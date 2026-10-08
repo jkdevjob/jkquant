@@ -1,4 +1,5 @@
 import { buildDailyDigest, IPO_SCORE_VERSION } from "./ipo-score.mjs";
+import { verifyFirebaseToken } from "../../../functions/api/_firebase_token.js";
 import { evaluatePresale, describeEvaluation, won, SCORING_VERSION } from "./presale-score.mjs";
 const enc=new TextEncoder();
 const BASE_APP="https://jkquant.pages.dev";
@@ -8,7 +9,43 @@ const IPO_APP=BASE_APP+"/ipo";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
 const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl"]);
 const VALID_TOPICS=new Set(["presale","job","ipo",...TRADE_TOPICS]);
+const APPROVAL_ADMIN="jk82investing@gmail.com";
+const FIRESTORE_PROFILE="https://firestore.googleapis.com/v1/projects/jk-invest/databases/(default)/documents/profiles/";
 
+export function approvalRecipient(fields){
+  const valid=fields&&fields.approved&&fields.approved.booleanValue===true
+    &&!(fields.blocked&&fields.blocked.booleanValue===true);
+  const email=String(fields&&fields.email&&fields.email.stringValue||"").trim().toLowerCase();
+  const approvedAt=Number(fields&&fields.approvedAt&&(fields.approvedAt.integerValue||fields.approvedAt.doubleValue)||0);
+  if(!valid||!approvedAt||!/^([^\s@]+)@([^\s@]+\.[^\s@]+)$/.test(email)||email.length>254)return null;
+  return {email,approvedAt};
+}
+async function authUser(request,admin=false){
+  const header=request.headers.get("authorization")||"";
+  if(!header.startsWith("Bearer "))return {ok:false,reason:"로그인 토큰 없음"};
+  const v=await verifyFirebaseToken(header.slice(7));
+  if(!v.ok)return {ok:false,reason:v.reason||"토큰 오류"};
+  if(admin&&v.email!==APPROVAL_ADMIN)return {ok:false,reason:"관리자 전용"};
+  return {...v,token:header.slice(7)};
+}
+async function profileApproved(uid,token){
+  if(!/^[a-zA-Z0-9_-]{1,128}$/.test(uid))throw new Error("invalid uid");
+  const r=await fetch(FIRESTORE_PROFILE+encodeURIComponent(uid),{
+    headers:{"authorization":"Bearer "+token,"accept":"application/json"},
+    cf:{cacheTtl:0,cacheEverything:false}
+  });
+  if(!r.ok)throw new Error("profile read HTTP "+r.status);
+  return approvalRecipient((await r.json()).fields);
+}
+export function approvalEmailData(email){
+  const link=BASE_APP+"/";
+  return {
+    from:"",
+    to:[email],
+    subject:"[JK 투자] 이용 신청이 승인되었습니다",
+    html:'<div style="font-family:Arial,sans-serif;line-height:1.8;color:#172033"><h2>JK 투자 이용 승인 완료</h2><p>신청하신 계정의 이용이 승인되었습니다.</p><p>이제 JK 투자에 로그인해 서비스를 이용하실 수 있습니다.</p><p><a href="'+link+'">JK 투자 바로가기</a></p><p style="font-size:12px;color:#687287">본인이 신청하지 않았다면 이 메일을 무시해 주세요.</p></div>'
+  };
+}
 function b64u(bytes){
   let s="";for(const b of bytes)s+=String.fromCharCode(b);
   return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
@@ -27,7 +64,7 @@ function cors(request){
     "content-type":"application/json; charset=utf-8",
     "cache-control":"no-store",
     "access-control-allow-methods":"GET,POST,DELETE,OPTIONS",
-    "access-control-allow-headers":"content-type"
+    "access-control-allow-headers":"content-type,authorization"
   };
   if(ALLOW_ORIGINS.has(origin))h["access-control-allow-origin"]=origin;
   else if(!origin)h["access-control-allow-origin"]="*";
@@ -223,15 +260,117 @@ export class PresaleAlertStore{
     const topics=normalizeTopics(body&&body.topics,old?this.topicsOf(old):["presale"]);
     await this.state.storage.put("sub:"+id,{
       endpoint,topics,createdAt:(old&&old.createdAt)||new Date().toISOString(),
-      updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220)
+      updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),
+      approvalUid:old&&old.approvalUid||null
     });
     return json(request,{ok:true,subscribed:true,topics});
+  }
+  async approvalSubscribe(request){
+    const user=await authUser(request);
+    if(!user.ok)return json(request,{ok:false,error:user.reason},401);
+    const body=await request.json().catch(()=>null),s=body&&body.subscription;
+    const endpoint=clean(s&&s.endpoint,2000);
+    if(!/^https:\/\//.test(endpoint))return json(request,{ok:false,error:"invalid endpoint"},400);
+    const id=await hashText(endpoint),old=await this.state.storage.get("sub:"+id);
+    const changed=old&&old.approvalUid&&old.approvalUid!==user.uid;
+    if(changed)await this.state.storage.delete("approval:event:"+id);
+    await this.state.storage.put("sub:"+id,{
+      endpoint,topics:old?this.topicsOf(old):[],createdAt:old&&old.createdAt||new Date().toISOString(),
+      updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),approvalUid:user.uid
+    });
+    return json(request,{ok:true,registered:true});
+  }
+  async approvalEvent(request){
+    const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
+    if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
+    const id=await hashText(endpoint),sub=await this.state.storage.get("sub:"+id);
+    const item=await this.state.storage.get("approval:event:"+id);
+    const valid=sub&&sub.approvalUid&&item&&item.uid===sub.approvalUid
+      &&Date.now()-item.at<7*86400000;
+    return json(request,{ok:true,alert:valid?item.alert:null});
+  }
+  async approvalNotify(request){
+    const user=await authUser(request,true);
+    if(!user.ok)return json(request,{ok:false,error:user.reason},user.reason==="관리자 전용"?403:401);
+    const body=await request.json().catch(()=>null),uid=String(body&&body.uid||"").trim();
+    if(!/^[a-zA-Z0-9_-]{1,128}$/.test(uid))return json(request,{ok:false,error:"invalid uid"},400);
+    let recipient;
+    try{recipient=await profileApproved(uid,user.token);}
+    catch(e){return json(request,{ok:false,error:"승인 상태를 확인할 수 없습니다: "+String(e.message||e)},502);}
+    if(!recipient)return json(request,{ok:false,error:"현재 승인·이메일 상태가 올바르지 않습니다."},409);
+    const key="approval:send:"+uid+":"+recipient.approvedAt;
+    const past=await this.state.storage.get(key)||{};
+    const result={email:past.email||"pending",push:past.push||"pending",delivered:past.delivered||0};
+    if(result.email!=="sent"&&!(past.lockEmail&&Date.now()-past.lockEmail<60000)){
+      if(!this.env.RESEND_API_KEY||!this.env.APPROVAL_FROM_EMAIL){
+        result.email="not_configured";
+      }else{
+        const lock={...past,lockEmail:Date.now()};
+        await this.state.storage.put(key,lock);
+        try{
+          const msg=approvalEmailData(recipient.email);
+          msg.from=this.env.APPROVAL_FROM_EMAIL;
+          const response=await fetch("https://api.resend.com/emails",{
+            method:"POST",headers:{
+              "authorization":"Bearer "+this.env.RESEND_API_KEY,
+              "content-type":"application/json",
+              "idempotency-key":"jk-approval-"+(await hashText(key))
+            },body:JSON.stringify(msg)
+          });
+          const payload=await response.json().catch(()=>({}));
+          result.email=response.ok?"sent":"failed";
+          if(!response.ok)result.emailError=clean(payload.message||"HTTP "+response.status,160);
+        }catch(e){result.email="failed";result.emailError=clean(String(e.message||e),160);}
+      }
+    }else if(past.lockEmail&&Date.now()-past.lockEmail<60000&&result.email!=="sent"){
+      result.email="sending";
+    }
+    if(result.push!=="sent"&&!(past.lockPush&&Date.now()-past.lockPush<60000)){
+      const subscribers=[...(await this.subscriptions()).values()].filter(s=>s.approvalUid===uid);
+      if(!subscribers.length){result.push="not_subscribed";result.delivered=0;}
+      else{
+        await this.state.storage.put(key,{...past,...result,lockPush:Date.now()});
+        let delivered=0,failed=0;
+        const alert={
+          id:"approval:"+(await hashText(key)),type:"approval",title:"✅ JK 투자 이용 승인 완료",
+          body:"이용 신청이 승인되었습니다. 지금 JK 투자를 이용하실 수 있습니다.",
+          url:BASE_APP+"/",createdAt:new Date().toISOString()
+        };
+        for(const s of subscribers){
+          const sid=await hashText(s.endpoint);
+          await this.state.storage.put("approval:event:"+sid,{uid,at:Date.now(),alert});
+          try{const r=await this.pushOne(s.endpoint,"approval");if(r.ok)delivered++;else failed++;}
+          catch(e){failed++;}
+        }
+        result.push=delivered?"sent":"failed";
+        result.delivered=delivered;
+        result.failed=failed;
+      }
+    }
+    await this.state.storage.put(key,{...result,approvedAt:recipient.approvedAt,uid,
+      updatedAt:new Date().toISOString()});
+    return json(request,{ok:true,...result});
+  }
+  async approvalStatus(request){
+    const user=await authUser(request,true);
+    if(!user.ok)return json(request,{ok:false,error:user.reason},user.reason==="관리자 전용"?403:401);
+    const body=await request.json().catch(()=>null);
+    const items=Array.isArray(body&&body.items)?body.items.slice(0,100):[];
+    const states={};
+    for(const item of items){
+      const uid=String(item&&item.uid||""),at=Number(item&&item.approvedAt||0);
+      if(!/^[a-zA-Z0-9_-]{1,128}$/.test(uid)||!Number.isSafeInteger(at)||at<=0)continue;
+      const state=await this.state.storage.get("approval:send:"+uid+":"+at);
+      if(state)states[uid]={email:state.email||"pending",push:state.push||"pending",
+        delivered:Number(state.delivered||0),updatedAt:state.updatedAt||null};
+    }
+    return json(request,{ok:true,states});
   }
   async subscription(request){
     const u=new URL(request.url),endpoint=clean(u.searchParams.get("endpoint"),2000);
     if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
     const id=await hashText(endpoint),s=await this.state.storage.get("sub:"+id);
-    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[]});
+    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[],approvalLinked:!!(s&&s.approvalUid)});
   }
   async unsubscribe(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
@@ -431,7 +570,7 @@ export class PresaleAlertStore{
       for(const [,s] of subs)for(const t of this.topicsOf(s))counts[t]++;
       const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null};
       for(const t of TRADE_TOPICS)lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.1.0",subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.2.0",subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
@@ -451,6 +590,10 @@ export class PresaleAlertStore{
       }
       return json(request,{ok:false,error:"최근 알림 상세 보관기간이 지났습니다."},404);
     }
+    if(path==="/approval/subscribe"&&request.method==="POST")return this.approvalSubscribe(request);
+    if(path==="/approval/event"&&request.method==="POST")return this.approvalEvent(request);
+    if(path==="/approval/notify"&&request.method==="POST")return this.approvalNotify(request);
+    if(path==="/approval/status"&&request.method==="POST")return this.approvalStatus(request);
     if(path==="/subscription"&&request.method==="GET")return this.subscription(request);
     if(path==="/subscribe"&&request.method==="POST")return this.subscribe(request);
     if(path==="/subscribe"&&request.method==="DELETE")return this.unsubscribe(request);
