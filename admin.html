@@ -336,6 +336,70 @@ async function setBlocked(uid,on,email){
   loadUsers();
 }
 
+// 인증·승인 상태를 Worker가 다시 확인한 뒤, 성공한 채널을 중복 없이 발송한다.
+let approvalWorkerUrl='';
+async function approvalWorker(){
+  if(approvalWorkerUrl)return approvalWorkerUrl;
+  const r=await fetch('/data/realestate/gpt/push-config.json',{cache:'no-store'});
+  const v=await r.json();
+  if(!r.ok||!v.workerUrl||!/^https:\/\//.test(v.workerUrl))throw new Error('알림 서버가 설정되지 않았습니다.');
+  approvalWorkerUrl=v.workerUrl;return approvalWorkerUrl;
+}
+function approvalStatusText(status){
+  if(status==='sent')return '발송 접수 성공';
+  if(status==='not_configured')return '이메일 발신 설정 필요';
+  if(status==='not_subscribed')return '웹알림 미동의';
+  if(status==='failed')return '실패(재시도 가능)';
+  if(status==='sending')return '발송 중';
+  return '발송 이력 없음';
+}
+async function approvalCall(path,data){
+  const user=window.fb&&window.fb.auth&&window.fb.auth.currentUser;
+  if(!isAdmin()||!user)throw new Error('관리자 로그인이 필요합니다.');
+  const worker=await approvalWorker();
+  const token=await user.getIdToken();
+  const r=await fetch(worker+path,{
+    method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+token},
+    body:JSON.stringify(data)
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||('알림 서버 HTTP '+r.status));
+  return j;
+}
+async function sendApprovalNotice(uid,confirmRetry){
+  if(confirmRetry&&!confirm('이미 성공한 채널은 중복 발송하지 않습니다. 실패하거나 미발송된 승인 알림을 재시도할까요?'))return;
+  let message='';
+  try{
+    const result=await approvalCall('/approval/notify',{uid});
+    message='승인 알림 요청 결과\n이메일: '+approvalStatusText(result.email)+
+      '\n웹알림: '+approvalStatusText(result.push)+
+      (result.delivered?' ('+result.delivered+'대 접수)':'')+
+      (result.emailError?'\n이메일 오류: '+result.emailError:'');
+  }catch(e){
+    message='승인은 유지됩니다. 승인 알림 요청 실패: '+String(e.message||e)+
+      '\n사용자 목록의 [알림 재시도]를 이용하세요.';
+  }
+  alert(message);
+  if(confirmRetry)void loadUsers();
+}
+async function loadApprovalDelivery(rows){
+  const approved=rows.filter(r=>r._st==='approved'&&r.approvedAt);
+  if(!approved.length)return;
+  try{
+    const j=await approvalCall('/approval/status',{items:approved.map(r=>({uid:r.uid,approvedAt:r.approvedAt}))});
+    for(const r of approved){
+      const el=[...document.querySelectorAll('[data-appr-status]')]
+        .find(x=>x.getAttribute('data-appr-status')===r.uid);
+      if(!el)continue;
+      const st=j.states&&j.states[r.uid];
+      el.textContent=st?'이메일 '+approvalStatusText(st.email)+' · 웹알림 '+approvalStatusText(st.push)+
+        (st.delivered?' ('+st.delivered+'대)':''):'승인 알림 발송 이력 없음';
+    }
+  }catch(e){
+    document.querySelectorAll('[data-appr-status]').forEach(el=>el.textContent='발송 기록 조회 실패');
+  }
+}
+
 // ── 2. 전략 기본값 ──────────────────────────────────────────────────
 const STRATEGY_DEFAULT_CACHE='jkq_strategy_default_overrides_v2';
 const STRATEGY_DEFAULT_LEGACY_CACHE='jkq_strategy_defaults_v1';
