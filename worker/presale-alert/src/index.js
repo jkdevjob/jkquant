@@ -1,10 +1,12 @@
+import { buildDailyDigest, IPO_SCORE_VERSION } from "./ipo-score.mjs";
 import { evaluatePresale, describeEvaluation, won, SCORING_VERSION } from "./presale-score.mjs";
 const enc=new TextEncoder();
 const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
 const JOB_APP=BASE_APP+"/job";
+const IPO_APP=BASE_APP+"/ipo";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
-const VALID_TOPICS=new Set(["presale","job"]);
+const VALID_TOPICS=new Set(["presale","job","ipo"]);
 
 function b64u(bytes){
   let s="";for(const b of bytes)s+=String.fromCharCode(b);
@@ -144,6 +146,22 @@ async function evaluateFreshPresales(base,items){
   return out;
 }
 
+async function ipoFeed(base){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),23000);
+  try{
+    const r=await fetch(base+"/api/ipo",{
+      headers:{"accept":"application/json","user-agent":"JKQuant-IPO-Digest/1.0"},
+      signal:controller.signal,
+      cf:{cacheTtl:0,cacheEverything:false}
+    });
+    if(!r.ok)throw new Error("IPO feed HTTP "+r.status);
+    const j=await r.json();
+    if(!Array.isArray(j.items))throw new Error("IPO feed missing items");
+    return j.items;
+  }finally{clearTimeout(timer)}
+}
+
 async function jobFeed(baseUrl){
   const urls=[
     "https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/job_archive.json?ts="+Date.now(),
@@ -258,7 +276,11 @@ export class PresaleAlertStore{
     if(!sub)return json(request,{ok:false,error:"subscription not registered"},404);
     const last=Number(await this.state.storage.get("test:"+id)||0);
     if(Date.now()-last<30000)return json(request,{ok:false,error:"테스트는 30초에 한 번 가능합니다."},429);
-    const alert=topic==="job"?{
+    const alert=topic==="ipo"?{
+      id:"test-ipo-"+Date.now(),type:"ipo",title:"📈 공모주 웹알림 테스트",
+      body:"IPO 일정 및 평가점수 웹알림이 정상 연결되었습니다.",
+      url:IPO_APP,createdAt:new Date().toISOString()
+    }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
       body:"대전·세종 신규 채용공고 알림이 정상 연결되었습니다.",
       url:JOB_APP,createdAt:new Date().toISOString()
@@ -338,18 +360,45 @@ export class PresaleAlertStore{
     const delivery=await this.notifyAll("job");
     return json(request,{ok:true,items:items.length,newCount:fresh.length,alert,delivery});
   }
+  async checkIPO(request){
+    const today=kstDate(0),stored=await this.state.storage.get("lastSent:ipo");
+    if(stored===today)return json(request,{ok:true,skipped:true,reason:"이미 오늘 IPO 브리핑 발송",date:today});
+    const rows=await ipoFeed(this.env.BASE_URL||BASE_APP);
+    // Empty, valid items[] may be genuine lack of IPO. Error response is never treated as 'none'.
+    const digest=buildDailyDigest(rows);
+    if(digest.date!==today)return json(request,{ok:false,error:"date mismatch, retry"},503);
+    const alert={
+      id:"ipo-daily:"+digest.date,type:"ipo",
+      title:digest.title,body:digest.body,
+      url:IPO_APP+"?brief="+digest.date,
+      digest,scoringVersion:IPO_SCORE_VERSION,
+      createdAt:new Date().toISOString()
+    };
+    await this.recordAlert(alert);
+    await this.state.storage.put("digest:ipo:"+today,digest);
+    await this.state.storage.put("lastCheck:ipo",new Date().toISOString());
+    const delivery=await this.notifyAll("ipo");
+    await this.state.storage.put("lastSent:ipo",today);
+    return json(request,{ok:true,date:today,sent:delivery.sent,digest,delivery});
+  }
+  async ipoDaily(request){
+    const day=clean(new URL(request.url).searchParams.get("date"),10)||kstDate(0);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return json(request,{ok:false,error:"invalid date"},400);
+    const digest=await this.state.storage.get("digest:ipo:"+day);
+    return json(request,{ok:true,date:day,digest:digest||null});
+  }
   async fetch(request){
     if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
     const u=new URL(request.url),path=u.pathname;
     if(path==="/health"){
       const subs=await this.subscriptions(),lastCheck=await this.state.storage.get("lastCheck");
       const jobLastCheck=await this.state.storage.get("lastCheck:job");
-      let presale=0,job=0;
-      for(const [,s] of subs){const t=this.topicsOf(s);if(t.includes("presale"))presale++;if(t.includes("job"))job++}
+      let presale=0,job=0,ipo=0;
+      for(const [,s] of subs){const t=this.topicsOf(s);if(t.includes("presale"))presale++;if(t.includes("job"))job++;if(t.includes("ipo"))ipo++}
       return json(request,{
         ok:true,service:"jkquant-push-alert",version:"2.0.0",subscriptions:subs.size,
-        topicSubscriptions:{presale,job},lastCheck:lastCheck||null,
-        lastChecks:{presale:lastCheck||null,job:jobLastCheck||null}
+        topicSubscriptions:{presale,job,ipo},lastCheck:lastCheck||null,
+        lastChecks:{presale:lastCheck||null,job:jobLastCheck||null,ipo:(await this.state.storage.get("lastCheck:ipo"))||null}
       });
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
@@ -375,6 +424,8 @@ export class PresaleAlertStore{
     if(path==="/test"&&request.method==="POST")return this.test(request);
     if(path==="/check"&&request.method==="POST")return this.checkPresale(request);
     if(path==="/check-jobs"&&request.method==="POST")return this.checkJobs(request);
+    if(path==="/check-ipo"&&request.method==="POST")return this.checkIPO(request);
+    if(path==="/ipo-daily"&&request.method==="GET")return this.ipoDaily(request);
     return json(request,{ok:false,error:"not found"},404);
   }
 }
@@ -387,6 +438,10 @@ export default{
   },
   async scheduled(controller,env,ctx){
     const id=env.ALERT_STORE.idFromName("global"),stub=env.ALERT_STORE.get(id);
+    if(controller&&controller.cron==="10 23 * * *"){
+      ctx.waitUntil(stub.fetch(new Request("https://internal/check-ipo",{method:"POST"})));
+      return;
+    }
     ctx.waitUntil(Promise.allSettled([
       stub.fetch(new Request("https://internal/check",{method:"POST"})),
       stub.fetch(new Request("https://internal/check-jobs",{method:"POST"}))
