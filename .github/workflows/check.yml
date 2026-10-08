@@ -29,6 +29,9 @@ jobs:
       - name: 승인 이메일·개인별 웹푸시 보안 및 중복방지 검사
         run: node --test tests/approval-notification.test.mjs
 
+      - name: 승인 알림 Worker 빌드 검증 (실배포 없음)
+        run: npx --yes wrangler@4 deploy --dry-run --config worker/presale-alert/wrangler.jsonc --outdir /tmp/jkquant-approval-worker-check
+
       - name: 전 페이지 모바일 기본 레이아웃 검사
         run: node scripts/check-mobile-pages.cjs
 
