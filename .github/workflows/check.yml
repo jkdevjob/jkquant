@@ -116,7 +116,9 @@ jobs:
         run: python scripts/test_scalping_paper_backfill.py
 
       - name: 오늘 탭 실시간 마감장부 우선·무매매·날짜 경계 검사
-        run: node scripts/test_scalping_daily_results.mjs
+        run: |
+          node scripts/test_scalping_daily_results.mjs
+          node --test tests/scalping-push.test.mjs
 
       - name: 시초가 사후라벨·엔진 값 검사
         run: python scripts/test_opening_signal_labels.py

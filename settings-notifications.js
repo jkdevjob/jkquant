@@ -30,7 +30,7 @@ async function server(path,opt){
 }
 async function currentSub(){
   if(!supported())return null;
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.0.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.1.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   sub=await reg.pushManager.getSubscription();
   return sub;
@@ -88,6 +88,14 @@ function render(){
       "30분마다 채용사이트를 다시 수집하고, 새 공고가 있을 때만 알려줍니다. 알림을 누르면 해당 JOB 공고로 이동합니다.")+
     item("presale","🏢","대전·세종 신규분양",
       "대전·세종의 새 일반분양·무순위/잔여·임의공급 공고를 약 30분 간격으로 확인해 알려줍니다.")+
+    item("opening","⚡","단타(지피티) · 시초가 매수·매도",
+      "기준전략의 시초가 매수·매도 모의 신호를 알립니다. 누르면 시초가 전략으로 이동합니다.")+
+    item("daytrading","📈","단타(지피티) · 데이트레이딩 매수·매도",
+      "확정된 모의 매수·매도 전환 시 알립니다. 누르면 데이트레이딩 화면으로 이동합니다.")+
+    item("crypto","₿","단타(지피티) · 비트코인 매수·매도",
+      "KRW-BTC 기준전략의 모의 매수·매도 신호를 알립니다.")+
+    item("soxl","⚡","단타(지피티) · SOXL 매수·매도",
+      "미국 정규장 SOXL 기준전략의 모의 매수·매도 신호를 알립니다.")+
   '</div>';
   host.querySelectorAll("button[data-action]").forEach(btn=>{
     btn.addEventListener("click",()=>{
@@ -102,7 +110,7 @@ async function ensurePushSubscription(){
   const perm=Notification.permission==="granted"?"granted":await Notification.requestPermission();
   if(perm!=="granted")throw new Error("알림 권한이 허용되지 않았습니다.");
   cfg=cfg||await getConfig();
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.0.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.1.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   const v=await server("/vapid");
   sub=await reg.pushManager.getSubscription();
@@ -124,7 +132,7 @@ async function enable(topic){
     topics.add(topic);
     await saveTopics();
     try{health=await server("/health")}catch(e){}
-    alert(topic==="job"?"JOB 신규공고 알림을 켰습니다.":"신규분양 알림을 켰습니다.");
+    alert(({job:"JOB 신규공고",presale:"신규분양",opening:"시초가 매수·매도",daytrading:"데이트레이딩 매수·매도",crypto:"비트코인 매수·매도",soxl:"SOXL 매수·매도"})[topic]+" 알림을 켰습니다.");
   }catch(e){alert("알림 설정 실패: "+String(e&&e.message||e))}
   finally{busy=false;render()}
 }
