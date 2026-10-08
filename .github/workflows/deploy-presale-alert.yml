@@ -32,7 +32,7 @@ jobs:
           [ -n "$CF_ACCOUNT" ] || { echo "CLOUDFLARE_ACCOUNT_ID GitHub Secret 없음"; exit 1; }
 
       - name: 신규분양 평가 로직 단위테스트
-        run: node --test tests/presale-score.test.mjs tests/ipo-score.test.mjs
+        run: node --test tests/presale-score.test.mjs tests/ipo-score.test.mjs tests/approval-notification.test.mjs
 
       - name: Worker + Cron + Durable Object 배포
         env:
