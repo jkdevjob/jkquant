@@ -219,7 +219,7 @@ const isAdmin=()=>!!me && ADMIN_EMAILS.includes(normEmail(me.email));
    기능을 더할 때는 여기 한 줄과 render 함수 하나만 있으면 된다.
    soon:true 면 자리만 잡아두고 눌러도 안 열린다. */
 const SECTIONS=[
-  {id:'users', label:'사용자',   sub:'이용 승인·차단', render:renderUsers},
+  {id:'users', label:'사용자',   sub:'승인·메일·알림', render:renderUsers},
   {id:'menus', label:'메뉴 관리', sub:'공개·숨김·순서', render:renderMenus},
   {id:'defaults', label:'전략 기본값', sub:'운영 탭 신규 세션', render:renderDefaults},
   {id:'diag',  label:'시스템 점검', sub:'API·규칙 상태', render:renderDiag},
@@ -297,11 +297,11 @@ async function loadUsers(){
         /* 이메일·이름은 본인이 쓴 칸이다 — onclick 글자 안에 넣지 않는다(따옴표로 스크립트를 끼워 넣을 수 있다). data- 칸으로만 넘긴다 */
         const btn=(act,on,label,cls)=>`<button class="ghostbtn sm${cls?' '+cls:''}" data-uact="${act}" data-on="${on?1:0}" data-uid="${esc(r.uid)}" data-email="${esc(r.email)}">${label}</button>`;
         const acts = st==='pending'  ? btn('approve',true,'승인','ok')+' '+btn('block',true,'거절','danger')
-                   : st==='approved' ? btn('approve',false,'승인 취소')+' '+btn('block',true,'차단','danger')
+                   : st==='approved' ? btn('approve',false,'승인 취소')+' '+btn('block',true,'차단','danger')+' '+btn('notify',true,'알림 재시도')
                    :                   btn('block',false,'차단 해제');
         return `<tr class="${st==='blocked'?'off':''}">
           <td><b>${esc(r.email||r.uid)}</b>${mine?'<span class="sub"> (나)</span>':''}${tag}
-              <div class="sub">${esc(r.name||'')}</div>${r.reqNote?`<div class="note-req">“${esc(r.reqNote)}”</div>`:''}</td>
+              <div class="sub">${esc(r.name||'')}</div>${r.reqNote?`<div class="note-req">“${esc(r.reqNote)}”</div>`:''}${st==='approved'?`<div class="sub" data-appr-status="${esc(r.uid)}">승인 알림 발송 기록 확인 중…</div>`:''}</td>
           <td>${fmtWhen(r.requestedAt)}</td><td>${fmtWhen(r.lastSeen)}</td>
           <td>${+r.visits||0}</td>
           <td>${adm?'<span class="sub">—</span>':acts}</td>
@@ -309,12 +309,15 @@ async function loadUsers(){
       }).join('')
     + `</tbody></table></div>
        <p class="note">승인·취소·차단은 그 계정이 <b>다음에 페이지를 열 때</b> 적용됩니다(열어 둔 화면도 다시 확인되면 덮입니다).
-       차단 해제하면 원래 승인 상태로 돌아갑니다. 데이터까지 확실히 막으려면 <b>보안 규칙</b>을 반영해 주세요.</p>`;
+       차단 해제하면 원래 승인 상태로 돌아갑니다. 데이터까지 확실히 막으려면 <b>보안 규칙</b>을 반영해 주세요. 이메일 성공은 메일 서버 접수 성공을 의미합니다.</p>`;
+  void loadApprovalDelivery(rows);
 }
 document.addEventListener('click',e=>{
   const b=e.target&&e.target.closest&&e.target.closest('[data-uact]'); if(!b) return;
   const uid=b.getAttribute('data-uid'), on=b.getAttribute('data-on')==='1', email=b.getAttribute('data-email')||'';
-  if(b.getAttribute('data-uact')==='approve') setApproved(uid,on,email); else setBlocked(uid,on,email);
+  if(b.getAttribute('data-uact')==='approve') setApproved(uid,on,email);
+  else if(b.getAttribute('data-uact')==='notify') sendApprovalNotice(uid,true);
+  else setBlocked(uid,on,email);
 });
 async function setApproved(uid,on,email){
   if(!isAdmin()) return;
@@ -322,7 +325,8 @@ async function setApproved(uid,on,email){
   try{ await window.fb.setDoc(window.fb.doc(window.fb.db,'profiles',uid),
          {approved:!!on, approvedAt:Date.now(), approvedBy:normEmail(me&&me.email)},{merge:true}); }
   catch(e){ alert('바꾸지 못했습니다 — '+(e.message||e)); return; }
-  loadUsers();
+  if(on)await sendApprovalNotice(uid,false);
+  await loadUsers();
 }
 async function setBlocked(uid,on,email){
   if(!isAdmin()) return;
