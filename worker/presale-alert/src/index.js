@@ -368,7 +368,7 @@ export class PresaleAlertStore{
     const u=new URL(request.url),endpoint=clean(u.searchParams.get("endpoint"),2000);
     if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
     const id=await hashText(endpoint),s=await this.state.storage.get("sub:"+id);
-    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[]});
+    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[],approvalLinked:!!(s&&s.approvalUid)});
   }
   async unsubscribe(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
@@ -538,7 +538,7 @@ export class PresaleAlertStore{
       let presale=0,job=0,ipo=0;
       for(const [,s] of subs){const t=this.topicsOf(s);if(t.includes("presale"))presale++;if(t.includes("job"))job++;if(t.includes("ipo"))ipo++}
       return json(request,{
-        ok:true,service:"jkquant-push-alert",version:"2.0.0",subscriptions:subs.size,
+        ok:true,service:"jkquant-push-alert",version:"2.1.0",subscriptions:subs.size,
         topicSubscriptions:{presale,job,ipo},lastCheck:lastCheck||null,
         lastChecks:{presale:lastCheck||null,job:jobLastCheck||null,ipo:(await this.state.storage.get("lastCheck:ipo"))||null}
       });
