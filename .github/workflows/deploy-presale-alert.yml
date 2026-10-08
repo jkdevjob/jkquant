@@ -32,7 +32,7 @@ jobs:
           [ -n "$CF_ACCOUNT" ] || { echo "CLOUDFLARE_ACCOUNT_ID GitHub Secret 없음"; exit 1; }
 
       - name: 신규분양 평가 로직 단위테스트
-        run: node --test tests/presale-score.test.mjs tests/ipo-score.test.mjs tests/scalping-push.test.mjs
+        run: node --test tests/presale-score.test.mjs tests/ipo-score.test.mjs tests/scalping-push.test.mjs tests/approval-notification.test.mjs
 
       - name: Worker + Cron + Durable Object 배포
         env:
@@ -50,6 +50,22 @@ jobs:
         run: |
           [ -n "$MONITOR_KEY" ] || { echo "AUTOTRADE_KEY GitHub Secret 없음"; exit 1; }
           printf '%s' "$MONITOR_KEY" | npx --yes wrangler@4 secret put MONITOR_KEY --config worker/presale-alert/wrangler.jsonc
+
+      - name: 승인 이메일 발신 설정 (GitHub Secrets에 있을 때만)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          APPROVAL_FROM_EMAIL: ${{ secrets.APPROVAL_FROM_EMAIL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${RESEND_API_KEY}" ] || [ -z "${APPROVAL_FROM_EMAIL}" ]; then
+            echo "::warning::승인 이메일 발송 준비 미완료: GitHub Secrets RESEND_API_KEY, APPROVAL_FROM_EMAIL 설정 필요"
+            exit 0
+          fi
+          printf '%s' "${RESEND_API_KEY}" | npx --yes wrangler@4 secret put RESEND_API_KEY --config worker/presale-alert/wrangler.jsonc
+          printf '%s' "${APPROVAL_FROM_EMAIL}" | npx --yes wrangler@4 secret put APPROVAL_FROM_EMAIL --config worker/presale-alert/wrangler.jsonc
 
       - name: workers.dev 주소를 웹앱 설정에 기록
         env:
