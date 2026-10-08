@@ -12,16 +12,18 @@
 | 개인 Gmail 자동 발송 | Apps Script/Worker/GitHub 비밀값 등록·단위검사 기록 | **실수신 미검증**. CI는 모의 발송이므로 실메일 도착 증거 아님 |
 | 투자전략 실제 성과 | 이번 문서 감사에는 실데이터 앱 백테 실행 결과 없음 | **미검증**. 과거 숫자를 신규 실측처럼 쓰지 않음 |
 
-## B. 이번 감사 수정 항목 — CI 완료 전에는 미확정
+## B. 2026-10-08 · PR #467 CI/배포 완료 · 실사용 검증은 별도
 
 | 테스트 ID | 검증하려는 회귀 | 기대값 | 현재 상태 |
 |---|---|---|---|
-| V-01 | 관리자 무한매수 내장 기본 큰수 vs 운영/백테 | 모두 20%; 사용자 선택/기존 장부 변화 없음 | **테스트 추가·CI 대기** |
-| V-02 | 승인 메일 실패 정보의 관리자 전용 반환 | 비관리자 403; 관리자 실패사유·제공자 확인; 성공 시 오래된 오류 제거 | **테스트 추가·CI 대기** |
-| V-03 | 관리자 실패 표시 XSS 방지 | 상태 문구 `textContent`로 렌더링 | **테스트 추가·CI 대기** |
-| V-04 | 전체 회귀 유지 | `regression-check.js` ALL PASS + 관련 검증/Worker 번들 | **CI 대기** |
-| V-05 | Cloudflare Pages/Worker | PR main 병합 SHA로 두 배포 성공 | **미배포** |
+| V-01 | 관리자 무한매수 내장 기본 큰수 vs 운영/백테 | 모두 20%; 기존 장부·사용자 설정 일괄 변경 없음 | **정적/회귀 PASS + Pages 배포 성공** |
+| V-02 | 승인 메일 실패 정보의 관리자 전용 반환 | 비관리자 403; 관리자 오류·제공자 조회; 성공 시 옛 오류 제거 | **단위검사 7/7 PASS + Worker 배포 성공** |
+| V-03 | 관리자 실패 표시 XSS 방지 | 상태 문구 `textContent`로 렌더링 | **회귀 PASS + Pages 배포 성공** |
+| V-04 | 전체 회귀 유지 | `regression-check.js` ALL PASS + 관련 검증/Worker 번들 | [PR CI #37729987963](https://github.com/jkdevjob/jkquant/actions/runs/37729987963) **2,742 PASS / 0 FAIL** |
+| V-05 | Cloudflare Pages/Worker | `main@cd4a714a` 병합 후 Pages/Worker 배포 작업 성공 | **배포 성공 확인**; 직접 실제 URL GET/사용자 화면 미검증 |
 | V-06 | 실제 가입 승인 메일 수신 | 실제 테스트 수신자의 편지함에 정확히 1건 + 관리자 오류 상태 일치 | **실사용 계정/메일함 검증 필요** |
+
+검증 근거: [PR #467](https://github.com/jkdevjob/jkquant/pull/467) · [PR CI 실행](https://github.com/jkdevjob/jkquant/actions/runs/37729987963) · [main 검증 작업](https://github.com/jkdevjob/jkquant/actions/runs/37730501030) · [Worker 배포 작업](https://github.com/jkdevjob/jkquant/actions/runs/37730501082).
 
 ## C. 검증 실패 시 기록 방식
 

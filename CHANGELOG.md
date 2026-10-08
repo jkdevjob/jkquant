@@ -3,14 +3,14 @@
 > 최초 작성: **2026-10-08**. 과거 모든 릴리스를 소급 수집한 전체 변경기록이 아니라, **실제 확인한 최근 main 커밋과 이번 감사 PR**부터 관리한다.
 > 이전 상세 감사는 [AUDIT-SELF-REVIEW.md](AUDIT-SELF-REVIEW.md), [작업 기준](CLAUDE.md)에 남겨둔다.
 
-## 미배포 — 2026-10-08 · 프로젝트 관리/기준 불일치 감사
+## 2026-10-08 · 감사 수정 운영 배포 — [PR #467](https://github.com/jkdevjob/jkquant/pull/467) · `cd4a714a`
 
 - 신규 `REQUIREMENTS.md`, `TASKS.md`, `CHANGELOG.md`, `TEST_RESULTS.md` 및 README 안내를 만든다.
 - `admin.html`: 관리자 내장 무한매수 큰수 기본값 15%를 사용자 기준 20%에 일치시킨다. **운영/백테 엔진과 기존 투자 세션·사용자 지정값은 변경하지 않는다.** 관리자 버전 v0.12.17.
 - `worker/presale-alert/src/index.js`: 승인메일 관리자 상태 조회에 **발신 제공자**와 **실패 사유(최대 120자, 실패한 경우만)**를 추가한다. Worker 2.2.2.
 - `admin.html`: 승인메일 발송 실패 때 목록에 원인을 표시한다. 화면 문자열은 `textContent`로 작성해 HTML로 실행되지 않도록 한다.
 - 관련 가입 승인 단위검사·전체 회귀검사에 재발 방지 항목을 추가한다.
-- 이 절은 **PR 단계의 변경 예정** 목록으로, CI/병합/배포가 끝나기 전까지 완료/운영 반영으로 간주하지 않는다.
+- **검증:** [PR CI #37729987963](https://github.com/jkdevjob/jkquant/actions/runs/37729987963) 전체 2,742 PASS / 0 FAIL. `main` 병합 뒤 Cloudflare Pages · 승인 알림 Worker 배포 성공을 확인했다. **실제 아이폰 화면 및 Gmail 메일 수신은 미검증**으로 남긴다.
 
 ## 2026-10-08 · 운영 main에 병합된 최근 확인 작업
 
