@@ -30,7 +30,7 @@ async function server(path,opt){
 }
 async function currentSub(){
   if(!supported())return null;
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.0.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.1.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   sub=await reg.pushManager.getSubscription();
   return sub;
@@ -83,6 +83,14 @@ function item(topic,icon,name,desc){
   '</div>';
 }
 const NOTIFY_DEFS=[
+  {topic:"opening",href:"/scalping",icon:"⚡",name:"단타(지피티) · 시초가 매수·매도",
+    desc:"기준전략의 시초가 모의매수·매도 신호를 알립니다. 알림을 누르면 해당 전략 화면으로 이동합니다."},
+  {topic:"daytrading",href:"/scalping",icon:"📈",name:"단타(지피티) · 데이트레이딩 매수·매도",
+    desc:"기준전략의 모의매수·매도 전환 시 알려줍니다."},
+  {topic:"crypto",href:"/scalping",icon:"₿",name:"단타(지피티) · 비트코인 매수·매도",
+    desc:"KRW-BTC 기준전략 모의매수·매도 신호 알림입니다."},
+  {topic:"soxl",href:"/scalping",icon:"⚡",name:"단타(지피티) · SOXL 매수·매도",
+    desc:"미국장 SOXL 기준전략의 모의매수·매도 신호를 알립니다."},
   {topic:"ipo",href:"/ipo",icon:"📈",name:"공모주·청약 일정",
    desc:"매일 오전 8:10경 청약 중·7일 내 청약 예정·당일 상장 종목과 공모가/경쟁률 기반 투자 조사 점수를 보내드립니다."},
   {topic:"presale",href:"/realestate",icon:"🏢",name:"대전·세종 신규분양",
@@ -111,7 +119,7 @@ async function ensurePushSubscription(){
   const perm=Notification.permission==="granted"?"granted":await Notification.requestPermission();
   if(perm!=="granted")throw new Error("알림 권한이 허용되지 않았습니다.");
   cfg=cfg||await getConfig();
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.0.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.1.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   const v=await server("/vapid");
   sub=await reg.pushManager.getSubscription();
@@ -133,7 +141,7 @@ async function enable(topic){
     topics.add(topic);
     await saveTopics();
     try{health=await server("/health")}catch(e){}
-    alert(topic==="ipo"?"공모주·청약 매일 알림을 켰습니다.":topic==="job"?"JOB 신규공고 알림을 켰습니다.":"신규분양 알림을 켰습니다.");
+    alert(({ipo:"공모주·청약 매일",job:"JOB 신규공고",presale:"신규분양",opening:"시초가 매수·매도",daytrading:"데이트레이딩 매수·매도",crypto:"비트코인 매수·매도",soxl:"SOXL 매수·매도"})[topic]+" 알림을 켰습니다.");
   }catch(e){alert("알림 설정 실패: "+String(e&&e.message||e))}
   finally{busy=false;render()}
 }

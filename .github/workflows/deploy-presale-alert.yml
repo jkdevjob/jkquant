@@ -32,7 +32,7 @@ jobs:
           [ -n "$CF_ACCOUNT" ] || { echo "CLOUDFLARE_ACCOUNT_ID GitHub Secret 없음"; exit 1; }
 
       - name: 신규분양 평가 로직 단위테스트
-        run: node --test tests/presale-score.test.mjs tests/ipo-score.test.mjs
+        run: node --test tests/presale-score.test.mjs tests/ipo-score.test.mjs tests/scalping-push.test.mjs
 
       - name: Worker + Cron + Durable Object 배포
         env:
@@ -40,6 +40,16 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           NO_COLOR: "1"
         run: npx --yes wrangler@4 deploy --config worker/presale-alert/wrangler.jsonc
+
+      - name: Pages 서버와 같은 단타 신호 인증키를 Worker Secret으로 설정
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        shell: bash
+        run: |
+          [ -n "$MONITOR_KEY" ] || { echo "AUTOTRADE_KEY GitHub Secret 없음"; exit 1; }
+          printf '%s' "$MONITOR_KEY" | npx --yes wrangler@4 secret put MONITOR_KEY --config worker/presale-alert/wrangler.jsonc
 
       - name: workers.dev 주소를 웹앱 설정에 기록
         env:

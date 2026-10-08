@@ -291,7 +291,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.8</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.9</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2540,7 +2540,8 @@ function showStrategy(name){
   else stopGlobalPaperAuto();
 }
 function restoreStrategy(){
-  let n=String((SCALP_PREFS&&SCALP_PREFS.strategyTab)||'daily');
+  const linked=new URLSearchParams(location.search).get('strategy');
+  let n=String(linked||(SCALP_PREFS&&SCALP_PREFS.strategyTab)||'daily');
   if(!['daily','duel','opening','daytrading','crypto','soxl'].includes(n))n='daily';
   showStrategy(n);
 }

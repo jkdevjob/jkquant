@@ -5,6 +5,7 @@ const CONFIG="/data/realestate/gpt/push-config.json";
 const META_CACHE="jk-push-meta-v2";
 const TOPICS_KEY="/__jk_push_topics";
 const SHOWN_KEY="/__jk_push_shown";
+const VALID_TOPICS=new Set(["presale","job","ipo","opening","daytrading","crypto","soxl"]);
 
 async function getConfig(){
   const r=await fetch(CONFIG+"?ts="+Date.now(),{cache:"no-store"});
@@ -44,24 +45,27 @@ async function markShown(id){
   const v=await shownIds();
   await writeMeta(SHOWN_KEY,[id,...v.filter(x=>x!==id)].slice(0,100));
 }
-function pickAlert(payload,allowed,shown){
+function pickAlerts(payload,allowed,shown,now=Date.now()){
+  if(!allowed.length)return []; // 설정하지 않은 주제의 알림은 표시하지 않는다.
   const rows=[];
   if(payload&&Array.isArray(payload.alerts))rows.push(...payload.alerts);
   if(payload&&payload.alert)rows.push(payload.alert);
-  const uniq=[],seen=new Set();
+  const seen=new Set(),uniq=[];
   for(const a of rows){
     if(!a||!a.id||seen.has(a.id))continue;
-    seen.add(a.id);uniq.push(a);
+    seen.add(a.id);
+    const age=now-Date.parse(a.createdAt||"");
+    if(!Number.isFinite(age)||age<0||age>20*60*1000)continue;
+    if(!allowed.includes(String(a.type||""))||shown.includes(a.id))continue;
+    uniq.push(a);
   }
-  uniq.sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
-  let candidates=uniq.filter(a=>shown.indexOf(a.id)<0);
-  if(allowed.length)candidates=candidates.filter(a=>allowed.indexOf(String(a.type||""))>=0);
-  return candidates[0]||null;
+  uniq.sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
+  return uniq.slice(-10);
 }
 self.addEventListener("message",event=>{
   const d=event.data||{};
   if(d.type==="JK_PUSH_TOPICS"){
-    const a=Array.isArray(d.topics)?d.topics.filter(x=>x==="presale"||x==="job"||x==="ipo"):[];
+    const a=Array.isArray(d.topics)?d.topics.filter(x=>VALID_TOPICS.has(x)):[];
     event.waitUntil(writeMeta(TOPICS_KEY,[...new Set(a)]));
   }
 });
@@ -69,17 +73,17 @@ self.addEventListener("push",event=>{
   event.waitUntil((async()=>{
     try{
       const [j,allowed,shown]=await Promise.all([getLatest(),topics(),shownIds()]);
-      const a=pickAlert(j,allowed,shown);
-      if(!a)return;
-      await self.registration.showNotification(a.title||"JK 알림",{
-        body:a.body||"새로운 정보가 업데이트되었습니다.",
-        icon:"/icons/jk-invest-192.png?v=1.0.0",
-        badge:"/icons/jk-invest-192.png?v=1.0.0",
-        tag:"jk-"+String(a.type||"notice")+"-"+String(a.id||"latest"),
-        renotify:true,
-        data:{url:a.url||"/"}
-      });
-      await markShown(a.id);
+      const alerts=pickAlerts(j,allowed,shown);
+      for(const a of alerts){
+        await self.registration.showNotification(a.title||"JK 알림",{
+          body:a.body||"새로운 정보가 업데이트되었습니다.",
+          icon:"/icons/jk-invest-192.png?v=1.0.0",
+          badge:"/icons/jk-invest-192.png?v=1.0.0",
+          tag:"jk-"+String(a.id||"latest").slice(0,100),
+          renotify:false,data:{url:a.url||"/"}
+        });
+        await markShown(a.id);
+      }
     }catch(e){
       await self.registration.showNotification("JK 알림",{
         body:"새로운 정보가 업데이트되었습니다. 눌러서 확인하세요.",
