@@ -395,6 +395,8 @@ export class PresaleAlertStore{
       if(!/^[a-zA-Z0-9_-]{1,128}$/.test(uid)||!Number.isSafeInteger(at)||at<=0)continue;
       const state=await this.state.storage.get("approval:send:"+uid+":"+at);
       if(state)states[uid]={email:state.email||"pending",push:state.push||"pending",
+        emailProvider:state.emailProvider==="gmail"?"gmail":state.emailProvider==="resend"?"resend":null,
+        emailError:state.email==="failed"?clean(state.emailError,120):null,
         delivered:Number(state.delivered||0),updatedAt:state.updatedAt||null};
     }
     return json(request,{ok:true,states});
@@ -617,7 +619,7 @@ export class PresaleAlertStore{
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
       }
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.2.1",subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.2.2",subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
