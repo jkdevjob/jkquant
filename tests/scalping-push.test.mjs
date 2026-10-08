@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {PresaleAlertStore} from "../worker/presale-alert/src/index.js";
+import workerMain, {PresaleAlertStore} from "../worker/presale-alert/src/index.js";
 
 function fakeStore(){
   const state=new Map();
@@ -76,4 +76,19 @@ test("기존 JOB/분양 수신 보존 · 전략별 설정 · 앱 이동 확인",
   const opening=readFileSync(new URL("../worker/opening-scheduler/src/index.js",import.meta.url),"utf8");
   assert.match(alert,/await webPush\(env/);
   assert.match(opening,/await notifyOpeningWebPush\(env/);
+});
+
+test("Cloudflare 무료 Cron 한 개로 IPO 08:10 KST와 기존 :07/:37 수집을 정확히 분기한다",()=>{
+  const schedule=JSON.parse(readFileSync(new URL("../worker/presale-alert/wrangler.jsonc",import.meta.url),"utf8"));
+  assert.deepEqual(schedule.triggers.crons,["7,10,37 * * * *"]);
+  function run(iso){
+    const paths=[],ctx={waitUntil(p){void p.catch(()=>{});}};
+    const env={ALERT_STORE:{idFromName(x){return x},get(){return {fetch(r){paths.push(new URL(r.url).pathname);return Promise.resolve(new Response("{}"));}}}}};
+    workerMain.scheduled({scheduledTime:Date.parse(iso)},env,ctx);
+    return paths;
+  }
+  assert.deepEqual(run("2026-10-07T23:10:00Z"),["/check-ipo"]);
+  assert.deepEqual(run("2026-10-07T23:07:00Z"),["/check","/check-jobs"]);
+  assert.deepEqual(run("2026-10-07T23:37:00Z"),["/check","/check-jobs"]);
+  assert.deepEqual(run("2026-10-08T00:10:00Z"),[]);
 });
