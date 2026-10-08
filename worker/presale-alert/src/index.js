@@ -16,7 +16,7 @@ export function approvalRecipient(fields){
     &&!(fields.blocked&&fields.blocked.booleanValue===true);
   const email=String(fields&&fields.email&&fields.email.stringValue||"").trim().toLowerCase();
   const approvedAt=Number(fields&&fields.approvedAt&&(fields.approvedAt.integerValue||fields.approvedAt.doubleValue)||0);
-  if(!valid||!approvedAt||!/^([^\\s@]+)@([^\\s@]+\\.[^\\s@]+)$/.test(email)||email.length>254)return null;
+  if(!valid||!approvedAt||!/^([^\s@]+)@([^\s@]+\.[^\s@]+)$/.test(email)||email.length>254)return null;
   return {email,approvedAt};
 }
 async function authUser(request,admin=false){
