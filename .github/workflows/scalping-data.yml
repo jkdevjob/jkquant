@@ -80,5 +80,5 @@ jobs:
           git add data/scalping data/opening-research
           if [ -d data/opening-next-open ]; then git add data/opening-next-open; fi
           git commit -m "data: scalping research $(TZ=Asia/Seoul date +%F) [skip ci]"
-          git pull --rebase origin scalping-data
-          git push origin scalping-data
+          bash .app/scripts/push-scalping-data.sh
+

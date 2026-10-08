@@ -38,6 +38,9 @@ jobs:
       - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
         run: node scripts/check-sticky-layout.cjs
 
+      - name: 연구 데이터 동시 저장 충돌·이력 보존 검사
+        run: node scripts/test-data-push-race.cjs
+
       - name: 연구 Python 문법 검사
         run: |
           python -m py_compile scripts/backtest_opening_rebreak.py

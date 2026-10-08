@@ -22,7 +22,6 @@ on:
       - "worker/daytrading-scheduler/**"
       - "functions/api/daytrading-research.js"
       - "functions/api/daytrading-summary.js"
-      - "scalping.html"
 
 permissions:
   contents: write
@@ -118,8 +117,7 @@ jobs:
             git add data/daytrading-universe
             if ! git diff --cached --quiet; then
               git commit -m "data: daytrading universe $DATE [skip ci]"
-              git pull --rebase origin scalping-data
-              git push origin scalping-data
+              bash .app/scripts/push-scalping-data.sh
             fi
             exit 0
           fi
@@ -174,5 +172,5 @@ jobs:
             exit 0
           fi
           git commit -m "data: daytrading research $DATE [skip ci]"
-          git pull --rebase origin scalping-data
-          git push origin scalping-data
+          bash .app/scripts/push-scalping-data.sh
+

@@ -234,8 +234,7 @@ jobs:
               return 0
             fi
             git commit -m "data: opening baseline+shadow $DATE [skip ci]"
-            git pull --rebase origin scalping-data
-            git push origin scalping-data
+            bash .app/scripts/push-scalping-data.sh
 
           }
 
@@ -288,8 +287,8 @@ jobs:
           git add "$OUTCSV" data/scalping-trend
           if ! git diff --cached --quiet; then
             git commit -m "data: rebuild cumulative opening trades [skip ci]"
-            git pull --rebase origin scalping-data
-            git push origin scalping-data
+            bash .app/scripts/push-scalping-data.sh
           else
             echo "누적 시초가 매매 CSV 변경 없음"
           fi
+
