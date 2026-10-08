@@ -179,3 +179,33 @@ test("Gmail mailer reports provider rejection rather than false sent",async()=>{
     assert.match(j.emailError,/quota/);
   }finally{undo();}
 });
+
+test("owner-only approval status exposes safe failed-mail diagnostics but never reveals provider secrets",async()=>{
+  const {app,values}=store({});
+  const approvalAt=1730000000300;
+  values.set("approval:send:"+userUid+":"+approvalAt,{
+    email:"failed",emailProvider:"gmail",
+    emailError:"send failed: quota exceeded",push:"not_subscribed",delivered:0,
+    updatedAt:"2026-10-08T04:00:00Z"
+  });
+  const attacker=await jwt("other-user","other@example.com");
+  const denied=await app.approvalStatus(req("/approval/status",{items:[{uid:userUid,approvedAt}]},attacker));
+  assert.equal(denied.status,403);
+  const admin=await jwt("admin-uid",adminEmail);
+  const response=await app.approvalStatus(req("/approval/status",{items:[{uid:userUid,approvedAt}]},admin));
+  assert.equal(response.status,200);
+  const result=(await response.json()).states[userUid];
+  assert.equal(result.email,"failed");
+  assert.equal(result.emailProvider,"gmail");
+  assert.equal(result.emailError,"send failed: quota exceeded");
+  assert.equal(result.push,"not_subscribed");
+  assert.equal(result.delivered,0);
+  assert.equal(result.emailRecipient,undefined);
+  assert.equal(result.secret,undefined);
+  values.set("approval:send:"+userUid+":"+approvalAt,{
+    ...values.get("approval:send:"+userUid+":"+approvalAt),
+    email:"sent",emailError:"old stale error"
+  });
+  const accepted=await app.approvalStatus(req("/approval/status",{items:[{uid:userUid,approvedAt}]},admin));
+  assert.equal((await accepted.json()).states[userUid].emailError,null);
+});
