@@ -11800,6 +11800,17 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
      && /#u_body \.htable-wrap \+ \.note\{/.test(adm)
      && !/\.htable\{border-collapse:separate/.test(adm.slice(0,adm.indexOf('#u_body .htable'))));
 
+  ok('관리자 무한매수 내장 기본 큰수20%는 운영·백테 기본과 같다 (기존 사용자 재지정값은 보존)',
+     /inf:\{ticker:'SOXL',div:20,target:20,big:20,rows:3/.test(adm)
+     && /const IM_BIG_DEFAULT=20;/.test(idx)
+     && /const IM_BIG_DEFAULT=20;/.test(bt)
+     && /strategyDefaultOverrides:strategyOverrides/.test(adm));
+  ok('관리자 승인메일: 메일 실패 원인·발신 제공자는 운영자 목록에만 안전하게 표시',
+     /st\.email==='failed'&&st\.emailError/.test(adm)
+     && /st\.emailProvider==='gmail'/.test(adm)
+     && /el\.textContent=st\?/.test(adm)
+     && !/el\.innerHTML=st\?/.test(adm));
+
   // ── 관리자 — 승인 화면 (목록 순서·상태·단추·쓰기) ──
   { const uSrc=adm.slice(adm.indexOf('const ACC_LABEL='), adm.indexOf('// ── 2. 전략 기본값'));
     const helpers=["const ADMIN_EMAILS=['jk82investing@gmail.com'];", (adm.match(/const normEmail=.*\n/)||[''])[0],
