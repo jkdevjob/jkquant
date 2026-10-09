@@ -24,8 +24,8 @@ canvas.gpt-chart{width:100%!important;max-height:330px}
 @media(max-width:760px){.gpt-grid{grid-template-columns:1fr 1fr}.gpt-two{grid-template-columns:1fr}.gpt-head{display:block}.gpt-status{display:inline-block;margin-top:8px}}
 </style>
 <div class="gpt-head">
- <div><div class="gpt-title">⚡ GPT 부동산 퀀트 <span class="gpt-ver">v1.0.0</span></div>
- <div class="gpt-desc">대전·세종 장기 가격자료를 학습해 패턴을 규칙화하고, 같은 규칙을 과거에 백테스트한 뒤 현재를 모의 평가합니다. 클로드 분석/엔진은 사용하지 않습니다.</div></div>
+ <div><div class="gpt-title">⚡ GPT 부동산 투자판단 <span class="gpt-ver">v1.1.0</span></div>
+ <div class="gpt-desc">후보의 가격·필요자금을 확인하고, 관심·보유 단지의 매수 계획과 매도 조건을 기록합니다.</div></div>
  <div id="gptReStatus" class="gpt-status">데이터 불러오는 중</div>
 </div>
 <div class="gpt-nav" id="gptReNav">
@@ -185,11 +185,14 @@ async function boot(){
   try{
     const data=await REGPT.load();
     window.__REGPT_DATA__=data;
+    window.dispatchEvent(new CustomEvent("regpt-market"));
     renderOverview(data);renderPattern(data);renderBacktest(data);renderPaper(data);renderRank(data);renderData(data);drawHistory(data);
     const ok=(data.daejeon||data.sejong);
     st.textContent=ok?"실데이터 연결됨":"가격데이터 없음";
     st.className="gpt-status "+(ok?"ok":"err");
   }catch(e){
+    window.__REGPT_MARKET_ERROR__=String(e.message||e);
+    window.dispatchEvent(new CustomEvent("regpt-market"));
     st.textContent="불러오기 실패";st.className="gpt-status err";
     $("#gptOverview").innerHTML='<div class="gpt-warn">GPT 부동산 데이터를 불러오지 못했습니다: '+esc(e.message||e)+'</div>';
     $("#gptData").innerHTML='<div class="gpt-warn">API 연결을 확인해 주세요. 클로드 탭에는 영향이 없습니다.</div>';

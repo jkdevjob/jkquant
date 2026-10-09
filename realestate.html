@@ -23,12 +23,31 @@ main{padding:22px 0 70px}.hero{margin-bottom:14px}.hero h2{font-size:23px;margin
 /* 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다 (판정은 jk-access.js 한 곳 · 공모주·JOB 과 같은 글자) */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { initializeFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDomain:"jk-invest.firebaseapp.com",projectId:"jk-invest",
   storageBucket:"jk-invest.firebasestorage.app",messagingSenderId:"1024066323251",appId:"1:1024066323251:web:23d557527866205f01f446"});
 const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"")||(/Macintosh/i.test(navigator.userAgent||"")&&(navigator.maxTouchPoints||0)>1);   // 아이폰·아이패드가 '데스크탑 웹사이트 요청'으로 맥처럼 보여도 터치면 iOS(2026-10-07 진단: Macintosh UA → auto-detect → DB 원장 멈춤)
 const auth=getAuth(app),db=initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
-JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{});
+// 개인 부동산 계획은 승인된 본인의 하위 문서에만 저장한다. 기존 투자 원장을 덮어쓰지 않는다.
+JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{
+  onUser(){window.REGPT_ACCOUNT=null;window.dispatchEvent(new CustomEvent("regpt-account"));},
+  onOk(user){
+    const ref=doc(db,"users",user.uid,"realestateGpt","notebook");
+    const mine=()=>{if(auth.currentUser?.uid!==user.uid)throw new Error("로그인 계정이 바뀌었습니다. 다시 불러오세요.");};
+    window.REGPT_ACCOUNT={uid:user.uid,
+      async load(){mine();const s=await getDoc(ref);mine();return s.exists()?s.data():{schemaVersion:1,revision:0,settings:{},items:[]};},
+      async save(next,expectedRevision){
+        mine();return runTransaction(db,async tx=>{
+          mine();const s=await tx.get(ref),revision=s.exists()?(s.data().revision||0):0;mine();
+          if(revision!==expectedRevision)throw new Error("다른 기기에서 기록이 바뀌었습니다. 다시 불러온 뒤 저장하세요.");
+          const saved={...next,schemaVersion:1,revision:revision+1,updatedAt:new Date().toISOString()};
+          tx.set(ref,saved);return saved;
+        });
+      }
+    };
+    window.dispatchEvent(new CustomEvent("regpt-account"));
+  }
+});
 </script>
 <link rel="stylesheet" href="/jk-mobile.css?v=1.0.1">
 
@@ -41,7 +60,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.8.6</span></h1></div>
+  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.9.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -60,25 +79,27 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </div></div></header>
 
 <main><div class="wrap">
-  <div class="hero"><h2>부동산</h2><div class="sub">클로드 · 지피티 분석을 탭으로 나눠 봅니다.</div></div>
+  <div class="hero"><h2>부동산</h2><div class="sub">오늘 확인할 일부터 매수 계획 · 보유 · 매도 기록까지.</div></div>
   <div class="tabs" id="tabs">
-    <button class="tab on" data-tab="claude">🤖 클로드</button>
-    <button class="tab" data-tab="gpt">⚡ 지피티</button>
+    <button class="tab" data-tab="claude">🤖 클로드</button>
+    <button class="tab on" data-tab="gpt">⚡ 지피티</button>
   </div>
-  <section class="pane" id="pane-claude"><div id="rec-root" class="rec">클로드 분석을 불러오는 중…</div></section>
+  <section class="pane" id="pane-claude" hidden><div id="rec-root" class="rec">클로드 분석을 불러오는 중…</div></section>
   <!-- 🤖 클로드 탭 전용 — 계산 realestate-claude-engine.js(지수 분석) · realestate-claude-apt.js(아파트 매매 전략) · 화면 realestate-claude.js · 자료 data/realestate/claude/ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <script src="/realestate-claude-engine.js" defer></script>
   <script src="/realestate-claude-apt.js" defer></script>
   <script src="/realestate-claude.js" defer></script>
-  <section class="pane" id="pane-gpt" hidden><div id="gpt-re-root">GPT 부동산 분석을 불러오는 중…</div></section>
+  <section class="pane" id="pane-gpt"><div id="gpt-re-root">GPT 부동산 분석을 불러오는 중…</div></section>
   <!-- ⚡ GPT 탭 전용 — 클로드 엔진/자료와 분리 -->
   <script src="/realestate-gpt-engine.js" defer></script>
   <script src="/realestate-gpt.js" defer></script>
+  <script src="/realestate-gpt-decision-engine.js?v=1.0.0" defer></script>
   <script src="/realestate-gpt-presale.js" defer></script>
   <script src="/realestate-gpt-presale-alert.js" defer></script>
   <script src="/realestate-gpt-strategy-engine.js" defer></script>
   <script src="/realestate-gpt-strategy.js" defer></script>
+  <script src="/realestate-gpt-decision.js?v=1.0.0" defer></script>
 </div></main>
 
 <script>

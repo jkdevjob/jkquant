@@ -147,6 +147,9 @@ jobs:
           python scripts/realestate_claude/test_collect.py
           node scripts/realestate_claude/mutation_test.cjs
 
+      - name: 부동산 GPT 투자판단·자금·계약 기록 값 및 변이 검사
+        run: node --test tests/realestate-decision.test.cjs
+
       - name: D-1 갭하락 · D-3 BTC 급락 값 시험 + 변이 시험
         run: |
           pip install --quiet pandas pyarrow
