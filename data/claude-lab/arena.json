@@ -935,8 +935,8 @@
       "etf_dip_overnight_v1",
       "g_etf_th3.25",
       "g_etf_th4.25",
-      "etf_dip_th35",
       "etf_dip_overnight_th4",
+      "etf_dip_th35",
       "etf_dip_th25",
       "g_etf_th4.75",
       "g_etf_th5.5",
@@ -1842,7 +1842,20 @@
     "g_coin_ma25_s10_hi2_eth",
     "g_coin_ma15_s6_hi20_h15_eth",
     "g_coin_ma20_s99_hi5_h12_both",
-    "g_coin_ma30_s99_hi15_btc"
+    "g_coin_ma30_s99_hi15_btc",
+    "g_coin_ma5_s10_vb0.4_h15_eth",
+    "g_coin_ma25_s6_vb0.5_h21_eth",
+    "g_coin_ma10_s5_vb0.3_h15_eth",
+    "g_coin_ma30_s2_vb0.6_btc",
+    "g_coin_ma20_s6_hi5_eth",
+    "g_coin_ma25_s99_hi2_btc",
+    "g_coin_ma30_s10_hi2_h15_both",
+    "g_coin_ma10_s8_hi3_h15_both",
+    "g_coin_ma40_s6_hi3_h18_both",
+    "g_coin_ma20_s10_hi7_h12_eth",
+    "g_coin_ma50_s10_hi4_h12_btc",
+    "g_coin_ma5_s6_hi2_h15_both",
+    "g_coin_ma30_s8_hi7_h12_eth"
    ],
    "snapshots": [
     {
@@ -1977,11 +1990,11 @@
      "accepted": 0
     },
     "explore": {
-     "tried": 423,
+     "tried": 468,
      "accepted": 2
     },
     "jump2": {
-     "tried": 176,
+     "tried": 179,
      "accepted": 3
     },
     "struct": {
@@ -2111,26 +2124,6 @@
      ]
     },
     {
-     "version": "g_soxl_r4lt20_ibs0.7_ma150_d4",
-     "name": "RSI(4) < 20 · 종가 위치(IBS) ≤ 0.7 · 150일 평균 위 · 최대 4일",
-     "rule": "확정 종가 RSI(4) < 20 · 종가 위치(IBS) ≤ 0.7 · 150일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 4거래일 · 탭 자금 50%",
-     "params": {
-      "rsiMax": 20.0,
-      "rsiN": 4,
-      "ibsMax": 0.7,
-      "downDays": 0,
-      "ma": 150,
-      "maxHoldDays": 4,
-      "tabSize": 0.5
-     },
-     "source": "generated",
-     "addedAt": "2026-10-07",
-     "op": "neighbor",
-     "parents": [
-      "g_soxl_r4lt20_ibs0.7_ma200_d4"
-     ]
-    },
-    {
      "version": "g_soxl_r2lt20_ibs0.7_dn2_ma200_d5",
      "name": "RSI(2) < 20 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 200일 평균 위 · 최대 5일",
      "rule": "확정 종가 RSI(2) < 20 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
@@ -2250,6 +2243,26 @@
      "op": "jump2",
      "parents": [
       "g_soxl_r2lt15_ibs0.7_dn1_ma200_d5"
+     ]
+    },
+    {
+     "version": "g_soxl_r2lt25_ibs0.5_ma150_d5",
+     "name": "RSI(2) < 25 · 종가 위치(IBS) ≤ 0.5 · 150일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(2) < 25 · 종가 위치(IBS) ≤ 0.5 · 150일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 25.0,
+      "rsiN": 2,
+      "ibsMax": 0.5,
+      "downDays": 0,
+      "ma": 150,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-10",
+     "op": "jump2",
+     "parents": [
+      "g_soxl_r2lt20_ibs0.5_ma200_d5"
      ]
     }
    ],
@@ -2607,6 +2620,21 @@
      },
      "retiredAt": "2026-10-09",
      "reason": "자리 교체 — 신규 g_soxl_r2lt15_ibs0.6_dn1_ma150_d5 가 안정 점수 +0.359 로 +0.316 보다 확실히 나음"
+    },
+    {
+     "version": "g_soxl_r4lt20_ibs0.7_ma150_d4",
+     "name": "RSI(4) < 20 · 종가 위치(IBS) ≤ 0.7 · 150일 평균 위 · 최대 4일",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 4,
+      "ibsMax": 0.7,
+      "downDays": 0,
+      "ma": 150,
+      "maxHoldDays": 4,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-10-10",
+     "reason": "자리 교체 — 신규 g_soxl_r2lt25_ibs0.5_ma150_d5 가 안정 점수 +0.369 로 +0.331 보다 확실히 나음"
     }
    ],
    "tried": [
@@ -2871,7 +2899,29 @@
     "g_soxl_r2lt20_ibs0.4_dn2_ma150_d5",
     "g_soxl_r2lt35_dn1_ma50_d3",
     "g_soxl_r2lt20_ibs0.5_dn2_ma150_d2",
-    "g_soxl_r3lt15_ibs0.7_dn1_ma150_d5"
+    "g_soxl_r3lt15_ibs0.7_dn1_ma150_d5",
+    "g_soxl_norsi_ibs0.2_ma100_d4",
+    "g_soxl_r4lt20_ibs0.4_dn2_ma50_d1",
+    "g_soxl_norsi_ibs0.6_ma0_d5",
+    "g_soxl_r2lt10_ibs0.4_dn1_ma100_d4",
+    "g_soxl_r2lt35_ibs0.4_ma0_d1",
+    "g_soxl_r2lt10_ibs0.3_dn1_ma0_d2",
+    "g_soxl_r3lt10_ibs0.3_dn1_ma50_d3",
+    "g_soxl_r4lt20_ibs0.5_dn2_ma50_d5",
+    "g_soxl_norsi_ibs0.7_ma200_d5",
+    "g_soxl_r2lt20_ibs0.2_ma50_d2",
+    "g_soxl_r2lt20_ibs0.1_dn3_ma50_d1",
+    "g_soxl_r2lt35_ibs0.2_dn1_ma50_d2",
+    "g_soxl_r4lt40_ibs0.4_ma150_d1",
+    "g_soxl_r2lt10_ibs0.4_dn2_ma0_d1",
+    "g_soxl_r2lt20_ibs0.4_ma150_d5",
+    "g_soxl_r4lt25_ibs0.3_ma150_d5",
+    "g_soxl_r3lt15_ibs0.7_ma200_d5",
+    "g_soxl_r3lt20_ibs0.7_dn2_ma200_d4",
+    "g_soxl_r3lt20_ibs0.5_ma200_d5",
+    "g_soxl_r3lt20_ibs0.5_dn1_ma200_d5",
+    "g_soxl_r3lt15_ibs0.7_dn2_ma200_d5",
+    "g_soxl_r3lt25_ibs0.5_ma200_d5"
    ],
    "snapshots": [
     {
@@ -3002,19 +3052,19 @@
    ],
    "ops": {
     "struct": {
-     "tried": 82,
+     "tried": 83,
      "accepted": 6
     },
     "explore": {
-     "tried": 260,
+     "tried": 290,
      "accepted": 0
     },
     "jump2": {
-     "tried": 262,
-     "accepted": 8
+     "tried": 277,
+     "accepted": 9
     },
     "neighbor": {
-     "tried": 75,
+     "tried": 77,
      "accepted": 4
     },
     "cross": {
@@ -4717,7 +4767,44 @@
    "version": "",
    "name": "",
    "reason": "후보 48개 계산 → 기준 통과 35 · 투입 0(교체 0) · 탈락: 손실 기준 미달 11 · 점수 부족 6 · 복제 3 · 매매일 부족 1 · 해마다 일관성 부족 1"
+  },
+  {
+   "date": "2026-10-10",
+   "at": "2026-10-10T04:46+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 44 · 투입 0(교체 0) · 탈락: 점수 부족 9 · 손실 기준 미달 4"
+  },
+  {
+   "date": "2026-10-10",
+   "at": "2026-10-10T04:46+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r2lt25_ibs0.5_ma150_d5",
+   "name": "RSI(2) < 25 · 종가 위치(IBS) ≤ 0.5 · 150일 평균 위 · 최대 5일",
+   "reason": "두 칸 동시 — g_soxl_r2lt20_ibs0.5_ma200_d5 에서 RSI 상한 20→25, 평균 200→150 · 안정 점수 +0.369 (그대로 +0.490 · 이웃 중앙 +0.369) · 매매일 869 · MDD -21.5% · 플러스 12/17해",
+   "op": "jump2"
+  },
+  {
+   "date": "2026-10-10",
+   "at": "2026-10-10T04:46+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 34 · 투입 1(교체 1) · 탈락: 손실 기준 미달 9 · 점수 부족 8 · 해마다 일관성 부족 4 · 매매일 부족 1"
+  },
+  {
+   "date": "2026-10-10",
+   "at": "2026-10-10T04:46+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "g_soxl_r4lt20_ibs0.7_ma150_d4",
+   "name": "RSI(4) < 20 · 종가 위치(IBS) ≤ 0.7 · 150일 평균 위 · 최대 4일",
+   "reason": "자리 교체 — 신규 g_soxl_r2lt25_ibs0.5_ma150_d5 가 안정 점수 +0.369 로 +0.331 보다 확실히 나음"
   }
  ],
- "updatedAt": "2026-10-10T01:33+09:00"
+ "updatedAt": "2026-10-10T04:46+09:00"
 }
