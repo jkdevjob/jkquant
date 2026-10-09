@@ -23,8 +23,8 @@ views.insertBefore(view,views.querySelector('[data-v="data"]')||null);
 const mount=view.querySelector("#gptPresale");
 let DATA=null, city="전체", sort="score";
 let LIVE={configured:false,note:"공식 API 확인 중"};
-let OFFICIAL=[];
-let FIN={id:"",ltv:50,rate:4.0,years:30,costRate:0};
+let OFFICIAL=[],OFFICIAL_DATE=null,OFFICIAL_ERRORS=[];
+let FIN={id:"",ltv:50,rate:4.0,years:30,costRate:2};
 
 const style=document.createElement("style");
 style.textContent=
@@ -83,8 +83,11 @@ function annNorm(r,category){
   };
 }
 async function liveJson(q){
-  const r=await fetch("/api/realestate-gpt-live?"+new URLSearchParams(q),{cache:"no-store"});
-  const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status)); return j;
+  const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),22000);
+  try{
+    const r=await fetch("/api/realestate-gpt-live?"+new URLSearchParams(q),{cache:"no-store",signal:ac.signal});
+    const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status)); return j;
+  }finally{clearTimeout(timer);}
 }
 async function loadModels(a){
   try{
@@ -97,17 +100,20 @@ async function loadModels(a){
   return a;
 }
 async function loadOfficial(){
+  OFFICIAL_ERRORS=[];
   try{
     const s=await liveJson({kind:"status"}); LIVE=s;
     if(!s.configured){render();return}
     const cats=["apt","remndr","opt"], regs=["대전","세종"];
     const jobs=[]; for(const category of cats)for(const region of regs)jobs.push(
-      liveJson({kind:"applyhome",category,mode:"detail",region,from:dateKst(-75),to:dateKst(60),perPage:"200"}).then(j=>(j.payload&&j.payload.data||[]).map(r=>annNorm(r,category))).catch(()=>[])
+      liveJson({kind:"applyhome",category,mode:"detail",region,from:dateKst(-75),to:dateKst(60),perPage:"200"}).then(j=>(j.payload&&j.payload.data||[]).map(r=>annNorm(r,category)))
     );
-    const all=(await Promise.all(jobs)).flat();
+    const results=await Promise.allSettled(jobs),all=[];
+    for(const r of results)if(r.status==="fulfilled")all.push(...r.value);else OFFICIAL_ERRORS.push(String(r.reason.message||r.reason));
     const m=new Map(); for(const a of all)if(a.name)m.set(a.key,a);
     OFFICIAL=[...m.values()].sort((a,b)=>String(b.announce||b.start).localeCompare(String(a.announce||a.start))).slice(0,20);
     await Promise.all(OFFICIAL.slice(0,12).map(loadModels));
+    OFFICIAL_DATE=results.some(r=>r.status==="fulfilled")?dateKst(0):null;
     if(DATA){
       for(const p of DATA.projects){
         const pn=normName(p.name);
@@ -122,7 +128,7 @@ async function loadOfficial(){
       }
     }
     render();
-  }catch(e){LIVE={configured:false,note:"공식 API 연결 실패: "+String(e&&e.message||e),error:true};render()}
+  }catch(e){OFFICIAL_ERRORS.push(String(e.message||e));LIVE={configured:false,note:"공식 API 연결 실패: "+String(e&&e.message||e),error:true};render()}
 }
 function marginClass(v){return !Number.isFinite(v)?"":v>0?"ps-positive":v<0?"ps-negative":"ps-neutral"}
 function daysOld(d){
@@ -156,6 +162,13 @@ function ymShift(back){
 function xmlText(node,tag){const x=node.querySelector(tag);return x&&x.textContent?x.textContent.trim():""}
 function parseRtms(xml,kind){
   const doc=new DOMParser().parseFromString(xml,"application/xml");
+  if(doc.querySelector("parsererror"))throw new Error("실거래 응답 형식 오류");
+  const code=xmlText(doc,"resultCode");
+  if(code&&!["00","000","0"].includes(code))throw new Error(xmlText(doc,"resultMsg")||"실거래 조회 오류");
+  if(window.REDecision)return [...doc.querySelectorAll("item")].map(it=>{
+    const fields=Object.fromEntries(["aptNm","aptName","umdNm","excluUseAr","dealYear","dealMonth","dealDay","dealAmount","deposit","monthlyRent","floor","cdealType","cdealDay","cdealDe","dealingGbn"].map(k=>[k,xmlText(it,k)]));
+    return REDecision.normaliseRtms(fields,kind);
+  }).filter(Boolean);
   return [...doc.querySelectorAll("item")].map(it=>{
     const apt=xmlText(it,"aptNm")||xmlText(it,"apartment")||xmlText(it,"aptName");
     const area=Number(xmlText(it,"excluUseAr")||xmlText(it,"exclusiveArea"));
@@ -177,41 +190,40 @@ async function loadMarket(){
   const configs=[...new Map(DATA.projects.filter(p=>p.liveMarket).map(p=>[p.liveMarket.lawd,p.liveMarket])).values()];
   const cache={};
   for(const c of configs){
-    const trades=[],rents=[];
-    for(let m=0;m<3;m++){
+    const trades=[],rents=[],errors=[],jobs=[];
+    for(let m=0;m<4;m++){
       const ymd=ymShift(m);
-      try{
-        const [t,r]=await Promise.all([
-          liveJson({kind:"trade",lawd:c.lawd,ymd}),
-          liveJson({kind:"rent",lawd:c.lawd,ymd})
-        ]);
-        trades.push(...parseRtms(t.payload,"trade"));rents.push(...parseRtms(r.payload,"rent"));
-      }catch(e){}
+      for(const kind of ["trade","rent"])jobs.push({kind,ymd});
     }
-    cache[c.lawd]={trades,rents};
+    const results=await Promise.allSettled(jobs.map(j=>liveJson({kind:j.kind,lawd:c.lawd,ymd:j.ymd}).then(r=>parseRtms(r.payload,j.kind))));
+    results.forEach((r,i)=>{if(r.status==="fulfilled")(jobs[i].kind==="trade"?trades:rents).push(...r.value);else errors.push({kind:jobs[i].kind,ymd:jobs[i].ymd,message:String(r.reason.message||r.reason)});});
+    cache[c.lawd]={trades,rents,errors};
   }
   for(const p of DATA.projects){
     const c=p.liveMarket,x=c&&cache[c.lawd]; if(!c||!x)continue;
-    const lo=(c.targetArea||84)-5,hi=(c.targetArea||84)+5;
-    const sales=x.trades.filter(v=>v.area>=lo&&v.area<=hi&&nameHit(v.apt,c.saleApts)&&Number.isFinite(v.price));
-    const rents=x.rents.filter(v=>v.area>=lo&&v.area<=hi&&nameHit(v.apt,c.rentApts)&&Number.isFinite(v.deposit)&&(!v.monthly||v.monthly===0));
+    p.collectionIncomplete=x.errors.length>0;
+    p.liveErrors=x.errors;
+    const area=c.targetArea||84,tolerance=Math.max(2,area*.04),lo=area-tolerance,hi=area+tolerance;
+    const recent=v=>{const a=window.REDecision?.age(v.date);return a!==null&&a>=0&&a<=90;};
+    const sales=x.trades.filter(v=>recent(v)&&v.area>=lo&&v.area<=hi&&nameHit(v.apt,c.saleApts)&&Number.isFinite(v.price));
+    const rents=x.rents.filter(v=>recent(v)&&v.area>=lo&&v.area<=hi&&nameHit(v.apt,c.rentApts)&&Number.isFinite(v.deposit)&&v.monthly===0);
     const sm=median(sales.map(v=>v.price)),rm=median(rents.map(v=>v.deposit));
-    p.liveStats={saleCount:sales.length,rentCount:rents.length,saleMedian:sm,rentMedian:rm,months:3};
+    p.liveStats={saleCount:sales.length,rentCount:rents.length,saleMedian:sm,rentMedian:rm,months:4,windowDays:90};
     if(sales.length>=3&&Number.isFinite(sm)){
-      p.benchmarks.conservative={label:"국토부 실거래 자동중앙값",price:sm,date:dateKst(0),method:"최근 3개월 지정 비교단지 80~89㎡ "+sales.length+"건 중앙값"};
+      p.benchmarks.conservative={label:"국토부 실거래 자동중앙값",price:sm,date:sales.map(v=>v.date).sort().at(-1),method:"최근 90일 지정 비교단지 동일 면적 "+sales.length+"건 중앙값"};
       p.recentComparables=sales.sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6).map(v=>({name:v.apt,area:v.area,date:v.date,floor:v.floor||"-",price:v.price}));
     }
     if(rents.length>=2&&Number.isFinite(rm)){
-      p.benchmarks.jeonse={label:"국토부 전세 자동중앙값",price:rm,date:dateKst(0),method:"최근 3개월 지정 비교단지 순수전세 "+rents.length+"건 중앙값"};
+      p.benchmarks.jeonse={label:"국토부 전세 자동중앙값",price:rm,date:rents.map(v=>v.date).sort().at(-1),method:"최근 90일 지정 비교단지 순수전세 "+rents.length+"건 중앙값"};
     }
   }
   render();
 }
 function officialFeedHtml(){
-  const state=LIVE.configured?'<span class="ps-badge open">공식 API 자동수집 ON</span>':'<span class="ps-badge closed">공식 API 키 필요</span>';
+  const state=OFFICIAL_ERRORS.length?'<span class="ps-badge closed">청약 공고 연결 확인 필요</span>':LIVE.configured?'<span class="ps-badge open">공식 API 자동수집 ON</span>':'<span class="ps-badge closed">공식 API 키 필요</span>';
   if(!LIVE.configured)return '<div class="gpt-panel"><h4>공식 자동수집</h4><div class="ps-mini">'+state+' '+esc(LIVE.note||"")+'<br>Cloudflare Pages 환경변수 <b>DATA_GO_KR_API_KEY</b>에 공공데이터포털 키를 넣으면 청약홈 공고가 자동으로 붙습니다. 키 값은 화면/응답에 노출하지 않습니다.</div></div>';
   const rows=OFFICIAL.slice(0,15).map(a=>'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.region)+'</td><td>'+esc(a.category==="apt"?"일반":a.category==="remndr"?"무순위/잔여":"임의공급")+'</td><td>'+esc(a.status)+'</td><td>'+esc(a.start||a.announce)+'</td><td>'+esc(a.end)+'</td><td>'+ (a.minPrice?won(a.minPrice)+(a.maxPrice!==a.minPrice?"~"+won(a.maxPrice):""):"가격형 수집 전") +'</td></tr>').join("");
-  return '<div class="gpt-panel"><h4>공식 자동수집 피드</h4><div class="ps-mini">'+state+' · 최근 공고를 청약홈 OpenAPI에서 읽고 주택형별 최고분양가까지 자동 결합합니다.</div><div class="gpt-table-wrap"><table class="gpt-table"><thead><tr><th>단지</th><th>지역</th><th>구분</th><th>상태</th><th>접수시작</th><th>접수종료</th><th>최고분양가 범위</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7">최근 대전·세종 공고 없음</td></tr>')+'</tbody></table></div></div>';
+  return '<div class="gpt-panel"><h4>공식 자동수집 피드</h4><div class="ps-mini">'+state+' · '+esc(OFFICIAL_ERRORS.length?"일부 공고 조회에 실패했습니다: "+[...new Set(OFFICIAL_ERRORS)].join(" · "):"최근 공고를 청약홈 OpenAPI에서 읽고 주택형별 최고분양가까지 자동 결합합니다.")+'</div><div class="gpt-table-wrap"><table class="gpt-table"><thead><tr><th>단지</th><th>지역</th><th>구분</th><th>상태</th><th>접수시작</th><th>접수종료</th><th>최고분양가 범위</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7">'+(OFFICIAL_ERRORS.length?"공고를 확인하지 못했습니다. 공고 없음으로 판단하지 마세요.":"최근 대전·세종 공고 없음")+'</td></tr>')+'</tbody></table></div></div>';
 }
 function annuity(principal,annual,years){
   const r=annual/100/12,n=Math.max(1,Math.round(years*12)); if(!principal)return 0;if(!r)return principal/n;
@@ -259,6 +271,17 @@ function projectHtml(p){
 }
 function render(){
   if(!DATA)return;
+  // 수집 시점의 '예정'을 그대로 표시하지 않는다. 마감일이 지난 공고는 당일 기준으로 닫는다.
+  const currentDate=dateKst(0);
+  for(const p of DATA.projects){
+    const o=p.offer||{};
+    if(o.applyEnd&&o.applyEnd<currentDate)o.status="마감";
+    else if(o.applyStart&&o.applyStart>currentDate)o.status="예정";
+    else if(o.applyStart&&o.applyEnd&&o.applyStart<=currentDate&&currentDate<=o.applyEnd)o.status="접수중";
+  }
+  window.__REGPT_PRESALES__=DATA;
+  window.__REGPT_OFFICIAL__={date:OFFICIAL_DATE,rows:OFFICIAL,errors:OFFICIAL_ERRORS};
+  window.dispatchEvent(new CustomEvent("regpt-presales"));
   let rows=DATA.projects.filter(p=>city==="전체"||p.city===city).map(p=>({p,x:calc(p)}));
   rows.sort((a,b)=>{
     if(sort==="price")return a.x.eff-b.x.eff;
@@ -292,6 +315,8 @@ async function load(){
     DATA=await r.json();
     window.__REGPT_PRESALES__=DATA;
     render();
+    await loadOfficial();
+    await loadMarket();
   }catch(e){
     mount.innerHTML='<div class="gpt-warn">신규분양 데이터를 불러오지 못했습니다: '+esc(e&&e.message||e)+'</div>';
   }

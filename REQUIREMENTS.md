@@ -26,6 +26,7 @@
 | R-08 | 단타/연구 | 미래봉 사용 금지. 신호 원본·전략버전·파라미터·사후 결과 보존. 장마감 재구성과 실시간 원본 구분. 비용 포함 성과, 표본수 부족 시 검증 완료 주장 금지 | `scalping.html`, 관련 API/수집기/워크플로 및 테스트 |
 | R-09 | JOB/알림 | 공고 삭제·마감 여부 검증과 수집기→DB→페이지 매핑 유지; 신규 공고 알림은 정확한 페이지로 이동. 알림은 수신자 동의·기기 지원 여부 구분 | `job.html`, 수집 스크립트·Workflow, `settings-notifications.js` |
 | R-10 | 가입 승인 알림 | 승인 대상 본인의 등록 이메일로 Gmail 발신 시도. 웹푸시는 사전 동의한 **해당 사용자 기기만**. 관리자 발송 상태/실패 원인 확인, 승인 건별 중복방지, 키 비공개 | `admin.html`, `worker/presale-alert/src/index.js`, `integrations/gmail-approval/Code.gs`, 보안 테스트 |
+| R-11 | 부동산 투자판단 | 모바일 첫 화면에서 오늘 할 일 → 후보 가격·자금 → 관심 계획 → 실제 매수 등록 → 보유·매도 기록으로 연결. 미확인 비용·실거래 누락·오래된 자료는 보류, 마감일은 한국 날짜로 판정. 공개 실거래와 실제 매물/계약 가격 구분. 본인의 승인 사용자 하위 문서에만 기록하고 계약 이벤트 보존 및 revision 충돌 확인. 가격 한도는 사용자 가정으로 표시 | realestate.html, realestate-gpt-decision*.js, realestate-gpt-presale.js, tests/realestate-decision.test.cjs |
 
 ## 3. 공식 상태의 의미
 
