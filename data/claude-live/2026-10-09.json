@@ -1,0 +1,81 @@
+{
+  "ok": true,
+  "date": "2026-10-09",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-09",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-09T15:05:56.998Z",
+    "updatedAt": "2026-10-09T15:05:57.773Z",
+    "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1791558345000,
+        "capturedAt": "2026-10-09T15:05:56.916Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:crypto:sent",
+        "scheduledTime": 1791558345000,
+        "capturedAt": "2026-10-09T15:05:57.692Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-10-09",
+        "capturedAt": "2026-10-09T15:05:56.916Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타",
+          "date": "2026-10-09",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 2,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "tg:crypto:sent",
+        "date": "2026-10-09",
+        "capturedAt": "2026-10-09T15:05:57.692Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 379,
+          "error": null
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
