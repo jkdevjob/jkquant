@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-09T15:48:37.779076+09:00",
+  "generatedAt": "2026-10-10T00:30:57.349261+09:00",
   "mode": "prospective-shadow-paper",
   "paperStart": "2026-10-01",
   "designEnd": "2026-09-30",
@@ -11,7 +11,7 @@
   "executionRule": "completed-bar signal -> next-bar-open fill; same-bar stop/target -> stop first; explicit friction; no broker orders",
   "promotionRule": "No automatic promotion. New version only after prospective review; never rewrite historical rules.",
   "latestSourceDates": {
-    "opening": "2026-10-08",
+    "opening": "2026-10-09",
     "daytrading": "2026-10-08",
     "crypto": "2026-10-08",
     "soxl": "2026-10-08"
@@ -82,20 +82,20 @@
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 5,
-        "trades": 2,
-        "tradeDays": 2,
-        "winRatePct": 0.0,
-        "avgTradePnlPct": -1.9570715194006207,
-        "avgDailyReturnPct": -0.39141430388012416,
+        "days": 6,
+        "trades": 3,
+        "tradeDays": 3,
+        "winRatePct": 33.33333333333333,
+        "avgTradePnlPct": -1.1075388733381824,
+        "avgDailyReturnPct": -0.2768847183345456,
         "plus1Days": 0,
         "plus1DayRatePct": 0.0,
         "plus5Weeks": 0,
-        "weeklyAvgPct": -0.9785360961123035,
+        "weeklyAvgPct": -0.8322096813401125,
         "lossDayAvgPct": -0.9785357597003104,
         "worstDayPct": -0.9866981132075475,
-        "profitFactor": 0.0,
-        "compoundReturnPct": -1.9474968633106493,
+        "profitFactor": 0.1511253965230298,
+        "compoundReturnPct": -1.657493633143059,
         "maxDrawdownPct": -1.9474968633106493,
         "daily": [
           {
@@ -122,6 +122,11 @@
             "date": "2026-10-08",
             "returnPct": 0.0,
             "trades": 0
+          },
+          {
+            "date": "2026-10-09",
+            "returnPct": 0.2957632093933472,
+            "trades": 1
           }
         ],
         "plus1DaysPerYear": 0.0,
@@ -267,6 +272,29 @@
           "frictionPct": 1.1733962264150943,
           "pnlPct": -1.973396226415095,
           "reason": "stop"
+        },
+        {
+          "date": "2026-10-09",
+          "strategy": "opening",
+          "strategyVersion": "opening_gapdown_reclaim_v1",
+          "code": "036930",
+          "name": "주성엔지니어링",
+          "rank": 9,
+          "signalTime": 933,
+          "entryTime": 934,
+          "entryPrice": 255500.0,
+          "gapPct": -4.174573055028463,
+          "flushPct": -2.970297029702973,
+          "signalVwap": 251746.40171618195,
+          "volumeRatio": 2.736612198673354,
+          "decisionReason": "gapdown+first5_flush+open_vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 944,
+          "exitPrice": 260099.0,
+          "grossPnlPct": 1.8000000000000016,
+          "frictionPct": 1.2084735812133072,
+          "pnlPct": 0.5915264187866944,
+          "reason": "take_profit"
         }
       ]
     },
@@ -3233,18 +3261,18 @@
   "equalWeightPortfolio": {
     "days": 9,
     "trades": 9,
-    "tradeDays": 5,
-    "winRatePct": 11.11111111111111,
-    "avgTradePnlPct": -0.07706857798912642,
-    "avgDailyReturnPct": -0.07706857798912642,
+    "tradeDays": 6,
+    "winRatePct": 22.22222222222222,
+    "avgTradePnlPct": -0.06885293328375566,
+    "avgDailyReturnPct": -0.06885293328375566,
     "plus1Days": 0,
     "plus1DayRatePct": 0.0,
     "plus5Weeks": 0,
-    "weeklyAvgPct": -0.34729686535062143,
+    "weeklyAvgPct": -0.3104616690225659,
     "lossDayAvgPct": -0.24904481667293094,
     "worstDayPct": -0.5091745283018853,
-    "profitFactor": 0.30372250749042784,
-    "compoundReturnPct": -0.6933875795744227,
+    "profitFactor": 0.3779469014530643,
+    "compoundReturnPct": -0.619959473565812,
     "maxDrawdownPct": -0.7265403535172243,
     "daily": [
       {
@@ -3289,7 +3317,7 @@
       },
       {
         "date": "2026-10-09",
-        "returnPct": 0.0,
+        "returnPct": 0.0739408023483368,
         "trades": 1
       }
     ],
