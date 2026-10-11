@@ -194,7 +194,7 @@
       "schema": 1,
       "candidateFactory": "prospective-mixed-radix-v2",
       "minimumActive": 10,
-      "candidatePoolSize": 21,
+      "candidatePoolSize": 22,
       "activeCandidates": [
         "vol_1.0",
         "vol_1.5",
@@ -217,7 +217,8 @@
         "combo_novwap_vol15",
         "hold_45m",
         "entry_by_2100",
-        "cf_g0001"
+        "cf_g0001",
+        "cf_g0002"
       ],
       "generatedPool": [
         {
@@ -230,6 +231,20 @@
             "entry_cutoff_min": 1075
           },
           "createdAfter": "2026-10-03",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        },
+        {
+          "name": "cf_g0002",
+          "generation": 2,
+          "params": {
+            "range_bars": 2,
+            "volume_mult": 0.9,
+            "max_hold_bars": 6,
+            "entry_cutoff_min": 1075
+          },
+          "createdAfter": "2026-10-10",
           "status": "incubating",
           "liveCompatible": true,
           "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
@@ -249,10 +264,24 @@
           "status": "incubating",
           "liveCompatible": true,
           "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        },
+        {
+          "name": "cf_g0002",
+          "generation": 2,
+          "params": {
+            "range_bars": 2,
+            "volume_mult": 0.9,
+            "max_hold_bars": 6,
+            "entry_cutoff_min": 1075
+          },
+          "createdAfter": "2026-10-10",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
         }
       ],
-      "factoryGeneration": 1,
-      "lastFactoryDate": "2026-10-03",
+      "factoryGeneration": 2,
+      "lastFactoryDate": "2026-10-10",
       "retired": [
         {
           "name": "no_vwap",
@@ -273,19 +302,19 @@
         "entry_by_1800": 0,
         "stop_0.6_tp_1.2": 0
       },
-      "lastEvidenceDate": "2026-10-09",
+      "lastEvidenceDate": "2026-10-10",
       "leader": {
         "name": "hold_30m",
         "consecutiveResearchSessions": 7,
         "requiredResearchSessions": 7,
         "dates": [
-          "2026-10-03",
           "2026-10-04",
           "2026-10-05",
           "2026-10-06",
           "2026-10-07",
           "2026-10-08",
-          "2026-10-09"
+          "2026-10-09",
+          "2026-10-10"
         ]
       },
       "autoPromotionCandidate": null,
@@ -407,5 +436,5 @@
       "replacementRule": "퇴출 즉시 정적+자동생성 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지"
     }
   },
-  "updatedAt": "2026-10-11T01:12:39.816778+09:00"
+  "updatedAt": "2026-10-12T01:15:23.753358+09:00"
 }
