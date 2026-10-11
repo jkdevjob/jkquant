@@ -69,7 +69,7 @@ def minute_history(code: str, date_yyyymmdd: str):
             for b in j.get("bars") or []:
                 t = str(b.get("t") or "")
                 hhmmss = t[-6:] if len(t) >= 6 else ""
-                if "090000" <= hhmmss <= "100000":
+                # Reject stale bars returned by the API for a different session.\n                # Unknown/short timestamps are rejected rather than relabelled as today.\n                bar_date = t[:8] if len(t) >= 14 else ""\n                if bar_date == date_yyyymmdd and "090000" <= hhmmss <= "100000":
                     bars.append({
                         "t": t,
                         "o": float(b.get("o") or 0),
@@ -91,7 +91,7 @@ def main():
         return backfill([x for x in sys.argv[1:] if x != '--backfill'])
     now = datetime.now(KST)
     date_iso = os.environ.get("JKQ_DATE", now.strftime("%Y-%m-%d"))
-    date_compact = date_iso.replace("-", "")
+    date_compact = date_iso.replace("-", "")\n    session_day = datetime.strptime(date_iso, "%Y-%m-%d").date()\n    if session_day.weekday() >= 5:\n        print(f"{date_iso}: weekend; no Korean equity session.")\n        return 0
 
     u = get_json(f"/api/universe?limit={LIMIT}", timeout=90)
     universe = u.get("universe") or []
