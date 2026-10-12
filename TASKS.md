@@ -2,6 +2,8 @@
 
 ## 2026-10-12 · GPT 단타 점검
 
+- 후속 운영 보완(v1.43.12): 최근 조회 119일은 정상이나 BTC 370일 전체 장부가 5초 제한에 걸리는 것을 재현했다. 전체 요청만 15초로 조정하며 최종 검증/운영 결과는 [후속 PR](https://github.com/jkdevjob/jkquant/pulls?q=head%3Afix%2Fgpt-scalping-history-budget-20261012)을 확인한다.
+
 - 요청: 단타 메뉴 전체 점검 후 필요한 수정·업데이트. 시작 기준 `main@95a8e09d`.
 - 확인된 실패: `collect_scalping_data.py`·`daily1_shadow_lab.py` Python 문법 오류, BTC 누적 이력 API 35초 무응답, 그래프 연구 기준일과 최신 완료 모의장부의 불일치.
 - 구현: 문법 복구·수집 개장일/오류 판정·누적 이력 병렬 조회와 제한시간·원천 오류 표시·최근 완료 장부 그래프 반영·KST 표시·자동 갱신 오류/장부 없음 구분.
