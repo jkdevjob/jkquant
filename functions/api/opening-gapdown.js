@@ -94,15 +94,34 @@ async function vtsOrder(origin,env,date,side,x,qty,meta={}){
   return rec;
 }
 // 매수 직전 계좌 현금 확인 — 같은 모의계좌를 다른 전략도 쓰므로(2026-10-07 ② 주문 '주문가능금액 부족' 거절) 살 수 있는 만큼만 산다.
-// 조회가 실패하거나 늦으면(2.5초) 계획 수량 그대로 낸다(주문을 막지 않는다). 주문 재시도는 여전히 없다.
-async function buyable(origin,env,code,timeoutMs=2500){
-  const ac=new AbortController(),t=setTimeout(()=>ac.abort(),timeoutMs);
+// 2026-10-12 ② 는 조회가 2.5초 제한에 걸려(모의투자 서버 지연) 계획 수량 835주를 그대로 냈다가 같은 사유로 다시 거절됐다 →
+// 제한 6초 · 실패하면 0.7초 쉬고 조회만 한 번 더(읽기라 안전). 마감이 있으면(① 08:59:40) 주문 몫 4초를 남긴 시간 안에서만 묻는다.
+// 끝내 모르면 계획 수량 그대로 낸다(주문을 막지 않는다). 주문 재시도는 여전히 없다.
+const BUYABLE_TIMEOUT_MS=6000,BUYABLE_RETRY_GAP_MS=700,ORDER_RESERVE_MS=4000;
+const secOfHms=h=>Math.floor(h/10000)*3600+Math.floor(h/100)%100*60+h%100;
+async function buyable(origin,env,code,timeoutMs,fetchImpl){
+  const t0=Date.now(),ac=new AbortController(),t=setTimeout(()=>ac.abort(),timeoutMs);
   try{
-    const r=await fetch(origin+"/api/kis?op=buyable&env=vts&market=kr&code="+encodeURIComponent(code),{headers:{"x-autotrade-key":env.AUTOTRADE_KEY,"Accept":"application/json"},signal:ac.signal});
+    const r=await fetchImpl(origin+"/api/kis?op=buyable&env=vts&market=kr&code="+encodeURIComponent(code),{headers:{"x-autotrade-key":env.AUTOTRADE_KEY,"Accept":"application/json"},signal:ac.signal});
     const j=await r.json().catch(()=>({}));
-    return r.ok&&!j.error?j:{error:j.error||("HTTP "+r.status)};
-  }catch(e){return {error:String(e.message||e)};}
+    return r.ok&&!j.error?{...j,ms:Date.now()-t0}:{error:j.error||("HTTP "+r.status),ms:Date.now()-t0};
+  }catch(e){return {error:ac.signal.aborted?"응답 지연 "+(timeoutMs/1000).toFixed(1)+"초 초과":String(e.message||e),ms:Date.now()-t0};}
   finally{clearTimeout(t);}
+}
+// 조회 결과 + 시도별 기록(tries: 걸린 ms · 제한 ms · 실패 사유) — 장부에 남아 지연을 나중에 확인할 수 있다.
+// hmsNow · fetchImpl 은 시험용(기본 = 지금 한국시각 · 전역 fetch).
+export async function lookupBuyable(origin,env,code,deadline=0,hmsNow=()=>kstNow().hms,fetchImpl=(u,i)=>fetch(u,i)){
+  const tries=[];let b={error:"마감 임박 — 조회 생략"};
+  for(let i=0;i<2;i++){
+    if(i)await sleep(BUYABLE_RETRY_GAP_MS);
+    const left=deadline?(secOfHms(deadline)-secOfHms(hmsNow()))*1000-ORDER_RESERVE_MS:BUYABLE_TIMEOUT_MS;
+    if(left<1000)break;
+    const limitMs=Math.min(BUYABLE_TIMEOUT_MS,left);
+    b=await buyable(origin,env,code,limitMs,fetchImpl);
+    tries.push(b.error?{ms:b.ms,limitMs,error:b.error}:{ms:b.ms,limitMs});
+    if(!b.error)break;
+  }
+  return {...b,tries};
 }
 export function sizeToBuyable(planned,b){
   planned=Math.max(0,Math.floor(+planned||0));
@@ -112,7 +131,8 @@ export function sizeToBuyable(planned,b){
 }
 // 계획 수량 → 현금 확인 → 0 주면 주문하지 않고 기록만(사유 남김) · 아니면 그 수량으로 주문
 export async function sizedBuy(origin,env,date,x,planned,meta={}){
-  const s=sizeToBuyable(planned,await buyable(origin,env,x.code));
+  const b=await lookupBuyable(origin,env,x.code,meta.deadline);
+  const s={...sizeToBuyable(planned,b),lookup:b.tries};
   if(!(s.qty>0)){
     return {signalId:meta.id||signalId(date,x.code,"buy"),strategy:meta.strategy||"opening_gapdown",strategyVersion:meta.version||GAPDOWN_VERSION,date,side:"buy",code:x.code,name:x.name||x.code,qty:0,
       sizing:s,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",msg:"매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 "+s.planned+"주"}};

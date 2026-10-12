@@ -483,8 +483,59 @@ t("①② 매수 직전 현금 확인: 살 수 있는 만큼만 · 0주면 주�
     can = 210; calls.length = 0;
     const r1 = await F.sizedBuy("https://o", { AUTOTRADE_KEY: "ak" }, "2026-10-07", x, 738, { id: "t1" });
     assert.equal(r1.qty, 210); assert.equal(r1.vts.ok, true); assert.equal(r1.sizing.capped, true);
+    assert.deepEqual(r1.sizing.lookup.map(x => x.limitMs), [6000]);                              // 조회 기록이 장부에 남는다
     assert.equal(calls.filter(u => u.includes("op=order")).length, 1);
   } finally { globalThis.fetch = old; }
+});
+t("①② 매수가능 조회 지연(2026-10-12 ② 2.5초 초과 → 835주 거절 재현): 6초까지 기다림 · 실패하면 조회만 한 번 더 · 마감 안에서만 · 주문은 안 냄", async () => {
+  const env = { AUTOTRADE_KEY: "ak" }, code = "233740";
+  const mk = steps => {                                                       // 조회 응답 차례: {ms, body, status} · ms<0 이면 응답 없음(제한시간까지 매달림)
+    const f = (u, init = {}) => {
+      f.calls.push(String(u)); assert.equal(init.headers["x-autotrade-key"], "ak");
+      const step = steps.shift() || { ms: 0, body: { error: "no plan" }, status: 502 };
+      return new Promise((res, rej) => {
+        const tm = step.ms >= 0 ? setTimeout(() => res(new Response(JSON.stringify(step.body), { status: step.status || 200 })), step.ms) : null;
+        init.signal && init.signal.addEventListener("abort", () => { clearTimeout(tm); rej(new DOMException("The operation was aborted.", "AbortError")); });
+      });
+    };
+    f.calls = []; return f;
+  };
+  const seq = arr => () => arr.length > 1 ? arr.shift() : arr[0];
+  await Promise.all([
+    (async () => {                                                            // ⓐ 제한 6초(옛 2.5초는 느린 모의투자 응답을 끊고 계획 835주를 냈다)
+      const f = mk([{ ms: 0, body: { code, cash: 1000000, qty: 120 } }]);
+      const a = await F.lookupBuyable("https://o", env, code, 0, undefined, f);
+      assert.equal(a.qty, 120); assert.deepEqual(a.tries.map(x => [x.limitMs, x.error]), [[6000, undefined]]);
+      assert.ok(f.calls[0].includes("op=buyable") && f.calls[0].includes("env=vts"));
+    })(),
+    (async () => {                                                            // ⓑ 첫 조회 실패(초당 제한) → 조회만 한 번 더 → 120주(계획 835주가 아니라)
+      const f = mk([{ ms: 0, body: { error: "초당 요청 제한 — 잠시 후 다시" }, status: 502 }, { ms: 0, body: { code, cash: 1000000, qty: 120 } }]);
+      const b = await F.lookupBuyable("https://o", env, code, 0, undefined, f);
+      assert.equal(b.qty, 120); assert.equal(b.tries.length, 2); assert.equal(b.tries[0].error, "초당 요청 제한 — 잠시 후 다시");
+      assert.equal(F.sizeToBuyable(835, b).qty, 120);
+      assert.equal(f.calls.length, 2); assert.ok(f.calls.every(u => u.includes("op=buyable")));          // 읽기만 — 주문은 여기서 나가지 않는다
+    })(),
+    (async () => {                                                            // ⓒ 두 번 다 실패 → 계획 수량 그대로(주문을 막지 않음) · 마지막 실패 사유가 남는다
+      const f = mk([{ ms: 0, body: { error: "e1" }, status: 502 }, { ms: 0, body: { error: "e2" }, status: 502 }]);
+      const c = await F.lookupBuyable("https://o", env, code, 0, undefined, f);
+      assert.equal(c.error, "e2"); assert.deepEqual(c.tries.map(x => x.error), ["e1", "e2"]);
+      assert.equal(F.sizeToBuyable(835, c).qty, 835); assert.ok(F.sizeToBuyable(835, c).note.includes("e2"));
+    })(),
+    (async () => {                                                            // ⓓ ① 마감 08:59:40 — 주문 몫 4초를 남긴 시간만 기다리고, 시간이 없으면 다시 묻지 않는다
+      const f = mk([{ ms: -1 }]);
+      const d = await F.lookupBuyable("https://o", env, code, 85940, seq([85935, 85937]), f);
+      assert.equal(d.tries.length, 1); assert.equal(d.tries[0].limitMs, 1000); assert.ok(d.tries[0].ms >= 900 && d.tries[0].ms < 2500, JSON.stringify(d.tries));
+      assert.equal(d.error, "응답 지연 1.0초 초과");
+    })(),
+    (async () => {
+      const f = mk([]);
+      const e = await F.lookupBuyable("https://o", env, code, 85940, () => 85937, f);
+      assert.deepEqual(e.tries, []); assert.equal(e.error, "마감 임박 — 조회 생략"); assert.equal(f.calls.length, 0);
+      assert.equal(F.sizeToBuyable(14, e).qty, 14);
+      const g = await F.lookupBuyable("https://o", env, code, 85940, () => 85600, mk([]));               // 마감이 멀면 평소대로 6초 · 2번
+      assert.deepEqual(g.tries.map(x => x.limitMs), [6000, 6000]);
+    })(),
+  ]);
 });
 t("soxl live: planned open buy/sell executes only in the session after the decision", () => {
   const q = (date, open, c, prev) => ({ price: c, ohlc: [{ date: "2026-10-01", open: prev, close: prev }, { date, open, close: c }], intraday: { regular: { c }, date } });

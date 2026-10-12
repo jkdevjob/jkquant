@@ -1,5 +1,15 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-12 · 단타(클로드) ①② 매수가능 조회 시간초과 보완 · v2.14.4
+
+- 재현 근거(운영 장부 `opening-gapdown-live/2026-10-12.json`): ② 매수 기록 `매수가능 조회 실패 — 계획 수량 그대로(The operation was aborted)`. 이어서 835주 주문이 `모의투자 주문가능금액이 부족합니다`로 거절됐다. 같은 날 ① 은 08:57:33 · 08:57:36 접수로 정상이었다.
+- `node scripts/test_opening_gapdown.mjs`: 36 ALL PASS. 새 값 시험 5갈래와 장부 기록 확인 1건을 넣었다.
+  - 값 시험: 제한 6000ms, 첫 실패 뒤 두 번째 조회의 120주(계획 835주 아님), 두 번 실패면 계획대로 + 마지막 사유, 마감 5초 전 제한 1000ms + 재조회 없음, 마감 3초 전 조회 생략.
+  - 옛 main 코드로 같은 시험을 돌리면 FAIL 이다.
+- `python scripts/mutation_test_opening_gapdown.py`: 154종 모두 잡힘. 이번에 넣은 6종: 제한 2.5초 · 재조회 없음 · 마감 무시 · 마감 넘겨 대기 · 제한 미적용 · 첫 결과만 사용.
+- `node scripts/check-before-push.cjs`: main(#473) 병합 뒤 44단계 PASS · 회귀 2,748 PASS / 0 FAIL.
+- 미확인: 실제 다음 ② 신호일의 조회 시간(`sizing.lookup`)과 현금 부족 해소. 공용 모의계좌 현금 부족은 코드로 해결되지 않는다(GPT 미매도 보유분 · 15:21 시점 ① 보유분).
+
 ## 2026-10-12 · 메뉴 대기 · 백테 복원 · 고정열 줄 · 여는 화면 · v3.110.27
 
 - `node scripts/check-before-push.cjs`: 44 단계 PASS · 회귀 2,748 PASS / 0 FAIL.
