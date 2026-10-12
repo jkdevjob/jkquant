@@ -472,27 +472,27 @@ await t('P10 폰 폭: 첫 칸 윗줄(줄바꿈 없음)은 설정 2개까지 — 
   assert.equal('SOXL'+top,'SOXL · 20분할 · 익절 자동');
 });
 /* ── 자산플랜 열기 (2026-10-07 사용자 화면: "자산플랜만 로그인 페이지가 다르고 오류가 나고 시세도 느리다") ── */
-await t('P11 자산플랜 8초: 로그인됐고 원장을 읽는 중이면 로그인 상자 대신 "원장 불러오는 중" · 로그인 안 된 채 무응답이면 예전처럼 로그인 상자',async()=>{
+await t('P11 자산플랜 8초: 로그인됐고 원장을 읽는 중이면 로그인 상자를 띄우지 않고 지금 단계 문구를 그대로 둔다 · 로그인 안 된 채 무응답이면 예전처럼 로그인 상자',async()=>{
   const tm=(plan.match(/setTimeout\(function\(\)\{ var h=document\.documentElement;[\s\S]*?\}, 8000\);/)||[''])[0]; assert(tm,'plan 8s timer');
   const run=win=>{ const cls=new Set(['had-user']), e={textContent:''}, notes=[]; let f=null;
     new Function('document','window','setTimeout','planBootNote',tm)({documentElement:{classList:{contains:c=>cls.has(c),remove:c=>cls.delete(c)}},getElementById:()=>e},win,fn=>{f=fn;},(x,n)=>notes.push(x)); f();
     return {had:cls.has('had-user'),msg:e.textContent,notes}; };
   const a=run({__planAuthResolved:true,__planAuthUser:true});
-  assert.equal(a.had,true,'로그인된 사람에게 로그인 상자를 띄우지 않는다'); assert.equal(a.msg,''); assert.deepEqual(a.notes,['로그인됨 · Firebase DB 원장을 불러오는 중…']);
+  assert.equal(a.had,true,'로그인된 사람에게 로그인 상자를 띄우지 않는다'); assert.equal(a.msg,''); assert.deepEqual(a.notes,[],'단계 문구(이용 승인 · 원장 불러오는 중)를 덮어쓰지 않는다');
   const b=run({__planAuthResolved:false}); assert.equal(b.had,false); assert(/늦어지고 있습니다/.test(b.msg),'무응답은 로그인 상자 + 안내');
   const c=run({__planAuthResolved:true,__planAuthUser:false}); assert.equal(c.had,false); assert.equal(c.msg,'','로그아웃 판정이면 겁주는 문구 없이 로그인 상자');
   assert(/window\.__planAuthResolved=true;[^\n]*\n\s*window\.__planAuthUser=!!user;/.test(plan),'onAuthStateChanged 맨 앞에서 세운다');
 });
-await t('P12 대기 문구(planBootNote) — 로그인 상자가 아니라 "확인 중" 화면(had-user)에 적는다 · 이미 열렸으면 손대지 않는다',async()=>{
-  const src=fnOf(plan,'function planBootNote(text, note){');
-  const mk=open=>{ const cls=new Set(open?['authed']:[]), E={bwText:{textContent:'로그인 확인 중…'},bwNote:{textContent:''}};
+await t('P12 대기 문구(planBootNote) — 운영 화면과 같은 "JK 투자 · 여는 중…" 화면 아래 줄에 적는다 · 로그인 상자 아님(had-user) · 이미 열렸으면 손대지 않는다',async()=>{
+  const src=fnOf(plan,'function planBootNote(text){');
+  const HELP0='오래 멈추면 자동으로 복구 화면으로 전환됩니다.';
+  const mk=open=>{ const cls=new Set(open?['authed']:[]), E={bwText:{textContent:'여는 중…'},bwNote:{textContent:HELP0}};
     const f=new Function('document',src+'\nreturn planBootNote;')({documentElement:{classList:{contains:c=>cls.has(c),add:c=>cls.add(c)}},getElementById:id=>E[id]||null});
     return {f,cls,E}; };
-  const a=mk(false); a.f('로그인됨 · Firebase DB 원장을 불러오는 중…','늦어집니다');
-  assert.deepEqual([a.cls.has('had-user'),a.E.bwText.textContent,a.E.bwNote.textContent],[true,'로그인됨 · Firebase DB 원장을 불러오는 중…','늦어집니다']);
-  a.f(null); assert.equal(a.E.bwText.textContent,'로그인됨 · Firebase DB 원장을 불러오는 중…','글자 없이 부르면 그대로'); assert.equal(a.E.bwNote.textContent,'');
-  const b=mk(true); b.f('x'); assert.deepEqual([b.cls.has('had-user'),b.E.bwText.textContent],[false,'로그인 확인 중…'],'열린 뒤엔 그대로');
-  assert(/<span id="bwText">로그인 확인 중…<\/span><div class="bw-note" id="bwNote"><\/div>/.test(plan),'화면 칸');
+  const a=mk(false); a.f('로그인은 확인됐습니다. Firebase DB 원장 불러오는 중…');
+  assert.deepEqual([a.cls.has('had-user'),a.E.bwText.textContent,a.E.bwNote.textContent],[true,'여는 중…','로그인은 확인됐습니다. Firebase DB 원장 불러오는 중…']);
+  a.f(null); a.f(''); assert.equal(a.E.bwNote.textContent,'로그인은 확인됐습니다. Firebase DB 원장 불러오는 중…','글자 없이 부르면 그대로');
+  const b=mk(true); b.f('x'); assert.deepEqual([b.cls.has('had-user'),b.E.bwText.textContent,b.E.bwNote.textContent],[false,'여는 중…',HELP0],'열린 뒤엔 그대로');
 });
 await t('P13 원장이 12초 넘게 걸려도 실패로 돌리지 않는다 — "늦어지고 있습니다"를 적고 계속 기다렸다 열고, 진짜 오류만 다시 연결로 · 시세는 원장 읽기 전에 미리 받기 시작',async()=>{
   const src=fnOf(plan,'async function finishPlanOpen(user){');
@@ -504,7 +504,7 @@ await t('P13 원장이 12초 넘게 걸려도 실패로 돌리지 않는다 — 
     return {f,log,fail:e=>rej(e)}; };
   const A=mk(60); await A.f({uid:'u'});
   assert.deepEqual(A.log.filter(x=>!/^note:/.test(x)),['prefetch','cloudLoad','loaded','gate:true','refreshLive','sessions','view'],'미리 받기 → 원장 → 열기 → 시세');
-  assert(A.log.some(x=>/^note:DB 응답이 늦어지고 있습니다/.test(x)),'늦으면 안내(로그인 상자 아님)');
+  assert(A.log.includes('note:Firebase DB 원장 응답이 늦어지고 있습니다 — 끊지 않고 계속 기다리는 중입니다.'),'늦으면 안내(로그인 상자 아님) — 운영과 같은 글자');
   assert(A.log.indexOf('gate:true')>A.log.findIndex(x=>/늦어지고/.test(x)),'안내 뒤에도 끝까지 기다려 연다');
   const B=mk(5); await B.f({uid:'u'}); assert(!B.log.some(x=>/늦어지고/.test(x)),'빨리 오면 안내 없음');
   const C=mk(1e6); const p=C.f({uid:'u'}); C.fail(new Error('permission-denied'));
@@ -567,13 +567,13 @@ await t('P16 자산플랜 시세 미리 받기 — 6종목을 한 번 받아 두
 /* ── 운영 화면 원장 열기 (2026-10-07 사용자 화면: 5G 아이폰에서 'Firebase DB 원장 응답 없음(20초)' 다시 연결 화면 반복) ── */
 await t('D5 운영 원장 읽기 — 읽자마자 true(화면 열기) · 고칠 게 있어 하는 저장은 기다리지 않고 뒤에서 · 읽은 시간·크기를 남긴다 · 오류는 false+이유',async()=>{
   const src=fn('async function pullRemote(){');
-  let pushResolve=null, pushes=0;
+  let pushResolve=null, pushes=0; const busySeen=[];
   const mk=(data,fail)=>{ const C={console:{error(){},warn(){}},curUid:'u1',
-      window:{fb:{db:{},doc:(db,c,id)=>c+'/'+id,getDoc:async()=>{ if(fail) throw Object.assign(new Error('Missing or insufficient permissions.'),{code:'permission-denied'}); return {exists:()=>true,data:()=>JSON.parse(JSON.stringify(data))}; }}},
+      window:{fb:{db:{},doc:(db,c,id)=>c+'/'+id,getDoc:async()=>{ busySeen.push(C.dbReadsBusy); if(fail) throw Object.assign(new Error('Missing or insufficient permissions.'),{code:'permission-denied'}); return {exists:()=>true,data:()=>JSON.parse(JSON.stringify(data))}; }}},
       stateCloudHydrated:false,cacheStrategyDefaults(){},KR_NAME_MEMO:{},validState:x=>!!(x&&x.inf&&x.vr),_historySignature:()=>'sig',S:null,stateDbBase:null,ensureBoxes(){},
       _repairLegacyMergeDupes:()=>0,stateCloudPending:false,migrateInfOperatingDefaults:()=>true,lastPushedJSON:'',freshState:()=>({inf:{},vr:{}}),
       pushRemoteNow:()=>{ pushes++; return new Promise(r=>{ pushResolve=r; }); },setSync(){},stateCloudRev:0,stateCloudHistorySig:'',
-      dbReadStart:0,dbReadMs:0,dbReadKB:0,dbReadTop:'',pullLastErr:'',
+      dbReadStart:0,dbReadMs:0,dbReadKB:0,dbReadTop:'',pullLastErr:'',dbReadsBusy:0,
       fsDocBytes:(p,parts)=>parts.reduce((a,x)=>a+x.bytes,0),fsDocParts:d=>Object.keys(d).map(k=>({k,bytes:JSON.stringify(d[k]).length})),dbPartsText:()=>'운영 원장 5KB'};
     vm.createContext(C); vm.runInContext(src+'\nthis.pull=pullRemote;',C); return C; };
   const D={stateV2:{inf:{sessions:[]},vr:{sessions:[]},big:'x'.repeat(5000)},stateV2Rev:4};
@@ -584,16 +584,18 @@ await t('D5 운영 원장 읽기 — 읽자마자 true(화면 열기) · 고칠 
   assert.equal(C.stateCloudHydrated,true); assert.equal(C.stateCloudRev,4); assert.equal(C.stateCloudPending,true,'저장 끝날 때까지 미저장 표시 유지');
   assert(C.dbReadKB>=4,'읽은 원장 크기 KB: '+C.dbReadKB); assert(C.dbReadStart>0 && C.dbReadMs>=0); assert.equal(C.dbReadTop,'운영 원장 5KB');
   const E=mk(D,true); assert.equal(await E.pull(),false); assert.equal(E.pullLastErr,'permission-denied','이유를 남긴다');
+  assert.deepEqual([busySeen,C.dbReadsBusy,E.dbReadsBusy],[[1,1],0,0],'읽는 동안만 "읽는 중"(워치독이 본다) — 성공·실패 뒤엔 0');
   const ia=fn('function initAuth(){');
   assert(/const ok=await dbWait\(pullRemote\(\), 'Firebase DB 원장'\);\n\s*if\(!ok\)throw new Error\(pullLastErr\|\|/.test(ia),'로그인 흐름 배선');
   assert(/const ok=await dbWait\(pullRemote\(\),'Firebase DB 원장 재연결'\);/.test(fn('async function retryDbLoad(){')),'다시 연결도 같은 길');
 });
 await t('D6 dbWait — 원장이 20초 넘게 걸려도 끊지 않는다: 늦으면 안내만 적고 끝까지 기다려 그 결과를 돌려준다 · 빠르면 안내 없음',async()=>{
   const src=fn('async function dbWait(p,label){');
-  const mk=()=>{ const warns=[]; const f=new Function('authWarn','DB_SLOW_NOTE_MS','setTimeout','clearTimeout',src+'\nreturn dbWait;')(m=>warns.push(m),20,setTimeout,clearTimeout); return {f,warns}; };
+  const mk=()=>{ const warns=[], helps=[]; const f=new Function('authWarn','bootHelp','DB_SLOW_HELP','DB_SLOW_NOTE_MS','setTimeout','clearTimeout',src+'\nreturn dbWait;')(m=>warns.push(m),h=>helps.push(h),'SLOW',20,setTimeout,clearTimeout); return {f,warns,helps}; };
   const A=mk(); const r=await A.f(new Promise(res=>setTimeout(()=>res(true),80)),'Firebase DB 원장');
-  assert.equal(r,true,'늦어도 결과를 돌려준다(예전: 20초에 실패)'); assert.equal(A.warns.length,1); assert(/늦어지고 있습니다\(\d+초\) — 끊지 않고 계속 기다리는 중/.test(A.warns[0]),A.warns[0]);
-  const B=mk(); assert.equal(await B.f(new Promise(res=>setTimeout(()=>res(true),2)),'x'),true); await tick(40); assert.equal(B.warns.length,0,'빨리 오면 안내 없음(타이머도 지운다)');
+  assert.equal(r,true,'늦어도 결과를 돌려준다(예전: 20초에 실패)'); assert.equal(A.warns.length,1);
+  assert.deepEqual(A.helps,['SLOW'],'여는 중 화면 아래 줄에도 적는다(로그인 상자는 감춰져 있어 gerr 만으론 안 보인다)'); assert(/늦어지고 있습니다\(\d+초\) — 끊지 않고 계속 기다리는 중/.test(A.warns[0]),A.warns[0]);
+  const B=mk(); assert.equal(await B.f(new Promise(res=>setTimeout(()=>res(true),2)),'x'),true); await tick(40); assert.equal(B.warns.length+B.helps.length,0,'빨리 오면 안내 없음(타이머도 지운다)');
   const C=mk(); assert.equal(await C.f(Promise.resolve(false),'x'),false,'진짜 오류(false)는 그대로 넘겨 다시 연결 화면으로');
   assert(/const DB_SLOW_NOTE_MS=20000;/.test(html));
 });
@@ -604,6 +606,67 @@ await t('D7 진단 정보 — DB 읽기 시간·원장 크기·큰 칸 · 읽는
   const a=run({ms:23456,kb:910,top:'운영 원장 880KB',start:1,now:2}); assert(/DB읽기\s+23\.5초 · 원장 910KB \/ 1024KB · 큰 칸 운영 원장 880KB/.test(a),a);
   const b=run({ms:0,kb:0,top:'',start:1000,now:31000}); assert(/DB읽기\s+읽는 중 30초째/.test(b),b);
   const c=run({ms:0,kb:0,top:'',start:0,now:5}); assert(/DB읽기\s+아직/.test(c),c);
+});
+await t('D8 워치독 22초 — 원장을 읽는 중이면 "다시 연결" 상자로 바꾸지 않고 여는 중 화면에 "늦어지고 있습니다" · 읽기 시작 60초가 지나도 안 오면 그때 다시 연결 · 읽다 실패했으면 그 까닭을 둔다',async()=>{
+  const wd=(html.match(/\(function bootWatchdog\(\)\{[\s\S]*?\n\}\)\(\);/)||[''])[0]; assert(wd,'bootWatchdog');
+  const SLOW=(html.match(/const DB_SLOW_HELP='([^']+)';/)||[])[1]; assert(SLOW,'DB_SLOW_HELP');
+  assert(/const DB_WAIT_MAX_MS=60000;/.test(html));
+  const mk=o=>{ const timers=[]; let now=0;
+    const E={}; for(const id of ['authgate','gerr','gbtn','bw','gb','help']) E[id]={id,style:{display:''},textContent:'',disabled:false,onclick:null};
+    E.authgate.style.display='flex'; E.gerr.textContent=o.err||'';
+    E.authgate.querySelector=q=>q.includes('bootwait')?E.bw:E.gb; E.bw.querySelector=()=>E.help;
+    const C={document:{getElementById:id=>E[id]||null},getComputedStyle:x=>({display:x.style.display||'block'}),
+      window:{fb:{auth:{currentUser:o.user?{uid:'u1'}:null}},JKAccess:{showing:()=>''}},JKAccess:{showing:()=>''},
+      authWired:true,authStep:o.step||'DB 원장 읽기',authResolved:true,retryDbLoad:function retryDbLoad(){},googleLogin(){},renderInAppWarn(){},
+      bootStepText:x=>'STEP:'+x,DB_SLOW_HELP:SLOW,DB_WAIT_MAX_MS:60000,dbReadsBusy:o.busy||0,dbReadStart:o.start||0,pullLastErr:o.lastErr||'',
+      Date:{now:()=>now},setTimeout:(f,ms)=>{ timers.push({at:now+ms,f}); },console:{error(m,e){ throw e||new Error(m); }}};
+    vm.createContext(C); vm.runInContext(wd,C);
+    const runUntil=t=>{ for(let n=0;;n++){ if(n>200) throw new Error('워치독이 타이머를 끝없이 다시 건다'); timers.sort((a,b)=>a.at-b.at); const x=timers[0]; if(!x||x.at>t)break; timers.shift(); now=x.at; x.f(); } now=t; };
+    return {C,E,runUntil}; };
+  const A=mk({user:true,busy:1,start:3000}); A.runUntil(6000);
+  assert.equal(A.E.help.textContent,'STEP:DB 원장 읽기','6초: 지금 단계 문구(자산플랜과 같은 글자)');
+  A.runUntil(22000);
+  assert.deepEqual([A.E.bw.style.display,A.E.gb.style.display,A.E.help.textContent,A.E.gbtn.textContent],['block','none',SLOW,''],'읽는 중엔 다시 연결 상자 없음');
+  A.E.authgate.style.display='none'; A.C.dbReadsBusy=0; A.runUntil(90000);
+  assert.equal(A.E.gbtn.textContent,'','다 읽고 열렸으면 손대지 않는다');
+  const B=mk({user:true,busy:1,start:3000}); B.runUntil(62900);
+  assert.deepEqual([B.E.bw.style.display,B.E.gb.style.display],['block','none'],'60초 전엔 그대로');
+  B.runUntil(63100);
+  assert.deepEqual([B.E.bw.style.display,B.E.gb.style.display,B.E.gbtn.textContent],['none','block','Firebase DB 다시 연결']);
+  assert(/^Firebase DB 원장 응답이 60초째 없습니다/.test(B.E.gerr.textContent),B.E.gerr.textContent);
+  const F='로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다 — permission-denied';
+  const C2=mk({user:true,busy:0,start:3000,lastErr:'permission-denied',err:F}); C2.runUntil(22000);
+  assert.deepEqual([C2.E.gb.style.display,C2.E.gbtn.textContent,C2.E.gerr.textContent],['block','Firebase DB 다시 연결',F]);
+  const D=mk({user:true,busy:0,step:'이용 승인'}); D.runUntil(22000);
+  assert.deepEqual([D.E.gb.style.display,D.E.gbtn.textContent],['block','Firebase DB 다시 연결']); assert(/연결만 다시 시도해 주세요/.test(D.E.gerr.textContent));
+});
+await t('D9 여는 중 화면 — 운영과 자산플랜이 같은 칸·같은 글자·같은 색 · 단계 문구도 같은 글자(운영 BOOT_STEP_TEXT = 자산플랜 planBootNote)',async()=>{
+  const box=s=>{ const m=s.match(/<div class="bootwait">[\s\S]*?<\/div>\s*<\/div>/); assert(m,'bootwait'); return m[0].replace(/\s+/g,' '); };
+  assert.equal(box(plan),box(html),'여는 중 화면 마크업이 같다');
+  assert(/<div class="bw-logo">JK 투자<\/div>/.test(box(plan)) && !/자산플랜|로그인됨/.test(box(plan)),'제목은 JK 투자 하나');
+  const vars=s=>{ const v={}; for(const m of s.matchAll(/--([\w-]+):(#[0-9a-f]{3,8})/gi)) if(!(m[1] in v)) v[m[1]]=m[2].toLowerCase(); return v; };
+  const rules=s=>{ const V=vars(s), out={}; for(const m of s.matchAll(/^#authgate \.bootwait( \.bw-[\w-]+)?\{([^}]*)\}/gm)) out[m[1]||'']=m[2].replace(/var\(--([\w-]+)\)/g,(_,k)=>V[k]||('?'+k)).toLowerCase(); return out; };
+  const rp=rules(plan), ri=rules(html); assert.deepEqual(Object.keys(ri).sort(),['',' .bw-dot',' .bw-help',' .bw-logo']);
+  assert.deepEqual(rp,ri,'여는 중 화면 스타일(색을 값으로 풀어)이 같다');
+  const ST=new Function(html.match(/const BOOT_STEP_TEXT=\{[^\n]*\};/)[0]+'\nreturn BOOT_STEP_TEXT;')();
+  const SLOW=html.match(/const DB_SLOW_HELP='([^']+)';/)[1];
+  for(const x of [ST['이용 승인'],ST['DB 원장 읽기'],SLOW]) assert(plan.includes("planBootNote('"+x+"')"),'자산플랜도 같은 글자: '+x);
+  const ia=fn('function initAuth(){');
+  assert(/authStep='이용 승인'; bootHelp\(bootStepText\(authStep\)\);/.test(ia) && /authStep='DB 원장 읽기'; bootHelp\(bootStepText\(authStep\)\);/.test(ia),'initAuth: 단계를 바꾸는 줄에서 바로 아래 줄을 적는다');
+  const bst=new Function('BOOT_STEP_TEXT',fn('function bootStepText(step){')+'\nreturn bootStepText;')(ST);
+  assert.equal(bst('DB 원장 읽기'),'로그인은 확인됐습니다. Firebase DB 원장 불러오는 중…'); assert.equal(bst('배지'),'로그인은 확인됐습니다. 배지 처리 중…');
+  const E={bwNote:{textContent:'x'}}; const bh=new Function('document',fn('function bootHelp(text){')+'\nreturn bootHelp;')({getElementById:id=>E[id]||null});
+  bh('A'); assert.equal(E.bwNote.textContent,'A'); bh(''); assert.equal(E.bwNote.textContent,'A','빈 글자는 무시');
+});
+await t('D10 원장 읽기 실패는 바로 다시 연결 상자로 — 여는 중 화면을 22초 워치독까지 돌리지 않는다(자산플랜 showPlanDbRetry 와 같게)',async()=>{
+  const ia=fn('function initAuth(){');
+  const a=ia.indexOf("console.error('db load',e);"), b=ia.indexOf('return;',a); assert(a>0&&b>a,'catch 구간');
+  const E={}; for(const id of ['authgate','gbtn','bw','gb']) E[id]={style:{display:''},textContent:'',disabled:true,onclick:null};
+  E.authgate.querySelector=q=>q.includes('bootwait')?E.bw:E.gb;
+  const warns=[]; let sync='';
+  new Function('e','console','authWarn','$','retryDbLoad','setSync',ia.slice(a,b))(new Error('permission-denied'),{error(){}},m=>warns.push(m),id=>E[id]||null,function retryDbLoad(){},x=>{ sync=x; });
+  assert.deepEqual([E.bw.style.display,E.gb.style.display,E.gbtn.textContent,E.gbtn.disabled,E.gbtn.onclick&&E.gbtn.onclick.name,sync],['none','block','Firebase DB 다시 연결',false,'retryDbLoad','err']);
+  assert(/불러오지 못했습니다[\s\S]*permission-denied/.test(warns[0]),warns[0]);
 });
 clearTimeout(ALL_GUARD);
 console.log(results.join('\n'));

@@ -92,16 +92,19 @@ const acc=fs.readFileSync(path.join(ROOT,'jk-access.js'),'utf8');
 const HREFS=['/','/plan','/backtest','/scalping','/claude','/paper','/ipo','/realestate','/job','/admin'];
 const SAVED={'/':10,'/plan':20,'/paper':30,'/scalping':40,'/claude':50,'/backtest':60,'/ipo':70,'/realestate':80,'/job':90,'/admin':100};
 const ORDER_SAVED=Object.keys(SAVED).sort((a,b)=>SAVED[a]-SAVED[b]).join(',');
-function menuDom(){
-  const pop={children:[], appendChild(a){ const i=this.children.indexOf(a); if(i>=0) this.children.splice(i,1); this.children.push(a); return a; },
+function menuDom(o={}){
+  const pop={hidden:o.open?false:true, children:[], appendChild(a){ const i=this.children.indexOf(a); if(i>=0) this.children.splice(i,1); this.children.push(a); return a; },
              querySelectorAll(q){ return q==='a[href]'?this.children.slice():[]; }};
   HREFS.forEach(h=>{ const c=new Set(); pop.children.push({getAttribute:k=>k==='href'?h:null, classList:{toggle:(x,on)=>on?c.add(x):c.delete(x), contains:x=>c.has(x)}}); });
-  const html={classList:{add(){},remove(){},toggle(){},contains:()=>false}};
+  const cls=new Set(), late=[];
+  const html={classList:{add:x=>cls.add(x),remove:x=>cls.delete(x),toggle(){},contains:x=>cls.has(x)}};
   const document={documentElement:html, head:{appendChild(){}}, body:null, createElement:()=>({setAttribute(){},appendChild(){}}),
     getElementById:()=>null, querySelectorAll:q=>q==='.jkmenu-pop'?[pop]:[], currentScript:null, addEventListener(){}};
-  const ctx={document, console:{warn(){},error(){},log(){}}, setTimeout, clearTimeout, URL, location:{origin:'https://jkquant.pages.dev',pathname:'/'}};
+  /* 메뉴 감춤 한도 타이머(6초)는 시험이 직접 돌린다 — 진짜로 걸면 시험이 6초씩 늦게 끝난다 */
+  const st=(f,ms)=>{ if(ms>=6000){ late.push({f,ms}); return 0; } return setTimeout(f,ms); };
+  const ctx={document, console:{warn(){},error(){},log(){}}, setTimeout:st, clearTimeout, URL, location:{origin:'https://jkquant.pages.dev',pathname:'/'}};
   ctx.window=ctx; vm.createContext(ctx); vm.runInContext(acc, ctx);
-  return {A:ctx.JKAccess, order:()=>pop.children.map(a=>a.getAttribute('href')).join(',')};
+  return {A:ctx.JKAccess, pop, cls, late, order:()=>pop.children.map(a=>a.getAttribute('href')).join(',')};
 }
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const menuDoc=items=>({exists:()=>true, data:()=>({items:Object.fromEntries(Object.entries(items).map(([p,o])=>[p,{mode:['/scalping','/claude','/admin'].includes(p)?'admin':'public',order:o}]))})});
@@ -134,6 +137,19 @@ ta('U8 첫 읽기가 실패(끊김)하면 한 번 더 읽어 그 순서를 붙�
   assert.equal(E.order(),ORDER_NEW,'새 순서');
   await sleep(110);
   assert.equal(E.order(),ORDER_NEW,'늦게 온 옛 답이 새 순서를 덮으면 안 된다');
+});
+ta('U12 페이지를 옮기자마자 ☰ — 설정을 읽기 전엔 기본 순서를 보이지 않고 "메뉴 불러오는 중…" · 읽으면 펼쳐 둔 채로도 곧바로 바른 순서 · 끝내 못 읽으면 6초 뒤 기본 순서',async()=>{
+  const D=menuDom({open:true}), F=mkFb([()=>sleep(20).then(()=>menuDoc(SAVED))]);
+  assert(D.cls.has('jk-menu-wait'),'불러오기 전: 링크 감춤');
+  assert(/html\.jk-menu-wait \.jkmenu-pop a\[href\]\{display:none!important\}/.test(acc) && /메뉴 불러오는 중…/.test(acc),'감추는 CSS · 안내 글자');
+  await D.A.applyMenuConfig(ADM,F.fb);
+  assert.equal(D.order(),ORDER_SAVED,'펼쳐 둔 채여도(링크가 감춰져 있었으니) 바로 바른 순서 — 닫을 때까지 미루지 않는다');
+  assert(!D.cls.has('jk-menu-wait'),'적용하면 보인다');
+  // 이미 보이는 뒤에 다시 온 설정은 예전처럼 닫힐 때 바꾼다(눈앞에서 안 움직임)
+  const NEW={...SAVED,'/backtest':15}; await D.A.applyMenuConfig(ADM,mkFb([()=>Promise.resolve(menuDoc(NEW))]).fb,{force:true});
+  assert.equal(D.order(),ORDER_SAVED,'보이는 동안엔 그대로'); assert(D.pop.__jkPendingMenuLinks,'닫힐 때 바꿀 순서를 둔다');
+  const E=menuDom(); assert.equal(E.late.length,1); assert.equal(E.late[0].ms,6000);
+  E.late[0].f(); assert(!E.cls.has('jk-menu-wait'),'끝내 못 읽어도 6초 뒤엔 기본 순서로 연다');
 });
 /* 넓은 표 — 휴대폰에서도 표 그대로(사용자: 비교는 표가 편함). 넘치는 표만 촘촘하게 + 첫 칸 고정 · 페이지는 안 밀린다 */
 const fitSrc=(()=>{ const a=ui.indexOf('/* 넓은 표 —'), b=ui.indexOf('window.JKFit = {'); assert(a>=0&&b>a,'jk-ui.js 넓은 표 블록'); return ui.slice(a, ui.indexOf('})();',b)+5); })();
@@ -285,6 +301,30 @@ t('U11 운영 화면 기록 표 — 휴대폰(≤560px)에선 최소 폭(590·44
   assert.deepEqual([v(ht,'min-width',375),v(cyc,'min-width',375)],['0','0'],'폰 폭에선 최소 폭 해제');
   assert.deepEqual([v(ht,'min-width',1024),v(cyc,'min-width',1024)],['590px','440px'],'넓은 화면은 그대로');
   for(const W of [340,375,560,1024]) assert.equal(v(cycTd,'white-space',W),'nowrap',`${W}px 사이클 표 숫자 칸 — '167,273 / .50$' 로 끊기지 않게`);
+});
+t('U13 백테 — 저장된 설정이 늦게 와도 먼저 고른 탭·옵션을 덮지 않는다(들어가면 ASAP 탭이 저절로 선택되던 것) · 아무것도 안 골랐으면 예전처럼 복원',()=>{
+  const bt=fs.readFileSync(path.join(ROOT,'backtest.html'),'utf8');
+  const src=fnOf(bt,'function restoreBtStateFrom(st){');
+  const run=(picked,touched)=>{ const log=[], el={value:'2016-10-01'};
+    const C={_restoring:false,_btTabPicked:picked,_btCtrlTouched:touched,setStrat:x=>log.push(x),
+      document:{getElementById:id=>id==='dStart'?el:null},dcaActive:new Set(['SOXL']),imActive:null,vrActive:null,maActive:null,asapActive:null,allActive:null,stdActive:null,ivsActive:null};
+    vm.createContext(C); vm.runInContext(src+'\nthis.r=restoreBtStateFrom;',C);
+    C.r({v:2,strat:'asap',inputs:{dStart:'2020-01-02'},segs:{},sets:{dca:['TQQQ']}});
+    return [log.join(','),el.value,[...C.dcaActive].join(','),C._restoring]; };
+  assert.deepEqual(run(false,false),['asap','2020-01-02','TQQQ',false],'아무것도 안 골랐으면 저장된 탭·옵션 복원');
+  assert.deepEqual(run(true,false),['','2020-01-02','TQQQ',false],'탭을 먼저 골랐으면 탭은 그대로(옵션만 복원)');
+  assert.deepEqual(run(false,true),['asap','2016-10-01','SOXL',false],'옵션을 먼저 만졌으면 옵션은 그대로');
+  const ss=fnOf(bt,'function setStrat(s){');
+  assert(/if\(!_restoring\) _btTabPicked=true;/.test(ss),'사용자가 탭을 누르면 표시(복원 중 setStrat 은 제외)');
+  assert(/if\(e&&e\.isTrusted\)_btCtrlTouched=true;/.test(bt),'사용자가 옵션을 만지면 표시(복원의 프로그램 클릭은 제외)');
+});
+t('U14 모의 성과 표 고정 첫 칸 — 가로줄은 본문 칸과 같은 1px 한 줄(칸 아래 테두리) · 그 위에 그림자 줄을 또 그리지 않는다(2px·1px 어긋남 = 계단) · 세로 경계는 둔다',()=>{
+  const m=html.match(/\.htable-wrap table\.htable\.narrow tr>:first-child\{([^}]*)\}/); assert(m,'고정 칸 규칙');
+  const sh=(m[1].match(/box-shadow:([^;]*)/)||['',''])[1];
+  assert(/position:sticky/.test(m[1]),'고정');
+  assert(!/inset\s+0\s+-?1px/.test(sh),'가로 그림자 줄 없음: '+sh);
+  assert(/inset\s+-1px\s+0\s+0\s+var\(--line\)/.test(sh),'세로 경계는 둔다');
+  assert(/\.htable td\{[^}]*border-bottom:1px solid var\(--line\)/.test(html),'가로줄은 칸 아래 테두리');
 });
 Promise.all(PENDING).then(()=>{
   console.log(results.join('\n'));

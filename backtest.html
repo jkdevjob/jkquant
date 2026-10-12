@@ -322,7 +322,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.15</span></h1>
+      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.16</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -1381,6 +1381,7 @@ function setStrat(s){
   buildPickSingle();
   renderSingle();
   renderFootNote();          // 하단 문구도 탭 설정을 따라간다
+  if(!_restoring) _btTabPicked=true;   // 저장된 설정이 늦게 와도 지금 고른 탭을 덮지 않게
   if(typeof saveBtState==='function'&&!_restoring) saveBtState();   // 전략 탭 변경 저장
   if(dataLoaded) run();      // 데이터 있을 때만 재계산 (탭 전환만으로 로딩 안 함)
 }
@@ -1784,6 +1785,9 @@ const MOM_UNIV={
 let momUniv='us', momLookback=1, momFilter=true, momCostOn=true;
 let MOMDATA={};   // { univKey: {range:'s_e', data:{sym:{date:close}}} }
 let _restoring=false;   // 옵션 복원 중이면 자동 재실행 억제
+/* 저장된 설정(Firebase 원장 문서)은 들어온 뒤 몇 초 걸려 온다(아이폰에서 원장이 크면 더). 그 사이 사용자가 고른 탭·옵션을
+   늦게 온 복원이 덮어 '들어가면 ASAP 탭이 저절로 선택된다'로 보였다(2026-10-12 사용자). 먼저 고른 쪽이 이긴다. */
+let _btTabPicked=false, _btCtrlTouched=false;
 
 document.getElementById('momUniv').onclick=e=>{ if(!e.target.dataset.u)return;
   document.querySelectorAll('#momUniv button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
@@ -2057,19 +2061,20 @@ async function saveBtState(){
 }
 function restoreBtStateFrom(st){
   if(!st||typeof st!=='object')return false;
+  const ctrlFree=!_btCtrlTouched;
   _restoring=true;
   try{
-    if(st.sets){ if(st.sets.dca)dcaActive=new Set(st.sets.dca); if(st.sets.im)imActive=new Set(st.sets.im); if(st.sets.vr)vrActive=new Set(st.sets.vr); if(st.sets.ma)maActive=new Set(st.sets.ma); if(st.sets.asap)asapActive=new Set(st.sets.asap); if(st.sets.all)allActive=new Set(st.sets.all); if(st.sets.std)stdActive=new Set(st.sets.std); if(st.sets.ivs)ivsActive=new Set(st.sets.ivs); }
-    if(st.segs) Object.entries(st.segs).forEach(([id,val])=>{ const seg=document.getElementById(id); if(!seg)return;
+    if(ctrlFree&&st.sets){ if(st.sets.dca)dcaActive=new Set(st.sets.dca); if(st.sets.im)imActive=new Set(st.sets.im); if(st.sets.vr)vrActive=new Set(st.sets.vr); if(st.sets.ma)maActive=new Set(st.sets.ma); if(st.sets.asap)asapActive=new Set(st.sets.asap); if(st.sets.all)allActive=new Set(st.sets.all); if(st.sets.std)stdActive=new Set(st.sets.std); if(st.sets.ivs)ivsActive=new Set(st.sets.ivs); }
+    if(ctrlFree&&st.segs) Object.entries(st.segs).forEach(([id,val])=>{ const seg=document.getElementById(id); if(!seg)return;
       const btn=[...seg.querySelectorAll('button')].find(b=>String(Object.values(b.dataset)[0])===String(val)); if(btn) btn.click(); });
-    if(st.inputs) Object.entries(st.inputs).forEach(([id,v])=>{ if(id==='dEnd')return; const el=document.getElementById(id); if(el&&v!=null&&v!=='') el.value=v; });
-    if(st.strat)setStrat(st.strat);
+    if(ctrlFree&&st.inputs) Object.entries(st.inputs).forEach(([id,v])=>{ if(id==='dEnd')return; const el=document.getElementById(id); if(el&&v!=null&&v!=='') el.value=v; });
+    if(st.strat&&!_btTabPicked)setStrat(st.strat);
   }finally{_restoring=false;}
   return true;
 }
 window.restoreBtStateFrom=restoreBtStateFrom;
-['click','change'].forEach(ev=>document.querySelector('.ctrl-card')?.addEventListener(ev,()=>{ if(!_restoring) setTimeout(()=>{void saveBtState();},0); }));
-document.querySelector('.ctrl-card')?.addEventListener('input',()=>{ if(_restoring)return; clearTimeout(window._btSaveT); window._btSaveT=setTimeout(()=>{void saveBtState();},450); });
+['click','change'].forEach(ev=>document.querySelector('.ctrl-card')?.addEventListener(ev,e=>{ if(!_restoring){ if(e&&e.isTrusted)_btCtrlTouched=true; setTimeout(()=>{void saveBtState();},0); } }));
+document.querySelector('.ctrl-card')?.addEventListener('input',e=>{ if(_restoring)return; if(e&&e.isTrusted)_btCtrlTouched=true; clearTimeout(window._btSaveT); window._btSaveT=setTimeout(()=>{void saveBtState();},450); });
 
 /* 짧은 기간 — 막지 않고 알린다.
    1년 미만을 통째로 막아 두니 '올해 1월부터'를 볼 수가 없었다. 막아야 할 이유는
