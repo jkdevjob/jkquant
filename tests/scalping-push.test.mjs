@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import workerMain, {PresaleAlertStore} from "../worker/presale-alert/src/index.js";
+const {default:workerMain,PresaleAlertStore}=await import(process.env.SCALPING_PUSH_MODULE||"../worker/presale-alert/src/index.js");
 
 function fakeStore(){
   const state=new Map();
@@ -94,7 +94,7 @@ test("Cloudflare 무료 Cron 한 개로 IPO 08:10 KST와 기존 :07/:37 수집�
 });
 
 
-test("푸시 전체 실패이면 영속 중복잠금을 풀고 다음 감시에서 재전송한다",async()=>{
+test("푸시 전체 실패이면 실패 영수증을 남기고 다음 감시에서 재전송한다",async()=>{
   const x=fakeStore(),date=today("Asia/Seoul");
   let attempts=0;
   x.worker.notifyAll=async()=>{
@@ -116,6 +116,45 @@ test("푸시 전체 실패이면 영속 중복잠금을 풀고 다음 감시에�
   const health=await (await x.worker.fetch(new Request("https://push.invalid/health"))).json();
   assert.equal(health.lastDeliveries.daytrading.status,"sent");
   assert.equal(health.lastDeliveries.daytrading.sent,1);
+});
+
+test('일부 기기만 실패하면 실패한 기기만 재시도하고 성공 기기는 중복 발송하지 않는다',async()=>{
+  const x=fakeStore();x.worker.notifyAll=PresaleAlertStore.prototype.notifyAll;
+  for(const [key,endpoint] of [['sub:a','https://push.test/a'],['sub:b','https://push.test/b']])
+    x.state.set(key,{endpoint,topics:['crypto']});
+  const calls=[];let failB=true;
+  x.worker.pushOne=async endpoint=>{calls.push(endpoint);return {ok:!endpoint.endsWith('/b')||!failB,status:503};};
+  const b={strategy:'crypto',stage:'buy',eventId:'partial-fixture',date:today('Asia/Seoul')};
+  const first=await x.send(b);assert.equal(first.status,502);assert.equal((await first.json()).delivery.sent,1);
+  failB=false;assert.equal((await x.send(b)).status,200);
+  assert.deepEqual(calls,['https://push.test/a','https://push.test/b','https://push.test/b']);
+  assert.equal((await (await x.send(b)).json()).duplicate,true);assert.equal(calls.length,3);
+});
+
+test('전송 중 예외·만료된 잠금은 복구하고 최근 신호만 전달한다',async()=>{
+  const x=fakeStore(),b={strategy:'crypto',stage:'sell',eventId:'exception-fixture',date:today('Asia/Seoul')};
+  let calls=0;x.worker.notifyAll=async()=>{calls++;if(calls===1)throw new Error('fixture outage');return {eligible:1,sent:1,failed:0,removed:0,total:1};};
+  assert.equal((await x.send(b)).status,502);assert.equal((await x.send(b)).status,200);assert.equal(calls,2);
+  const [key,value]=[...x.state].find(([key])=>key.startsWith('signal:'));
+  x.state.set(key,{status:'sending',at:new Date().toISOString()});assert.equal((await x.send(b)).status,409);
+  x.state.set(key,{status:'sending',at:new Date(Date.now()-121_000).toISOString()});assert.equal((await x.send(b)).status,200);
+  const before=calls;
+  const stale=await (await x.send({...b,eventId:'stale-fixture',eventAt:new Date(Date.now()-21*60_000).toISOString()})).json();
+  assert.equal(stale.skipped,'stale_or_future_signal');assert.equal(calls,before);
+  const future=await (await x.send({...b,eventId:'future-fixture',eventAt:new Date(Date.now()+120_000).toISOString()})).json();
+  assert.equal(future.skipped,'stale_or_future_signal');assert.equal(calls,before);
+});
+
+test('자정에 확정된 전일 BTC 마지막 매도만 허용하고 전일 매수·오래된 신호는 차단한다',async()=>{
+  const OriginalDate=globalThis.Date,now=Date.parse('2026-10-01T15:05:00Z');
+  globalThis.Date=class extends OriginalDate{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}};
+  try{
+    const x=fakeStore(),b={strategy:'crypto',stage:'sell',eventId:'midnight-fixture',date:'2026-10-01',time:'23:55',eventAt:'2026-10-01T15:00:00Z'};
+    assert.equal((await x.send(b)).status,200);assert.deepEqual(x.deliveries,['crypto']);
+    assert.equal((await x.send({...b,eventId:'old-buy',stage:'buy'})).status,409);
+    assert.equal((await x.send({...b,eventId:'old-date',date:'2026-09-30'})).status,409);
+    assert.equal((await x.send({...b,eventId:'old-time',time:'23:30'})).status,409);
+  }finally{globalThis.Date=OriginalDate;}
 });
 
 test("구독자가 0명이면 과거 매수·매도 신호를 후속 가입자에게 재전송하지 않는다",async()=>{
@@ -145,7 +184,7 @@ test("데이트레이딩 최근 8분만 매수·매도 푸시 복구 — 날짜�
   assert.deepEqual(a.map(x=>x.stage),["buy","sell"]);
   assert.equal(a[0].eventId,"daytrading:2026-10-08:001:1016:buy");
   assert.equal(a[1].eventId,"daytrading:2026-10-08:001:1016:sell:1018");
-  assert.ok(a.every(x=>x.webOnly===true));
+  assert.ok(a.every(x=>x.webOnly!==true)); // Retry both channels; successful Telegram receipts suppress duplicates.
   assert.equal(fn({...ledger,targetHm:1030}).length,0);
   assert.match(source,/await retryPaperWebPush\(env,saved\)/);
 });

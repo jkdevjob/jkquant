@@ -44,7 +44,7 @@ export async function onRequestGet({env={}}={}){
     j.dateRule="Asia/Seoul · SOXL dates use the Korean date containing the U.S. session close";
     j.latestCompletedDate=Object.values(j.strategies).flatMap(x=>x.daily||[]).map(x=>x.date).sort().at(-1)||null;
     j.generatedAt=new Date().toISOString();
-    j.sourceRule="연구 일별 결과에 최근 완료된 서버 모의장부를 우선 반영합니다. 진행 중 세션은 제외합니다.";
+    j.sourceRule="원래 기준전략 연구 재구성 + 최근 8개 완료 DB 세션(운영 모의장부 또는 과거 연구 이관) 혼합입니다. 전체 운영 메인 성과가 아니며 진행 중 세션은 제외합니다.";
     return new Response(JSON.stringify(j),{headers:j.sourceWarnings.length?{...H,"Cache-Control":"no-store"}:H});
   }catch(e){
     return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{

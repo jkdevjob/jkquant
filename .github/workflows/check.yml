@@ -74,6 +74,8 @@ jobs:
         run: |
           node scripts/test_scalping_audit.mjs
           node scripts/test_scalping_history_workers.mjs
+          node scripts/test_scalping_deep_audit.mjs
+          node scripts/mutation_test_scalping_deep.mjs
 
       - name: 과거 Top100 백필과 다음날 시가 그림자 값 검사
         run: |

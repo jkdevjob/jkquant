@@ -140,6 +140,8 @@ function durableTradeRows(strategy,ledgers){
       const pnl=strategy==="daytrading"?n(x.pnl):n(x.pnlPct);
       if(!Number.isFinite(pnl))continue;
       rows.push({
+        recordOrigin:ledger.mode==="historical-research-import-no-order"?"research-import":"live-paper",
+        capitalSlots:strategy==="daytrading"?Math.max(1,Number(ledger.maxTrades)||3):1,
         date,code:strategy==="daytrading"?String(x.code||""):(strategy==="crypto"?"KRW-BTC":"SOXL"),
         name:strategy==="daytrading"?String(x.name||x.code||""):(strategy==="crypto"?"비트코인":"SOXL"),
         strategyVersion:String(x.strategyVersion||ledger.strategyVersion||""),
@@ -152,25 +154,27 @@ function durableTradeRows(strategy,ledgers){
   return {rows,days:Array.from(new Set(days))};
 }
 
-export function sessionReturnPct(strategy,pnls){
+export function sessionReturnPct(strategy,pnls,capitalSlots=3){
   const a=Array.isArray(pnls)?pnls.filter(Number.isFinite):[];
   if(!a.length)return 0;
   const sum=a.reduce((s,v)=>s+v,0);
   // Daytrading allocates three equal capital slots per session; unused slots remain cash.
-  if(strategy==="daytrading")return sum/3;
+  if(strategy==="daytrading")return sum/Math.max(1,Number(capitalSlots)||3);
   // Opening uses equal weight across executed baseline trades; BTC/SOXL are one-slot strategies.
   return sum/a.length;
 }
 export function dailyRisk(rows,strategy,explicitDays=[]){
   const by=new Map((Array.isArray(explicitDays)?explicitDays:[]).map(d=>[String(d),[]]));
+  const slotsByDate=new Map();
   for(const x of rows){
     if(!x.date||!Number.isFinite(x.pnl))continue;
     if(!by.has(x.date))by.set(x.date,[]);
     by.get(x.date).push(x.pnl);
+    if(x.capitalSlots>0)slotsByDate.set(x.date,x.capitalSlots);
   }
   const daily=[...by.entries()].map(([date,a])=>({
     date,
-    returnPct:sessionReturnPct(strategy,a),
+    returnPct:sessionReturnPct(strategy,a,slotsByDate.get(date)||3),
     trades:a.length
   })).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   let eq=1,peak=1,maxDd=0;

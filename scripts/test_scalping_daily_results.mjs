@@ -39,10 +39,12 @@ const recovered=mergeDaytradingSessions(
   [{date:"2026-10-02",returnPct:0,trades:0,noTrade:true,source:"daytrading-paper-live",mainVariant:"baseline"}],
   [{date:"2026-10-02",returnPct:-0.25,trades:3,noTrade:false,source:"daytrading-research",mainVariant:"baseline"}]
 );
-assert.equal(recovered[0].trades,3);
-assert.equal(recovered[0].noTrade,false);
-assert.equal(recovered[0].returnPct,-0.25);
-assert.equal(recovered[0].source,"daytrading-research-confirmed");
+assert.equal(recovered[0].trades,0);
+assert.equal(recovered[0].noTrade,true);
+assert.equal(recovered[0].returnPct,0);
+assert.equal(recovered[0].source,"daytrading-paper-live");
+assert.equal(recovered[0].sourceConflict.researchTrades,3);
+assert.equal(recovered[0].sourceConflict.researchReturnPct,-0.25);
 
 const promotedNoTrade=mergeDaytradingSessions(
   [{date:"2026-10-02",returnPct:0,trades:0,noTrade:true,source:"daytrading-paper-live",mainVariant:"vol_2.0"}],
@@ -117,8 +119,10 @@ assert.equal(after[0].marketDate,"2026-10-07");
 const ui=readFileSync(new URL("../scalping.html",import.meta.url),"utf8");
 const cellFn=ui.slice(ui.indexOf("function dailyResultCell("),ui.indexOf("const DAILY_CHART_COLORS="));
 assert.ok(cellFn.startsWith("function dailyResultCell("));
-const renderCell=new Function("esc","dailyResultPct",cellFn+"; return dailyResultCell;")(
-  s=>String(s).replaceAll("&","&amp;").replaceAll("<","&lt;"),n=>(n>=0?"+":"")+Number(n).toFixed(2)+"%");
+const stateFn=ui.slice(ui.indexOf('function dailyResultState('),ui.indexOf('function dailyResultCell('));
+const sourceFn=ui.slice(ui.indexOf('function scalpingResultSource('),ui.indexOf('const DAILY_TREND_STEP='));
+const renderCell=new Function("esc",stateFn+sourceFn+cellFn+"; return dailyResultCell;")(
+  s=>String(s).replaceAll("&","&amp;").replaceAll("<","&lt;"));
 const rendered=renderCell({...after[0],wins:0,losses:1,noTrade:false},"최근","soxl");
 assert.match(rendered,/최근 · 미국 10-07장/);
 assert.match(rendered,/한국 2026-10-08 새벽 마감 기준/);

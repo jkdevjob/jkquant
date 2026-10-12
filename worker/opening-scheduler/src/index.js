@@ -346,6 +346,34 @@ async function notifyOpeningWebPush(env,date,buys,sells,mainVariant){
   }
   return out;
 }
+export function recentOpeningAlertEvents(ledger,target,windowMin=8){
+  const minute=hm=>Math.floor(Number(hm)/100)*60+Number(hm)%100;
+  const full=new Set((ledger?.scans||[]).filter(x=>!x.partial&&x.okShards===SHARDS).map(x=>x.targetHm));
+  const variant=String(ledger?.mainVariant||"baseline"),out=[];
+  for(const e of ledger?.events||[]){
+    if(e.variant!==variant||!full.has(e.targetHm)||!["buy","sell"].includes(e.stage))continue;
+    const age=minute(target)-minute(e.targetHm);
+    if(age<1||age>windowMin)continue; // This minute's VTS/first-delivery path stays unchanged.
+    const x=e.signal||{},hm=String((e.stage==="buy"?x.entryTime:x.exitTime)||e.targetHm).padStart(4,"0");
+    out.push({strategy:"opening",stage:e.stage,webOnly:!e.alertDelivery?.error,
+      eventId:["opening",ledger.date,variant,String(x.code||e.code),e.stage,hm].join(":"),date:ledger.date,
+      time:hm.slice(0,2)+":"+hm.slice(2)+" KST",
+      eventAt:new Date(Date.parse(ledger.date+"T00:00:00+09:00")+(minute(e.targetHm)+1)*60_000).toISOString(),
+      lines:[String(x.name||e.name||e.code)+" ("+String(x.code||e.code)+")","보관된 운영 메인 "+variant+" 신호 재전송",
+        e.stage==="sell"&&x.pnl!=null?"모의손익 "+Number(x.pnl).toFixed(2)+"%":"모의 매수 "+hm]});
+  }
+  return out;
+}
+async function retryOpeningNotifications(env,date,target){
+  try{
+    const ledger=await readLedger(env,date);
+    for(const payload of recentOpeningAlertEvents(ledger,target)){
+      const r=await fetch(baseUrl(env)+"/api/scalping-alert",{method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},body:JSON.stringify(payload)});
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok||!j.ok)console.warn(JSON.stringify({type:"opening_alert_retry_failed",eventId:payload.eventId,error:j.error||j.webPush?.error||r.status}));
+    }
+  }catch(e){console.warn(JSON.stringify({type:"opening_alert_retry_failed",date,error:String(e.message||e)}));}
+}
 async function sendOpeningCloseSummary(env,date){
   const mainVariant=await mainVariantForDate(env,date);
   const parts=[];
@@ -394,6 +422,7 @@ async function runMinute(controller,env){
   }catch(e){
     console.error(JSON.stringify({type:"signal_archive_failed",date:kst.date,targetHm:target,error:String(e.message||e)}));
   }
+  await retryOpeningNotifications(env,kst.date,target);
 
   if(ok.length!==SHARDS){
     console.error(JSON.stringify({type:"scan_partial",targetHm:target,okShards:ok.length,failed,archive}));
