@@ -1,17 +1,17 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-09T15:47:47.589683+09:00",
+  "generatedAt": "2026-10-12T15:35:42.091887+09:00",
   "mode": "read-only-vts-execution-research",
   "from": "2026-09-25",
-  "to": "2026-10-09",
-  "archiveDays": 11,
+  "to": "2026-10-12",
+  "archiveDays": 12,
   "strategies": [
     {
       "strategy": "opening",
-      "days": 11,
-      "reports": 11,
-      "internalTrades": 20,
-      "kisOrders": 16,
+      "days": 12,
+      "reports": 12,
+      "internalTrades": 21,
+      "kisOrders": 20,
       "completeMatches": 3,
       "buyMatches": 5,
       "sellMatches": 3,
@@ -62,15 +62,93 @@
     }
   ],
   "latest": {
-    "date": "2026-10-09",
+    "date": "2026-10-12",
     "reports": [
       {
         "strategy": "opening",
-        "internalTrades": 0,
-        "kisOrders": 0,
+        "internalTrades": 1,
+        "kisOrders": 4,
         "matched": 0,
-        "matches": [],
-        "unmatched": []
+        "matches": [
+          {
+            "code": "457190",
+            "name": "이수스페셜티케미컬",
+            "internalEntryTime": 920,
+            "internalEntryPrice": 87900,
+            "internalExitTime": 926,
+            "internalExitPrice": 89400,
+            "internalReason": "익절",
+            "internalPnl": 0.90765642775882,
+            "vtsBuy": null,
+            "vtsSell": null,
+            "entryOrderLagSecApprox": null,
+            "exitOrderLagSecApprox": null,
+            "entryBrokerNotifyLagSec": null,
+            "exitBrokerNotifyLagSec": null,
+            "entrySlippageCostPct": null,
+            "exitSlippageCostPct": null,
+            "vtsGrossPnlPct": null,
+            "vtsNetPnlPct": null,
+            "vtsBrokerEstimatedCosts": 0,
+            "vtsBrokerCostRatePct": null,
+            "observedExecutionDragPct": null,
+            "matched": false
+          }
+        ],
+        "unmatched": [
+          {
+            "code": "042660",
+            "name": "한화오션",
+            "side": "매도",
+            "orderTime": "152159",
+            "orderQty": 14,
+            "fillQty": 14,
+            "fillPrice": 67300,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "087010",
+            "name": "펩트론",
+            "side": "매도",
+            "orderTime": "152151",
+            "orderQty": 23,
+            "fillQty": 23,
+            "fillPrice": 89500,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "042660",
+            "name": "한화오션",
+            "side": "매수",
+            "orderTime": "085736",
+            "orderQty": 14,
+            "fillQty": 14,
+            "fillPrice": 70100,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "087010",
+            "name": "펩트론",
+            "side": "매수",
+            "orderTime": "085733",
+            "orderQty": 23,
+            "fillQty": 23,
+            "fillPrice": 88626,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          }
+        ]
       }
     ]
   }
