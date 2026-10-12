@@ -27,6 +27,22 @@
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
   var menuCache=null, menuSeq=0;
+  /* 메뉴 순서·표시는 DB 설정(settings/siteMenu)을 읽어야 안다. 그 전엔 페이지 HTML 의 기본 순서라,
+     페이지를 옮기자마자 ☰ 를 누르면 기본 순서가 보였다가 잠시 뒤 바뀌었다(2026-10-12 사용자).
+     설정을 처음 적용할 때까지 링크를 감추고 '메뉴 불러오는 중…'만 보인다 — 브라우저 저장소는 쓰지 않는다.
+     설정을 못 읽어도(로그아웃·오류) MENU_WAIT_MAX_MS 뒤엔 기본 순서로 연다. */
+  var MENU_WAIT_MAX_MS=6000;
+  (function menuWaitStart(){
+    var de=document.documentElement; de.classList.add('jk-menu-wait');
+    if(!document.getElementById('jkMenuWaitStyle')){
+      var st=document.createElement('style'); st.id='jkMenuWaitStyle';
+      st.textContent='html.jk-menu-wait .jkmenu-pop a[href]{display:none!important}'+
+        'html.jk-menu-wait .jkmenu-pop::after{content:"메뉴 불러오는 중…";display:block;padding:12px 10px;color:#6f7ba0;font-size:13px;font-weight:700}';
+      (document.head||de).appendChild(st);
+    }
+    setTimeout(menuWaitEnd, MENU_WAIT_MAX_MS);
+  })();
+  function menuWaitEnd(){ document.documentElement.classList.remove('jk-menu-wait'); }
   function menuPath(v){
     var p=String(v||'/').split(/[?#]/)[0]||'/';
     try{ p=new URL(p, location.origin).pathname; }catch(e){}
@@ -76,6 +92,7 @@
   }
   function applyMenuDom(user,cfg){
     var admin=isAdminEmail(user&&user.email),pops=document.querySelectorAll('.jkmenu-pop');
+    var waiting=document.documentElement.classList.contains('jk-menu-wait');   // 링크를 감춰 둔 동안엔 펼쳐 있어도 바로 바꾼다(눈앞에서 안 움직인다)
     Array.prototype.forEach.call(pops,function(pop){
       var links=Array.prototype.slice.call(pop.querySelectorAll('a[href]'));
       var oldOrder=links.slice();
@@ -92,7 +109,7 @@
         if(p==='/admin')a.classList.toggle('admin-on',admin);
       });
       if(links.some(function(a,i){return a!==oldOrder[i];})){
-        if(pop.hidden!==false)links.forEach(function(a){pop.appendChild(a);});
+        if(pop.hidden!==false||waiting)links.forEach(function(a){pop.appendChild(a);});
         else{
           /* 메뉴를 이미 펼쳐 둔 동안 DB 설정이 와도 목록이 눈앞에서 움직이지 않게
              닫힌 직후 순서를 바꾼다. 권한상 숨겨야 할 링크는 위에서 즉시 숨긴다. */
@@ -108,6 +125,7 @@
         }
       }
     });
+    menuWaitEnd();
   }
   async function applyMenuConfig(user,fb,opt){
     setAdmin(isAdminEmail(user&&user.email));
