@@ -1053,25 +1053,6 @@
   "crypto": {
    "pool": [
     {
-     "version": "coin_breakout_v1",
-     "name": "기본 · ③ BTC·ETH 어제 고가 돌파 하루 단타",
-     "rule": "업비트 BTC·ETH 각각(하루 = 09:00~다음날 09:00): 어제 종가 > 20일 평균인 날만, 오늘 가격이 어제 고가를 넘는 순간 매수 → 다음 날 09:00 에 무조건 매도(보유 24시간 미만). 매수가 대비 −5% 닿으면 손절. 두 코인 반반, 탭 표시 자금 80%.",
-     "params": {
-      "ma": 20,
-      "stopPct": 5.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "lastEntryHour": null,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-BTC",
-       "KRW-ETH"
-      ]
-     },
-     "source": "seed",
-     "addedAt": "2026-10-05"
-    },
-    {
      "version": "g_coin_ma20_s99_hi10_both",
      "name": "평균 20일 · 최근 10일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
      "rule": "어제 종가 > 20일 평균인 날, 최근 10일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
@@ -1348,6 +1329,29 @@
      "op": "jump2",
      "parents": [
       "g_coin_ma15_s99_hi3_eth"
+     ]
+    },
+    {
+     "version": "g_coin_ma10_s10_hi7_eth",
+     "name": "평균 10일 · 최근 7일 고가 돌파 · 손절 −10% · ETH 만",
+     "rule": "어제 종가 > 10일 평균인 날, 최근 7일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · ETH 만 · 탭 자금 80%",
+     "params": {
+      "ma": 10,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 7,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-10-13",
+     "op": "jump2",
+     "parents": [
+      "g_coin_ma15_s99_hi7_eth"
      ]
     }
    ],
@@ -1749,6 +1753,24 @@
      },
      "retiredAt": "2026-10-13",
      "reason": "7일 연속 하위 3위 (안정 점수 +0.439)"
+    },
+    {
+     "version": "coin_breakout_v1",
+     "name": "기본 · ③ BTC·ETH 어제 고가 돌파 하루 단타",
+     "params": {
+      "ma": 20,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-10-13",
+     "reason": "자리 교체 — 신규 g_coin_ma10_s10_hi7_eth 가 안정 점수 +0.520 로 +0.406 보다 확실히 나음"
     }
    ],
    "tried": [
@@ -2053,7 +2075,26 @@
     "g_coin_ma20_s4_vb0.4_eth",
     "g_coin_ma40_s4_hi4_btc",
     "g_coin_ma50_s10_vb0.8_eth",
-    "g_coin_ma20_s10_hi5_h15_both"
+    "g_coin_ma20_s10_hi5_h15_both",
+    "g_coin_ma30_s4_vb0.3_h21_eth",
+    "g_coin_ma80_s5_vb0.5_both",
+    "g_coin_ma80_s2_vb0.4_h18_both",
+    "g_coin_ma30_s99_vb0.5_eth",
+    "g_coin_ma20_s2_hi5_h15_eth",
+    "g_coin_ma100_s2_hi5_h12_eth",
+    "g_coin_ma20_s8_vb0.8_h12_eth",
+    "g_coin_ma25_s4_vb0.4_h18_btc",
+    "g_coin_ma40_s4_vb0.5_both",
+    "g_coin_ma25_s10_vb0.5_eth",
+    "g_coin_ma80_s4_hi2_eth",
+    "g_coin_ma20_s99_hi_btc",
+    "g_coin_ma5_s10_hi3_h21_both",
+    "g_coin_ma20_s99_vb0.7_h18_eth",
+    "g_coin_ma50_s5_hi_btc",
+    "g_coin_ma25_s8_hi5_h21_eth",
+    "g_coin_ma50_s10_hi10_h21_btc",
+    "g_coin_ma40_s10_hi15_h18_eth",
+    "g_coin_ma50_s3_hi_h12_btc"
    ],
    "snapshots": [
     {
@@ -2209,11 +2250,11 @@
     {
      "date": "2026-10-13",
      "top": "g_coin_ma15_s99_hi7_eth",
-     "main": "coin_breakout_v1",
+     "main": "g_coin_ma15_s99_hi7_eth",
      "bottom": [
       "g_coin_ma20_s8_hi5_both",
       "g_coin_ma20_s99_vb0.8_eth",
-      "g_coin_ma20_s6_vb0.7_eth"
+      "coin_breakout_v1"
      ],
      "ranks": [
       "g_coin_ma15_s99_hi7_eth",
@@ -2223,11 +2264,11 @@
       "g_coin_ma20_s10_hi3_eth",
       "g_coin_ma15_s10_hi2_eth",
       "g_coin_ma20_s99_vb0.7_eth",
+      "g_coin_ma10_s10_hi3_eth",
       "g_coin_ma15_s99_hi5_both",
       "g_coin_ma20_s99_hi10_both",
       "g_coin_ma20_s8_hi5_both",
       "g_coin_ma20_s99_vb0.8_eth",
-      "g_coin_ma20_s6_vb0.7_eth",
       "coin_breakout_v1"
      ]
     }
@@ -2238,12 +2279,12 @@
      "accepted": 0
     },
     "explore": {
-     "tried": 585,
+     "tried": 630,
      "accepted": 2
     },
     "jump2": {
-     "tried": 199,
-     "accepted": 5
+     "tried": 202,
+     "accepted": 6
     },
     "struct": {
      "tried": 25,
@@ -3253,7 +3294,26 @@
     "g_soxl_r2lt30_ibs0.4_dn1_ma50_d5",
     "g_soxl_r2lt20_ibs0.4_dn1_ma100_d4",
     "g_soxl_r3lt20_ibs0.6_ma150_d5",
-    "g_soxl_r3lt15_ibs0.7_dn1_ma200_d4"
+    "g_soxl_r3lt15_ibs0.7_dn1_ma200_d4",
+    "g_soxl_r3lt20_ibs0.5_dn2_ma200_d4",
+    "g_soxl_r2lt15_ibs0.6_dn1_ma150_d4",
+    "g_soxl_r2lt10_ibs0.6_dn2_ma100_d3",
+    "g_soxl_r2lt15_ibs0.7_ma100_d5",
+    "g_soxl_r3lt10_ibs0.5_ma150_d2",
+    "g_soxl_r2lt10_ma100_d1",
+    "g_soxl_norsi_ibs0.4_ma200_d4",
+    "g_soxl_r4lt15_ibs0.7_dn2_ma50_d4",
+    "g_soxl_r2lt25_ibs0.5_dn1_ma150_d4",
+    "g_soxl_r4lt30_ibs0.1_dn1_ma200_d1",
+    "g_soxl_r2lt20_ibs0.6_ma150_d4",
+    "g_soxl_r2lt10_ibs0.6_dn1_ma150_d5",
+    "g_soxl_r2lt35_ibs0.7_dn1_ma50_d3",
+    "g_soxl_r3lt35_ibs0.6_dn1_ma50_d4",
+    "g_soxl_r4lt10_ibs0.5_dn1_ma0_d3",
+    "g_soxl_r3lt20_ibs0.6_dn1_ma50_d5",
+    "g_soxl_r3lt15_ibs0.6_ma150_d5",
+    "g_soxl_r2lt40_dn3_ma150_d5",
+    "g_soxl_r3lt15_ibs0.6_dn1_ma150_d5"
    ],
    "snapshots": [
     {
@@ -3411,21 +3471,21 @@
      "top": "g_soxl_r2lt15_ibs0.5_ma200_d5",
      "main": "soxl_rsi2_meanrev_v1",
      "bottom": [
-      "g_soxl_r2lt10_ibs0.6_ma200_d5",
+      "g_soxl_r2lt20_ibs0.7_ma200_d5",
       "g_soxl_r2lt20_ibs0.7_ma150_d5",
       "g_soxl_r2lt20_ibs0.7_dn2_ma150_d5"
      ],
      "ranks": [
       "g_soxl_r2lt15_ibs0.5_ma200_d5",
-      "g_soxl_r2lt20_ibs0.5_dn2_ma200_d5",
       "g_soxl_r2lt15_ibs0.6_ma150_d5",
+      "g_soxl_r2lt20_ibs0.5_dn2_ma200_d5",
       "g_soxl_r2lt20_ibs0.5_ma200_d5",
-      "g_soxl_r2lt15_ibs0.7_dn1_ma200_d5",
       "g_soxl_r2lt20_ibs0.7_dn2_ma200_d5",
-      "g_soxl_r4lt20_ibs0.7_ma200_d4",
+      "g_soxl_r2lt15_ibs0.7_dn1_ma200_d5",
       "g_soxl_r2lt25_ibs0.5_ma150_d5",
-      "g_soxl_r2lt20_ibs0.7_ma200_d5",
+      "g_soxl_r4lt20_ibs0.7_ma200_d4",
       "g_soxl_r2lt10_ibs0.6_ma200_d5",
+      "g_soxl_r2lt20_ibs0.7_ma200_d5",
       "g_soxl_r2lt20_ibs0.7_ma150_d5",
       "g_soxl_r2lt20_ibs0.7_dn2_ma150_d5",
       "soxl_rsi2_meanrev_v1"
@@ -3434,19 +3494,19 @@
    ],
    "ops": {
     "struct": {
-     "tried": 89,
+     "tried": 90,
      "accepted": 6
     },
     "explore": {
-     "tried": 389,
+     "tried": 417,
      "accepted": 0
     },
     "jump2": {
-     "tried": 307,
+     "tried": 325,
      "accepted": 10
     },
     "neighbor": {
-     "tried": 86,
+     "tried": 87,
      "accepted": 4
     },
     "cross": {
@@ -5333,7 +5393,44 @@
    "version": "",
    "name": "",
    "reason": "후보 48개 계산 → 기준 통과 33 · 투입 0(교체 0) · 탈락: 손실 기준 미달 8 · 점수 부족 8 · 해마다 일관성 부족 6 · 매매일 부족 1 · 복제 1"
+  },
+  {
+   "date": "2026-10-13",
+   "at": "2026-10-13T07:16+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma10_s10_hi7_eth",
+   "name": "평균 10일 · 최근 7일 고가 돌파 · 손절 −10% · ETH 만",
+   "reason": "두 칸 동시 — g_coin_ma15_s99_hi7_eth 에서 평균 15→10, 손절 99→10 · 안정 점수 +0.520 (그대로 +0.637 · 이웃 중앙 +0.520) · 매매일 568 · MDD -19.7% · 플러스 9/9해",
+   "op": "jump2"
+  },
+  {
+   "date": "2026-10-13",
+   "at": "2026-10-13T07:16+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 37 · 투입 1(교체 1) · 탈락: 손실 기준 미달 10 · 점수 부족 8 · 매매일 부족 1"
+  },
+  {
+   "date": "2026-10-13",
+   "at": "2026-10-13T07:16+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "coin_breakout_v1",
+   "name": "기본 · ③ BTC·ETH 어제 고가 돌파 하루 단타",
+   "reason": "자리 교체 — 신규 g_coin_ma10_s10_hi7_eth 가 안정 점수 +0.520 로 +0.406 보다 확실히 나음"
+  },
+  {
+   "date": "2026-10-13",
+   "at": "2026-10-13T07:16+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 38 · 투입 0(교체 0) · 탈락: 점수 부족 7 · 손실 기준 미달 6 · 해마다 일관성 부족 4 · 복제 2"
   }
  ],
- "updatedAt": "2026-10-13T04:18+09:00"
+ "updatedAt": "2026-10-13T07:16+09:00"
 }

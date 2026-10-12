@@ -2,6 +2,33 @@
   "ok": true,
   "events": [
     {
+      "tab": "crypto",
+      "version": "g_coin_ma15_s99_hi7_eth",
+      "name": "평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만",
+      "rule": "어제 종가 > 15일 평균인 날, 최근 7일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · ETH 만 · 탭 자금 80%",
+      "params": {
+        "ma": 15,
+        "stopPct": 99,
+        "level": "prevhigh",
+        "k": 0.5,
+        "hiN": 7,
+        "lastEntryHour": null,
+        "tabSize": 0.8,
+        "markets": [
+          "KRW-ETH"
+        ]
+      },
+      "effectiveFrom": "2026-10-14",
+      "promotedAt": "2026-10-12T19:18:16.240298+00:00",
+      "prevVersion": "coin_breakout_v1",
+      "by": "auto:arena-7d-top1",
+      "basis": {
+        "labGeneratedAt": "2026-10-13T04:18:16.240308+09:00",
+        "rank": 1,
+        "promotion": "7일 연속 1위 · 안정 점수 +0.547 vs 메인 +0.406"
+      }
+    },
+    {
       "tab": "opening",
       "version": "g_open_q7_k3_gap3",
       "name": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
