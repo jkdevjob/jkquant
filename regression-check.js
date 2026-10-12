@@ -10986,8 +10986,9 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
      && /pageSize:'100'/.test(sc)
      && /\.value\|\|'180'/.test(sc)
      && /parseInt\(range,10\)/.test(hapi));
-  ok('누적 이력 공통 컬럼은 날짜·종목·전략버전·신호·진입·청산·사유·손익',
-     /<th>날짜<\/th><th>종목<\/th><th>전략버전<\/th><th>신호<\/th><th>진입<\/th><th>청산<\/th><th>사유<\/th><th>손익<\/th>/.test(sc));
+  ok('누적 이력 공통 컬럼은 날짜·종목·전략버전/출처·신호·진입·청산·사유·손익',
+     /<th>날짜<\/th><th>종목<\/th><th>전략버전\/출처<\/th><th>신호<\/th><th>진입<\/th><th>청산<\/th><th>사유<\/th><th>손익<\/th>/.test(sc)
+     &&/x\.recordOrigin==='live-paper'/.test(sc));
   ok('오늘 장중 모의장부는 5번(today), 다음 계획은 6번(plan), 누적 이력은 8번(history)',
      /opening:\{strategy:\[\],search:\['🔥 실시간 시초가 돌파 감시'\],today:\['📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc)
      && /daytrading:\{strategy:\['📈 데이트레이딩 기준전략'\],search:\['📡 데이트레이딩 서버 장중 감시'\],today:\['📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc)
@@ -11426,7 +11427,8 @@ ok('GPT 오늘 탭에 4전략 누적 수익률 그래프가 단일 사전계산 
    &&/DAILY_TREND_STEP=5/.test(scl)
    &&/전체 누적값 · 최근 31일 확대/.test(scl)
    &&/cut\.setUTCDate\(cut\.getUTCDate\(\)-30\)/.test(scl)
-   &&/시초가·데이트레이딩 선도 함께 보이게/.test(scl));
+   &&/원래 기준전략 연구 \+ 최근 완료 DB 세션 혼합/.test(scl)
+   &&/자료 없음이 무매매를 의미하지는 않습니다/.test(scl));
 ok('무매매 확정일은 0.00% 대신 매매없음으로 표시한다',
    /const resultText=x\.noTrade\?'매매없음':dailyResultPct\(r\);/.test(scl)
    &&/x\.noTrade\?'매매없음 · 0\.00% 반영'/.test(scl));
@@ -11455,8 +11457,8 @@ console.log('\n[PERF FAST PATH] 모의 성과 · 단타 오늘 탭');
      && /if\(!force\)await edgePut\(request,response\)/.test(dapi));
   ok('단타 오늘 서버의 독립 원천 조회는 순차 대기 대신 병렬 처리한다',
      /const reads=await Promise\.allSettled\(dates\.map/.test(dapi)
-     && /Promise\.allSettled\(\[daytradingLiveSessions\(env\),daytradingResearchSessions\(\)\]\)/.test(dapi)
-     && /Promise\.allSettled\(\[globalPaperSessions\(env,strategy\),decisionSessions\(path,source\)\]\)/.test(dapi));
+     && /Promise\.allSettled\(\[daytradingLiveSessions\(env,warnings\),daytradingResearchSessions\(\)\]\)/.test(dapi)
+     && /Promise\.allSettled\(\[globalPaperSessions\(env,strategy,warnings\),decisionSessions\(path,source\)\]\)/.test(dapi));
   ok('단타 오늘 빠른 경로는 외부 원천 1.8초 제한 + 필요한 완료일 2개만 조회 + KRX 로컬 휴장일을 쓴다',
      /const SOURCE_TIMEOUT_MS=1800;/.test(dapi)
      && /async function fastFetch\(url,init=\{\},timeoutMs=SOURCE_TIMEOUT_MS\)/.test(dapi)
@@ -11872,16 +11874,19 @@ console.log('\n[SCALPING TODAY LIVE] BTC·SOXL 실시간 장부 우선 · 부분
   const dapi=fs.readFileSync(__d+'/functions/api/scalping-daily-results.js','utf8');
   ok('오늘 API는 BTC·SOXL Worker 마감 모의장부를 연구 CSV보다 우선한다',
      /GLOBAL_WORKER_FALLBACK/.test(dapi)
-     &&/async function globalPaperSessions\(env,strategy\)/.test(dapi)
+     &&/async function globalPaperSessions\(env,strategy,warnings=\[\]\)/.test(dapi)
      &&/liveFirstSessions\(env,"crypto"/.test(dapi)
      &&/liveFirstSessions\(env,"soxl"/.test(dapi)
      &&/"global-paper-live"/.test(dapi));
   ok('오늘 API는 전략별 실패를 격리해 한 원천 오류가 4전략 전체를 숨기지 않는다',
      /async function safeSessions\(fn\)/.test(dapi)
-     &&/safeSessions\(\(\)=>openingSessions\(\)\)/.test(dapi)
-     &&/safeSessions\(\(\)=>daytradingSessions\(env\)\)/.test(dapi));
-  ok('오늘 화면은 실시간 마감 모의장부 사용 여부를 표시한다',
-     /global-paper-live/.test(scl) && /실시간 마감 모의장부/.test(scl));
+     &&/safeSessions\(w=>openingSessions\(w\)\)/.test(dapi)
+     &&/safeSessions\(w=>daytradingSessions\(env,w\)\)/.test(dapi));
+  const sourceLabel=new Function(extractFn(scl,'function scalpingResultSource(')+';return scalpingResultSource;')();
+  ok('오늘 화면은 운영 모의장부·연구 이관·장마감 재구성을 서로 구분한다',
+     sourceLabel('global-paper-live')==='운영 모의장부'
+     &&sourceLabel('historical-research-import')==='과거 연구결과 DB 이관'
+     &&sourceLabel('opening-history')==='장마감 재구성');
 }
 
 
