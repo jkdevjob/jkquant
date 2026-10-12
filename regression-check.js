@@ -12149,11 +12149,13 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
   const iE=re.indexOf('<script src="/realestate-claude-engine.js" defer></script>'),iA=re.indexOf('<script src="/realestate-claude-apt.js" defer></script>'),iU=re.indexOf('<script src="/realestate-claude.js" defer></script>');
   ok('클로드 칸: 지수 엔진 → 아파트 엔진 → 화면 순서로, 클로드 칸 뒤 · 지피티 칸 앞에서 불러온다', iC>0&&iC<iE&&iE<iA&&iA<iU&&iU<iG&&/id="rec-root"/.test(re.slice(iC,iE)));
   ok('클로드 화면·엔진은 지피티 칸을 건드리지 않는다', !/pane-gpt/.test(ui)&&!/pane-gpt/.test(eng)&&!/pane-gpt/.test(apt));
-  ok('화면은 장부·전략을 계산하지 않는다 — 엔진 함수만 부른다(같은 걸 두 군데서 세지 않는다)',
-     !/function\s+(simulate|markMonth|planNext|walkForward|monthYield|desire|stepMonth|candidatesAt|eventStudy|paperUpdate|gainTax|acqRate)\b/.test(ui)
-     &&/E\.walkForward\(/.test(ui)&&/E\.snapshot\(/.test(ui)&&/X\.simulate\(/.test(ui)&&/X\.nowView\(/.test(ui)&&/X\.eventStudy\(/.test(ui));
+  ok('화면은 장부·전략을 계산하지 않는다 — 엔진 함수만 부른다(같은 걸 두 군데서 세지 않는다 · 비교 곡선도 엔진 benchmarks 값)',
+     !/function\s+(simulate|markMonth|planNext|walkForward|monthYield|desire|stepMonth|candidatesAt|leadersAt|leaderChanges|benchmarks|eventStudy|paperUpdate|gainTax|acqRate)\b/.test(ui)
+     &&/E\.walkForward\(/.test(ui)&&/E\.snapshot\(/.test(ui)&&/X\.simulate\(/.test(ui)&&/X\.nowView\(/.test(ui)&&/X\.eventStudy\(/.test(ui)
+     &&/X\.benchmarks\(/.test(ui)&&/X\.leaderChanges\(/.test(ui)&&!/X\.price\(/.test(ui)&&!/depositRate/.test(ui)
+     &&['lead','hold','deposit'].every(b=>new RegExp('BENCH\\.'+b+'\\.curve').test(ui)));
   const ta=require('child_process').spawnSync(process.execPath,[__d+'/scripts/test_realestate_claude_apt.cjs'],{encoding:'utf8'});
-  ok('아파트 매매 전략(apt-1) 값 시험 전부 통과 — 매수·매도·갈아타기·세금·룩어헤드·장부(합성+실제)', ta.status===0,
+  ok('아파트 매매 전략(apt-1 · 대장 apt-lead-1) 값 시험 전부 통과 — 매수·매도·갈아타기·세금·대장 고르기·룩어헤드·장부(합성+실제)', ta.status===0,
      (ta.stdout||'').split('\n').filter(l=>/✗|결과:/.test(l)).join(' / ')+(ta.stderr||'').slice(0,300));
   for(const [f,name] of [['test_collect_apt.py','아파트 단지 수집기 — 84㎡ 대표 타입 · 같은 달 두 번 멈춤 · 실거래 월 요약 · 이름 불일치 멈춤'],['test_collect_presale.py','신규 분양 수집기 — 청약홈 목록·상세·경쟁률·위치']]){
     const tp=require('child_process').spawnSync('python3',['-I',__d+'/scripts/realestate_claude/'+f],{encoding:'utf8'});
@@ -12172,13 +12174,16 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        return P.strategyVersion===sv&&P.params&&P.params.lag===E2.DEFAULTS.lag&&P.decisions.length>0
          &&P.decisions.every(d=>d.sv===sv&&d.ev&&/^\d{4}-\d{2}$/.test(d.data)&&E2.ymk(d.m)-E2.ymk(d.data)===P.params.lag&&(d.cand===null||ids.indexOf(d.cand)>=0)); }));
   const pm=fs.readFileSync(__d+'/scripts/realestate_claude/paper.mjs','utf8');
-  ok('장부 갱신은 세 장부 모두(지수 v1·v2 · 아파트 apt-1) · 파일과 전략 버전이 어긋나거나 지난 기록이 바뀌면 저장 거부',
+  const XA=require(__d+'/realestate-claude-apt.js'),ASV=Object.keys(XA.STRATEGIES);
+  ok('장부 갱신은 네 장부 모두(지수 v1·v2 · 아파트 apt-1·대장 apt-lead-1) · 파일과 전략 버전이 어긋나거나 지난 기록이 바뀌면 저장 거부',
      /\{ file: 'paper\.json', sv: 'rec-wf-1' \}/.test(pm)&&/\{ file: 'paper-rec-wf-2\.json', sv: 'rec-wf-2' \}/.test(pm)
-     &&/old\.strategyVersion !== sv/.test(pm)&&(pm.match(/지난 장부 기록이 바뀌었습니다/g)||[]).length===2
-     &&/'paper-apt-1\.json'/.test(pm)&&/old\.strategyVersion !== X\.STRATEGY/.test(pm));
-  const PA=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/paper-apt-1.json','utf8')),XA=require(__d+'/realestate-claude-apt.js');
-  ok('아파트 모의장부(apt-1): 제 전략 버전 · 당시 가정(원금·문턱·최소 보유) · 시작 달 기록',
-     PA.strategyVersion===XA.STRATEGY&&PA.params&&PA.params.minHold===XA.DEFAULTS.minHold&&PA.params.buyMin===XA.DEFAULTS.buyMin&&/^\d{4}-\d{2}$/.test(PA.startedData)&&Array.isArray(PA.months));
+     &&(pm.match(/old\.strategyVersion !== sv/g)||[]).length===2&&(pm.match(/지난 장부 기록이 바뀌었습니다/g)||[]).length===2
+     &&ASV.join()==='apt-1,apt-lead-1'&&ASV.every(sv=>pm.indexOf("{ file: 'paper-"+sv+".json', sv: '"+sv+"' }")>0&&ui.indexOf("'"+sv+"':'paper-"+sv+".json'")>0)
+     &&/X\.paperUpdate\(old, A, \{ strategy: sv \}, now\)/.test(pm));
+  ok('아파트 모의장부(apt-1 · apt-lead-1): 파일마다 제 전략 버전 · 후보 방식 · 당시 가정(원금·문턱·최소 보유) · 시작 달 기록',
+     ASV.every(sv=>{ const PA=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/paper-'+sv+'.json','utf8')),o=XA.opts({strategy:sv});
+       return PA.strategyVersion===sv&&PA.params&&(PA.params.pick==null?sv===XA.STRATEGY:PA.params.pick===o.pick)&&PA.params.minHold===o.minHold&&PA.params.buyMin===o.buyMin&&PA.params.capital===o.capital
+         &&/^\d{4}-\d{2}$/.test(PA.startedData)&&Array.isArray(PA.months)&&Array.isArray(PA.trades); }));
   const AP=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/apt.json','utf8'));
   ok('아파트 원자료(KB): 대단지 30곳 이상 · 단지마다 2004~ 월 시세(하한·일반·상한·전세) · 실거래 월 요약',
      AP.universe.length>=30&&AP.universe.every(u=>u.units>=AP.minUnits&&AP.sise[u.id]&&AP.sise[u.id].mid.length===AP.sise[u.id].jeonse.length)

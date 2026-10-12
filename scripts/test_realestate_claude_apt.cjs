@@ -1,4 +1,4 @@
-/* 부동산(클로드) 아파트 매매 전략 apt-1 값 시험 — node scripts/test_realestate_claude_apt.cjs
+/* 부동산(클로드) 아파트 매매 전략 apt-1 · apt-lead-1(대장) 값 시험 — node scripts/test_realestate_claude_apt.cjs
    합성 단지로 "이 상황이면 이 단지를 이 값에 사고판다"를 값으로 확인하고, 실제 자료가 있으면 룩어헤드·장부를 실제 자료로도 본다.
    변이 시험은 REC_APT 로 바꾼 엔진을 넣는다. */
 'use strict';
@@ -157,6 +157,85 @@ console.log('[부동산 클로드 아파트 전략] 모의장부 — 덧붙이�
   ok('전략 버전이 다른 장부는 건드리지 않는다', threw);
 }
 
+console.log('[부동산 클로드 아파트 전략] 대장 아파트(apt-lead-1)');
+// J: 세종 대단지 1곳 — 2004-11 까지 1.5억, 2004-12 부터 월 1.5% 상승(24개월) → 2005-02 결정에서 6개월 +3.02%
+const midJ=path_(N,i=>15000*Math.pow(1.015,Math.min(Math.max(i-10,0),24)));
+// F: 대전 싼 대단지 — 3년간 월 2% 급등(6개월 +12.6%)이지만 시세 1위가 아니라 대장이 아니다
+const midF=path_(N,i=>10000*Math.pow(1.02,Math.min(i,36)));
+const LEAD=BASE.concat([{id:5,name:'세종하나',gu:'세종시',units:1100,mid:midJ},{id:6,name:'급등',gu:'동구',units:2000,mid:midF}]);
+const LO=X.opts({strategy:'apt-lead-1'});
+const ix=m=>K(m)-K('2004-01');
+{
+  const A=prep(LEAD);
+  // 독립 계산: 도시마다 전달 시세가 가장 비싼 1,000세대 이상 단지
+  const want=(k)=>{ const out={}; for(const c of LEAD){ if(c.units<1000) continue; const city=c.gu==='세종시'?'세종':'대전',p=c.mid[k-1-K('2004-01')]; if(p==null) continue; if(!out[city]||p>out[city].p||(p===out[city].p&&c.units>out[city].u)) out[city]={id:c.id,p,u:c.units}; } return out; };
+  let same=true,seen=0;
+  for(let k=K('2004-02');k<=K('2013-12');k++){ const L=X.leadersAt(A,k,LO),w=want(k); seen++;
+    if(L.length!==2||L[0].city!=='대전'||L[1].city!=='세종'||L[0].id!==w['대전'].id||L[1].id!==w['세종'].id||L[0].price!==w['대전'].p) { same=false; break; } }
+  ok('대장: 매달 도시마다 전달 84㎡ 시세가 가장 비싼 대단지(대전·세종 순) — 독립 계산과 '+seen+'달 모두 같다', same);
+  const k=K('2006-01');
+  ok('대장: 1,000세대 미만은 시세가 더 비싸도 대장이 아니다', midS[ix('2005-12')]>midA[ix('2005-12')]&&X.leadersAt(A,k,LO)[0].id===1, midS[ix('2005-12')]+' vs '+midA[ix('2005-12')]);
+  const L1=X.leadersAt(A,K('2005-02'),LO);
+  ok('대장 기록: 그 도시 대단지 수 · 2위 단지와 값', L1[0].n===3&&L1[0].next&&L1[0].next.id===2&&L1[0].next.price===midB[ix('2005-01')]&&L1[1].n===1&&L1[1].next===null, JSON.stringify(L1));
+  const kk=K('2010-10'),bump=LEAD.map(c=>c.id===2?Object.assign({},c,{mid:c.mid.map((v,i)=>i===kk-K('2004-01')?v*3:v)}):c);
+  ok('대장은 k월 시세를 보지 않는다(k월 값을 바꿔도 k월 대장은 같고, k+1월에 바뀐다)', X.leadersAt(prep(bump),kk,LO)[0].id===X.leadersAt(A,kk,LO)[0].id&&X.leadersAt(prep(bump),kk+1,LO)[0].id===2&&X.leadersAt(A,kk+1,LO)[0].id===1);
+  const tie=prep([{id:7,name:'작은값',gu:'세종시',units:1100,mid:midB},{id:8,name:'큰값',gu:'세종시',units:1500,mid:midB}]);
+  ok('대장: 시세가 같으면 세대수 많은 단지', X.leadersAt(tie,K('2005-01'),LO)[0].id===8);
+  const C=X.candidatesAt(A,K('2005-02'),LO);
+  ok('대장 후보: 대장만(급등하는 싼 대단지 제외) · 6개월 상승률 순', C.length===2&&C[0].id===5&&C[1].id===1&&C.every(c=>c.lead&&c.id!==6), JSON.stringify(C.map(c=>[c.id,c.mom])));
+  const C1=X.candidatesAt(A,K('2005-02'),X.DEFAULTS);
+  ok('apt-1 후보(같은 달)는 대단지 전부 — 급등 단지가 1위', C1[0].id===6&&C1.length===4&&!C1.some(c=>c.lead), JSON.stringify(C1.map(c=>c.id)));
+}
+{
+  const A=prep(LEAD),S=X.simulate(A,{strategy:'apt-lead-1'}),S1=X.simulate(A);
+  const t=S.trades[0],b=t.buy;
+  ok('apt-1 은 급등하는 싼 대단지를 첫 달(2004-08)에 산다', S1.trades[0].id===6&&S1.trades[0].buy.m==='2004-08', S1.trades[0].id+' '+S1.trades[0].buy.m);
+  ok('apt-lead-1 은 대장 중 6개월 +3%를 처음 넘는 달(2005-02)에 그 대장(세종하나)을 산다', t.id===5&&b.m==='2005-02'&&b.price===midJ[ix('2005-02')], t.id+' '+b.m);
+  ok('대장 매수 기록: 도시 · 전달 시세 · 대단지 수 · 2위 없음 · 대장 2곳 중 1위 · 다른 대장', b.lead&&b.lead.city==='세종'&&b.lead.last===midJ[ix('2005-01')]&&b.lead.n===1&&b.lead.next===null&&b.rank===1&&b.of===2&&b.runners.length===1&&b.runners[0].id===1&&b.runners[0].mom===0, JSON.stringify(b.lead)+' '+JSON.stringify(b.runners));
+  ok('대장 매수도 같은 체결·비용(취득세·중개) · 결정 직전 6개월 뉴스(이 창엔 없음)', b.costs.acq===Math.round(b.price*0.011)&&b.total===b.price+b.costs.acq+b.costs.broker&&b.news.length===0);
+  ok('apt-lead-1 은 대장이 아닌 단지를 한 번도 사지 않는다', S.trades.every(x=>X.leadersAt(A,K(x.buy.m),LO).some(l=>l.id===x.id)), JSON.stringify(S.trades.map(x=>[x.id,x.buy.m])));
+  ok('apt-1 매수 기록엔 대장 칸이 없다(전략 기록이 섞이지 않음)', S1.trades.every(x=>!('lead' in x.buy)));
+  ok('전략 이름이 후보 방식을 정한다: apt-1 에 pick 을 넘겨도 대장으로 바뀌지 않는다', X.opts({strategy:'apt-1',pick:'leader'}).pick==='mom'&&JSON.stringify(X.simulate(A,{pick:'leader'}).trades)===JSON.stringify(S1.trades)&&S.opts.pick==='leader'&&S.opts.strategy==='apt-lead-1');
+  let threw=false; try{ X.opts({strategy:'apt-9'}); }catch(e){ threw=/모르는 전략/.test(e.message); }
+  ok('모르는 전략 이름은 멈춘다', threw);
+  // 비교 기준 — 대장 계속 보유: 그달 대장(전달 시세 1위) 두 곳 평균 월수익 − 보유세/12 (독립 계산)
+  const B=X.benchmarks(A,S),k0=K(S.start),k1=K(S.end);
+  let v=30000,ok2=true;
+  for(let k=k0;k<=k1;k++){ let s2=0,n=0;
+    for(const city of ['대전','세종']){ let best=null; for(const c of LEAD){ if(c.units<1000||(c.gu==='세종시'?'세종':'대전')!==city) continue; const p=c.mid[k-1-K('2004-01')]; if(best==null||p>best.p) best={c,p}; }
+      s2+=best.c.mid[k-K('2004-01')]/best.p-1; n++; }
+    v*=1+s2/n-0.0015/12; if(!near(B.lead.curve[k-k0],v,1e-9)) ok2=false; }
+  ok('비교 기준(대장 계속 보유) 값: 전달 시세 1위 두 곳의 그달 수익 평균 − 보유세', ok2&&near(B.lead.final,v,1e-9)&&B.lead.curve.length===S.curve.length, B.lead.final+' vs '+v);
+  ok('비교 기준 곡선은 전략 곡선과 같은 달 수(화면이 다시 세지 않는다)', B.hold.curve.length===S.curve.length&&B.deposit.curve.length===S.curve.length&&near(B.hold.curve[B.hold.curve.length-1],B.hold.final)&&B.deposit.mdd===0);
+  const lc=X.leaderChanges(A,{strategy:'apt-lead-1'});
+  const want=[]; { const prev={}; for(let k=K('2004-02');k<=A.lastK+1;k++) for(const l of X.leadersAt(A,k,LO)) if(prev[l.city]!==l.id){ want.push([E.kym(k-1),l.city,l.id]); prev[l.city]=l.id; } }
+  ok('대장이 바뀐 때: 시세 달 기준(첫 줄 2004-01 대전 에이 · 세종하나) · 대전 에이 → 비 한 번', lc.length===want.length&&lc.every((x,i)=>x.m===want[i][0]&&x.city===want[i][1]&&x.id===want[i][2])&&lc[0].m==='2004-01'&&lc[0].id===1&&lc[1].id===5&&lc.filter(x=>x.city==='대전').map(x=>x.id).join()==='1,2', JSON.stringify(lc.map(x=>[x.m,x.city,x.id])));
+  const nv=X.nowView(A,{strategy:'apt-lead-1'},null);
+  ok('지금(대장): 다음 달 대장 두 곳 · 6개월 상승률 · 2위 · 후보도 대장만', nv.strategy==='apt-lead-1'&&nv.leaders.length===2&&nv.leaders[0].id===2&&nv.leaders[1].id===5&&nv.leaders[0].next.id===1&&near(nv.leaders[0].mom,midB[N-1]/midB[N-7]-1)&&nv.top.every(x=>x.id===2||x.id===5), JSON.stringify(nv.leaders.map(l=>[l.id,l.mom])));
+}
+lookaheadLead(LEAD,R0,'2005-06');
+lookaheadLead(LEAD,R0,'2009-12');
+function lookaheadLead(list,rates,month){
+  const M=K(month),bump=v=>v==null?null:Math.round(v*1.5);
+  const L2=list.map(c=>Object.assign({},c,{mid:c.mid.map((v,i)=>K(c.start||'2004-01')+i>M?bump(v):v)}));
+  const S1=X.simulate(prep(list,rates),{strategy:'apt-lead-1'}),S2=X.simulate(prep(L2,rates.map((v,i)=>K('2002-01')+i>M?v+2:v)),{strategy:'apt-lead-1'});
+  const upTo=S=>JSON.stringify(S.months.filter(m=>m.k<=M).map(m=>[m.k,m.action,m.opened&&m.opened.id,m.opened&&m.opened.buy.lead,Math.round(m.eq)]));
+  ok('대장 합성: '+month+' 뒤 시세·금리를 바꿔도 그달까지 대장 판단·체결·자산은 같다', upTo(S1)===upTo(S2));
+}
+{
+  const cut=K('2006-06'),short=LEAD.map(c=>Object.assign({},c,{mid:c.mid.slice(0,cut-K('2004-01')+1)}));
+  const L0=X.paperUpdate(null,prep(short),{strategy:'apt-lead-1'},'t0').ledger;
+  ok('대장 장부: 제 전략 버전 · 후보 방식(pick) 기록 · 만든 달 자료까지', L0.strategyVersion==='apt-lead-1'&&L0.params.pick==='leader'&&L0.months.length===0&&L0.startedData==='2006-06');
+  const A1=prep(LEAD.map(c=>Object.assign({},c,{mid:c.mid.slice(0,cut-K('2004-01')+13)}))),r1=X.paperUpdate(L0,A1,{strategy:'apt-lead-1'},'t1');
+  const st={eq:30000,pos:null},want=[]; for(let k=cut+1;k<=cut+12;k++){ const r=X.stepMonth(A1,st,k,LO); want.push([r.action,Math.round(r.eq*100)/100,st.pos&&st.pos.id]); }
+  ok('대장 장부 한 줄 = 같은 stepMonth(대장 후보) 결과', r1.added===12&&JSON.stringify(r1.ledger.months.map(m=>[m.action,m.eq,m.pos]))===JSON.stringify(want), JSON.stringify(r1.ledger.months.map(m=>m.action)));
+  let t1=false,t2=false,t3=false;
+  try{ X.paperUpdate(L0,A1,{},'t'); }catch(e){ t1=true; }
+  try{ X.paperUpdate(X.paperUpdate(null,prep(short),{},'t0').ledger,A1,{strategy:'apt-lead-1'},'t'); }catch(e){ t2=true; }
+  try{ X.paperUpdate(Object.assign({},L0,{params:Object.assign({},L0.params,{pick:'mom'})}),A1,{strategy:'apt-lead-1'},'t'); }catch(e){ t3=true; }
+  ok('장부와 전략이 어긋나면 멈춘다(대장 장부를 apt-1 로 · apt-1 장부를 대장으로 · 후보 방식이 바뀐 장부)', t1&&t2&&t3);
+}
+
 /* ── 실제 자료 ── */
 const DIR=path.join(__dirname,'..','data','realestate','claude');
 if(fs.existsSync(path.join(DIR,'apt.json'))){
@@ -174,14 +253,24 @@ if(fs.existsSync(path.join(DIR,'apt.json'))){
   lookahead2(A,E.kym(A.lastK-20));
   const nv=X.nowView(A,X.DEFAULTS,null);
   ok('실제: 지금 판단은 마지막 시세 다음 달', nv.forMonth===E.kym(A.lastK+1)&&nv.top.length>0);
+  const SL=X.simulate(A,{strategy:'apt-lead-1'}),LO2=X.opts({strategy:'apt-lead-1'});
+  const leaderOf=(k,city)=>{ let best=null,n=0,sec=null; for(const u of A.U){ if(u.city!==city||u.units<1000) continue; const p=X.price(A,u.id,k-1); if(p==null) continue; n++;
+      if(!best||p>best.p||(p===best.p&&u.units>best.u)){ sec=best; best={id:u.id,p,u:u.units}; } else if(!sec||p>sec.p||(p===sec.p&&u.units>sec.u)) sec={id:u.id,p,u:u.units}; } return {best,n,sec}; };
+  ok('실제(대장): 산 단지는 모두 그 달 그 도시 대장(전달 시세 1위) · 대단지 수 · 2위 기록이 독립 계산과 같다', SL.trades.length>0&&SL.trades.every(t=>{ const w=leaderOf(K(t.buy.m),t.city); return w.best.id===t.id&&t.buy.lead.n===w.n&&t.buy.lead.last===w.best.p&&(w.sec?t.buy.lead.next.id===w.sec.id:t.buy.lead.next===null); }), JSON.stringify(SL.trades.map(t=>[t.id,t.buy.m])));
+  ok('실제(대장): 매수 근거·2년 보유·체결가가 apt-1 과 같은 규칙', SL.trades.every(t=>t.buy.rateUp<=0&&t.buy.mom>=0.03&&t.buy.rank===1&&t.buy.price===X.price(A,t.id,K(t.buy.m))&&(t.open||t.sell.held>=24)));
+  ok('실제(대장): 거래가 겹치지 않는다', SL.trades.every((t,i)=>i===0||K(t.buy.m)>=K(SL.trades[i-1].sell.m)));
+  lookahead2(A,'2015-06','apt-lead-1');
+  lookahead2(A,E.kym(A.lastK-8),'apt-lead-1');
+  const nl=X.nowView(A,{strategy:'apt-lead-1'},null);
+  ok('실제(대장): 지금 대장 = 대전 1곳 · 세종 1곳', nl.leaders.length===2&&nl.leaders[0].city==='대전'&&nl.leaders[1].city==='세종'&&nl.leaders.every(l=>l.id===leaderOf(A.lastK+1,l.city).best.id));
 }
-function lookahead2(A,month){
-  const M=K(month),S1=X.simulate(A);
+function lookahead2(A,month,sv){
+  const M=K(month),S1=X.simulate(A,{strategy:sv});
   const B=Object.assign({},A,{P:{}});
   for(const id in A.P){ const s=A.P[id]; B.P[id]={k0:s.k0,v:s.v.map((v,i)=>s.k0+i>M&&v!=null?Math.round(v*(1.3+0.2*Math.sin(i))):v)}; }
-  const S2=X.simulate(B);
+  const S2=X.simulate(B,{strategy:sv});
   const upTo=S=>JSON.stringify(S.months.filter(m=>m.k<=M).map(m=>[m.k,m.action,m.opened&&m.opened.id,Math.round(m.eq)]));
-  ok('실제: '+month+' 뒤 시세를 바꿔도 그달까지 결정은 같다', upTo(S1)===upTo(S2));
+  ok('실제'+(sv?'('+sv+')':'')+': '+month+' 뒤 시세를 바꿔도 그달까지 결정은 같다', upTo(S1)===upTo(S2));
 }
 
 console.log(`\n결과: ${pass} PASS / ${fail} FAIL`);

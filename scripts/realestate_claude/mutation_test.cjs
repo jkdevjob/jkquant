@@ -56,14 +56,31 @@ const APT_MUTS=[
   ['보유세를 안 쌓음','      if(px!=null){ p.hold+=px*o.holdCostYr/12;','      if(px!=null){'],
   ['그때 뉴스에 결정 달 사건 포함','e.k>=k-n&&e.k<=k-1&&regionHit(e,city)','e.k>=k-n&&e.k<=k&&regionHit(e,city)'],
   ['다른 지역 뉴스도 붙임',"function regionHit(e,city){ return e.region==='전국'||e.region==='대전·세종'||e.region===city; }","function regionHit(e,city){ return true; }"],
-  ['작은 단지도 후보',"    if(o.minUnits&&(+u.units||0)<o.minUnits) continue;\n    const m=momOf","    const m=momOf"],
+  ['작은 단지도 후보',"    if(o.minUnits&&(+u.units||0)<o.minUnits) continue;\n    const ld=lead","    const ld=lead"],
   ['갈아타기 없음','  if(!st.pos){\n    const C=candidatesAt(A,k,o)','  if(!st.pos&&!out.closed){\n    const C=candidatesAt(A,k,o)'],
   ['장부를 처음부터 다시 씀',"  const done=L.months.length?ymk(L.months[L.months.length-1].m):ymk(L.startedData);","  const done=ymk(L.startedData); L.months=[];"],
   ['사건 기준 달을 사건 달로',"const a=price(A,u.id,e.k-1),b=price(A,u.id,e.k-1+h);","const a=price(A,u.id,e.k),b=price(A,u.id,e.k+h);"],
   ['예금 이자소득세 무시',"return (d==null?0:d/100)*(1-o.depositTax)/12;","return (d==null?0:d/100)/12;"],
   ['비과세 기준 12억 안 올림',"k<ymk('2021-12')?90000:120000;","90000;"],
   ['장기보유특별공제 없음',"  if(held>=36) taxable*=1-Math.min(0.8,0.08*Math.floor(held/12));","  if(false) taxable*=1;"],
-  ['체결을 전달 시세로',"      const px=price(A,best.id,k),q=quote(A,best.id,k)","      const px=price(A,best.id,k-1),q=quote(A,best.id,k)"]
+  ['체결을 전달 시세로',"      const px=price(A,best.id,k),q=quote(A,best.id,k)","      const px=price(A,best.id,k-1),q=quote(A,best.id,k)"],
+  // apt-lead-1 (대장 아파트)
+  ['대장을 이번 달 시세로(룩어헤드)',"    const p=price(A,u.id,k-1); if(p==null) continue;\n    (by[u.city]","    const p=price(A,u.id,k); if(p==null) continue;\n    (by[u.city]"],
+  ['대장에 작은 단지도',"    if(o.minUnits&&(+u.units||0)<o.minUnits) continue;\n    const p=price(A,u.id,k-1)","    const p=price(A,u.id,k-1)"],
+  ['대장을 가장 싼 단지로',"const a=by[city].sort((x,y)=>(y.price-x.price)||","const a=by[city].sort((x,y)=>(x.price-y.price)||"],
+  ['대장 같은 값이면 세대수 적은 쪽',"(y.units-x.units)||String(x.id).localeCompare(String(y.id)));\n    out.push({city","(x.units-y.units)||String(x.id).localeCompare(String(y.id)));\n    out.push({city"],
+  ['대장 2위 기록 틀림',"next:a[1]?{id:a[1].id,name:A.byId[a[1].id].name,price:a[1].price}:null","next:a[1]?{id:a[0].id,name:A.byId[a[0].id].name,price:a[0].price}:null"],
+  ['대장 후보 거르기 없음',"if(lead&&!ld) continue;",""],
+  ['대장 매수 기록 없음',"if(best.lead) buy.lead=","if(false) buy.lead="],
+  ['전략 이름 대신 넘겨받은 pick 사용',"return Object.assign({},DEFAULTS,o,{strategy:sv,pick:S.pick});","return Object.assign({},DEFAULTS,{pick:S.pick},o,{strategy:sv});"],
+  ['모르는 전략도 통과',"if(!S) throw new Error('모르는 전략: '+sv);","if(!S) return Object.assign({},DEFAULTS,o);"],
+  ['장부 전략 버전 검사 없음',"if(L&&L.strategyVersion!==o.strategy) throw","if(false) throw"],
+  ['장부 후보 방식 검사 없음',"if(L&&L.params&&L.params.pick!=null&&L.params.pick!==o.pick) throw","if(false) throw"],
+  ['장부에 후보 방식(pick) 안 남김',"for(const k of ['pick','mom',","for(const k of ['mom',"],
+  ['대장 계속 보유를 이번 달 대장으로(룩어헤드)',"for(const x of leadersAt(A,k,o)){ const a=price(A,x.id,k); if(a!=null&&x.price>0){ s2+=a/x.price-1; n2++; } }","for(const x of leadersAt(A,k+1,o)){ const a=price(A,x.id,k),b=price(A,x.id,k-1); if(a!=null&&b>0){ s2+=a/b-1; n2++; } }"],
+  ['대장 계속 보유에 보유세 안 뺌',"ld*=1+(n2?s2/n2:0)-o.holdCostYr/12;","ld*=1+(n2?s2/n2:0);"],
+  ['대장이 바뀐 때를 결정 달로',"{m:kym(k-1),price:x.price,n:x.n}","{m:kym(k),price:x.price,n:x.n}"],
+  ['지금 대장을 한 달 뒤 시세로',"const leaders=leadersAt(A,n,o)","const leaders=leadersAt(A,n+1,o)"]
 ];
 const CAPT_MUTS=[
   ['84㎡ 대표 타입을 세대수 대신 첫 타입',"    t84.sort(key=lambda t: (-(t.get(\"세대수\") or 0), t.get(\"면적일련번호\") or 0))","    pass"],
