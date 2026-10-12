@@ -75,7 +75,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.14.4</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.15.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -367,15 +367,16 @@ function shadowCard(tab){
   var rows=(z.rows||[]).map(function(r){var f=r.full||{},y=r.year||{},d=r.d90||{},o=r.oos||{},pr=r.promotion||{};
     var tag=r.isMain?"<span class='tag' style='color:var(--gold)'>메인</span>":r.isNew?"<span class='tag'>신규</span>":"";
     var star=pr.code==="candidate"?"🥇 ":"";
-    var sc="<b>"+pct(r.score,3)+"</b>"+(r.raw!=null?"<div class='sub'>그대로 "+pct(r.raw,3)+(r.plateau!=null?" · 이웃 "+pct(r.plateau,3):"")+"</div>":"");
+    var sc="<b>"+pct(r.score,3)+"</b>"+(r.stable!=null&&r.freqFactor!=null?"<div class='sub'>안정 "+pct(r.stable,3)+" × 빈도 "+num(r.freqFactor,2)+"</div>":"")+
+      (r.raw!=null?"<div class='sub'>그대로 "+pct(r.raw,3)+(r.plateau!=null?" · 이웃 "+pct(r.plateau,3):"")+"</div>":"");
     return "<tr><td>"+r.rank+"</td><td class='nm' style='text-align:left'>"+star+esc(r.name)+tag+"<div class='sub'>"+esc(r.rule||"")+(r.op&&!r.isMain?" · "+esc(ARENA_OP[r.op]||r.op):"")+"</div></td><td class='"+cls(r.score)+"'>"+sc+"</td>"+
       "<td class='"+cls(y.totalPct)+"'>"+pct(y.totalPct,1)+"</td><td class='"+cls(d.totalPct)+"'>"+pct(d.totalPct,1)+"</td><td>"+mddTxt(f.mddPct)+"</td>"+
-      "<td>"+num(f.tradeDaysPerYear,0)+"</td><td>"+num(f.plus1DaysPerYear,0)+"</td><td>"+(o.tradeDays?pct(o.totalPct,1)+"<span class='sub'> ("+o.tradeDays+"일)</span>":"<span class='sub'>—</span>")+"</td></tr>"}).join("");
+      "<td>"+num(f.tradeDaysPerYear,0)+(tab==="soxl"&&r.tradesPerYear!=null?"<div class='sub'>들어감 "+num(r.tradesPerYear,0)+"회</div>":"")+"</td><td>"+num(f.plus1DaysPerYear,0)+"</td><td>"+(o.tradeDays?pct(o.totalPct,1)+"<span class='sub'> ("+o.tradeDays+"일)</span>":"<span class='sub'>—</span>")+"</td></tr>"}).join("");
   var lg=arenaLog(z.log,false);
   return sec("⑥ 전략 경쟁 · 자동 개선 (메인 + 그림자 "+(z.poolSize||0)+"개)",
     "<div class='why'>"+arenaStatus(z)+"</div>"+arenaGen(z)+
     "<div class='sub'>메인: <b>"+esc(z.mainName||z.main)+"</b>"+(z.effectiveFrom?" ("+esc(z.effectiveFrom)+" 부터)":" (처음 채택)")+" · 오늘 신규 "+(z.added||[]).length+" · 퇴출 "+(z.retiredToday||[]).length+" · 지금까지 시험한 후보 "+((z.triedCount||0)+(z.rows||[]).length)+"개 · 계산 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</div>"+
-    "<div class='tw'><table class='board arena'><thead><tr><th>순위</th><th style='text-align:left'>전략 · 규칙</th><th>안정 점수<div class='sub'>주 평균 %</div></th><th>최근 1년</th><th>최근 90일</th><th>MDD</th><th>매매일/년</th><th>+1%일/년</th><th>10/1~ 구간</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
+    "<div class='tw'><table class='board arena'><thead><tr><th>순위</th><th style='text-align:left'>전략 · 규칙</th><th>순위 점수<div class='sub'>안정(주 평균 %) × 빈도</div></th><th>최근 1년</th><th>최근 90일</th><th>MDD</th><th>매매일/년</th><th>+1%일/년</th><th>10/1~ 구간</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+
     (lg?"<div class='tw'><table class='board alog'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
     "<p class='note'>"+esc(z.rule||"")+" 모든 수치는 같은 함수 · 같은 비용(순수익)으로 계산합니다. 과거로 고른 결과라 과최적화 위험이 있어, 10/1~ 구간(규칙 채택 뒤 새 자료) 열로 계속 확인합니다.</p>",true);
@@ -546,7 +547,7 @@ function arenaOverview(lab){                                  // 📅 오늘 탭
     "<div class='sub'>마지막 분석 "+esc(String(lab.generatedAt||"").slice(0,16).replace("T"," "))+" · 하루 세 번(18:40 · 23:40 · 07:30, GitHub 대기로 늦어질 수 있음)</div>"+
     "<div class='tw'><table class='board'><thead><tr><th>전략</th><th style='text-align:left'>지금 메인</th><th style='text-align:left'>분석 상태</th><th>그림자</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+(lg?"<div class='tw'><table class='board alog'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
-    "<p class='note'>순위 = 안정 점수(매매가 적은 최근 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃의 중앙값보다 높게 쳐 주지 않음) · 퇴출 = 기준 미달(손실 · 매매일 60일 · 해마다 60% 플러스) · 7일 연속 하위 3위 · 다른 전략과 같은 매매(복제) · 더 나은 신규에 자리 교체 · 신규 = 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조(③ 최근 N일 고가 · ④ 종가 위치/연속 하락) · 격자 탐색으로 만들어 모두 계산한 뒤 좋은 순 · 승격 = 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인. 자세히는 각 탭 ⑥.</p></div>";
+    "<p class='note'>순위 = 순위 점수 = 안정 점수(매매가 적은 최근 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃의 중앙값보다 높게 쳐 주지 않음) × 빈도 보정(연 매매 횟수 ÷ 메인, 0.25제곱 — 매매 2배면 ×1.19 · 같은 수익이면 자주 매매하는 쪽이 위) · 퇴출 = 기준 미달(손실 · 매매일 60일 · 해마다 60% 플러스) · 7일 연속 하위 3위 · 다른 전략과 같은 매매(복제) · 더 나은 신규에 자리 교체 · 신규 = 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조(③ 최근 N일 고가 · ④ 종가 위치/연속 하락) · 격자 탐색으로 만들어 모두 계산한 뒤 좋은 순 · 승격 = 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인. 자세히는 각 탭 ⑥.</p></div>";
 }
 function refreshToday(){var m=document.getElementById("daily_results_meta");if(m)m.textContent="새로고침 중…";load();loadLive()}
 // 휴대폰에서 화면보다 넓은 비교 표 → 표는 그대로 두고 촘촘하게(fit). 넘치는 표에만 붙인다.

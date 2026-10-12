@@ -676,12 +676,12 @@ class SoxlParamsTest(unittest.TestCase):
             lab.MAIN_EVENTS[:] = old
 
 
-def fake_metrics(sc, gate=True, trade_days=100, years=(9, 9), dv=None, cal=None):
-    """경쟁 시험용 가짜 성적 — arena_eval 과 같은 모양(점수 = adj = raw)."""
+def fake_metrics(sc, gate=True, trade_days=100, years=(9, 9), dv=None, cal=None, tpy=None):
+    """경쟁 시험용 가짜 성적 — arena_eval 과 같은 모양(점수 = adj = raw). tpy: 연 매매 횟수(빈도 보정)."""
     return dict(full=dict(gate=gate, mddPct=-10.0 if gate else -40.0, worstDayPct=-5.0, expectancyPct=0.5 if gate else -0.1,
                           tradeDays=trade_days, weeklyAvgPct=sc),
                 year=dict(totalPct=sc * 100), d90={}, oos={}, years=dict(n=years[1], pos=years[0], worstPct=1.0),
-                raw=sc, adj=sc, score=sc, _dv=dv, _cal=cal or [])
+                raw=sc, adj=sc, score=sc, tradesPerYear=tpy, _dv=dv, _cal=cal or [])
 
 
 class ArenaTest(unittest.TestCase):
@@ -691,13 +691,14 @@ class ArenaTest(unittest.TestCase):
         self.old = (lab.arena_eval, lab.post_json, list(lab.MAIN_EVENTS), os.environ.get("JKQ_MONITOR_KEY"), lab.EVAL_BUDGET)
         lab.MAIN_EVENTS[:] = []
         self.formula = lambda p: (p["minQ"] * 0.01 + p["topK"] * 0.001, p["minQ"] >= 3)
+        self.tpy = lambda p: None                                                # 연 매매 횟수(기본: 모름 → 빈도 보정 없음)
         self.series = {}
 
         def ev(tab, e, ctx):
             p = e["params"]
             sc, gate = self.formula(p)
             dv = self.series.get(lab.gen_version(tab, lab._canon(tab, p)))
-            return fake_metrics(sc, gate=gate, dv=dv, cal=sorted(dv) if dv else None)
+            return fake_metrics(sc, gate=gate, dv=dv, cal=sorted(dv) if dv else None, tpy=self.tpy(lab._canon(tab, p)))
         lab.arena_eval = ev
         self.posts = []
         lab.post_json = lambda url, body, key, timeout=30: (self.posts.append((url, body)) or {"ok": True})
@@ -744,7 +745,7 @@ class ArenaTest(unittest.TestCase):
         kinds = {x["kind"] for x in state["log"]}
         self.assertTrue({"new", "retire", "reject"} <= kinds, kinds)
         news = [x for x in state["log"] if x["kind"] == "new"]
-        self.assertTrue(all(x.get("op") in lab.OPS and lab.OP_NAME[x["op"]] in x["reason"] and "안정 점수" in x["reason"] for x in news))
+        self.assertTrue(all(x.get("op") in lab.OPS and lab.OP_NAME[x["op"]] in x["reason"] and "순위 점수" in x["reason"] and "× 빈도" in x["reason"] for x in news))
         ops = state["tabs"]["opening"]["ops"]
         self.assertEqual(sum(s["accepted"] for s in ops.values()), len(z["added"]))   # 방법별 성적 = 실제 투입 수
         self.assertEqual(sum(s["tried"] for s in ops.values()), z["gen"]["evaluated"])
@@ -848,6 +849,84 @@ class ArenaTest(unittest.TestCase):
         self.assertTrue(z["rows"][0]["isNew"])
         self.assertEqual(z["status"].get("newTopVersion"), z["rows"][0]["version"])
         self.assertNotEqual(z["top"], z["rows"][0]["version"])
+
+
+    def test_frequency_breaks_near_tie(self):
+        # 안정 점수가 모두 같을 때(0.06): 메인(연 10회)은 보호 +0.02 로 1위. 연 40회 전략은 0.06 × 4^0.25 = 0.0849 > 0.08 → 1위.
+        # 빈도 보정이 없으면 메인이 1위(사실상 같음). 메인 자신의 보정은 ×1 이다.
+        lab.EVAL_BUDGET = 0
+        self.formula = lambda p: (0.06, True)
+        self.tpy = lambda p: 40.0 if p["minQ"] == 6 else 10.0
+        outs, state = self.run_days(["2026-10-05"], state=self.pool_state([dict(minQ=6, topK=3), dict(minQ=7, topK=3)]))
+        z = outs[0]
+        self.assertEqual(z["top"], "g_open_q6_k3")
+        r6 = next(r for r in z["rows"] if r["version"] == "g_open_q6_k3")
+        self.assertAlmostEqual(r6["freqFactor"], 4 ** lab.FREQ_BETA)
+        self.assertAlmostEqual(r6["score"], 0.06 * 4 ** lab.FREQ_BETA)
+        self.assertAlmostEqual(r6["stable"], 0.06)
+        main = next(r for r in z["rows"] if r["isMain"])
+        self.assertEqual((main["freqFactor"], main["score"]), (1.0, main["stable"]))
+        r7 = next(r for r in z["rows"] if r["version"] == "g_open_q7_k3")
+        self.assertEqual(r7["freqFactor"], 1.0)                                   # 메인과 같은 빈도
+        self.assertTrue(any(x["kind"] == "note" and "매매 빈도" in x["reason"] for x in state["log"]))
+        self.assertEqual(state["freqBeta"], lab.FREQ_BETA)
+        # 수익이 확실히 나쁘면 빈도로 뒤집지 않는다: 연 40회라도 안정 점수가 메인의 절반(0.03 × 1.41 = 0.042 < 0.08)이면 메인 1위
+        self.formula = lambda p: (0.03 if p["minQ"] == 6 else 0.06, True)
+        outs, _ = self.run_days(["2026-10-05"], state=self.pool_state([dict(minQ=6, topK=3), dict(minQ=7, topK=3)]))
+        self.assertEqual(outs[0]["top"], lab.MAIN_DEFAULT["opening"]["version"])
+
+    def test_frequency_presort_reaches_frequent_candidates(self):
+        # 경쟁군이 가득 찬 상태(빈자리 0)에선 대략 순서 상위 9개만 이웃까지 계산한다.
+        # 안정 점수(adj)는 통과 수가 많을수록 조금 높지만, 매매는 통과 수가 적을수록 훨씬 잦다 → 빈도 보정 순위로 골라야 잦은 후보가 들어온다.
+        self.formula = lambda p: (0.05 + p["minQ"] * 0.001, p["minQ"] >= 2)
+        self.tpy = lambda p: 2000.0 / p["minQ"] ** 4
+        st = self.pool_state([dict(minQ=q, topK=1, gapMax=-6.0) for q in range(2, 14) if q != 5 and q <= 12] + [dict(minQ=12, topK=2, gapMax=-6.0)])
+        lab.EVAL_BUDGET = 48
+        outs, state = self.run_days(["2026-10-05"], state=st)
+        added = [lab._canon("opening", r["params"])["minQ"] for r in outs[0]["rows"] if r["isNew"]]
+        self.assertTrue(added, "잦은 후보가 하나도 안 들어옴")
+        self.assertTrue(all(q <= 3 for q in added), added)
+
+
+class FreqFactorTest(unittest.TestCase):
+    """빈도 보정 — 연 매매 횟수 · 메인 대비 비율^β · 손실 전략 제외 · ④ 는 들어간 횟수."""
+
+    def test_trades_per_year_and_factor(self):
+        cal = [f"d{i:03d}" for i in range(250)]
+        dv = {d: 0.1 for d in cal[::5]}                                            # 50일
+        self.assertAlmostEqual(lab.trades_per_year(dv, cal, 250), 50.0)
+        self.assertAlmostEqual(lab.trades_per_year(dv, cal, 250, entries=10), 10.0)
+        self.assertAlmostEqual(lab.trades_per_year(dict(dv, x999=1.0), cal, 250), 50.0)   # 달력 밖 날짜는 세지 않는다
+        self.assertAlmostEqual(lab.freq_factor(100, 50), 2 ** lab.FREQ_BETA)
+        self.assertAlmostEqual(lab.freq_factor(25, 100), 0.25 ** lab.FREQ_BETA)
+        self.assertEqual(lab.freq_factor(30, None), 1.0)
+        self.assertEqual(lab.freq_factor(0, 30), 1.0)
+        self.assertAlmostEqual(2 ** lab.FREQ_BETA, 1.189207, places=5)              # 매매 2배 ↔ ×1.19 (화면 설명과 같은 값)
+
+    def test_rank_score_not_applied_to_losers(self):
+        E = lab._Evaluator("opening", {})
+        E.ref = 10.0
+        sc, f = E.rank_score(0.05, dict(tradesPerYear=40.0))
+        self.assertAlmostEqual(sc, 0.05 * 4 ** lab.FREQ_BETA)
+        sc, f = E.rank_score(-0.05, dict(tradesPerYear=1.0))                        # 드물다고 손실이 덜 나빠지지 않는다
+        self.assertEqual(sc, -0.05)
+        sc, f = E.rank_score(-0.05, dict(tradesPerYear=100.0))                      # 잦다고 손실이 더 나빠지지도 않는다
+        self.assertEqual(sc, -0.05)
+        self.assertEqual(E.rank_score(None, {})[0], None)
+
+    def test_soxl_counts_entries_not_hold_days(self):
+        rows = [(f"2026-01-{d:02d}", 100.0, 101.0, 99.0, 100.0) for d in range(1, 21)]
+        dec = [dict(date="2026-01-05", action="enter"), dict(date="2026-01-06", action="hold"), dict(date="2026-01-07", action="hold"),
+               dict(date="2026-01-08", action="exit"), dict(date="2026-01-12", action="enter"), dict(date="2026-01-13", action="exit")]
+        dv = {r["date"]: 0.5 for r in dec}                                           # 보유일 6일 · 들어간 횟수 2번
+        old = lab.soxl_series
+        lab.soxl_series = lambda p, srows, *a: (dv, dv, dec, {})
+        try:
+            m = lab.arena_eval("soxl", dict(version="x", params=lab.MAIN_DEFAULT["soxl"]["params"]), dict(soxl=rows))
+        finally:
+            lab.soxl_series = old
+        self.assertAlmostEqual(m["tradesPerYear"], 2 / (20 / 252))
+        self.assertEqual(m["full"]["tradeDays"], 6)
 
 
 class ArenaScoreTest(unittest.TestCase):
