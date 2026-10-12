@@ -43,6 +43,15 @@ try{
   globalThis.setTimeout=originalTimer;
   console.log('PASS history: hung live request aborts and returns remaining data');
 
+  const budgets=[];
+  globalThis.setTimeout=(fn,ms,...args)=>{budgets.push(ms);return originalTimer(fn,ms,...args);};
+  globalThis.fetch=async()=>response({ok:true,ledgers:[]});
+  await history.durableLedgers(env,'crypto',8);
+  await history.durableLedgers(env,'crypto',3650);
+  globalThis.setTimeout=originalTimer;
+  assert.deepEqual(budgets,[5000,15000]);
+  console.log('PASS history: small latest-ledger queries stay fast; full history has a bounded 15s budget');
+
   assert.equal(history.durableTradeRows('crypto',[closed('2026-10-01',null)]).days.length,0);
   assert.equal(history.durableTradeRows('crypto',[{date:'2026-10-01',trades:[{status:'open',pnlPct:1}]}]).days.length,0);
   let series=trend.mergeTrendLedger('crypto',{daily:[{date:'2026-10-01',returnPct:5,trades:1}]},[

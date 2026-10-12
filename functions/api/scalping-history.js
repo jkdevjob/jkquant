@@ -20,8 +20,9 @@ const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data
 const GLOBAL_WORKER_FALLBACK="https://jkquant-global-intraday-scheduler.mumae4.workers.dev";
 const DAYTRADING_WORKER_FALLBACK="https://jkquant-daytrading-scheduler.mumae4.workers.dev";
 const HISTORY_SOURCE_TIMEOUT_MS=5000;
-async function historyFetch(url,init={}){
-  const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),HISTORY_SOURCE_TIMEOUT_MS);
+const HISTORY_FULL_TIMEOUT_MS=15000;
+async function historyFetch(url,init={},timeoutMs=HISTORY_SOURCE_TIMEOUT_MS){
+  const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),timeoutMs);
   try{return await fetch(url,{...init,signal:ac.signal});}
   finally{clearTimeout(timer);}
 }
@@ -123,7 +124,7 @@ async function durableLedgers(env,strategy,limit=3650){
   const base=String(strategy==="daytrading"?(env.DAYTRADING_WORKER_URL||DAYTRADING_WORKER_FALLBACK):(env.GLOBAL_INTRADAY_WORKER_URL||GLOBAL_WORKER_FALLBACK)).replace(/\/$/,"");
   const q=new URLSearchParams({limit:String(Math.max(1,Math.min(3650,Number(limit)||3650)))});
   if(strategy!=="daytrading")q.set("strategy",strategy);
-  const r=await historyFetch(base+"/paper-history?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const r=await historyFetch(base+"/paper-history?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}},Number(limit)>120?HISTORY_FULL_TIMEOUT_MS:HISTORY_SOURCE_TIMEOUT_MS);
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("paper history HTTP "+r.status));
   return (Array.isArray(j.ledgers)?j.ledgers:[]).filter(x=>x&&x.date&&isCompletedSession(strategy,String(x.date)));
