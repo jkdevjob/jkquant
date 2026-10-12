@@ -11454,7 +11454,7 @@ console.log('\n[PERF FAST PATH] 모의 성과 · 단타 오늘 탭');
      && /u\.searchParams\.get\("refresh"\)==="1"/.test(dapi)
      && /if\(!force\)await edgePut\(request,response\)/.test(dapi));
   ok('단타 오늘 서버의 독립 원천 조회는 순차 대기 대신 병렬 처리한다',
-     /const got=await Promise\.all\(dates\.map/.test(dapi)
+     /const reads=await Promise\.allSettled\(dates\.map/.test(dapi)
      && /Promise\.allSettled\(\[daytradingLiveSessions\(env\),daytradingResearchSessions\(\)\]\)/.test(dapi)
      && /Promise\.allSettled\(\[globalPaperSessions\(env,strategy\),decisionSessions\(path,source\)\]\)/.test(dapi));
   ok('단타 오늘 빠른 경로는 외부 원천 1.8초 제한 + 필요한 완료일 2개만 조회 + KRX 로컬 휴장일을 쓴다',

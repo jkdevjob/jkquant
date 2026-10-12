@@ -190,9 +190,10 @@ async function writePaper(env,ledger){
 async function readPaperHistory(env,strategy,limit=120){
   const dates=(await readPaperDates(env,strategy)).slice().sort().reverse().slice(0,Math.max(1,Math.min(3650,Number(limit)||120)));
   const ledgers=[];
-  for(const date of dates){
-    const ledger=await readPaper(env,strategy,date).catch(()=>null);
-    if(ledger)ledgers.push(ledger);
+  // Bound concurrent reads; hundreds of historical BTC dates must not be read serially.
+  for(let i=0;i<dates.length;i+=6){
+    const batch=await Promise.all(dates.slice(i,i+6).map(date=>readPaper(env,strategy,date).catch(()=>null)));
+    ledgers.push(...batch.filter(Boolean));
   }
   return {dates,ledgers};
 }

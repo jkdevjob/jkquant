@@ -1,5 +1,13 @@
 # JKQuant 작업 현황 · 우선순위
 
+## 2026-10-12 · GPT 단타 점검
+
+- 요청: 단타 메뉴 전체 점검 후 필요한 수정·업데이트. 시작 기준 `main@95a8e09d`.
+- 확인된 실패: `collect_scalping_data.py`·`daily1_shadow_lab.py` Python 문법 오류, BTC 누적 이력 API 35초 무응답, 그래프 연구 기준일과 최신 완료 모의장부의 불일치.
+- 구현: 문법 복구·수집 개장일/오류 판정·누적 이력 병렬 조회와 제한시간·원천 오류 표시·최근 완료 장부 그래프 반영·KST 표시·자동 갱신 오류/장부 없음 구분.
+- 검증: 신규 값 시험·변이 7종 PASS, Pages Functions 및 두 Worker 빌드 PASS. 최종 로컬 44단계 PASS·회귀 2,742 PASS / 0 FAIL. GitHub CI/배포/실제 운영 결과는 [해당 PR의 최종 보고](https://github.com/jkdevjob/jkquant/pulls?q=head%3Afix%2Fgpt-scalping-audit-20261012)가 정본이다.
+- 외부 한계: 운영 브라우저는 소유자 로그인 화면이다. 운영 API·배포 HTML은 직접 검증하며 실제 소유자 로그인 후 화면 및 iPhone 알림 수신은 미검증이다.
+
 > 갱신 기준: **2026-10-09**, 감사 병합 `main@cd4a714a` (#467), 부동산 작업 기준 `main@89aa80ef` → [PR #469](https://github.com/jkdevjob/jkquant/pull/469).  
 > 아래는 작업 근거가 확인된 항목만 등록한다. **PR 열림 ≠ 기능 미완료**, **CI 통과 ≠ 운영 검증**.
 

@@ -43,6 +43,8 @@ jobs:
 
       - name: 연구 Python 문법 검사
         run: |
+          python -m py_compile scripts/collect_scalping_data.py
+          python -m py_compile scripts/test_scalping_collector.py
           python -m py_compile scripts/backtest_opening_rebreak.py
           python -m py_compile scripts/backfill_opening_paths.py
           python -m py_compile scripts/test_opening_signal_labels.py
@@ -64,7 +66,14 @@ jobs:
           python -m py_compile scripts/test_scalping_paper_backfill.py
 
       - name: 일 +1% 그림자 전략 값·룩어헤드 검사
-        run: python scripts/test_daily1_shadow.py
+        run: |
+          python scripts/test_daily1_shadow.py
+          python scripts/test_scalping_collector.py
+
+      - name: 단타 조회 지연·원천 오류·그래프 장부 일치 검사
+        run: |
+          node scripts/test_scalping_audit.mjs
+          node scripts/test_scalping_history_workers.mjs
 
       - name: 과거 Top100 백필과 다음날 시가 그림자 값 검사
         run: |
