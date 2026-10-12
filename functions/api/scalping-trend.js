@@ -1,6 +1,7 @@
 // GET /api/scalping-trend
 // Tiny precomputed payload for the Today cumulative-return chart.
-// Read-only. The expensive CSV/Worker merge is done ahead of time by GitHub workflows.
+// Read-only. Research CSVs are precomputed; eight recent completed live ledgers override them.
+import {historyFetch,durableLedgers,durableTradeRows,dailyRisk} from "./scalping-history.js";
 
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/scalping-trend/latest.json";
 const H={
@@ -8,9 +9,19 @@ const H={
   "Cache-Control":"public, max-age=60, s-maxage=300, stale-while-revalidate=1800"
 };
 
-export async function onRequestGet(){
+export function mergeTrendLedger(name,base,ledgers){
+  const db=durableTradeRows(name,ledgers),live=dailyRisk(db.rows,name,db.days).daily;
+  const daily=new Map((base.daily||[]).map(x=>[x.date,x]));
+  for(const x of live)daily.set(x.date,x);
+  let eq=1;
+  return {...base,durableDbDays:db.days.length,daily:[...daily.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{
+    eq*=1+Number(x.returnPct||0)/100;
+    return {...x,cumulativePct:(eq-1)*100};
+  })};
+}
+export async function onRequestGet({env={}}={}){
   try{
-    const r=await fetch(RAW,{
+    const r=await historyFetch(RAW,{
       headers:{"Accept":"application/json","User-Agent":"jkquant-scalping-trend/1.0"},
       cf:{cacheEverything:true,cacheTtl:300}
     });
@@ -18,7 +29,23 @@ export async function onRequestGet(){
     const text=await r.text();
     const j=JSON.parse(text);
     if(!j||j.schema!==1||!j.strategies)throw new Error("invalid trend data");
-    return new Response(text,{headers:H});
+    const names=["daytrading","crypto","soxl"];
+    const latest=await Promise.allSettled(names.map(name=>durableLedgers(env,name,8)));
+    j.sourceWarnings=[];
+    latest.forEach((r,i)=>{
+      const name=names[i];
+      if(r.status==="fulfilled")j.strategies[name]=mergeTrendLedger(name,j.strategies[name]||{daily:[]},r.value);
+      else j.sourceWarnings.push(name+" 최신 모의장부 조회 실패: "+String(r.reason?.message||r.reason));
+    });
+    if(j.strategies.soxl)j.strategies.soxl.daily=(j.strategies.soxl.daily||[]).map(x=>{
+      const marketDate=x.marketDate||x.date;
+      return {...x,marketDate,date:new Date(Date.parse(marketDate+"T00:00:00Z")+86400000).toISOString().slice(0,10)};
+    });
+    j.dateRule="Asia/Seoul · SOXL dates use the Korean date containing the U.S. session close";
+    j.latestCompletedDate=Object.values(j.strategies).flatMap(x=>x.daily||[]).map(x=>x.date).sort().at(-1)||null;
+    j.generatedAt=new Date().toISOString();
+    j.sourceRule="연구 일별 결과에 최근 완료된 서버 모의장부를 우선 반영합니다. 진행 중 세션은 제외합니다.";
+    return new Response(JSON.stringify(j),{headers:j.sourceWarnings.length?{...H,"Cache-Control":"no-store"}:H});
   }catch(e){
     return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{
       status:502,

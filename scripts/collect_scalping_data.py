@@ -29,6 +29,15 @@ def get_json(path: str, timeout: int = 60):
         return json.loads(r.read().decode("utf-8"))
 
 
+def session_open(date_iso: str):
+    """Use the app's official KRX calendar; missing data is not a holiday."""
+    q = urllib.parse.urlencode({"op": "holiday", "date": date_iso.replace("-", "")})
+    j = get_json("/api/kis?" + q, timeout=60)
+    if j.get("ok") is not True or j.get("unknown") or type(j.get("open")) is not bool or j.get("date") != date_iso:
+        raise RuntimeError(j.get("error") or "KRX calendar response is unconfirmed")
+    return j["open"]
+
+
 def daily_meta(code: str, date_iso: str):
     """Return exact previous close for gap backtests.
 
@@ -69,7 +78,10 @@ def minute_history(code: str, date_yyyymmdd: str):
             for b in j.get("bars") or []:
                 t = str(b.get("t") or "")
                 hhmmss = t[-6:] if len(t) >= 6 else ""
-                # Reject stale bars returned by the API for a different session.\n                # Unknown/short timestamps are rejected rather than relabelled as today.\n                bar_date = t[:8] if len(t) >= 14 else ""\n                if bar_date == date_yyyymmdd and "090000" <= hhmmss <= "100000":
+                # Reject stale bars returned by the API for a different session.
+                # Unknown/short timestamps are rejected rather than relabelled as today.
+                bar_date = t[:8] if len(t) >= 14 else ""
+                if bar_date == date_yyyymmdd and "090000" <= hhmmss <= "100000":
                     bars.append({
                         "t": t,
                         "o": float(b.get("o") or 0),
@@ -91,7 +103,18 @@ def main():
         return backfill([x for x in sys.argv[1:] if x != '--backfill'])
     now = datetime.now(KST)
     date_iso = os.environ.get("JKQ_DATE", now.strftime("%Y-%m-%d"))
-    date_compact = date_iso.replace("-", "")\n    session_day = datetime.strptime(date_iso, "%Y-%m-%d").date()\n    if session_day.weekday() >= 5:\n        print(f"{date_iso}: weekend; no Korean equity session.")\n        return 0
+    date_compact = date_iso.replace("-", "")
+    session_day = datetime.strptime(date_iso, "%Y-%m-%d").date()
+    if session_day.weekday() >= 5:
+        print(f"{date_iso}: weekend; no Korean equity session.")
+        return 0
+    try:
+        if not session_open(date_iso):
+            print(f"{date_iso}: confirmed KRX holiday; no collection.")
+            return 0
+    except Exception as e:
+        print(f"{date_iso}: market-day check failed: {e}", file=sys.stderr)
+        return 2
 
     u = get_json(f"/api/universe?limit={LIMIT}", timeout=90)
     universe = u.get("universe") or []
@@ -137,10 +160,11 @@ def main():
         print(f"{idx:03d}/{len(universe)} {code} bars={len(bars)} gap={gap if gap is not None else 'n/a'}")
         time.sleep(0.70)
 
-    # Holiday / no-session day: all symbols have no intraday bars. Do not create an empty dataset.
+    # The calendar confirmed an open session. An empty response is a collection failure.
     if successful == 0:
-        print(f"{date_iso}: no 09:00~10:00 bars found; treating as market holiday/no-session.")
-        return 0
+        print(f"{date_iso}: open KRX session but no valid same-day bars; archive preserved.", file=sys.stderr)
+        print(json.dumps(errors[:20], ensure_ascii=False), file=sys.stderr)
+        return 2
 
     min_required = max(1, int(len(universe) * 0.90))
     if successful < min_required:
@@ -152,6 +176,7 @@ def main():
         "schema": 3,
         "date": date_iso,
         "collectedAt": datetime.now(KST).isoformat(),
+        "marketSession": {"open": True, "source": "KIS/CTCA0903R"},
         "universeLimit": LIMIT,
         "universeSource": u.get("source") or "",
         "count": len(rows),

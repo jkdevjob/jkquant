@@ -202,9 +202,9 @@ async function writePaper(env,ledger){
 async function readPaperHistory(env,limit=120){
   const dates=(await readPaperDates(env)).slice().sort().reverse().slice(0,Math.max(1,Math.min(3650,Number(limit)||120)));
   const ledgers=[];
-  for(const date of dates){
-    const ledger=await readPaper(env,date).catch(()=>null);
-    if(ledger)ledgers.push(ledger);
+  for(let i=0;i<dates.length;i+=6){
+    const batch=await Promise.all(dates.slice(i,i+6).map(date=>readPaper(env,date).catch(()=>null)));
+    ledgers.push(...batch.filter(Boolean));
   }
   return {dates,ledgers};
 }

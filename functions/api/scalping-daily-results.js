@@ -157,10 +157,9 @@ async function openingSessions(){
   /* 오늘 카드에는 KST 당일/전일만 필요하다. 장 마감 전이면 직전 완료 거래일부터,
      장 마감 후면 오늘부터 최근 완료 거래일 2개만 읽는다. 예전 15개 파일 동시조회는 제거. */
   const dates=completedKrCandidates().slice(0,2);
-  const got=await Promise.all(dates.map(async date=>{
-    try{return [date,await readJson("opening-history/"+date+".json")];}
-    catch(e){return [date,null];}
-  }));
+  const reads=await Promise.allSettled(dates.map(async date=>[date,await readJson("opening-history/"+date+".json")]));
+  const got=reads.filter(x=>x.status==="fulfilled").map(x=>x.value);
+  if(!got.length)throw new Error("시초가 원천 조회 실패: "+reads.map(x=>String(x.reason?.message||x.reason)).join(" / "));
   for(const [date,j] of got){
     if(!j)continue;
     const operational=Array.isArray(j.operationalTrades)?j.operationalTrades:(j.trades||[]);
@@ -222,12 +221,12 @@ function daytradingLedgerSummary(ledger,date){
 }
 async function daytradingLiveSessions(env){
   const candidates=completedKrCandidates().slice(0,2);
-  const got=await Promise.all(candidates.map(async date=>{
-    try{
+  const reads=await Promise.allSettled(candidates.map(async date=>{
       const ledger=await readDaytradingPaper(env,date);
       return ledger?daytradingLedgerSummary(ledger,date):null;
-    }catch(e){return null;}
   }));
+  const got=reads.filter(x=>x.status==="fulfilled").map(x=>x.value);
+  if(!got.length)throw new Error("데이트레이딩 모의장부 조회 실패: "+reads.map(x=>String(x.reason?.message||x.reason)).join(" / "));
   return got.filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 function mergeDaytradingSessions(live,fallback){
@@ -254,6 +253,7 @@ function mergeDaytradingSessions(live,fallback){
 async function daytradingSessions(env){
   const [lr,fr]=await Promise.allSettled([daytradingLiveSessions(env),daytradingResearchSessions()]);
   const live=lr.status==="fulfilled"?lr.value:[],fallback=fr.status==="fulfilled"?fr.value:[];
+  if(lr.status==="rejected"&&fr.status==="rejected")throw new Error("데이트레이딩 원천 조회 실패: "+String(lr.reason?.message||lr.reason)+" / "+String(fr.reason?.message||fr.reason));
   return mergeDaytradingSessions(live,fallback);
 }
 async function decisionSessions(path,source){
@@ -327,12 +327,12 @@ function completedGlobalCandidates(strategy,now=Date.now()){
 }
 async function globalPaperSessions(env,strategy){
   const candidates=completedGlobalCandidates(strategy).slice(0,2);
-  const got=await Promise.all(candidates.map(async date=>{
-    try{
+  const reads=await Promise.allSettled(candidates.map(async date=>{
       const ledger=await readGlobalPaper(env,strategy,date);
       return marketLedgerDateMatches(ledger,date)?liveLedgerSummary(ledger,date,"global-paper-live"):null;
-    }catch(e){return null;}
   }));
+  const got=reads.filter(x=>x.status==="fulfilled").map(x=>x.value);
+  if(!got.length)throw new Error(strategy+" 모의장부 조회 실패: "+reads.map(x=>String(x.reason?.message||x.reason)).join(" / "));
   return got.filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 async function liveFirstSessions(env,strategy,path,source){
@@ -400,7 +400,7 @@ function pairKst(name,label,result,kstDate,krStatuses=null){
   return {
     strategy:name,label,marketTime:"KST",timeZone:"Asia/Seoul",dateRule:"kst-calendar",
     current,previous,
-    status:(current||previous)?"ok":(result&&result.error?"error":"collecting"),
+    status:result&&result.error?"error":(a.length?"ok":"collecting"),
     error:result&&result.error||null
   };
 }

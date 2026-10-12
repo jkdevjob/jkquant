@@ -19,6 +19,12 @@ async function trendCachePut(request,response){
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const GLOBAL_WORKER_FALLBACK="https://jkquant-global-intraday-scheduler.mumae4.workers.dev";
 const DAYTRADING_WORKER_FALLBACK="https://jkquant-daytrading-scheduler.mumae4.workers.dev";
+const HISTORY_SOURCE_TIMEOUT_MS=5000;
+async function historyFetch(url,init={}){
+  const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),HISTORY_SOURCE_TIMEOUT_MS);
+  try{return await fetch(url,{...init,signal:ac.signal});}
+  finally{clearTimeout(timer);}
+}
 
 const SOURCES={
   opening:{path:"opening-history/baseline-trades.csv",market:"KR",pnl:"pnl"},
@@ -49,7 +55,7 @@ function parseCsv(text){
     const o={}; head.forEach((h,i)=>o[h]=r[i]??""); return o;
   });
 }
-function n(v){const x=Number(v);return Number.isFinite(x)?x:null;}
+function n(v){if(v==null||v==="")return null;const x=Number(v);return Number.isFinite(x)?x:null;}
 function str(v){return v==null?"":String(v);}
 function hm(v){
   const s=str(v); if(!s)return "";
@@ -113,13 +119,13 @@ function isCompletedSession(strategy,date){
 function monitorKey(env){return String(env&&(env.DAYTRADING_MONITOR_KEY||env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY)||"").trim();}
 async function durableLedgers(env,strategy,limit=3650){
   if(!["daytrading","crypto","soxl"].includes(strategy))return [];
-  const key=monitorKey(env);if(!key)return [];
+  const key=monitorKey(env);if(!key)throw new Error("장중 모의장부 조회 키가 없습니다.");
   const base=String(strategy==="daytrading"?(env.DAYTRADING_WORKER_URL||DAYTRADING_WORKER_FALLBACK):(env.GLOBAL_INTRADAY_WORKER_URL||GLOBAL_WORKER_FALLBACK)).replace(/\/$/,"");
   const q=new URLSearchParams({limit:String(Math.max(1,Math.min(3650,Number(limit)||3650)))});
   if(strategy!=="daytrading")q.set("strategy",strategy);
-  const r=await fetch(base+"/paper-history?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const r=await historyFetch(base+"/paper-history?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
   const j=await r.json().catch(()=>({}));
-  if(!r.ok||!j.ok)return [];
+  if(!r.ok||!j.ok)throw new Error(j.error||("paper history HTTP "+r.status));
   return (Array.isArray(j.ledgers)?j.ledgers:[]).filter(x=>x&&x.date&&isCompletedSession(strategy,String(x.date)));
 }
 function durableTradeRows(strategy,ledgers){
@@ -127,7 +133,7 @@ function durableTradeRows(strategy,ledgers){
   for(const ledger of ledgers||[]){
     const date=String(ledger.date||"");if(!date)continue;
     const trades=Array.isArray(ledger.trades)?ledger.trades:[];
-    if(trades.some(x=>x&&x.status!=="closed"))continue;
+    if(trades.some(x=>!x||x.status!=="closed"||n(strategy==="daytrading"?x.pnl:x.pnlPct)==null))continue;
     days.push(date);
     for(const x of trades){
       const pnl=strategy==="daytrading"?n(x.pnl):n(x.pnlPct);
@@ -215,27 +221,31 @@ export async function onRequestGet({request,env}){
     const src=SOURCES[strategy];
     if(!src)return new Response(JSON.stringify({ok:false,error:"strategy must be opening|daytrading|crypto|soxl"}),{status:400,headers:JH});
 
-    const r=await fetch(RAW+src.path,{
+    const rawPromise=(async()=>{const r=await historyFetch(RAW+src.path,{
       headers:{"Accept":"text/csv","User-Agent":"jkquant-scalping-history/1.1"},
       ...(trendOnly?{cf:{cacheEverything:true,cacheTtl:300}}:{})
     });
-    if(r.status===404){
-      return new Response(JSON.stringify({ok:true,strategy,source:src.path,total:0,filtered:0,page:1,pageSize:100,pages:0,trades:[],status:"collecting"}),{headers:JH});
-    }
+    if(r.status===404)return {found:false,rows:[]};
     if(!r.ok)throw new Error("GitHub raw "+src.path+" HTTP "+r.status);
-
-    let rows=parseCsv(await r.text()).map(x=>normalize(strategy,x)).filter(x=>x.date);
+    return {found:true,rows:parseCsv(await r.text()).map(x=>normalize(strategy,x)).filter(x=>x.date)};
+    })();
+    const [raw,live]=await Promise.allSettled([rawPromise,
+      strategy==="opening"?Promise.resolve([]):durableLedgers(env,strategy,trendOnly?120:3650)]);
+    const sourceWarnings=[];
+    if(raw.status==="rejected")sourceWarnings.push("연구 이력 조회 실패: "+String(raw.reason?.message||raw.reason));
+    if(live.status==="rejected")sourceWarnings.push("장중 모의장부 조회 실패: "+String(live.reason?.message||live.reason));
+    if(raw.status==="rejected"&&(strategy==="opening"||live.status==="rejected"))throw new Error(sourceWarnings.join(" / "));
+    let rows=raw.status==="fulfilled"?raw.value.rows:[];
     let durableDays=[];
     if(strategy!=="opening"){
-      try{
-        const db=durableTradeRows(strategy,await durableLedgers(env,strategy,trendOnly?120:3650));
+        const db=durableTradeRows(strategy,live.status==="fulfilled"?live.value:[]);
         durableDays=db.days;
         if(durableDays.length){
           const override=new Set(durableDays);
           rows=rows.filter(x=>!override.has(String(x.date))).concat(db.rows);
         }
-      }catch(e){}
     }
+    const status=sourceWarnings.length?"degraded":(rows.length||durableDays.length?"ok":"collecting");
     rows.sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.entryTime).localeCompare(String(a.entryTime))||String(a.code).localeCompare(String(b.code)));
     const total=rows.length;
 
@@ -250,7 +260,7 @@ export async function onRequestGet({request,env}){
     const risk=dailyRisk(rows,strategy,durableDays.filter(d=>(!from||d>=from)&&(!to||d<=to)));
     if(trendOnly){
       const response=new Response(JSON.stringify({
-        ok:true,strategy,market:src.market,source:src.path,durableDbDays:durableDays.length,
+        ok:true,strategy,market:src.market,source:src.path,durableDbDays:durableDays.length,status,sourceWarnings,
         summary:{dailySeries:risk.daily}
       }),{headers:TREND_H});
       await trendCachePut(request,response);
@@ -267,7 +277,7 @@ export async function onRequestGet({request,env}){
     const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
 
     return new Response(JSON.stringify({
-      ok:true,strategy,market:src.market,source:src.path,durableDbDays:durableDays.length,total,filtered,
+      ok:true,strategy,market:src.market,source:src.path,durableDbDays:durableDays.length,status,sourceWarnings,total,filtered,
       page,pageSize,pages,trades,
       summary:{
         trades:filtered,
@@ -291,3 +301,6 @@ export async function onRequestGet({request,env}){
     return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{status:502,headers:JH});
   }
 }
+
+// The chart uses the same completed ledger filters and account-return calculation as history.
+export {historyFetch,durableLedgers,durableTradeRows};

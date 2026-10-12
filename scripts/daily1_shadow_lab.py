@@ -176,7 +176,13 @@ def load_opening_days():
         try:
             with gzip.open(p, "rt", encoding="utf-8") as f:
                 j = json.load(f)
-            if j.get("date") and j.get("universe"):\n                # 2026 Hangeul Day is a KRX holiday; previously cached stale bars\n                # must never be counted as prospective opening trades.\n                if j["date"] == "2026-10-09":\n                    print("opening quarantine: KRX holiday", p)\n                    continue\n                out.append(j)
+            if j.get("date") and j.get("universe"):
+                # 2026 Hangeul Day is a KRX holiday; previously cached stale bars
+                # must never be counted as prospective opening trades.
+                if j["date"] == "2026-10-09":
+                    print("opening quarantine: KRX holiday", p)
+                    continue
+                out.append(j)
         except Exception as e:
             print("opening skip", p, e)
     return out

@@ -291,7 +291,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.10</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.11</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1312,9 +1312,9 @@ async function loadGlobalPaper(strategy,silent=false){
     const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
     const l=j.ledger;
-    if(!l){msg.textContent='오늘 서버 장부 준비 중';body.innerHTML='<div class="warn">현재까지 기준전략 신호가 없습니다. 신호가 없으면 0건이 정상입니다.</div>';return;}
+    if(!l){msg.textContent='오늘 서버 장부 미확인';body.innerHTML='<div class="warn">'+esc(paperMissingText(strategy))+'</div>';return;}
     const a=l.trades||[],sum=l.summary||{},x=a[0]||null;
-    const updated=l.updatedAt?new Date(l.updatedAt).toLocaleTimeString('ko-KR',{hour12:false}):'—';
+    const updated=scalpingKstStamp(l.updatedAt);
     msg.textContent=(j.date||l.date||'')+' · '+(sum.selected||a.length)+'건 · '+updated+' 갱신';
     const pct=v=>v==null?'—':((+v>=0?'+':'')+(+v).toFixed(2)+'%');
     const price=v=>v==null?'—':(strategy==='crypto'?Math.round(+v).toLocaleString('ko-KR')+'원':'$'+Number(v).toFixed(2));
@@ -1340,7 +1340,7 @@ async function loadGlobalPaper(strategy,silent=false){
     }
     html+='<p class="note">서버가 확정봉으로 재구성한 연구용 모의장부입니다. 주문 API와 연결되지 않습니다.</p>';
     body.innerHTML=html;
-  }catch(e){if(!silent){msg.textContent='장중 모의장부 조회 실패';body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';}}
+  }catch(e){msg.textContent='장중 모의장부 조회 실패 · '+String(e.message||e)+(silent?' · 이전 표시값은 최신이 아닐 수 있습니다.':'');if(!silent)body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';}
 }
 async function loadCryptoResearch(){
   const msg=$('btc_research_msg'), body=$('btc_research_body');
@@ -1584,6 +1584,15 @@ function setReviewLog(name,html){
 const HIST_LABELS={opening:'시초가 돌파',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL'};
 
 const DAILY_RESULT_LABELS={opening:'⚡ 시초가',daytrading:'📈 데이트레이딩',crypto:'₿ 비트코인',soxl:'⚡ SOXL'};
+function scalpingKstStamp(value){
+  if(!value||!Number.isFinite(Date.parse(value)))return '—';
+  return new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value))+' KST';
+}
+function paperMissingText(strategy){
+  return strategy==='soxl'
+    ? '현재 미국 거래일의 서버 장부가 아직 없습니다. 개장 전·휴장인지 확인하세요. 정규장 감시 시간에 장부가 없으면 실행 여부 점검이 필요합니다.'
+    : '오늘 서버 장부가 아직 없습니다. 첫 감시 전에는 준비 중일 수 있습니다. 감시 시간에 장부가 없으면 실행 여부 점검이 필요하며, 매매없음으로 확정하지 않습니다.';
+}
 function dailyResultPct(v){
   const n=Number(v); return Number.isFinite(n)?((n>=0?'+':'')+n.toFixed(2)+'%'):'—';
 }
@@ -1611,6 +1620,7 @@ function dailyResultCell(x,label,strategy=''){
 const DAILY_CHART_COLORS={opening:'#f5c451',daytrading:'#8b8cf0',crypto:'#36d399',soxl:'#f87b8c'};
 const DAILY_TREND_STEP=5,DAILY_TREND_TTL_MS=300000;
 let DAILY_TREND_CACHE=null,DAILY_TREND_CACHE_AT=0,DAILY_TREND_PROMISE=null;
+let DAILY_TREND_META={};
 async function loadDailyTrendSeries(force=false){
   const now=Date.now();
   if(!force&&DAILY_TREND_CACHE&&now-DAILY_TREND_CACHE_AT<DAILY_TREND_TTL_MS)return DAILY_TREND_CACHE;
@@ -1620,6 +1630,7 @@ async function loadDailyTrendSeries(force=false){
   const p=(async()=>{
     const r=await fetch(url,{headers:{Accept:'application/json'},cache:force?'no-store':'default'});
     const j=await r.json(); if(!r.ok||!j||!j.strategies)throw new Error((j&&j.error)||('HTTP '+r.status));
+    DAILY_TREND_META={latestCompletedDate:j.latestCompletedDate,sourceWarnings:j.sourceWarnings||[],generatedAt:j.generatedAt};
     return names.map(name=>({name,daily:(j.strategies[name]&&j.strategies[name].daily)||[]}));
   })();
   DAILY_TREND_PROMISE=p;
@@ -1675,6 +1686,8 @@ async function renderDailyCumulativeChart(force=false){
     el.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>📈 전략별 누적 결과 · 수익률 추이</b><span class="sub">전체 누적값 · 최근 31일 확대</span></div>'+
       '<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+H+'" style="display:block;width:100%;min-width:620px;height:auto" role="img" aria-label="전략별 누적 수익률 추이">'+zones+grid+zero+lines+dots+ticks+'</svg></div>'+
       '<div class="row" style="gap:12px;margin-top:7px;font-size:11px">'+legend+'</div>'+
+      '<p class="note">기준일 '+esc(DAILY_TREND_META.latestCompletedDate||latest)+' · 날짜는 한국 기준(KST), SOXL은 미국장 마감 다음 날 · 최근 완료된 서버 모의장부 우선</p>'+
+      (DAILY_TREND_META.sourceWarnings.length?'<div class="warn">일부 최신 장부 조회 실패 · '+DAILY_TREND_META.sourceWarnings.map(esc).join(' / ')+' · 표시값에 최신 매매가 빠질 수 있습니다.</div>':'')+
       '<p class="note">누적값은 각 전략의 전체 확정 일별 계좌수익률을 날짜순으로 복리 계산합니다. 데이트레이딩은 하루 3개 동일자금 슬롯 기준으로 계산해 미사용 슬롯은 현금 0%로 반영합니다. 그래프 화면만 최근 31일을 확대해 시초가·데이트레이딩 선도 함께 보이게 했습니다. 해당 전략이 매매하지 않은 날짜는 수익률 0%로 보고 직전 누적값을 유지하며, 오늘 카드에는 <b>매매없음</b>으로 표시합니다.</p>';
   }catch(e){el.innerHTML='<div class="warn">누적 수익률 그래프 조회 실패 · '+esc(e.message||String(e))+'</div>';}
 }
@@ -1698,13 +1711,13 @@ function renderDailyStrategyResultsPayload(j,force=false){
       '<div class="daily-result-meta" style="margin-top:7px">시간 기준 '+esc(z.marketTime||'')+
         (z.current&&z.current.source==='global-paper-live'?' · <b>실시간 마감 모의장부</b>':' · 연구/확정 이력')+
         (z.status==='collecting'?' · 데이터 수집 대기':z.status==='error'?' · <span class="loss">일부 원천 조회 실패</span>':'')+
+        (z.error?' · <span class="loss">'+esc(z.error)+'</span>':'')+
         (z.strategy==='soxl'?' · 미국장 날짜는 ET, 한국 표시일은 KST 다음 날 · 연구용 모의매매':'')+'</div>'+
     '</div>';
   }).join('');
   body.innerHTML='<div class="daily-result-list">'+rows+'</div>';
   body.dataset.loaded='1';
-  const stamp=String(j.generatedAt||'').replace('T',' ').slice(0,16);
-  meta.textContent='기준일 '+esc(j.kstDate||'')+' · 갱신 '+stamp+(force?' · 새로고침 완료':'');
+  meta.textContent='기준일 '+(j.kstDate||'')+' · 갱신 '+scalpingKstStamp(j.generatedAt)+(force?' · 새로고침 완료':'');
   return j;
 }
 async function loadDailyStrategyResults(force){
@@ -1772,8 +1785,9 @@ async function loadScalpingHistory(name,page=1){
     const r=await fetch('/api/scalping-history?'+q.toString(),{headers:{Accept:'application/json'}});
     const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
     const a=j.trades||[],z=j.summary||{};
-    msg.textContent='전체 '+(j.total||0)+'건 · 조회 '+(j.filtered||0)+'건 · '+(j.pages?j.page+'/'+j.pages+'쪽':'0건');
-    HISTORY_RISK_CACHE[name]=z; HISTORY_ERROR_CACHE[name]='';
+    const warnings=j.sourceWarnings||[];
+    msg.textContent='전체 '+(j.total||0)+'건 · 조회 '+(j.filtered||0)+'건 · '+(j.pages?j.page+'/'+j.pages+'쪽':'0건')+(warnings.length?' · 일부 자료 조회 실패: '+warnings.join(' / '):'');
+    HISTORY_RISK_CACHE[name]=z; HISTORY_ERROR_CACHE[name]=warnings.join(' / ');
     renderStrategyCockpit(name); renderStrategyStatus(name); renderPlan(name);
     if(sum)sum.innerHTML=
       '<div class="outbox"><div class="ol">거래</div><div class="ov">'+(z.trades||0)+'</div></div>'+
@@ -1937,14 +1951,14 @@ function renderStrategyStatus(name){
   const src=DAILY1_CACHE&&DAILY1_CACHE.latestSourceDates&&DAILY1_CACHE.latestSourceDates[name]||'—';
   const risk=HISTORY_RISK_CACHE[name]||{},issues=reviewIssueCount(name);
   const rr=REVIEW_CACHE[name],latest=rr&&rr.records&&rr.records[0]||null;
-  const stamp=latest&&latest.generatedAt?String(latest.generatedAt).replace('T',' ').slice(5,16):'—';
+  const stamp=scalpingKstStamp(latest&&latest.generatedAt);
   const errors=[HISTORY_ERROR_CACHE[name],REVIEW_ERROR_CACHE[name]].filter(Boolean);
   const bad=Number(risk.lossStreakTradeDays||0)>=3||Number(risk.currentDrawdownPct||0)<=-5;
   const riskText=(Number(risk.lossStreakTradeDays||0)>=3?(risk.lossStreakTradeDays+'거래일 연속 손실'):'')+
     (Number(risk.currentDrawdownPct||0)<=-5?((Number(risk.lossStreakTradeDays||0)>=3?' · ':'')+'현재 낙폭 '+cockpitPct(risk.currentDrawdownPct)):'');
   el.innerHTML='<span class="status-item">📊 원천 '+esc(src)+' · 검증 '+esc(stamp)+'</span>'+
     '<span class="status-item">▶ '+esc(nextPlanText(name))+'</span>'+
-    (bad?'<span class="status-item risk">⚠ '+esc(riskText)+'</span>':'<span class="status-item ok">✔ 위험경고 없음</span>')+
+    (bad?'<span class="status-item risk">⚠ '+esc(riskText)+'</span>':!HISTORY_RISK_CACHE[name]||HISTORY_ERROR_CACHE[name]?'<span class="status-item">위험자료 확인 대기</span>':'<span class="status-item ok">✔ 위험경고 없음</span>')+
     '<span class="status-item '+(issues?'risk':'')+'">'+(issues?'⚠ 점검 '+issues+'건':'점검 0건')+'</span>'+
     (errors.length?'<span class="status-item risk">⚠ 조회오류 '+errors.length+'건</span>':'');
 }
@@ -2569,8 +2583,8 @@ async function loadDayTradingPaper(silent=false){
     if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
     const l=j.ledger;
     if(!l){
-      msg.textContent='오늘 서버 장부 준비 중';
-      body.innerHTML='<div class="warn">아직 오늘 기준전략 신호가 없거나 Cloudflare 장부가 첫 스캔 전입니다. 신호가 없으면 0건이 정상입니다.</div>';
+      msg.textContent='오늘 서버 장부 미확인';
+      body.innerHTML='<div class="warn">'+esc(paperMissingText('daytrading'))+'</div>';
       return;
     }
     const a=l.trades||[],sum=l.summary||{};
@@ -2582,7 +2596,7 @@ async function loadDayTradingPaper(silent=false){
     if(open) setTimingBoard('daytrading','sell','보유중','<b>'+esc(open.name||open.code)+'</b> · 진입 '+commas(Math.round(open.entryPrice||0))+'원','손절 '+commas(Math.round((open.entryPrice||0)*(1-Number(open.stopPct||l.stopPct||1)/100)))+' · 익절 '+commas(Math.round((open.entryPrice||0)*(1+Number(open.takeProfitPct||l.takeProfitPct||2)/100)))+' · 15:10 시간청산');
     else if(closed) setTimingBoard('daytrading','sell','최근 청산','<b>'+esc(closed.name||closed.code)+'</b> · '+(closed.reason||'청산'),'손익 '+((closed.pnl||0)>=0?'+':'')+Number(closed.pnl||0).toFixed(2)+'%');
     else setTimingBoard('daytrading','sell','대기','현재 보유 포지션이 없습니다.','선택된 메인전략의 손절·익절·15:10 규칙을 표시합니다.');
-    const updated=l.updatedAt?new Date(l.updatedAt).toLocaleTimeString('ko-KR',{hour12:false}):'—';
+    const updated=scalpingKstStamp(l.updatedAt);
     msg.textContent='선정 '+(sum.selected||a.length)+'건 · 진입대기 '+(sum.pending||0)+' · 보유 '+(sum.open||0)+' · 청산 '+(sum.closed||0)+' · '+updated+' 갱신';
 
     const pct=v=>v==null?'—':((+v>=0?'+':'')+(+v).toFixed(2)+'%');
@@ -2614,8 +2628,8 @@ async function loadDayTradingPaper(silent=false){
     html+='<p class="note">손익에는 왕복 마찰비용 '+Number(l.frictionPct||0.25).toFixed(2)+'%를 반영합니다. 장중 미실현손익도 같은 비용을 보수적으로 선반영합니다.</p>';
     body.innerHTML=html;
   }catch(e){
+    msg.textContent='장중 모의장부 조회 실패 · '+String(e.message||e)+(silent?' · 이전 표시값은 최신이 아닐 수 있습니다.':'');
     if(!silent){
-      msg.textContent='장중 모의장부 조회 실패';
       body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
     }
   }
@@ -2933,8 +2947,8 @@ async function loadServerOpeningHistory(silent=false){
     body.innerHTML=baseHtml+shadowHtml+
       '<p class="note">기준전략만 Telegram 알림 대상입니다. 그림자 전략은 실제 주문이나 기준전략에 영향을 주지 않는 연구용 병렬 신호입니다.</p>';
   }catch(e){
+    msg.textContent='서버 이력 조회 실패 · '+String(e.message||e)+(silent?' · 이전 표시값은 최신이 아닐 수 있습니다.':'');
     if(!silent){
-      msg.textContent='서버 이력 조회 실패';
       body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
     }
   }
@@ -4074,7 +4088,7 @@ function boot(){
   // 구형 공용 계산기/모의매매 DOM은 제거됐으므로 로그인 초기화에서 참조하지 않는다.
   window.fb.onAuthStateChanged(window.fb.auth, async user=>{
     me=user||null; renderBadge();
-    if(!user){ stopLive(); stopOpeningLive(); $('gate').style.display='flex'; $('app').style.display='none';
+    if(!user){ stopLive(); stopOpeningLive(); stopGlobalPaperAuto(); stopDayTradingPaperAuto(); stopOpeningPaperAuto(); $('gate').style.display='flex'; $('app').style.display='none';
       try{ if(window.JKAccess) JKAccess.setAdmin(false); }catch(e){}
       $('gate_sub').innerHTML='이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.'; resetLoginButton(); return; }
     $('gate').style.display='flex';$('app').style.display='none';
