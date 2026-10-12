@@ -67,7 +67,7 @@ ok(trend.includes('data/scalping-trend/latest.json')&&trend.includes('cacheTtl:3
 ok(trendBuild.includes('"daytrading": (Path("data/daytrading-research/baseline-trades.csv"), "pnl", "slots3")')&&trendBuild.includes('ret = total / 3.0 if mode == "slots3" else total / len(pnls)'),'precomputed trend builder preserves daily account-return rules');
 ok(ui.includes("if(name==='daily'){")&&ui.includes("Promise.resolve(loadDailyStrategyResults(false)).finally")&&ui.includes("setTimeout(()=>renderDailyCumulativeChart(),0)"),'today tab renders core daily result first and defers cumulative trend');
 ok(ui.includes('function refreshDailyDashboard()')&&ui.includes('onclick="refreshDailyDashboard()"'),'today refresh reloads both result cards and cumulative trend');
-ok(ui.includes('검증상태는 10/1부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.'),'today 4-strategy overview includes Claude-equivalent explanatory note');
+ok(ui.includes('연구 표본은 실시간 모의투자 검증일이 아닙니다.')&&!ui.includes('20일이면 판정'),'today overview distinguishes research sample from prospective validation');
 ok(marProbe(ui),'MAR uses annualized CAGR divided by absolute MDD');
 const mutMar=ui.replace('return Number.isFinite(cagr)?cagr/dd:null;','return Number.isFinite(cagr)?cagr:null;');
 ok(!marProbe(mutMar),'mutation killed: MAR must divide CAGR by absolute MDD');

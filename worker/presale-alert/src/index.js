@@ -420,17 +420,18 @@ export class PresaleAlertStore{
     }
     return r;
   }
-  async notifyAll(topic){
-    const subs=await this.subscriptions();let sent=0,failed=0,removed=0,eligible=0;
+  async notifyAll(topic,delivered=new Set()){
+    const subs=await this.subscriptions();let sent=0,failed=0,removed=0,eligible=0;const sentKeys=[];
     for(const [key,s] of subs){
       if(!this.topicsOf(s).includes(topic))continue;
       eligible++;
+      if(delivered.has(key))continue;
       try{
         const r=await this.pushOne(s.endpoint,topic);
-        if(r.ok)sent++;else{failed++;if(r.status===404||r.status===410)removed++}
+        if(r.ok){sent++;sentKeys.push(key);}else{failed++;if(r.status===404||r.status===410)removed++}
       }catch(e){failed++}
     }
-    return {sent,failed,removed,total:subs.size,eligible};
+    return {sent,failed,removed,total:subs.size,eligible,sentKeys};
   }
   async recordAlert(alert){
     const topic=clean(alert&&alert.type,20)||"notice";
@@ -487,29 +488,49 @@ export class PresaleAlertStore{
     const eventId=clean(b.eventId,220),date=clean(b.date,20),time=clean(b.time,30);
     if(!eventId||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date))return json(request,{ok:false,error:"invalid signal identity"},400);
     const marketDate=topic==="soxl"?new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()):kstDate();
-    if(date!==marketDate)return json(request,{ok:false,error:"stale or future market date"},409);
+    const eventAt=b.eventAt==null?null:Date.parse(b.eventAt),now=Date.now();
+    const prevDate=new Date(Date.parse(marketDate+"T00:00:00Z")-86400000).toISOString().slice(0,10);
+    const kstMinute=Number(new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()).replace(':',''));
+    // A 23:55 BTC candle confirms at 00:00 on the next Korean day, still belonging to yesterday's session.
+    const boundarySell=topic==="crypto"&&stage==="sell"&&date===prevDate&&/^23:55/.test(time)&&kstMinute<20&&eventAt!=null&&now-eventAt>=0&&now-eventAt<=20*60_000;
+    if(date!==marketDate&&!boundarySell)return json(request,{ok:false,error:"stale or future market date"},409);
+    if(b.eventAt!=null){
+      const at=eventAt,age=now-at;
+      if(!Number.isFinite(at))return json(request,{ok:false,error:"invalid eventAt"},400);
+      if(age>20*60_000||age< -90_000)return json(request,{ok:true,skipped:"stale_or_future_signal"});
+    }
     const id="trade:"+topic+":"+eventId,claimKey="signal:"+await hashText(id);
     const prev=await this.state.storage.get(claimKey);
-    if(prev)return json(request,{ok:true,duplicate:true,id,delivery:prev.delivery||{sent:0},status:prev.status||"recorded"});
+    if(prev&&!["sending","delivery_failed"].includes(prev.status))return json(request,{ok:true,duplicate:true,id,delivery:prev.delivery||{sent:0},status:prev.status||"recorded"});
+    if(prev?.status==="sending"&&Date.now()-Date.parse(prev.at)<120_000)
+      return json(request,{ok:false,retryable:true,id,error:"delivery in progress"},409);
+    const delivered=new Set(prev?.sentKeys||[]);
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,200)).filter(Boolean).slice(0,5):[];
     const name={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic];
     const trade={id,type:topic,stage,createdAt:new Date().toISOString(),
       title:(stage==="buy"?"🟢 ":"🔴 ")+name+" 모의 "+(stage==="buy"?"매수":"매도")+" 타이밍",
       body:[date,time,...lines].filter(Boolean).join(" · ").slice(0,245),url:BASE_APP+"/scalping?strategy="+topic};
     // 송신 중인 같은 eventId 중복 요청 차단. 성공 응답 전 실패 건은 재시도 가능하도록 해제한다.
-    await this.state.storage.put(claimKey,{status:"sending",at:trade.createdAt});
-    await this.recordAlert(trade);
-    const delivery=await this.notifyAll(topic);
-    const status=delivery.sent>0?"sent":delivery.eligible>0?"delivery_failed":"no_subscribers";
+    await this.state.storage.put(claimKey,{status:"sending",at:trade.createdAt,sentKeys:[...delivered]});
+    let delivery;
+    try{
+      await this.recordAlert(trade);
+      delivery=await this.notifyAll(topic,delivered);
+    }catch(e){
+      await this.state.storage.put(claimKey,{status:"delivery_failed",at:trade.createdAt,sentKeys:[...delivered]});
+      return json(request,{ok:false,retryable:true,id,error:String(e.message||e)},502);
+    }
+    const sentKeys=[...new Set([...delivered,...(delivery.sentKeys||[])])];
+    const status=delivery.failed>delivery.removed?"delivery_failed":delivery.sent>0||sentKeys.length?"sent":"no_subscribers";
     const audit={id,stage,at:trade.createdAt,status,eligible:delivery.eligible,sent:delivery.sent,failed:delivery.failed};
     await this.state.storage.put("lastCheck:"+topic,trade.createdAt);
     await this.state.storage.put("lastDelivery:"+topic,audit);
     if(status==="delivery_failed"){
-      // 모두 실패한 경우만 중복 잠금을 해제해 다음 1분 스캔에서 재시도한다.
-      await this.state.storage.delete(claimKey);
-      return json(request,{ok:false,retryable:true,id,status,delivery,error:"web push service rejected all deliveries"},502);
+      // Retry failed devices only; never replay an accepted signal to successful devices.
+      await this.state.storage.put(claimKey,{status,delivery,sentKeys,at:trade.createdAt});
+      return json(request,{ok:false,retryable:true,id,status,delivery,error:"web push delivery incomplete"},502);
     }
-    await this.state.storage.put(claimKey,{status,delivery,at:trade.createdAt});
+    await this.state.storage.put(claimKey,{status,delivery,sentKeys,at:trade.createdAt});
     return json(request,{ok:true,duplicate:false,id,status,delivery});
   }
   async checkPresale(request){
@@ -619,7 +640,7 @@ export class PresaleAlertStore{
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
       }
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.2.2",subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.2.3",subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}

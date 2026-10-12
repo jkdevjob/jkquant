@@ -61,7 +61,7 @@ function parseCsv(text){
     const o={};head.forEach((h,i)=>o[h]=r[i]??"");return o;
   });
 }
-function num(v){const n=Number(v);return Number.isFinite(n)?n:null;}
+function num(v){if(v==null||v==="")return null;const n=Number(v);return Number.isFinite(n)?n:null;}
 function tzParts(timeZone,ms=Date.now()){
   const p=new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false,weekday:"short"}).formatToParts(new Date(ms));
   const g=t=>p.find(x=>x.type===t)?.value||"";
@@ -112,36 +112,39 @@ async function krMarketDayStatus(_request,date){
   return {date,open:!d.closed,source:"KRX-local-calendar",known:d.known,reason:d.reason||""};
 }
 function tradeSummary(date,trades){
-  const a=(Array.isArray(trades)?trades:[]).filter(x=>Number.isFinite(Number(x.pnl)));
+  const all=Array.isArray(trades)?trades:[];
+  const a=all.filter(x=>x&&num(x.pnl)!=null);
   const pn=a.map(x=>Number(x.pnl));
   const sum=pn.reduce((s,x)=>s+x,0);
   return {
     date,
-    returnPct:pn.length?sum/pn.length:0,
-    sumPnlPct:sum,
-    trades:a.length,
-    wins:pn.filter(x=>x>0).length,
-    losses:pn.filter(x=>x<0).length,
-    noTrade:a.length===0,
-    finalized:true
-  };
-}
-function liveLedgerSummary(ledger,date,source){
-  const all=Array.isArray(ledger&&ledger.trades)?ledger.trades:[];
-  const closed=all.filter(x=>x&&x.status==="closed"&&Number.isFinite(Number(x.pnlPct)));
-  const pn=closed.map(x=>Number(x.pnlPct));
-  const sum=pn.reduce((s,x)=>s+x,0);
-  return {
-    date:String((ledger&&ledger.date)||date),
-    returnPct:pn.length?sum/pn.length:0,
+    returnPct:a.length===all.length?(pn.length?sum/pn.length:0):null,
     sumPnlPct:sum,
     trades:all.length,
     wins:pn.filter(x=>x>0).length,
     losses:pn.filter(x=>x<0).length,
     noTrade:all.length===0,
-    finalized:all.every(x=>x&&x.status==="closed"),
-    incomplete:all.some(x=>x&&x.status!=="closed"),
-    source,
+    incomplete:a.length!==all.length,
+    finalized:a.length===all.length
+  };
+}
+function liveLedgerSummary(ledger,date,source){
+  const all=Array.isArray(ledger&&ledger.trades)?ledger.trades:[];
+  const closed=all.filter(x=>x&&x.status==="closed"&&num(x.pnlPct)!=null);
+  const incomplete=closed.length!==all.length;
+  const pn=closed.map(x=>Number(x.pnlPct));
+  const sum=pn.reduce((s,x)=>s+x,0);
+  return {
+    date:String((ledger&&ledger.date)||date),
+    returnPct:incomplete?null:(pn.length?sum/pn.length:0),
+    sumPnlPct:sum,
+    trades:all.length,
+    wins:pn.filter(x=>x>0).length,
+    losses:pn.filter(x=>x<0).length,
+    noTrade:all.length===0,
+    finalized:!incomplete,
+    incomplete,
+    source:ledger?.mode==="historical-research-import-no-order"?"historical-research-import":source,
     generatedAt:ledger&&ledger.updatedAt||null,
     strategyVersion:ledger&&ledger.strategyVersion||""
   };
@@ -152,13 +155,17 @@ function mergeSessions(primary,fallback){
   for(const x of Array.isArray(fallback)?fallback:[])if(x&&x.date&&!m.has(String(x.date)))m.set(String(x.date),x);
   return [...m.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
-async function openingSessions(){
+function readWarnings(reads,label,warnings){
+  for(const r of reads)if(r.status==="rejected")warnings.push(label+": "+String(r.reason?.message||r.reason));
+}
+async function openingSessions(warnings=[]){
   const out=[];
   /* 오늘 카드에는 KST 당일/전일만 필요하다. 장 마감 전이면 직전 완료 거래일부터,
      장 마감 후면 오늘부터 최근 완료 거래일 2개만 읽는다. 예전 15개 파일 동시조회는 제거. */
   const dates=completedKrCandidates().slice(0,2);
   const reads=await Promise.allSettled(dates.map(async date=>[date,await readJson("opening-history/"+date+".json")]));
   const got=reads.filter(x=>x.status==="fulfilled").map(x=>x.value);
+  readWarnings(reads,"시초가 원천 조회 실패",warnings);
   if(!got.length)throw new Error("시초가 원천 조회 실패: "+reads.map(x=>String(x.reason?.message||x.reason)).join(" / "));
   for(const [date,j] of got){
     if(!j)continue;
@@ -177,9 +184,9 @@ async function daytradingResearchSessions(){
   const base=(j.variants||[]).find(x=>x&&x.params&&x.params.name==="baseline");
   const daily=((base&&base.summary&&base.summary.daily)||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
   return daily.map(x=>({
-    date:String(x.date||""),returnPct:num(x.returnPct)??0,sumPnlPct:null,
+    date:String(x.date||""),returnPct:num(x.returnPct),sumPnlPct:null,
     trades:Number(x.trades||0),wins:null,losses:null,noTrade:Number(x.trades||0)===0,
-    finalized:true,source:"daytrading-research",generatedAt:j.generatedAt||null,mainVariant:"baseline"
+    finalized:num(x.returnPct)!=null,incomplete:num(x.returnPct)==null,source:"daytrading-research",generatedAt:j.generatedAt||null,mainVariant:"baseline"
   }));
 }
 function completedKrCandidates(now=Date.now()){
@@ -209,23 +216,25 @@ async function readDaytradingPaperHistory(env,limit=8){
 }
 function daytradingLedgerSummary(ledger,date){
   const all=Array.isArray(ledger&&ledger.trades)?ledger.trades:[];
-  const closed=all.filter(x=>x&&x.status==="closed"&&Number.isFinite(Number(x.pnl)));
+  const closed=all.filter(x=>x&&x.status==="closed"&&num(x.pnl)!=null);
+  const incomplete=closed.length!==all.length;
   const pn=closed.map(x=>Number(x.pnl)),sum=pn.reduce((s,x)=>s+x,0);
   return {
-    date:String((ledger&&ledger.date)||date),returnPct:pn.length?sum/Math.max(1,Number(ledger&&ledger.maxTrades||3)):0,
+    date:String((ledger&&ledger.date)||date),returnPct:incomplete?null:(pn.length?sum/Math.max(1,Number(ledger&&ledger.maxTrades||3)):0),
     sumPnlPct:sum,trades:all.length,wins:pn.filter(x=>x>0).length,losses:pn.filter(x=>x<0).length,
-    noTrade:all.length===0,finalized:all.every(x=>x&&x.status==="closed"),
-    incomplete:all.some(x=>x&&x.status!=="closed"),source:"daytrading-paper-live",
+    noTrade:all.length===0,finalized:!incomplete,
+    incomplete,source:ledger?.mode==="historical-research-import-no-order"?"historical-research-import":"daytrading-paper-live",
     generatedAt:ledger&&ledger.updatedAt||null,mainVariant:String(ledger&&ledger.mainVariant||"baseline")
   };
 }
-async function daytradingLiveSessions(env){
+async function daytradingLiveSessions(env,warnings=[]){
   const candidates=completedKrCandidates().slice(0,2);
   const reads=await Promise.allSettled(candidates.map(async date=>{
       const ledger=await readDaytradingPaper(env,date);
       return ledger?daytradingLedgerSummary(ledger,date):null;
   }));
   const got=reads.filter(x=>x.status==="fulfilled").map(x=>x.value);
+  readWarnings(reads,"데이트레이딩 장부 조회 실패",warnings);
   if(!got.length)throw new Error("데이트레이딩 모의장부 조회 실패: "+reads.map(x=>String(x.reason?.message||x.reason)).join(" / "));
   return got.filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
@@ -240,18 +249,17 @@ function mergeDaytradingSessions(live,fallback){
     const liveTrades=Number(x.trades||0),fallbackTrades=Number(fb.trades||0);
     const liveVariant=String(x.mainVariant||"baseline");
     const fallbackVariant=String(fb.mainVariant||"baseline");
-    // A zero-trade live ledger must not erase confirmed reconstructed trades
-    // when both sources represent the same operational main strategy.
-    // If a different variant was promoted, keep the live ledger as authoritative.
+    // Reconstruction is not an execution. Retain the live no-trade ledger and disclose the conflict.
     if(liveTrades===0&&fallbackTrades>0&&liveVariant===fallbackVariant){
-      return {...fb,source:"daytrading-research-confirmed",liveLedgerSource:x.source||null,liveLedgerNoTrade:true};
+      return {...x,sourceConflict:{researchTrades:fallbackTrades,researchReturnPct:fb.returnPct,source:fb.source}};
     }
     return x;
   });
   return mergeSessions(resolved,secondary);
 }
-async function daytradingSessions(env){
-  const [lr,fr]=await Promise.allSettled([daytradingLiveSessions(env),daytradingResearchSessions()]);
+async function daytradingSessions(env,warnings=[]){
+  const [lr,fr]=await Promise.allSettled([daytradingLiveSessions(env,warnings),daytradingResearchSessions()]);
+  readWarnings([lr,fr],"데이트레이딩 원천 조회 실패",warnings);
   const live=lr.status==="fulfilled"?lr.value:[],fallback=fr.status==="fulfilled"?fr.value:[];
   if(lr.status==="rejected"&&fr.status==="rejected")throw new Error("데이트레이딩 원천 조회 실패: "+String(lr.reason?.message||lr.reason)+" / "+String(fr.reason?.message||fr.reason));
   return mergeDaytradingSessions(live,fallback);
@@ -265,13 +273,13 @@ async function decisionSessions(path,source){
     const pnl=num(x.pnlPct);
     return {
       date:String(x.date),
-      returnPct:trade?(pnl??0):0,
-      sumPnlPct:trade?(pnl??0):0,
+      returnPct:trade?pnl:0,
+      sumPnlPct:trade?pnl:0,
       trades:trade?1:0,
       wins:trade&&pnl!=null&&pnl>0?1:0,
       losses:trade&&pnl!=null&&pnl<0?1:0,
       noTrade:!trade,
-      finalized:true,
+      finalized:!trade||pnl!=null,incomplete:trade&&pnl==null,
       source,
       strategyVersion:x.strategyVersion||"",
       decisionReason:x.decisionReason||"",
@@ -325,18 +333,20 @@ function completedGlobalCandidates(strategy,now=Date.now()){
   }
   return out;
 }
-async function globalPaperSessions(env,strategy){
+async function globalPaperSessions(env,strategy,warnings=[]){
   const candidates=completedGlobalCandidates(strategy).slice(0,2);
   const reads=await Promise.allSettled(candidates.map(async date=>{
       const ledger=await readGlobalPaper(env,strategy,date);
       return marketLedgerDateMatches(ledger,date)?liveLedgerSummary(ledger,date,"global-paper-live"):null;
   }));
   const got=reads.filter(x=>x.status==="fulfilled").map(x=>x.value);
+  readWarnings(reads,strategy+" 장부 조회 실패",warnings);
   if(!got.length)throw new Error(strategy+" 모의장부 조회 실패: "+reads.map(x=>String(x.reason?.message||x.reason)).join(" / "));
   return got.filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
-async function liveFirstSessions(env,strategy,path,source){
-  const [lr,fr]=await Promise.allSettled([globalPaperSessions(env,strategy),decisionSessions(path,source)]);
+async function liveFirstSessions(env,strategy,path,source,warnings=[]){
+  const [lr,fr]=await Promise.allSettled([globalPaperSessions(env,strategy,warnings),decisionSessions(path,source)]);
+  readWarnings([lr,fr],strategy+" 원천 조회 실패",warnings);
   const live=lr.status==="fulfilled"?lr.value:[],fallback=fr.status==="fulfilled"?fr.value:[];
   const liveError=lr.status==="rejected"?String(lr.reason&&lr.reason.message||lr.reason):null;
   const fallbackError=fr.status==="rejected"?String(fr.reason&&fr.reason.message||fr.reason):null;
@@ -345,8 +355,9 @@ async function liveFirstSessions(env,strategy,path,source){
   return sessions;
 }
 async function safeSessions(fn){
-  try{return {sessions:await fn(),error:null};}
-  catch(e){return {sessions:[],error:String(e.message||e)};}
+  const sourceWarnings=[];
+  try{return {sessions:await fn(sourceWarnings),error:null,sourceWarnings};}
+  catch(e){return {sessions:[],error:String(e.message||e),sourceWarnings};}
 }
 function kstSessionDate(strategy,date){
   const d=String(date||"");
@@ -400,8 +411,9 @@ function pairKst(name,label,result,kstDate,krStatuses=null){
   return {
     strategy:name,label,marketTime:"KST",timeZone:"Asia/Seoul",dateRule:"kst-calendar",
     current,previous,
-    status:result&&result.error?"error":(a.length?"ok":"collecting"),
-    error:result&&result.error||null
+    status:result&&result.error?"error":(result?.sourceWarnings?.length||a.some(x=>x.incomplete||x.sourceConflict)?"degraded":(a.length?"ok":"collecting")),
+    error:result&&result.error||null,
+    sourceWarnings:result?.sourceWarnings||[]
   };
 }
 
@@ -413,10 +425,10 @@ export async function onRequestGet({request,env}){
   }
   const kst=tzParts("Asia/Seoul"),prevKst=shiftIso(kst.date,-1);
   const [opening,daytrading,crypto,soxl,krToday,krPrevious]=await Promise.all([
-    safeSessions(()=>openingSessions()),
-    safeSessions(()=>daytradingSessions(env)),
-    safeSessions(()=>liveFirstSessions(env,"crypto","crypto-research/baseline-decisions.csv","crypto-research")),
-    safeSessions(()=>liveFirstSessions(env,"soxl","soxl-research/baseline-decisions.csv","soxl-research")),
+    safeSessions(w=>openingSessions(w)),
+    safeSessions(w=>daytradingSessions(env,w)),
+    safeSessions(w=>liveFirstSessions(env,"crypto","crypto-research/baseline-decisions.csv","crypto-research",w)),
+    safeSessions(w=>liveFirstSessions(env,"soxl","soxl-research/baseline-decisions.csv","soxl-research",w)),
     krMarketDayStatus(request,kst.date),
     krMarketDayStatus(request,prevKst)
   ]);
@@ -427,7 +439,7 @@ export async function onRequestGet({request,env}){
     kstDate:kst.date,
     dateRule:"All displayed previous/current result dates use the Asia/Seoul calendar. SOXL U.S. market dates are shifted to the Korean calendar date containing the regular-session close.",
     returnRule:"Opening uses the equal-weight average of executed baseline trades; Daytrading uses the sum of trade net PnL divided by 3 fixed capital slots; BTC/SOXL use one slot. No-trade session = 0%.",
-    sourceRule:"BTC/SOXL use the completed live paper ledger first; immutable research CSV is fallback. One strategy source failure does not hide the other strategies.",
+    sourceRule:"Stored paper ledgers are preferred; imported historical research is labelled separately. A research reconstruction never replaces an existing live no-trade result. Source failures and conflicts remain visible.",
     strategies:[
       pairKst("opening","시초가",opening,kst.date,krStatuses),
       pairKst("daytrading","데이트레이딩",daytrading,kst.date,krStatuses),

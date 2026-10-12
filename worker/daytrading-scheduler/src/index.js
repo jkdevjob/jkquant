@@ -407,6 +407,10 @@ function ledgerSummary(ledger){
 
 async function sendScalpingAlert(env,payload){
   try{
+    if(payload.stage!=="summary"&&!payload.eventAt){
+      const m=String(payload.time||"").match(/^(\d{2}):?(\d{2})/);
+      if(m)payload={...payload,eventAt:new Date(Date.parse(payload.date+"T00:00:00+09:00")+(Number(m[1])*60+Number(m[2])+1)*60_000).toISOString()};
+    }
     const r=await fetch(baseUrl(env)+"/api/scalping-alert",{
       method:"POST",
       headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
@@ -458,7 +462,7 @@ async function notifyPaperTransitions(env,oldLedger,newLedger){
     }
   }
 }
-// 장부 기록 후 첫 웹알림이 실패해도 최근 이벤트를 재시도한다(동일 eventId는 푸시 Worker가 영속 중복 제거).
+// 장부 기록 후 첫 알림이 실패해도 최근 이벤트를 재시도한다. 두 채널은 각자 중복 제거한다.
 export function recentPaperPushEvents(ledger,windowMin=8){
   const rows=[],now=hmToMin(ledger&&ledger.targetHm);
   for(const x of (ledger&&ledger.trades||[])){
@@ -473,7 +477,7 @@ export function recentPaperPushEvents(ledger,windowMin=8){
         "모의 순손익 "+signedPct(x.pnl)]});
     for(const e of events){const age=now-hmToMin(e.when);
       if(age>=0&&age<=windowMin)rows.push({strategy:"daytrading",stage:e.stage,
-        webOnly:true,eventId:e.eventId,date:ledger.date,time:hmLabel(e.when)+" KST",lines:e.lines});
+        eventId:e.eventId,date:ledger.date,time:hmLabel(e.when)+" KST",lines:e.lines});
     }
   }
   return rows;
