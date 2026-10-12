@@ -1060,13 +1060,16 @@ def soxl_piecewise(srows):
 
 
 # ── 전략 경쟁(아레나) — 자동 퇴출 · 신규 투입 · 7일 1위 자동 승격 ──────────────────────────
-# 밤 계산마다: 탭별 경쟁군(메인 + 그림자 10~12개)을 같은 함수·같은 비용으로 계산 → 안정 점수 순위 → 날짜별 1위 기록.
+# 밤 계산마다: 탭별 경쟁군(메인 + 그림자 10~12개)을 같은 함수·같은 비용으로 계산 → 순위 점수 순위 → 날짜별 1위 기록.
 #  · 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일로 내되, 매매가 적은 구간은 전체 성적 쪽으로 당기고(운으로 튄 최근 성적 거름),
 #    변수를 한 칸씩 바꾼 이웃들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 '뾰족한' 과최적화 거름).
+#  · 순위 점수 = 안정 점수 × 빈도 보정. 빈도 보정 = (연 매매 횟수 ÷ 지금 메인의 연 매매 횟수)^FREQ_BETA — 메인은 1.
+#    같은 수익이면 더 자주 매매하는 전략이 위(사용자 요청 2026-10-12: '언제 매매하냐'). 안정 점수가 0 이하면 보정하지 않는다
+#    (드물게 매매한다고 손실 전략이 덜 나빠 보이면 안 된다). ④ 는 보유일이 아니라 들어간 횟수로 센다(오래 들고 있는 것을 상 주지 않게).
 #  · 기준(투입·유지): MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일 이상 · 매매한 해의 60% 이상 플러스.
 #  · 퇴출: 기준 미달 · 7일 연속 하위 3위 · 다른 전략과 사실상 같은 매매(일 손익 상관 ≥ 0.97 — 낮은 쪽) · 더 나은 신규에 자리 교체.
 #  · 신규: 밤마다 탭별 후보 48개를 다섯 방법(이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색)으로 만들어 모두 계산 → 기준 통과 · 복제 아님 ·
-#    안정 점수 높은 순으로 빈자리를 채우고, 기존 최하위보다 확실히(+0.02) 나으면 하룻밤 3개까지 교체. 방법별 성공률을 기억해 잘 되는 방법에 후보를 더 준다.
+#    순위 점수 높은 순으로 빈자리를 채우고, 기존 최하위보다 확실히(+0.02) 나으면 하룻밤 3개까지 교체. 방법별 성공률을 기억해 잘 되는 방법에 후보를 더 준다.
 #  · 자동 승격: 같은 그림자가 7일(달력) 동안 매일 1위면 Worker 메인 기록에 쌓는다 → 다음 날부터 메인(주문·장부·텔레그램 모두).
 #    메인은 +0.02 보호(사실상 같은 성적이면 바꾸지 않는다).
 #  모든 변수는 주문·장부 경로가 그대로 실행할 수 있는 범위(_valid_params = _claude_main.js validateParams)만 쓴다.
@@ -1075,9 +1078,12 @@ ARENA_PATH = OUT / "arena.json"
 ARENA_SCHEMA = 2
 POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, EVAL_BUDGET = 12, 10, 7, 3, 48
 SHRINK_K, MIN_TRADE_DAYS, YEAR_POS_MIN, DUP_CORR = 40, 60, 0.6, 0.97
+FREQ_BETA = 0.25                                                 # 빈도 보정 세기 — 매매 2배 ↔ 점수 ×1.19 (근거: AUDIT-SELF-REVIEW 시간순 검증)
 MAIN_MARGIN, REPLACE_MARGIN, MAX_REPLACE = 0.02, 0.02, 3
-ARENA_RULE = ("순위 = 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, "
+ARENA_RULE = ("순위 = 순위 점수 = 안정 점수 × 빈도 보정. 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, "
               "변수를 한 칸씩 바꾼 이웃 전략들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 과최적화를 거른다). "
+              f"빈도 보정: (연 매매 횟수 ÷ 지금 메인)^{FREQ_BETA:g} — 같은 수익이면 더 자주 매매하는 전략이 위(매매 2배면 ×{2 ** FREQ_BETA:.2f}, 메인은 ×1, "
+              "④ 는 보유일이 아닌 들어간 횟수, 안정 점수가 0 이하면 보정 없음). "
               "기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일↑ · 매매한 해의 60%↑ 플러스)을 못 지키면 맨 뒤 · 그림자는 퇴출. "
               "7일 연속 하위 3위, 다른 전략과 사실상 같은 매매(상관 0.97↑)도 퇴출. 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색으로 만들어 "
               "모두 계산하고 좋은 순으로 빈자리를 채우거나 최하위를 교체(그림자 10~12개 유지). "
@@ -1208,8 +1214,10 @@ def gate_ok(m):
 
 
 def arena_eval(tab, entry, ctx):
-    """한 전략 계산(같은 함수·같은 비용) — ctx: 시장 자료. '_dv' 는 복제 판정용 일 손익(화면에는 안 나간다)."""
+    """한 전략 계산(같은 함수·같은 비용) — ctx: 시장 자료. '_dv' 는 복제 판정용 일 손익(화면에는 안 나간다).
+    tradesPerYear: 빈도 보정에 쓰는 연 매매 횟수 — ①②③ 은 매매일(하루 매매), ④ 는 들어간 횟수(여러 날 보유를 한 번으로)."""
     p = dict(entry["params"], version=entry["version"])
+    entries = None
     if tab == "opening":
         dv, cal = d1_series(p)
         per = 250
@@ -1219,8 +1227,25 @@ def arena_eval(tab, entry, ctx):
         r = coin_series(p, ctx["coin"])
         dv, cal, per = r[0], r[4], 365
     else:
-        dv, cal, per = soxl_series(p, ctx["soxl"])[0], [x[0] for x in ctx["soxl"]], 252
-    return dict(score_metrics(dv, cal, per), _dv=dv, _cal=cal)
+        sx = soxl_series(p, ctx["soxl"])
+        dv, cal, per = sx[0], [x[0] for x in ctx["soxl"]], 252
+        entries = sum(1 for r in sx[2] if r.get("action") == "enter")
+    m = score_metrics(dv, cal, per)
+    return dict(m, tradesPerYear=trades_per_year(dv, cal, per, entries), _dv=dv, _cal=cal)
+
+
+def trades_per_year(dv, cal, per, entries=None):
+    """연 매매 횟수 — entries 가 없으면 매매일 수(그날 손익이 있는 날)."""
+    cs = set(cal)
+    n = entries if entries is not None else sum(1 for d in dv if d in cs)
+    return n / (len(cs) / per) if cs else None
+
+
+def freq_factor(tpy, ref):
+    """빈도 보정 = (연 매매 횟수 ÷ 메인의 연 매매 횟수)^FREQ_BETA. 둘 중 하나라도 모르면 1(보정 없음)."""
+    if not tpy or not ref or tpy <= 0 or ref <= 0:
+        return 1.0
+    return (tpy / ref) ** FREQ_BETA
 
 
 def neighbors(tab, parent, keys=None):
@@ -1348,7 +1373,7 @@ def auto_promote(tab, row, main_row, today, state):
     ev = dict(tab=tab, version=row["version"], name=row["name"], rule=row["rule"], params=row["params"], effectiveFrom=eff,
               promotedAt=datetime.now(timezone.utc).isoformat(), prevVersion=main_row["version"], by="auto:arena-7d-top1",
               basis=dict(labGeneratedAt=datetime.now(KST).isoformat(), rank=1,
-                         promotion=f"7일 연속 1위 · 안정 점수 {row['score']:+.3f} vs 메인 {main_row['score'] or 0:+.3f}"))
+                         promotion=f"7일 연속 1위 · 순위 점수 {row['score']:+.3f} vs 메인 {main_row['score'] or 0:+.3f}"))
     key = os.environ.get("JKQ_MONITOR_KEY", "").strip()
     if not key:
         return dict(ok=False, due=True, event=ev, error="감시키 없음(로컬 계산) — 기록하지 않음")
@@ -1373,6 +1398,7 @@ class _Evaluator:
 
     def __init__(self, tab, ctx):
         self.tab, self.ctx, self.cache, self.dv, self.days, self._cal = tab, ctx, {}, {}, set(), None
+        self.ref = None                                          # 지금 메인의 연 매매 횟수(빈도 보정 기준)
 
     def metrics(self, params, version=None):
         try:
@@ -1416,12 +1442,18 @@ class _Evaluator:
                 vals.append(m["adj"])
         return statistics.median(vals) if vals else None
 
+    def rank_score(self, stable, m):
+        """순위 점수 = 안정 점수 × 빈도 보정(안정 점수가 0 이하면 그대로 — 손실 전략을 드물다고 덜 나쁘게 보지 않는다)."""
+        f = freq_factor(m.get("tradesPerYear"), self.ref)
+        return (stable * f if stable is not None and stable > 0 else stable), f
+
     def robust(self, params, m):
-        """안정 점수 = min(adj, 이웃 중앙값). 결과 dict 를 새로 만든다(캐시를 건드리지 않는다)."""
+        """안정 점수 = min(adj, 이웃 중앙값) → 순위 점수(score) = 안정 점수 × 빈도 보정. 결과 dict 를 새로 만든다(캐시를 건드리지 않는다)."""
         out = dict(m)
         pl = self.plateau(params)
         out["plateau"] = pl
-        out["score"] = m["adj"] if pl is None or m.get("adj") is None else min(m["adj"], pl)
+        out["stable"] = m["adj"] if pl is None or m.get("adj") is None else min(m["adj"], pl)
+        out["score"], out["freqFactor"] = self.rank_score(out["stable"], m)
         return out
 
 
@@ -1458,6 +1490,12 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
         if cur["version"] not in {x["version"] for x in pool}:   # 지금 메인은 늘 경쟁군에 있다
             pool.insert(0, dict(version=cur["version"], name=cur["name"], rule=cur["rule"], params=cur["params"], source="main", addedAt=today))
         E = _Evaluator(tab, ctx)
+        mm = E.metrics(cur["params"], cur["version"])           # 빈도 보정 기준 = 지금 메인의 연 매매 횟수
+        E.ref = (mm or {}).get("tradesPerYear") if mm and not mm.get("error") else None
+        if state.get("freqBeta") != FREQ_BETA:
+            log.append(dict(date=today, at=now, tab=tab, kind="note", version="", name="",
+                            reason=f"순위 점수에 매매 빈도 반영 — 안정 점수 × (연 매매 횟수 ÷ 메인)^{FREQ_BETA:g}(매매 2배면 ×{2 ** FREQ_BETA:.2f}) · "
+                                   "1위가 그대로면 연속 일수는 이어서 셈"))
 
         def canon_key(params):
             try:
@@ -1522,7 +1560,7 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
                 continue
             s0, s1, n = streak(snaps, r["version"], lambda sn: r["version"] in (sn.get("bottom") or []))
             if n and _span_days(s0, today) >= PROMOTE_DAYS - 1:
-                mark(r, f"{_span_days(s0, today) + 1}일 연속 하위 {BOTTOM_N}위 (안정 점수 {r['score']:+.3f})")
+                mark(r, f"{_span_days(s0, today) + 1}일 연속 하위 {BOTTOM_N}위 (순위 점수 {r['score']:+.3f})")
         for i, a in enumerate(rows):                              # 순위 높은 쪽을 남긴다
             if a["version"] in bad_v:
                 continue
@@ -1532,7 +1570,7 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
                 c = E.corr(a["params"], b["params"])
                 if c is not None and c >= DUP_CORR:
                     mark(b, f"복제 — {a['name']} 와 사실상 같은 매매(일 손익 상관 {c:.3f}) · 순위 낮은 쪽을 뺌")
-        # 4) 신규 — 후보 48개를 다섯 방법으로 만들어 모두 계산 → 기준 통과 · 복제 아님 · 안정 점수 순으로 빈자리 채움 / 최하위 교체
+        # 4) 신규 — 후보 48개를 다섯 방법으로 만들어 모두 계산 → 기준 통과 · 복제 아님 · 순위 점수 순으로 빈자리 채움 / 최하위 교체
         rng = random.Random(f"arena:{tab}:{today}")
         parents = [r for r in rows if gate_ok(r)]
         weights = op_weights(tab, ops_state, len(parents))
@@ -1562,7 +1600,7 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
                 reasons[kind] = reasons.get(kind, 0) + 1
                 continue
             passed.append((c, m))
-        passed.sort(key=lambda cm: -(cm[1]["adj"] or -1e9))
+        passed.sort(key=lambda cm: -(E.rank_score(cm[1]["adj"], cm[1])[0] or -1e9))   # 이웃 계산 전 대략 순서(빈도 보정 포함)
         live = [r for r in rows if r["version"] not in bad_v]
         need = POOL_TARGET - len([r for r in live if r["version"] != cur["version"]])
         added, replaced, filled = [], 0, 0
@@ -1580,14 +1618,14 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
                     st["tried"].append(c["version"])
                     reasons["복제"] = reasons.get("복제", 0) + 1
                     continue
-                out_r, why_out = twin, f"자리 교체 — 같은 매매의 더 나은 신규 {c['version']} (안정 점수 {rm['score']:+.3f} > {twin['score']:+.3f})"
+                out_r, why_out = twin, f"자리 교체 — 같은 매매의 더 나은 신규 {c['version']} (순위 점수 {rm['score']:+.3f} > {twin['score']:+.3f})"
                 replaced += 1
             elif need > filled:
                 out_r, why_out = None, ""
                 filled += 1
             elif replaced < MAX_REPLACE and nonmain and rm["score"] > (nonmain[0]["score"] or -1e9) + REPLACE_MARGIN:
                 out_r = nonmain[0]
-                why_out = f"자리 교체 — 신규 {c['version']} 가 안정 점수 {rm['score']:+.3f} 로 {out_r['score']:+.3f} 보다 확실히 나음"
+                why_out = f"자리 교체 — 신규 {c['version']} 가 순위 점수 {rm['score']:+.3f} 로 {out_r['score']:+.3f} 보다 확실히 나음"
                 replaced += 1
             else:
                 st["tried"].append(c["version"])
@@ -1608,9 +1646,9 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
                                       f" — {c['parents'][0]} 에서 {param_diff(tab, c['base'], c['params'])}" if c["parents"] else "")
             y = rm.get("years") or {}
             f = rm.get("full") or {}
-            note(tab, "new", e, f"{how} · 안정 점수 {rm['score']:+.3f} (그대로 {rm['raw']:+.3f} · 이웃 중앙 "
+            note(tab, "new", e, f"{how} · 순위 점수 {rm['score']:+.3f} (안정 {rm['stable']:+.3f} × 빈도 {rm['freqFactor']:.2f} · 그대로 {rm['raw']:+.3f} · 이웃 중앙 "
                                 + (f"{rm['plateau']:+.3f}" if rm.get("plateau") is not None else "—")
-                                + f") · 매매일 {f.get('tradeDays') or 0} · MDD {f.get('mddPct') or 0:.1f}% · 플러스 {y.get('pos', 0)}/{y.get('n', 0)}해",
+                                + f") · 매매일 {f.get('tradeDays') or 0} · 연 {rm.get('tradesPerYear') or 0:.0f}회 · MDD {f.get('mddPct') or 0:.1f}% · 플러스 {y.get('pos', 0)}/{y.get('n', 0)}해",
                  op=c["op"])
             added.append(c["version"])
         if cands:
@@ -1647,6 +1685,7 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
                         log=[x for x in log if x["tab"] == tab][-30:])
     state["log"] = log[-600:]
     state["updatedAt"] = now
+    state["freqBeta"] = FREQ_BETA
     return out, state
 
 

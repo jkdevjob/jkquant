@@ -12050,8 +12050,18 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   }
   ok('신규 전략 생성: 안정 점수(구간 당김 · 이웃 중앙값) · 기준(매매일 60 · 해마다 60%) · 복제(상관 0.97) 퇴출 · 다섯 방법 후보 48개 · 방법별 성공률 · 자리 교체 최대 3 · 메인 보호',
      /SHRINK_K, MIN_TRADE_DAYS, YEAR_POS_MIN, DUP_CORR = 40, 60, 0\.6, 0\.97/.test(lp)&&/MAIN_MARGIN, REPLACE_MARGIN, MAX_REPLACE = 0\.02, 0\.02, 3/.test(lp)
-     &&/OPS = \("neighbor", "jump2", "cross", "struct", "explore"\)/.test(lp)&&/out\["score"\] = m\["adj"\] if pl is None or m\.get\("adj"\) is None else min\(m\["adj"\], pl\)/.test(lp)
-     &&/def gate_reason\(m\):/.test(lp)&&/mark\(b, f"복제 — /.test(lp)&&/function arenaGen\(z\)/.test(ch)&&/안정 점수<div class='sub'>/.test(ch));
+     &&/OPS = \("neighbor", "jump2", "cross", "struct", "explore"\)/.test(lp)&&/out\["stable"\] = m\["adj"\] if pl is None or m\.get\("adj"\) is None else min\(m\["adj"\], pl\)/.test(lp)
+     &&/def gate_reason\(m\):/.test(lp)&&/mark\(b, f"복제 — /.test(lp)&&/function arenaGen\(z\)/.test(ch)&&/순위 점수<div class='sub'>안정\(주 평균 %\) × 빈도<\/div>/.test(ch));
+  { // 매매 빈도 반영(2026-10-12 사용자 요청) — 순위 점수 = 안정 점수 × (연 매매 횟수 ÷ 메인)^0.25 · 손실 전략엔 보정 없음 · ④ 는 들어간 횟수
+    const pyF=cp.spawnSync('python3',['-c','import sys,json;sys.path.insert(0,"scripts");import claude_lab as L\nE=L._Evaluator("opening",{});E.ref=10.0\nprint(json.dumps([L.FREQ_BETA,L.freq_factor(20,10),L.freq_factor(5,10),L.freq_factor(0,10),L.freq_factor(5,None),E.rank_score(0.1,dict(tradesPerYear=40))[0],E.rank_score(-0.1,dict(tradesPerYear=1))[0],L.trades_per_year({"a":1,"b":1,"z":1},["a","b","c","d"],250),L.trades_per_year({"a":1},["a","b"],252,entries=1)]))'],{cwd:__d,encoding:'utf8'});
+    let v=null;try{v=JSON.parse(pyF.stdout)}catch(e){}
+    const near=(a,b)=>Math.abs(a-b)<1e-9;
+    ok('전략 경쟁 매매 빈도 반영: 매매 2배 ×1.19 · 절반 ×0.84 · 모르면 ×1 · 손실 전략은 보정 없음 · 매매일 수는 달력 안만 · ④ 는 들어간 횟수 · 메인 기준 · 대략 순서에도 반영 · 화면에 안정 × 빈도',
+       !!v&&v[0]===0.25&&near(v[1],2**0.25)&&near(v[2],0.5**0.25)&&v[3]===1&&v[4]===1&&near(v[5],0.1*4**0.25)&&v[6]===-0.1&&near(v[7],125)&&near(v[8],126)
+       &&/entries = sum\(1 for r in sx\[2\] if r\.get\("action"\) == "enter"\)/.test(lp)&&/E\.ref = \(mm or \{\}\)\.get\("tradesPerYear"\)/.test(lp)
+       &&/passed\.sort\(key=lambda cm: -\(E\.rank_score\(cm\[1\]\["adj"\], cm\[1\]\)\[0\] or -1e9\)\)/.test(lp)
+       &&/안정 "\+pct\(r\.stable,3\)\+" × 빈도 "\+num\(r\.freqFactor,2\)/.test(ch),(pyF.stderr||'')+(pyF.stdout||'').slice(0,300));
+  }
   ok('단타(클로드) 휴대폰 기본: 비교 표는 표 그대로(넘치는 표만 촘촘하게 · 첫 칸 고정, 경쟁표는 순위·이름 고정) · 개선 내역에 전략 표기 · 전략 코드는 이름으로',
      /\n  body\.innerHTML=statusBar\(\)\+html;\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;\n\s*t\.classList\.add\("fit"\);/.test(ch)
      &&/@media\(max-width:760px\)\{table\.fit\{min-width:0!important;font-size:11px\}/.test(ch)&&/table\.fit td:first-child,table\.fit th:first-child\{position:sticky;left:0;/.test(ch)
