@@ -1,21 +1,30 @@
-/* 부동산 🤖 클로드 — 아파트(단지) 매매 전략 엔진 apt-1
+/* 부동산 🤖 클로드 — 아파트(단지) 매매 전략 엔진 apt-1 · apt-lead-1
    "어느 아파트를 언제·얼마에·왜 사서, 언제·얼마에·왜 팔았나"를 계산하는 한 곳.
    화면(realestate-claude.js)·모의장부(scripts/realestate_claude/paper.mjs)·시험이 이 함수를 같이 쓴다.
    자료  apt.json    — 단지별 KB 월 시세(전용 84㎡ 대표 타입: 하한·일반·상한·전세)와 매매 실거래 월 요약 (단위 만원)
          series.json — 한국은행 기준금리·예금금리 (realestate-claude-engine.js 의 prepare 로 읽는다)
          events.json — 날짜를 확인한 정책·개발·교통·규제 사건 (기준금리 변경은 금리 자료에서 자동으로 덧붙인다)
    시점  k월 결정은 k-1월까지 공개된 시세·금리만 본다(룩어헤드 금지). 체결은 k월 KB 일반거래가.
-   규칙  매수: 현금일 때, 기준금리가 1년 전보다 높지 않고, 대단지 중 6개월 시세 상승률 1위가 +3% 이상이면 그 단지를 산다.
+   규칙  매수: 현금일 때, 기준금리가 1년 전보다 높지 않고, 후보 중 6개월 시세 상승률 1위가 +3% 이상이면 그 단지를 산다.
          매도: 2년(1주택 양도세 비과세 요건) 이상 보유한 뒤, 그 단지 6개월 시세가 떨어졌거나 기준금리가 1년 새 0.5%p 이상 오르면 판다.
-         판 달에 매수 조건이 맞는 다른 단지가 있으면 바로 갈아탄다. 현금은 예금이자(세후)를 받는다. */
+         판 달에 매수 조건이 맞는 다른 단지가 있으면 바로 갈아탄다. 현금은 예금이자(세후)를 받는다.
+   후보  전략마다 '무엇을 사나'만 다르다(사고파는 때·비용·체결은 같은 stepMonth).
+         apt-1      — 대단지 전부
+         apt-lead-1 — 대장 아파트만: 도시(대전·세종)마다 전달 84㎡ KB 시세가 가장 비싼 대단지 1곳 */
 (function(g){
 'use strict';
 const BASE=(typeof module!=='undefined'&&module.exports)?require('./realestate-claude-engine.js'):g.JKRealEstateClaude;
 const {ymk,kym,at,upTo,lastK}=BASE;
 
-const VERSION='1.0.0';
-const STRATEGY='apt-1';
-const DEFAULTS={mom:6,buyMin:0.03,minHold:24,rateLook:12,rateUpSell:0.5,minUnits:1000,holdCostYr:0.0015,depositTax:0.154,newsWindow:6,capital:30000};
+const VERSION='1.1.0';
+const STRATEGY='apt-1';   // 기본 전략(첫 장부)
+const STRATEGIES={'apt-1':{pick:'mom',name:'상승률 1위'},'apt-lead-1':{pick:'leader',name:'대장 아파트'}};
+const DEFAULTS={strategy:STRATEGY,pick:'mom',mom:6,buyMin:0.03,minHold:24,rateLook:12,rateUpSell:0.5,minUnits:1000,holdCostYr:0.0015,depositTax:0.154,newsWindow:6,capital:30000};
+/* 전략 버전이 후보 방식을 정한다 — 같은 이름으로 다른 규칙이 돌지 않게 pick 은 넘겨받지 않는다 */
+function opts(o){
+  o=o||{}; const sv=o.strategy||STRATEGY,S=STRATEGIES[sv]; if(!S) throw new Error('모르는 전략: '+sv);
+  return Object.assign({},DEFAULTS,o,{strategy:sv,pick:S.pick});
+}
 const CITY_OF=gu=>gu==='세종시'?'세종':'대전';
 
 /* ── 자료 준비 ── */
@@ -60,13 +69,30 @@ function realAt(A,id,k){
 }
 function quote(A,id,k){ return {m:kym(k),price:price(A,id,k),low:at(A.LO[id],k),high:at(A.HI[id],k),jeonse:at(A.J[id],k),real:realAt(A,id,k)}; }
 
-/* ── 후보: k월 결정 — k-1월까지 시세가 있는 대단지의 6개월 상승률 순 ── */
-function candidatesAt(A,k,o){
-  const out=[];
+/* ── 대장: k월 결정 — 도시(대전·세종)마다 k-1월 84㎡ KB 시세가 가장 비싼 대단지(같으면 세대수 많은 곳 → id) ── */
+function leadersAt(A,k,o){
+  const by={},out=[];
   for(const u of A.U){
     if(o.minUnits&&(+u.units||0)<o.minUnits) continue;
+    const p=price(A,u.id,k-1); if(p==null) continue;
+    (by[u.city]=by[u.city]||[]).push({id:u.id,price:p,units:+u.units||0});
+  }
+  for(const city of Object.keys(by).sort()){
+    const a=by[city].sort((x,y)=>(y.price-x.price)||(y.units-x.units)||String(x.id).localeCompare(String(y.id)));
+    out.push({city,id:a[0].id,price:a[0].price,n:a.length,next:a[1]?{id:a[1].id,name:A.byId[a[1].id].name,price:a[1].price}:null});
+  }
+  return out;
+}
+
+/* ── 후보: k월 결정 — k-1월까지 시세가 있는 대단지(apt-lead-1 은 대장만)의 6개월 상승률 순 ── */
+function candidatesAt(A,k,o){
+  const out=[],lead=o.pick==='leader'?leadersAt(A,k,o):null;
+  for(const u of A.U){
+    if(o.minUnits&&(+u.units||0)<o.minUnits) continue;
+    const ld=lead&&lead.find(x=>x.id===u.id); if(lead&&!ld) continue;
     const m=momOf(A,u.id,k,o); if(m==null) continue;
-    out.push({id:u.id,mom:m,last:price(A,u.id,k-1)});
+    const c={id:u.id,mom:m,last:price(A,u.id,k-1)}; if(ld) c.lead=ld;
+    out.push(c);
   }
   out.sort((x,y)=>(y.mom-x.mom)||((+A.byId[y.id].units||0)-(+A.byId[x.id].units||0))||String(x.id).localeCompare(String(y.id)));
   return out;
@@ -123,6 +149,7 @@ function stepMonth(A,st,k,o){
       const meta=info(A,best.id),rank=C.indexOf(best)+1;
       const buy=Object.assign(q,{k,costs:{acq,broker},total:px+acq+broker,mom:best.mom,rank,of:C.length,rate:m.rate,rate0:m.rate0,rateUp:m.rateUp,
         runners:C.filter(c=>c!==best).slice(0,2).map(c=>({id:c.id,name:A.byId[c.id].name,mom:c.mom})),news:newsFor(A,k,meta.city,o.newsWindow)});
+      if(best.lead) buy.lead={city:best.lead.city,last:best.lead.price,n:best.lead.n,next:best.lead.next};   // 왜 대장인가: 전달 시세 1위 · 그 도시 대단지 수 · 2위
       st.pos={id:best.id,k,meta,buy,hold:0,eqIn:st.eq};
       st.eq=st.pos.eqIn*(px/buy.total);
       out.opened=Object.assign({},meta,{buy}); out.action=out.closed?'switch':'buy';
@@ -144,7 +171,7 @@ function startK(A,o){
   return s==null?null:s+1+o.mom;
 }
 function simulate(A,o){
-  o=Object.assign({},DEFAULTS,o||{});
+  o=opts(o);
   const k0=startK(A,o),k1=A.lastK; if(k0==null||k1==null||k1<k0) return {trades:[],curve:[],opts:o};
   const st={eq:o.capital,pos:null},trades=[],curve=[],months=[];
   for(let k=k0;k<=k1;k++){
@@ -167,17 +194,35 @@ function summary(A,sim){
     final:sim.final,total:sim.final/sim.opts.capital-1,cagr:cagr(sim.opts.capital,sim.final,n),mdd:mdd(c),
     inMarket:c.filter(x=>x.pos).length/n};
 }
-/* 비교: 같은 기간 예금만 / 대단지 전부 고르게 사서 보유(시세 있는 단지 평균 월수익) */
+/* 비교: 같은 기간 예금만 / 대단지 전부 고르게 사서 보유(시세 있는 단지 평균 월수익)
+        / 대장 계속 보유(그달 대장 = 전달 시세 1위, 도시별 평균 월수익 — 대장이 바뀔 때 사고파는 비용은 넣지 않은 시세 흐름)
+   curve 는 sim.curve 와 같은 달 순서(그래프용 — 화면이 다시 세지 않는다) */
 function benchmarks(A,sim){
   const o=sim.opts,k0=ymk(sim.start),k1=ymk(sim.end);
-  let dep=o.capital,eqw=o.capital;
+  let dep=o.capital,eqw=o.capital,ld=o.capital;
+  const cd=[],ch=[],cl=[];
   for(let k=k0;k<=k1;k++){
     dep*=1+depMonthly(A,k,o);
     let s=0,n=0; for(const u of A.U){ if(o.minUnits&&(+u.units||0)<o.minUnits) continue; const a=price(A,u.id,k),b=price(A,u.id,k-1); if(a!=null&&b!=null&&b>0){ s+=a/b-1; n++; } }
     eqw*=1+(n?s/n:0)-o.holdCostYr/12;
+    let s2=0,n2=0; for(const x of leadersAt(A,k,o)){ const a=price(A,x.id,k); if(a!=null&&x.price>0){ s2+=a/x.price-1; n2++; } }
+    ld*=1+(n2?s2/n2:0)-o.holdCostYr/12;
+    cd.push(dep); ch.push(eqw); cl.push(ld);
   }
-  const months=k1-k0+1;
-  return {deposit:{final:dep,cagr:cagr(o.capital,dep,months)},hold:{final:eqw,cagr:cagr(o.capital,eqw,months)}};
+  const months=k1-k0+1,f=(v,c)=>({final:v,cagr:cagr(o.capital,v,months),mdd:mdd(c.map(eq=>({eq}))),curve:c});
+  return {deposit:f(dep,cd),hold:f(eqw,ch),lead:f(ld,cl)};
+}
+/* 대장이 바뀐 때 — 시세 달(m)마다 도시별 1위가 바뀐 기록(화면 설명용, 대장 판단과 같은 leadersAt) */
+function leaderChanges(A,o){
+  o=opts(o); const out=[],prev={};
+  let s=null; for(const u of A.U){ const p=A.P[u.id]; if(p&&(s==null||p.k0<s)) s=p.k0; }
+  if(s==null||A.lastK==null) return out;
+  for(let k=s+1;k<=A.lastK+1;k++){
+    for(const x of leadersAt(A,k,o)){
+      if(prev[x.city]!==x.id){ out.push(Object.assign(info(A,x.id),{m:kym(k-1),price:x.price,n:x.n})); prev[x.city]=x.id; }
+    }
+  }
+  return out;
 }
 
 /* ── 사건 뒤 가격: 사건 직전 달(k-1) 대비 6·12·24개월 뒤 그 지역 대단지 평균 ── */
@@ -199,7 +244,7 @@ function eventStudy(A,o){
 
 /* ── 지금: 다음 달(n=lastK+1) 결정 미리보기 — lastK월까지 자료로 ── */
 function nowView(A,o,pos){
-  o=Object.assign({},DEFAULTS,o||{});
+  o=opts(o);
   const n=A.lastK+1,m=marketAt(A,n,o),C=candidatesAt(A,n,o);
   const top=C.slice(0,10).map((c,i)=>Object.assign(info(A,c.id),{rank:i+1,mom:c.mom},quote(A,c.id,A.lastK)));
   let action='wait',why=[];
@@ -208,15 +253,17 @@ function nowView(A,o,pos){
     else { action='hold'; why=held<o.minHold?['minHold']:[]; } }
   else if(C.length&&m.rateUp!=null&&m.rateUp<=0&&C[0].mom>=o.buyMin){ action='buy'; }
   else { if(m.rateUp==null) why.push('noRate'); else if(m.rateUp>0) why.push('rateUp'); if(!C.length) why.push('noCand'); else if(C[0].mom<o.buyMin) why.push('weak'); }
-  return {forMonth:kym(n),dataMonth:kym(A.lastK),market:m,action,why,top,news:newsFor(A,n,'대전',o.newsWindow).concat(newsFor(A,n,'세종',o.newsWindow).filter(e=>e.title&&!/대전/.test(e.title))).slice(0,6)};
+  const leaders=leadersAt(A,n,o).map(x=>Object.assign(info(A,x.id),{n:x.n,next:x.next,mom:momOf(A,x.id,n,o)},quote(A,x.id,A.lastK)));
+  return {strategy:o.strategy,forMonth:kym(n),dataMonth:kym(A.lastK),market:m,action,why,top,leaders,news:newsFor(A,n,'대전',o.newsWindow).concat(newsFor(A,n,'세종',o.newsWindow).filter(e=>e.title&&!/대전/.test(e.title))).slice(0,6)};
 }
 
 /* ── 모의장부(앞으로) — 만든 달 다음 달부터 같은 stepMonth 로 한 달씩. 지난 기록은 고치지 않는다 ── */
 function paperUpdate(ledger,A,o,nowIso){
-  o=Object.assign({},DEFAULTS,o||{});
+  o=opts(o);
   let L=ledger?JSON.parse(JSON.stringify(ledger)):null;
-  if(L&&L.strategyVersion!==STRATEGY) throw new Error('장부 전략 버전 다름: '+L.strategyVersion);
-  if(!L){ L={strategyVersion:STRATEGY,engineVersion:VERSION,created:nowIso,startedData:kym(A.lastK),params:pickParams(o),months:[],trades:[],acct:{eq:o.capital,pos:null}}; return {ledger:L,added:0}; }
+  if(L&&L.strategyVersion!==o.strategy) throw new Error('장부 전략 버전 다름: '+L.strategyVersion+' ≠ '+o.strategy);
+  if(L&&L.params&&L.params.pick!=null&&L.params.pick!==o.pick) throw new Error('장부 후보 방식 다름: '+L.params.pick+' ≠ '+o.pick);
+  if(!L){ L={strategyVersion:o.strategy,engineVersion:VERSION,created:nowIso,startedData:kym(A.lastK),params:pickParams(o),months:[],trades:[],acct:{eq:o.capital,pos:null}}; return {ledger:L,added:0}; }
   const po=Object.assign({},o,L.params);
   const st={eq:L.acct.eq,pos:L.acct.pos?JSON.parse(JSON.stringify(L.acct.pos)):null};
   const done=L.months.length?ymk(L.months[L.months.length-1].m):ymk(L.startedData);
@@ -230,7 +277,7 @@ function paperUpdate(ledger,A,o,nowIso){
   L.acct={eq:st.eq,pos:st.pos};
   return {ledger:L,added};
 }
-function pickParams(o){ const x={}; for(const k of ['mom','buyMin','minHold','rateLook','rateUpSell','minUnits','holdCostYr','depositTax','newsWindow','capital']) x[k]=o[k]; return x; }
+function pickParams(o){ const x={}; for(const k of ['pick','mom','buyMin','minHold','rateLook','rateUpSell','minUnits','holdCostYr','depositTax','newsWindow','capital']) x[k]=o[k]; return x; }
 
 
 /* ── 주변 대단지(신규 분양 비교) — 좌표 반경 안 대단지의 최근 KB 시세 ── */
@@ -247,8 +294,8 @@ function nearby(A,lat,lng,o){
   return out.slice(0,o.limit);
 }
 
-const API={VERSION,STRATEGY,DEFAULTS,nearby,distKm,prepareApt,rateEvents,price,momOf,marketAt,candidatesAt,acqRate,brokerRate,exemptLimit,gainTax,newsFor,
-  stepMonth,simulate,summary,benchmarks,eventStudy,nowView,paperUpdate,quote,realAt,startK};
+const API={VERSION,STRATEGY,STRATEGIES,DEFAULTS,opts,nearby,distKm,prepareApt,rateEvents,price,momOf,marketAt,leadersAt,candidatesAt,acqRate,brokerRate,exemptLimit,gainTax,newsFor,
+  stepMonth,simulate,summary,benchmarks,leaderChanges,eventStudy,nowView,paperUpdate,quote,realAt,startK};
 if(typeof module!=='undefined'&&module.exports) module.exports=API;
 g.JKREApt=API;
 })(typeof globalThis!=='undefined'?globalThis:this);
