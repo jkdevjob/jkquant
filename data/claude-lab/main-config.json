@@ -1,5 +1,26 @@
 {
   "ok": true,
-  "events": [],
+  "events": [
+    {
+      "tab": "opening",
+      "version": "g_open_q7_k3_gap3",
+      "name": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+      "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 7개 이상인 날, 갭 깊은 3종목 · 갭 -3% 이하만 시가 매수 → 종가 매도",
+      "params": {
+        "minQ": 7,
+        "topK": 3,
+        "gapMax": -3
+      },
+      "effectiveFrom": "2026-10-13",
+      "promotedAt": "2026-10-12T01:28:34.342167+00:00",
+      "prevVersion": "opening_gapdown_v1+v2filter",
+      "by": "auto:arena-7d-top1",
+      "basis": {
+        "labGeneratedAt": "2026-10-12T10:28:34.342177+09:00",
+        "rank": 1,
+        "promotion": "7일 연속 1위 · 안정 점수 +0.499 vs 메인 +0.410"
+      }
+    }
+  ],
   "source": "cloudflare-opening-scheduler-claude-config"
 }

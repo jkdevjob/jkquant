@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-12T10:28:18.624324+09:00",
+  "generatedAt": "2026-10-12T20:48:07.830853+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -78,6 +78,12 @@
       "rows": 538318,
       "lastDate": "2026-10-08",
       "status": "final"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-12.csv",
+      "rows": 2869,
+      "lastDate": "2026-10-12",
+      "status": "provisional"
     }
   ],
   "designEnd": "2026-09-30",
@@ -2142,9 +2148,9 @@
     }
   },
   "live": {
-    "trades": 7,
-    "days": 3,
-    "actualGapQualifiesRate": 28.57142857142857,
+    "trades": 10,
+    "days": 4,
+    "actualGapQualifiesRate": 20.0,
     "openVsExpectedPct": {
       "n": 4,
       "mean": 2.173923843978909
@@ -2158,8 +2164,8 @@
       "mean": 0.0
     },
     "realizedNetPct": {
-      "n": 3,
-      "mean": -2.7482050601278836
+      "n": 5,
+      "mean": -2.3425683084729707
     },
     "modelNet0tPct": {
       "n": 4,
@@ -2356,12 +2362,93 @@
       "realizedGrossPct": -3.6499999999999977,
       "realizedNetPct": -3.8799999999999977,
       "modelNet0tPct": -3.8799999999999977
+    },
+    {
+      "date": "2026-10-12",
+      "code": "087010",
+      "name": "펩트론",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 85100,
+      "expectedGapPct": -6.994535519125689,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 23,
+      "buyFill": 88626.08695652174,
+      "sellQty": 23,
+      "sellFill": 89500,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": 0.986067503924648,
+      "realizedNetPct": 0.756067503924648,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-12",
+      "code": "042660",
+      "name": "한화오션",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 69700,
+      "expectedGapPct": -3.194444444444444,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 14,
+      "buyFill": 70100,
+      "sellQty": 14,
+      "sellFill": 67300,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": -3.9942938659058513,
+      "realizedNetPct": -4.224293865905851,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-12",
+      "code": "475830",
+      "name": "오름테라퓨틱",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 18700,
+      "expectedGapPct": -2.9579657498702616,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": false,
+      "buyOrderMsg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 106주",
+      "sellOrderOk": false,
+      "sellOrderMsg": null,
+      "buyQty": null,
+      "buyFill": null,
+      "sellQty": null,
+      "sellFill": null,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": null,
+      "realizedNetPct": null,
+      "modelNet0tPct": null
     }
   ],
   "watchlist": {
-    "basedOn": "2026-10-08",
-    "basedOnStatus": "final",
-    "size": 23
+    "basedOn": "2026-10-12",
+    "basedOnStatus": "provisional_snapshot",
+    "size": 34
   },
   "finalDataThrough": "2026-10-08"
 }
