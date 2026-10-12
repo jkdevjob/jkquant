@@ -462,10 +462,11 @@ html.had-user #authgate .bootwait{display:block}
 .htable.narrow tr.paper-row-compact td{padding-top:1px;padding-bottom:1px}
 .htable.narrow tr.paper-row-compact .slink{padding-top:1px;padding-bottom:1px;line-height:17px}
 .htable.narrow tr.paper-row-compact .cw{line-height:1.12}
-/* 고정 전략 열의 가로·세로 경계를 본문 셀과 연결 */
+/* 고정 전략 열의 가로·세로 경계를 본문 셀과 연결 — 가로줄은 칸의 아래 테두리(본문 칸과 같은 1px 한 줄)가 그대로 보인다.
+   예전엔 그 위에 1px 그림자 줄을 또 그려 고정 칸만 2px 로 굵고 1px 위에서 시작해 계단처럼 보였다(2026-10-12 사용자). */
 .htable-wrap table.htable.narrow tr>:first-child{
   position:sticky;left:0;z-index:2;background:var(--jk-fit-bg,var(--panel)) !important;
-  box-shadow:inset -1px 0 0 var(--line),inset 0 -1px 0 var(--line),5px 0 8px -6px rgba(0,0,0,.5) !important;
+  box-shadow:inset -1px 0 0 var(--line),5px 0 8px -6px rgba(0,0,0,.5) !important;
 }
 .htable-wrap table.htable.narrow thead tr>:first-child{z-index:3}
 
@@ -564,8 +565,8 @@ html.had-user #authgate .bootwait{display:block}
    로그아웃 상태로 판정되면 initAuth 가 had-user 를 지워 로그인 상자를 연다(브라우저 저장소는 쓰지 않는다). */
 document.documentElement.classList.add('had-user');</script>
 <div id="authgate">
-  <div class="bootwait"><div class="bw-logo">JK 투자</div><span class="bw-dot"></span>여는 중…
-    <div class="bw-help">오래 멈추면 자동으로 복구 화면으로 전환됩니다.</div>
+  <div class="bootwait"><div class="bw-logo">JK 투자</div><span class="bw-dot"></span><span id="bwText">여는 중…</span>
+    <div class="bw-help" id="bwNote">오래 멈추면 자동으로 복구 화면으로 전환됩니다.</div>
   </div>
   <div class="gbox">
     <div class="glogo">JK <span class="v">투자</span></div>
@@ -583,7 +584,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.26</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.27</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1695,7 +1696,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.26</b> · 2026-10-08</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.27</b> · 2026-10-12</div>
   </footer>
 </div>
 
@@ -10750,14 +10751,21 @@ async function pushRemoteNow(){
     아이폰의 long polling 으로는 첫 읽기가 20초를 넘을 수 있다. 끊고 다시 읽으면 처음부터 다시 받아 더 오래 걸린다.)
    진짜 오류(거절·오프라인)는 pullRemote 가 false 를 돌려 다시 연결 화면으로 간다. */
 const DB_SLOW_NOTE_MS=20000;
-let dbReadStart=0, dbReadMs=0, dbReadKB=0, dbReadTop='', pullLastErr='';
+const DB_WAIT_MAX_MS=60000;   // 원장을 읽는 중이면 '다시 연결' 상자를 이만큼(읽기 시작부터) 미룬다 — 그래도 안 오면 그때 다시 연결
+let dbReadStart=0, dbReadMs=0, dbReadKB=0, dbReadTop='', pullLastErr='', dbReadsBusy=0;
+/* 여는 중 화면 아래 줄 — 지금 무엇을 기다리는지 적는다. 자산플랜(planBootNote)과 같은 글자다(2026-10-07 사용자: '얘만 로그인 페이지가 다르다'). */
+const BOOT_STEP_TEXT={'이용 승인':'로그인은 확인됐습니다. 이용 승인 확인 중…','DB 원장 읽기':'로그인은 확인됐습니다. Firebase DB 원장 불러오는 중…','DB 원장 재연결':'로그인은 확인됐습니다. Firebase DB 원장 다시 연결 중…'};
+const DB_SLOW_HELP='Firebase DB 원장 응답이 늦어지고 있습니다 — 끊지 않고 계속 기다리는 중입니다.';
+function bootStepText(step){ return BOOT_STEP_TEXT[step]||('로그인은 확인됐습니다. '+(step||'Firebase DB 원장')+' 처리 중…'); }
+function bootHelp(text){ try{ const h=document.getElementById('bwNote'); if(h&&text)h.textContent=text; }catch(e){} }
 async function dbWait(p,label){
-  const tm=setTimeout(()=>authWarn((label||'Firebase DB 원장')+' 응답이 늦어지고 있습니다('+Math.round(DB_SLOW_NOTE_MS/1000)+'초) — 끊지 않고 계속 기다리는 중입니다. 원장이 커서 아이폰에서는 오래 걸릴 수 있습니다.'),DB_SLOW_NOTE_MS);
+  const tm=setTimeout(()=>{ authWarn((label||'Firebase DB 원장')+' 응답이 늦어지고 있습니다('+Math.round(DB_SLOW_NOTE_MS/1000)+'초) — 끊지 않고 계속 기다리는 중입니다. 원장이 커서 아이폰에서는 오래 걸릴 수 있습니다.'); bootHelp(DB_SLOW_HELP); },DB_SLOW_NOTE_MS);
   try{ return await p; }finally{ clearTimeout(tm); }
 }
 async function pullRemote(){
   if(!curUid||!window.fb)return false;
   stateCloudHydrated=false;
+  dbReadsBusy++;
   try{
     dbReadStart=Date.now(); dbReadMs=0;
     const ref=window.fb.doc(window.fb.db,'users',curUid),snap=await window.fb.getDoc(ref);
@@ -10794,7 +10802,7 @@ async function pullRemote(){
     console.error('pull',e);stateCloudHydrated=false;stateCloudPending=true;setSync('err');
     pullLastErr=String(e&&(e.code||e.message)||e).slice(0,120);
     return false;
-  }
+  }finally{ dbReadsBusy--; }
 }
 /* 구글시트 잔재 호환 (호출되어도 무해) */
 function setLed(){}
@@ -11000,7 +11008,7 @@ function initAuth(){
     /* 이용 승인 — 관리자가 승인한 계정만 연다 (판정은 jk-access.js 한 곳 · 플랜·백테·공모주·JOB 과 같은 글자).
        이 기기에서 승인이 확인된 계정은 곧바로 열고 뒤에서 다시 묻는다 — 페이지를 옮길 때마다 기다리지 않게.
        처음 보는 계정은 답이 와야 연다. 승인 전에는 이 기기 기록도 클라우드 기록도 열지 않는다. */
-    authStep='이용 승인';
+    authStep='이용 승인'; bootHelp(bootStepText(authStep));
     if(!window.JKAccess){ authWarn('이용 승인 모듈을 불러오지 못했습니다 — 새로고침해 주세요.'); return; }
     const accFb={auth:window.fb.auth, db:window.fb.db, doc:window.fb.doc, getDoc:window.fb.getDoc, setDoc:window.fb.setDoc};
     accessLocked=false;
@@ -11012,7 +11020,7 @@ function initAuth(){
        원장을 먼저 열고 프로필 기록은 뒤에서 비동기로 남긴다. */
     if(accessLocked) return;
 
-    authStep='DB 원장 읽기';
+    authStep='DB 원장 읽기'; bootHelp(bootStepText(authStep));
     const loginBtn=$('gbtn');
     if(loginBtn){ loginBtn.disabled=true; loginBtn.textContent='Firebase DB 원장 불러오는 중…'; }
     try{
@@ -11023,6 +11031,9 @@ function initAuth(){
       authWarn('로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다. 오래된 브라우저 기록으로 열지 않습니다 — '+(e&&e.message||e));
       const b=$('gbtn');
       if(b){ b.disabled=false; b.textContent='Firebase DB 다시 연결'; b.onclick=retryDbLoad; }
+      /* 실패는 바로 보여 준다 — 예전엔 여는 중 화면이 22초 워치독까지 그대로 돌았다(자산플랜 showPlanDbRetry 와 같게) */
+      const gate=$('authgate'), bw=gate&&gate.querySelector('.bootwait'), gb=gate&&gate.querySelector('.gbox');
+      if(bw)bw.style.display='none'; if(gb)gb.style.display='block';
       setSync('err');
       return;
     }
@@ -11165,14 +11176,14 @@ try{ renderInAppWarn(); }catch(e){}
         if(bw){
           bw.style.display='block';
           const help=bw.querySelector('.bw-help');
-          if(help)help.textContent='로그인은 확인됐습니다. '+(authStep||'Firebase DB 원장')+' 처리 중…';
+          if(help)help.textContent=bootStepText(authStep);
         }
         return;
       }
       /* 로그인 상태 자체가 12초 넘게 안 잡힐 때만 실제 로그인 복구 화면을 연다. */
     }catch(e){console.error('boot watchdog stage1',e);}
   },6000);
-  setTimeout(function(){
+  setTimeout(function stage2(){
     try{
       const gate=document.getElementById('authgate');
       if(!gate || getComputedStyle(gate).display==='none')return;
@@ -11180,12 +11191,27 @@ try{ renderInAppWarn(); }catch(e){}
       const bw=gate.querySelector('.bootwait'),gb=gate.querySelector('.gbox');
       const err=document.getElementById('gerr');
       const user=window.fb&&window.fb.auth&&window.fb.auth.currentUser;
+      /* 원장을 읽고 있는 중이면(끊지 않고 기다리는 중) '다시 연결' 상자로 바꾸지 않는다 — 다 읽으면 initAuth 가 바로 연다.
+         예전엔 22초에 이 상자가 떠서 정상으로 읽는 중인데도 오류처럼 보였고, 누르면 같은 원장을 한 번 더 읽어 더 늦어졌다(2026-10-07).
+         읽기 시작부터 DB_WAIT_MAX_MS 가 지나도 안 오면 그때 다시 연결 상자를 연다(끝없이 도는 화면에 갇히지 않게). */
+      if(user && dbReadsBusy>0){
+        const waited=Date.now()-dbReadStart;
+        if(waited<DB_WAIT_MAX_MS){
+          if(gb)gb.style.display='none';
+          if(bw){ bw.style.display='block'; const help=bw.querySelector('.bw-help'); if(help)help.textContent=DB_SLOW_HELP; }
+          setTimeout(stage2, DB_WAIT_MAX_MS-waited+50);
+          return;
+        }
+      }
       if(user){
         if(bw)bw.style.display='none';
         if(gb)gb.style.display='block';
         const b=document.getElementById('gbtn');
         if(b){b.disabled=false;b.textContent='Firebase DB 다시 연결';b.onclick=retryDbLoad;}
-        if(err){err.style.display='block';err.textContent='Google 로그인은 완료됐습니다. Firebase DB 원장 연결만 다시 시도해 주세요.';}
+        if(err){err.style.display='block';
+          if(dbReadsBusy>0) err.textContent='Firebase DB 원장 응답이 '+Math.round((Date.now()-dbReadStart)/1000)+'초째 없습니다 — 아래 단추로 다시 연결하거나 새로고침해 주세요.';
+          else if(!pullLastErr) err.textContent='Google 로그인은 완료됐습니다. Firebase DB 원장 연결만 다시 시도해 주세요.';   // 읽다 실패했으면 initAuth 가 적은 까닭을 둔다
+        }
       }else{
         if(bw)bw.style.display='none';if(gb)gb.style.display='block';
         const b=document.getElementById('gbtn');
