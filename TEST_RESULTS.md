@@ -1,5 +1,13 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-14 · 지피티 전체 탭 공통 알림 · v1.4.0 / Worker v2.6.0
+
+- `node --test tests/settings-notifications.test.mjs tests/research-notify.test.mjs tests/scalping-push.test.mjs tests/gpt-common-notifications.test.mjs`: **34 PASS / 0 FAIL**.
+- 값 검사: 설정 카드 하나·일부 ON·전체 켜기/끄기·팝업 전 갱신·실패 복원·구형 서버에 저장 차단. 네 매매 탭 + 텐배거 수신, 혼합 구독 중복 없음, 다른 연구/공모주/JOB/분양·승인 연결 보존, OFF 뒤 구형 요청 재활성화 없음, 테스트 버튼과 탭 링크, 서비스워커의 새/이전 주제·캐시·중복/시간 경계.
+- 새 변이 **3/3 차단**: UI의 텐배거 해제 누락, 서버의 공통 동의 누락, 서비스워커의 공통 표시 누락. 이전 안내 오류 변이 **3/3**도 계속 차단.
+- `node scripts/check-before-push.cjs`: **49/49 단계 PASS · 회귀 2,760 PASS / 0 FAIL**, Worker dry-run 빌드 포함. GitHub CI·Pages/Worker 운영 반영은 해당 PR 실행 로그에서 확인한다. 실제 기기 푸시 수신은 미검증.
+- 위 결과 뒤 main f9bc84d(#491)가 추가되어 통합하고 전체 검사를 재실행했다: **50/50 단계 PASS · 회귀 2,760 PASS / 0 FAIL**, Worker dry-run 포함(`gpt-common-integrated-check.log`). 이후 GitHub CI·운영 반영은 해당 PR 로그로 확인한다.
+
 ## 2026-10-14 · 설정 연구 알림 이름·상태 표시 · v1.3.4
 
 - `node --test tests/settings-notifications.test.mjs tests/research-notify.test.mjs`: **14 PASS / 0 FAIL**.

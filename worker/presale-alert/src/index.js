@@ -8,7 +8,8 @@ const JOB_APP=BASE_APP+"/job";
 const IPO_APP=BASE_APP+"/ipo";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
 const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl"]);
-const VALID_TOPICS=new Set(["presale","job","ipo","research",...TRADE_TOPICS]);
+const GPT_TOPICS=new Set([...TRADE_TOPICS,"tenbagger_gpt"]);
+const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
 /* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
 const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
 const RESEARCH_STUDIES={im_plan:{name:"무매·5년 플랜 연구",url:RESEARCH_APP},
@@ -103,9 +104,12 @@ function kstDate(offsetDays=0){
   return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");
 }
 function clean(v,max=500){return String(v==null?"":v).replace(/[<>\r\n]/g," ").trim().slice(0,max)}
-function normalizeTopics(v,fallback){
+function normalizeTopics(v,fallback,legacy=false){
   const a=Array.isArray(v)?v:(fallback||[]);
-  return [...new Set(a.map(x=>String(x||"").trim()).filter(x=>VALID_TOPICS.has(x)))];
+  const out=[...new Set(a.map(x=>String(x||"").trim()).filter(x=>VALID_TOPICS.has(x)))];
+  // 기존 research 동의는 지피티 텐배거에도 적용됐다. 다른 단타 탭까지 자동으로 켜지 않는다.
+  if(legacy&&out.includes("research")&&!out.includes("tenbagger_gpt"))out.push("tenbagger_gpt");
+  return out;
 }
 async function hashText(s){
   const d=new Uint8Array(await crypto.subtle.digest("SHA-256",enc.encode(String(s))));
@@ -278,15 +282,17 @@ export class PresaleAlertStore{
     return v;
   }
   async subscriptions(){return this.state.storage.list({prefix:"sub:"})}
-  topicsOf(s){return normalizeTopics(s&&s.topics,s&&s.topics?[]:["presale"])}
+  topicsOf(s){return normalizeTopics(s&&s.topics,s&&s.topics?[]:["presale"],Number(s&&s.topicSchemaVersion||1)<2)}
+  subscribedTo(s,topic){const t=this.topicsOf(s);return t.includes(topic)||(GPT_TOPICS.has(topic)&&t.includes("gpt"))}
   async subscribe(request){
     const body=await request.json().catch(()=>null),s=body&&body.subscription;
     const endpoint=clean(s&&s.endpoint,2000);
     if(!endpoint||!/^https:\/\//.test(endpoint))return json(request,{ok:false,error:"invalid subscription"},400);
     const id=await hashText(endpoint),old=await this.state.storage.get("sub:"+id);
-    const topics=normalizeTopics(body&&body.topics,old?this.topicsOf(old):["presale"]);
+    const schema=Number(body&&body.topicSchemaVersion||old&&old.topicSchemaVersion||1);
+    const topics=normalizeTopics(body&&body.topics,old?this.topicsOf(old):["presale"],schema<2);
     await this.state.storage.put("sub:"+id,{
-      endpoint,topics,createdAt:(old&&old.createdAt)||new Date().toISOString(),
+      endpoint,topics,topicSchemaVersion:2,createdAt:(old&&old.createdAt)||new Date().toISOString(),
       updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),
       approvalUid:old&&old.approvalUid||null
     });
@@ -302,7 +308,7 @@ export class PresaleAlertStore{
     const changed=old&&old.approvalUid&&old.approvalUid!==user.uid;
     if(changed)await this.state.storage.delete("approval:event:"+id);
     await this.state.storage.put("sub:"+id,{
-      endpoint,topics:old?this.topicsOf(old):[],createdAt:old&&old.createdAt||new Date().toISOString(),
+      endpoint,topics:old?this.topicsOf(old):[],topicSchemaVersion:2,createdAt:old&&old.createdAt||new Date().toISOString(),
       updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),approvalUid:user.uid
     });
     return json(request,{ok:true,registered:true});
@@ -412,7 +418,7 @@ export class PresaleAlertStore{
     const u=new URL(request.url),endpoint=clean(u.searchParams.get("endpoint"),2000);
     if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
     const id=await hashText(endpoint),s=await this.state.storage.get("sub:"+id);
-    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[],approvalLinked:!!(s&&s.approvalUid)});
+    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[],topicSchemaVersion:2,approvalLinked:!!(s&&s.approvalUid)});
   }
   async unsubscribe(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
@@ -430,7 +436,7 @@ export class PresaleAlertStore{
   async notifyAll(topic,delivered=new Set()){
     const subs=await this.subscriptions();let sent=0,failed=0,removed=0,eligible=0;const sentKeys=[];
     for(const [key,s] of subs){
-      if(!this.topicsOf(s).includes(topic))continue;
+      if(!this.subscribedTo(s,topic))continue;
       eligible++;
       if(delivered.has(key))continue;
       try{
@@ -463,7 +469,12 @@ export class PresaleAlertStore{
     if(!sub)return json(request,{ok:false,error:"subscription not registered"},404);
     const last=Number(await this.state.storage.get("test:"+id)||0);
     if(Date.now()-last<30000)return json(request,{ok:false,error:"테스트는 30초에 한 번 가능합니다."},429);
-    const alert=TRADE_TOPICS.has(topic)?{
+    const gptType=this.topicsOf(sub).includes("gpt")?"gpt":this.topicsOf(sub).find(t=>GPT_TOPICS.has(t))||"gpt";
+    const alert=topic==="gpt"?{
+      id:"test-gpt-"+Date.now(),type:gptType,title:"[지피티 연구] 🔔 전체 탭 알림 테스트",
+      body:"시초가·데이트레이딩·비트코인·SOXL·텐배거를 한 설정으로 관리합니다.",
+      url:BASE_APP+"/scalping",createdAt:new Date().toISOString()
+    }:TRADE_TOPICS.has(topic)?{
       id:"test-"+topic+"-"+Date.now(),type:topic,title:"🔔 "+({opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic])+" 매매알림 테스트",
       body:"매수·매도 알림 수신이 정상 연결되었습니다. 실제 주문이 아닌 모의매매 신호입니다.",
       url:BASE_APP+"/scalping?strategy="+topic,createdAt:new Date().toISOString()
@@ -473,7 +484,7 @@ export class PresaleAlertStore{
       url:IPO_APP,createdAt:new Date().toISOString()
     }:topic==="research"?{
       id:"test-research-"+Date.now(),type:"research",title:"🔬 매일 연구 웹알림 테스트",
-      body:"무매·5년 플랜·텐배거(지피티·클로드) 연구 결과 알림이 정상 연결되었습니다.",
+      body:"무매·5년 플랜·클로드 텐배거 연구 알림이 정상 연결되었습니다.",
       url:RESEARCH_APP,createdAt:new Date().toISOString()
     }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
@@ -654,16 +665,17 @@ export class PresaleAlertStore{
     const claim="research-delivery:"+id,prev=await this.state.storage.get(claim);
     if(prev?.status==="sending"&&Date.now()-Date.parse(prev.at)<120000)return json(request,{ok:false,retryable:true,error:"delivery in progress"},409);
     const delivered=new Set(prev?.sentKeys||[]);
-    const alert={id,type:"research",study,title:spec.trade?spec.name+" "+RESEARCH_STAGE[stage]+" "+date.slice(5).replace("-","/")
+    const topic=study==="tenbagger"?"tenbagger_gpt":"research";
+    const alert={id,type:topic,study,title:spec.trade?spec.name+" "+RESEARCH_STAGE[stage]+" "+date.slice(5).replace("-","/")
         :(found?"★ ":"🔬 ")+spec.name+" "+date.slice(5).replace("-","/")+(found?" — 발견":""),
       body,url:spec.url,createdAt:new Date().toISOString()};
     await this.state.storage.put(claim,{status:"sending",at:alert.createdAt,sentKeys:[...delivered]});
     let delivery;
-    try{await this.recordAlert(alert);delivery=await this.notifyAll("research",delivered);}
+    try{await this.recordAlert(alert);delivery=await this.notifyAll(topic,delivered);}
     catch(e){await this.state.storage.put(claim,{status:"delivery_failed",at:alert.createdAt,sentKeys:[...delivered]});return json(request,{ok:false,retryable:true,error:String(e.message||e)},502);}
     const sentKeys=[...new Set([...delivered,...(delivery.sentKeys||[])])];
     await this.state.storage.put(claim,{status:delivery.failed>delivery.removed?"delivery_failed":"sent",at:alert.createdAt,sentKeys});
-    await this.state.storage.put("lastCheck:research",alert.createdAt);
+    await this.state.storage.put("lastCheck:"+topic,alert.createdAt);
     if(delivery.failed>delivery.removed)return json(request,{ok:false,retryable:true,id,delivery,error:"research delivery incomplete"},502);
     await this.state.storage.put("sent:"+id,alert.createdAt);
     return json(request,{ok:true,id,alert,delivery});
@@ -681,14 +693,19 @@ export class PresaleAlertStore{
       const subs=await this.subscriptions(),lastCheck=await this.state.storage.get("lastCheck");
       const jobLastCheck=await this.state.storage.get("lastCheck:job");
       const counts=Object.fromEntries([...VALID_TOPICS].map(t=>[t,0]));
-      for(const [,s] of subs)for(const t of this.topicsOf(s))counts[t]++;
+      for(const [,s] of subs){
+        for(const t of VALID_TOPICS)if(this.subscribedTo(s,t))counts[t]++;
+        if(!this.topicsOf(s).includes("gpt")&&this.topicsOf(s).some(t=>GPT_TOPICS.has(t)))counts.gpt++;
+      }
       const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null,research:await this.state.storage.get("lastCheck:research")||null};
       const lastDeliveries={};
       for(const t of TRADE_TOPICS){
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
       }
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.5.0",subscriptions:subs.size,
+      lastChecks.tenbagger_gpt=await this.state.storage.get("lastCheck:tenbagger_gpt")||null;
+      lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.6.0",topicSchemaVersion:2,subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}

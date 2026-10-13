@@ -53,7 +53,7 @@ test("네 전략의 시장별 거래일 검증과 알림 주제를 유지한다"
   assert.equal((await x.send({strategy:"soxl",stage:"buy",eventId:"tomorrow",date:"2099-01-01"})).status,409);
 });
 
-test("기존 JOB/분양 수신 보존 · 전략별 설정 · 앱 이동 확인",async()=>{
+test("기존 JOB/분양·탭별 구독 호환 보존 · 지피티 공통 설정 · 앱 이동 확인",async()=>{
   const x=fakeStore(),endpoint="https://push.example.test/subscription";
   const r=await x.worker.fetch(new Request("https://push.invalid/subscribe",{method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({subscription:{endpoint},topics:["job","presale","opening","soxl","unknown"]})}));
@@ -67,9 +67,11 @@ test("기존 JOB/분양 수신 보존 · 전략별 설정 · 앱 이동 확인",
   const sw=readFileSync(new URL("../jk-sw.js",import.meta.url),"utf8");
   const ui=readFileSync(new URL("../scalping.html",import.meta.url),"utf8");
   for(const topic of ["opening","daytrading","crypto","soxl"]){
-    assert.ok(settings.includes('topic:"'+topic+'"'),topic+" setting");
+    assert.ok(settings.includes('"'+topic+'"'),topic+" 공통 설정 구성");
     assert.ok(sw.includes('"'+topic+'"'),topic+" service worker");
   }
+  assert.match(settings,/\{topic:"gpt",href:"\/scalping"/);
+  assert.doesNotMatch(settings,/\{topic:"(?:opening|daytrading|crypto|soxl)"/);
   assert.match(sw,/if\(!allowed.length\)return \[\]/);
   assert.match(sw,/age>20\*60\*1000/);
   assert.match(ui,/URLSearchParams\(location.search\).get\('strategy'\)/);
