@@ -26,6 +26,7 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
 @media(max-width:850px){.hero{align-items:flex-start;flex-direction:column}.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}}
 @media(max-width:560px){.wrap{padding:0 11px}.filters{grid-template-columns:1fr}.filters .search{grid-column:auto}.cardtop{display:block}.card-actions{margin-top:7px;justify-content:space-between}.date{margin-top:0}.hero h2{font-size:20px}}
 </style>
+<script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js" data-guard="1"></script>
 <script src="/jk-ui.js?v=1.0.3" defer></script>
 <script type="module">
@@ -54,7 +55,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.1.19</span></h1></div>
+  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.1.20</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
