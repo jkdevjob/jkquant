@@ -9,16 +9,15 @@ const endpoint="https://push.example/settings-device";
 const origin="https://jkquant.pages.dev";
 const worker="https://alerts.example";
 const names={
-  opening:"연구(지피티) · 시초가 매수·매도",daytrading:"연구(지피티) · 데이트레이딩 매수·매도",
-  crypto:"연구(지피티) · 비트코인 매수·매도",soxl:"연구(지피티) · SOXL 매수·매도",
+  gpt:"연구(지피티) · 전체 탭",
   ipo:"공모주·청약 일정",presale:"대전·세종 신규분양",
-  research:"연구 결과 · 무매·플랜·텐배거",job:"대전·세종 JOB 신규공고"
+  research:"연구 결과 · 무매·플랜·클로드 텐배거",job:"대전·세종 JOB 신규공고"
 };
 const response=body=>new Response(JSON.stringify(body),{headers:{"content-type":"application/json"}});
 const row=(html,topic)=>html.split('<div class="alert-item">').find(x=>x.includes('data-topic="'+topic+'"'))||"";
 
 // 실제 설정 스크립트 전체와 실제 Worker의 구독 경로를 실행한다. 푸시 전송은 호출하지 않는다.
-async function harness(code=source,initial=[]){
+async function harness(code=source,initial=[],{legacy=false}={}){
   const values=new Map(),messages=[],alerts=[],requests=[];
   const storage={get:async k=>values.get(k),put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),
     list:async({prefix}={})=>new Map([...values].filter(([k])=>!prefix||k.startsWith(prefix)))};
@@ -26,7 +25,7 @@ async function harness(code=source,initial=[]){
   const subscription={endpoint,toJSON:()=>({endpoint,keys:{p256dh:"test",auth:"test"}}),
     unsubscribe:async()=>{h.unsubscribed++;return true}};
   const request=(path,opt={})=>new Request(worker+path,{...opt,headers:{origin,...opt.headers}});
-  if(initial.length)await app.fetch(request("/subscribe",{method:"POST",body:JSON.stringify({subscription:subscription.toJSON(),topics:initial})}));
+  if(initial.length)await app.fetch(request("/subscribe",{method:"POST",body:JSON.stringify({subscription:subscription.toJSON(),topics:initial,topicSchemaVersion:legacy?1:2})}));
   let html="",buttons=[],alertResolve=null;
   const host={get innerHTML(){return html},set innerHTML(v){
     html=v;buttons=[];
@@ -37,7 +36,7 @@ async function harness(code=source,initial=[]){
         addEventListener(_event,fn){this.click=fn}});
     }
   },querySelectorAll:()=>buttons};
-  const h={failRead:false,failWrite:false,failDelete:false,unsubscribed:0,paintFrames:0,alerts,messages,requests,
+  const h={failRead:false,failWrite:false,failDelete:false,oldWorker:false,unsubscribed:0,paintFrames:0,alerts,messages,requests,
     get html(){return html},async saved(){return (await (await app.fetch(request("/subscription?endpoint="+encodeURIComponent(endpoint)))).json()).topics},
     click(action,topic){const b=buttons.find(x=>x.dataset.action===action&&x.dataset.topic===topic);
       assert.ok(b,"button exists: "+action+" "+topic);assert.equal(b.disabled,false);b.click()},
@@ -66,7 +65,9 @@ async function harness(code=source,initial=[]){
         ||(path==="/subscribe"&&opt.method==="DELETE"&&h.failDelete)){
         return new Response(JSON.stringify({ok:false,error:"시험 서버 실패"}),{status:503});
       }
-      return app.fetch(request(String(url).slice(worker.length),opt));
+      const r=await app.fetch(request(String(url).slice(worker.length),opt));
+      if(path==="/subscription"&&h.oldWorker){const j=await r.json();delete j.topicSchemaVersion;return response(j)}
+      return r;
     }};
   vm.runInNewContext(code.replace(/init\(\);\s*\}\)\(\);\s*$/,"globalThis.initPromise=init();\n})();"),context,{filename:"settings-notifications.js"});
   await context.initPromise;return h;
@@ -93,11 +94,34 @@ async function checkFailedWrite(code=source){
 }
 
 test("연구 알림: 서버 저장·ON 표시·버튼·페인트가 성공 팝업보다 먼저",()=>checkEnable());
-test("설정 목록의 모든 8개 주제: 안내 이름 일치, undefined 없음",async()=>{
+test("설정 목록의 모든 5개 항목: 안내 이름 일치, undefined 없음",async()=>{
   for(const [topic,name] of Object.entries(names)){
     const h=await harness(),a=await h.enable(topic);
     assert.equal(a.message,name+" 알림을 켰습니다.");assert.doesNotMatch(a.message,/undefined/);
     const reload=await harness(source,await h.saved());assert.match(row(reload.html,topic),/>ON<\/span>/,"다시 열면 서버 구독 복원");
+  }
+});
+async function checkCommonToggle(code=source){
+  const h=await harness(code,["opening","research","ipo"],{legacy:true});
+  assert.equal((h.html.match(/class="alert-name">[^<]*연구\(지피티\)/g)||[]).length,1,"지피티 설정은 하나");
+  assert.match(row(h.html,"gpt"),/>일부 ON<\/span>/,"기존 일부 탭은 확대 없이 표시");
+  assert.doesNotMatch(h.html,/data-topic="(?:opening|daytrading|crypto|soxl|tenbagger_gpt)"/);
+  const a=await h.enable("gpt");assert.equal(a.message,names.gpt+" 알림을 켰습니다.");
+  assert.match(row(a.html,"gpt"),/>ON<\/span>/);
+  assert.deepEqual(await h.saved(),["research","ipo","gpt"],"일부 탭 구독을 통합하고 다른 연구·공모주 보존");
+  assert.equal(h.messages.at(-1).topicSchemaVersion,2);
+  h.click("off","gpt");await h.idle();
+  assert.deepEqual(await h.saved(),["research","ipo"],"통합 해제 뒤 기존 research가 텐배거를 다시 켜지 않음");
+  assert.match(row(h.html,"gpt"),/>OFF<\/span>/);
+  const reload=await harness(source,await h.saved());assert.match(row(reload.html,"gpt"),/>OFF<\/span>/);
+}
+test("지피티 한 항목: 일부 ON → 전체 켜기 → 전체 끄기 · 기존 연구/IPO 보존",()=>checkCommonToggle());
+test("지피티 전체 저장 실패·구형 서버: 기존 일부 탭 유지, 성공으로 오인하지 않음",async()=>{
+  for(const oldWorker of [false,true]){
+    const h=await harness(source,["opening","job"]);h.oldWorker=oldWorker;h.failWrite=!oldWorker;
+    const a=await h.enable("gpt");assert.match(a.message,/알림 설정 실패/);
+    assert.match(row(a.html,"gpt"),/>일부 ON<\/span>/);assert.deepEqual(await h.saved(),["opening","job"]);
+    if(oldWorker)assert.equal(h.requests.filter(([p,m])=>p==="/subscribe"&&m==="POST").length,0,"구형 서버에는 변경을 저장하지 않음");
   }
 });
 test("구독 저장 실패: 성공 안내·잘못된 ON·기존 주제 손실 없음",()=>checkFailedWrite());
@@ -132,4 +156,8 @@ test("회귀 변이 3종: 이름 누락·팝업 뒤 갱신·저장 전 ON을 실
     [source.replace('await server("/subscribe",{','topics=new Set(nextTopics);\n  await server("/subscribe",{'),checkFailedWrite]
   ];
   for(const [code,check] of mutants){assert.notEqual(code,source,"변이 적용");await assert.rejects(()=>check(code),{name:"AssertionError"})}
+});
+test("공통 설정 변이: 텐배거 제거 누락을 실제 켜기·끄기 결과로 차단",async()=>{
+  const mutant=source.replace(',"tenbagger_gpt"];','];');assert.notEqual(mutant,source);
+  await assert.rejects(()=>checkCommonToggle(mutant),{name:"AssertionError"});
 });

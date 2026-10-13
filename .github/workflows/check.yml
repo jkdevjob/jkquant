@@ -29,7 +29,7 @@ jobs:
       - name: 승인 이메일·개인별 웹푸시 보안 및 중복방지 검사
         run: node --test tests/approval-notification.test.mjs
       - name: 매일 연구 결과 웹알림 (요약 · 서버 인증 · 주제)
-        run: node --test tests/research-notify.test.mjs tests/settings-notifications.test.mjs
+        run: node --test tests/research-notify.test.mjs tests/settings-notifications.test.mjs tests/gpt-common-notifications.test.mjs
 
       - name: 연구 GPT 허브·텐배거 전향 기록 값·변이 검사
         run: |
