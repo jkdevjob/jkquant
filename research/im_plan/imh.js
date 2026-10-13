@@ -22,6 +22,7 @@ const SETUP=`(()=>{
   inj('if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;','if(shares<1e-9){ cash+=__res;__res=0; shares=0;avg=0;cycles++; inReverse=false;');
   inj('const fin=cash+shares*','cash+=__res;__res=0; const fin=cash+shares*');
   inj('const buyLimit=prevC*(1+bigPct/100);','const buyLimit=prevC*(1+bigPct/100); if(__H.rate){ const _r=__H.rate(d,i); if(cash>0) cash+=cash*_r; if(__res>0) __res+=__res*_r; if(__H.savedYield&&savedProfit>0) savedProfit+=savedProfit*_r; }\\n    if(__H.exit&&shares>0&&__H.exit(d,i,tkr)){ _sell(o,shares,0); cash+=__res;__res=0; shares=0;avg=0;T=0;inReverse=false;cycleStart=String();cycles++; __H.exits++; }');
+  inj('const buyLimit=prevC*(1+bigPct/100);','const buyLimit=prevC*(1+bigPct/100); if(__H.sg){ const G=__H.sg, _r=__H.sgRate(d), unit=(cash+shares*prevC)/divs; if(G.S>0){ const y=G.S*_r; G.S+=y; cash+=y; G.yld+=y; }; const mv=x=>{ if(Math.abs(x)<1) return; const f=Math.abs(x)*G.fee; G.S+=x; cash-=f; G.fees+=f; G.n++; };; if(G.mode==="week"){ const wk=Math.floor((Date.parse(d)/864e5+3)/7); if(wk!==G.wk){ G.wk=wk; mv(Math.max(0,cash-G.k*unit)-G.S); } } else if(!(shares>0)&&T===0){ mv(Math.max(0,cash-G.k*unit)-G.S); }; if(G.S>0&&cash-G.S<2*unit){ mv(-Math.min(G.S, G.mode==="week"?(2*unit-(cash-G.S)):G.k*unit)); } }');
   inj('{ const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)','{ const eq=cash+__res+shares*c+savedProfit-addedCash; __H.eqs.push([d,eq,savedProfit]); if(eq>mddPeak)');
   inj('const buys=_imBuyPlan(','if((flat0||__H.divsDaily)&&__H.divsAt){ const _nd=__H.divsAt(d,i,tkr); if(_nd&&_nd!==divs){ divs=_nd; starSlope=starBase*0.1*20/divs; } }\\n    if(flat0&&__H.tpAt){ const _tp=__H.tpAt(d,i,tkr); if(_tp&&_tp!==curTP){ curTP=_tp; starBase=_tp; starSlope=starBase*0.1*20/divs; exitMul=1-starBase/100; } }\\n    const buys=(flat0&&__H.gate&&!__H.gate(d,i,tkr))?[]:_imBuyPlan(');
   inj('if(flat0&&__H.tpAt)','if(flat0&&__H.budget&&__res===0){ const _b=__H.budget(d,i,tkr); if(_b<1){ __res=cash*(1-_b); cash-=__res; } }\\n    if(flat0&&__H.tpAt)');
@@ -38,6 +39,9 @@ const SETUP=`(()=>{
     let lastIrx=0, li=0; const irxAt=d=>{ while(li<irxDates.length&&irxDates[li]<=d){ lastIrx=IRX[irxDates[li]]; li++; } return lastIrx; };
     let prevD=null;
     __H={eqs:[]};
+    if(o.sgov){ let pd=null; __H.sgRate=(d)=>{ const r=irxAt(d); const gap=pd?Math.max(1,Math.round((Date.parse(d)-Date.parse(pd))/864e5)):1; pd=d; return Math.max(0,(r/100-0.0009))*(1-0.154)*gap/365; }; __H.sg={mode:o.sgov.mode,k:o.sgov.k||10,fee:o.sgov.fee!=null?o.sgov.fee:0.0026,S:0,fees:0,yld:0,n:0,wk:null}; }
+    const _A0=Object.assign({},IM_AUTOTP), _M0=Object.assign({},IM_AUTOTP_M1); window.__imAutoTP0=window.__imAutoTP0||imAutoTP; imAutoTP=window.__imAutoTP0;
+    if(o.auto){ Object.assign(IM_AUTOTP,o.auto.A||{}); Object.assign(IM_AUTOTP_M1,o.auto.M||{}); if(o.auto.noWeak) imAutoTP=(b,d)=>{ const P=window.__imAutoTP0(b,d); if(P) P.tp=P.hot?IM_AUTOTP.lo:IM_AUTOTP.hi; return P; }; }
     if(o.cashYield){ __H.rate=(d,i)=>{ const r=irxAt(d); const gap=prevD?Math.max(1,Math.round((Date.parse(d)-Date.parse(prevD))/864e5)):1; prevD=d; return Math.max(0,(r/100-0.0009))*(1-0.154)*gap/365; }; }
     const P=k=>k-1;  // 전일 확정 지표
     const sig=o.sig||{};
@@ -55,7 +59,8 @@ const SETUP=`(()=>{
     if(typeof o.autoTp==='boolean') imAutoTp=o.autoTp; else imAutoTp=false;
     imCostOn=o.cost!==false; imReverse=!!o.reverse;
     const r=runIMx(days,tkr,o.cap||10000,o.divs||20,o.tgt||20,o.compound!==false,o.big);
-    return {exits:__H.exits, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, first:days[0], last:days[days.length-1], n:days.length};
+    Object.assign(IM_AUTOTP,_A0); Object.assign(IM_AUTOTP_M1,_M0); imAutoTP=window.__imAutoTP0;
+    return {sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, first:days[0], last:days[days.length-1], n:days.length};
   };
 })()`;
 function stats(r,cap){ const yrs=(Date.parse(r.last)-Date.parse(r.first))/(365.25*864e5); const cagr=(Math.pow(r.final/cap,1/yrs)-1)*100;
