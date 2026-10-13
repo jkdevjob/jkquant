@@ -9276,10 +9276,12 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     body.appendChild(modal); modal.classList.add('on'); home.classList.add('cur');
     const E={paperModal:modal, paperPage:page, paper_body:pbody, jkPaper:jk};
     const docF={title:'앱', body, querySelector:q=>q==='#jkmenuPop a[href="/"]'?home:null};
-    const hist=[];
-    const F=new Function('$','document','history','APP_TITLE',
+    const hist=[],headerCalls=[];
+    // 공통 UI가 전환 직후 실제로 호출되는지 가짜 window에서 확인한다.
+    const windowStub={JKUnifiedUI:{normalizeHeader(){headerCalls.push(body._cls.has('paperpage')?'모의':'운영');}}};
+    const F=new Function('$','document','history','APP_TITLE','window',
       [extractFn(idx,'function closePaper()'), extractFn(idx,'function isPaperPage()'), extractFn(idx,'function paperPageMode(on)')].join('\n')
-      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 투자 — 운영');
+      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 투자 — 운영',windowStub);
     F.paperPageMode(true);
     const on1={page:body._cls.has('paperpage'), inBody:modal.parentNode===body, homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, wait:/기록을 맞추는 중/.test(pbody.innerHTML)};
     F.closePaper();   // 전략 이름을 누르면 gotoSess 가 부른다 — 페이지에서 나가 운영 화면으로
@@ -9288,7 +9290,8 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
        on1.page && on1.inBody && !on1.homeCur && on1.paperCur && on1.title==='JK 투자 — 모의투자' && on1.wait
        && !extractFn(idx,'function paperPageMode(on)').includes('appendChild('), JSON.stringify(on1));
     ok('페이지에서 전략 이름을 누르면 운영 화면으로 나간다 — 주소 / · 모달은 body 자리에 그대로 · 메뉴·제목 되돌림',
-       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 투자 — 운영' && off1.hist==='/', JSON.stringify(off1)); }
+       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 투자 — 운영' && off1.hist==='/', JSON.stringify(off1));
+    ok('모의→운영 전환마다 공통 헤더 제목을 다시 정규화한다',headerCalls.join(',')==='모의,운영',JSON.stringify(headerCalls)); }
   // 채우기는 클라우드 기록을 맞춘 뒤 한 번 — 로컬로 먼저 연 갈래(openedLocal)에서는 부르지 않는다
   { const ia=extractFn(idx,'function initAuth()');
     const iPull=ia.indexOf('pullRemote()'), iAuto=ia.indexOf('paperPageAuto()'), local=(ia.match(/if\(openedLocal\)\{[\s\S]*?\n    \}/)||[''])[0];
