@@ -111,3 +111,26 @@ test('동시 연구 발송은 같은 research 최신 요약을 중간에 덮어�
   await Promise.all(['tenbagger','im_plan'].map(study=>app.fetch(req({study,date:'2026-10-13',body:'연구 동시 실행'},'k1'))));
   assert.deepEqual(seen,[['tenbagger','tenbagger'],['im_plan','im_plan']]);
 });
+
+test('텐배거 전향 시험(클로드): 실제 매수·매도 때만 · 제목 "[클로드 연구 텐배거] 🟢 매수 10/15" · 고정 링크 · 지피티 텐배거와 따로 중복 판정',async()=>{
+  const {app,values,pushed}=store({MONITOR_KEY:'k1'});
+  values.set('sub:a',{endpoint:'https://push.example/a',topics:['research']});
+  // forward.py --note-out 이 쓰는 그대로의 모양(study·date·stage·discovery·body·telegram·fresh)
+  const note={study:'tenbagger_claude',date:'2026-10-15',stage:'buy',discovery:false,body:'10/15 종가 매수 예정 20종목: 벨로크, 브이씨 · 10만$ 장부 · 모의(실주문 없음)',
+    telegram:'[클로드 연구 텐배거] 🟢 매수',fresh:true,url:'https://evil.example/'};
+  const r=await (await app.fetch(req(note,'k1'))).json();
+  assert.equal(r.ok,true);assert.match(r.id,/^research:tenbagger_claude:2026-10-15:/);
+  assert.equal(r.alert.url,'https://jkquant.pages.dev/claude?tab=tenbagger','보낸 쪽 url 은 무시하고 고정 링크');
+  assert.equal(r.alert.title,'[클로드 연구 텐배거] 🟢 매수 10/15','머리말로 시작 · 🔬 없음');
+  assert.equal((await (await app.fetch(req(note,'k1'))).json()).skipped,true,'같은 날 같은 문장은 한 번');
+  const sell=await (await app.fetch(req({...note,stage:'sell',body:'10/16 종가 매도 예정: 다솜'},'k1'))).json();
+  assert.equal(sell.alert.title,'[클로드 연구 텐배거] 🔴 매도 10/15');
+  const both=await (await app.fetch(req({...note,stage:'both',body:'둘 다'},'k1'))).json();
+  assert.equal(both.alert.title,'[클로드 연구 텐배거] 🟢🔴 매수·매도 10/15');
+  assert.equal((await app.fetch(req({...note,stage:undefined,body:'단계 없음'},'k1'))).status,400,'매매 연구는 stage 필수(요약 금지)');
+  assert.equal((await app.fetch(req({...note,stage:'summary',body:'요약'},'k1'))).status,400,'매수·매도 말고는 거절');
+  await app.fetch(req({...note,study:'tenbagger'},'k1'));
+  assert.equal(pushed.length,4,'지피티 텐배거는 같은 문장이라도 별도 알림');
+  const fw=fs.readFileSync(new URL('../scripts/tenbagger_claude/forward.py',import.meta.url),'utf8');
+  assert.match(fw,/dict\(study='tenbagger_claude', date=note\['date'\], stage=note\['stage'\],/,'엔진이 같은 study·stage 로 보낸다');
+});

@@ -32,13 +32,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from features import derive, cs_rank, forward_max, carry_dead, LIQ_MIN  # noqa: E402
 from episodes import find_episodes  # noqa: E402
 from model import fit_logit, predict, auc  # noqa: E402
+from signals import RANK_FEATS, AGE_MIN, index_on, drawdown, buy_universe, frame_at, model_cols, score_day  # noqa: E402
 import backtest as BT  # noqa: E402
 from backtest import Rule, trade_list, portfolio, stats  # noqa: E402
 
 VERSION = '1.0.0'
 H5, H3, H1 = 1250, 750, 250
-RANK_FEATS = ['lcap', 'lraw', 'lA20', 'dd3', 'ret20', 'ret60', 'ret250', 'pos52', 'low52', 'vol60',
-              'turn', 'surge', 'ma200p', 'ma200s', 'age']
 FEAT_KO = {'lcap': '시가총액', 'lraw': '주가 수준', 'lA20': '거래대금(20일)', 'dd3': '3년 고점 대비', 'ret20': '1개월 수익',
            'ret60': '3개월 수익', 'ret250': '1년 수익', 'pos52': '52주 고점 근접', 'low52': '52주 저점 대비', 'vol60': '변동성(60일)',
            'turn': '회전율', 'surge': '거래대금 급증', 'ma200p': '200일선 대비', 'ma200s': '200일선 기울기', 'age': '상장 기간',
@@ -67,60 +66,13 @@ def qs(s, ps=(10, 25, 50, 75, 90), k=3):
     return [r3(np.percentile(s, p), k) for p in ps] if len(s) else []
 
 
-# ── 지수 · 시장 국면 ──────────────────────────────────────────────
-def index_on(dates, rows):
-    s = pd.Series({d: v for d, v in rows})
-    s.index = pd.to_datetime(s.index)
-    return s.reindex(pd.to_datetime(dates)).ffill().values.astype(float)
-
-
-def drawdown(x, w=250):
-    hi = pd.Series(x).rolling(w, min_periods=20).max().values
-    return x / hi - 1
-
-
-# ── 특징 표(한 날짜) ─────────────────────────────────────────────
-def frame_at(s, D, js, extra):
-    C = D['C']
-    d = {'s': np.full(len(js), s), 'j': js}
-    for k in ('cap', 'raw', 'A20', 'A250', 'vol60', 'hi250', 'lo250', 'hi750', 'ma200', 'ret20', 'ret60', 'ret120',
-              'ret250', 'age', 'mkt', 'dept'):
-        d[k] = D[k][s, js]
-    d['c'] = C[s, js]
-    d['ma200_20'] = D['ma200'][max(0, s - 20), js]
-    for k, v in extra.items():
-        d[k] = np.full(len(js), v[s])
-    X = pd.DataFrame(d)
-    X['pos52'] = X['c'] / X['hi250']
-    X['low52'] = X['c'] / X['lo250']
-    X['dd3'] = X['c'] / X['hi750'] - 1
-    X['turn'] = X['A20'] / X['cap']
-    X['surge'] = X['A20'] / X['A250']
-    X['ma200p'] = X['c'] / X['ma200']
-    X['ma200s'] = X['ma200'] / X['ma200_20'] - 1
-    X['lcap'] = np.log(X['cap'])
-    X['lraw'] = np.log(X['raw'])
-    X['lA20'] = np.log(X['A20'])
-    return X
-
-
-def model_cols(X):
-    for c in RANK_FEATS:
-        X[c + '_r'] = X.groupby('s')[c].rank(pct=True).fillna(0.5)
-        X[c + '_r2'] = (X[c + '_r'] - 0.5) ** 2
-    X['kosdaq'] = (X['mkt'] == 2).astype(float)
-    X['kan'] = X['dept'].isin([1, 2]).astype(float)
-    X['kddn'] = -X['kdd'].fillna(0)
-    X['qddn'] = -X['qdd'].fillna(0)
-    return [c + '_r' for c in RANK_FEATS] + [c + '_r2' for c in RANK_FEATS] + ['kosdaq', 'kan', 'kddn', 'qddn']
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--panel', required=True)
     ap.add_argument('--aux', required=True)
     ap.add_argument('--out', required=True)
     ap.add_argument('--seeds', type=int, default=30)
+    ap.add_argument('--model-out', help='전향 시험용 고정 모형(JSON) — 가중치·순위 기준·매매 규칙·백테 기준값')
     a = ap.parse_args()
     t_all = time.time()
     P = dict(np.load(a.panel))
@@ -139,7 +91,7 @@ def main():
     KOSPI = index_on(dates, aux['index']['KOSPI'])
     KOSDAQ = index_on(dates, aux['index']['KOSDAQ'])
     kdd, qdd = drawdown(KOSPI), drawdown(KOSDAQ)
-    M0 = D['inv'] & ~np.isin(D['dept'], [1, 2]) & (np.nan_to_num(D['age']) >= 60)
+    M0 = buy_universe(D)
     log('패널', T, N, '파생 끝')
 
     # 종목 이름(그때 이름) — name_hist: id\t시작일\t이름
@@ -512,12 +464,12 @@ def main():
     log('몬테카를로 끝')
 
     # ── 7) 오늘 기준 ──────────────────────────────────────────
+    # 백테(월말 코호트)와 같은 순위 기준 — '살 수 있는 종목 전체' 안 백분위 → 매수 후보 범위만 점수 순(전향 시험과 같은 함수)
     sT = T - 1
-    jsT = np.flatnonzero(M0[sT])
-    XT = frame_at(sT, D, jsT, {'kdd': kdd, 'qdd': qdd})
-    colsT = model_cols(XT)
-    XT['score'] = predict(w_now, ((XT[colsT] - mu_now) / sd_now).values)
-    XT = XT.sort_values('score', ascending=False)
+    model_now = dict(cols=list(cols), mu=[float(x) for x in mu_now[cols].values], sd=[float(x) for x in sd_now[cols].values],
+                     w=[float(x) for x in w_now])
+    XT = score_day(D, sT, M0, model_now, kdd, qdd, codes)
+    jsT = XT['j'].to_numpy()
     hist_top = dec.loc[10] if 10 in dec.index else None
     cand = []
     for _, r in XT.head(30).iterrows():
@@ -591,6 +543,31 @@ def main():
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
     with open(a.out, 'w', encoding='utf-8') as f:
         json.dump(out, f, ensure_ascii=False, separators=(',', ':'), allow_nan=False)
+    if a.model_out:
+        # 전향 시험이 그대로 쓰는 고정 모형 — 한 번 만든 뒤엔 바꾸지 않는다(바꾸면 새 버전 장부로 시작).
+        # ageRef: 마지막 날 상장 종목의 '상장 뒤 거래일 수' — 최근 몇 년 자료만 받는 전향 시험이 상장 기간을 30년 패널과 같게 잇는다.
+        alive_end = np.flatnonzero(P['last'] == end)
+        ages = {str(codes[j]): int(D['age'][T - 1, j]) for j in alive_end}
+        R_ = bestR
+        model_file = dict(
+            version='tb-claude-model-1.0.0', analysisVersion=VERSION, trainedThrough=end, label='y3_3 — 750거래일 안 종가 3배',
+            l2=5.0, rows=int(len(trn)), positives=int(trn['y3_3'].sum()), auc=model_auc,
+            cols=model_now['cols'], mu=model_now['mu'], sd=model_now['sd'], w=model_now['w'],
+            rankFeats=RANK_FEATS, universe=dict(liqMin=LIQ_MIN, ageMin=AGE_MIN, excludeDept=[1, 2], rankWithin='inv',
+                                                delistTailMasked=False),
+            rule=dict(name=R_.name, trail=R_.trail, hold=R_.hold, ma=R_.ma, hot=R_.hot, hot_trail=R_.hot_trail,
+                      target=R_.target, stop=R_.stop),
+            portfolio=dict(slots=20, capitals=dict(usd10k=1.4e7, usd100k=1.4e8), fee=BT.FEE, slip=BT.SLIP,
+                           signal='매달 마지막 거래일 종가 점수 → 다음 거래일 종가 매수(빈 칸만)'),
+            backtest=dict(rule=best_port['rule'], cagr=best_port['cagr'], mdd=best_port['mdd'], is_cagr=best_port['is_cagr'],
+                          oos_cagr=best_port['oos_cagr'], oos_mdd=best_port['oos_mdd'], trades=best_port['trades'],
+                          win=best_port['win'], med=best_port['med'], split=T_SPLIT, portStart=PORT_START,
+                          small=rb.get('1만$ 환산(₩1,400만) · 20종목'), large=rb.get('10만$ 환산(₩1억4,000만) · 20종목'),
+                          topDecile=current['topDecile'], baseP3=out['base']['p3_3'], bench=bench),
+            ageRef=dict(date=end, ages=ages))
+        with open(a.model_out, 'w', encoding='utf-8') as f:
+            json.dump(model_file, f, ensure_ascii=False, separators=(',', ':'), allow_nan=False)
+        log('고정 모형', a.model_out, os.path.getsize(a.model_out) // 1024, 'KB')
     log('저장', a.out, os.path.getsize(a.out) // 1024, 'KB · 전체', round(time.time() - t_all), '초')
 
 

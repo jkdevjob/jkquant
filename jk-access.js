@@ -18,7 +18,7 @@
     {path:'/plan',label:'자산플랜',mode:'public',order:20},
     {path:'/backtest',label:'백테',mode:'public',order:30},
     {path:'/scalping',label:'연구(지피티)',mode:'admin',order:40},
-    {path:'/claude',label:'단타(클로드)',mode:'admin',order:50},
+    {path:'/claude',label:'연구(클로드)',mode:'admin',order:50},
     {path:'/paper',label:'모의',mode:'public',order:60},
     {path:'/tenbagger',label:'텐배거',mode:'public',order:65,after:'/paper'},
     {path:'/ipo',label:'공모주',mode:'public',order:70},

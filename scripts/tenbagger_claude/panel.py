@@ -80,8 +80,10 @@ def daily_return(close, changes, prev_close, stocks, prev_stocks, in_tail):
     return r, kind
 
 
-def chain_adjust(df):
-    """종목별 날짜순으로 기준가 수익률을 이어 붙인다. 재상장 구간은 다른 종목 id 로 나눈다."""
+def chain_adjust(df, keep_open_start=False):
+    """종목별 날짜순으로 기준가 수익률을 이어 붙인다. 재상장 구간은 다른 종목 id 로 나눈다.
+    keep_open_start: 최근 몇 년만 받은 자료 창(전향 시험) — 창 첫날 이미 상장돼 있던 종목은 거래정지 행도 남긴다
+    (30년 패널에서는 상장 전 자리표시가 아니라 진짜 정지 구간이다)."""
     df = df.sort_values(['Code', 'Date']).reset_index(drop=True)
     cal = np.sort(df['Date'].unique())
     ci = pd.Series(np.arange(len(cal)), index=cal)
@@ -92,6 +94,8 @@ def chain_adjust(df):
     df['id'] = np.where(seg > 1, df['Code'] + '#' + seg.astype(str), df['Code'])
     # 상장 전 자리표시 행(거래량 0 · 종가 1원 등)은 버린다 — 첫 거래가 그 값 대비 수만 배로 잡힌다
     traded_cum = (df['Volume'] > 0).groupby(df['id']).cummax()
+    if keep_open_start:
+        traded_cum |= df.groupby('id')['ci'].transform('min').eq(0)
     df = df[traded_cum].reset_index(drop=True)
     g = df.groupby('id')
     prev = g['Close'].shift(1)

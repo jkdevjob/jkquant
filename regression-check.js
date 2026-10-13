@@ -11293,10 +11293,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   const scl2=fs.readFileSync(__d+'/claude.html','utf8');
   const orApi=fs.readFileSync(__d+'/functions/api/claude-lab.js','utf8');
   const gptScl=fs.readFileSync(__d+'/scalping.html','utf8'),gptApi=fs.readFileSync(__d+'/functions/api/opening-research.js','utf8');
-  ok('단타(클로드)는 별도 페이지: GPT 단타 화면·API 에 클로드 내용 없음 · 모든 페이지 메뉴에서 연구(지피티) 바로 아래',
+  ok('연구(클로드)는 별도 페이지: GPT 단타 화면·API 에 클로드 내용 없음 · 모든 페이지 메뉴에서 연구(지피티) 바로 아래',
      !/gapdown|D-1 갭하락|etfOvernight|claude-lab/.test(gptScl)&&!/gapdown|etf-overnight|claude-lab/.test(gptApi)
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
-       .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>연구\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>단타\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+       .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>연구\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>연구\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('단타(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) + 합산 · 탭마다 GPT 같은 기간 비교',
      ['today','opening','daytrading','crypto','soxl','all'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
@@ -11305,7 +11305,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
     ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로',
        /function authorized\(request,env\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
-       &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\)\\\] \/;/.test(tg)
+       &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\|텐배거\)\\\] \/;/.test(tg)
        &&/if\(b\.op==="send"\|\|KINDS\.includes\(String\(b\.kind\|\|""\)\)\)return json\(\{ok:true,skipped:"buy_sell_only"\}\);/.test(tg)
        &&(tg.match(/await sendOnce\(env,/g)||[]).length===1&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
     // 하루 마감 장부: DO 에 한 번만 저장(먼저 저장된 것이 정본) — 밤 계산 · 대결 비교가 읽는다. 텔레그램은 보내지 않는다
@@ -11465,8 +11465,8 @@ console.log('\n[CLAUDE HEADER] 머리말 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8'), sh=fs.readFileSync(__d+'/scalping.html','utf8');
   const hd=(ch.match(/<header>[\s\S]*?<\/header>/)||[''])[0];
-  ok('클로드/연구 GPT 머리말 구조 유지(각 영문 머리 · 단타/연구 · 사용자 배지 → 메뉴)',
-     /<div class="kicker">Claude Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(hd)
+  ok('연구(클로드)/연구(지피티) 머리말 구조 유지(각 영문 머리 · JK 투자 연구 · 사용자 배지 → 메뉴)',
+     /<div class="kicker">Claude Research<\/div><h1>JK <span class="v">투자<\/span> 연구/.test(hd)
      &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(hd)
      &&/<div class="kicker">GPT Research<\/div><h1>JK <span class="v">투자<\/span> 연구/.test(sh)
      &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(sh));
@@ -11678,7 +11678,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
 
   // ── 가리는 CSS · 메뉴 ──
   { const E=loadAccess({guard:true}), css=(E.els['jkaccess-css']||{}).textContent||'';
-    ok('메뉴: 연구(지피티)·단타(클로드)·관리자 링크는 소유자(jk-admin) 아니면 숨김',
+    ok('메뉴: 연구(지피티)·연구(클로드)·관리자 링크는 소유자(jk-admin) 아니면 숨김',
        ['/scalping','/claude','/admin'].every(h=>css.includes('html:not(.jk-admin) a[href="'+h+'"]')) && /a\[href="\/admin"\]\{display:none!important\}/.test(css));
     // 자산플랜은 로그인 전 'body>*:not(#authgate)' 를 숨긴다 — 승인 화면이 거기 걸려 안 보이면 대기 계정은 '확인 중'만 본다
     ok('가림: 승인 화면 자체는 페이지가 본문을 숨겨도 보인다 (visibility 직접 켬)', css.includes('#jkgate.on{display:flex;visibility:visible!important}')

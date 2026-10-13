@@ -12,7 +12,10 @@ const VALID_TOPICS=new Set(["presale","job","ipo","research",...TRADE_TOPICS]);
 /* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
 const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
 const RESEARCH_STUDIES={im_plan:{name:"무매·5년 플랜 연구",url:RESEARCH_APP},
-  tenbagger:{name:"텐배거 전향 연구",url:BASE_APP+"/scalping?strategy=tenbagger"}};
+  tenbagger:{name:"텐배거 전향 연구",url:BASE_APP+"/scalping?strategy=tenbagger"},
+  tenbagger_claude:{name:"[클로드 연구 텐배거]",url:BASE_APP+"/claude?tab=tenbagger",trade:true}};
+/* 매매 연구(trade:true)는 실제 매수·매도 때만 보낸다(사용자 요청 2026-10-13) — 제목은 '[클로드 연구 텐배거] 🟢 매수 10/15' 처럼 머리말로 시작 */
+const RESEARCH_STAGE={buy:"🟢 매수",sell:"🔴 매도",both:"🟢🔴 매수·매도"};
 const APPROVAL_ADMIN="jk82investing@gmail.com";
 const FIRESTORE_PROFILE="https://firestore.googleapis.com/v1/projects/jk-invest/databases/(default)/documents/profiles/";
 
@@ -470,7 +473,7 @@ export class PresaleAlertStore{
       url:IPO_APP,createdAt:new Date().toISOString()
     }:topic==="research"?{
       id:"test-research-"+Date.now(),type:"research",title:"🔬 매일 연구 웹알림 테스트",
-      body:"무매·5년 플랜·텐배거 연구 결과 알림이 정상 연결되었습니다.",
+      body:"무매·5년 플랜·텐배거(지피티·클로드) 연구 결과 알림이 정상 연결되었습니다.",
       url:RESEARCH_APP,createdAt:new Date().toISOString()
     }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
@@ -644,12 +647,15 @@ export class PresaleAlertStore{
     const study=clean(b&&b.study,30)||"im_plan",spec=Object.hasOwn(RESEARCH_STUDIES,study)?RESEARCH_STUDIES[study]:null;
     if(!spec)return json(request,{ok:false,error:"unknown study"},400);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!body)return json(request,{ok:false,error:"date·body required"},400);
+    const stage=spec.trade?clean(b&&b.stage,8):"";
+    if(spec.trade&&!Object.hasOwn(RESEARCH_STAGE,stage))return json(request,{ok:false,error:"stage required (buy·sell·both)"},400);
     const id="research:"+(study==="im_plan"?"":study+":")+date+":"+(await hashText(body)).slice(0,12);
     if(await this.state.storage.get("sent:"+id))return json(request,{ok:true,skipped:true,reason:"이미 보낸 연구 요약",id});
     const claim="research-delivery:"+id,prev=await this.state.storage.get(claim);
     if(prev?.status==="sending"&&Date.now()-Date.parse(prev.at)<120000)return json(request,{ok:false,retryable:true,error:"delivery in progress"},409);
     const delivered=new Set(prev?.sentKeys||[]);
-    const alert={id,type:"research",study,title:(found?"★ ":"🔬 ")+spec.name+" "+date.slice(5).replace("-","/")+(found?" — 발견":""),
+    const alert={id,type:"research",study,title:spec.trade?spec.name+" "+RESEARCH_STAGE[stage]+" "+date.slice(5).replace("-","/")
+        :(found?"★ ":"🔬 ")+spec.name+" "+date.slice(5).replace("-","/")+(found?" — 발견":""),
       body,url:spec.url,createdAt:new Date().toISOString()};
     await this.state.storage.put(claim,{status:"sending",at:alert.createdAt,sentKeys:[...delivered]});
     let delivery;
@@ -682,7 +688,7 @@ export class PresaleAlertStore{
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
       }
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.4.1",subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.5.0",subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
