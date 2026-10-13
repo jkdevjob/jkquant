@@ -12247,10 +12247,10 @@ console.log('\n[TENBAGGER] 텐배거 메뉴 · 클로드/지피티 탭 · 분석
   const cp=require('child_process'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
   const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),tb=fs.readFileSync(__d+'/tenbagger.html','utf8'),ck=fs.readFileSync(__d+'/.github/workflows/check.yml','utf8');
   const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html'];
-  ok('11개 페이지 전체메뉴에서 텐배거가 모의 바로 아래(공모주 위)',
+  ok('11개 페이지 기존 텐배거 링크·모의/공모주 상대 순서 보존(메뉴 노출은 공용 정책에서 숨김)',
      pages.every(f=>/<a href="\/paper"[^>]*><span class="mi">🧪<\/span>모의<\/a>\s*\n\s*<a href="\/tenbagger"[^>]*><span class="mi">🔟<\/span>텐배거<\/a>\s*\n\s*<a href="\/ipo"/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
-  ok('공용 메뉴 정책: 모의 60 < 텐배거 65(after 모의) < 공모주 70 · 주소 /tenbagger.html → /tenbagger · 관리자 아이콘·내장 목록 · 미리 읽기',
-     /\{path:'\/paper',label:'모의',mode:'public',order:60\},\n\s*\{path:'\/tenbagger',label:'텐배거',mode:'public',order:65,after:'\/paper'\},\n\s*\{path:'\/ipo'/.test(acc)
+  ok('공용 메뉴 정책: 텐배거 메뉴 숨김 · 직접 주소·저장 순서·관리자 설정 보존',
+     /\{path:'\/paper',label:'모의',mode:'public',order:60\},\n\s*\{path:'\/tenbagger',label:'텐배거',mode:'public',order:65,after:'\/paper',navHidden:true\},\n\s*\{path:'\/ipo'/.test(acc)
      &&/'\/tenbagger\.html':'\/tenbagger'/.test(acc)&&/if\(x\.after&&!src\[x\.path\]&&src\[x\.after\]/.test(acc)
      &&/'\/tenbagger':'🔟'/.test(ad)&&/\{path:'\/tenbagger',label:'텐배거',mode:'public',order:65\}/.test(ad)
      &&/\(\?:plan\|paper\|tenbagger\|/.test(ui));

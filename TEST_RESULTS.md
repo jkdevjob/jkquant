@@ -1,5 +1,12 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-13 · 텐배거 연구 탭 순서·메뉴 숨김 · v1.44.1
+
+- `node --test tests/research-gpt.test.mjs`: 6 PASS / 0 FAIL. 새 2개 값 시험: 7개 탭의 정확한 순서·오늘 선택·텐배거 버튼 호출값, 11페이지 × 로그아웃/승인/소유자의 실제 공용 메뉴 함수·초기 CSS·6초 대기 해제·옛 DB public 설정·기존 URL 권한·다른 메뉴 유지.
+- 새 변이 3/3 값 실패 차단: 연구 탭을 맨 앞으로 되돌림, navHidden 제거, 초기 숨김 CSS 제거. import/문법 오류를 차단 증거로 세지 않는다.
+- 최종 로컬 `node scripts/check-before-push.cjs`: **48/48 단계 PASS · 전체 회귀 2,759 PASS / 0 FAIL**. 외부 Worker dry-run 포함. Pages Functions 별도 빌드도 성공했다.
+- 기존 GPT 자료·UI 격리·지연 로딩 3변이, 공용 UI 값 시험 ALL PASS, 텐배거 클로드 화면·메뉴 32 PASS / 0 FAIL. 전체 검증·외부 CI·배포 근거는 해당 PR 최종 로그가 정본이다. 소유자 로그인 후/실제 iPhone 표시·전략 수익성은 이번 검증 범위가 아니다.
+
 ## 2026-10-13 · 연구 메뉴 알림 정리
 
 - `node scripts/test_opening_gapdown.mjs`: 37 ALL PASS.
