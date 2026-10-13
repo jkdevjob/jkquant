@@ -1,5 +1,12 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-14 · 연구(클로드) '🎯 전체 계좌' 탭 삭제 · v2.17.2
+
+- `node regression-check.js index.html backtest.html testdata`: **2,760 PASS / 0 FAIL**. 탭 목록·직접 링크 검사를 새 탭 구성(오늘·①~④·비교·텐배거, `all` 없음)으로 바꿨다.
+- 변이 3종 차단: 탭 버튼 되살림(회귀 1 FAIL · 텐배거 탭 순서 시험 1 FAIL) · 직접 링크에 `all` 허용(회귀 1 FAIL).
+- 첫 전체 검사에서 텐배거 화면 시험이 옛 탭 순서(`… < all < duel`)를 고정해 1건 실패 → 순서(SOXL < 텐배거 < 비교)와 `all` 없음으로 고쳤다. `node --test tests/research-claude-tenbagger.test.mjs`: 7 PASS.
+- `node scripts/check-before-push.cjs`: **49/49 단계 PASS**. 운영 반영은 배포 후 버전으로 확인한다.
+
 ## 2026-10-14 · 설정 연구 알림 이름·상태 표시 · v1.3.4
 
 - `node --test tests/settings-notifications.test.mjs tests/research-notify.test.mjs`: **14 PASS / 0 FAIL**.
