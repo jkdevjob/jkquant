@@ -23,6 +23,8 @@ test("요약: 일일 기록 맨 끝 항목 · 날짜 · 줄을 잇고 꾸밈표 
   const e = latestResearchEntry(LOG);
   assert.equal(e.date, "2026-10-13");
   assert.equal(e.body, "익절 자동 noWeak 변형: 1만$ 31.0/50.1 · 10만$ 30.2/58.0 — 보류 · 합성: 변화 없음 grid1.js");
+  const v = latestResearchEntry("## 일일 기록\n### 2026-10-16\n- 시험: 긴 설명\n- ① **탈락**: A\n- **보류**: B\n- 주의: C\n");
+  assert.equal(v.body, "보류: B · ① 탈락: A · 시험: 긴 설명 · 주의: C", "판정 줄 먼저(보류 → 탈락), 나머지는 원래 순서");
   assert.equal(e.discovery, false);
   const f = latestResearchEntry(LOG + "\n### 2026-10-14\n- ★ 발견 잔금 SGOV 주1회: 1만$ 29.3/54.2\n");
   assert.deepEqual([f.date, f.discovery], ["2026-10-14", true]);

@@ -15,7 +15,10 @@ export function latestResearchEntry(md) {
   const last = parts[parts.length - 1];
   const head = last.split("\n")[0], m = /^### (\d{4}-\d{2}-\d{2})/.exec(head);
   if (!m) return null;
-  const lines = last.split("\n").slice(1).map(l => l.replace(/^\s*[-*]\s*/, "").trim()).filter(Boolean);
+  const raw = last.split("\n").slice(1).map(l => l.replace(/^\s*[-*]\s*/, "").trim()).filter(Boolean);
+  // 판정(★ 발견 · 발견 · 보류 · 탈락)이 든 줄을 먼저 — 알림 본문이 잘려도 결론은 보이게. 같은 등급 안에선 원래 순서.
+  const rank = l => /★\s*발견|\*\*발견\*\*/.test(l) ? 0 : /발견|보류/.test(l) ? 1 : /탈락/.test(l) ? 2 : 3;
+  const lines = raw.map((l, i) => [rank(l), i, l]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]);
   const discovery = /★\s*발견/.test(last);
   const body = clip(lines.join(" · ").replace(/\*\*/g, "").replace(/`/g, ""), 240);
   return body ? { date: m[1], body, discovery } : null;
