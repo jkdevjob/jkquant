@@ -1,0 +1,191 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-13T16:08:14.222982+09:00",
+  "mode": "read-only-vts-execution-research",
+  "from": "2026-09-25",
+  "to": "2026-10-13",
+  "archiveDays": 13,
+  "strategies": [
+    {
+      "strategy": "opening",
+      "days": 13,
+      "reports": 13,
+      "internalTrades": 21,
+      "kisOrders": 24,
+      "completeMatches": 3,
+      "buyMatches": 5,
+      "sellMatches": 3,
+      "avgEntrySlippageCostPct": -0.21610424182200605,
+      "avgExitSlippageCostPct": 0.18427904363662595,
+      "avgRoundTripSlippageCostPct": 0.18532351811679412,
+      "avgInternalPnlPct": -0.8501828344611186,
+      "avgVtsGrossPnlPct": -0.2178353224819888,
+      "avgVtsNetPnlPct": -0.6722113616022671,
+      "avgBrokerCostRatePct": 0.45437603912027763,
+      "avgObservedExecutionDragPct": 0.6396995572370717,
+      "frictionGapVsInternal025Pct": 0.3896995572370717,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 3,
+      "totalBrokerEstimatedCostsWon": 25292.0,
+      "avgBrokerEstimatedCostsWon": 8430.666666666666,
+      "avgEntryOrderLagSecApprox": 126.6,
+      "avgExitOrderLagSecApprox": 131.0,
+      "avgBrokerNotifyLagSec": 0.0,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    },
+    {
+      "strategy": "daytrading",
+      "days": 7,
+      "reports": 7,
+      "internalTrades": 15,
+      "kisOrders": 9,
+      "completeMatches": 0,
+      "buyMatches": 0,
+      "sellMatches": 0,
+      "avgEntrySlippageCostPct": null,
+      "avgExitSlippageCostPct": null,
+      "avgRoundTripSlippageCostPct": null,
+      "avgInternalPnlPct": null,
+      "avgVtsGrossPnlPct": null,
+      "avgVtsNetPnlPct": null,
+      "avgBrokerCostRatePct": null,
+      "avgObservedExecutionDragPct": null,
+      "frictionGapVsInternal025Pct": null,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 0,
+      "totalBrokerEstimatedCostsWon": 0,
+      "avgBrokerEstimatedCostsWon": null,
+      "avgEntryOrderLagSecApprox": null,
+      "avgExitOrderLagSecApprox": null,
+      "avgBrokerNotifyLagSec": null,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    }
+  ],
+  "latest": {
+    "date": "2026-10-13",
+    "reports": [
+      {
+        "strategy": "daytrading",
+        "internalTrades": 0,
+        "kisOrders": 4,
+        "matched": 0,
+        "matches": [],
+        "unmatched": [
+          {
+            "code": "071970",
+            "name": "HD현대마린엔진",
+            "side": "매도",
+            "orderTime": "152209",
+            "orderQty": 19,
+            "fillQty": 19,
+            "fillPrice": 40350,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "087010",
+            "name": "펩트론",
+            "side": "매도",
+            "orderTime": "152204",
+            "orderQty": 26,
+            "fillQty": 26,
+            "fillPrice": 82900,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "071970",
+            "name": "HD현대마린엔진",
+            "side": "매수",
+            "orderTime": "085659",
+            "orderQty": 19,
+            "fillQty": 19,
+            "fillPrice": 39668,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "087010",
+            "name": "펩트론",
+            "side": "매수",
+            "orderTime": "085657",
+            "orderQty": 26,
+            "fillQty": 26,
+            "fillPrice": 85900,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          }
+        ]
+      },
+      {
+        "strategy": "opening",
+        "internalTrades": 0,
+        "kisOrders": 4,
+        "matched": 0,
+        "matches": [],
+        "unmatched": [
+          {
+            "code": "071970",
+            "name": "HD현대마린엔진",
+            "side": "매도",
+            "orderTime": "152209",
+            "orderQty": 19,
+            "fillQty": 19,
+            "fillPrice": 40350,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "087010",
+            "name": "펩트론",
+            "side": "매도",
+            "orderTime": "152204",
+            "orderQty": 26,
+            "fillQty": 26,
+            "fillPrice": 82900,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "071970",
+            "name": "HD현대마린엔진",
+            "side": "매수",
+            "orderTime": "085659",
+            "orderQty": 19,
+            "fillQty": 19,
+            "fillPrice": 39668,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "087010",
+            "name": "펩트론",
+            "side": "매수",
+            "orderTime": "085657",
+            "orderQty": 26,
+            "fillQty": 26,
+            "fillPrice": 85900,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          }
+        ]
+      }
+    ]
+  }
+}
