@@ -12,20 +12,23 @@ const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toI
 // 돌려주는 것: [{id, title, body, tag, url, price?}]
 export function pushEvents(live, nowMs, sent = {}) {
   const T = (live && live.tabs) || {}, d = (live && live.today) || kstDateOf(nowMs), out = [];
-  const add = (id, title, body, price) => out.push({ id, title, body, tag: id.split(":").slice(0, 2).join(":"), url: "/claude", price: price ?? null });
+  const add = (id, title, body, price) => {
+    const kind=id.split(":")[0],name=({open:"시초가",etf:"데이트레이딩",coin:"비트코인",soxl:"SOXL"})[kind]||"단타";
+    out.push({id,title:"[클로드 연구 "+name+"] "+title,body:body+" · 모의체결 기준",tag:id,url:"/claude",price:price??null});
+  };
   // ① 시초가 — 08:56 판단 · 08:59 장전 동시호가 매수 / 15:20 종가 동시호가 매도
   const o = (T.opening && T.opening.rows) || [];
-  const ob = o.filter(r => r.status && r.status !== "주문 실패");
+  const ob = o.filter(r => r.status && r.status !== "주문 실패" && r.buyPriceKind === "체결" && Number(r.buyPrice)>0);
   if (ob.length) add("open:" + d + ":buy", "🟢 ① 시초가 매수", ob.map(r => r.name + (r.expectedGapPct != null ? " (갭 " + KR_PCT(r.expectedGapPct) + ")" : "")).join(" · ")
     + " — 08:59 동시호가" + (o.length > ob.length ? " · 주문 실패 " + (o.length - ob.length) + "종목" : ""));
-  const os = o.filter(r => r.realized && r.pnlPct != null);
+  const os = o.filter(r => r.realized && r.pnlPct != null && Number(r.sellPrice)>0);
   if (os.length) add("open:" + d + ":sell", "🔴 ① 시초가 매도", os.map(r => r.name + " " + KR_PCT(r.pnlPct)).join(" · ")
     + " · 평균 " + KR_PCT(os.reduce((a, r) => a + r.pnlPct, 0) / os.length));
   // ② 데이트레이딩 — 15:21 종가 매수 / 다음 거래일 08:56 시가 매도
   for (const r of (T.daytrading && T.daytrading.rows) || []) {
-    if (/^오늘 15:30/.test(r.buyTime || "") && r.status === "보유중(오버나잇)")
+    if (/^오늘 15:30/.test(r.buyTime || "") && r.status === "보유중(오버나잇)" && r.buyPriceKind==="체결" && Number(r.buyPrice)>0)
       add("etf:" + d + ":buy", "🟢 ② 데이트레이딩 매수", r.name + " 종가 매수" + (r.dropPct != null ? " (오늘 " + KR_PCT(r.dropPct) + ")" : "") + " → 다음 거래일 시가 매도");
-    if (/^오늘 09:00/.test(r.sellTime || "") && (r.status === "매도 접수" || r.status === "청산"))
+    if (/^오늘 09:00/.test(r.sellTime || "") && r.status === "청산" && r.realized===true && Number(r.sellPrice)>0)
       add("etf:" + d + ":sell", "🔴 ② 데이트레이딩 매도", r.name + " 시가 매도" + (r.realized && r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : " 접수"));
   }
   // ③ 비트코인 — 업비트 하루(09:00 시작) 돌파 매수 · 손절 / 다음 날 09:00 매도
