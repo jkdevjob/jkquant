@@ -1,0 +1,38 @@
+name: 매일 연구 결과 웹알림
+
+# 무매·5년 플랜 매일 연구 세션이 research/daily 에 연구 기록을 올리면, 맨 끝 일일 기록을 요약해 웹 알림(주제 research)으로 보낸다.
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/daily]
+    paths:
+      - "research/im_plan/RESEARCH_LOG.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: research-notify
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: 최신 일일 기록 요약
+        run: node scripts/research-notify.mjs research/im_plan/RESEARCH_LOG.md > note.json && cat note.json
+      - name: 푸시 서버로 보내기
+        env:
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$MONITOR_KEY" ] || { echo "AUTOTRADE_KEY GitHub Secret 없음"; exit 1; }
+          WORKER=$(node -e 'console.log(require("./data/realestate/gpt/push-config.json").workerUrl)')
+          for t in 1 2 3; do
+            if curl -sf -X POST "$WORKER/research-note" -H "content-type: application/json" -H "x-monitor-key: $MONITOR_KEY" --data @note.json -o out.json; then cat out.json; exit 0; fi
+            sleep $((t*10))
+          done
+          echo "푸시 서버 전송 실패"; exit 1
