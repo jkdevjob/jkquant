@@ -12089,7 +12089,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   { const st=fs.readFileSync(__d+'/settings.html','utf8'),sc=fs.readFileSync(__d+'/settings-claude-push.js','utf8');
     ok('설정 → 알림: 단타(클로드) 매수·매도 항목(켜기 · 끄기 · 테스트) — 단타 화면과 같은 ClaudePush 로 · 소유자 토큰 · 기존 JOB/신규분양 항목 그대로',
        /<div id="claudePushSettings"><\/div>\s*<div id="notificationSettings">/.test(st)&&/<script src="\/claude-push-client\.js\?v=[\d.]+" defer><\/script>\s*<script src="\/settings-claude-push\.js\?v=[\d.]+" defer><\/script>/.test(st)
-       &&/window\.jkAuth=auth;/.test(st)&&/<script src="\/settings-notifications\.js" defer><\/script>/.test(st)
+       &&/window\.jkAuth=auth;/.test(st)&&/<script src="\/settings-notifications\.js\?v=\d+\.\d+\.\d+" defer><\/script>/.test(st)
        &&/P\.enable\(token\)/.test(sc)&&/P\.disable\(token\)/.test(sc)&&/P\.test\(token\)/.test(sc)&&!/localStorage|sessionStorage/.test(sc));
   }
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',

@@ -36,14 +36,13 @@ async function currentSub(){
   sub=await reg.pushManager.getSubscription();
   return sub;
 }
-async function loadTopics(){
-  topics=new Set();
+async function loadTopics(required=false){
   if(!sub||!cfg)return;
   try{
     const j=await server("/subscription?endpoint="+encodeURIComponent(sub.endpoint));
-    (j.topics||[]).forEach(x=>topics.add(x));
+    topics=new Set(j.topics||[]);
     approvalLinked=!!j.approvalLinked;
-  }catch(e){}
+  }catch(e){if(required)throw e}
 }
 async function syncWorkerTopics(){
   if(!reg&&"serviceWorker" in navigator)reg=await navigator.serviceWorker.ready.catch(()=>null);
@@ -129,40 +128,48 @@ async function ensurePushSubscription(){
   sub=await reg.pushManager.getSubscription();
   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(v.publicKey)});
 }
-async function saveTopics(){
-  if(!sub)return;
+async function saveTopics(nextTopics=topics){
+  if(!sub)throw new Error("기기의 알림 구독을 확인할 수 없습니다.");
   await server("/subscribe",{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent,topics:[...topics]})
+    body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent,topics:[...nextTopics]})
   });
+  topics=new Set(nextTopics);
   await syncWorkerTopics();
 }
 async function enable(topic){
   if(busy)return;busy=true;render();
+  let message;
   try{
     await ensurePushSubscription();
-    await loadTopics();
-    topics.add(topic);
-    await saveTopics();
+    await loadTopics(true);
+    const nextTopics=new Set(topics);nextTopics.add(topic);
+    await saveTopics(nextTopics);
     try{health=await server("/health")}catch(e){}
-    alert(({ipo:"공모주·청약 매일",job:"JOB 신규공고",presale:"신규분양",opening:"시초가 매수·매도",daytrading:"데이트레이딩 매수·매도",crypto:"비트코인 매수·매도",soxl:"SOXL 매수·매도"})[topic]+" 알림을 켰습니다.");
-  }catch(e){alert("알림 설정 실패: "+String(e&&e.message||e))}
+    const def=NOTIFY_DEFS.find(x=>x.topic===topic);
+    message=(def?def.name:"선택한 항목")+" 알림을 켰습니다.";
+  }catch(e){message="알림 설정 실패: "+String(e&&e.message||e)}
   finally{busy=false;render()}
+  // 차단형 팝업을 띄우기 전에 저장 결과와 버튼 상태가 실제 화면에 그려지게 한다.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  alert(message);
 }
 async function disable(topic){
   if(busy||!sub)return;busy=true;render();
   try{
-    topics.delete(topic);
-    if(topics.size||approvalLinked){
-      await saveTopics();
+    await loadTopics(true);
+    const nextTopics=new Set(topics);nextTopics.delete(topic);
+    if(nextTopics.size||approvalLinked){
+      await saveTopics(nextTopics);
     }else{
       await server("/subscribe",{
         method:"DELETE",headers:{"content-type":"application/json"},
         body:JSON.stringify({endpoint:sub.endpoint})
-      }).catch(()=>{});
+      });
+      topics=nextTopics;
+      await syncWorkerTopics();
       await sub.unsubscribe();
       sub=null;
-      await syncWorkerTopics();
     }
     try{health=await server("/health")}catch(e){}
   }catch(e){alert("알림 해제 실패: "+String(e&&e.message||e))}
