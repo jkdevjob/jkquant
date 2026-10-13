@@ -176,6 +176,7 @@ export async function onRequestPost({request,env}){
   if(b.op==="close"||b.op==="send"){
     const strategy=String(b.strategy||""),date=String(b.date||"");
     if(!DAY_STRATEGIES.includes(strategy)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"strategy/date 오류"},400);
+    if(b.op==="send")return json({ok:true,skipped:"confirmed_trades_only"}); // 연구 요약은 화면/장부에만 기록
     if(b.op==="close"){
       try{const result=await closeDay(new URL(request.url).origin,env,strategy,date);return json({ok:!!result,result});}
       catch(e){return json({ok:false,error:String(e.message||e)},502);}
@@ -188,6 +189,10 @@ export async function onRequestPost({request,env}){
   const kind=String(b.kind||""),date=String(b.date||"");
   if(!KINDS.includes(kind)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"kind/date 오류"},400);
   if(kind==="promote"&&!(b.event&&TABN[b.event.tab]))return json({ok:false,error:"event 오류"},400);
+  // 예상 주문·조건 미충족·매매없음·주간연구·승격 보고는 외부 메시지 금지.
+  // 확정 모의체결 알림은 실시간 푸시 감시 및 시초가 전용 경로에서 발송한다.
+  return json({ok:true,skipped:"confirmed_trades_only",kind,date});
+  
   if(!(await claim("claude:"+date+":"+kind+(kind==="promote"?":"+b.event.tab:""))))return json({ok:true,duplicate:true});
   try{
     const origin=new URL(request.url).origin;
