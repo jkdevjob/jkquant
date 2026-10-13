@@ -175,7 +175,7 @@ test("데이트레이딩 최근 8분만 매수·매도 푸시 복구 — 날짜�
   const fn=new Function("hmToMin","hmLabel","exitLabel","signedPct",code+"; return recentPaperPushEvents;")(
     hmMin,v=>String(v).padStart(4,"0"),v=>v==="stop"?"손절":String(v),v=>"+"+Number(v).toFixed(2)+"%");
   const ledger={date:"2026-10-08",targetHm:1018,trades:[
-    {id:"001:1016",code:"001",name:"테스트1",signalTime:1016,entryTime:1017,signalPrice:5000,status:"closed",
+    {id:"001:1016",code:"001",name:"테스트1",signalTime:1016,entryTime:1017,signalPrice:5000,entryPrice:5000,status:"closed",
       exitTime:1018,exitPrice:4920,reason:"stop",pnl:-1.85},
     {id:"002:1001",code:"002",signalTime:1001,entryTime:1002,status:"open"}
   ]};
@@ -187,4 +187,107 @@ test("데이트레이딩 최근 8분만 매수·매도 푸시 복구 — 날짜�
   assert.ok(a.every(x=>x.webOnly!==true)); // Retry both channels; successful Telegram receipts suppress duplicates.
   assert.equal(fn({...ledger,targetHm:1030}).length,0);
   assert.match(source,/await retryPaperWebPush\(env,saved\)/);
+});
+
+
+test("GPT 연구 정책: 후보 매수 알림 금지, 확정 1분봉 시가와 청산 때만 발송",async()=>{
+  const source=readFileSync(new URL("../worker/daytrading-scheduler/src/index.js",import.meta.url),"utf8");
+  const first=source.indexOf("async function notifyPaperTransitions("),last=source.indexOf("// 장부 기록 후 첫 알림",first);
+  assert.ok(first>=0&&last>first);
+  const code=source.slice(first,last);
+  const out=[],fn=new Function("sendScalpingAlert","hmLabel","signedPct","exitLabel","PAPER_STOP_PCT","PAPER_TAKE_PROFIT_PCT","PAPER_FINAL_EXIT_HM","PAPER_FRICTION_PCT",code+"; return notifyPaperTransitions;")(
+    async (_env,b)=>{out.push(b);return {ok:true}},n=>String(n||"").padStart(4,"0"),
+    n=>(Number(n)>=0?"+":"")+Number(n).toFixed(2)+"%",n=>n==="stop"?"손절":String(n),1,2,1510,.25);
+  const candidate={id:"247540:1426",code:"247540",name:"에코프로비엠",status:"pending",signalTime:1426,signalPrice:114000,
+    entryTime:1427,entryPrice:null,exitTime:null,exitPrice:null,sessionRet:1.33,score:70,volRatio:1.56};
+  const book=x=>({date:"2026-10-13",trades:[x],stopPct:1,takeProfitPct:2});
+  await fn(null,null,book(candidate));
+  assert.equal(out.length,0,"14:26 후보 신호는 Telegram과 Push 모두 금지");
+  const opened={...candidate,status:"open",entryPrice:114200};
+  await fn(null,book(candidate),book(opened));
+  assert.equal(out.length,1);
+  assert.equal(out[0].stage,"buy");
+  assert.equal(out[0].time,"1427");
+  assert.ok(out[0].lines.some(x=>x.includes("모의 매수 확정")));
+  assert.ok(out[0].lines.every(x=>!x.includes("진입 대기")));
+  const closed={...opened,status:"closed",exitTime:1430,exitPrice:112770,reason:"stop",pnl:-1.25};
+  await fn(null,book(opened),book(closed));
+  assert.equal(out.length,2);
+  assert.equal(out[1].stage,"sell");
+  await fn(null,book(closed),book(closed));
+  assert.equal(out.length,2);
+});
+
+test("GPT 연구 마감요약 금지, 연구 전략명 메시지 첫 줄 검증",async()=>{
+  const {onRequestPost}=await import("../functions/api/scalping-alert.js");
+  const old=globalThis.fetch,calls=[];
+  globalThis.fetch=async(url,options)=>{
+    calls.push({url:String(url),body:JSON.parse(options.body)});
+    return new Response(JSON.stringify(String(url).includes("api.telegram.org")?{ok:true,result:{message_id:19}}:{ok:true,delivery:{sent:1}}),{status:200});
+  };
+  try{
+    const env={AUTOTRADE_KEY:"test",TELEGRAM_BOT_TOKEN:"token",TELEGRAM_CHAT_ID:"chat"};
+    const run=async stage=>{const r=await onRequestPost({env,request:new Request("https://host.invalid/api/scalping-alert",{
+      method:"POST",headers:{"x-monitor-key":"test","content-type":"application/json"},
+      body:JSON.stringify({strategy:"opening",stage,eventId:"test-"+stage,date:"2026-10-13",time:"09:08"})})});return r.json()};
+    assert.equal((await run("summary")).skipped,"trade_notifications_only");
+    assert.equal(calls.length,0);
+    assert.equal((await run("buy")).ok,true);
+    assert.equal(calls.length,2);
+    assert.ok(calls.some(x=>String(x.body.text||"").startsWith("[지피티 연구 시초가]")));
+  }finally{globalThis.fetch=old;}
+  const opening=readFileSync(new URL("../functions/api/opening-monitor.js",import.meta.url),"utf8");
+  const worker=readFileSync(new URL("../worker/presale-alert/src/index.js",import.meta.url),"utf8");
+  assert.ok(opening.includes("[지피티 연구 시초가]"));
+  assert.ok(worker.includes('title:"[지피티 연구 "+name+"] "'));
+});
+
+
+test("클로드 연구: 매매없음·예상가·매도접수는 외부알림이 아니고 체결확인만 푸시",async()=>{
+  const {pushEvents}=await import("../functions/api/_claude_push.js");
+  const now=Date.parse("2026-10-13T06:43:00Z");
+  const candidate=pushEvents({today:"2026-10-13",tabs:{
+    opening:{rows:[{code:"247540",name:"에코프로비엠",status:"보유중",buyPrice:114000,buyPriceKind:"예상"}]},
+    daytrading:{rows:[{status:"매매 없음"}]}
+  }},now,{});
+  assert.equal(candidate.length,0);
+  const filled=pushEvents({today:"2026-10-13",tabs:{
+    opening:{rows:[{code:"247540",name:"에코프로비엠",status:"보유중",buyPrice:114200,buyPriceKind:"체결"}]},
+    daytrading:{rows:[{name:"ETF",status:"보유중(오버나잇)",buyTime:"오늘 15:30 종가",buyPrice:1000,buyPriceKind:"체결"}]}
+  }},now,{});
+  assert.equal(filled.length,2);
+  assert.ok(filled.every(x=>x.title.startsWith("[클로드 연구 ")));
+  const received=pushEvents({today:"2026-10-13",tabs:{daytrading:{rows:[
+    {name:"ETF",status:"매도 접수",sellTime:"오늘 09:00 시가",sellPrice:null,realized:false}
+  ]}}},now,{});
+  assert.equal(received.length,0);
+});
+
+test("클로드 매매없음 Telegram과 GPT/Claude 대결 일일보고는 보내지 않는다",async()=>{
+  const claude=await import("../functions/api/claude-telegram.js");
+  const duel=await import("../functions/api/scalping-duel.js");
+  const env={AUTOTRADE_KEY:"test"};
+  const post=async(fn,body)=>{
+    const r=await fn({env,request:new Request("https://host.invalid/api/check",{
+      method:"POST",headers:{"content-type":"application/json","x-monitor-key":"test"},body:JSON.stringify(body)})});
+    return r.json();
+  };
+  const one=await post(claude.onRequestPost,{kind:"etfbuy",date:"2026-10-13"});
+  const two=await post(claude.onRequestPost,{op:"send",strategy:"daytrading",date:"2026-10-13"});
+  const three=await post(duel.onRequestPost,{date:"2026-10-13"});
+  assert.equal(one.skipped,"confirmed_trades_only");
+  assert.equal(two.skipped,"confirmed_trades_only");
+  assert.equal(three.skipped,"confirmed_trades_only");
+});
+
+
+test("14:26 후보 알림 원본(/api/daytrading-monitor)은 텔레그램 송신을 완전히 제거하고 신호만 보존",()=>{
+  const src=readFileSync(new URL("../functions/api/daytrading-monitor.js",import.meta.url),"utf8");
+  assert.ok(src.includes("signalEvents:events"));
+  assert.ok(src.includes("notifiedEvents:0"));
+  assert.ok(src.includes('skipped:"candidate_only"'));
+  assert.ok(!src.includes("sendTelegram("));
+  assert.ok(!src.includes("모의 후보 신호"));
+  const scheduler=readFileSync(new URL("../worker/daytrading-scheduler/src/index.js",import.meta.url),"utf8");
+  assert.ok(scheduler.includes('Number(x.entryPrice)>0'));
 });

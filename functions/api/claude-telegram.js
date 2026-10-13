@@ -173,9 +173,20 @@ export async function sendOnce(env,text){
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
   let b={};try{b=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
+  // 클로드 연구 모의체결은 별도 live Worker의 확정 매수/매도 이벤트만 받아 텔레그램 전송한다.
+  if(b.op==="trade"){
+    const id=String(b.eventId||"").slice(0,220),title=String(b.title||"").trim().slice(0,160);
+    const body=String(b.body||"").trim().slice(0,1000);
+    if(!/^(open|etf|coin|soxl):[0-9]{4}-[0-9]{2}-[0-9]{2}(:|$)/.test(id)
+       ||!title.startsWith("[클로드 연구 ")||!/모의체결 기준/.test(body))
+      return json({ok:false,error:"confirmed trade event required"},400);
+    const result=await sendOnce(env,title+"\n"+body+"\n\nJKQuant 모의체결 알림 · 실제 계좌 주문 아님");
+    return json({...result,eventId:id},result.ok?200:502);
+  }
   if(b.op==="close"||b.op==="send"){
     const strategy=String(b.strategy||""),date=String(b.date||"");
     if(!DAY_STRATEGIES.includes(strategy)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"strategy/date 오류"},400);
+    if(b.op==="send")return json({ok:true,skipped:"confirmed_trades_only"}); // 연구 요약은 화면/장부에만 기록
     if(b.op==="close"){
       try{const result=await closeDay(new URL(request.url).origin,env,strategy,date);return json({ok:!!result,result});}
       catch(e){return json({ok:false,error:String(e.message||e)},502);}
@@ -188,6 +199,10 @@ export async function onRequestPost({request,env}){
   const kind=String(b.kind||""),date=String(b.date||"");
   if(!KINDS.includes(kind)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"kind/date 오류"},400);
   if(kind==="promote"&&!(b.event&&TABN[b.event.tab]))return json({ok:false,error:"event 오류"},400);
+  // 예상 주문·조건 미충족·매매없음·주간연구·승격 보고는 외부 메시지 금지.
+  // 확정 모의체결 알림은 실시간 푸시 감시 및 시초가 전용 경로에서 발송한다.
+  return json({ok:true,skipped:"confirmed_trades_only",kind,date});
+  
   if(!(await claim("claude:"+date+":"+kind+(kind==="promote"?":"+b.event.tab:""))))return json({ok:true,duplicate:true});
   try{
     const origin=new URL(request.url).origin;

@@ -11125,7 +11125,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
 
   ok('공통 Telegram API는 서버키 인증 + eventId 중복방지',
      /x-monitor-key/.test(alertApi) && /eventId required/.test(alertApi) && /caches\.default/.test(alertApi));
-  ok('공통 Telegram API는 매수/매도/장 종료 결과만 전송하고 주문 API 없음',
+  ok('공통 Telegram API는 매수/매도만 전송하고 연구 요약 차단',
      /\["buy","sell","summary"\]\.includes\(stage\)/.test(alertApi) && /stage==="buy"/.test(alertApi) && !/op=order|opening-execute/.test(alertApi));
   ok('데이트레이딩 ③매수·④매도 상태변화 Telegram',
      /notifyPaperTransitions/.test(dayWorker) && /strategy:"daytrading",stage:"buy"/.test(dayWorker) && /strategy:"daytrading",stage:"sell"/.test(dayWorker));
@@ -11136,14 +11136,13 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
      !/\/api\/kis\?op=order|opening-execute|method:"POST"[\s\S]{0,100}order/.test(globalWorker));
   ok('BTC·SOXL Worker 배포는 MONITOR_KEY Secret만 전달',
      /secret put MONITOR_KEY/.test(globalDeploy) && !/TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID/.test(globalDeploy));
-  ok('BTC ⑤⑥ 일일 Telegram은 00:05 KST Worker 마감으로 연결',
-     /if\(k\.hm===5\)await sendCloseSummary\(env,"crypto"/.test(globalWorker)
+  ok('BTC ⑤⑥ 연구 요약은 화면만 유지하고 Telegram 발송 차단',
+     !/if\(k\.hm===5\)await sendCloseSummary\(env,"crypto"/.test(globalWorker)
      && /"⑤ 오늘 매매이력"/.test(globalWorker)
      && /"⑥ 검증·분석 기록 · 연구자료 기준 "/.test(globalWorker)
      && !/scalping-daily-summary\?strategy=crypto/.test(cryptoYml));
-  ok('SOXL ⑤⑥ 일일 Telegram은 16:05 ET Worker 마감으로 연결',
-     /if\(n\.hm===1605&&isNyseSessionDate\(n\.date\)\)/.test(globalWorker)
-     && /sendCloseSummary\(env,"soxl"/.test(globalWorker)
+  ok('SOXL ⑤⑥ 연구 요약은 화면만 유지하고 Telegram 발송 차단',
+     !/await sendCloseSummary\(env,"soxl"/.test(globalWorker)
      && !/scalping-daily-summary\?strategy=soxl/.test(soxlYml));
   const soxlPy=fs.readFileSync(__d+'/scripts/backtest_soxl_intraday.py','utf8');
   const soxlCollector=fs.readFileSync(__d+'/scripts/collect_soxl_data.py','utf8');

@@ -433,21 +433,22 @@ async function notifyPaperTransitions(env,oldLedger,newLedger){
   const oldBy=new Map(((oldLedger&&oldLedger.trades)||[]).map(x=>[x.id,x]));
   for(const x of ((newLedger&&newLedger.trades)||[])){
     const prev=oldBy.get(x.id);
-    if(!prev){
+    // 신규 후보만 선정됐거나 진입봉 시가가 확정되지 않았으면 알림 금지.
+    // pending -> open/closed 모의체결 전환에서만 매수 알림을 보낸다.
+    if((!prev||!(Number(prev.entryPrice)>0))&&Number(x.entryPrice)>0&&["open","closed"].includes(x.status)){
       await sendScalpingAlert(env,{
         strategy:"daytrading",stage:"buy",
         eventId:"daytrading:"+newLedger.date+":"+x.id+":buy",
-        date:newLedger.date,time:hmLabel(x.signalTime),
+        date:newLedger.date,time:hmLabel(x.entryTime),
         lines:[
           (x.name||x.code)+" ("+x.code+")",
-          "신호 "+hmLabel(x.signalTime)+" · 신호가 "+Math.round(x.signalPrice||0).toLocaleString("ko-KR")+"원",
-          "매수: 다음 1분봉 시가 "+hmLabel(x.entryTime)+(x.entryPrice?" · "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원":" · 진입 대기"),
-          "근거: 점수 "+Number(x.score||0).toFixed(1)+" · 장중수익 "+signedPct(x.sessionRet)+" · VWAP기울기 "+signedPct(x.vwapSlope)+" · 거래량 "+Number(x.volRatio||0).toFixed(2)+"배",
-          "청산계획: 손절 -"+Number(newLedger.stopPct||PAPER_STOP_PCT).toFixed(1)+"% · 익절 +"+Number(newLedger.takeProfitPct||PAPER_TAKE_PROFIT_PCT).toFixed(1)+"% · "+hmLabel(PAPER_FINAL_EXIT_HM)+" 시간청산"
+          "모의 매수 확정 "+hmLabel(x.entryTime)+" · "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원",
+          "신호 "+hmLabel(x.signalTime)+" · 장중수익 "+signedPct(x.sessionRet)+" · 거래량 "+Number(x.volRatio||0).toFixed(2)+"배",
+          "청산계획: 손절 -"+Number(newLedger.stopPct||PAPER_STOP_PCT).toFixed(1)+"% · 익절 +"+Number(newLedger.takeProfitPct||PAPER_TAKE_PROFIT_PCT).toFixed(1)+"%"
         ]
       });
     }
-    if(x.status==="closed"&&(!prev||prev.status!=="closed")){
+    if(x.status==="closed"&&Number(x.entryPrice)>0&&Number(x.exitPrice)>0&&(!prev||prev.status!=="closed")){
       await sendScalpingAlert(env,{
         strategy:"daytrading",stage:"sell",
         eventId:"daytrading:"+newLedger.date+":"+x.id+":sell:"+String(x.exitTime||""),
@@ -467,10 +468,13 @@ export function recentPaperPushEvents(ledger,windowMin=8){
   const rows=[],now=hmToMin(ledger&&ledger.targetHm);
   for(const x of (ledger&&ledger.trades||[])){
     if(!x||!x.id)continue;
-    const events=[{stage:"buy",when:+x.signalTime||0,eventId:"daytrading:"+ledger.date+":"+x.id+":buy",
-      lines:[(x.name||x.code)+" ("+x.code+")","신호 "+hmLabel(x.signalTime)+" · 모의진입 "+hmLabel(x.entryTime),
-        "신호가 "+Math.round(x.signalPrice||0).toLocaleString("ko-KR")+"원"]}];
-    if(x.status==="closed"&&x.exitTime)events.push({stage:"sell",when:+x.exitTime,
+    // 후보 시각이 아닌 모의 진입봉 시가/가격이 확정된 시각만 재알림 대상.
+    const events=[];
+    if(Number(x.entryPrice)>0&&["open","closed"].includes(x.status))events.push({
+      stage:"buy",when:+x.entryTime||0,eventId:"daytrading:"+ledger.date+":"+x.id+":buy",
+      lines:[(x.name||x.code)+" ("+x.code+")","모의 매수 확정 "+hmLabel(x.entryTime),
+        "진입가 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원"]});
+    if(x.status==="closed"&&Number(x.exitPrice)>0&&x.exitTime)events.push({stage:"sell",when:+x.exitTime,
       eventId:"daytrading:"+ledger.date+":"+x.id+":sell:"+String(x.exitTime),
       lines:[(x.name||x.code)+" ("+x.code+") · "+exitLabel(x.reason),
         "모의매도 "+hmLabel(x.exitTime)+" · "+Math.round(x.exitPrice||0).toLocaleString("ko-KR")+"원",
@@ -561,7 +565,7 @@ async function runScheduled(controller,env){
     return;
   }
 
-  if(sched.hm===1535){ await sendDailySummary(env,sched.date); return; }
+  if(sched.hm===1535){ return; } // 일일 요약은 화면에만 남기고 메시지는 보내지 않는다.
   const lag=Math.max(0,Date.now()-scheduled);
 
   // 09:55 KST: immutable Top100 snapshot. If it is delayed beyond 10:15,

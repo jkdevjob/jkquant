@@ -358,10 +358,10 @@ t("새 구조 변수: ③ 최근 N일 고가(hiN) · ④ IBS · 연속 하락 ·
 t("웹 알림: 매수·매도 때만 · 같은 알림 id · ③ 다음 날 09:00 매도 · 손절은 매도 알림 안 함", () => {
   const now = Date.parse("2026-10-07T10:30:00+09:00");                       // 업비트 하루 10/7 · 어제 10/6
   const live = { today: "2026-10-07", tabs: {
-    opening: { rows: [{ name: "가", status: "보유중", expectedGapPct: -5.2 }, { name: "나", status: "주문 실패" },
-                      { name: "다", status: "청산", realized: true, pnlPct: 2.0 }, { name: "라", status: "청산", realized: true, pnlPct: -1.0 }] },
-    daytrading: { rows: [{ name: "KODEX", buyTime: "2026-10-06 15:30 종가", sellTime: "오늘 09:00 시가", status: "청산", realized: true, pnlPct: 0.8 },
-                         { name: "KODEX", buyTime: "오늘 15:30 종가", status: "보유중(오버나잇)", dropPct: -3.4 }] },
+    opening: { rows: [{ name: "가", status: "보유중", expectedGapPct: -5.2, buyPriceKind:"체결", buyPrice:100 }, { name: "나", status: "주문 실패" },
+                      { name: "다", status: "청산", realized: true, pnlPct: 2.0, buyPriceKind:"체결", buyPrice:100, sellPrice:102 }, { name: "라", status: "청산", realized: true, pnlPct: -1.0, buyPriceKind:"체결", buyPrice:100, sellPrice:99 }] },
+    daytrading: { rows: [{ name: "KODEX", buyTime: "2026-10-06 15:30 종가", sellTime: "오늘 09:00 시가", status: "청산", realized: true, pnlPct: 0.8, sellPrice:1008 },
+                         { name: "KODEX", buyTime: "오늘 15:30 종가", status: "보유중(오버나잇)", dropPct: -3.4, buyPriceKind:"체결", buyPrice:1000 }] },
     crypto: { rows: [{ code: "KRW-BTC", hold: true, buyTime: "10:00", buyPrice: 120000000, stopped: false, nowPrice: 121000000 },
                      { code: "KRW-ETH", hold: true, buyTime: "09:00", buyPrice: 3700000, stopped: true, stopPrice: 3515000, pnlPct: -5.24, nowPrice: 3600000 }] },
     soxl: { rows: [{ status: "보유중 (시가 매수)", buyTime: "2026-10-06 시가", buyPrice: 150.5 }] } } };
@@ -371,9 +371,9 @@ t("웹 알림: 매수·매도 때만 · 같은 알림 id · ③ 다음 날 09:00
   assert.deepEqual(ids, ["coin:2026-10-06:KRW-BTC:sell", "coin:2026-10-07:KRW-BTC:buy", "coin:2026-10-07:KRW-ETH:buy", "coin:2026-10-07:KRW-ETH:stop",
     "etf:2026-10-07:buy", "etf:2026-10-07:sell", "open:2026-10-07:buy", "open:2026-10-07:sell", "soxl:2026-10-06:buy"]);
   const by = Object.fromEntries(ev.map(e => [e.id, e]));
-  assert.equal(by["open:2026-10-07:buy"].body, "가 (갭 -5.20%) · 다 · 라 — 08:59 동시호가 · 주문 실패 1종목");   // 주문 실패는 매수로 안 셈
-  assert.equal(by["open:2026-10-07:sell"].body, "다 +2.00% · 라 -1.00% · 평균 +0.50%");
-  assert.equal(by["coin:2026-10-06:KRW-BTC:sell"].body, "BTC 09:00 매도(어제 돌파분) 약 +9.86%");      // 121/110 − 1 − 비용 0.14
+  assert.equal(by["open:2026-10-07:buy"].body, "가 (갭 -5.20%) · 다 · 라 — 08:59 동시호가 · 주문 실패 1종목 · 모의체결 기준");   // 주문 실패는 매수로 안 셈
+  assert.equal(by["open:2026-10-07:sell"].body, "다 +2.00% · 라 -1.00% · 평균 +0.50% · 모의체결 기준");
+  assert.equal(by["coin:2026-10-06:KRW-BTC:sell"].body, "BTC 09:00 매도(어제 돌파분) 약 +9.86% · 모의체결 기준");      // 121/110 − 1 − 비용 0.14
   assert.equal(by["coin:2026-10-07:KRW-BTC:buy"].price, 120000000);                                 // 다음 날 매도 알림이 쓸 매수가
   assert.ok(!ids.includes("coin:2026-10-06:KRW-ETH:sell"));                                          // 어제 손절한 코인은 09:00 매도 없음
   assert.deepEqual(PU.pushEvents({ today: "2026-10-07", tabs: { opening: { rows: [{ name: "가", status: "주문 실패" }] }, daytrading: { rows: [{ status: "매매 없음" }] },
@@ -427,7 +427,7 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     getAlarm: async () => alarmAt, setAlarm: async t => { alarmAt = t; } } }, env);
   const ua = nodeCrypto.createECDH("prime256v1"); ua.generateKeys();
   const sub = { endpoint: "https://push.test/s1", keys: { p256dh: PU.b64u(ua.getPublicKey()), auth: PU.b64u(nodeCrypto.randomBytes(16)) } };
-  let live = { ok: true, today: "2026-10-07", tabs: { opening: { rows: [{ name: "가", status: "보유중" }] }, daytrading: { rows: [] }, crypto: { rows: [] }, soxl: { rows: [] } } };
+  let live = { ok: true, today: "2026-10-07", tabs: { opening: { rows: [{ name: "가", status: "보유중", buyPriceKind: "체결", buyPrice: 100 }] }, daytrading: { rows: [] }, crypto: { rows: [] }, soxl: { rows: [] } } };
   const posts = [], oldFetch = globalThis.fetch;
   globalThis.fetch = async (u, init = {}) => {
     u = String(u);
@@ -449,7 +449,7 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     assert.equal(r1.dropped, 1); assert.equal((await call("/push-key")).subscribers, 1);            // 410 받은 구독은 지운다
     posts.length = 0;
     assert.equal((await W.claudePushWatch(env, now + 3e5)).fresh || 0, 0); assert.deepEqual(posts, []);   // 같은 매수는 다시 안 보냄
-    live.tabs.opening.rows[0] = { name: "가", status: "청산", realized: true, pnlPct: 1.2 };
+    live.tabs.opening.rows[0] = { name: "가", status: "청산", realized: true, pnlPct: 1.2, buyPriceKind: "체결", buyPrice: 100, sellPrice: 101.2 };
     alarmAt = null;
     await store.alarm();                                                                              // 저장소 알람이 감시를 돌리고 다음 5분 알람을 다시 건다
     assert.deepEqual(posts, ["https://push.test/s1"]);                                                // 매수는 이미 보냄 — 새로 생긴 매도 한 건만

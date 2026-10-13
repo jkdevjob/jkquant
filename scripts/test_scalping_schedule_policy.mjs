@@ -63,9 +63,9 @@ ok(!/^\s*schedule:/m.test(duel)
 
 ok(globalW.includes('"⑤ 오늘 매매이력"')
   &&globalW.includes('"⑥ 검증·분석 기록 · 연구자료 기준 "')
-  &&globalW.includes('if(k.hm===5)await sendCloseSummary(env,"crypto"')
-  &&globalW.includes('if(n.hm===1605&&isNyseSessionDate(n.date))'),
-  'BTC/SOXL ⑤⑥ are emitted by Worker at market close times');
+  &&!globalW.includes('if(k.hm===5)await sendCloseSummary(env,"crypto"')
+  &&!globalW.includes('await sendCloseSummary(env,"soxl"'),
+  'BTC/SOXL research summaries remain in UI only; no close Telegram');
 
 ok(globalW.indexOf('const live=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)])')
   < globalW.indexOf('await runCloseSummaries(env,now)'),

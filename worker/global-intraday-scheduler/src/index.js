@@ -613,17 +613,8 @@ async function runCloseSummaries(env,now){
       }
     }
   }
-  if(k.hm===5)await sendCloseSummary(env,"crypto",previousDate(k.date),"00:05 KST");
-  const n=parts(now,"America/New_York");
-  if(n.hm===1605&&isNyseSessionDate(n.date)){
-    try{
-      const bars=await fetchSoxl();
-      if(hasSoxlSessionOpenBar(bars,n.date))await sendCloseSummary(env,"soxl",n.date,"16:05 ET");
-      else console.log(JSON.stringify({type:"market_session_unconfirmed_skip",market:"NYSE",date:n.date,strategy:"soxl-summary",reason:"09:30 ET bar missing"}));
-    }catch(e){
-      console.error(JSON.stringify({type:"market_session_check_failed",market:"NYSE",date:n.date,strategy:"soxl-summary",error:String(e.message||e)}));
-    }
-  }
+  // 연구 마감요약/매매없음 전송 중단: 매수·매도 모의체결 알림만 허용.
+  // SOXL 역시 마감요약 대신 모의 매수·매도 이벤트만 발송한다.
 }
 
 async function run(env){

@@ -473,7 +473,7 @@ async function runMinute(controller,env){
     result.webPush=await notifyOpeningWebPush(env,kst.date,buyEvents,sellEvents,mainVariant);
   }
   console.log(JSON.stringify(result));
-  if(kst.hh===9&&kst.mm===31){ try{await sendOpeningCloseSummary(env,kst.date);}catch(e){console.error(JSON.stringify({type:"opening_close_summary_failed",date:kst.date,error:String(e.message||e)}));} }
+  // 연구 마감요약/매매없음은 장부에만 기록한다. 웹푸시와 텔레그램은 모의 매수·매도만.
 }
 
 // ── D-1 시초가 갭하락 과매도(opening_gapdown_v1) 연구용 모의체결 ──
@@ -571,8 +571,8 @@ export function claudeSendState(ledger,strategy){
   const has=id=>ev.some(e=>e&&e.id===id);
   const fails=ev.filter(e=>e&&String(e.id).startsWith("tg:"+strategy+":fail:")).length;
   const rec=(ev.find(e=>e&&e.id==="close:"+strategy)||{}).payload||null;
-  return {done:has("tg:"+strategy+":sent")||has("tg:"+strategy+":unknown"),fails,record:rec,
-    canSend:!(has("tg:"+strategy+":sent")||has("tg:"+strategy+":unknown"))&&fails<CLAUDE_TG_MAX_FAILS};
+  const finished=has("tg:"+strategy+":sent")||has("tg:"+strategy+":unknown")||has("tg:"+strategy+":skipped");
+  return {done:finished,fails,record:rec,canSend:!finished&&fails<CLAUDE_TG_MAX_FAILS};
 }
 async function claudeAppend(env,date,id,stage,payload,ms){
   const event={id,date,capturedAt:new Date().toISOString(),targetHm:kstHm(ms),strategy:"claude_day",stage,payload};
@@ -597,7 +597,7 @@ async function claudeDayClose(env,strategy,date,ms,extra={}){
     let res;
     try{res=await claudePost(env,{op:"send",strategy,date,result:s.record,records:extra.records});}
     catch(e){res={ok:false,definite:false,error:String(e.message||e)};}
-    const tag=res.ok?"sent":res.definite?"fail:"+(s.fails+1):"unknown";
+    const tag=res.skipped?"skipped":res.ok?"sent":res.definite?"fail:"+(s.fails+1):"unknown";
     await claudeAppend(env,date,"tg:"+strategy+":"+tag,"telegram",{ok:!!res.ok,messageId:res.messageId||null,error:res.error||null},ms);
     console.log(JSON.stringify({type:"claude_day_telegram",strategy,date,result:tag,error:res.error||null}));
     return s;
@@ -726,6 +726,21 @@ async function pushBroadcast(env,msgs,call=(op,b)=>pushStore(env,op,b)){
   if(gone.length)await call("drop",{endpoints:gone});
   return {subs:subs.length,sent:res,dropped:gone.length};
 }
+// Telegram은 확정 모의체결 이벤트만 발송한다. 후보·매매없음·예상가/요약은 이 경로에 들어오지 않는다.
+async function claudeTradeTelegram(env,event){
+  try{
+    const r=await fetch(baseUrl(env)+"/api/claude-telegram",{
+      method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
+      body:JSON.stringify({op:"trade",eventId:event.id,title:event.title,body:event.body})
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
+    return {ok:true,eventId:event.id};
+  }catch(e){
+    console.error(JSON.stringify({type:"claude_trade_telegram_failed",eventId:event.id,error:String(e.message||e)}));
+    return {ok:false,eventId:event.id};
+  }
+}
 export async function claudePushWatch(env,nowMs=Date.now(),call=(op,b)=>pushStore(env,op,b)){
   const r=await fetch(baseUrl(env)+"/api/claude-live",{headers:{"x-monitor-key":env.MONITOR_KEY,Accept:"application/json"}});
   const live=await r.json().catch(()=>null);
@@ -736,8 +751,13 @@ export async function claudePushWatch(env,nowMs=Date.now(),call=(op,b)=>pushStor
   const {fresh}=await call("claim",{events:evs});           // 먼저 기록 — 보내다 실패해도 같은 알림을 되풀이하지 않는다
   const msgs=evs.filter(e=>fresh.includes(e.id));
   if(!msgs.length)return {events:evs.length,fresh:0};
-  const out=await pushBroadcast(env,msgs,call);
-  console.log(JSON.stringify({type:"claude_push",fresh:msgs.map(m=>m.id),...out}));
+  // 같은 확정 모의체결 이벤트를 웹푸시와 텔레그램 두 채널로 독립 송신한다.
+  const [out,telegram]=await Promise.all([
+    pushBroadcast(env,msgs,call),
+    Promise.all(msgs.map(m=>claudeTradeTelegram(env,m)))
+  ]);
+  console.log(JSON.stringify({type:"claude_push",fresh:msgs.map(m=>m.id),
+    telegramSent:telegram.filter(x=>x.ok).length,telegramFailed:telegram.filter(x=>!x.ok).length,...out}));
   return {events:evs.length,fresh:msgs.length,...out};
 }
 
