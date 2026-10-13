@@ -247,7 +247,7 @@ canvas{display:block;width:100%;height:auto}
 
 </style>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js?v=1.0.1" defer></script>
+<script src="/jk-ui.js?v=1.0.3" defer></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
@@ -293,7 +293,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.1</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -318,12 +318,12 @@ canvas{display:block;width:100%;height:auto}
 
 <div class="wrap" id="app" style="display:none">
   <div class="strategy-tabs">
-    <button class="strategy-tab" data-strategy="tenbagger" onclick="showStrategy('tenbagger')">🔟 텐배거 연구</button>
     <button class="strategy-tab on" data-strategy="daily" onclick="showStrategy('daily')">📅 오늘</button>
     <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
     <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
     <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
     <button class="strategy-tab" data-strategy="soxl" onclick="showStrategy('soxl')">⚡ SOXL</button>
+    <button class="strategy-tab" data-strategy="tenbagger" onclick="showStrategy('tenbagger')">🔟 텐배거 연구</button>
     <button class="strategy-tab" data-strategy="duel" onclick="showStrategy('duel')">🆚 클로드 대결</button>
   </div>
 

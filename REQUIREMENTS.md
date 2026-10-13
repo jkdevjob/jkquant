@@ -32,6 +32,11 @@
 | R-14 | 연구 GPT·전향 검증 | 메뉴를 연구(지피티)로 바꾸고 기존 단타 탭·접근권한 보존. 텐배거 고정 가설·후보 등록·등록일 이후 새 KRX 세션 관찰. 규칙/시점/해시 고정·실패/정지/누락/미청산 보존·실주문 없음. 기존 research 동의 기기에 연구별 링크·중복방지·실패 재시도 | scalping.html, tenbagger-gpt.js, scripts/tenbagger_forward.py, functions/api/tenbagger-research.js, tenbagger-forward.yml, 연구 알림 Worker |
 | R-15 | 연구(클로드)·텐배거 전향 시험 | 메뉴를 연구(클로드)로 바꾸고 단타 탭·주문·장부·소유자 권한 보존. 30년 분석의 고정 모형·규칙(sha256 잠금)으로 등록 뒤 첫 종가부터만 신호 → 다음 거래일 종가 체결, 백테와 같은 매매 코드 재사용, 실시간에 모르는 정보(상폐 꼬리) 금지, 1만$·10만$ 두 장부, 기록 덧붙이기만(수정 감지 별도), 알림은 실제 매수·매도 때만(`[클로드 연구 텐배거]` 웹 알림·텔레그램, 자료일마다 한 번) · 실주문 없음 | `scripts/tenbagger_claude/forward.py`·`signals.py`, `claude-tenbagger.js`, `claude.html`, `functions/api/tenbagger-claude.js`, `.github/workflows/tenbagger-claude-forward.yml`, `test_forward.py`, `tests/research-claude-tenbagger.test.mjs` |
 
+## 2026-10-13 추가 메뉴 요청
+
+- 연구(지피티)의 텐배거 연구 탭은 SOXL 뒤, 클로드 대결 바로 앞에 둔다. 기본 오늘 탭과 직접 연구 링크를 유지한다.
+- 별도 텐배거 전체메뉴는 모든 사용자·페이지에서 숨기며 옛 DB 설정·인증/조회 대기로 다시 나타나지 않는다. 메뉴 노출만 변경하고 기존 페이지 접근권한·분석 자료·연구 규칙·장부·알림은 보존한다.
+
 ## 3. 공식 상태의 의미
 
 - **완료(구현)**: 해당 기능의 코드가 최신 main에 있고 관련 단위/회귀검사가 통과함.

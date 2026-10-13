@@ -20,7 +20,7 @@
     {path:'/scalping',label:'연구(지피티)',mode:'admin',order:40},
     {path:'/claude',label:'연구(클로드)',mode:'admin',order:50},
     {path:'/paper',label:'모의',mode:'public',order:60},
-    {path:'/tenbagger',label:'텐배거',mode:'public',order:65,after:'/paper'},
+    {path:'/tenbagger',label:'텐배거',mode:'public',order:65,after:'/paper',navHidden:true},
     {path:'/ipo',label:'공모주',mode:'public',order:70},
     {path:'/realestate',label:'부동산',mode:'public',order:75},
     {path:'/job',label:'JOB',mode:'public',order:80},
@@ -107,8 +107,10 @@
       });
       links.forEach(function(a){
         var p=menuPath(a.getAttribute('href')),mode=menuMode(cfg,p);
+        var item=MENU_ITEMS.find(function(x){return x.path===p;});
         var visible=mode==='public'||(mode==='admin'&&admin);
         if(mode==='hidden')visible=false;
+        if(item&&item.navHidden)visible=false; // 연구 탭으로 통합: 옛 DB 설정으로 메뉴를 다시 노출하지 않는다. 직접 주소 권한은 유지한다.
         a.classList.toggle('jk-menu-hidden',!visible);
         if(p==='/admin')a.classList.toggle('admin-on',admin);
       });
@@ -187,7 +189,9 @@
   }
 
   /* ── 화면 ── 단타·관리자 메뉴는 소유자에게만 · 승인 전에는 본문을 가린다(data-guard) */
-  var css=''
+  var css=MENU_ITEMS.filter(function(x){return x.navHidden;}).map(function(x){
+    return '.jkmenu-pop a[href="'+x.path+'"]{display:none!important}';
+  }).join('') // 인증/DB 응답 전과 메뉴 대기 한도 뒤에도 통합된 메뉴는 숨긴다.
    +'html:not(.jk-admin) a[href="/scalping"],html:not(.jk-admin) a[href="/claude"],html:not(.jk-admin) a[href="/admin"]{display:none!important}'
    +'.jk-menu-hidden{display:none!important}'
    +'html.jk-guard:not(.jk-ok) body{overflow:hidden}'

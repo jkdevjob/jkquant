@@ -11,6 +11,19 @@
 - 첫 전체 검사(`check-before-push.cjs`)에서 31/48 단계 실패 1건: GPT 텐배거 화면 시험이 `tenbagger.html` 버전을 정확히 v1.1.1 로 고정해, 메뉴 이름 변경에 따른 z 올림(v1.1.2)을 막았다. 검사를 지우지 않고 기능 버전 고정(`v1.1.x`)으로 바꿨다(같은 이유로 연구(지피티) `scVer` 1.44.x). Pages Functions 빌드(`wrangler pages functions build`) 성공.
 - 미확인: GitHub Actions 첫 실행·자료 브랜치 저장, 실제 웹 알림 도착, 소유자 로그인 뒤 실제 화면, 전향 수익.
 
+## 2026-10-13 · 전 페이지 헤더·PC 폭 통일 + 모의성과 달러·원화 병기 · v1.44.2
+
+- 새 값/회귀검사: `node scripts/check-unified-layout.cjs` — 루트 11페이지 공용 UI 캐시 키, PC 1100px, 메뉴명 헤더, 관리자 메뉴관리의 텐배거 제외, 모의성과 달러+원화 병기, 3개 변이 차단.
+- 기존 모바일/상단 sticky 검사와 같은 GitHub `검증` workflow에서 실행하도록 연결했다.
+- GitHub CI 전체 PASS, 병합, Pages 배포, 실제 운영 URL 표시는 PR/병합 후 별도로 확인한다.
+
+## 2026-10-13 · 텐배거 연구 탭 순서·메뉴 숨김 · v1.44.1
+
+- `node --test tests/research-gpt.test.mjs`: 6 PASS / 0 FAIL. 새 2개 값 시험: 7개 탭의 정확한 순서·오늘 선택·텐배거 버튼 호출값, 11페이지 × 로그아웃/승인/소유자의 실제 공용 메뉴 함수·초기 CSS·6초 대기 해제·옛 DB public 설정·기존 URL 권한·다른 메뉴 유지.
+- 새 변이 3/3 값 실패 차단: 연구 탭을 맨 앞으로 되돌림, navHidden 제거, 초기 숨김 CSS 제거. import/문법 오류를 차단 증거로 세지 않는다.
+- 최종 로컬 `node scripts/check-before-push.cjs`: **48/48 단계 PASS · 전체 회귀 2,759 PASS / 0 FAIL**. 외부 Worker dry-run 포함. Pages Functions 별도 빌드도 성공했다.
+- 기존 GPT 자료·UI 격리·지연 로딩 3변이, 공용 UI 값 시험 ALL PASS, 텐배거 클로드 화면·메뉴 32 PASS / 0 FAIL. 전체 검증·외부 CI·배포 근거는 해당 PR 최종 로그가 정본이다. 소유자 로그인 후/실제 iPhone 표시·전략 수익성은 이번 검증 범위가 아니다.
+
 ## 2026-10-13 · 연구 메뉴 알림 정리
 
 - `node scripts/test_opening_gapdown.mjs`: 37 ALL PASS.
