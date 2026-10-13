@@ -456,12 +456,13 @@ await t('P9 원화 평가와 달러 수익률이 어긋나 보이던 것 — 줄
   assert.equal(K(row(1e8,{price:0})),null,'시세 없는 줄은 비운다'); assert.equal(K(row(1e8,{inflowWon:null})),null);
   const line=L([a,b,c,{cur:'krw',price:1,inflow:1,inflowWon:1,wonRate:1}]);
   assert(/시작일 환율 1,508원 → 지금 1,338원 \(−11\.3%\)/.test(line),line);
-  assert(/평가\(원\)<\/b>는 지금 환율로 바꾼 값, <b>최종·현재·연\(%\)<\/b>은 달러 기준/.test(line));
+  assert(/달러 종목 금액은 달러 \+ 원화<\/b>로 함께 표시합니다/.test(line));
   assert(/시작일 환율 1,450~1,508원\(세션마다 다름\) → 지금 1,338원/.test(L([a,Object.assign(row(1e8),{inflow:1e8/1450})])),'시작일이 다르면 범위');
   assert.equal(L([{cur:'krw',price:1,inflow:1,inflowWon:1,wonRate:1}]),'','원화 종목뿐이면 안 적는다');
   const op=fn('async function openPaper()');
   assert(op.indexOf('h=paperFxLine(rows)+h;')>0 && op.indexOf('h=paperFxLine(rows)+h;')<op.indexOf('if(paperStaleNote) h=')
-     && /원화 \$\{paperKrwRet\(r\)>=0\?'\+':''\}\$\{paperKrwRet\(r\)\.toFixed\(1\)\}%/.test(op),'표 배선');
+     && /paperDualMoney\(r,r\.total,r\.wonRate\)/.test(op)
+     && /원화 수익률 \$\{paperKrwRet\(r\)>=0\?'\+':''\}\$\{paperKrwRet\(r\)\.toFixed\(1\)\}%/.test(op),'표 배선');
 });
 await t('P10 폰 폭: 첫 칸 윗줄(줄바꿈 없음)은 설정 2개까지 — 3개면 375px 폰에서 최종 칸이 잘렸다',async()=>{
   const op=fn('async function openPaper()');
