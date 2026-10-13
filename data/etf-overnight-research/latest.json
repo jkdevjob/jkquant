@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-13T12:06:49.119919+09:00",
+  "generatedAt": "2026-10-14T02:08:33.975495+09:00",
   "strategyVersion": "etf_dip_overnight_v1",
   "rule": {
     "code": "233740",
@@ -17,7 +17,7 @@
     "worstDay": -15.0
   },
   "from": "2018-04-02",
-  "to": "2026-10-12",
+  "to": "2026-10-13",
   "evaluationOrder": [
     "plus1DaysPerYear",
     "plus5WeeksPerYear",
@@ -50,24 +50,24 @@
       "gate": true
     },
     "outOfSample": {
-      "days": 6,
-      "tradeDays": 1,
-      "tradeDaysPerYear": 41.666666666666664,
+      "days": 7,
+      "tradeDays": 2,
+      "tradeDaysPerYear": 71.42857142857143,
       "plus1RateOfTradeDays": 0.0,
-      "lossDaysPerYear": 41.666666666666664,
+      "lossDaysPerYear": 71.42857142857143,
       "tStat": null,
       "plus1Days": 0,
       "plus1DaysPerYear": 0.0,
       "plus5Weeks": 0,
       "plus5WeeksPerYear": 0.0,
-      "weeklyAvgPct": -0.33713368393935017,
-      "totalPct": -1.007995110024451,
-      "lossDays": 1,
-      "lossDayAvgPct": -1.007995110024451,
-      "worstDayPct": -1.007995110024451,
-      "mddPct": -1.007995110024451,
+      "weeklyAvgPct": -2.355491301135604,
+      "totalPct": -6.901330631803592,
+      "lossDays": 2,
+      "lossDayAvgPct": -3.480670028879823,
+      "worstDayPct": -5.953344947735195,
+      "mddPct": -6.901330631803592,
       "cagrPct": null,
-      "expectancyPct": -1.007995110024451,
+      "expectancyPct": -3.480670028879823,
       "profitFactor": 0.0,
       "gate": false
     }
@@ -96,7 +96,7 @@
       "gate": false
     },
     "outOfSample": {
-      "days": 6,
+      "days": 7,
       "tradeDays": 0,
       "tradeDaysPerYear": 0.0,
       "plus1RateOfTradeDays": null,
@@ -142,42 +142,29 @@
       "gate": true
     },
     "outOfSample": {
-      "days": 6,
-      "tradeDays": 1,
-      "tradeDaysPerYear": 41.666666666666664,
+      "days": 7,
+      "tradeDays": 2,
+      "tradeDaysPerYear": 71.42857142857143,
       "plus1RateOfTradeDays": 0.0,
-      "lossDaysPerYear": 41.666666666666664,
+      "lossDaysPerYear": 71.42857142857143,
       "tStat": null,
       "plus1Days": 0,
       "plus1DaysPerYear": 0.0,
       "plus5Weeks": 0,
       "plus5WeeksPerYear": 0.0,
-      "weeklyAvgPct": -0.33713368393935017,
-      "totalPct": -1.007995110024451,
-      "lossDays": 1,
-      "lossDayAvgPct": -1.007995110024451,
-      "worstDayPct": -1.007995110024451,
-      "mddPct": -1.007995110024451,
+      "weeklyAvgPct": -2.355491301135604,
+      "totalPct": -6.901330631803592,
+      "lossDays": 2,
+      "lossDayAvgPct": -3.480670028879823,
+      "worstDayPct": -5.953344947735195,
+      "mddPct": -6.901330631803592,
       "cagrPct": null,
-      "expectancyPct": -1.007995110024451,
+      "expectancyPct": -3.480670028879823,
       "profitFactor": 0.0,
       "gate": false
     }
   },
   "latestSignals": [
-    {
-      "signalDate": "2026-07-30",
-      "exitDate": "2026-07-31",
-      "strategyVersion": "etf_dip_overnight_v1",
-      "code": "233740",
-      "dayChangePct": -10.532030401737247,
-      "entryPrice": 4120.0,
-      "exitPrice": 4700.0,
-      "grossPnl": 14.077669902912614,
-      "frictionPct": 0.2727184466019417,
-      "pnl": 13.804951456310672,
-      "sample": "design"
-    },
     {
       "signalDate": "2026-08-18",
       "exitDate": "2026-08-19",
@@ -294,6 +281,19 @@
       "frictionPct": 0.15224938875305621,
       "pnl": -1.007995110024451,
       "sample": "outOfSample"
+    },
+    {
+      "signalDate": "2026-10-12",
+      "exitDate": "2026-10-13",
+      "strategyVersion": "etf_dip_overnight_v1",
+      "code": "233740",
+      "dayChangePct": -10.312500000000002,
+      "entryPrice": 7175.0,
+      "exitPrice": 6760.0,
+      "grossPnl": -5.783972125435543,
+      "frictionPct": 0.16937282229965156,
+      "pnl": -5.953344947735195,
+      "sample": "outOfSample"
     }
   ],
   "live": {
@@ -330,10 +330,10 @@
         "buySlipPct": null,
         "sellQty": null,
         "sellFill": null,
-        "actualNextOpen": null,
+        "actualNextOpen": 6760.0,
         "sellSlipPct": null,
         "realizedNetPct": null,
-        "modelNetPct": null
+        "modelNetPct": -5.953344947735195
       }
     ]
   }

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-13T12:06:39.165781+09:00",
+  "generatedAt": "2026-10-14T02:08:23.903031+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -83,6 +83,12 @@
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-12.csv",
       "rows": 2869,
       "lastDate": "2026-10-12",
+      "status": "provisional"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-13.csv",
+      "rows": 2868,
+      "lastDate": "2026-10-13",
       "status": "provisional"
     }
   ],
@@ -2148,9 +2154,9 @@
     }
   },
   "live": {
-    "trades": 10,
-    "days": 4,
-    "actualGapQualifiesRate": 20.0,
+    "trades": 13,
+    "days": 5,
+    "actualGapQualifiesRate": 15.384615384615385,
     "openVsExpectedPct": {
       "n": 4,
       "mean": 2.173923843978909
@@ -2164,8 +2170,8 @@
       "mean": 0.0
     },
     "realizedNetPct": {
-      "n": 5,
-      "mean": -2.3425683084729707
+      "n": 7,
+      "mean": -1.9924406203838998
     },
     "modelNet0tPct": {
       "n": 4,
@@ -2443,12 +2449,93 @@
       "realizedGrossPct": null,
       "realizedNetPct": null,
       "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-13",
+      "code": "087010",
+      "name": "펩트론",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 75000,
+      "expectedGapPct": -16.201117318435752,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 26,
+      "buyFill": 85900,
+      "sellQty": 26,
+      "sellFill": 82900,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": -3.4924330616996513,
+      "realizedNetPct": -3.7224330616996513,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-13",
+      "code": "071970",
+      "name": "HD현대마린엔진",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 36000,
+      "expectedGapPct": -11.22071516646116,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 19,
+      "buyFill": 39668.42105263158,
+      "sellQty": 19,
+      "sellFill": 40350,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": 1.718190261377206,
+      "realizedNetPct": 1.488190261377206,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-13",
+      "code": "298380",
+      "name": "에이비엘바이오",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 40600,
+      "expectedGapPct": -10.964912280701755,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": false,
+      "buyOrderMsg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 49주",
+      "sellOrderOk": false,
+      "sellOrderMsg": null,
+      "buyQty": null,
+      "buyFill": null,
+      "sellQty": null,
+      "sellFill": null,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": null,
+      "realizedNetPct": null,
+      "modelNet0tPct": null
     }
   ],
   "watchlist": {
-    "basedOn": "2026-10-12",
+    "basedOn": "2026-10-13",
     "basedOnStatus": "provisional_snapshot",
-    "size": 39
+    "size": 56
   },
   "finalDataThrough": "2026-10-08"
 }
