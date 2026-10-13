@@ -5,7 +5,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=req
 const ROOT=path.join(__dirname,'..');
 const ui=fs.readFileSync(path.join(ROOT,'jk-ui.js'),'utf8');
 const html=fs.readFileSync(process.argv[2]||path.join(ROOT,'index.html'),'utf8');
-const PAGES=['index.html','backtest.html','plan.html','admin.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','settings.html'];
+const PAGES=['index.html','backtest.html','plan.html','admin.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','settings.html','tenbagger.html'];
 const results=[];let failed=0;
 function t(name,body){ try{ body(); results.push('PASS '+name); }catch(e){ failed++; results.push('FAIL '+name+' — '+(e&&e.message||e)); } }
 function fnOf(src,marker){const start=src.indexOf(marker);assert(start>=0,marker);let i=src.indexOf('{',start),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(start,i+1);}throw Error('unclosed '+marker);}
@@ -57,7 +57,7 @@ t('U2 자리 — 오른쪽 가장자리 · 화면 세로 가운데 · 모달(z-i
   assert(/#jkToTop\.on\{opacity:\.8;visibility:visible\}/.test(ui) && /opacity:0;visibility:hidden/.test(ui),'평소 숨김 · on 이면 보임');
   assert(/@media print\{#jkToTop\{display:none\}\}/.test(ui));
 });
-t('U3 모든 페이지(10개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
+t('U3 모든 페이지(11개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
   for(const f of PAGES){
     const s=fs.readFileSync(path.join(ROOT,f),'utf8');
     assert.equal((s.match(/<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/g)||[]).length,1,f+' 한 번');
@@ -89,9 +89,11 @@ t('U5 자산플랜 맨 위 "다음 단계 조건" 카드를 뺐다 — 화면·�
 
 /* 전체메뉴 순서 — 관리자가 바꾼 순서(settings/siteMenu)가 첫 읽기가 늦거나 끊겨도 결국 메뉴에 붙는다 (2026-10-07 사용자 화면) */
 const acc=fs.readFileSync(path.join(ROOT,'jk-access.js'),'utf8');
-const HREFS=['/','/plan','/backtest','/scalping','/claude','/paper','/ipo','/realestate','/job','/admin'];
-const SAVED={'/':10,'/plan':20,'/paper':30,'/scalping':40,'/claude':50,'/backtest':60,'/ipo':70,'/realestate':80,'/job':90,'/admin':100};
-const ORDER_SAVED=Object.keys(SAVED).sort((a,b)=>SAVED[a]-SAVED[b]).join(',');
+const HREFS=['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'];
+const SAVED={'/':10,'/plan':20,'/paper':30,'/scalping':40,'/claude':50,'/backtest':60,'/ipo':70,'/realestate':80,'/job':90,'/admin':100};   // 텐배거가 생기기 전에 저장된 설정
+/* 저장된 설정에 텐배거가 없으면 '모의 바로 아래'(모의 +5)에 붙는다(jk-access.js MENU_ITEMS after:'/paper') */
+const ORDER_OF=cfg=>{ const o={...cfg}; if(!('/tenbagger' in o)) o['/tenbagger']=o['/paper']+5; return Object.keys(o).sort((a,b)=>o[a]-o[b]).join(','); };
+const ORDER_SAVED=ORDER_OF(SAVED);
 function menuDom(o={}){
   const pop={hidden:o.open?false:true, children:[], appendChild(a){ const i=this.children.indexOf(a); if(i>=0) this.children.splice(i,1); this.children.push(a); return a; },
              querySelectorAll(q){ return q==='a[href]'?this.children.slice():[]; }};
@@ -130,7 +132,7 @@ ta('U8 첫 읽기가 실패(끊김)하면 한 번 더 읽어 그 순서를 붙�
   await sleep(60);
   assert.equal(F.reads(),2,'한 번 더 읽었다'); assert.equal(D.order(),ORDER_SAVED,'다시 읽은 순서');
   const NEW={...SAVED,'/backtest':15};                                 // 관리자가 백테를 운영 바로 아래로 다시 옮겨 저장
-  const ORDER_NEW=Object.keys(NEW).sort((a,b)=>NEW[a]-NEW[b]).join(',');
+  const ORDER_NEW=ORDER_OF(NEW);
   const E=menuDom(), G=mkFb([()=>sleep(80).then(()=>menuDoc(SAVED)),()=>Promise.resolve(menuDoc(NEW))]);
   await E.A.applyMenuConfig(ADM,G.fb,{timeoutMs:15});                 // 느린 첫 읽기(옛 순서)
   await E.A.applyMenuConfig(ADM,G.fb,{force:true});                   // 저장 직후 새로 읽기

@@ -20,6 +20,7 @@
     {path:'/scalping',label:'단타(지피티)',mode:'admin',order:40},
     {path:'/claude',label:'단타(클로드)',mode:'admin',order:50},
     {path:'/paper',label:'모의',mode:'public',order:60},
+    {path:'/tenbagger',label:'텐배거',mode:'public',order:65,after:'/paper'},
     {path:'/ipo',label:'공모주',mode:'public',order:70},
     {path:'/realestate',label:'부동산',mode:'public',order:75},
     {path:'/job',label:'JOB',mode:'public',order:80},
@@ -48,7 +49,7 @@
     try{ p=new URL(p, location.origin).pathname; }catch(e){}
     p=p.replace(/\/+$/,'')||'/';
     var map={'/index.html':'/','/plan.html':'/plan','/backtest.html':'/backtest','/scalping.html':'/scalping',
-             '/claude.html':'/claude','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/settings.html':'/settings','/admin.html':'/admin'};
+             '/claude.html':'/claude','/tenbagger.html':'/tenbagger','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/settings.html':'/settings','/admin.html':'/admin'};
     return map[p]||p;
   }
   function menuDefaults(){
@@ -60,6 +61,9 @@
     MENU_ITEMS.forEach(function(x){
       var v=src[x.path]||{},mode=['public','admin','hidden'].indexOf(v.mode)>=0?v.mode:x.mode;
       var order=Number.isFinite(+v.order)?+v.order:x.order;
+      /* 새로 생긴 메뉴(after 지정)가 관리자가 저장한 설정에 아직 없으면 그 기준 메뉴 바로 아래에 둔다 —
+         관리자가 순서를 바꿔 저장해 둔 경우에도 '모의 밑에 텐배거'가 지켜진다(저장 순서는 10 단위라 +5 가 사이에 들어간다). */
+      if(x.after&&!src[x.path]&&src[x.after]&&Number.isFinite(+src[x.after].order)) order=+src[x.after].order+5;
       d.items[x.path]={mode:mode,order:order};
     });
     d.updatedAt=+(data&&data.updatedAt)||0; d.updatedBy=String(data&&data.updatedBy||'');

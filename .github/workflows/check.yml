@@ -28,6 +28,8 @@ jobs:
 
       - name: 승인 이메일·개인별 웹푸시 보안 및 중복방지 검사
         run: node --test tests/approval-notification.test.mjs
+      - name: 매일 연구 결과 웹알림 (요약 · 서버 인증 · 주제)
+        run: node --test tests/research-notify.test.mjs
 
       - name: 승인 알림 Worker 빌드 검증 (실배포 없음)
         run: npx --yes wrangler@4 deploy --dry-run --config worker/presale-alert/wrangler.jsonc --outdir /tmp/jkquant-approval-worker-check
@@ -161,12 +163,26 @@ jobs:
       - name: 부동산 GPT 투자판단·자금·계약 기록 값 및 변이 검사
         run: node --test tests/realestate-decision.test.cjs
 
+      - name: 텐배거(클로드) 계산·화면 값 시험 + 변이 시험
+        run: |
+          pip install --quiet numpy pandas
+          python scripts/tenbagger_claude/test_analysis.py
+          python scripts/tenbagger_claude/mutation_test.py
+          node scripts/test_tenbagger_claude.cjs
+
       - name: D-1 갭하락 · D-3 BTC 급락 값 시험 + 변이 시험
         run: |
           pip install --quiet pandas pyarrow
           python scripts/test_opening_gapdown.py
           node scripts/test_opening_gapdown.mjs functions/api
           python scripts/mutation_test_opening_gapdown.py
+
+      - name: 텐배거 GPT 과거 연구 값·미래봉·갭 체결·자료 일치 검사
+        run: |
+          pip install --quiet lxml
+          python scripts/test_tenbagger.py
+          python scripts/mutation_test_tenbagger.py
+          node scripts/test_tenbagger_ui.cjs
 
       - name: BTC 00:00~22:00 기준전략 값·경계 시험
         run: |

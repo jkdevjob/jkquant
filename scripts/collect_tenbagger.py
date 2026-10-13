@@ -53,6 +53,18 @@ def universe(cache, end):
         rows.append({'code': code, 'name': str(x['회사명']), 'market': market,
                      'sector': str(x['업종']), 'listingDate': str(x['상장일']),
                      'delistingDate': None, 'delistingReason': None, 'universeSource': 'KIND-current'})
+    # KIND may repeat a company for different classes of listed shares while
+    # returning the same ordinary-stock code. One code must create one cohort.
+    unique = {}
+    for s in rows:
+        previous = unique.get(s['code'])
+        if previous:
+            if previous['name'] != s['name'] or previous['market'] != s['market']:
+                raise RuntimeError('conflicting current stock identity: ' + s['code'])
+            previous['listingDate'] = min(previous['listingDate'], s['listingDate'])
+            excluded.append({'code':s['code'],'reason':'duplicate_listed_record'})
+        else: unique[s['code']] = s
+    rows = list(unique.values())
     dfile = cache / 'delist.csv'
     meta = cache / 'delist-source.json'
     if not dfile.exists():
@@ -136,9 +148,18 @@ def main():
     p.add_argument('--workers', type=int, default=8)
     p.add_argument('--limit', type=int)
     p.add_argument('--offset', type=int, default=0)
+    p.add_argument('--merge-cache', action='store_true', help='merge normalized batch checkpoints without network price requests')
+    p.add_argument('--universe', help='reuse an already saved universe.json instead of a fresh listing snapshot')
+    p.add_argument('--resume', action='store_true', help='reuse successful normalized stock checkpoints')
     a = p.parse_args()
     cache = pathlib.Path(a.cache); (cache / 'prices').mkdir(parents=True, exist_ok=True)
-    rows, excluded, dm = universe(cache, a.end)
+    if a.universe:
+        saved = json.loads(pathlib.Path(a.universe).read_text())
+        fields = ['code','name','market','sector','listingDate','delistingDate','delistingReason','universeSource']
+        rows = [{k:s.get(k) for k in fields} for s in saved['stocks']]
+        excluded, dm = saved['excludedUniverse'], saved.get('delistingSource', {'snapshot':'2026-09-17','url':'https://github.com/FinanceData/fdr_krx_data_cache'})
+    else:
+        rows, excluded, dm = universe(cache, a.end)
     rows = rows[a.offset:a.offset+a.limit] if a.limit else rows[a.offset:]
     print(f'Universe {len(rows)} (listed {sum(x["delistingDate"] is None for x in rows)}, delisted {sum(x["delistingDate"] is not None for x in rows)})', flush=True)
     manifest = {'schemaVersion': 1, 'collectedAt': dt.datetime.now(dt.timezone.utc).isoformat(),
@@ -146,10 +167,31 @@ def main():
                 'delistingSource': dm, 'priceBasis': 'naver-retrospective-adjusted-OHLCV',
                 'marketBasis': 'current-or-final-market-not-point-in-time',
                 'excludedUniverse': excluded, 'stocks': []}
+    if a.merge_cache:
+        for stock in rows:
+            path = cache / 'normalized' / (stock['code'] + '.json.gz')
+            if not path.exists(): raise RuntimeError('missing checkpoint: ' + stock['code'])
+            s = json.loads(gzip.decompress(path.read_bytes()))
+            bars = s.pop('bars')
+            manifest['stocks'].append(s | {'barCount':len(bars),'firstDate':bars[0][0] if bars else None,'lastDate':bars[-1][0] if bars else None})
+        (cache/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2))
+        print('Merged',len(rows),'transport failures',sum(bool(x['error']) for x in manifest['stocks']),flush=True)
+        return
     with concurrent.futures.ThreadPoolExecutor(max_workers=a.workers) as ex:
-        futures = {ex.submit(collect_one, s, cache, a.end): s for s in rows}
+        def collect_or_resume(s):
+            fp=cache/'normalized'/(s['code']+'.json.gz')
+            if a.resume and fp.exists():
+                try:
+                    result=json.loads(gzip.decompress(fp.read_bytes()))
+                    if not result['error']: return result
+                except (OSError,ValueError,EOFError): pass
+            return collect_one(s,cache,a.end)
+        futures = {ex.submit(collect_or_resume, s): s for s in rows}
         for f in concurrent.futures.as_completed(futures):
             x = f.result()
+            # Futures retain their entire historical-bar result until removed.
+            # Keep one stock in memory, not thousands of complete histories.
+            futures.pop(f,None)
             path = cache / 'normalized' / (x['code'] + '.json.gz')
             path.parent.mkdir(exist_ok=True)
             path.write_bytes(gzip.compress(json.dumps(x, ensure_ascii=False, separators=(',', ':')).encode(), mtime=0))

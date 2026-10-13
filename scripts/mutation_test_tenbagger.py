@@ -16,6 +16,10 @@ mutations = [
     ('미청산 수익 확정', "float(c[s]), '관측 종료 / 미청산 평가', False", "float(c[s]), '관측 종료 / 미청산 평가', True"),
     ('매도 뒤 종가 낙폭 혼입', 'held_closes = c[b:s] if completed', 'held_closes = c[b:s+1] if completed'),
     ('수수료 미반영', 'return sell * (1 - cost) / (buy * (1 + cost))', 'return sell / buy'),
+    ('학습 시점 뒤 가격 혼입', 'd = d.loc[d.date <= asof].reset_index(drop=True)', 'd = d.reset_index(drop=True)'),
+    ('학습 때 미래 폐지 결과 혼입', "stock['delistingDate'] <= asof", "stock['delistingDate'] <= '2025-12-31'"),
+    ('추적 기한 뒤 급등 혼입', "int(np.searchsorted(dates, due, side='right'))-1", "int(np.searchsorted(dates, due))"),
+    ('시가 매수에 그날 거래량 혼입', "d['buyable'] = (d.open > 0)", "d['buyable'] = d.tradable"),
 ]
 
 
@@ -23,6 +27,7 @@ def run(text):
     with tempfile.TemporaryDirectory(prefix='tenbagger-mutation-') as directory:
         p=pathlib.Path(directory)
         (p/'analyze_tenbagger.py').write_text(text)
+        (p/'collect_tenbagger.py').write_text((ROOT/'collect_tenbagger.py').read_text())
         (p/'test_tenbagger.py').write_text((ROOT/'test_tenbagger.py').read_text())
         return subprocess.run([sys.executable,str(p/'test_tenbagger.py')],capture_output=True,text=True)
 

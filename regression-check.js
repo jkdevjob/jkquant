@@ -58,7 +58,7 @@ console.log('[0] 파일 문법');
 /* ── 공통 로그인·시세 부팅 경로 ── */
 console.log('[0-A] 공통 로그인·실시간 시세 의존성');
 {
-  const authPages=['index.html','plan.html','backtest.html','ipo.html','realestate.html','job.html','admin.html','scalping.html','claude.html'];
+  const authPages=['index.html','plan.html','backtest.html','ipo.html','realestate.html','job.html','admin.html','scalping.html','claude.html','tenbagger.html'];
   for(const p of authPages){
     const s=fs.readFileSync(path.join(__d,p),'utf8');
     ok(p+' Firebase SDK 12.19.0 통일',
@@ -4772,7 +4772,7 @@ console.log('\n[76] 버전 형식 (x.y.z)');
 {
   const SEMVER=/^v\d+\.\d+\.\d+$/;
   const pages=[['index.html',idx],['backtest.html',bt]];
-  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html']){
+  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html','tenbagger.html']){
     const fp=__d+'/'+f;
     if(fs.existsSync(fp)) pages.push([f, fs.readFileSync(fp,'utf8')]);
   }
@@ -12130,7 +12130,7 @@ console.log('\n[DANTA LOGIN] 소유자 확인 빠르게 · 토큰/서버 따로 
 console.log('\n[REAL ESTATE] 부동산 메뉴 · 클로드/지피티 탭');
 {
   const re=fs.readFileSync(__d+'/realestate.html','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
-  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html'];
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html','tenbagger.html'];
   ok('모든 페이지 메뉴에서 부동산이 공모주 바로 아래',
      pages.every(f=>/<a href="\/ipo"[^>]*><span class="mi">🎯<\/span>공모주<\/a>\s*\n\s*<a href="\/realestate"[^>]*><span class="mi">🏢<\/span>부동산<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('공용 메뉴 정책·관리자 메뉴 관리에 부동산(공모주 70 < 부동산 75 < JOB 80)',
@@ -12240,11 +12240,38 @@ console.log('\n[SCALPING TODAY KST/AUTO] KST 전일·당일 · 전략분석 자�
 }
 
 
+/* ════ 텐배거 메뉴(모의 바로 아래) · 🤖 클로드 탭 — 계산은 scripts/tenbagger_claude(파이썬) 한 곳, 화면은 그리기만 ════ */
+console.log('\n[TENBAGGER] 텐배거 메뉴 · 클로드/지피티 탭 · 분석 값 시험');
+{
+  const cp=require('child_process'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
+  const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),tb=fs.readFileSync(__d+'/tenbagger.html','utf8'),ck=fs.readFileSync(__d+'/.github/workflows/check.yml','utf8');
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html'];
+  ok('11개 페이지 전체메뉴에서 텐배거가 모의 바로 아래(공모주 위)',
+     pages.every(f=>/<a href="\/paper"[^>]*><span class="mi">🧪<\/span>모의<\/a>\s*\n\s*<a href="\/tenbagger"[^>]*><span class="mi">🔟<\/span>텐배거<\/a>\s*\n\s*<a href="\/ipo"/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+  ok('공용 메뉴 정책: 모의 60 < 텐배거 65(after 모의) < 공모주 70 · 주소 /tenbagger.html → /tenbagger · 관리자 아이콘·내장 목록 · 미리 읽기',
+     /\{path:'\/paper',label:'모의',mode:'public',order:60\},\n\s*\{path:'\/tenbagger',label:'텐배거',mode:'public',order:65,after:'\/paper'\},\n\s*\{path:'\/ipo'/.test(acc)
+     &&/'\/tenbagger\.html':'\/tenbagger'/.test(acc)&&/if\(x\.after&&!src\[x\.path\]&&src\[x\.after\]/.test(acc)
+     &&/'\/tenbagger':'🔟'/.test(ad)&&/\{path:'\/tenbagger',label:'텐배거',mode:'public',order:65\}/.test(ad)
+     &&/\(\?:plan\|paper\|tenbagger\|/.test(ui));
+  ok('텐배거 화면: 승인 가드 · 버전 #tbVer x.y.z · 클로드 탭이 먼저 · 클로드 칸에서 화면 스크립트 · 지피티 칸은 비워 둠',
+     /<script src="\/jk-access\.js" data-guard="1"><\/script>/.test(tb)&&/JKAccess\.guard\(\{auth/.test(tb)&&/id="tbVer">v\d+\.\d+\.\d+<\/span>/.test(tb)
+     &&tb.indexOf('data-tab="claude"')<tb.indexOf('data-tab="gpt"')&&tb.indexOf('id="pane-claude"')<tb.indexOf('tenbagger-claude.js')
+     &&tb.indexOf('tenbagger-claude.js')<tb.indexOf('id="pane-gpt"'));
+  const tj=cp.spawnSync(process.execPath,[__d+'/scripts/test_tenbagger_claude.cjs'],{encoding:'utf8'});
+  ok('텐배거 화면·메뉴 값 시험 + 변이(목록·숫자 형식·메뉴 기준점·분석 파일 정합성)', tj.status===0,
+     (tj.stdout||'').split('\n').filter(l=>/^FAIL|시험:/.test(l)).join(' / ')+(tj.stderr||'').slice(0,300));
+  const tp=cp.spawnSync('python3',['-I',__d+'/scripts/tenbagger_claude/test_analysis.py'],{encoding:'utf8'});
+  ok('텐배거 계산 값 시험 — 수정주가 보정 · 펀드 거르기 · 텐배거 구간 · 다음 날 체결(룩어헤드 금지) · 모형', tp.status===0,
+     (tp.stdout||'').split('\n').filter(l=>/^FAIL|시험:/.test(l)).join(' / ')+(tp.stderr||'').slice(0,300));
+  ok('CI 에서 텐배거 값 시험·변이 시험을 돌린다',
+     /scripts\/tenbagger_claude\/test_analysis\.py/.test(ck)&&/scripts\/tenbagger_claude\/mutation_test\.py/.test(ck)&&/scripts\/test_tenbagger_claude\.cjs/.test(ck));
+}
+
 /* ════ 공용 로그인 · 상단 전체메뉴 통일 ════ */
-console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 9개 페이지 전체메뉴');
+console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메뉴');
 {
   const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8');
-  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html'];
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html','tenbagger.html'];
   ok('공용 승인 로그인 브랜드는 JK 투자 — 퀀트 잔존 없음',
      /var head='<div class="jl">JK <b>투자<\/b><\/div>'/.test(acc)
      &&!/JK <b>퀀트<\/b>/.test(acc)&&!/\/\* JK 퀀트 — 이용 승인/.test(acc));
@@ -12256,9 +12283,9 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 9개 페이지 전체메�
      /function mountMenus\(\)/.test(ui)&&/전체메뉴/.test(ui)&&/btn\.textContent='☰'/.test(ui)
      &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
      &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
-  ok('9개 페이지 모두 jk-ui 공용 UI와 같은 10개 메뉴 링크를 사용',
+  ok('10개 페이지 모두 jk-ui 공용 UI와 같은 11개 메뉴 링크를 사용',
      pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/.test(s)
-       &&['/','/plan','/backtest','/scalping','/claude','/paper','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
+       &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
 }
 
 Promise.all(PENDING).then(()=>{

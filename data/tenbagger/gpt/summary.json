@@ -1,0 +1,3193 @@
+{
+  "schemaVersion": 1,
+  "version": "1.0.0",
+  "generatedAt": "2026-10-13T04:51:40.347391+00:00",
+  "analysisStart": "2000-01-01",
+  "analysisEnd": "2025-12-31",
+  "collection": {
+    "requested": 3512,
+    "listedRequested": 2513,
+    "delistedRequested": 999,
+    "usable": 2553,
+    "listedUsable": 2346,
+    "delistedUsable": 207,
+    "qualityExclusions": {
+      "no_price_history": 327,
+      "price_jump_over_36pct": 514,
+      "less_than_253_bars": 105,
+      "inconsistent_adjusted_ohlc": 17
+    },
+    "universeExclusions": {
+      "listed_after_analysis_end": 54,
+      "other_market": 113,
+      "spac_reit_fund": 262,
+      "duplicate_listed_record": 36
+    },
+    "inputManifestSha256": "08b8bf28cf0c00c5fedabef4821775306ce589ad715e7f11aa0ec4bbe7e99a36",
+    "delistingSnapshot": "2026-09-17"
+  },
+  "tenbaggerStocks": 1191,
+  "byMarket": {
+    "KOSPI": 509,
+    "KOSDAQ": 682
+  },
+  "fastFiveYearStocks": 853,
+  "caseRisk": {
+    "medianRiseMddPct": -68.88489208633092,
+    "medianPostPeakDrawdownPct": -80.86466165413533
+  },
+  "marketCohorts": {
+    "KOSPI": {
+      "n": 3478,
+      "stocks": 744,
+      "successN": 40,
+      "ratePct": 1.1500862564692353,
+      "stockCluster95": [
+        0.756401126117862,
+        1.6786332723227106
+      ]
+    },
+    "KOSDAQ": {
+      "n": 5043,
+      "stocks": 1161,
+      "successN": 127,
+      "ratePct": 2.518342256593298,
+      "stockCluster95": [
+        1.798896410881164,
+        3.180393028193354
+      ]
+    }
+  },
+  "cohortN": 24723,
+  "baselineTrain": {
+    "n": 9182,
+    "stocks": 1278,
+    "successN": 570,
+    "ratePct": 6.207797865388804,
+    "stockCluster95": [
+      5.532229730982443,
+      6.948513555752595
+    ]
+  },
+  "baselineTest": {
+    "n": 8521,
+    "stocks": 1905,
+    "successN": 167,
+    "ratePct": 1.9598638657434573,
+    "stockCluster95": [
+      1.5764355243550114,
+      2.3558260146397987
+    ]
+  },
+  "horizons": [
+    {
+      "years": 1,
+      "n": 24723,
+      "touch10N": 50,
+      "finish10N": 14
+    },
+    {
+      "years": 3,
+      "n": 24723,
+      "touch10N": 398,
+      "finish10N": 111
+    },
+    {
+      "years": 5,
+      "n": 24723,
+      "touch10N": 970,
+      "finish10N": 253
+    }
+  ],
+  "features": [
+    {
+      "id": "above200",
+      "label": "전일 종가 > 200일선",
+      "train": {
+        "n": 4124,
+        "stocks": 1189,
+        "successN": 184,
+        "ratePct": 4.461687681862269,
+        "stockCluster95": [
+          3.553298856245419,
+          5.198220659647639
+        ]
+      },
+      "test": {
+        "n": 2737,
+        "stocks": 1514,
+        "successN": 44,
+        "ratePct": 1.6075995615637562,
+        "stockCluster95": [
+          1.0773685514836757,
+          2.210454816326118
+        ]
+      }
+    },
+    {
+      "id": "rising200",
+      "label": "200일선이 20일 전보다 상승",
+      "train": {
+        "n": 4842,
+        "stocks": 1261,
+        "successN": 196,
+        "ratePct": 4.047914085088807,
+        "stockCluster95": [
+          3.352808703725219,
+          4.9699927354934115
+        ]
+      },
+      "test": {
+        "n": 3371,
+        "stocks": 1666,
+        "successN": 43,
+        "ratePct": 1.2755858795609611,
+        "stockCluster95": [
+          0.8959668188892693,
+          1.6812196228297673
+        ]
+      }
+    },
+    {
+      "id": "trendConfirmed",
+      "label": "종가 > 200일선 + 200일선 상승",
+      "train": {
+        "n": 3509,
+        "stocks": 1171,
+        "successN": 141,
+        "ratePct": 4.018238814477059,
+        "stockCluster95": [
+          3.187430792017878,
+          4.887547710814047
+        ]
+      },
+      "test": {
+        "n": 2176,
+        "stocks": 1373,
+        "successN": 29,
+        "ratePct": 1.3327205882352942,
+        "stockCluster95": [
+          0.9012634470610439,
+          1.7682753883312283
+        ]
+      }
+    },
+    {
+      "id": "nearHigh",
+      "label": "252일 종가 고점과 거리 20% 이내",
+      "train": {
+        "n": 3182,
+        "stocks": 1060,
+        "successN": 134,
+        "ratePct": 4.211187932118165,
+        "stockCluster95": [
+          3.4102361485851644,
+          4.966083498679575
+        ]
+      },
+      "test": {
+        "n": 2811,
+        "stocks": 1469,
+        "successN": 40,
+        "ratePct": 1.4229811454998222,
+        "stockCluster95": [
+          1.0132735779130977,
+          1.989811039787185
+        ]
+      }
+    },
+    {
+      "id": "deepDrawdown",
+      "label": "252일 종가 고점보다 50% 이상 하락",
+      "train": {
+        "n": 2052,
+        "stocks": 976,
+        "successN": 175,
+        "ratePct": 8.528265107212475,
+        "stockCluster95": [
+          7.484380082490859,
+          9.76470590319793
+        ]
+      },
+      "test": {
+        "n": 969,
+        "stocks": 709,
+        "successN": 25,
+        "ratePct": 2.5799793601651184,
+        "stockCluster95": [
+          1.692943281984378,
+          3.7114359579968723
+        ]
+      }
+    },
+    {
+      "id": "ret63positive",
+      "label": "직전 63일 수익률 양수",
+      "train": {
+        "n": 4305,
+        "stocks": 1182,
+        "successN": 226,
+        "ratePct": 5.249709639953543,
+        "stockCluster95": [
+          4.413516943686236,
+          6.095643472172018
+        ]
+      },
+      "test": {
+        "n": 3084,
+        "stocks": 1609,
+        "successN": 54,
+        "ratePct": 1.7509727626459144,
+        "stockCluster95": [
+          1.279093015816334,
+          2.3649420731792117
+        ]
+      }
+    },
+    {
+      "id": "momentum50",
+      "label": "직전 252일 +50% 이상",
+      "train": {
+        "n": 2224,
+        "stocks": 1132,
+        "successN": 52,
+        "ratePct": 2.338129496402878,
+        "stockCluster95": [
+          1.574688342288304,
+          3.078898817511187
+        ]
+      },
+      "test": {
+        "n": 1125,
+        "stocks": 869,
+        "successN": 15,
+        "ratePct": 1.3333333333333335,
+        "stockCluster95": [
+          0.6138631269480932,
+          2.1806151966439598
+        ]
+      }
+    },
+    {
+      "id": "tight60",
+      "label": "직전 60일 종가 범위 35% 이하",
+      "train": {
+        "n": 4273,
+        "stocks": 1152,
+        "successN": 306,
+        "ratePct": 7.161245026913175,
+        "stockCluster95": [
+          6.0923979656679546,
+          8.237995461842877
+        ]
+      },
+      "test": {
+        "n": 5448,
+        "stocks": 1793,
+        "successN": 95,
+        "ratePct": 1.7437591776798826,
+        "stockCluster95": [
+          1.3271465149594113,
+          2.2357544923384665
+        ]
+      }
+    },
+    {
+      "id": "volume15",
+      "label": "전일 거래량 / 직전 20일 평균 ≥ 1.5",
+      "train": {
+        "n": 1038,
+        "stocks": 696,
+        "successN": 67,
+        "ratePct": 6.454720616570328,
+        "stockCluster95": [
+          4.973409150513793,
+          8.005296357238972
+        ]
+      },
+      "test": {
+        "n": 982,
+        "stocks": 778,
+        "successN": 27,
+        "ratePct": 2.74949083503055,
+        "stockCluster95": [
+          1.659198919547943,
+          3.8346074264338643
+        ]
+      }
+    },
+    {
+      "id": "rsiLow",
+      "label": "전일 RSI(14) ≤ 30",
+      "train": {
+        "n": 469,
+        "stocks": 406,
+        "successN": 69,
+        "ratePct": 14.712153518123666,
+        "stockCluster95": [
+          11.546016416516855,
+          18.187523773297833
+        ]
+      },
+      "test": {
+        "n": 177,
+        "stocks": 150,
+        "successN": 2,
+        "ratePct": 1.1299435028248588,
+        "stockCluster95": [
+          0.0,
+          2.987992610837441
+        ]
+      }
+    },
+    {
+      "id": "rsiStrong",
+      "label": "전일 RSI(14) ≥ 55",
+      "train": {
+        "n": 2628,
+        "stocks": 1078,
+        "successN": 118,
+        "ratePct": 4.4901065449010655,
+        "stockCluster95": [
+          3.779764448138969,
+          5.455752975677075
+        ]
+      },
+      "test": {
+        "n": 2704,
+        "stocks": 1456,
+        "successN": 58,
+        "ratePct": 2.1449704142011834,
+        "stockCluster95": [
+          1.4382696674599882,
+          2.766958690879245
+        ]
+      }
+    }
+  ],
+  "strategies": [
+    {
+      "id": "trend200__hold5",
+      "entry": "상승하는 200일선 회복",
+      "exit": "5년 보유",
+      "train": {
+        "n": 2118,
+        "stocks": 1286,
+        "winPct": 59.82058545797923,
+        "medianReturnPct": 23.63146039313562,
+        "meanReturnPct": 98.05869407303751,
+        "meanLogGrowth": -0.05056264391141378,
+        "p10ReturnPct": -67.8124026793181,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -70.66501014442525,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 1.6525023607176583,
+        "matchedHoldMedianReturnPct": 23.63146039313562,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 41,
+        "incompleteN": 0
+      },
+      "test": {
+        "n": 1815,
+        "stocks": 1815,
+        "winPct": 48.209366391184574,
+        "medianReturnPct": -2.361957471027487,
+        "meanReturnPct": 34.12088579752559,
+        "meanLogGrowth": -0.308384884923265,
+        "p10ReturnPct": -65.78415614236509,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -72.17550274223035,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 0.3305785123966942,
+        "matchedHoldMedianReturnPct": -2.361957471027487,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 41,
+        "incompleteN": 6
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 699,
+          "stocks": 699,
+          "winPct": 44.77825464949928,
+          "medianReturnPct": -6.23206386204993,
+          "meanReturnPct": 20.228556586474756,
+          "meanLogGrowth": -0.45868995199882073,
+          "p10ReturnPct": -61.21444819576012,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -69.53727506426735,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 1826.0,
+          "tenbaggerPct": 0.14306151645207438,
+          "matchedHoldMedianReturnPct": -6.23206386204993,
+          "beatMatchedHoldPct": 0.0,
+          "medianExcessPct": 0.0,
+          "terminalStressN": 22,
+          "incompleteN": 1
+        },
+        "KOSDAQ": {
+          "n": 1116,
+          "stocks": 1116,
+          "winPct": 50.358422939068106,
+          "medianReturnPct": 0.24835414109598553,
+          "meanReturnPct": 42.82226403993108,
+          "meanLogGrowth": -0.21424219506142483,
+          "p10ReturnPct": -66.63806693594098,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -73.29644816981246,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 1826.0,
+          "tenbaggerPct": 0.4480286738351254,
+          "matchedHoldMedianReturnPct": 0.24835414109598553,
+          "beatMatchedHoldPct": 0.0,
+          "medianExcessPct": 0.0,
+          "terminalStressN": 19,
+          "incompleteN": 5
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 1774,
+        "stocks": 1774,
+        "winPct": 49.32356257046223,
+        "medianReturnPct": -0.9440963904755906,
+        "meanReturnPct": 37.22063569476266,
+        "meanLogGrowth": 0.003786565242846322,
+        "p10ReturnPct": -59.33273182794018,
+        "worstReturnPct": -97.05238692723009,
+        "medianMddPct": -71.64325364946335,
+        "worstMddPct": -98.52807283763278,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 0.3382187147688839,
+        "matchedHoldMedianReturnPct": -0.9440963904755906,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 0,
+        "incompleteN": 2
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -1.5777122285997924
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -2.361957471027487
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -3.3335286191341074
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "trend200__profit100",
+      "entry": "상승하는 200일선 회복",
+      "exit": "+100% 익절 / -12% 종가 손절",
+      "train": {
+        "n": 6116,
+        "stocks": 1286,
+        "winPct": 21.141268803139308,
+        "medianReturnPct": -13.812752310517284,
+        "meanReturnPct": 10.48623714431043,
+        "meanLogGrowth": -0.0031658466040542506,
+        "p10ReturnPct": -18.93582960715907,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -21.432322318538112,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 70.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": 23.66930395275384,
+        "beatMatchedHoldPct": 40.7782864617397,
+        "medianExcessPct": -19.192313324075194,
+        "terminalStressN": 11,
+        "incompleteN": 1
+      },
+      "test": {
+        "n": 4748,
+        "stocks": 1815,
+        "winPct": 14.574557708508845,
+        "medianReturnPct": -14.094233968021697,
+        "meanReturnPct": 2.531035985918173,
+        "meanLogGrowth": -0.06702491387153155,
+        "p10ReturnPct": -19.28510060141062,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -22.175746658312445,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 95.5,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -13.081388894076884,
+        "beatMatchedHoldPct": 54.97051390058972,
+        "medianExcessPct": 7.092066793890439,
+        "terminalStressN": 10,
+        "incompleteN": 26
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1610,
+          "stocks": 699,
+          "winPct": 12.608695652173912,
+          "medianReturnPct": -13.982104344083545,
+          "meanReturnPct": -0.2164029962099856,
+          "meanLogGrowth": -0.11467014096834947,
+          "p10ReturnPct": -18.986671835627046,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -22.355962353289694,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 125.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -13.884516245924072,
+          "beatMatchedHoldPct": 54.96894409937888,
+          "medianExcessPct": 6.236190610655301,
+          "terminalStressN": 7,
+          "incompleteN": 4
+        },
+        "KOSDAQ": {
+          "n": 3138,
+          "stocks": 1116,
+          "winPct": 15.583173996175908,
+          "medianReturnPct": -14.162545662378534,
+          "meanReturnPct": 3.9406525446263663,
+          "meanLogGrowth": -0.04257978460898317,
+          "p10ReturnPct": -19.433959816278335,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -22.10956581454598,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 84.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -12.351600275359399,
+          "beatMatchedHoldPct": 54.97131931166348,
+          "medianExcessPct": 7.370198486733004,
+          "terminalStressN": 3,
+          "incompleteN": 22
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 4738,
+        "stocks": 1811,
+        "winPct": 14.605318699873365,
+        "medianReturnPct": -14.090396170476716,
+        "meanReturnPct": 2.7474374970746007,
+        "meanLogGrowth": -0.038007426230981224,
+        "p10ReturnPct": -19.2430006828602,
+        "worstReturnPct": -57.47400208605572,
+        "medianMddPct": -22.14480096605857,
+        "worstMddPct": -76.06216250026061,
+        "medianHoldingDays": 95.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -12.952867188995842,
+        "beatMatchedHoldPct": 55.08653440270156,
+        "medianExcessPct": 7.200667140235084,
+        "terminalStressN": 0,
+        "incompleteN": 26
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -13.404224351250704
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -14.09423396802169
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.949060238303597
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "trend200__ma50",
+      "entry": "상승하는 200일선 회복",
+      "exit": "50일선 2일 이탈 / -12% 종가 손절",
+      "train": {
+        "n": 15103,
+        "stocks": 1286,
+        "winPct": 29.007481957227043,
+        "medianReturnPct": -1.9438225538971676,
+        "meanReturnPct": -0.2669930605648019,
+        "meanLogGrowth": -0.015121489317909213,
+        "p10ReturnPct": -9.749313864154917,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -3.9559213279397376,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 3.0,
+        "tenbaggerPct": 0.0066212010858769784,
+        "matchedHoldMedianReturnPct": 32.00663349917083,
+        "beatMatchedHoldPct": 36.61524200489969,
+        "medianExcessPct": -33.10880661626931,
+        "terminalStressN": 4,
+        "incompleteN": 5
+      },
+      "test": {
+        "n": 12275,
+        "stocks": 1817,
+        "winPct": 25.083503054989816,
+        "medianReturnPct": -1.927275112197946,
+        "meanReturnPct": -0.6564572144867276,
+        "meanLogGrowth": -0.01751997194515562,
+        "p10ReturnPct": -8.631550213534078,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -3.40978036646038,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 3.0,
+        "tenbaggerPct": 0.016293279022403257,
+        "matchedHoldMedianReturnPct": -10.346624168684283,
+        "beatMatchedHoldPct": 55.86965376782077,
+        "medianExcessPct": 8.855543392162613,
+        "terminalStressN": 3,
+        "incompleteN": 64
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 4628,
+          "stocks": 700,
+          "winPct": 22.601555747623163,
+          "medianReturnPct": -1.9246490551934947,
+          "meanReturnPct": -1.238746150831771,
+          "meanLogGrowth": -0.02219903302732925,
+          "p10ReturnPct": -7.637807395116791,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -3.2950291770543263,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 3.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -12.791108583690104,
+          "beatMatchedHoldPct": 58.98876404494382,
+          "medianExcessPct": 11.209368900361127,
+          "terminalStressN": 2,
+          "incompleteN": 6
+        },
+        "KOSDAQ": {
+          "n": 7647,
+          "stocks": 1117,
+          "winPct": 26.585589119916307,
+          "medianReturnPct": -1.9290340749084645,
+          "meanReturnPct": -0.30405323941089524,
+          "meanLogGrowth": -0.014688182395227602,
+          "p10ReturnPct": -9.19201860056662,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -3.4925705918567584,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 3.0,
+          "tenbaggerPct": 0.026154047338825683,
+          "matchedHoldMedianReturnPct": -8.159357178694659,
+          "beatMatchedHoldPct": 53.9819537073362,
+          "medianExcessPct": 6.980574342389511,
+          "terminalStressN": 1,
+          "incompleteN": 58
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 12272,
+        "stocks": 1817,
+        "winPct": 25.08963494132986,
+        "medianReturnPct": -1.9257427306988983,
+        "meanReturnPct": -0.6321717982256003,
+        "meanLogGrowth": -0.014146929917934517,
+        "p10ReturnPct": -8.626200018426367,
+        "worstReturnPct": -56.76702141542553,
+        "medianMddPct": -3.4097803664603745,
+        "worstMddPct": -60.841367425830185,
+        "medianHoldingDays": 3.0,
+        "tenbaggerPct": 0.016297262059973925,
+        "matchedHoldMedianReturnPct": -10.3142881686217,
+        "beatMatchedHoldPct": 55.88331160365059,
+        "medianExcessPct": 8.86537387240201,
+        "terminalStressN": 0,
+        "incompleteN": 64
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -1.139538427674014
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -1.927275112197946
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -2.903171673099525
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "trend200__ma200",
+      "entry": "상승하는 200일선 회복",
+      "exit": "200일선 5일 이탈 / -12% 종가 손절",
+      "train": {
+        "n": 9800,
+        "stocks": 1286,
+        "winPct": 20.6734693877551,
+        "medianReturnPct": -5.187856008609892,
+        "meanReturnPct": 3.634115985372355,
+        "meanLogGrowth": -0.013976626705688684,
+        "p10ReturnPct": -14.826830012972604,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -13.570418217038053,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 21.0,
+        "tenbaggerPct": 0.061224489795918366,
+        "matchedHoldMedianReturnPct": 29.733729509385398,
+        "beatMatchedHoldPct": 37.816326530612244,
+        "medianExcessPct": -29.49435514734021,
+        "terminalStressN": 5,
+        "incompleteN": 2
+      },
+      "test": {
+        "n": 8203,
+        "stocks": 1817,
+        "winPct": 17.859319761063023,
+        "medianReturnPct": -5.017800388576299,
+        "meanReturnPct": 0.20431473495914343,
+        "meanLogGrowth": -0.03340149083772583,
+        "p10ReturnPct": -14.051343957044137,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -11.790166043140172,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 23.0,
+        "tenbaggerPct": 0.012190661952944045,
+        "matchedHoldMedianReturnPct": -10.577252494744227,
+        "beatMatchedHoldPct": 55.72351578690723,
+        "medianExcessPct": 8.067072047171543,
+        "terminalStressN": 7,
+        "incompleteN": 41
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 3077,
+          "stocks": 700,
+          "winPct": 17.224569385765356,
+          "medianReturnPct": -4.524614006615746,
+          "meanReturnPct": -1.100576817319987,
+          "meanLogGrowth": -0.04285310861713602,
+          "p10ReturnPct": -12.570940540050735,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -10.215053763440851,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 22.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -13.643925482995101,
+          "beatMatchedHoldPct": 59.57101072473188,
+          "medianExcessPct": 10.927907631653056,
+          "terminalStressN": 4,
+          "incompleteN": 5
+        },
+        "KOSDAQ": {
+          "n": 5126,
+          "stocks": 1117,
+          "winPct": 18.240343347639485,
+          "medianReturnPct": -5.36289142522679,
+          "meanReturnPct": 0.9876060549675048,
+          "meanLogGrowth": -0.027727938768423215,
+          "p10ReturnPct": -14.725641863674321,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -12.892850938085386,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 24.0,
+          "tenbaggerPct": 0.019508388607101055,
+          "matchedHoldMedianReturnPct": -7.873304216703114,
+          "beatMatchedHoldPct": 53.41396800624268,
+          "medianExcessPct": 5.508265225336761,
+          "terminalStressN": 3,
+          "incompleteN": 36
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 8196,
+        "stocks": 1816,
+        "winPct": 17.874572962420693,
+        "medianReturnPct": -5.011933174224337,
+        "meanReturnPct": 0.28989675096020573,
+        "meanLogGrowth": -0.021630533850184847,
+        "p10ReturnPct": -14.025154520049066,
+        "worstReturnPct": -56.76702141542553,
+        "medianMddPct": -11.782245149244712,
+        "worstMddPct": -75.90936195587359,
+        "medianHoldingDays": 23.0,
+        "tenbaggerPct": 0.012201073694485115,
+        "matchedHoldMedianReturnPct": -10.541087427263985,
+        "beatMatchedHoldPct": 55.771107857491465,
+        "medianExcessPct": 8.09820088923746,
+        "terminalStressN": 0,
+        "incompleteN": 41
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -4.254887324864742
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -5.017800388576299
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -5.962943924189257
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "trend200__trail25",
+      "entry": "상승하는 200일선 회복",
+      "exit": "종가 고점 대비 -25% / -12% 종가 손절",
+      "train": {
+        "n": 7180,
+        "stocks": 1286,
+        "winPct": 29.484679665738163,
+        "medianReturnPct": -12.71929824561403,
+        "meanReturnPct": 8.420059913024215,
+        "meanLogGrowth": -0.009298429067949547,
+        "p10ReturnPct": -17.800986711641265,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -25.14272937716789,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 63.0,
+        "tenbaggerPct": 0.08356545961002786,
+        "matchedHoldMedianReturnPct": 23.50468568269917,
+        "beatMatchedHoldPct": 40.83565459610028,
+        "medianExcessPct": -20.181807782472596,
+        "terminalStressN": 10,
+        "incompleteN": 1
+      },
+      "test": {
+        "n": 5556,
+        "stocks": 1816,
+        "winPct": 27.015838732901372,
+        "medianReturnPct": -13.083354627599864,
+        "meanReturnPct": 1.7424157675142826,
+        "meanLogGrowth": -0.05195120858682157,
+        "p10ReturnPct": -17.624792289082624,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -24.99999999999999,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 82.0,
+        "tenbaggerPct": 0.017998560115190784,
+        "matchedHoldMedianReturnPct": -13.008801902134348,
+        "beatMatchedHoldPct": 56.2634989200864,
+        "medianExcessPct": 8.853830104516863,
+        "terminalStressN": 11,
+        "incompleteN": 31
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1881,
+          "stocks": 699,
+          "winPct": 23.817118553960658,
+          "medianReturnPct": -13.100436681222693,
+          "meanReturnPct": -0.5423977798581614,
+          "meanLogGrowth": -0.09070589641180371,
+          "p10ReturnPct": -17.409822628256,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -24.367088607594944,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 102.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -14.847572835411405,
+          "beatMatchedHoldPct": 57.94790005316322,
+          "medianExcessPct": 9.987143966945556,
+          "terminalStressN": 7,
+          "incompleteN": 4
+        },
+        "KOSDAQ": {
+          "n": 3675,
+          "stocks": 1117,
+          "winPct": 28.653061224489797,
+          "medianReturnPct": -13.075589776859797,
+          "meanReturnPct": 2.911867272985713,
+          "meanLogGrowth": -0.032115135716402135,
+          "p10ReturnPct": -17.7027139233787,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -25.08981535633721,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 74.0,
+          "tenbaggerPct": 0.027210884353741496,
+          "matchedHoldMedianReturnPct": -11.54277040945393,
+          "beatMatchedHoldPct": 55.40136054421768,
+          "medianExcessPct": 8.416007330525643,
+          "terminalStressN": 4,
+          "incompleteN": 27
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 5545,
+        "stocks": 1813,
+        "winPct": 27.069431920649233,
+        "medianReturnPct": -13.077599253278239,
+        "meanReturnPct": 1.9442492343208828,
+        "meanLogGrowth": -0.024647483998336092,
+        "p10ReturnPct": -17.571339037399568,
+        "worstReturnPct": -56.76702141542553,
+        "medianMddPct": -24.97583608278344,
+        "worstMddPct": -81.10271317829458,
+        "medianHoldingDays": 82.0,
+        "tenbaggerPct": 0.018034265103697024,
+        "matchedHoldMedianReturnPct": -12.863881445099857,
+        "beatMatchedHoldPct": 56.37511271415689,
+        "medianExcessPct": 9.119357341731703,
+        "terminalStressN": 0,
+        "incompleteN": 31
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.385225457293597
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.083354627599869
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -13.948239899229325
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "trend200__trail35",
+      "entry": "상승하는 200일선 회복",
+      "exit": "종가 고점 대비 -35% / -12% 종가 손절",
+      "train": {
+        "n": 6225,
+        "stocks": 1286,
+        "winPct": 24.497991967871485,
+        "medianReturnPct": -13.384855287283425,
+        "meanReturnPct": 12.686338738669424,
+        "meanLogGrowth": -0.017351536081672725,
+        "p10ReturnPct": -18.389216726627467,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -25.481759656652358,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 70.0,
+        "tenbaggerPct": 0.17670682730923695,
+        "matchedHoldMedianReturnPct": 23.66686423478277,
+        "beatMatchedHoldPct": 40.41767068273092,
+        "medianExcessPct": -19.603489344449244,
+        "terminalStressN": 13,
+        "incompleteN": 0
+      },
+      "test": {
+        "n": 4972,
+        "stocks": 1815,
+        "winPct": 20.77634754625905,
+        "medianReturnPct": -13.58278162875094,
+        "meanReturnPct": 0.4153213791310728,
+        "meanLogGrowth": -0.08637921541233086,
+        "p10ReturnPct": -18.45576138485754,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -25.282739711445558,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 98.0,
+        "tenbaggerPct": 0.02011263073209976,
+        "matchedHoldMedianReturnPct": -13.087852174490845,
+        "beatMatchedHoldPct": 54.88736926790024,
+        "medianExcessPct": 6.7063934925926665,
+        "terminalStressN": 15,
+        "incompleteN": 28
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1676,
+          "stocks": 699,
+          "winPct": 18.01909307875895,
+          "medianReturnPct": -13.53705910173244,
+          "meanReturnPct": -2.615208424038684,
+          "meanLogGrowth": -0.1272842764019005,
+          "p10ReturnPct": -18.053829087411156,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -24.783885500736993,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 122.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -14.720994767027529,
+          "beatMatchedHoldPct": 55.847255369928405,
+          "medianExcessPct": 7.054801778687686,
+          "terminalStressN": 8,
+          "incompleteN": 4
+        },
+        "KOSDAQ": {
+          "n": 3296,
+          "stocks": 1116,
+          "winPct": 22.178398058252426,
+          "medianReturnPct": -13.6212662001851,
+          "meanReturnPct": 1.9563310727331862,
+          "meanLogGrowth": -0.06557919046739191,
+          "p10ReturnPct": -18.583776861195368,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -25.68823087419895,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 89.0,
+          "tenbaggerPct": 0.030339805825242715,
+          "matchedHoldMedianReturnPct": -11.977483851806102,
+          "beatMatchedHoldPct": 54.39927184466019,
+          "medianExcessPct": 6.641759251782824,
+          "terminalStressN": 7,
+          "incompleteN": 24
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 4957,
+        "stocks": 1809,
+        "winPct": 20.83921726850918,
+        "medianReturnPct": -13.575767570984842,
+        "meanReturnPct": 0.719180531982988,
+        "meanLogGrowth": -0.04483453715163302,
+        "p10ReturnPct": -18.4091337216859,
+        "worstReturnPct": -56.76702141542553,
+        "medianMddPct": -25.1716621253406,
+        "worstMddPct": -81.10271317829458,
+        "medianHoldingDays": 98.0,
+        "tenbaggerPct": 0.02017349203147065,
+        "matchedHoldMedianReturnPct": -12.87562189054725,
+        "beatMatchedHoldPct": 55.053459753883395,
+        "medianExcessPct": 6.901151081055845,
+        "terminalStressN": 0,
+        "incompleteN": 28
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.888663940439265
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.58278162875094
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.442697230236101
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252__hold5",
+      "entry": "252일 종가 신고가 + 거래량 1.5배",
+      "exit": "5년 보유",
+      "train": {
+        "n": 2003,
+        "stocks": 1258,
+        "winPct": 60.95856215676485,
+        "medianReturnPct": 28.78695951138617,
+        "meanReturnPct": 88.65959181887261,
+        "meanLogGrowth": -0.09501611459886733,
+        "p10ReturnPct": -68.94404598120923,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -71.71428571428571,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 1.4478282576135795,
+        "matchedHoldMedianReturnPct": 28.78695951138617,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 43,
+        "incompleteN": 0
+      },
+      "test": {
+        "n": 1801,
+        "stocks": 1801,
+        "winPct": 42.642976124375345,
+        "medianReturnPct": -12.485994317421333,
+        "meanReturnPct": 24.532328774238433,
+        "meanLogGrowth": -0.4361587309812251,
+        "p10ReturnPct": -68.77784281208336,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -73.24022346368714,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 0.3331482509716824,
+        "matchedHoldMedianReturnPct": -12.485994317421333,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 44,
+        "incompleteN": 7
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 690,
+          "stocks": 690,
+          "winPct": 43.913043478260875,
+          "medianReturnPct": -11.681126957579636,
+          "meanReturnPct": 23.5932270648207,
+          "meanLogGrowth": -0.5299962577795446,
+          "p10ReturnPct": -63.675001021664634,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -70.38189211993037,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 1826.0,
+          "tenbaggerPct": 0.5797101449275363,
+          "matchedHoldMedianReturnPct": -11.681126957579636,
+          "beatMatchedHoldPct": 0.0,
+          "medianExcessPct": 0.0,
+          "terminalStressN": 23,
+          "incompleteN": 1
+        },
+        "KOSDAQ": {
+          "n": 1111,
+          "stocks": 1111,
+          "winPct": 41.85418541854185,
+          "medianReturnPct": -13.33782018290509,
+          "meanReturnPct": 25.11556925983538,
+          "meanLogGrowth": -0.3778797989462653,
+          "p10ReturnPct": -71.01735546688997,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -74.37499999999999,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 1826.0,
+          "tenbaggerPct": 0.18001800180018002,
+          "matchedHoldMedianReturnPct": -13.33782018290509,
+          "beatMatchedHoldPct": 0.0,
+          "medianExcessPct": 0.0,
+          "terminalStressN": 21,
+          "incompleteN": 6
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 1757,
+        "stocks": 1757,
+        "winPct": 43.71087080250427,
+        "medianReturnPct": -10.661652368080855,
+        "meanReturnPct": 27.650952830053164,
+        "meanLogGrowth": -0.10110381897937308,
+        "p10ReturnPct": -63.316903997027296,
+        "worstReturnPct": -97.65113824815317,
+        "medianMddPct": -72.79411764705883,
+        "worstMddPct": -98.66472765732416,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 0.3414911781445646,
+        "matchedHoldMedianReturnPct": -10.661652368080855,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 0,
+        "incompleteN": 4
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -11.783067048247664
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -12.485994317421333
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -13.356823768464476
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252__profit100",
+      "entry": "252일 종가 신고가 + 거래량 1.5배",
+      "exit": "+100% 익절 / -12% 종가 손절",
+      "train": {
+        "n": 6571,
+        "stocks": 1258,
+        "winPct": 22.005782985846903,
+        "medianReturnPct": -13.948946854512478,
+        "meanReturnPct": 11.210536820029038,
+        "meanLogGrowth": -0.0015684562623572258,
+        "p10ReturnPct": -19.463380026802323,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -22.058333333333337,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 47.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": 18.40629492763388,
+        "beatMatchedHoldPct": 43.08324455942779,
+        "medianExcessPct": -13.265691248192546,
+        "terminalStressN": 13,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 4938,
+        "stocks": 1802,
+        "winPct": 12.879708383961116,
+        "medianReturnPct": -14.067789812819099,
+        "meanReturnPct": 0.3473557369620961,
+        "meanLogGrowth": -0.09319052158896006,
+        "p10ReturnPct": -18.86888390146745,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -20.836247086247084,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 43.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -21.264590327283884,
+        "beatMatchedHoldPct": 59.437019036046976,
+        "medianExcessPct": 13.6446178531503,
+        "terminalStressN": 15,
+        "incompleteN": 37
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1630,
+          "stocks": 691,
+          "winPct": 12.76073619631902,
+          "medianReturnPct": -13.960880381327257,
+          "meanReturnPct": -0.25166012430158924,
+          "meanLogGrowth": -0.15217980286359392,
+          "p10ReturnPct": -18.385320339348855,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -21.154276393842764,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 60.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -18.956837625028278,
+          "beatMatchedHoldPct": 57.852760736196316,
+          "medianExcessPct": 11.528975124963846,
+          "terminalStressN": 12,
+          "incompleteN": 9
+        },
+        "KOSDAQ": {
+          "n": 3308,
+          "stocks": 1111,
+          "winPct": 12.93833131801693,
+          "medianReturnPct": -14.137944294701764,
+          "meanReturnPct": 0.6425177242232349,
+          "meanLogGrowth": -0.06412385639015315,
+          "p10ReturnPct": -19.040637059139044,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -20.6880501481168,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 35.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -22.33689636295251,
+          "beatMatchedHoldPct": 60.21765417170496,
+          "medianExcessPct": 15.111691871573157,
+          "terminalStressN": 3,
+          "incompleteN": 28
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 4923,
+        "stocks": 1796,
+        "winPct": 12.91895185862279,
+        "medianReturnPct": -14.061671338737769,
+        "meanReturnPct": 0.6531063638266943,
+        "meanLogGrowth": -0.05137967443364221,
+        "p10ReturnPct": -18.791106316846594,
+        "worstReturnPct": -55.32168294576202,
+        "medianMddPct": -20.79601990049751,
+        "worstMddPct": -64.89861111111111,
+        "medianHoldingDays": 43.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -21.003904362700922,
+        "beatMatchedHoldPct": 59.61811903310989,
+        "medianExcessPct": 13.886065290539895,
+        "terminalStressN": 0,
+        "incompleteN": 37
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -13.377567792128792
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -14.067789812819099
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.922879222114904
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252__ma50",
+      "entry": "252일 종가 신고가 + 거래량 1.5배",
+      "exit": "50일선 2일 이탈 / -12% 종가 손절",
+      "train": {
+        "n": 8215,
+        "stocks": 1258,
+        "winPct": 34.71698113207547,
+        "medianReturnPct": -7.479574448069471,
+        "meanReturnPct": 3.5983020556264345,
+        "meanLogGrowth": -0.009513571828919784,
+        "p10ReturnPct": -17.23529985219735,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -17.159763313609467,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 43.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": 25.363442527621636,
+        "beatMatchedHoldPct": 39.51308581862447,
+        "medianExcessPct": -23.73406937913174,
+        "terminalStressN": 6,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 5874,
+        "stocks": 1802,
+        "winPct": 26.676881171263194,
+        "medianReturnPct": -9.080016583747918,
+        "meanReturnPct": -0.31585697008900127,
+        "meanLogGrowth": -0.04338641303785916,
+        "p10ReturnPct": -16.698749007390756,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -16.32917791870156,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 37.0,
+        "tenbaggerPct": 0.017024174327545112,
+        "matchedHoldMedianReturnPct": -19.486327477681897,
+        "beatMatchedHoldPct": 60.72522982635342,
+        "medianExcessPct": 15.916822364437389,
+        "terminalStressN": 5,
+        "incompleteN": 38
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 2038,
+          "stocks": 691,
+          "winPct": 29.6368989205103,
+          "medianReturnPct": -6.85354152675377,
+          "meanReturnPct": 0.20095828981314678,
+          "meanLogGrowth": -0.053808141558873396,
+          "p10ReturnPct": -16.108445026355856,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -14.692783901377808,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 43.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -17.022762804925595,
+          "beatMatchedHoldPct": 60.500490677134444,
+          "medianExcessPct": 14.863570747299775,
+          "terminalStressN": 5,
+          "incompleteN": 10
+        },
+        "KOSDAQ": {
+          "n": 3836,
+          "stocks": 1111,
+          "winPct": 25.104275286757037,
+          "medianReturnPct": -10.51896283831326,
+          "meanReturnPct": -0.5904319178680728,
+          "meanLogGrowth": -0.037849530158342214,
+          "p10ReturnPct": -17.002682258055135,
+          "worstReturnPct": -47.697590967804246,
+          "medianMddPct": -17.14773623530589,
+          "worstMddPct": -61.66803278688524,
+          "medianHoldingDays": 34.0,
+          "tenbaggerPct": 0.026068821689259645,
+          "matchedHoldMedianReturnPct": -20.90408429892825,
+          "beatMatchedHoldPct": 60.84462982273201,
+          "medianExcessPct": 16.39039522000823,
+          "terminalStressN": 0,
+          "incompleteN": 28
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 5869,
+        "stocks": 1801,
+        "winPct": 26.699608110410633,
+        "medianReturnPct": -9.068677922780921,
+        "meanReturnPct": -0.23093267035316778,
+        "meanLogGrowth": -0.031653473742471176,
+        "p10ReturnPct": -16.67272534859332,
+        "worstReturnPct": -47.697590967804246,
+        "medianMddPct": -16.323182333111685,
+        "worstMddPct": -61.66803278688524,
+        "medianHoldingDays": 37.0,
+        "tenbaggerPct": 0.01703867779860283,
+        "matchedHoldMedianReturnPct": -19.43712808506486,
+        "beatMatchedHoldPct": 60.7769637076163,
+        "medianExcessPct": 15.97063861022755,
+        "terminalStressN": 0,
+        "incompleteN": 38
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -8.349731926365084
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -9.080016583747918
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -9.984738046668989
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252__ma200",
+      "entry": "252일 종가 신고가 + 거래량 1.5배",
+      "exit": "200일선 5일 이탈 / -12% 종가 손절",
+      "train": {
+        "n": 5852,
+        "stocks": 1258,
+        "winPct": 28.485987696514016,
+        "medianReturnPct": -13.118083054117157,
+        "meanReturnPct": 10.905405546568758,
+        "meanLogGrowth": -0.011509159070964385,
+        "p10ReturnPct": -18.625462691923556,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -24.60688695788186,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 64.0,
+        "tenbaggerPct": 0.17088174982911825,
+        "matchedHoldMedianReturnPct": 26.871229700151922,
+        "beatMatchedHoldPct": 39.25153793574846,
+        "medianExcessPct": -23.812836193850508,
+        "terminalStressN": 10,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 4826,
+        "stocks": 1802,
+        "winPct": 20.845420638209696,
+        "medianReturnPct": -13.36858484982617,
+        "meanReturnPct": -0.8036416986998973,
+        "meanLogGrowth": -0.08431277379744166,
+        "p10ReturnPct": -18.036260884519585,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -21.307337878070896,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 50.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -19.496284053034362,
+        "beatMatchedHoldPct": 59.75963530874429,
+        "medianExcessPct": 13.648820614569729,
+        "terminalStressN": 12,
+        "incompleteN": 32
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1634,
+          "stocks": 691,
+          "winPct": 24.173806609547125,
+          "medianReturnPct": -12.965972364611854,
+          "meanReturnPct": 0.008328021517889361,
+          "meanLogGrowth": -0.10362795333772139,
+          "p10ReturnPct": -17.31603078518654,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -20.428520099563386,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 76.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -17.4417146260211,
+          "beatMatchedHoldPct": 59.17992656058752,
+          "medianExcessPct": 13.047476417808074,
+          "terminalStressN": 8,
+          "incompleteN": 8
+        },
+        "KOSDAQ": {
+          "n": 3192,
+          "stocks": 1111,
+          "winPct": 19.141604010025063,
+          "medianReturnPct": -13.544951299838836,
+          "meanReturnPct": -1.2192928650018975,
+          "meanLogGrowth": -0.07442524141372704,
+          "p10ReturnPct": -18.34360184709014,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -21.8403722286431,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 42.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -20.75387936532358,
+          "beatMatchedHoldPct": 60.056390977443606,
+          "medianExcessPct": 14.074718008458053,
+          "terminalStressN": 4,
+          "incompleteN": 24
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 4814,
+        "stocks": 1800,
+        "winPct": 20.89738263398421,
+        "medianReturnPct": -13.355040129608465,
+        "meanReturnPct": -0.556372006216399,
+        "meanLogGrowth": -0.05008461147712551,
+        "p10ReturnPct": -17.971716346678946,
+        "worstReturnPct": -47.04990160890683,
+        "medianMddPct": -21.274305312521875,
+        "worstMddPct": -77.43743743743744,
+        "medianHoldingDays": 50.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -19.346968461514493,
+        "beatMatchedHoldPct": 59.90859991690901,
+        "medianExcessPct": 13.772755278424487,
+        "terminalStressN": 0,
+        "incompleteN": 32
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.67274669682199
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.368584849826165
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.230631868585064
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252__trail25",
+      "entry": "252일 종가 신고가 + 거래량 1.5배",
+      "exit": "종가 고점 대비 -25% / -12% 종가 손절",
+      "train": {
+        "n": 6512,
+        "stocks": 1258,
+        "winPct": 33.38452088452088,
+        "medianReturnPct": -12.357061008971248,
+        "meanReturnPct": 9.141805704109295,
+        "meanLogGrowth": 0.0016470163021893767,
+        "p10ReturnPct": -18.027855270139504,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -25.50191656904855,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 40.0,
+        "tenbaggerPct": 0.030712530712530713,
+        "matchedHoldMedianReturnPct": 21.762740352292596,
+        "beatMatchedHoldPct": 42.1068796068796,
+        "medianExcessPct": -17.44229361300291,
+        "terminalStressN": 9,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 4991,
+        "stocks": 1802,
+        "winPct": 25.465838509316768,
+        "medianReturnPct": -13.04574977142925,
+        "meanReturnPct": 0.6791280707095559,
+        "meanLogGrowth": -0.05680039785359383,
+        "p10ReturnPct": -17.52946063977464,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -23.255344070278195,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 39.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -20.70082280903175,
+        "beatMatchedHoldPct": 60.689240633139654,
+        "medianExcessPct": 15.670726123981316,
+        "terminalStressN": 8,
+        "incompleteN": 34
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1647,
+          "stocks": 691,
+          "winPct": 26.10807528840316,
+          "medianReturnPct": -12.924466849811655,
+          "meanReturnPct": 1.0732809358384499,
+          "meanLogGrowth": -0.08797386770418442,
+          "p10ReturnPct": -16.992790378281697,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -23.978508771929828,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 55.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -18.761847459710545,
+          "beatMatchedHoldPct": 59.44140862173649,
+          "medianExcessPct": 14.238917770697078,
+          "terminalStressN": 7,
+          "incompleteN": 8
+        },
+        "KOSDAQ": {
+          "n": 3344,
+          "stocks": 1111,
+          "winPct": 25.149521531100476,
+          "medianReturnPct": -13.129211096262882,
+          "meanReturnPct": 0.484998355139199,
+          "meanLogGrowth": -0.04144671817538728,
+          "p10ReturnPct": -17.856464401056726,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -22.934890177798962,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 33.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -21.71771808528369,
+          "beatMatchedHoldPct": 61.303827751196174,
+          "medianExcessPct": 16.662973209239784,
+          "terminalStressN": 1,
+          "incompleteN": 26
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 4983,
+        "stocks": 1800,
+        "winPct": 25.506722857716234,
+        "medianReturnPct": -13.036170498857047,
+        "meanReturnPct": 0.8407642385935166,
+        "meanLogGrowth": -0.034711358864855026,
+        "p10ReturnPct": -17.495854063018236,
+        "worstReturnPct": -47.697590967804246,
+        "medianMddPct": -23.234218178407275,
+        "worstMddPct": -83.41666666666667,
+        "medianHoldingDays": 39.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -20.644867266719825,
+        "beatMatchedHoldPct": 60.78667469395946,
+        "medianExcessPct": 15.897665718405374,
+        "terminalStressN": 0,
+        "incompleteN": 34
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.347318552569142
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.04574977142925
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -13.911009239348749
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252__trail35",
+      "entry": "252일 종가 신고가 + 거래량 1.5배",
+      "exit": "종가 고점 대비 -35% / -12% 종가 손절",
+      "train": {
+        "n": 5668,
+        "stocks": 1258,
+        "winPct": 27.875793930839805,
+        "medianReturnPct": -13.25278370054489,
+        "meanReturnPct": 14.589905619516452,
+        "meanLogGrowth": -0.004514422371919152,
+        "p10ReturnPct": -18.57471607264398,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -27.62614556127317,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 48.0,
+        "tenbaggerPct": 0.12350035285815103,
+        "matchedHoldMedianReturnPct": 24.670471590257215,
+        "beatMatchedHoldPct": 40.80804516584333,
+        "medianExcessPct": -18.109997754895794,
+        "terminalStressN": 12,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 4725,
+        "stocks": 1802,
+        "winPct": 18.984126984126984,
+        "medianReturnPct": -13.561040949100644,
+        "meanReturnPct": -1.3278856114008697,
+        "meanLogGrowth": -0.10274974250071453,
+        "p10ReturnPct": -18.123828476664293,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -23.188279852556715,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 45.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -20.265636105188335,
+        "beatMatchedHoldPct": 58.98412698412698,
+        "medianExcessPct": 13.234773591131344,
+        "terminalStressN": 16,
+        "incompleteN": 32
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1560,
+          "stocks": 691,
+          "winPct": 19.102564102564102,
+          "medianReturnPct": -13.428597521006225,
+          "meanReturnPct": -1.4470018230224424,
+          "meanLogGrowth": -0.14136730878310153,
+          "p10ReturnPct": -17.563043823885838,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -23.95804709233218,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 67.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -17.778631188258164,
+          "beatMatchedHoldPct": 56.6025641025641,
+          "medianExcessPct": 10.055557824611256,
+          "terminalStressN": 10,
+          "incompleteN": 8
+        },
+        "KOSDAQ": {
+          "n": 3165,
+          "stocks": 1111,
+          "winPct": 18.925750394944707,
+          "medianReturnPct": -13.63583866382373,
+          "meanReturnPct": -1.2691743033030334,
+          "meanLogGrowth": -0.08371549182124417,
+          "p10ReturnPct": -18.259926695243344,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -22.827560240963862,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 37.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -21.64186072438925,
+          "beatMatchedHoldPct": 60.15797788309637,
+          "medianExcessPct": 14.664517801359956,
+          "terminalStressN": 6,
+          "incompleteN": 24
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 4709,
+        "stocks": 1795,
+        "winPct": 19.048630282437884,
+        "medianReturnPct": -13.55225966603042,
+        "meanReturnPct": -0.9926225342682393,
+        "meanLogGrowth": -0.056157223272127375,
+        "p10ReturnPct": -18.03095398416795,
+        "worstReturnPct": -47.04990160890683,
+        "medianMddPct": -23.076923076923073,
+        "worstMddPct": -83.41666666666667,
+        "medianHoldingDays": 45.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -20.08743558549202,
+        "beatMatchedHoldPct": 59.18454024208961,
+        "medianExcessPct": 13.401433895162974,
+        "terminalStressN": 0,
+        "incompleteN": 32
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.866748635979397
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.561040949100644
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.421172886519429
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252_plain__hold5",
+      "entry": "252일 종가 신고가",
+      "exit": "5년 보유",
+      "train": {
+        "n": 2047,
+        "stocks": 1267,
+        "winPct": 60.38104543234001,
+        "medianReturnPct": 26.61691542288558,
+        "meanReturnPct": 89.87025575005734,
+        "meanLogGrowth": -0.08665901810572148,
+        "p10ReturnPct": -68.65692648443029,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -71.7852975495916,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 1.612115290669272,
+        "matchedHoldMedianReturnPct": 26.61691542288558,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 42,
+        "incompleteN": 0
+      },
+      "test": {
+        "n": 1833,
+        "stocks": 1833,
+        "winPct": 42.98963447899618,
+        "medianReturnPct": -11.085916570991195,
+        "meanReturnPct": 25.841534886009974,
+        "meanLogGrowth": -0.4210634416893226,
+        "p10ReturnPct": -67.90703604761488,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -73.18649045521293,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 0.32733224222585927,
+        "matchedHoldMedianReturnPct": -11.085916570991195,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 44,
+        "incompleteN": 8
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 710,
+          "stocks": 710,
+          "winPct": 44.08450704225352,
+          "medianReturnPct": -10.9140804771379,
+          "meanReturnPct": 24.368973821199692,
+          "meanLogGrowth": -0.5256620134678366,
+          "p10ReturnPct": -62.94248703833858,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -70.18589323663267,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 1826.0,
+          "tenbaggerPct": 0.5633802816901409,
+          "matchedHoldMedianReturnPct": -10.9140804771379,
+          "beatMatchedHoldPct": 0.0,
+          "medianExcessPct": 0.0,
+          "terminalStressN": 24,
+          "incompleteN": 1
+        },
+        "KOSDAQ": {
+          "n": 1123,
+          "stocks": 1123,
+          "winPct": 42.297417631344615,
+          "medianReturnPct": -11.602700781805254,
+          "meanReturnPct": 26.77253965539135,
+          "meanLogGrowth": -0.35493255481243485,
+          "p10ReturnPct": -70.98359139396526,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -74.4467919492939,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 1826.0,
+          "tenbaggerPct": 0.17809439002671415,
+          "matchedHoldMedianReturnPct": -11.602700781805254,
+          "beatMatchedHoldPct": 0.0,
+          "medianExcessPct": 0.0,
+          "terminalStressN": 20,
+          "incompleteN": 7
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 1789,
+        "stocks": 1789,
+        "winPct": 44.04695360536613,
+        "medianReturnPct": -9.611798909537562,
+        "meanReturnPct": 28.93657543099848,
+        "meanLogGrowth": -0.09163042150145348,
+        "p10ReturnPct": -62.91039426523297,
+        "worstReturnPct": -98.05950248756218,
+        "medianMddPct": -72.78145695364238,
+        "worstMddPct": -99.06737588652483,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 0.3353828954723309,
+        "matchedHoldMedianReturnPct": -9.611798909537562,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 0,
+        "incompleteN": 5
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -10.371743640974406
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -11.085916570991195
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -11.970677837014465
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252_plain__profit100",
+      "entry": "252일 종가 신고가",
+      "exit": "+100% 익절 / -12% 종가 손절",
+      "train": {
+        "n": 7272,
+        "stocks": 1267,
+        "winPct": 21.768426842684267,
+        "medianReturnPct": -13.999915675857988,
+        "meanReturnPct": 10.89796924542461,
+        "meanLogGrowth": -0.005284438606887274,
+        "p10ReturnPct": -19.476794627350014,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -22.01429624095373,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 47.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": 17.422151157072285,
+        "beatMatchedHoldPct": 43.74312431243124,
+        "medianExcessPct": -12.196947488923126,
+        "terminalStressN": 15,
+        "incompleteN": 3
+      },
+      "test": {
+        "n": 5335,
+        "stocks": 1834,
+        "winPct": 13.008434864104967,
+        "medianReturnPct": -14.088490263300656,
+        "meanReturnPct": 0.37554103395900373,
+        "meanLogGrowth": -0.09262949763992208,
+        "p10ReturnPct": -18.968403945676126,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -20.957668285912558,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 45.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -21.072117436461212,
+        "beatMatchedHoldPct": 59.75632614807872,
+        "medianExcessPct": 14.266870774333462,
+        "terminalStressN": 16,
+        "incompleteN": 39
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1796,
+          "stocks": 711,
+          "winPct": 12.861915367483295,
+          "medianReturnPct": -13.908717283149464,
+          "meanReturnPct": -0.35009789636977207,
+          "meanLogGrowth": -0.14385513126466506,
+          "p10ReturnPct": -18.372921100106645,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -21.05960479867995,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 63.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -19.11043996433599,
+          "beatMatchedHoldPct": 58.68596881959911,
+          "medianExcessPct": 12.129860722682789,
+          "terminalStressN": 12,
+          "incompleteN": 9
+        },
+        "KOSDAQ": {
+          "n": 3539,
+          "stocks": 1123,
+          "winPct": 13.082791749081663,
+          "medianReturnPct": -14.19568822553896,
+          "meanReturnPct": 0.743794076872395,
+          "meanLogGrowth": -0.06663310374615594,
+          "p10ReturnPct": -19.19830459358409,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -20.903954802259882,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 37.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -22.158250516459464,
+          "beatMatchedHoldPct": 60.299519638315914,
+          "medianExcessPct": 15.39116643854962,
+          "terminalStressN": 4,
+          "incompleteN": 30
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 5319,
+        "stocks": 1827,
+        "winPct": 13.047565331829292,
+        "medianReturnPct": -14.080723432020225,
+        "meanReturnPct": 0.6774791156554327,
+        "meanLogGrowth": -0.05134991558216881,
+        "p10ReturnPct": -18.892959558935985,
+        "worstReturnPct": -53.34390547263681,
+        "medianMddPct": -20.903954802259882,
+        "worstMddPct": -68.80958549222798,
+        "medianHoldingDays": 45.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -20.905619503956217,
+        "beatMatchedHoldPct": 59.93607821018988,
+        "medianExcessPct": 14.432191005184725,
+        "terminalStressN": 0,
+        "incompleteN": 39
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -13.398434512123602
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -14.088490263300656
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.943373687716798
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252_plain__ma50",
+      "entry": "252일 종가 신고가",
+      "exit": "50일선 2일 이탈 / -12% 종가 손절",
+      "train": {
+        "n": 9060,
+        "stocks": 1267,
+        "winPct": 35.33112582781457,
+        "medianReturnPct": -7.071791279728856,
+        "meanReturnPct": 3.747171216432643,
+        "meanLogGrowth": -0.008658263087483097,
+        "p10ReturnPct": -17.062039466184153,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -16.896542862036462,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 44.0,
+        "tenbaggerPct": 0.011037527593818985,
+        "matchedHoldMedianReturnPct": 26.00376481952629,
+        "beatMatchedHoldPct": 39.5364238410596,
+        "medianExcessPct": -24.154078996390282,
+        "terminalStressN": 7,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 6418,
+        "stocks": 1834,
+        "winPct": 26.92427547522593,
+        "medianReturnPct": -8.768225644773786,
+        "meanReturnPct": -0.2421792485100882,
+        "meanLogGrowth": -0.041259970250518405,
+        "p10ReturnPct": -16.571208344488074,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -16.12314725056151,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 37.0,
+        "tenbaggerPct": 0.03116235587410408,
+        "matchedHoldMedianReturnPct": -19.102436992201376,
+        "beatMatchedHoldPct": 60.56403864132128,
+        "medianExcessPct": 15.435635036661793,
+        "terminalStressN": 5,
+        "incompleteN": 39
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 2281,
+          "stocks": 711,
+          "winPct": 29.504603244191145,
+          "medianReturnPct": -6.621829957115633,
+          "meanReturnPct": 0.14263823723508207,
+          "meanLogGrowth": -0.04987521464443337,
+          "p10ReturnPct": -15.602316287415363,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -14.403359399990457,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 43.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -17.071080242352576,
+          "beatMatchedHoldPct": 60.368259535291536,
+          "medianExcessPct": 14.789846899072302,
+          "terminalStressN": 5,
+          "incompleteN": 10
+        },
+        "KOSDAQ": {
+          "n": 4137,
+          "stocks": 1123,
+          "winPct": 25.501571186850374,
+          "medianReturnPct": -10.16503042089395,
+          "meanReturnPct": -0.4543544201283445,
+          "meanLogGrowth": -0.03650981978822205,
+          "p10ReturnPct": -16.94380120297896,
+          "worstReturnPct": -47.697590967804246,
+          "medianMddPct": -17.02607956657991,
+          "worstMddPct": -63.721413721413725,
+          "medianHoldingDays": 34.0,
+          "tenbaggerPct": 0.048344210780759005,
+          "matchedHoldMedianReturnPct": -20.53332013233995,
+          "beatMatchedHoldPct": 60.67198452985255,
+          "medianExcessPct": 16.110277017280474,
+          "terminalStressN": 0,
+          "incompleteN": 29
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 6413,
+        "stocks": 1833,
+        "winPct": 26.945267425541868,
+        "medianReturnPct": -8.75287740402464,
+        "meanReturnPct": -0.1644014372271574,
+        "meanLogGrowth": -0.03052065122064646,
+        "p10ReturnPct": -16.551567508030196,
+        "worstReturnPct": -47.697590967804246,
+        "medianMddPct": -16.113902736346077,
+        "worstMddPct": -63.721413721413725,
+        "medianHoldingDays": 37.0,
+        "tenbaggerPct": 0.03118665211289568,
+        "matchedHoldMedianReturnPct": -19.092708500508195,
+        "beatMatchedHoldPct": 60.61125838141276,
+        "medianExcessPct": 15.599523391446146,
+        "terminalStressN": 0,
+        "incompleteN": 39
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -8.035436629927522
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -8.768225644773786
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -9.676049659453401
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252_plain__ma200",
+      "entry": "252일 종가 신고가",
+      "exit": "200일선 5일 이탈 / -12% 종가 손절",
+      "train": {
+        "n": 6265,
+        "stocks": 1267,
+        "winPct": 28.45969672785315,
+        "medianReturnPct": -13.087235577835997,
+        "meanReturnPct": 11.012262245334048,
+        "meanLogGrowth": -0.011606981804781995,
+        "p10ReturnPct": -18.466491074041546,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -24.35146443514644,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 65.0,
+        "tenbaggerPct": 0.17557861133280128,
+        "matchedHoldMedianReturnPct": 27.039912314503244,
+        "beatMatchedHoldPct": 39.4732641660016,
+        "medianExcessPct": -23.804649497389608,
+        "terminalStressN": 11,
+        "incompleteN": 3
+      },
+      "test": {
+        "n": 5145,
+        "stocks": 1834,
+        "winPct": 21.263362487852284,
+        "medianReturnPct": -13.322492595388802,
+        "meanReturnPct": -0.5411446834096334,
+        "meanLogGrowth": -0.08273350439257739,
+        "p10ReturnPct": -18.029731747771738,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -21.26200274348422,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 53.0,
+        "tenbaggerPct": 0.019436345966958212,
+        "matchedHoldMedianReturnPct": -19.10099308902956,
+        "beatMatchedHoldPct": 59.7667638483965,
+        "medianExcessPct": 13.492040755913326,
+        "terminalStressN": 13,
+        "incompleteN": 33
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1780,
+          "stocks": 711,
+          "winPct": 24.15730337078652,
+          "medianReturnPct": -12.915356951292035,
+          "meanReturnPct": 0.15793615266224137,
+          "meanLogGrowth": -0.09721154077081683,
+          "p10ReturnPct": -17.25032359085151,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -20.3208003919346,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 79.5,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -17.4417146260211,
+          "beatMatchedHoldPct": 59.38202247191011,
+          "medianExcessPct": 13.146244850963418,
+          "terminalStressN": 8,
+          "incompleteN": 8
+        },
+        "KOSDAQ": {
+          "n": 3365,
+          "stocks": 1123,
+          "winPct": 19.73254086181278,
+          "medianReturnPct": -13.536921916330048,
+          "meanReturnPct": -0.9109407868889474,
+          "meanLogGrowth": -0.07507498886411787,
+          "p10ReturnPct": -18.336361120483424,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -21.86786863403777,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 42.0,
+          "tenbaggerPct": 0.029717682020802376,
+          "matchedHoldMedianReturnPct": -20.177238805970134,
+          "beatMatchedHoldPct": 59.9702823179792,
+          "medianExcessPct": 13.778192371475962,
+          "terminalStressN": 5,
+          "incompleteN": 25
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 5132,
+        "stocks": 1831,
+        "winPct": 21.31722525331255,
+        "medianReturnPct": -13.314028699509917,
+        "meanReturnPct": -0.28920292208546305,
+        "meanLogGrowth": -0.04794665682897021,
+        "p10ReturnPct": -17.95313453502292,
+        "worstReturnPct": -46.75732448866776,
+        "medianMddPct": -21.236653848761847,
+        "worstMddPct": -77.43743743743744,
+        "medianHoldingDays": 53.0,
+        "tenbaggerPct": 0.019485580670303974,
+        "matchedHoldMedianReturnPct": -18.956837625028278,
+        "beatMatchedHoldPct": 59.91816056118472,
+        "medianExcessPct": 13.651958449734675,
+        "terminalStressN": 0,
+        "incompleteN": 33
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.626284221614947
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.322492595388802
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.184998266363602
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252_plain__trail25",
+      "entry": "252일 종가 신고가",
+      "exit": "종가 고점 대비 -25% / -12% 종가 손절",
+      "train": {
+        "n": 7031,
+        "stocks": 1267,
+        "winPct": 33.110510595932304,
+        "medianReturnPct": -12.371210656692567,
+        "meanReturnPct": 9.140374495510395,
+        "meanLogGrowth": 0.000554407203468302,
+        "p10ReturnPct": -17.8877487562189,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -25.4746835443038,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 41.0,
+        "tenbaggerPct": 0.028445455838429813,
+        "matchedHoldMedianReturnPct": 21.433286641227546,
+        "beatMatchedHoldPct": 42.72507466932158,
+        "medianExcessPct": -16.892578588923392,
+        "terminalStressN": 10,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 5337,
+        "stocks": 1834,
+        "winPct": 25.651114858534758,
+        "medianReturnPct": -13.05636882573732,
+        "meanReturnPct": 0.800109678319294,
+        "meanLogGrowth": -0.05692442965355505,
+        "p10ReturnPct": -17.587864832061896,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -23.385,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 40.0,
+        "tenbaggerPct": 0.01873711823121604,
+        "matchedHoldMedianReturnPct": -20.416043450126764,
+        "beatMatchedHoldPct": 60.951845606145774,
+        "medianExcessPct": 15.675787728026535,
+        "terminalStressN": 9,
+        "incompleteN": 35
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1792,
+          "stocks": 711,
+          "winPct": 26.004464285714285,
+          "medianReturnPct": -12.924572629782338,
+          "meanReturnPct": 0.8848339388707549,
+          "meanLogGrowth": -0.0842630630414909,
+          "p10ReturnPct": -17.141638150016057,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -23.916815504939592,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 57.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -18.531648375571518,
+          "beatMatchedHoldPct": 59.82142857142857,
+          "medianExcessPct": 13.909702927814621,
+          "terminalStressN": 7,
+          "incompleteN": 8
+        },
+        "KOSDAQ": {
+          "n": 3545,
+          "stocks": 1123,
+          "winPct": 25.472496473906915,
+          "medianReturnPct": -13.126620419031587,
+          "meanReturnPct": 0.757281504861429,
+          "meanLogGrowth": -0.04310473119624023,
+          "p10ReturnPct": -17.865214572348165,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -23.10118265440211,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 34.0,
+          "tenbaggerPct": 0.028208744710860365,
+          "matchedHoldMedianReturnPct": -21.322133294878252,
+          "beatMatchedHoldPct": 61.52327221438646,
+          "medianExcessPct": 16.67762378583274,
+          "terminalStressN": 2,
+          "incompleteN": 27
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 5328,
+        "stocks": 1831,
+        "winPct": 25.694444444444443,
+        "medianReturnPct": -13.04911482558091,
+        "meanReturnPct": 0.9703801338570184,
+        "meanLogGrowth": -0.03368357470708424,
+        "p10ReturnPct": -17.530187070145576,
+        "worstReturnPct": -47.697590967804246,
+        "medianMddPct": -23.356455134927735,
+        "worstMddPct": -83.41666666666667,
+        "medianHoldingDays": 40.0,
+        "tenbaggerPct": 0.01876876876876877,
+        "matchedHoldMedianReturnPct": -20.342131664080544,
+        "beatMatchedHoldPct": 61.05480480480481,
+        "medianExcessPct": 15.93047630638204,
+        "terminalStressN": 0,
+        "incompleteN": 35
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.3580229009143
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.05636882573732
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -13.921522626167848
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "breakout252_plain__trail35",
+      "entry": "252일 종가 신고가",
+      "exit": "종가 고점 대비 -35% / -12% 종가 손절",
+      "train": {
+        "n": 6073,
+        "stocks": 1267,
+        "winPct": 27.56463033097316,
+        "medianReturnPct": -13.295642997135515,
+        "meanReturnPct": 14.698654662208256,
+        "meanLogGrowth": -0.005698054493548748,
+        "p10ReturnPct": -18.46684778017056,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -27.30923694779117,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 49.0,
+        "tenbaggerPct": 0.16466326362588507,
+        "matchedHoldMedianReturnPct": 24.239012997431587,
+        "beatMatchedHoldPct": 41.13288325374609,
+        "medianExcessPct": -17.633933337603814,
+        "terminalStressN": 13,
+        "incompleteN": 3
+      },
+      "test": {
+        "n": 5023,
+        "stocks": 1834,
+        "winPct": 19.470435994425642,
+        "medianReturnPct": -13.563001044141298,
+        "meanReturnPct": -1.1121550046026552,
+        "meanLogGrowth": -0.10383963009399239,
+        "p10ReturnPct": -18.15511364622401,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -23.31967612915812,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 47.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -19.736501741670242,
+        "beatMatchedHoldPct": 58.96874377861836,
+        "medianExcessPct": 12.99640210780818,
+        "terminalStressN": 18,
+        "incompleteN": 33
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1692,
+          "stocks": 711,
+          "winPct": 19.38534278959811,
+          "medianReturnPct": -13.448107291244716,
+          "meanReturnPct": -1.2910228004518243,
+          "meanLogGrowth": -0.13384007247335425,
+          "p10ReturnPct": -17.600756845954724,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -23.84755760455659,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 70.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -17.387838197967433,
+          "beatMatchedHoldPct": 56.7966903073286,
+          "medianExcessPct": 9.573148041720675,
+          "terminalStressN": 10,
+          "incompleteN": 8
+        },
+        "KOSDAQ": {
+          "n": 3331,
+          "stocks": 1123,
+          "winPct": 19.513659561693185,
+          "medianReturnPct": -13.64421267504028,
+          "meanReturnPct": -1.0212981116045294,
+          "meanLogGrowth": -0.08860073831798507,
+          "p10ReturnPct": -18.39589929142168,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -23.053333333333338,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 38.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -21.003904362700922,
+          "beatMatchedHoldPct": 60.07205043530471,
+          "medianExcessPct": 14.427949221862225,
+          "terminalStressN": 8,
+          "incompleteN": 25
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 5005,
+        "stocks": 1826,
+        "winPct": 19.54045954045954,
+        "medianReturnPct": -13.555357540654922,
+        "meanReturnPct": -0.7565144032206095,
+        "meanLogGrowth": -0.054526927456297045,
+        "p10ReturnPct": -18.089943091460302,
+        "worstReturnPct": -46.36078745290494,
+        "medianMddPct": -23.242857142857144,
+        "worstMddPct": -83.41666666666667,
+        "medianHoldingDays": 46.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -19.477209575339284,
+        "beatMatchedHoldPct": 59.18081918081918,
+        "medianExcessPct": 13.152485746450227,
+        "terminalStressN": 0,
+        "incompleteN": 33
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.868724474834359
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.563001044141298
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.423113477156468
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "pullback50__hold5",
+      "entry": "상승 추세의 50일선 재돌파",
+      "exit": "5년 보유",
+      "train": {
+        "n": 2122,
+        "stocks": 1286,
+        "winPct": 60.03770028275211,
+        "medianReturnPct": 30.325933462784604,
+        "meanReturnPct": 96.22561773456685,
+        "meanLogGrowth": -0.020340664952003523,
+        "p10ReturnPct": -65.19822713450823,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -70.36911809395711,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 1.3195098963242224,
+        "matchedHoldMedianReturnPct": 30.325933462784604,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 39,
+        "incompleteN": 2
+      },
+      "test": {
+        "n": 1850,
+        "stocks": 1850,
+        "winPct": 48.10810810810811,
+        "medianReturnPct": -3.861761742810166,
+        "meanReturnPct": 37.073896388205064,
+        "meanLogGrowth": -0.30721260869691086,
+        "p10ReturnPct": -64.96895202962062,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -72.38861941647917,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 0.43243243243243246,
+        "matchedHoldMedianReturnPct": -3.861761742810166,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 40,
+        "incompleteN": 8
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 710,
+          "stocks": 710,
+          "winPct": 46.901408450704224,
+          "medianReturnPct": -6.059888230920829,
+          "meanReturnPct": 39.67459485768532,
+          "meanLogGrowth": -0.403019205495274,
+          "p10ReturnPct": -58.961355309739716,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -69.57820803684379,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 1826.0,
+          "tenbaggerPct": 0.7042253521126761,
+          "matchedHoldMedianReturnPct": -6.059888230920829,
+          "beatMatchedHoldPct": 0.0,
+          "medianExcessPct": 0.0,
+          "terminalStressN": 22,
+          "incompleteN": 1
+        },
+        "KOSDAQ": {
+          "n": 1140,
+          "stocks": 1140,
+          "winPct": 48.85964912280702,
+          "medianReturnPct": -2.2674170002377037,
+          "meanReturnPct": 35.45416313089716,
+          "meanLogGrowth": -0.24754358788389527,
+          "p10ReturnPct": -70.5645264343125,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -73.908521382691,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 1826.0,
+          "tenbaggerPct": 0.2631578947368421,
+          "matchedHoldMedianReturnPct": -2.2674170002377037,
+          "beatMatchedHoldPct": 0.0,
+          "medianExcessPct": 0.0,
+          "terminalStressN": 18,
+          "incompleteN": 7
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 1810,
+        "stocks": 1810,
+        "winPct": 49.171270718232044,
+        "medianReturnPct": -1.8970216053298072,
+        "meanReturnPct": 40.10315376694989,
+        "meanLogGrowth": -0.008686687166140425,
+        "p10ReturnPct": -60.18579522418439,
+        "worstReturnPct": -97.58066328083666,
+        "medianMddPct": -72.05797355207609,
+        "worstMddPct": -98.52807283763278,
+        "medianHoldingDays": 1826.0,
+        "tenbaggerPct": 0.44198895027624313,
+        "matchedHoldMedianReturnPct": -1.8970216053298072,
+        "beatMatchedHoldPct": 0.0,
+        "medianExcessPct": 0.0,
+        "terminalStressN": 0,
+        "incompleteN": 5
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -3.089563181514643
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -3.8617617428101605
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -4.818408722830958
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "pullback50__profit100",
+      "entry": "상승 추세의 50일선 재돌파",
+      "exit": "+100% 익절 / -12% 종가 손절",
+      "train": {
+        "n": 7521,
+        "stocks": 1286,
+        "winPct": 23.8266188006914,
+        "medianReturnPct": -13.65845192641444,
+        "meanReturnPct": 13.73797316060208,
+        "meanLogGrowth": 0.022655033257799478,
+        "p10ReturnPct": -18.46164089684825,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -21.22411693057249,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 75.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": 23.124802637248166,
+        "beatMatchedHoldPct": 42.50764525993883,
+        "medianExcessPct": -15.105548974248018,
+        "terminalStressN": 13,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 5713,
+        "stocks": 1851,
+        "winPct": 15.140906704008403,
+        "medianReturnPct": -14.028012363126619,
+        "meanReturnPct": 3.1968971706478833,
+        "meanLogGrowth": -0.06738659085122783,
+        "p10ReturnPct": -18.62555998954669,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -21.737154150197625,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 79.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -16.322154915797572,
+        "beatMatchedHoldPct": 57.395413968142826,
+        "medianExcessPct": 11.198822543590314,
+        "terminalStressN": 15,
+        "incompleteN": 38
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1907,
+          "stocks": 710,
+          "winPct": 13.476664918720505,
+          "medianReturnPct": -13.959962094290434,
+          "meanReturnPct": 0.9423186583899179,
+          "meanLogGrowth": -0.11622323354974425,
+          "p10ReturnPct": -18.09490608588502,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -21.63919413919414,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 105.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -15.60464154870347,
+          "beatMatchedHoldPct": 56.63345568956476,
+          "medianExcessPct": 8.813499269232484,
+          "terminalStressN": 10,
+          "incompleteN": 6
+        },
+        "KOSDAQ": {
+          "n": 3806,
+          "stocks": 1141,
+          "winPct": 15.974776668418286,
+          "medianReturnPct": -14.079925008505601,
+          "meanReturnPct": 4.326555926001507,
+          "meanLogGrowth": -0.042916943550631206,
+          "p10ReturnPct": -18.925573857026556,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -21.75771403207254,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 69.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -16.962540922510804,
+          "beatMatchedHoldPct": 57.77719390436153,
+          "medianExcessPct": 12.588396526411632,
+          "terminalStressN": 5,
+          "incompleteN": 32
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 5698,
+        "stocks": 1845,
+        "winPct": 15.18076518076518,
+        "medianReturnPct": -14.021995286724264,
+        "meanReturnPct": 3.46856327411571,
+        "meanLogGrowth": -0.031194618315830216,
+        "p10ReturnPct": -18.55474057787916,
+        "worstReturnPct": -59.93444150485032,
+        "medianMddPct": -21.710842166212927,
+        "worstMddPct": -72.34681405112397,
+        "medianHoldingDays": 78.0,
+        "tenbaggerPct": 0.0,
+        "matchedHoldMedianReturnPct": -16.185487173917814,
+        "beatMatchedHoldPct": 57.54650754650754,
+        "medianExcessPct": 11.409169583264706,
+        "terminalStressN": 0,
+        "incompleteN": 38
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -13.337470843244503
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -14.028012363126619
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.883497587634054
+        }
+      ],
+      "selectedOnTrain": true
+    },
+    {
+      "id": "pullback50__ma50",
+      "entry": "상승 추세의 50일선 재돌파",
+      "exit": "50일선 2일 이탈 / -12% 종가 손절",
+      "train": {
+        "n": 20048,
+        "stocks": 1286,
+        "winPct": 24.541101356743813,
+        "medianReturnPct": -3.501347759008011,
+        "meanReturnPct": 1.8778491826796362,
+        "meanLogGrowth": -0.003088015425055806,
+        "p10ReturnPct": -10.381862012423682,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -8.559913932496794,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 9.0,
+        "tenbaggerPct": 0.009976057462090982,
+        "matchedHoldMedianReturnPct": 33.36545264470088,
+        "beatMatchedHoldPct": 36.91141260973663,
+        "medianExcessPct": -32.349824938866476,
+        "terminalStressN": 5,
+        "incompleteN": 8
+      },
+      "test": {
+        "n": 13942,
+        "stocks": 1851,
+        "winPct": 19.75326352029838,
+        "medianReturnPct": -3.702343638254768,
+        "meanReturnPct": -0.05395949246764786,
+        "meanLogGrowth": -0.01640180660125864,
+        "p10ReturnPct": -9.706827295180975,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -7.881747999891108,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 10.0,
+        "tenbaggerPct": 0.007172572084349448,
+        "matchedHoldMedianReturnPct": -13.245897687304197,
+        "beatMatchedHoldPct": 57.31602352603644,
+        "medianExcessPct": 11.658852096198109,
+        "terminalStressN": 3,
+        "incompleteN": 74
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 5010,
+          "stocks": 710,
+          "winPct": 19.800399201596807,
+          "medianReturnPct": -3.3381952618569466,
+          "meanReturnPct": -0.25986984503033606,
+          "meanLogGrowth": -0.018029941462425574,
+          "p10ReturnPct": -8.464665987445352,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -6.810835164147827,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 9.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -12.492272353555055,
+          "beatMatchedHoldPct": 57.44510978043912,
+          "medianExcessPct": 11.384376427043524,
+          "terminalStressN": 2,
+          "incompleteN": 13
+        },
+        "KOSDAQ": {
+          "n": 8932,
+          "stocks": 1141,
+          "winPct": 19.726824899238693,
+          "medianReturnPct": -3.90928914559201,
+          "meanReturnPct": 0.061536574072773575,
+          "meanLogGrowth": -0.015488578247648438,
+          "p10ReturnPct": -10.34756255425301,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -8.5866637283054,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 10.0,
+          "tenbaggerPct": 0.011195700850873264,
+          "matchedHoldMedianReturnPct": -13.784670670119393,
+          "beatMatchedHoldPct": 57.243618450515,
+          "medianExcessPct": 11.964837525977835,
+          "terminalStressN": 1,
+          "incompleteN": 61
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 13939,
+        "stocks": 1850,
+        "winPct": 19.757514886290263,
+        "medianReturnPct": -3.7016357063602734,
+        "meanReturnPct": -0.03244875844636841,
+        "meanLogGrowth": -0.013431914481731482,
+        "p10ReturnPct": -9.699174901550112,
+        "worstReturnPct": -59.93444150485032,
+        "medianMddPct": -7.88126919140224,
+        "worstMddPct": -67.0150684931507,
+        "medianHoldingDays": 10.0,
+        "tenbaggerPct": 0.007174115790228854,
+        "matchedHoldMedianReturnPct": -13.242002047972179,
+        "beatMatchedHoldPct": 57.328359279718775,
+        "medianExcessPct": 11.67426123495867,
+        "terminalStressN": 0,
+        "incompleteN": 74
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -2.92886460382793
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -3.702343638254768
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -4.660576946993972
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "pullback50__ma200",
+      "entry": "상승 추세의 50일선 재돌파",
+      "exit": "200일선 5일 이탈 / -12% 종가 손절",
+      "train": {
+        "n": 8033,
+        "stocks": 1286,
+        "winPct": 27.72314203908876,
+        "medianReturnPct": -7.796893395617321,
+        "meanReturnPct": 10.702497404111956,
+        "meanLogGrowth": 0.01203833096871647,
+        "p10ReturnPct": -16.52600650869359,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -19.545454545454554,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 56.0,
+        "tenbaggerPct": 0.12448649321548612,
+        "matchedHoldMedianReturnPct": 33.160360319034865,
+        "beatMatchedHoldPct": 38.34183991036972,
+        "medianExcessPct": -27.753863576533355,
+        "terminalStressN": 7,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 6819,
+        "stocks": 1851,
+        "winPct": 21.80671652735005,
+        "medianReturnPct": -8.147475550006622,
+        "meanReturnPct": 1.1907560056672706,
+        "meanLogGrowth": -0.04432317038199532,
+        "p10ReturnPct": -16.30860437280235,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -17.96502384737678,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 52.0,
+        "tenbaggerPct": 0.014664906877841324,
+        "matchedHoldMedianReturnPct": -13.088800304893732,
+        "beatMatchedHoldPct": 56.95849831353571,
+        "medianExcessPct": 10.397782775619612,
+        "terminalStressN": 10,
+        "incompleteN": 38
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 2479,
+          "stocks": 710,
+          "winPct": 22.065348931020573,
+          "medianReturnPct": -6.698642645687292,
+          "meanReturnPct": 0.9012492365210845,
+          "meanLogGrowth": -0.041909280472422844,
+          "p10ReturnPct": -15.397304804247025,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -15.767195767195751,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 53.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -13.740492937610771,
+          "beatMatchedHoldPct": 59.903186768858404,
+          "medianExcessPct": 11.696373433362862,
+          "terminalStressN": 4,
+          "incompleteN": 4
+        },
+        "KOSDAQ": {
+          "n": 4340,
+          "stocks": 1141,
+          "winPct": 21.658986175115206,
+          "medianReturnPct": -9.284265635872035,
+          "meanReturnPct": 1.3561217385505309,
+          "meanLogGrowth": -0.045701979848776476,
+          "p10ReturnPct": -16.769383834449137,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -19.37713271674805,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 51.0,
+          "tenbaggerPct": 0.02304147465437788,
+          "matchedHoldMedianReturnPct": -12.430082482550286,
+          "beatMatchedHoldPct": 55.276497695852534,
+          "medianExcessPct": 9.08786965688066,
+          "terminalStressN": 6,
+          "incompleteN": 34
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 6809,
+        "stocks": 1849,
+        "winPct": 21.83874284035835,
+        "medianReturnPct": -8.130630637669533,
+        "meanReturnPct": 1.3393692469738872,
+        "meanLogGrowth": -0.024098192576763607,
+        "p10ReturnPct": -16.283931342179216,
+        "worstReturnPct": -42.64875885029714,
+        "medianMddPct": -17.94926108374384,
+        "worstMddPct": -77.31884057971014,
+        "medianHoldingDays": 52.0,
+        "tenbaggerPct": 0.0146864444118079,
+        "matchedHoldMedianReturnPct": -12.917089942955373,
+        "beatMatchedHoldPct": 57.042150095461885,
+        "medianExcessPct": 10.480982708606811,
+        "terminalStressN": 0,
+        "incompleteN": 38
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -7.409700565594102
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -8.147475550006622
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -9.061476489854304
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "pullback50__trail25",
+      "entry": "상승 추세의 50일선 재돌파",
+      "exit": "종가 고점 대비 -25% / -12% 종가 손절",
+      "train": {
+        "n": 8559,
+        "stocks": 1286,
+        "winPct": 31.756046267087278,
+        "medianReturnPct": -12.418675851511662,
+        "meanReturnPct": 10.599465588780777,
+        "meanLogGrowth": 0.01048060111239641,
+        "p10ReturnPct": -17.170674065691994,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -25.192741552896525,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 65.0,
+        "tenbaggerPct": 0.03505082369435682,
+        "matchedHoldMedianReturnPct": 23.336706299013432,
+        "beatMatchedHoldPct": 41.46512443042412,
+        "medianExcessPct": -18.150912106135987,
+        "terminalStressN": 11,
+        "incompleteN": 6
+      },
+      "test": {
+        "n": 6543,
+        "stocks": 1851,
+        "winPct": 27.44918233226349,
+        "medianReturnPct": -13.028386401458869,
+        "meanReturnPct": 2.7190648481487223,
+        "meanLogGrowth": -0.04230429343665482,
+        "p10ReturnPct": -17.15136306770242,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -24.27536231884059,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 69.0,
+        "tenbaggerPct": 0.01528350909368791,
+        "matchedHoldMedianReturnPct": -16.745816372682032,
+        "beatMatchedHoldPct": 58.93321106526058,
+        "medianExcessPct": 13.548049227546466,
+        "terminalStressN": 11,
+        "incompleteN": 41
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 2126,
+          "stocks": 710,
+          "winPct": 27.04609595484478,
+          "medianReturnPct": -13.000382338826387,
+          "meanReturnPct": 1.8352981634007115,
+          "meanLogGrowth": -0.06812823222396903,
+          "p10ReturnPct": -16.532666713228018,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -23.982424657374946,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 89.0,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -15.898899109087417,
+          "beatMatchedHoldPct": 59.54844778927564,
+          "medianExcessPct": 12.459310254178774,
+          "terminalStressN": 7,
+          "incompleteN": 5
+        },
+        "KOSDAQ": {
+          "n": 4417,
+          "stocks": 1141,
+          "winPct": 27.643196739868692,
+          "medianReturnPct": -13.047804455980948,
+          "meanReturnPct": 3.1444413416452877,
+          "meanLogGrowth": -0.029874659327116665,
+          "p10ReturnPct": -17.375339503250952,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -24.491158486200614,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 62.0,
+          "tenbaggerPct": 0.022639800769753225,
+          "matchedHoldMedianReturnPct": -17.674821841623412,
+          "beatMatchedHoldPct": 58.63708399366085,
+          "medianExcessPct": 14.480319490980476,
+          "terminalStressN": 4,
+          "incompleteN": 36
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 6532,
+        "stocks": 1849,
+        "winPct": 27.49540722596448,
+        "medianReturnPct": -13.02366671316314,
+        "meanReturnPct": 2.8920455146107082,
+        "meanLogGrowth": -0.01910997792688694,
+        "p10ReturnPct": -17.079553067686714,
+        "worstReturnPct": -59.93444150485032,
+        "medianMddPct": -24.209748381440882,
+        "worstMddPct": -83.41666666666667,
+        "medianHoldingDays": 69.0,
+        "tenbaggerPct": 0.015309246785058175,
+        "matchedHoldMedianReturnPct": -16.654480615705268,
+        "beatMatchedHoldPct": 59.03245560318432,
+        "medianExcessPct": 13.683454859956063,
+        "terminalStressN": 0,
+        "incompleteN": 41
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.329815717079606
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.028386401458869
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -13.893818647824762
+        }
+      ],
+      "selectedOnTrain": false
+    },
+    {
+      "id": "pullback50__trail35",
+      "entry": "상승 추세의 50일선 재돌파",
+      "exit": "종가 고점 대비 -35% / -12% 종가 손절",
+      "train": {
+        "n": 6722,
+        "stocks": 1286,
+        "winPct": 28.042249330556384,
+        "medianReturnPct": -13.154638391441843,
+        "meanReturnPct": 17.25470723033917,
+        "meanLogGrowth": 0.014301454852894817,
+        "p10ReturnPct": -17.786649693636292,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -26.11679281394798,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 78.0,
+        "tenbaggerPct": 0.17851829812555786,
+        "matchedHoldMedianReturnPct": 24.841378823301863,
+        "beatMatchedHoldPct": 41.252603391847664,
+        "medianExcessPct": -16.61371068976331,
+        "terminalStressN": 12,
+        "incompleteN": 4
+      },
+      "test": {
+        "n": 5694,
+        "stocks": 1851,
+        "winPct": 21.303126097646647,
+        "medianReturnPct": -13.50101635121106,
+        "meanReturnPct": 1.0050586956201757,
+        "meanLogGrowth": -0.0790464392717996,
+        "p10ReturnPct": -17.749712973593557,
+        "worstReturnPct": -100.0,
+        "medianMddPct": -24.574032976065496,
+        "worstMddPct": -100.0,
+        "medianHoldingDays": 83.0,
+        "tenbaggerPct": 0.035124692658939236,
+        "matchedHoldMedianReturnPct": -15.592715084185793,
+        "beatMatchedHoldPct": 56.41025641025641,
+        "medianExcessPct": 10.255767835997766,
+        "terminalStressN": 16,
+        "incompleteN": 37
+      },
+      "testByMarket": {
+        "KOSPI": {
+          "n": 1898,
+          "stocks": 710,
+          "winPct": 19.915700737618547,
+          "medianReturnPct": -13.454721012124725,
+          "meanReturnPct": -0.5021291148557205,
+          "meanLogGrowth": -0.10540876251270495,
+          "p10ReturnPct": -17.049885706602108,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -24.09133869167611,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 108.5,
+          "tenbaggerPct": 0.0,
+          "matchedHoldMedianReturnPct": -14.956364979751369,
+          "beatMatchedHoldPct": 56.26975763962066,
+          "medianExcessPct": 8.501604451020311,
+          "terminalStressN": 8,
+          "incompleteN": 5
+        },
+        "KOSDAQ": {
+          "n": 3796,
+          "stocks": 1141,
+          "winPct": 21.996838777660695,
+          "medianReturnPct": -13.55119994133236,
+          "meanReturnPct": 1.7586526008581016,
+          "meanLogGrowth": -0.06586527765134692,
+          "p10ReturnPct": -18.054263979758844,
+          "worstReturnPct": -100.0,
+          "medianMddPct": -24.828083930695726,
+          "worstMddPct": -100.0,
+          "medianHoldingDays": 73.5,
+          "tenbaggerPct": 0.052687038988408846,
+          "matchedHoldMedianReturnPct": -15.937609787690853,
+          "beatMatchedHoldPct": 56.48050579557429,
+          "medianExcessPct": 10.971603968461785,
+          "terminalStressN": 8,
+          "incompleteN": 32
+        }
+      },
+      "testWithoutTerminalStress": {
+        "n": 5678,
+        "stocks": 1846,
+        "winPct": 21.363156040859458,
+        "medianReturnPct": -13.49271974685966,
+        "meanReturnPct": 1.2896802065623936,
+        "meanLogGrowth": -0.04033854460834776,
+        "p10ReturnPct": -17.691084529730936,
+        "worstReturnPct": -59.93444150485032,
+        "medianMddPct": -24.53567076933266,
+        "worstMddPct": -83.41666666666667,
+        "medianHoldingDays": 82.0,
+        "tenbaggerPct": 0.03522367030644593,
+        "matchedHoldMedianReturnPct": -15.388055835817017,
+        "beatMatchedHoldPct": 56.569214512152165,
+        "medianExcessPct": 10.471209591269997,
+        "terminalStressN": 0,
+        "incompleteN": 37
+      },
+      "costSensitivity": [
+        {
+          "oneWayPct": 0.1,
+          "testMedianReturnPct": -12.806241910385241
+        },
+        {
+          "oneWayPct": 0.5,
+          "testMedianReturnPct": -13.501016351211053
+        },
+        {
+          "oneWayPct": 1.0,
+          "testMedianReturnPct": -14.36174557802622
+        }
+      ],
+      "selectedOnTrain": false
+    }
+  ],
+  "selectedRule": "pullback50__profit100",
+  "method": {
+    "oracle": "확보한 전체 기간의 선행 종가 저점→후행 종가 고점, 별도로 5개 달력년 최대 상승도 계산. 미래를 아는 사후 상한; 실현 수익 아님.",
+    "train": "진입 2001~2010, 최대 5년 추적. 2015-12-31 이후 가격·거래재개·상장폐지 결과를 차단하고 미완료 거래 제외. 선택 완료 시점 2015년 말.",
+    "test": "진입 2016~2020, 최대 5년 추적(~2025). 규칙 선택에 미사용.",
+    "cost": "한쪽 비용 0.5%(수수료·세금·슬리피지 합산 가정), 민감도 0.1/0.5/1.0%. 연도별 실제 세율 아님.",
+    "execution": "확정 종가 신호→다음 체결 가능한 시가. 삼성을 포함한 3개 장기 상장 종목의 관측 거래일로 누락봉과 휴장을 구분. 매수 다음 봉 불가 시 폐기; 매도 중지/가격제한 근처 시가는 재개까지 대기. 고저가·그날 종가로 시가 체결을 판단하지 않음. 종가 기준 낙폭.",
+    "limitZone": "거래 당시 호가·대기열을 모른다. 현재/최종 코스닥 분류는 2005-03-28 전 시가 갭 ±11%, 그 밖은 2015-06-15 전 ±14%, 이후 ±29%를 넘는 매수/매도는 보수적으로 제외한다. 과거 시장 이전·특별 기준가격·정리매매·호가 반올림을 완전히 복원한 가격제한 모델은 아님.",
+    "terminal": "상장폐지 시 정산액 미확인은 0원 전액손실 스트레스. 합병·시장 이전 실제 정산 수익은 복원하지 못함.",
+    "inference": "같은 종목의 연도별 코호트가 겹친다. 확률 구간은 종목 단위 200회 bootstrap; 시간·업종 상관까지 제거한 인과 추정 아님.",
+    "returnUnit": "독립 종목의 겹치지 않는 거래 사건. 자금 배분·동시 보유를 구현한 포트폴리오 CAGR/MDD가 아님.",
+    "priceBasis": "Naver 소급 조정 OHLCV. 거래 당시 원주가/주식수·기업행동 전체 대조 미완료. 소수주 정규화 연구 수익, 정수주 실주문 성과 아님. 양수 시가를 모형상 체결가로 가정하며, 당일 거래량이 0/누락인 원천의 실제 시가 거래와 주문 체결은 확인하지 못했다.",
+    "marketBasis": "현재/최종 시장·업종. 과거 시장 이전·업종 변경은 소급 복원하지 못함.",
+    "fundamentals": "역사적 공시 접수시각 연결 재무 패널 미확보. 재무 성장·수주·기술수출은 기업 원문 사례로만 설명하며 정량 예측 신호에 넣지 않음."
+  }
+}
