@@ -175,7 +175,7 @@ test("데이트레이딩 최근 8분만 매수·매도 푸시 복구 — 날짜�
   const fn=new Function("hmToMin","hmLabel","exitLabel","signedPct",code+"; return recentPaperPushEvents;")(
     hmMin,v=>String(v).padStart(4,"0"),v=>v==="stop"?"손절":String(v),v=>"+"+Number(v).toFixed(2)+"%");
   const ledger={date:"2026-10-08",targetHm:1018,trades:[
-    {id:"001:1016",code:"001",name:"테스트1",signalTime:1016,entryTime:1017,signalPrice:5000,status:"closed",
+    {id:"001:1016",code:"001",name:"테스트1",signalTime:1016,entryTime:1017,signalPrice:5000,entryPrice:5000,status:"closed",
       exitTime:1018,exitPrice:4920,reason:"stop",pnl:-1.85},
     {id:"002:1001",code:"002",signalTime:1001,entryTime:1002,status:"open"}
   ]};
