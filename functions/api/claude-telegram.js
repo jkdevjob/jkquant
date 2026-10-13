@@ -11,7 +11,7 @@ import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts } 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const KINDS=["preopen","etfbuy","weekly","duel","promote"];
-export const ALERT_HEAD=/^\[클로드 연구 (시초가|데이트레이딩|비트코인|SOXL)\] /;
+export const ALERT_HEAD=/^\[클로드 연구 (시초가|데이트레이딩|비트코인|SOXL|텐배거)\] /;   // 텐배거 = 전향 시험 매수·매도(GitHub Actions 가 부른다)
 const SX_ACT={enter:"시가 매수",hold:"보유",exit:"시가 매도",flat:"쉼"};
 const SX_NEXT={buy:"시가 매수 (과매도 신호)",sell:"시가 매도"};
 const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL"};

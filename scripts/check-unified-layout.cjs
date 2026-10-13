@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html'];
-const labels={'/':'운영','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'단타(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
+const labels={'/':'운영','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
 const ui=fs.readFileSync('jk-ui.js','utf8'),mobile=fs.readFileSync('jk-mobile.css','utf8');
 new vm.Script(ui,{filename:'jk-ui.js'});
 function verify(src=ui){
@@ -17,7 +17,7 @@ assert(mobile.includes('@media (max-width:768px)'),'모바일 분기 유지');
 assert(/\.wrap\{width:100%!important;max-width:none!important/.test(mobile),'모바일 전체폭 유지');
 for(const p of pages){
   const html=fs.readFileSync(p,'utf8');
-  assert(html.includes('/jk-ui.js?v=1.0.2'),p+' 공용 UI 캐시 버전');
+  assert(html.includes('/jk-ui.js?v=1.0.3'),p+' 공용 UI 캐시 버전');
   assert(html.includes('class="wrap'),p+' wrap 존재');
   assert(html.includes('class="jkmenu'),p+' 공통 메뉴 존재');
 }

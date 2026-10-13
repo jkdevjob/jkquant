@@ -46,13 +46,11 @@ class Rule:
         self.hot, self.hot_trail, self.target, self.stop = hot, hot_trail, target, stop
 
 
-def exit_index(c, ma200, traded, t0, last, rule):
-    """t0 종가 매수 → 매도 체결일. c·ma200·traded 는 한 종목의 열(전체 날짜)."""
-    end = min(last, t0 + rule.hold)
-    w = c[t0:end + 1]
-    if len(w) <= 1:
-        return end
+def exit_cond(w, m, rule):
+    """매수일부터 날마다 종가로 본 매도 조건. w: 매수일~ 수정 종가 · m: 같은 날들의 200일선.
+    반환 (cond, hot): cond[i] = i 일 종가로 매도 조건 성립(매수일 cond[0] 은 늘 False) · hot[i] = i 일까지 과열 표시."""
     cond = np.zeros(len(w), dtype=bool)
+    hot = np.zeros(len(w), dtype=bool)
     runmax = np.maximum.accumulate(w)
     if rule.trail is not None:
         cond |= w <= runmax * (1 - rule.trail)
@@ -61,7 +59,6 @@ def exit_index(c, ma200, traded, t0, last, rule):
     if rule.target is not None:
         cond |= w >= w[0] * rule.target
     if rule.ma or rule.hot is not None:
-        m = ma200[t0:end + 1]
         valid = ~np.isnan(m)
         if rule.ma:
             armed = np.maximum.accumulate(valid & (w > m))
@@ -69,7 +66,19 @@ def exit_index(c, ma200, traded, t0, last, rule):
         if rule.hot is not None:
             hot = np.maximum.accumulate(valid & (w >= m * rule.hot))
             cond |= hot & (w <= runmax * (1 - rule.hot_trail))
-    cond[0] = False
+    if len(cond):
+        cond[0] = False
+    return cond, hot
+
+
+def exit_index(c, ma200, traded, t0, last, rule):
+    """t0 종가 매수 → 매도 체결일. c·ma200·traded 는 한 종목의 열(전체 날짜).
+    전향 시험은 아직 상장 중인 종목의 last 를 자료 끝 너머(T)로 준다 — 조건이 안 나왔으면 T 이상(=아직 보유)이 돌아온다."""
+    end = min(last, t0 + rule.hold)
+    w = c[t0:end + 1]
+    if len(w) <= 1:
+        return end
+    cond, _ = exit_cond(w, ma200[t0:end + 1], rule)
     k = np.flatnonzero(cond)
     if len(k) == 0:
         return end
@@ -101,12 +110,16 @@ def trade_list(entries, C, MA, TR, last, rule, years):
     return {k: np.array(v) for k, v in out.items()}
 
 
-def portfolio(sig_days, C, RAW, MA, TR, last, rule, years, slots=20, capital=1.4e7, max_new=None, start=0, stop=None):
+def portfolio(sig_days, C, RAW, MA, TR, last, rule, years, slots=20, capital=1.4e7, max_new=None, start=0, stop=None,
+              book=None):
     """일별 포트폴리오. sig_days: {s: [j,...]} 신호일별 후보(우선순위 순). 정수 주식 수.
-    max_new: 한 신호일에 새로 사는 최대 종목 수(분할 매수). 반환: 날짜별 평가액 배열과 체결 기록."""
+    max_new: 한 신호일에 새로 사는 최대 종목 수(분할 매수). 반환: 날짜별 평가액 배열과 체결 기록.
+    book: dict 를 주면 장부를 채운다(전향 시험) — buys/sells 체결 내역(주식 수·체결가)과 끝날 보유(open)."""
     T = C.shape[0]
     stop = T if stop is None else stop
     cash = capital
+    if book is not None:
+        book.update(buys=[], sells=[], open={})
     pos = {}            # j -> [shares, t0, entry_adj, exit_day]
     eq = np.full(T, np.nan)
     trades = []
@@ -117,6 +130,8 @@ def portfolio(sig_days, C, RAW, MA, TR, last, rule, years, slots=20, capital=1.4
             px = RAW[t0, j] * C[t, j] / ca
             cash += sh * px * (1 - sell_cost(years[t]))
             trades.append((j, t0, t, C[t, j] / ca - 1))
+            if book is not None:
+                book['sells'].append(dict(j=j, t0=t0, t=t, sh=sh, px=float(px), cash=float(cash)))
         # 2) 어제 신호 → 오늘 종가 매수
         cands = sig_days.get(t - 1)
         if cands and len(pos) < slots:
@@ -139,7 +154,12 @@ def portfolio(sig_days, C, RAW, MA, TR, last, rule, years, slots=20, capital=1.4
                 e = exit_index(C[:, j], MA[:, j], TR[:, j], t, last[j], rule)
                 pos[j] = [sh, t, C[t, j], e if e > t else min(t + 1, last[j])]
                 bought += 1
+                if book is not None:
+                    book['buys'].append(dict(j=j, t=t, sh=sh, px=float(px), cash=float(cash), sig=t - 1))
         eq[t] = cash + sum(p[0] * RAW[p[1], jj] * C[t, jj] / p[2] for jj, p in pos.items())
+    if book is not None:
+        book['open'] = {j: dict(sh=p[0], t0=p[1], ca=float(p[2]), e=int(p[3])) for j, p in pos.items()}
+        book['cash'] = float(cash)
     return eq, trades
 
 

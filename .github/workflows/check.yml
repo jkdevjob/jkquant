@@ -172,12 +172,14 @@ jobs:
       - name: 부동산 GPT 투자판단·자금·계약 기록 값 및 변이 검사
         run: node --test tests/realestate-decision.test.cjs
 
-      - name: 텐배거(클로드) 계산·화면 값 시험 + 변이 시험
+      - name: 텐배거(클로드) 계산·전향 시험·화면 값 시험 + 변이 시험
         run: |
-          pip install --quiet numpy pandas
+          pip install --quiet numpy pandas pyarrow
           python scripts/tenbagger_claude/test_analysis.py
+          python scripts/tenbagger_claude/test_forward.py
           python scripts/tenbagger_claude/mutation_test.py
           node scripts/test_tenbagger_claude.cjs
+          node --test tests/research-claude-tenbagger.test.mjs
 
       - name: D-1 갭하락 · D-3 BTC 급락 값 시험 + 변이 시험
         run: |

@@ -55,7 +55,7 @@ assert(api.method().includes('미확인'));
 const page=fs.readFileSync('tenbagger.html','utf8'),access=fs.readFileSync('jk-access.js','utf8');
 assert(page.includes('data-guard="1"'));assert(page.includes('JKAccess.guard('));
 assert(access.includes("{path:'/tenbagger',label:'텐배거',mode:'public',order:65,after:'/paper',navHidden:true}"));
-assert(page.includes('id="tbVer">v1.1.3'));
+assert(/id="tbVer">v1\.1\.\d+</.test(page),'GPT 탭 기능 버전(1.1) — 뒤 자리는 메뉴 등 작은 수정마다 오른다');
 assert(page.includes('id="pane-gpt"'));assert(page.includes('id="tbg-root"'));
 assert(page.includes('/tenbagger-claude.js?v=1.0.0'),'Claude renderer version preserved');
 assert(page.includes("if(location.hash==='#gpt')tbTab('gpt')"));
