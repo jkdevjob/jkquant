@@ -241,3 +241,41 @@ test("GPT 연구 마감요약 금지, 연구 전략명 메시지 첫 줄 검증"
   assert.ok(opening.includes("[지피티 연구 시초가]"));
   assert.ok(worker.includes('title:"[지피티 연구 "+name+"] "'));
 });
+
+
+test("클로드 연구: 매매없음·예상가·매도접수는 외부알림이 아니고 체결확인만 푸시",async()=>{
+  const {pushEvents}=await import("../functions/api/_claude_push.js");
+  const now=Date.parse("2026-10-13T06:43:00Z");
+  const candidate=pushEvents({today:"2026-10-13",tabs:{
+    opening:{rows:[{code:"247540",name:"에코프로비엠",status:"보유중",buyPrice:114000,buyPriceKind:"예상"}]},
+    daytrading:{rows:[{status:"매매 없음"}]}
+  }},now,{});
+  assert.equal(candidate.length,0);
+  const filled=pushEvents({today:"2026-10-13",tabs:{
+    opening:{rows:[{code:"247540",name:"에코프로비엠",status:"보유중",buyPrice:114200,buyPriceKind:"체결"}]},
+    daytrading:{rows:[{name:"ETF",status:"보유중(오버나잇)",buyTime:"오늘 15:30 종가",buyPrice:1000,buyPriceKind:"체결"}]}
+  }},now,{});
+  assert.equal(filled.length,2);
+  assert.ok(filled.every(x=>x.title.startsWith("[클로드 연구 ")));
+  const received=pushEvents({today:"2026-10-13",tabs:{daytrading:{rows:[
+    {name:"ETF",status:"매도 접수",sellTime:"오늘 09:00 시가",sellPrice:null,realized:false}
+  ]}}},now,{});
+  assert.equal(received.length,0);
+});
+
+test("클로드 매매없음 Telegram과 GPT/Claude 대결 일일보고는 보내지 않는다",async()=>{
+  const claude=await import("../functions/api/claude-telegram.js");
+  const duel=await import("../functions/api/scalping-duel.js");
+  const env={AUTOTRADE_KEY:"test"};
+  const post=async(fn,body)=>{
+    const r=await fn({env,request:new Request("https://host.invalid/api/check",{
+      method:"POST",headers:{"content-type":"application/json","x-monitor-key":"test"},body:JSON.stringify(body)})});
+    return r.json();
+  };
+  const one=await post(claude.onRequestPost,{kind:"etfbuy",date:"2026-10-13"});
+  const two=await post(claude.onRequestPost,{op:"send",strategy:"daytrading",date:"2026-10-13"});
+  const three=await post(duel.onRequestPost,{date:"2026-10-13"});
+  assert.equal(one.skipped,"confirmed_trades_only");
+  assert.equal(two.skipped,"confirmed_trades_only");
+  assert.equal(three.skipped,"confirmed_trades_only");
+});
