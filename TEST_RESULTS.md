@@ -8,6 +8,8 @@
 - `node scripts/test_tenbagger_claude.cjs`: 32 PASS(값 24 + 변이 8 — 목록 정렬·시장 거르기·바뀐 이름 찾기·억/조·이름 이스케이프·중앙값 고르기·메뉴 기준점 2종).
 - 렌더 확인(Chromium 390px·1280px, 9개 칸): 가로 넘침 0 · 자바스크립트 오류 0. 휴대폰 가로축 날짜 겹침을 연도 표시로 고침.
 - 강건성(분석 결과 파일): 1만$·10만$ 환산 원금 모두 연 36.5% · 미끄러짐 1%/회 연 32.6%(검증 구간 23.1%) · 21~40위만 35.7% · 41~60위만 32.3% · 2018년 시작 23.7%.
+- main(#477·#478) 병합 뒤 `node scripts/check-before-push.cjs`: 46단계 PASS · 회귀 2,758 PASS / 0 FAIL. GitHub CI [검증 #2094](https://github.com/jkdevjob/jkquant/actions/runs/38347592364) success.
+- Cloudflare Pages 미리보기: 앞선 푸시는 `feat-tenbagger-claude-analys.jkquant.pages.dev/tenbagger` 에 v1.0.0 으로 배포됨. 병합 커밋 c6772d1 의 미리보기 빌드는 'Build failed'(대시보드 로그는 로그인 필요라 원인 미확인 · 바뀐 것은 #478 연구 알림 2개 파일뿐) — 이 커밋으로 다시 빌드해 재현 여부를 본다.
 - 미확인: 운영 로그인 후 화면과 실제 아이폰 표시. 분석 숫자는 과거 자료의 시험 결과이며 실제 매매 수익을 확인한 것이 아니다. 분석 자동 갱신 없음(2026-10-08 자료 기준).
 
 ## 2026-10-13 · 매일 연구 웹알림
