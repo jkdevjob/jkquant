@@ -1,5 +1,12 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-14 · 설정 연구 알림 이름·상태 표시 · v1.3.4
+
+- `node --test tests/settings-notifications.test.mjs tests/research-notify.test.mjs`: **14 PASS / 0 FAIL**.
+- 새 설정 시험은 실제 스크립트 전체와 Worker 구독 경로를 실행: 연구 성공 팝업 전에 ON·끄기 버튼·처리 완료·두 그리기 프레임 확인, 8개 주제 이름 및 다시 열기 상태 복원, 조회/저장/삭제 실패 때 기존 구독 보존, 끄기 성공 때 다른 주제 보존 및 마지막 주제만 기기 구독 삭제.
+- 변이 **3/3 차단**: 연구 안내 이름 누락, 팝업 뒤 화면 갱신, 저장 성공 전에 ON 반영. 기기 푸시 발송·실제 iPhone 수신은 미검증.
+- `node scripts/check-before-push.cjs`: **49/49 단계 PASS · 회귀 2,760 PASS / 0 FAIL**, 알림 Worker dry-run 빌드 포함. GitHub CI·운영 반영은 해당 PR 실행 로그에서 확인한다.
+
 ## 2026-10-14 · 관리자 이용 승인 표 겹침 · v0.12.24
 
 - `node scripts/check-ui-common.cjs`: U15 포함 ALL PASS(18). 변이 2종(첫 칸 행 선만 · 옛 마지막 행 규칙 부활) 모두 U15 FAIL.
