@@ -279,3 +279,15 @@ test("클로드 매매없음 Telegram과 GPT/Claude 대결 일일보고는 보�
   assert.equal(two.skipped,"confirmed_trades_only");
   assert.equal(three.skipped,"confirmed_trades_only");
 });
+
+
+test("14:26 후보 알림 원본(/api/daytrading-monitor)은 텔레그램 송신을 완전히 제거하고 신호만 보존",()=>{
+  const src=readFileSync(new URL("../functions/api/daytrading-monitor.js",import.meta.url),"utf8");
+  assert.ok(src.includes("signalEvents:events"));
+  assert.ok(src.includes("notifiedEvents:0"));
+  assert.ok(src.includes('skipped:"candidate_only"'));
+  assert.ok(!src.includes("sendTelegram("));
+  assert.ok(!src.includes("모의 후보 신호"));
+  const scheduler=readFileSync(new URL("../worker/daytrading-scheduler/src/index.js",import.meta.url),"utf8");
+  assert.ok(scheduler.includes('Number(x.entryPrice)>0'));
+});
