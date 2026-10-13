@@ -111,6 +111,8 @@ export async function onRequestPost({request,env}){
   try{
     const b=await request.json(),date=String(b.date||"");
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<DUEL_START)return json({ok:true,pending:true,reason:"before_start"});
+    // 대결 결과는 화면에서 조회한다. 매수·매도 확정 신호가 아니므로 Telegram을 보내지 않는다.
+    return json({ok:true,date,skipped:"confirmed_trades_only"});
     const report=await loadReport();
     const row=(report.total.days||[]).find(x=>x.date===date);
     if(!row)return json({ok:true,pending:true,reason:"same_day_record_wait",date});
