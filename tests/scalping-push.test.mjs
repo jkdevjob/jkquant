@@ -35,6 +35,7 @@ test("신호 인증·중복 차단·시장일 제한·매수/매도 각각 푸�
   const latest=await (await x.worker.fetch(new Request("https://push.invalid/latest"))).json();
   assert.equal(latest.alert.type,"opening");
   assert.match(latest.alert.title,/모의 매수 타이밍/);
+  assert.equal(latest.alert.title,"[지피티 연구 시초가] 🟢 모의 매수 타이밍");   // 2026-10-13: 모든 연구 메뉴 같은 머리말
   assert.equal(latest.alert.url,"https://jkquant.pages.dev/scalping?strategy=opening");
   assert.equal(latest.alerts.length,1);
   assert.equal((await x.send({...b,stage:"sell",eventId:"opening-test-1:sell"})).status,200);
@@ -187,4 +188,36 @@ test("데이트레이딩 최근 8분만 매수·매도 푸시 복구 — 날짜�
   assert.ok(a.every(x=>x.webOnly!==true)); // Retry both channels; successful Telegram receipts suppress duplicates.
   assert.equal(fn({...ledger,targetHm:1030}).length,0);
   assert.match(source,/await retryPaperWebPush\(env,saved\)/);
+});
+
+test("연구(지피티) 텔레그램: 실제 매수·매도만 · [지피티 연구 탭] 머리말 · 장 종료 일일결과는 보내지 않음",async()=>{
+  const alert=await import(process.env.SCALPING_ALERT_MODULE||"../functions/api/scalping-alert.js");
+  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches,texts=[],pushes=[];
+  const rows=new Map();
+  globalThis.caches={default:{async match(k){return rows.get(String(k))?.clone();},async put(k,v){rows.set(String(k),v.clone());},async delete(k){return rows.delete(String(k));}}};
+  globalThis.fetch=async(u,init={})=>{
+    if(String(u).includes("api.telegram.org")){texts.push(JSON.parse(init.body).text);return new Response(JSON.stringify({ok:true,result:{message_id:texts.length}}));}
+    pushes.push(JSON.parse(init.body));return new Response(JSON.stringify({ok:true,delivery:{sent:1}}));
+  };
+  const env={AUTOTRADE_KEY:"mk",TELEGRAM_BOT_TOKEN:"t",TELEGRAM_CHAT_ID:"c"};
+  const post=b=>alert.onRequestPost({request:new Request("https://p.test/api/scalping-alert",{method:"POST",headers:{"x-monitor-key":"mk"},body:JSON.stringify(b)}),env});
+  try{
+    const r=await post({strategy:"daytrading",stage:"buy",eventId:"d:1",date:"2026-10-13",time:"10:21 KST",lines:["005930 삼성전자"]});
+    assert.equal(r.status,200);
+    assert.ok(texts[0].startsWith("[지피티 연구 데이트레이딩] 🟢 매수 타이밍\n2026-10-13 10:21 KST"),texts[0]);
+    await post({strategy:"crypto",stage:"sell",eventId:"c:1",date:"2026-10-13",lines:["모의손익 +1%"]});
+    assert.ok(texts[1].startsWith("[지피티 연구 비트코인] 🔴 매도 타이밍"),texts[1]);
+    const s=await (await post({strategy:"opening",stage:"summary",eventId:"o:sum",date:"2026-10-13",lines:["요약"]})).json();
+    assert.equal(s.skipped,"buy_sell_only");
+    assert.equal(texts.length,2);assert.equal(pushes.length,2);                     // 요약은 텔레그램 · 웹 알림 모두 없음
+  }finally{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;}
+});
+
+test("연구(지피티) 후보 신호 · 대결 요약은 텔레그램으로 보내지 않는다",()=>{
+  const dm=readFileSync(new URL("../functions/api/daytrading-monitor.js",import.meta.url),"utf8");
+  const du=readFileSync(new URL("../functions/api/scalping-duel.js",import.meta.url),"utf8");
+  const om=readFileSync(new URL("../functions/api/opening-monitor.js",import.meta.url),"utf8");
+  assert.ok(!dm.includes("api.telegram.org")&&!dm.includes("모의 후보 신호"));
+  assert.ok(!du.includes("api.telegram.org")&&du.includes('skipped:"buy_sell_only"'));
+  assert.ok(om.includes('"[지피티 연구 시초가] 🟢 모의 매수 신호 · "')&&om.includes('"[지피티 연구 시초가] 🔴 모의 매도 신호 · "')&&om.includes('text:title+"\\n\\n"'));
 });

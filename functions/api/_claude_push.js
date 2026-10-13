@@ -1,53 +1,62 @@
-// 단타(클로드) 매수 · 매도 웹 알림 — 무엇을 언제 알릴지(순수 함수)와 웹 푸시 암호화(표준 RFC 8291 · VAPID RFC 8292).
-// 판단 원본은 실시간 화면과 같은 /api/claude-live 응답 하나다(같은 걸 두 군데서 세지 않는다). Worker 가 5분마다 그 응답을 읽어
-// 새로 생긴 매수 · 매도만 알림으로 보낸다. 알림 id 는 날짜 · 전략 · 종목 · 매수/매도로 만들어 같은 알림을 두 번 보내지 않는다.
+// 단타(클로드) 매수 · 매도 알림(웹 알림 · 텔레그램 공용) — 무엇을 언제 알릴지(순수 함수)와 웹 푸시 암호화(표준 RFC 8291 · VAPID RFC 8292).
+// 판단 원본은 실시간 화면과 같은 /api/claude-live 응답 하나다(같은 걸 두 군데서 세지 않는다). Worker 가 5분마다(①② 는 기록 직후에도) 그 응답을 읽어
+// 새로 생긴 매수 · 매도만 웹 알림과 텔레그램으로 보낸다. 알림 id 는 날짜 · 전략 · 종목 · 매수/매도로 만들어 같은 알림을 두 번 보내지 않는다.
+// 사용자 요청(2026-10-13): 모든 메시지는 '[클로드 연구 시초가]' 처럼 시작하고, 실제 매수 · 매도 때만 보낸다(후보 · 매매 없음 · 요약은 보내지 않음).
 // 알림이 실패해도 주문 · 장부에는 영향이 없다(주문 경로와 따로 돈다).
+import { MAIN_DEFAULT, openingCounts, openingPick } from "./_claude_main.js";
 
 const KR_PCT = v => (v >= 0 ? "+" : "") + Number(v).toFixed(2) + "%";
 const won = v => (v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("en-US"));
 export function kstDateOf(ms) { return new Date(ms + 9 * 36e5).toISOString().slice(0, 10); }
 const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+export const HEAD = { open: "[클로드 연구 시초가]", etf: "[클로드 연구 데이트레이딩]", coin: "[클로드 연구 비트코인]", soxl: "[클로드 연구 SOXL]" };
+export const APP_URL = "jkquant.pages.dev/claude";
 
 // live: /api/claude-live 응답 · nowMs: 지금 · sent: 이미 보낸 알림 {id: {at, price}} (③ 다음 날 09:00 매도 알림에 쓴다)
 // 돌려주는 것: [{id, title, body, tag, url, price?}]
 export function pushEvents(live, nowMs, sent = {}) {
   const T = (live && live.tabs) || {}, d = (live && live.today) || kstDateOf(nowMs), out = [];
   const add = (id, title, body, price) => out.push({ id, title, body, tag: id.split(":").slice(0, 2).join(":"), url: "/claude", price: price ?? null });
-  // ① 시초가 — 08:56 판단 · 08:59 장전 동시호가 매수 / 15:20 종가 동시호가 매도
-  const o = (T.opening && T.opening.rows) || [];
+  // ① 시초가 — 08:56 판단 · 08:59 장전 동시호가 매수 / 15:20 종가 동시호가 매도.
+  // 메인 전략 매매일(통과 종목 수 ≥ 메인 기준)에 메인이 고르는 종목만 알린다 — 다른 날 · 다른 종목 주문은 체결 측정용(실시간 화면 · 장부와 같은 함수).
+  const ot = T.opening || {}, P = (ot.main && ot.main.params) || MAIN_DEFAULT.opening.params, br = (ot.decision || {}).breadth;
+  const keep = new Set(openingPick(P, ot.rows || []));
+  const o = br && openingCounts(P, br.qualified) ? (ot.rows || []).filter(r => keep.has(String(r.code))) : [];
   const ob = o.filter(r => r.status && r.status !== "주문 실패");
-  if (ob.length) add("open:" + d + ":buy", "🟢 ① 시초가 매수", ob.map(r => r.name + (r.expectedGapPct != null ? " (갭 " + KR_PCT(r.expectedGapPct) + ")" : "")).join(" · ")
-    + " — 08:59 동시호가" + (o.length > ob.length ? " · 주문 실패 " + (o.length - ob.length) + "종목" : ""));
+  if (ob.length) add("open:" + d + ":buy", HEAD.open + " 🟢 매수", ob.map(r => r.name + (r.expectedGapPct != null ? " (갭 " + KR_PCT(r.expectedGapPct) + ")" : "")).join(" · ")
+    + " — 08:59 동시호가 → 15:30 종가 매도" + (o.length > ob.length ? " · 주문 실패 " + (o.length - ob.length) + "종목" : ""));
   const os = o.filter(r => r.realized && r.pnlPct != null);
-  if (os.length) add("open:" + d + ":sell", "🔴 ① 시초가 매도", os.map(r => r.name + " " + KR_PCT(r.pnlPct)).join(" · ")
-    + " · 평균 " + KR_PCT(os.reduce((a, r) => a + r.pnlPct, 0) / os.length));
+  if (os.length) add("open:" + d + ":sell", HEAD.open + " 🔴 매도", os.map(r => r.name + " " + KR_PCT(r.pnlPct)).join(" · ")
+    + " · 평균 " + KR_PCT(os.reduce((a, r) => a + r.pnlPct, 0) / os.length) + " — 15:30 종가");
   // ② 데이트레이딩 — 15:21 종가 매수 / 다음 거래일 08:56 시가 매도
   for (const r of (T.daytrading && T.daytrading.rows) || []) {
     if (/^오늘 15:30/.test(r.buyTime || "") && r.status === "보유중(오버나잇)")
-      add("etf:" + d + ":buy", "🟢 ② 데이트레이딩 매수", r.name + " 종가 매수" + (r.dropPct != null ? " (오늘 " + KR_PCT(r.dropPct) + ")" : "") + " → 다음 거래일 시가 매도");
+      add("etf:" + d + ":buy", HEAD.etf + " 🟢 매수", r.name + " 종가 매수" + (r.dropPct != null ? " (오늘 " + KR_PCT(r.dropPct) + ")" : "") + " → 다음 거래일 09:00 시가 매도");
     if (/^오늘 09:00/.test(r.sellTime || "") && (r.status === "매도 접수" || r.status === "청산"))
-      add("etf:" + d + ":sell", "🔴 ② 데이트레이딩 매도", r.name + " 시가 매도" + (r.realized && r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : " 접수"));
+      add("etf:" + d + ":sell", HEAD.etf + " 🔴 매도", r.name + " 시가 매도" + (r.realized && r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : " 접수"));
   }
   // ③ 비트코인 — 업비트 하루(09:00 시작) 돌파 매수 · 손절 / 다음 날 09:00 매도
   const ud = kstDateOf(nowMs - 9 * 36e5), pud = addDays(ud, -1);
   const coins = (T.crypto && T.crypto.rows) || [];
   for (const r of coins) {
     const m = String(r.code || ""), nm = m.replace("KRW-", "");
-    if (r.hold && r.buyTime) add("coin:" + ud + ":" + m + ":buy", "🟢 ③ " + nm + " 돌파 매수", nm + " " + r.buyTime + " " + won(r.buyPrice) + "원 매수 → 다음 날 09:00 매도", r.buyPrice);
-    if (r.stopped) add("coin:" + ud + ":" + m + ":stop", "🔴 ③ " + nm + " 손절", nm + " 손절 " + won(r.stopPrice) + "원" + (r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : ""));
+    if (r.hold && r.buyTime) add("coin:" + ud + ":" + m + ":buy", HEAD.coin + " 🟢 " + nm + " 매수", nm + " " + r.buyTime + " " + won(r.buyPrice) + "원 돌파 매수 → 다음 날 09:00 매도", r.buyPrice);
+    if (r.stopped) add("coin:" + ud + ":" + m + ":stop", HEAD.coin + " 🔴 " + nm + " 손절", nm + " 손절 " + won(r.stopPrice) + "원" + (r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : ""));
   }
   for (const id of Object.keys(sent || {})) {                    // 어제 하루에 산 코인은 오늘 09:00 에 판다(손절된 것은 빼고)
     const mm = /^coin:(\d{4}-\d{2}-\d{2}):(KRW-[A-Z]+):buy$/.exec(id);
     if (!mm || mm[1] !== pud || sent["coin:" + pud + ":" + mm[2] + ":stop"]) continue;
     const nm = mm[2].replace("KRW-", ""), bp = +(sent[id] && sent[id].price), now = (coins.find(r => r.code === mm[2]) || {}).nowPrice;
-    add("coin:" + pud + ":" + mm[2] + ":sell", "🔴 ③ " + nm + " 매도", nm + " 09:00 매도(어제 돌파분)" + (bp > 0 && now > 0 ? " 약 " + KR_PCT((now / bp - 1) * 100 - 0.14) : ""));
+    add("coin:" + pud + ":" + mm[2] + ":sell", HEAD.coin + " 🔴 " + nm + " 매도", nm + " 09:00 매도(어제 돌파분)" + (bp > 0 && now > 0 ? " 약 " + KR_PCT((now / bp - 1) * 100 - 0.14) : ""));
   }
   // ④ SOXL — 미국장 시가 매수 · 매도(전날 밤 마감 종가로 판단)
   const s = ((T.soxl && T.soxl.rows) || [])[0];
-  if (s && /^보유중 \(시가 매수\)/.test(s.status || "")) add("soxl:" + String(s.buyTime || "").slice(0, 10) + ":buy", "🟢 ④ SOXL 매수", "SOXL 시가 매수 $" + Number(s.buyPrice).toFixed(2) + " → 오른 날 다음 시가 매도");
-  if (s && /^청산 \(시가 매도\)/.test(s.status || "")) add("soxl:" + String(s.sellTime || "").slice(0, 10) + ":sell", "🔴 ④ SOXL 매도", "SOXL 시가 매도 $" + Number(s.sellPrice).toFixed(2) + (s.pnlPct != null ? " " + KR_PCT(s.pnlPct) : ""));
+  if (s && /^보유중 \(시가 매수\)/.test(s.status || "")) add("soxl:" + String(s.buyTime || "").slice(0, 10) + ":buy", HEAD.soxl + " 🟢 매수", "SOXL 시가 매수 $" + Number(s.buyPrice).toFixed(2) + " → 오른 날 다음 시가 매도");
+  if (s && /^청산 \(시가 매도\)/.test(s.status || "")) add("soxl:" + String(s.sellTime || "").slice(0, 10) + ":sell", HEAD.soxl + " 🔴 매도", "SOXL 시가 매도 $" + Number(s.sellPrice).toFixed(2) + (s.pnlPct != null ? " " + KR_PCT(s.pnlPct) : ""));
   return out;
 }
+// 텔레그램 본문 — 웹 알림과 같은 사건 · 같은 머리말
+export function alertText(m) { return m.title + "\n" + m.body + "\n\n자세히: " + APP_URL; }
 
 // ── 웹 푸시 암호화 · 서명 (WebCrypto 만 — Worker · 브라우저 · Node 공통) ──
 const te = new TextEncoder();

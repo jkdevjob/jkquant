@@ -36,6 +36,8 @@ jobs:
           if [ "$STATUS" = "200" ] && jq -e '.ok == true' duel-response.json >/dev/null 2>&1; then
             if jq -e '.pending == true' duel-response.json >/dev/null 2>&1; then
               echo "$DATE 양쪽 같은 날 장부가 아직 덜 쌓임 — 다음 백업 시각에 재확인"
+            elif jq -e '.skipped' duel-response.json >/dev/null 2>&1; then
+              echo "$DATE 대결 요약 텔레그램 꺼짐 — 연구 메뉴 알림은 실제 매수·매도 때만"
             elif jq -e '.duplicate == true' duel-response.json >/dev/null 2>&1; then
               echo "$DATE 대결 요약 이미 전송됨"
             else

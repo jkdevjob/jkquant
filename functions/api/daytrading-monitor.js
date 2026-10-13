@@ -2,7 +2,8 @@
 // 10:00~14:30 데이트레이딩 후보를 서버에서 계산한다.
 // Cloudflare scheduler는 09:55 고정 Top100 스냅샷을 POST로 전달하고,
 // GitHub/수동 GET은 scalping-data에 저장된 스냅샷을 fallback으로 사용한다.
-// 기준전략만 Telegram 후보신호를 보내며 실제 주문은 하지 않는다.
+// 실제 주문은 하지 않는다. 사용자 요청(2026-10-13): 후보 신호는 텔레그램으로 보내지 않는다 — 모든 연구 메뉴는 실제 매수 · 매도 때만 알린다
+// (연구(지피티) 데이트레이딩의 모의 매수 · 매도는 daytrading-scheduler → /api/scalping-alert 가 '[지피티 연구 데이트레이딩]' 으로 보낸다).
 
 import { minuteVolume, daySignal, DAY_SHADOW_VARIANTS, dayVariant } from "./_daytrading.js";
 
@@ -17,27 +18,6 @@ function authorized(request,env){
   const got=request.headers.get("x-monitor-key")||"";
   const want=String(env.DAYTRADING_MONITOR_KEY||env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim();
   return !!want&&got===want;
-}
-async function sendTelegram(env,title,lines){
-  const token=String(env.TELEGRAM_BOT_TOKEN||"").trim(),chatId=String(env.TELEGRAM_CHAT_ID||"").trim();
-  if(!token||!chatId)throw new Error("Telegram 환경변수 없음");
-  const r=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{
-    method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({chat_id:chatId,text:"📈 "+title+"\n\n"+lines.join("\n"),disable_web_page_preview:true})
-  });
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok||!j.ok)throw new Error("Telegram 전송 실패: "+(j.description||r.status));
-  return j.result&&j.result.message_id;
-}
-async function claimEvent(date,targetHm,code){
-  const cache=(typeof caches!=="undefined"&&caches.default)||null;
-  if(!cache)return true;
-  const key="https://daytrading-signal.internal/"+encodeURIComponent([date,targetHm,code].join(":"));
-  try{
-    if(await cache.match(key))return false;
-    await cache.put(key,new Response("1",{headers:{"cache-control":"max-age=21600","content-type":"text/plain"}}));
-  }catch(e){return true;}
-  return true;
 }
 async function snapshot(date,year){
   const u="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daytrading-universe/"+year+"/"+date+".json";
@@ -124,25 +104,11 @@ async function run(request,env,supplied){
   try{
     const res=await scanShard(url.origin,now,snap,shard,shards,targetHm,mainVariant);
     const events=res.signals.filter(x=>x.signalTime===targetHm);
-    const notify=[];
-    for(const x of events){
-      if(await claimEvent(now.date,targetHm,x.code))notify.push(x);
-    }
-    let messageId=null;
-    if(notify.length){
-      const lines=notify.flatMap((x,i)=>[
-        (i+1)+". "+x.name+" ("+x.code+") · Top"+x.rank,
-        "후보신호 "+String(x.signalTime).padStart(4,"0")+" · 신호가 "+Math.round(x.signalPrice).toLocaleString("ko-KR")+"원",
-        "세션 +"+x.sessionRet.toFixed(2)+"% · VWAP기울기 +"+x.vwapSlope.toFixed(2)+"% · 거래량 "+x.volRatio.toFixed(2)+"배",
-        "※ 다음 1분봉 시가 진입은 장마감 KIS 데이터로 모의 재구성"
-      ]);
-      messageId=await sendTelegram(env,"데이트레이딩 모의 후보 신호 · "+String(targetHm).padStart(4,"0"),lines);
-    }
     return new Response(JSON.stringify({
       ok:true,date:now.date,targetHm,snapshotHm:+snap.snapshotHm||null,snapshotSource:snap.captureSource||snap.source||"",
-      shard,shards,universe:res.universe,mainVariant:res.mainVariant,mainParams:res.mainParams,signalEvents:events,notifiedEvents:notify.length,signals:res.signals,
+      shard,shards,universe:res.universe,mainVariant:res.mainVariant,mainParams:res.mainParams,signalEvents:events,notifiedEvents:0,signals:res.signals,
       shadowEvents:Object.values(res.shadow).map(v=>({...v,signalEvents:v.signals.filter(x=>x.signalTime===targetHm)})),
-      telegram:{sent:!!messageId,messageId},errors:res.errors.length
+      telegram:{sent:false,disabled:"candidate_alerts_off"},errors:res.errors.length
     }),{headers:JH});
   }catch(e){
     return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{status:500,headers:JH});

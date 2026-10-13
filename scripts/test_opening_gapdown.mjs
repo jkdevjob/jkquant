@@ -355,11 +355,13 @@ t("새 구조 변수: ③ 최근 N일 고가(hiN) · ④ IBS · 연속 하락 ·
   const none = DAY.soxlDay("2026-10-02", { basedOn: "2026-10-01", action: "none", holding: false, heldDays: 0, close: 100, why: "연속 하락 1일 < 2일" }, q, null);
   assert.equal(none.note, "신호 없음(연속 하락 1일 < 2일) — 쉼");
 });
-t("웹 알림: 매수·매도 때만 · 같은 알림 id · ③ 다음 날 09:00 매도 · 손절은 매도 알림 안 함", () => {
+t("알림(웹 · 텔레그램 공용): 매수·매도 때만 · [클로드 연구 탭] 머리말 · ① 메인 매매일 · 메인 종목만 · ③ 다음 날 09:00 매도 · 손절은 매도 알림 안 함", () => {
   const now = Date.parse("2026-10-07T10:30:00+09:00");                       // 업비트 하루 10/7 · 어제 10/6
+  const M = { params: { minQ: 5, topK: 3, gapMax: -3 } };
   const live = { today: "2026-10-07", tabs: {
-    opening: { rows: [{ name: "가", status: "보유중", expectedGapPct: -5.2 }, { name: "나", status: "주문 실패" },
-                      { name: "다", status: "청산", realized: true, pnlPct: 2.0 }, { name: "라", status: "청산", realized: true, pnlPct: -1.0 }] },
+    opening: { main: M, decision: { breadth: { qualified: 6 } },
+      rows: [{ code: "1", name: "가", status: "보유중", expectedGapPct: -5.2 }, { code: "2", name: "나", status: "주문 실패", expectedGapPct: -4.1 },
+             { code: "3", name: "다", status: "청산", realized: true, pnlPct: 2.0, expectedGapPct: -3.5 }, { code: "4", name: "라", status: "청산", realized: true, pnlPct: -1.0, expectedGapPct: -2.5 }] },
     daytrading: { rows: [{ name: "KODEX", buyTime: "2026-10-06 15:30 종가", sellTime: "오늘 09:00 시가", status: "청산", realized: true, pnlPct: 0.8 },
                          { name: "KODEX", buyTime: "오늘 15:30 종가", status: "보유중(오버나잇)", dropPct: -3.4 }] },
     crypto: { rows: [{ code: "KRW-BTC", hold: true, buyTime: "10:00", buyPrice: 120000000, stopped: false, nowPrice: 121000000 },
@@ -371,13 +373,24 @@ t("웹 알림: 매수·매도 때만 · 같은 알림 id · ③ 다음 날 09:00
   assert.deepEqual(ids, ["coin:2026-10-06:KRW-BTC:sell", "coin:2026-10-07:KRW-BTC:buy", "coin:2026-10-07:KRW-ETH:buy", "coin:2026-10-07:KRW-ETH:stop",
     "etf:2026-10-07:buy", "etf:2026-10-07:sell", "open:2026-10-07:buy", "open:2026-10-07:sell", "soxl:2026-10-06:buy"]);
   const by = Object.fromEntries(ev.map(e => [e.id, e]));
-  assert.equal(by["open:2026-10-07:buy"].body, "가 (갭 -5.20%) · 다 · 라 — 08:59 동시호가 · 주문 실패 1종목");   // 주문 실패는 매수로 안 셈
-  assert.equal(by["open:2026-10-07:sell"].body, "다 +2.00% · 라 -1.00% · 평균 +0.50%");
+  assert.ok(ev.every(e => /^\[클로드 연구 (시초가|데이트레이딩|비트코인|SOXL)\] (🟢|🔴) /.test(e.title)), ev.map(e => e.title).join(" / "));   // 머리말 · 매수/매도만
+  assert.equal(by["open:2026-10-07:buy"].title, "[클로드 연구 시초가] 🟢 매수");
+  assert.equal(by["open:2026-10-07:buy"].body, "가 (갭 -5.20%) · 다 (갭 -3.50%) — 08:59 동시호가 → 15:30 종가 매도 · 주문 실패 1종목");   // 갭 −3% 이하(메인)만 · 주문 실패는 매수로 안 셈
+  assert.equal(by["open:2026-10-07:sell"].body, "다 +2.00% · 평균 +2.00% — 15:30 종가");                 // '라'(갭 −2.5%)는 메인 종목 아님(측정용)
+  assert.equal(by["etf:2026-10-07:buy"].title, "[클로드 연구 데이트레이딩] 🟢 매수");
+  assert.equal(by["coin:2026-10-06:KRW-BTC:sell"].title, "[클로드 연구 비트코인] 🔴 BTC 매도");
   assert.equal(by["coin:2026-10-06:KRW-BTC:sell"].body, "BTC 09:00 매도(어제 돌파분) 약 +9.86%");      // 121/110 − 1 − 비용 0.14
+  assert.equal(by["soxl:2026-10-06:buy"].title, "[클로드 연구 SOXL] 🟢 매수");
   assert.equal(by["coin:2026-10-07:KRW-BTC:buy"].price, 120000000);                                 // 다음 날 매도 알림이 쓸 매수가
   assert.ok(!ids.includes("coin:2026-10-06:KRW-ETH:sell"));                                          // 어제 손절한 코인은 09:00 매도 없음
-  assert.deepEqual(PU.pushEvents({ today: "2026-10-07", tabs: { opening: { rows: [{ name: "가", status: "주문 실패" }] }, daytrading: { rows: [{ status: "매매 없음" }] },
-    crypto: { rows: [{ code: "KRW-BTC", hold: false }] }, soxl: { rows: [{ status: "쉼 — RSI(2) 80 ≥ 20" }] } } }, now, {}), []);   // 매매 없는 날은 알림 없음
+  assert.equal(PU.alertText(by["etf:2026-10-07:buy"]), "[클로드 연구 데이트레이딩] 🟢 매수\nKODEX 종가 매수 (오늘 -3.40%) → 다음 거래일 09:00 시가 매도\n\n자세히: jkquant.pages.dev/claude");
+  // ① 메인 매매일이 아니면(통과 4 < 5) 주문이 있어도 체결 측정용 — 알리지 않는다. 판단 기록이 없어도 알리지 않는다
+  const notMain = { ...live, tabs: { ...live.tabs, opening: { ...live.tabs.opening, decision: { breadth: { qualified: 4 } } } } };
+  assert.ok(!PU.pushEvents(notMain, now, sent).some(e => e.id.startsWith("open:")));
+  assert.ok(!PU.pushEvents({ ...live, tabs: { ...live.tabs, opening: { rows: live.tabs.opening.rows } } }, now, sent).some(e => e.id.startsWith("open:")));
+  assert.deepEqual(PU.pushEvents({ today: "2026-10-07", tabs: { opening: { main: M, decision: { breadth: { qualified: 9 } }, rows: [{ code: "1", name: "가", status: "주문 실패", expectedGapPct: -5 }] },
+    daytrading: { rows: [{ status: "매매 없음" }, { name: "KODEX", buyTime: "오늘 15:30 종가", status: "주문 실패", dropPct: -4 }] },
+    crypto: { rows: [{ code: "KRW-BTC", hold: false }] }, soxl: { rows: [{ status: "쉼 — RSI(2) 80 ≥ 20" }] } } }, now, {}), []);   // 매매 없음 · 주문 실패는 실제 매수가 아니다 — 알림 없음
 });
 t("웹 알림 암호화(RFC 8291) — 받는 쪽 표준 복호화로 원문 복원 · VAPID 서명 검증", async () => {
   const ua = nodeCrypto.createECDH("prime256v1"); ua.generateKeys();
@@ -414,7 +427,7 @@ t("웹 알림 암호화(RFC 8291) — 받는 쪽 표준 복호화로 원문 복�
   const r = await PU.sendPush(sub, { title: "x" }, jwk, async (url, init) => { got = { url, init }; return { status: 410 }; });
   assert.equal(r.gone, true); assert.equal(got.init.headers["Content-Encoding"], "aes128gcm"); assert.ok(got.init.headers.Authorization.startsWith("vapid t="));
 });
-t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사라진 구독은 지움 · 알림 감시는 장 일정과 따로 · 경로는 감시키", async () => {
+t("worker 알림: 5분 감시가 새 매수·매도만 웹 알림 + 텔레그램(같은 사건 · [클로드 연구 탭]) · 텔레그램 거절만 3번까지 · 사라진 구독은 지움 · 경로는 감시키", async () => {
   const fs = await import("node:fs"), os = await import("node:os");
   let src = fs.readFileSync(process.env.JKQ_WORKER_SRC || new URL("../worker/opening-scheduler/src/index.js", import.meta.url), "utf8");
   src = src.replace('import { DurableObject } from "cloudflare:workers";', "class DurableObject{constructor(ctx,env){this.ctx=ctx;this.env=env}}")
@@ -427,12 +440,15 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     getAlarm: async () => alarmAt, setAlarm: async t => { alarmAt = t; } } }, env);
   const ua = nodeCrypto.createECDH("prime256v1"); ua.generateKeys();
   const sub = { endpoint: "https://push.test/s1", keys: { p256dh: PU.b64u(ua.getPublicKey()), auth: PU.b64u(nodeCrypto.randomBytes(16)) } };
-  let live = { ok: true, today: "2026-10-07", tabs: { opening: { rows: [{ name: "가", status: "보유중" }] }, daytrading: { rows: [] }, crypto: { rows: [] }, soxl: { rows: [] } } };
-  const posts = [], oldFetch = globalThis.fetch;
+  const op = { main: { params: { minQ: 5, topK: 3, gapMax: null } }, decision: { breadth: { qualified: 6 } } };
+  let live = { ok: true, today: "2026-10-07", tabs: { opening: { ...op, rows: [{ code: "000001", name: "가", status: "보유중", expectedGapPct: -4 }] }, daytrading: { rows: [] }, crypto: { rows: [] }, soxl: { rows: [] } } };
+  const posts = [], tgs = [], oldFetch = globalThis.fetch;
+  let tgReply = { ok: true };
   globalThis.fetch = async (u, init = {}) => {
     u = String(u);
     if (u.endsWith("/api/claude-live")) { assert.equal(init.headers["x-monitor-key"], "mk"); return new Response(JSON.stringify(live)); }
     if (u.startsWith("https://push.test/")) { posts.push(u); return new Response("", { status: u.endsWith("gone") ? 410 : 201 }); }
+    if (u.endsWith("/api/claude-telegram")) { const b = JSON.parse(init.body); assert.equal(b.op, "event"); tgs.push(b.text); return new Response(JSON.stringify(tgReply), { status: tgReply.ok ? 200 : 502 }); }
     throw new Error("unexpected fetch " + u);
   };
   try {
@@ -447,13 +463,30 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     const r1 = await W.claudePushWatch(env, now);
     assert.equal(r1.fresh, 1); assert.deepEqual(posts.sort(), ["https://push.test/gone", "https://push.test/s1"]);
     assert.equal(r1.dropped, 1); assert.equal((await call("/push-key")).subscribers, 1);            // 410 받은 구독은 지운다
-    posts.length = 0;
-    assert.equal((await W.claudePushWatch(env, now + 3e5)).fresh || 0, 0); assert.deepEqual(posts, []);   // 같은 매수는 다시 안 보냄
-    live.tabs.opening.rows[0] = { name: "가", status: "청산", realized: true, pnlPct: 1.2 };
+    assert.deepEqual(tgs, ["[클로드 연구 시초가] 🟢 매수\n가 (갭 -4.00%) — 08:59 동시호가 → 15:30 종가 매도\n\n자세히: jkquant.pages.dev/claude"]);   // 텔레그램도 같은 사건 · 같은 머리말
+    posts.length = 0; tgs.length = 0;
+    assert.equal((await W.claudePushWatch(env, now + 3e5)).fresh || 0, 0); assert.deepEqual(posts, []); assert.deepEqual(tgs, []);   // 같은 매수는 다시 안 보냄
+    live.tabs.opening.rows[0] = { code: "000001", name: "가", status: "청산", realized: true, pnlPct: 1.2, expectedGapPct: -4 };
+    tgReply = { ok: false, definite: true, error: "Too Many Requests" };                            // 텔레그램이 거절 → 다음 감시에서 텔레그램만 다시
     alarmAt = null;
     await store.alarm();                                                                              // 저장소 알람이 감시를 돌리고 다음 5분 알람을 다시 건다
     assert.deepEqual(posts, ["https://push.test/s1"]);                                                // 매수는 이미 보냄 — 새로 생긴 매도 한 건만
     assert.ok(alarmAt > Date.now() && alarmAt % 3e5 === 0);
+    assert.equal(tgs.length, 1); assert.ok(tgs[0].startsWith("[클로드 연구 시초가] 🔴 매도\n가 +1.20%"));
+    posts.length = 0; tgs.length = 0;
+    const r3 = await W.claudePushWatch(env, now + 6e5);                                               // 거절된 텔레그램만 다시(웹 알림은 다시 안 보냄)
+    assert.deepEqual(posts, []); assert.equal(tgs.length, 1); assert.deepEqual(r3.telegram, [{ id: "open:2026-10-07:sell", result: "fail" }]);
+    tgs.length = 0;
+    await W.claudePushWatch(env, now + 9e5); assert.equal(tgs.length, 1);                              // 세 번째(마지막) 시도
+    tgs.length = 0; tgReply = { ok: true };
+    await W.claudePushWatch(env, now + 12e5); assert.deepEqual(tgs, []);                              // 3번 거절되면 더 보내지 않는다
+    const sentMap = (await store.pushOp("sent", {})).sent;
+    assert.equal(sentMap["open:2026-10-07:sell"].tgTries, 3); assert.equal(sentMap["open:2026-10-07:buy"].tg, "sent");
+    tgReply = { ok: false, definite: false, error: "HTTP 502" };                                       // 보냈는지 모르면 다시 보내지 않는다(중복 방지)
+    live.tabs.opening.rows.push({ code: "000002", name: "나", status: "청산", realized: true, pnlPct: -0.5, expectedGapPct: -3 });
+    live.tabs.daytrading.rows = [{ name: "KODEX", buyTime: "오늘 15:30 종가", status: "보유중(오버나잇)", dropPct: -3.4 }];
+    await W.claudePushWatch(env, now + 15e5); assert.equal(tgs.length, 1); tgs.length = 0;
+    await W.claudePushWatch(env, now + 18e5); assert.deepEqual(tgs, []);
     live = null; posts.length = 0; alarmAt = null;
     await store.alarm();                                                                              // 감시가 실패해도(자료 없음) 다음 알람은 꼭 건다
     assert.ok(alarmAt > Date.now()); assert.deepEqual(posts, []);
@@ -642,6 +675,28 @@ t("claude auth: owner token or server key only; APIs answer 401 without it", asy
   assert.equal(await AUTH.claudeAuthorized(req({}), { OWNER_EMAIL: "me@x.com" }, look), false);       // 서버키 미설정이어도 빈 값으로 통과 안 됨
   assert.equal((await LV.onRequestGet({ request: req({}), env })).status, 401);
   assert.equal((await LAB.onRequestGet({ request: req({}), env })).status, 401);
+});
+t("텔레그램 엔드포인트: 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 보냄 · 판단·주간·대결·교체·마감 결과는 보내지 않음", async () => {
+  await Promise.all(pending.slice());                                         // 전역 fetch 를 바꾸므로 앞 시험이 다 끝난 뒤에(파일 맨 끝)
+  const old = globalThis.fetch, sentTexts = [];
+  globalThis.fetch = async (u, init = {}) => {
+    if (String(u).includes("api.telegram.org")) { sentTexts.push(JSON.parse(init.body).text); return new Response(JSON.stringify({ ok: true, result: { message_id: 7 } })); }
+    throw new Error("unexpected fetch " + u);
+  };
+  const env = { OPENING_MONITOR_KEY: "k", TELEGRAM_BOT_TOKEN: "t", TELEGRAM_CHAT_ID: "c" };
+  const post = b => TG.onRequestPost({ request: new Request("https://p.test/api/claude-telegram", { method: "POST", headers: { "x-monitor-key": "k" }, body: JSON.stringify(b) }), env }).then(async r => ({ status: r.status, j: await r.json() }));
+  try {
+    const ok = await post({ op: "event", text: "[클로드 연구 시초가] 🟢 매수\n가 — 08:59" });
+    assert.equal(ok.status, 200); assert.equal(ok.j.messageId, 7); assert.deepEqual(sentTexts, ["[클로드 연구 시초가] 🟢 매수\n가 — 08:59"]);
+    const bad = await post({ op: "event", text: "🟢 ① 시초가 매수" });                                // 머리말 없는 글은 거절(정의된 실패)
+    assert.equal(bad.status, 400); assert.equal(bad.j.definite, true);
+    for (const b of [{ kind: "preopen", date: "2026-10-13" }, { kind: "etfbuy", date: "2026-10-13" }, { kind: "weekly", date: "2026-10-17" },
+                     { kind: "duel", date: "2026-10-13" }, { kind: "promote", date: "2026-10-13", event: { tab: "crypto" } }, { op: "send", strategy: "opening", date: "2026-10-13", result: {} }]) {
+      const r = await post(b); assert.equal(r.status, 200); assert.equal(r.j.skipped, "buy_sell_only", JSON.stringify(b));
+    }
+    assert.equal(sentTexts.length, 1);                                                                // 매수·매도 말고는 하나도 안 보냄
+    assert.equal((await post({ op: "nope" })).status, 400);
+  } finally { globalThis.fetch = old; }
 });
 await Promise.all(pending);
 console.log(`opening gap-down JS: ${n} ALL PASS`);
