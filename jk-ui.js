@@ -281,7 +281,7 @@
       if(warmCount>=2)return;
       var u=new URL(href,location.href);
       if(u.origin!==location.origin||u.pathname===location.pathname||warmPages[u.pathname])return;
-      if(!/^\/(?:plan|paper|backtest|settings|job|realestate|ipo|scalping|claude|admin)?(?:\.html)?$/.test(u.pathname))return;
+      if(!/^\/(?:plan|paper|tenbagger|backtest|settings|job|realestate|ipo|scalping|claude|admin)?(?:\.html)?$/.test(u.pathname))return;
       warmPages[u.pathname]=true;warmCount++;
       var link=document.createElement('link');
       link.rel='prefetch';link.as='document';link.href=u.pathname;

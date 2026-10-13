@@ -74,12 +74,12 @@ await t('L3 앱 내장 브라우저 감지 — 이름을 아는 앱 + 이름 모
   assert.equal(fs_(iOS+' Mobile/15E148'),null,'홈 화면 앱(standalone)은 내장 화면이 아니다');
 });
 
-await t('L4 Firestore 전송은 iOS(데스크탑 웹사이트 요청으로 맥처럼 보이는 아이폰·아이패드 포함)·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지 — 9개 페이지가 같은 판정',async()=>{
-  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','admin.html'];
+await t('L4 Firestore 전송은 iOS(데스크탑 웹사이트 요청으로 맥처럼 보이는 아이폰·아이패드 포함)·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지 — 10개 페이지가 같은 판정',async()=>{
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','admin.html','tenbagger.html'];
   const lines=pages.map(p=>{ const s=fs.readFileSync(path.join(ROOT,p),'utf8');
     assert(/JK_FORCE_FIRESTORE_LONG_POLLING\?\{experimentalForceLongPolling:true\}:\{experimentalAutoDetectLongPolling:true\}/.test(s),p+' conditional firestore transport missing');
     const m=s.match(/const JK_FORCE_FIRESTORE_LONG_POLLING=(.+?);\s+\/\/ 아이폰/); assert(m,p+' 판정 줄'); return m[1]; });
-  assert.equal(new Set(lines).size,1,'9개 페이지 판정이 글자까지 같다(갈라지면 한 페이지만 아이폰을 못 알아본다)');
+  assert.equal(new Set(lines).size,1,pages.length+'개 페이지 판정이 글자까지 같다(갈라지면 한 페이지만 아이폰을 못 알아본다)');
   const force=(ua,touch)=>new Function('navigator','return '+lines[0]+';')({userAgent:ua,maxTouchPoints:touch});
   const IOS='Mozilla/5.0 (iPhone; CPU iPhone OS 26_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1';
   const DESK='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Safari/605.1.15';   // 사용자 진단 화면 그대로
