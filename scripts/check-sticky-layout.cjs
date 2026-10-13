@@ -12,7 +12,8 @@ const routes=[
   ['plan.html','.top','.plan-tabs'],['backtest.html','.top','.stabs-sticky'],
   ['scalping.html','header','.strategy-tabs'],['claude.html','header','.tabs'],
   ['ipo.html','header','#ipoWrap>.subnav'],['realestate.html','header','.tabs'],
-  ['job.html','header','.tabs'],['settings.html','header','.tabs'],['admin.html','header','#nav']
+  ['job.html','header','.tabs'],['settings.html','header','.tabs'],['admin.html','header','#nav'],
+  ['tenbagger.html','header','.tabs']
 ];
 function declarations(src,selector){
   const rule=src.match(new RegExp('(?:^|\\n)'+selector.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\{([^}]+)\\}'));
@@ -88,4 +89,4 @@ for(const [name,mutCode,mutCss] of [
   assert.throws(()=>verify(routes[0],390,mutCode,mutCss),assert.AssertionError,name+'를 검사에서 잡는다');
   console.log('PASS mutation '+name);
 }
-console.log('ALL PASS sticky: 11 routes × 4 widths, 3 mutations');
+console.log('ALL PASS sticky: '+routes.length+' routes × 4 widths, 3 mutations');

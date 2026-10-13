@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs');
-const pages=['index.html','backtest.html','plan.html','scalping.html','job.html','ipo.html','admin.html','claude.html','realestate.html','settings.html'];
+const pages=['index.html','backtest.html','plan.html','scalping.html','job.html','ipo.html','admin.html','claude.html','realestate.html','settings.html','tenbagger.html'];
 let fail=0;
 function ck(v,m){if(v)console.log('PASS '+m);else{console.error('FAIL '+m);fail++;}}
 for(const f of pages){
