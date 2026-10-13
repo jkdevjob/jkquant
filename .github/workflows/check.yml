@@ -31,6 +31,12 @@ jobs:
       - name: 매일 연구 결과 웹알림 (요약 · 서버 인증 · 주제)
         run: node --test tests/research-notify.test.mjs
 
+      - name: 연구 GPT 허브·텐배거 전향 기록 값·변이 검사
+        run: |
+          pip install --quiet numpy pandas pyarrow
+          python scripts/test_tenbagger_forward.py
+          node --test tests/research-gpt.test.mjs
+
       - name: 승인 알림 Worker 빌드 검증 (실배포 없음)
         run: npx --yes wrangler@4 deploy --dry-run --config worker/presale-alert/wrangler.jsonc --outdir /tmp/jkquant-approval-worker-check
 

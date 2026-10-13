@@ -1,7 +1,7 @@
 (function(){
   'use strict';
   const ROOT='/data/tenbagger/gpt/';
-  const state={summary:null,cases:[],evidence:null,view:'overview',market:'ALL',query:'',sort:'multiple',page:0,caseCode:null,loading:false};
+  const state={summary:null,cases:[],evidence:null,forward:null,forwardError:'',forwardLoading:false,view:document.getElementById('tbg-root')?.dataset?.defaultView||'overview',market:'ALL',query:'',sort:'multiple',page:0,caseCode:null,loading:false};
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const n=(v,d=1)=>Number.isFinite(v)?v.toLocaleString('ko-KR',{minimumFractionDigits:d,maximumFractionDigits:d}):'미확인';
   const pct=v=>Number.isFinite(v)?(v>0?'+':'')+n(v)+'%':'미확인';
@@ -69,10 +69,40 @@
     const s=state.summary,c=s.collection,m=s.method;
     return `<div class="notice"><strong>분석은 완료했지만 전수·인과·실계좌 성과 검증과는 다릅니다.</strong><br>현재 확보할 수 있는 가격에서 과거 특징과 규칙 성과를 계산했습니다. 아래 빠진 범위가 결과에 영향을 줄 수 있습니다.</div><div class="cards">${metric('요청한 현재 상장 종목',n(c.listedRequested,0)+'개',`가격 품질 통과 ${n(c.listedUsable,0)}개`)}${metric('요청한 상장폐지 이력',n(c.delistedRequested,0)+'개',`가격 품질 통과 ${n(c.delistedUsable,0)}개`)}${metric('분석에서 제외된 종목',n(c.requested-c.usable,0)+'개','누락·짧은 이력·품질 문제')}${metric('연초 5년 코호트',n(s.cohortN,0)+'건','같은 종목의 연도별 구간이 겹침')}</div><div class="box"><h3>품질 때문에 제외한 범위</h3>${table(['제외 사유','건수 (사유 간 중복 가능)'],Object.entries(c.qualityExclusions).map(([k,v])=>`<tr><td>${esc(qualityNames[k]||k)}</td><td>${n(v,0)}</td></tr>`))}<p class="fine">36% 초과 급변은 오류 확정이 아니라 기업행동·장기 거래정지·분할 조정 여부를 추가 확인해야 하는 격리 기준입니다. 해당 종목이 텐배거가 아니었다는 뜻이 아닙니다. 스팩·리츠·다중 상장폐지·현재 코드 충돌은 모집단 구성 단계에서 별도 제외했습니다.</p><p><a href="${ROOT}universe.json" target="_blank" rel="noopener">종목별 요청·누락·제외·원천 해시 전체 보기 (JSON) ↗</a></p></div><div class="box"><h3>정의와 재현 조건</h3><dl class="method-list">${Object.entries(m).map(([k,v])=>`<div><dt>${esc(({oracle:'사후 최대 수익 구간',train:'학습 구간',test:'검증 구간',cost:'거래비용',execution:'체결',limitZone:'가격 제한 근처 체결 가정',terminal:'상장폐지 정산',inference:'표본과 확률',returnUnit:'성과 단위',priceBasis:'가격 기준',marketBasis:'시장·업종 분류',fundamentals:'재무 정보'})[k]||k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl><details><summary>데이터 기준일과 해시</summary><p class="fine">시세 ${esc(s.analysisStart)}~${esc(s.analysisEnd)}<br>생성 ${esc(s.generatedAt)}<br>상장폐지 목록 ${esc(c.delistingSnapshot)}<br>입력 명세 SHA256 ${esc(c.inputManifestSha256)}</p></details></div><div class="box"><h3>원천 자료</h3><div class="sources">${(state.evidence?.sources||[]).map(e=>`<article><a href="${safeUrl(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.title)} ↗</a><p>${esc(e.description)}</p></article>`).join('')}</div></div><div class="box"><h3>현재 투자 후보로 연결하기 전 남은 검증</h3><p>상장폐지·합병 정산과 과거 종목 정체성, 거래 당시 원시 가격·분할·증자·배당·주식수, 공시 접수시각 기준 재무 패널, 시장별 상대강도와 업종·시장 국면, 거래대금·시장 충격·가격 제한의 체결 가능성, 동시 보유와 자금 배분을 포함한 포트폴리오 및 전향적 모의 검증이 필요합니다.</p><p class="fine">이번 결과에서 과거 구간의 사후 최고 수익은 계산할 수 있지만, 미래 최대 수익의 매수·매도 시점을 확정하거나 현재 종목별 매수 점수를 생성할 근거는 아직 충분하지 않습니다.</p></div>`;
   }
+  function forward(){
+    const f=state.forward;
+    if(!f)return '<div class="notice">'+esc(state.forwardError||'전향 모의 검증 자료를 불러오는 중…')+'</div><button class="action" id="tb-forward-refresh">다시 조회</button>';
+    const names=f.rules?.patterns||{};
+    const records=f.records||[];
+    const rows=records.slice().reverse().slice(0,100).map(r=>`<tr><td>${esc(r.name)}<span class="rule-note">${esc(r.code)} · ${esc(r.market)}</span></td><td>${esc(names[r.pattern]||r.pattern)}</td><td>${esc(r.signalDate)}<span class="rule-note">등록 ${esc(r.registeredDate)}</span></td><td>${esc(r.entryDate||'다음 세션 대기')}</td><td class="num">${n(r.sessions,0)}</td><td class="num">${pct(r.netMarkPct)}</td><td>${esc(r.dataStatus)}${r.revisionDates?.length?'<span class="rule-note">원천 수정 감지 · 기존 기록 보존</span>':''}</td></tr>`);
+    return `<div class="notice"><strong>미래 후보를 테스트하는 연구 · 자동주문 없음</strong><br>과거에 정의한 세 가격 패턴을 고정했습니다. 텐배거 예측력과 수익성은 아직 미검증입니다. 신호·등록일 모두 지난 다음 거래 가능한 KRX 종가부터 관찰하며, 과거 결과를 소급해서 모의 수익으로 넣지 않습니다.</div>
+      <div class="cards">${metric('시세 기준일',f.asOf||'대기','KRX 정규장 종가 / 마감·발표 지연 반영')}${metric('이번 조건 통과',n(f.candidates?.length||0,0)+'신호','한 종목에 여러 패턴 가능 / 매수 추천 아님')}${metric('누적 실험 등록',n(records.length,0)+'건','같은 종목·패턴의 활성 실험은 중복 등록 안 함')}${metric('관찰 시작 / 청산군',n(f.entered||0,0)+' / '+n(f.closedArms||0,0),'청산 미확인은 확정 0%가 아님')}</div>
+      <div class="box"><h3>고정한 탐색 가설 v${esc(f.strategyVersion)}</h3>${table(['패턴','등록 조건'],[
+        '<tr><td>상승 200일선 재돌파</td><td>종가가 200일선 위로 재진입 + 200일선의 20일 변화 양수</td></tr>',
+        '<tr><td>252일 신고가·거래량</td><td>직전 252일 종가 고점 돌파 + 상승 200일선 + 직전 20일 평균 대비 거래량 1.5배 이상</td></tr>',
+        '<tr><td>상승 추세·50일선 재돌파</td><td>상승 200일선 위 + 50일선 재진입 + 직전 252일 고점 대비 −30%~−5%</td></tr>'
+      ])}<p class="fine">공통: KOSPI·KOSDAQ 보통주 / 관리·환기·스팩·리츠 등 제외 / 253봉 이상 연속 이력 / 직전 20일 평균 거래대금 10억원 이상. 재무 성장·공시·시장지수 대조는 미포함이며, 과거 분석의 최적 전략이라고 선택한 것이 아닙니다.</p>
+      <p>등록 후 동일 기준에서 <b>1260거래일 보유</b>와 <b>종가 −12% 손절·고점 대비 −35% 추적 청산</b> 두 군을 비교합니다. 청산 신호 다음 거래 가능 종가를 기록하므로 손실이 −12%를 넘을 수 있습니다. 20·60·120·252·756·1260거래일 관찰과 2·5·10배 최초 도달을 보존합니다.</p></div>
+      <div class="box"><h3>앞으로 쌓이는 후보·실패 기록</h3><button class="action" id="tb-forward-refresh">최신 연구 조회</button><p class="fine">${esc(f.generatedAt)} · 등록 시작 ${esc(f.registeredAt)} · ${esc(f.coverage?.examined??'미확인')}종목 조건 검사</p>${state.forwardError?'<p class="bad">'+esc(state.forwardError)+' · 이전 자료 유지</p>':''}${rows.length?table(['종목','패턴','신호 / 등록','관찰 진입일','경과 세션','비용 가정 평가','자료 상태'],rows):'<p>조건 통과 실험이 아직 없습니다. 신호가 없다고 조건을 완화하지 않습니다.</p>'}<p class="fine">최근 100건 표시 · <a href="/api/tenbagger-research" target="_blank" rel="noopener">전체 기록 JSON ↗</a>. 손익은 종목별 관찰 평가이며 계좌·포트폴리오 수익률이 아닙니다.</p></div>
+      <div class="box"><h3>현재 후보 ${n(f.candidates?.length||0,0)}신호</h3>${table(['종목','패턴','직전 거래대금','거래량 배수'],(f.candidates||[]).map(c=>`<tr><td>${esc(c.name)} · ${esc(c.code)}</td><td>${esc(names[c.pattern]||c.pattern)}</td><td class="num">${n((c.features?.prior20AmountWon||0)/1e8)}억원</td><td class="num">${n(c.features?.volumeRatio)}배</td></tr>`))}</div>
+      <div class="box"><h3>패턴별 앞으로의 검증 결과</h3>${table(['패턴','등록 / 종목','관찰 시작','20봉 중앙 / 표본','60봉 중앙 / 표본','보유군 청산','손절·추적군 청산'],(f.patternStats||[]).map(p=>`<tr><td>${esc(names[p.pattern]||p.pattern)}</td><td>${n(p.registrations,0)} / ${n(p.uniqueStocks,0)}</td><td>${n(p.entered,0)}</td><td>${pct(p.horizons?.['20']?.medianNetPct)} / ${n(p.horizons?.['20']?.n||0,0)}</td><td>${pct(p.horizons?.['60']?.medianNetPct)} / ${n(p.horizons?.['60']?.n||0,0)}</td><td>${pct(p.arms?.hold1260?.medianNetPct)} / ${n(p.arms?.hold1260?.closedN||0,0)}</td><td>${pct(p.arms?.stop12_trail35?.medianNetPct)} / ${n(p.arms?.stop12_trail35?.closedN||0,0)}</td></tr>`))}<p class="fine">표본이 없으면 미확인입니다. 청산된 거래만의 비교에는 보유기간·미청산 편향이 있으며, 시장지수 대비 초과성과나 최적 매도 규칙이 입증된 것은 아닙니다. 120·252·756·1260봉 및 종목별 두 청산군 상세는 전체 JSON에 보존합니다.</p></div>
+      <div class="box"><h3>검증 상태와 알림</h3><p>과거 관찰에서 매매 규칙의 성과는 충분히 안정적이지 않았습니다. 이번 조건은 별도로 새 자료를 모으는 실험이며, 좋은 종목만 남기거나 기준을 뒤늦게 바꾸지 않습니다.</p><ul>${(f.warnings||[]).map(w=>'<li>'+esc(w)+'</li>').join('')}</ul><p><a href="/settings">설정 → 연구 결과 알림</a>을 켠 기기에만 일일 요약을 보냅니다. 실체결·기기 수신·미래 수익은 별도 확인 대상입니다.</p><details><summary>고정 규칙·수집 범위·원천 해시</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(JSON.stringify({rulesSha256:f.rulesSha256,coverage:f.coverage,source:f.source},null,2))}</pre></details></div>`;
+  }
+  async function bootForward(force=false){
+    if(state.forwardLoading||state.forward&&!force)return;
+    state.forwardLoading=true;
+    const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),20000);
+    try{
+      const r=await fetch('/api/tenbagger-research',{signal:ac.signal,cache:'no-store'}),j=await r.json();
+      if(!r.ok||!j.ok||j.schemaVersion!==1||!Array.isArray(j.records)||!Array.isArray(j.candidates))throw new Error(j.error||'전향 자료 형식/응답 오류');
+      state.forward=j;state.forwardError='';
+    }catch(e){state.forwardError='전향 연구 조회 실패: '+(e.message||e);}finally{clearTimeout(timer);state.forwardLoading=false;if(state.view==='forward')render();}
+  }
   function render(){
-    if(!state.summary)return;
+    if(state.view!=='forward'&&!state.summary)return;
     document.querySelectorAll('#tbg-root [data-view]').forEach(b=>{const active=b.dataset.view===state.view;b.classList.toggle('on',active);b.setAttribute('aria-selected',String(active));});
-    const content=document.getElementById('tb-content');content.innerHTML=({overview,patterns,rules,cases:casesView,method})[state.view]();
+    const content=document.getElementById('tb-content');content.innerHTML=({forward,overview,patterns,rules,cases:casesView,method})[state.view]();
+    const refresh=document.getElementById('tb-forward-refresh');if(refresh)refresh.onclick=()=>bootForward(true);
     content.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{state.view=b.dataset.open;render();});
     content.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>{state.caseCode=b.dataset.case;render();document.getElementById('tb-case-detail')?.scrollIntoView({behavior:'smooth',block:'start'});});
     const q=document.getElementById('tb-query');if(q)q.oninput=()=>{const pos=q.selectionStart;state.query=q.value;state.page=0;render();const next=document.getElementById('tb-query');next.focus();next.setSelectionRange(pos,pos);};
@@ -83,6 +113,7 @@
   }
   async function get(file){const ac=new AbortController(),timer=setTimeout(()=>ac.abort(),20000);try{const r=await fetch(ROOT+file,{signal:ac.signal,cache:'no-cache'});if(!r.ok)throw new Error(file+' HTTP '+r.status);return await r.json();}finally{clearTimeout(timer);}}
   async function boot(){
+    if(state.view==='forward'){render();return bootForward();}
     if(state.summary||state.loading)return;
     state.loading=true;
     const status=document.getElementById('tb-status');
@@ -94,10 +125,14 @@
       status.textContent='';render();
     }catch(e){status.textContent='분석 자료를 불러오지 못했습니다: '+(e.message||e);const b=document.createElement('button');b.className='action';b.textContent='다시 불러오기';b.onclick=boot;status.appendChild(b);}finally{state.loading=false;}
   }
-  window.TenbaggerResearch={esc,safeUrl,filters,chart,caseDetail,casesView,overview,patterns,rules,method,state,render,boot};
-  document.querySelectorAll('#tbg-root [data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;render();});
+  window.TenbaggerResearch={esc,safeUrl,filters,chart,caseDetail,casesView,overview,patterns,rules,method,forward,state,render,boot,bootForward};
+  document.querySelectorAll('#tbg-root [data-view]').forEach(b=>b.onclick=()=>{state.view=b.dataset.view;boot();render();});
   function start(){
     document.getElementById('tabs')?.addEventListener('click',e=>{if(e.target.closest('[data-tab="gpt"]'))boot();});
+    if(document.getElementById('tbg-root')?.dataset?.host==='research'){
+      if(document.getElementById('strategy_tenbagger')?.classList?.contains('on'))boot();
+      return;
+    }
     if(!document.getElementById('pane-gpt')?.hidden)boot();
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();

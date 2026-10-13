@@ -192,7 +192,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.19</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.20</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -201,7 +201,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
         <a href="/"><span class="mi">🏠</span>운영</a>
                 <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
 <a href="/backtest"><span class="mi">📊</span>백테</a>
-        <a href="/scalping"><span class="mi">⚡</span>단타(지피티)</a>
+        <a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a>
         <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
         <a href="/paper"><span class="mi">🧪</span>모의</a>
         <a href="/tenbagger"><span class="mi">🔟</span>텐배거</a>
@@ -736,7 +736,7 @@ function queueMenuSave(){
 function menuBase(){
   const src=(window.JKAccess&&JKAccess.MENU_ITEMS)||[
     {path:'/',label:'운영',mode:'public',order:10},{path:'/plan',label:'자산플랜',mode:'public',order:20},
-    {path:'/backtest',label:'백테',mode:'public',order:30},{path:'/scalping',label:'단타(지피티)',mode:'admin',order:40},
+    {path:'/backtest',label:'백테',mode:'public',order:30},{path:'/scalping',label:'연구(지피티)',mode:'admin',order:40},
     {path:'/claude',label:'단타(클로드)',mode:'admin',order:50},{path:'/paper',label:'모의',mode:'public',order:60},
     {path:'/tenbagger',label:'텐배거',mode:'public',order:65},
     {path:'/ipo',label:'공모주',mode:'public',order:70},{path:'/realestate',label:'부동산',mode:'public',order:75},{path:'/job',label:'JOB',mode:'public',order:80},
@@ -753,7 +753,7 @@ function renderMenus(el){
     +'<div id="menuStatus" class="cfgstatus"></div>'
     +'<p class="note"><b>전체 숨김</b>: 메뉴에서 누구에게도 보이지 않습니다. 관리자는 주소를 직접 입력하면 열 수 있지만 일반 사용자는 직접 URL도 차단됩니다.<br>'
     +'<b>관리자만</b>: 관리자 메뉴에는 보이고 일반 사용자에게는 숨겨지며 직접 URL도 차단됩니다.<br>'
-    +'단타(지피티)·단타(클로드)·관리자는 기존 소유자 보안이 있으므로 공개로 낮추지 않고 <b>관리자만/전체 숨김</b>만 선택합니다.</p></div>';
+    +'연구(지피티)·단타(클로드)·관리자는 기존 소유자 보안이 있으므로 공개로 낮추지 않고 <b>관리자만/전체 숨김</b>만 선택합니다.</p></div>';
   loadMenus();
 }
 function menuModeOptions(r){
