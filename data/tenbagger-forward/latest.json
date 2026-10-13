@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "strategyVersion": "1.0.0",
   "status": "prospective_experiment",
-  "generatedAt": "2026-10-13T07:06:20.283372+00:00",
-  "asOf": "2026-10-08",
+  "generatedAt": "2026-10-13T17:42:54.572495+00:00",
+  "asOf": "2026-10-12",
   "registeredAt": "2026-10-13T06:39:10.172275+00:00",
   "rules": {
     "version": "1.0.0",
@@ -47,95 +47,123 @@
   "source": {
     "provider": "KRX-via-FinanceData-marcap",
     "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
-    "asOf": "2026-10-08",
-    "cutoff": "2026-10-12",
+    "asOf": "2026-10-12",
+    "cutoff": "2026-10-13",
     "inputs": [
       {
-        "url": "https://raw.githubusercontent.com/FinanceData/marcap/677c523eb42c127eb68ee7d5b75b5ec316760b20/data/marcap-2025.parquet",
+        "url": "https://raw.githubusercontent.com/FinanceData/marcap/e6283b89b1212f29d6c11061b5a8f3f03de47a1f/data/marcap-2025.parquet",
         "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
         "bytes": 25153419
       },
       {
-        "url": "https://raw.githubusercontent.com/FinanceData/marcap/677c523eb42c127eb68ee7d5b75b5ec316760b20/data/marcap-2026.parquet",
-        "sha256": "0ff9a9b3e01362f31ef95b2342ff92187042c562e34a3fe3eaf86e8baf298515",
-        "bytes": 19811091
+        "url": "https://raw.githubusercontent.com/FinanceData/marcap/e6283b89b1212f29d6c11061b5a8f3f03de47a1f/data/marcap-2026.parquet",
+        "sha256": "83f0c91ba39d6c087534596c729fefd1de93ee34da25d579f43cc5ad30b247b9",
+        "bytes": 19914071
       }
     ],
-    "combinedSha256": "765972fe30f69a4853cc2d4c5381fdc99ca192a0003409f76076871dbde7ad84",
-    "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20",
+    "combinedSha256": "2f533df1659f79a5a5b763dcb115d7cbfa7aff29e5b1af8f5ca5f1986484ea49",
+    "upstreamCommit": "e6283b89b1212f29d6c11061b5a8f3f03de47a1f",
     "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
     "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
     "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
   },
   "coverage": {
-    "currentRows": 2872,
+    "currentRows": 2869,
     "examined": 2284,
     "excluded": {
-      "low_prior_liquidity": 1449,
-      "missing_latest_session": 170,
-      "outside_common_stock_or_watch_status": 510,
-      "not_traded": 36,
-      "invalid_reference_or_action": 2,
+      "low_prior_liquidity": 1440,
+      "missing_latest_session": 173,
+      "outside_common_stock_or_watch_status": 508,
+      "not_traded": 35,
+      "invalid_reference_or_action": 1,
       "short_history": 41,
       "prior_spac_or_fund_history": 1
     },
-    "candidateSignals": 12
+    "candidateSignals": 10
   },
   "candidates": [
     {
-      "code": "005160",
-      "name": "동국산업",
-      "market": "KOSDAQ",
-      "pattern": "breakout252",
-      "signalDate": "2026-10-08",
-      "signalClose": 4710.0,
+      "code": "002990",
+      "name": "금호건설",
+      "market": "KOSPI",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-12",
+      "signalClose": 13400.0,
       "features": {
-        "ma200SlopePct": 1.784930635786397,
-        "distancePriorHighPct": 13.630880579010874,
-        "volumeRatio": 7.106498611629192,
-        "prior20AmountWon": 11978575734.25
+        "ma200SlopePct": 14.092080163549436,
+        "distancePriorHighPct": -22.588099364529203,
+        "volumeRatio": 8.770782959203082,
+        "prior20AmountWon": 24500665063.25
       }
     },
     {
-      "code": "005440",
-      "name": "현대지에프홀딩스",
+      "code": "003690",
+      "name": "코리안리",
+      "market": "KOSPI",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-12",
+      "signalClose": 14660.0,
+      "features": {
+        "ma200SlopePct": 2.6232772420255346,
+        "distancePriorHighPct": -5.235940530058203,
+        "volumeRatio": 1.0732632832642297,
+        "prior20AmountWon": 2881862357.25
+      }
+    },
+    {
+      "code": "011200",
+      "name": "HMM",
+      "market": "KOSPI",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-12",
+      "signalClose": 21800.0,
+      "features": {
+        "ma200SlopePct": 0.7012992723195444,
+        "distancePriorHighPct": -11.020408163265405,
+        "volumeRatio": 4.163292924004213,
+        "prior20AmountWon": 16297965585.75
+      }
+    },
+    {
+      "code": "028670",
+      "name": "팬오션",
+      "market": "KOSPI",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-12",
+      "signalClose": 6450.0,
+      "features": {
+        "ma200SlopePct": 3.973107266918885,
+        "distancePriorHighPct": 1.0971786833855912,
+        "volumeRatio": 4.0089203208070465,
+        "prior20AmountWon": 16278719510.25
+      }
+    },
+    {
+      "code": "079650",
+      "name": "서산",
+      "market": "KOSDAQ",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-12",
+      "signalClose": 6760.0,
+      "features": {
+        "ma200SlopePct": 19.670332588980187,
+        "distancePriorHighPct": -16.748768472906384,
+        "volumeRatio": 1.0198283767811,
+        "prior20AmountWon": 22593074319.75
+      }
+    },
+    {
+      "code": "084670",
+      "name": "동양고속",
       "market": "KOSPI",
       "pattern": "trend200",
-      "signalDate": "2026-10-08",
-      "signalClose": 12850.0,
+      "signalDate": "2026-10-12",
+      "signalClose": 41300.0,
       "features": {
-        "ma200SlopePct": 3.8586598617056156,
-        "distancePriorHighPct": -31.466666666666686,
-        "volumeRatio": 2.200725559264226,
-        "prior20AmountWon": 4475732316.75
-      }
-    },
-    {
-      "code": "017890",
-      "name": "한국알콜",
-      "market": "KOSDAQ",
-      "pattern": "breakout252",
-      "signalDate": "2026-10-08",
-      "signalClose": 16190.0,
-      "features": {
-        "ma200SlopePct": 3.6116131288987496,
-        "distancePriorHighPct": 0.6840796019900397,
-        "volumeRatio": 1.8302600781574905,
-        "prior20AmountWon": 1116715312.75
-      }
-    },
-    {
-      "code": "058470",
-      "name": "리노공업",
-      "market": "KOSDAQ",
-      "pattern": "trend200",
-      "signalDate": "2026-10-08",
-      "signalClose": 87900.0,
-      "features": {
-        "ma200SlopePct": 1.3529545839737755,
-        "distancePriorHighPct": -30.78740157480325,
-        "volumeRatio": 1.7247763353927787,
-        "prior20AmountWon": 71932093886.4
+        "ma200SlopePct": 1.3119792990092582,
+        "distancePriorHighPct": -69.08682634730539,
+        "volumeRatio": 30.158381432451495,
+        "prior20AmountWon": 2968746492.5
       }
     },
     {
@@ -143,111 +171,55 @@
       "name": "비아트론",
       "market": "KOSDAQ",
       "pattern": "breakout252",
-      "signalDate": "2026-10-08",
-      "signalClose": 13840.0,
+      "signalDate": "2026-10-12",
+      "signalClose": 14430.0,
       "features": {
-        "ma200SlopePct": 2.592205397992342,
-        "distancePriorHighPct": 11.97411003236244,
-        "volumeRatio": 23.115962429431207,
-        "prior20AmountWon": 2520724155.25
+        "ma200SlopePct": 2.937359185989674,
+        "distancePriorHighPct": 4.26300578034684,
+        "volumeRatio": 7.840007597057627,
+        "prior20AmountWon": 5646298944.25
       }
     },
     {
-      "code": "192080",
-      "name": "더블유게임즈",
+      "code": "171090",
+      "name": "선익시스템",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-12",
+      "signalClose": 77700.0,
+      "features": {
+        "ma200SlopePct": 2.8719968544476115,
+        "distancePriorHighPct": -40.6870229007634,
+        "volumeRatio": 2.5249466540636303,
+        "prior20AmountWon": 3139833667.5
+      }
+    },
+    {
+      "code": "282330",
+      "name": "BGF리테일",
       "market": "KOSPI",
       "pattern": "trend200",
-      "signalDate": "2026-10-08",
-      "signalClose": 57700.0,
+      "signalDate": "2026-10-12",
+      "signalClose": 128600.0,
       "features": {
-        "ma200SlopePct": 0.8683335386131308,
-        "distancePriorHighPct": -22.65415549597859,
-        "volumeRatio": 1.3820761463428588,
-        "prior20AmountWon": 2513047252.5
+        "ma200SlopePct": 2.0477037807145715,
+        "distancePriorHighPct": -16.002612671456617,
+        "volumeRatio": 1.0857305401013662,
+        "prior20AmountWon": 5945040677.5
       }
     },
     {
-      "code": "217190",
-      "name": "제너셈",
-      "market": "KOSDAQ",
-      "pattern": "breakout252",
-      "signalDate": "2026-10-08",
-      "signalClose": 10060.0,
-      "features": {
-        "ma200SlopePct": 3.5647443240952814,
-        "distancePriorHighPct": 8.172043010752695,
-        "volumeRatio": 4.779702436822407,
-        "prior20AmountWon": 2079918163.75
-      }
-    },
-    {
-      "code": "295310",
-      "name": "에이치브이엠",
-      "market": "KOSDAQ",
+      "code": "457190",
+      "name": "이수스페셜티케미컬",
+      "market": "KOSPI",
       "pattern": "trend200",
-      "signalDate": "2026-10-08",
-      "signalClose": 74200.0,
+      "signalDate": "2026-10-12",
+      "signalClose": 84300.0,
       "features": {
-        "ma200SlopePct": 5.258155785609997,
-        "distancePriorHighPct": -44.21052631578949,
-        "volumeRatio": 1.1143132840141525,
-        "prior20AmountWon": 11279248836.25
-      }
-    },
-    {
-      "code": "393890",
-      "name": "더블유씨피",
-      "market": "KOSDAQ",
-      "pattern": "trend200",
-      "signalDate": "2026-10-08",
-      "signalClose": 11470.0,
-      "features": {
-        "ma200SlopePct": 2.6342418494759157,
-        "distancePriorHighPct": -44.455205811138065,
-        "volumeRatio": 4.633060782801423,
-        "prior20AmountWon": 2434217758.5
-      }
-    },
-    {
-      "code": "417200",
-      "name": "LS머트리얼즈",
-      "market": "KOSDAQ",
-      "pattern": "trend200",
-      "signalDate": "2026-10-08",
-      "signalClose": 16450.0,
-      "features": {
-        "ma200SlopePct": 0.6964810519372477,
-        "distancePriorHighPct": -47.35999999999992,
-        "volumeRatio": 1.8359522468787404,
-        "prior20AmountWon": 19852139200.0
-      }
-    },
-    {
-      "code": "417840",
-      "name": "저스템",
-      "market": "KOSDAQ",
-      "pattern": "breakout252",
-      "signalDate": "2026-10-08",
-      "signalClose": 20900.0,
-      "features": {
-        "ma200SlopePct": 14.010491385294689,
-        "distancePriorHighPct": 7.34463276836157,
-        "volumeRatio": 3.172989019953709,
-        "prior20AmountWon": 17277857393.25
-      }
-    },
-    {
-      "code": "482630",
-      "name": "삼양엔씨켐",
-      "market": "KOSDAQ",
-      "pattern": "trend200",
-      "signalDate": "2026-10-08",
-      "signalClose": 15970.0,
-      "features": {
-        "ma200SlopePct": 2.6158905098116136,
-        "distancePriorHighPct": -29.49227373068435,
-        "volumeRatio": 1.9305745150182563,
-        "prior20AmountWon": 2556876521.25
+        "ma200SlopePct": 2.0656957969153344,
+        "distancePriorHighPct": -35.203689469638746,
+        "volumeRatio": 3.711281149908926,
+        "prior20AmountWon": 16279671795.0
       }
     }
   ],
