@@ -54,6 +54,8 @@ export async function onRequestPost({request,env}){
     const strategy=clean(b.strategy,30).toLowerCase(),stage=clean(b.stage,20).toLowerCase();
     if(!LABELS[strategy])return json({ok:false,error:"unknown strategy"},400);
     if(!["buy","sell","summary"].includes(stage))return json({ok:false,error:"unknown stage"},400);
+    // 연구 알림 공통 정책: 후보, 미체결 대기, 매매 없음, 마감 요약은 장부/화면에서만 보여준다.
+    if(stage==="summary")return json({ok:true,skipped:"trade_notifications_only"});
     eventId=clean(b.eventId,220);
     if(!eventId)return json({ok:false,error:"eventId required"},400);
     if(stage!=="summary"&&b.eventAt!=null){
@@ -74,12 +76,12 @@ export async function onRequestPost({request,env}){
     const when=[clean(b.date,20),clean(b.time,20)].filter(Boolean).join(" ");
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,500)).filter(Boolean).slice(0,16):[];
     const msg=[
-      icon+" ["+LABELS[strategy]+"] "+action,
+      "[지피티 연구 "+LABELS[strategy]+"] "+icon+" 모의 "+action,
       when,
       "",
       ...lines,
       "",
-      stage==="summary"?"JKQuant 기준전략 당일 모의매매 마감":"JKQuant 기준전략 모의/연구 신호"
+      "JKQuant 모의체결 기준 · 실제 계좌 주문 아님"
     ].filter((x,i,a)=>!(x===""&&a[i-1]==="")).join("\n");
     const id=await telegram(env,msg);
     claimed=false; // Keep only a successful Telegram receipt; web push can still retry independently.

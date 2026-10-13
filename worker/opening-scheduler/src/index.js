@@ -473,7 +473,7 @@ async function runMinute(controller,env){
     result.webPush=await notifyOpeningWebPush(env,kst.date,buyEvents,sellEvents,mainVariant);
   }
   console.log(JSON.stringify(result));
-  if(kst.hh===9&&kst.mm===31){ try{await sendOpeningCloseSummary(env,kst.date);}catch(e){console.error(JSON.stringify({type:"opening_close_summary_failed",date:kst.date,error:String(e.message||e)}));} }
+  // 연구 마감요약/매매없음은 장부에만 기록한다. 웹푸시와 텔레그램은 모의 매수·매도만.
 }
 
 // ── D-1 시초가 갭하락 과매도(opening_gapdown_v1) 연구용 모의체결 ──
