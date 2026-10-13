@@ -246,6 +246,7 @@ canvas{display:block;width:100%;height:auto}
 
 
 </style>
+<script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.0.3" defer></script>
 <script type="module">
@@ -293,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.3</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1337,7 +1338,7 @@ async function loadGlobalPaper(strategy,silent=false){
     const updated=scalpingKstStamp(l.updatedAt);
     msg.textContent=(j.date||l.date||'')+' · '+(sum.selected||a.length)+'건 · '+updated+' 갱신';
     const pct=v=>v==null?'—':((+v>=0?'+':'')+(+v).toFixed(2)+'%');
-    const price=v=>v==null?'—':(strategy==='crypto'?Math.round(+v).toLocaleString('ko-KR')+'원':'$'+Number(v).toFixed(2));
+    const price=v=>v==null?'—':(strategy==='crypto'?Math.round(+v).toLocaleString('ko-KR')+'원':window.JKMoney?window.JKMoney.usdHtml(+v):'$'+Number(v).toFixed(2));
     let html='<div class="out" style="margin-bottom:10px">'+
       '<div class="outbox"><div class="ol">오늘 계좌수익률</div><div class="ov '+((sum.accountReturnPct||0)>=0?'good':'bad')+'">'+pct(sum.accountReturnPct||0)+'</div><div class="sub">1슬롯 기준</div></div>'+
       '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+((sum.tradeSumPct||0)>=0?'good':'bad')+'">'+pct(sum.tradeSumPct||0)+'</div></div>'+
@@ -1459,12 +1460,13 @@ async function loadCryptoResearch(){
 
 function soxlPct(v){const n=Number(v||0);return (n>=0?'+':'')+n.toFixed(2)+'%';}
 function soxlNum(v,d=2){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):'—';}
+function soxlUsd(v){return v==null?'—':window.JKMoney?window.JKMoney.usdText(+v):'$'+soxlNum(v);}
 async function loadSoxlLive(){
   const msg=$('soxl_live_msg'); if(msg)msg.textContent='SOXL 시세 조회 중…';
   try{
     const r=await fetch('/api/quote?symbol=SOXL&range=3mo&intraday=1',{headers:{'Accept':'application/json'}});
     const j=await r.json(); if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));
-    $('soxl_price').textContent=Number(j.price||0)>0?'$'+Number(j.price).toFixed(2):'—';
+    $('soxl_price').textContent=Number(j.price||0)>0?soxlUsd(+j.price):'—';
     $('soxl_market').textContent=(j.marketState||'—')+' · '+(j.src||'source ?');
     const x=(j.intraday||{}).regular;
     $('soxl_regular').textContent=x?('O '+soxlNum(x.o)+' · H '+soxlNum(x.h)+' · L '+soxlNum(x.l)+' · C '+soxlNum(x.c)):'정규장 데이터 없음';
@@ -1484,7 +1486,7 @@ async function loadSoxlVtsHistory(){
     if(!a.length){body.innerHTML='<div class="warn">조회일에 SOXL 한국투자 해외 VTS 주문/체결이 없습니다.</div>';return;}
     const side=x=>x.side||((String(x.sideCode)==='01')?'매도':(String(x.sideCode)==='02')?'매수':'—');
     body.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>시각</th><th>구분</th><th>주문</th><th>체결</th><th>잔량</th><th>주문번호</th></tr></thead><tbody>'+
-      a.map(x=>'<tr><td>'+esc(x.orderTime||'')+'</td><td><b>'+esc(side(x))+'</b></td><td>'+Number(x.orderQty||0)+'주 · $'+soxlNum(x.orderPrice)+'</td><td>'+Number(x.fillQty||0)+'주 · $'+soxlNum(x.fillPrice)+'</td><td>'+Number(x.remainingQty||0)+'</td><td>'+esc(x.orderNo||'')+'</td></tr>').join('')+
+      a.map(x=>'<tr><td>'+esc(x.orderTime||'')+'</td><td><b>'+esc(side(x))+'</b></td><td>'+Number(x.orderQty||0)+'주 · '+soxlUsd(x.orderPrice)+'</td><td>'+Number(x.fillQty||0)+'주 · '+soxlUsd(x.fillPrice)+'</td><td>'+Number(x.remainingQty||0)+'</td><td>'+esc(x.orderNo||'')+'</td></tr>').join('')+
       '</tbody></table></div><p class="note">읽기전용 조회입니다. 이 카드에서 주문·정정·취소를 보내지 않습니다.</p>';
   }catch(e){msg.textContent='SOXL VTS 조회 실패';body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';}
 }
@@ -1522,22 +1524,22 @@ async function loadSoxlResearch(){
     let decisionHtml='';
     if(decisions.length){
       decisionHtml='<div style="margin-bottom:8px"><b>최근 판단이력</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>판단</th><th>근거</th><th>체결</th><th>손익</th></tr></thead><tbody>'+
-        decisions.map(x=>{const traded=x.action==='trade';const evidence=traded?('OR '+soxlNum(x.openingHigh)+' · VWAP '+soxlNum(x.signalVwap)+' · 거래량 '+soxlNum(x.volumeRatio,2)+'x'):('OR '+soxlNum(x.openingHigh)+' · 최고돌파 '+soxlNum(x.maxCloseVsOpeningHighPct,2)+'% · 최대거래량 '+soxlNum(x.maxVolumeRatio,2)+'x');const path=traded?((x.entryTimeEt||'')+' $'+soxlNum(x.entryPrice)+' → '+(x.exitTimeEt||'')+' $'+soxlNum(x.exitPrice)+' · '+(x.exitReason||'')):'—';return '<tr><td>'+esc(x.date||'')+'</td><td>'+(traded?'TRADE':'NO TRADE')+'</td><td>'+esc(x.decisionReason||'')+'<div class="sub">'+esc(evidence)+'</div></td><td>'+esc(path)+'</td><td>'+(traded?soxlPct(x.pnlPct):'—')+'</td></tr>';}).join('')+
+        decisions.map(x=>{const traded=x.action==='trade';const evidence=traded?('OR '+soxlNum(x.openingHigh)+' · VWAP '+soxlNum(x.signalVwap)+' · 거래량 '+soxlNum(x.volumeRatio,2)+'x'):('OR '+soxlNum(x.openingHigh)+' · 최고돌파 '+soxlNum(x.maxCloseVsOpeningHighPct,2)+'% · 최대거래량 '+soxlNum(x.maxVolumeRatio,2)+'x');const path=traded?((x.entryTimeEt||'')+' '+soxlUsd(x.entryPrice)+' → '+(x.exitTimeEt||'')+' '+soxlUsd(x.exitPrice)+' · '+(x.exitReason||'')):'—';return '<tr><td>'+esc(x.date||'')+'</td><td>'+(traded?'TRADE':'NO TRADE')+'</td><td>'+esc(x.decisionReason||'')+'<div class="sub">'+esc(evidence)+'</div></td><td>'+esc(path)+'</td><td>'+(traded?soxlPct(x.pnlPct):'—')+'</td></tr>';}).join('')+
         '</tbody></table></div>';
     }
     let tradeHtml='';
     if(trades.length){
       tradeHtml='<div style="margin:14px 0 8px"><b>최근 매매이력</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호</th><th>진입</th><th>청산</th><th>MFE/MAE</th><th>순손익</th></tr></thead><tbody>'+
-        trades.map(x=>'<tr><td>'+esc(x.date||'')+'</td><td>'+esc(x.signalTimeEt||'')+'<div class="sub">거래량 '+soxlNum(x.volumeRatio,2)+'x</div></td><td>'+esc(x.entryTimeEt||'')+' · $'+soxlNum(x.entryPrice)+'</td><td>'+esc(x.exitTimeEt||'')+' · $'+soxlNum(x.exitPrice)+'<div class="sub">'+esc(x.reason||'')+'</div></td><td>'+soxlPct(x.mfePct)+' / '+soxlPct(x.maePct)+'</td><td>'+soxlPct(x.pnlPct)+'</td></tr>').join('')+
+        trades.map(x=>'<tr><td>'+esc(x.date||'')+'</td><td>'+esc(x.signalTimeEt||'')+'<div class="sub">거래량 '+soxlNum(x.volumeRatio,2)+'x</div></td><td>'+esc(x.entryTimeEt||'')+' · '+soxlUsd(x.entryPrice)+'</td><td>'+esc(x.exitTimeEt||'')+' · '+soxlUsd(x.exitPrice)+'<div class="sub">'+esc(x.reason||'')+'</div></td><td>'+soxlPct(x.mfePct)+' / '+soxlPct(x.maePct)+'</td><td>'+soxlPct(x.pnlPct)+'</td></tr>').join('')+
         '</tbody></table></div>';
     }
     if(sh)sh.innerHTML=(decisionHtml||'<div class="warn">최근 판단이력이 없습니다.</div>')+tradeHtml;
     const ld=decisions[0],lt=trades[0];
     if(ld&&ld.action==='trade'){
-      setTimingBoard('soxl','buy','최근 TRADE',esc(ld.date||'')+' '+esc(ld.entryTimeEt||'')+' · $'+soxlNum(ld.entryPrice),
+      setTimingBoard('soxl','buy','최근 TRADE',esc(ld.date||'')+' '+esc(ld.entryTimeEt||'')+' · '+soxlUsd(ld.entryPrice),
         esc(ld.decisionReason||'')+' · OR '+soxlNum(ld.openingHigh)+' · VWAP '+soxlNum(ld.signalVwap)+' · 거래량 '+soxlNum(ld.volumeRatio,2)+'x');
     }else if(ld) setTimingBoard('soxl','buy','최근 NO TRADE',esc(ld.date||'')+' · 매수 없음',esc(ld.decisionReason||''));
-    if(lt) setTimingBoard('soxl','sell','최근 청산',esc(lt.exitTimeEt||'')+' · $'+soxlNum(lt.exitPrice)+' · '+esc(lt.reason||''),'순손익 '+soxlPct(lt.pnlPct)+' · MFE/MAE '+soxlPct(lt.mfePct)+' / '+soxlPct(lt.maePct));
+    if(lt) setTimingBoard('soxl','sell','최근 청산',esc(lt.exitTimeEt||'')+' · '+soxlUsd(lt.exitPrice)+' · '+esc(lt.reason||''),'순손익 '+soxlPct(lt.pnlPct)+' · MFE/MAE '+soxlPct(lt.mfePct)+' / '+soxlPct(lt.maePct));
     setReviewLog('soxl','<b>'+(j.to||'최근')+'</b> · 유효 '+j.validDays+'일 · 기준 '+(st.trades||0)+'건 · 승률 '+soxlNum(st.winRate,1)+'% · 거래당 '+soxlPct(st.avgPnl)+'<br><span class="sub">홀드아웃·30일 롤링·Walk-forward와 그림자전략을 병렬 검증하며 기준전략은 자동 승격하지 않습니다.</span>');
     h+='<div style="margin:14px 0 8px"><b>🧬 기준 + 그림자</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>+1%일</th><th>PF</th><th>복리</th><th>MDD</th><th>MAR</th><th>홀드아웃 평균</th></tr></thead><tbody>';
     vars.forEach(v=>{const p=v.params||{},x=v.summary||{},z=(v.validation||{}).holdout||{};

@@ -7,6 +7,7 @@
 <title>JK 투자 — 백테스트</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js" data-guard="1"></script>
 <script src="/jk-ui.js?v=1.0.3" defer></script>
 <script type="module">
@@ -322,7 +323,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.21</span></h1>
+      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.22</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -1491,7 +1492,8 @@ function sortResultTable(th){
   th.dataset.sdir=dir;
   const keyOf=tr=>{ const td=tr.children[ci]; if(!td) return {s:''};
     if(ci===0){ const b=td.querySelector('b'); return {s:((b?b.textContent:td.textContent)||'').trim()}; }
-    const num=parseFloat((td.textContent||'').replace(/[^0-9.\-]/g,'')); return isNaN(num)?{s:(td.textContent||'').trim()}:{n:num}; };
+    const text=td.textContent||'',usd=text.match(/^\s*\$(-?[\d,.]+)/);
+    const num=parseFloat(usd?usd[1].replace(/,/g,''):text.replace(/[^0-9.\-]/g,'')); return isNaN(num)?{s:text.trim()}:{n:num}; };
   const rows=[...tb.querySelectorAll('tr')];
   rows.sort((ra,rb)=>{ const a=keyOf(ra),b=keyOf(rb); let c;
     if(a.n!=null&&b.n!=null) c=a.n-b.n; else c=String(a.s!=null?a.s:a.n).localeCompare(String(b.s!=null?b.s:b.n),'ko');
@@ -4625,7 +4627,7 @@ async function run(){
 const fmt=n=>Math.round(n).toLocaleString();
 /* 기호는 항상 숫자 뒤 — 목록에서 자릿수를 오른쪽으로 맞췄을 때 기호가 한 줄로 선다. */
 const curOf=t=>isKRW(t)?'₩':'$';
-const fmtV=(v,t)=>fmt(v)+curOf(t);
+const fmtV=(v,t)=>!isKRW(t)&&typeof window!=='undefined'&&window.JKMoney?window.JKMoney.usdText(v,{digits:0}):fmt(v)+curOf(t);
 
 /* 화면에 적는 세율·수수료는 계산에 실제로 쓰인 값이어야 한다 — 글로 박아 두면
    국내 백테를 돌려도 '수수료 0.25% · 양도세 22%'가 그대로 남아 거짓말이 된다. */

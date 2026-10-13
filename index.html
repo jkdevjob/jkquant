@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 운영</title>
 <script src="/plan-session-engine.js"></script>
+<script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.0.3" defer></script>
 <style>
@@ -584,7 +585,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.32</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.33</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1697,7 +1698,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.32</b> · 2026-10-13</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.33</b> · 2026-10-13</div>
   </footer>
 </div>
 
@@ -2121,6 +2122,7 @@ function isKrwSt(st){ return curOf(st)==='krw'; }
 function wnCur(v,cur){
   v=+v||0;
   if(cur==='krw') return Math.round(v).toLocaleString('en-US')+'₩';
+  if(typeof window!=='undefined'&&window.JKMoney)return window.JKMoney.usdText(v);
   return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$';
 }
 function wn(v){ return wnCur(v, curCurrency()); }
@@ -2129,9 +2131,9 @@ function wp(v){return wn(v)}
 /* ── 천 단위 콤마 숫자 포맷터 (모든 숫자 공통) ── */
 // 달러: $ + 콤마 + 소수2자리.  예: 1234.5 → "1,234.50$"
 // 달러 고정 포맷 (참고용)
-function usd(v){return (+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$';}
+function usd(v){return typeof window!=='undefined'&&window.JKMoney?window.JKMoney.usdText(+v||0):(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$';}
 // 통화 자동: krw면 ₩정수, 아니면 $소수2. cs 인자로 '₩'/'$' 강제 가능
-function px(v,cs){v=+v||0; const s=cs||(curCurrency()==='krw'?'₩':'$'); return s==='₩'?Math.round(v).toLocaleString('en-US')+'₩':v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$';}
+function px(v,cs){v=+v||0; const s=cs||(curCurrency()==='krw'?'₩':'$'); return s==='₩'?Math.round(v).toLocaleString('en-US')+'₩':typeof window!=='undefined'&&window.JKMoney?window.JKMoney.usdText(v):v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$';}
 // 콤마만 (기호 없음). 소수 자릿수 지정. 예: nfix(1234.5,2) → "1,234.50"
 function nfix(v,d){d=d==null?2:d; return (+v||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
 /* ── 입력칸 천 단위 콤마 자동 ── */
@@ -7995,6 +7997,7 @@ function paperUsd(v){return (+v||0).toLocaleString('en-US',{minimumFractionDigit
    평가/인출은 현재 USD/KRW, 투입 원화는 사용자가 넣은 원화 원본을 사용한다. */
 function paperDualMoney(r,v,rate,wonValue){
   if(r&&r.cur==='krw')return Math.round(+v||0).toLocaleString('ko-KR')+'원';
+  if(typeof window!=='undefined'&&window.JKMoney)return window.JKMoney.usdHtml(v,wonValue!=null?{won:wonValue}:rate>0?{rate}:{});
   const krw=wonValue!=null?Math.round(+wonValue||0).toLocaleString('ko-KR')+'원':paperWon(v,rate);
   return paperUsd(v)+'<span class="cw">≈ '+krw+'</span>';
 }
@@ -8054,7 +8057,7 @@ function paperWonRate(r){
    새로 열 때마다 평가금이 오락가락했다(수익률은 그대로인데 원화만 바뀜). 계산 결과와 함께 그때 환율을 남긴다. */
 function paperFxFallback(){
   const c=(typeof S!=='undefined'&&S)?S.paperViewCache:null;
-  return (c&&+c.fx>0)?+c.fx:FX;
+  return (c&&+c.fx>0)?+c.fx:((typeof window!=='undefined'&&window.JKMoney&&window.JKMoney.getFX())||{}).rate||0;
 }
 /* 모의 성과 빠른 보기 캐시
    - 거래 장부/설정은 Firebase stateV2가 정본이고, 이 캐시는 그 정본에서 계산한 '표 결과'만 저장한다.
