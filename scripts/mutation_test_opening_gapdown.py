@@ -96,6 +96,9 @@ PY = [
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
     ("gpt blank date crashes", "claude_lab.py", "        try:\n            v = float(r[col])", "        by.setdefault(r.get(\"date\"), [])\n        try:\n            v = float(r[col])"),
     ("review holiday ignored", "claude_lab.py", " and not led and not krx_closed(today):", " and not led:"),
+    ("review late run skipped", "claude_lab.py", "    if now.hour < 8:\n        return (now - timedelta(days=1)).strftime(\"%Y-%m-%d\")\n", ""),
+    ("review late uses today cell", "claude_lab.py", 'res = r.get("last") if r.get("lastDate") == today else r.get("prev") if r.get("prevDate") == today else None', 'res = r.get("last")'),
+    ("review intraday written", "claude_lab.py", "    return None\n\n\ndef review_entry(", "    return now.strftime(\"%Y-%m-%d\")\n\n\ndef review_entry("),
 ]
 JS = [
     ("base price first", "_gapdown.js", "const base=+(q&&q.basePrice)>0?+q.basePrice:+prevClose||0;", "const base=+prevClose||0;"),

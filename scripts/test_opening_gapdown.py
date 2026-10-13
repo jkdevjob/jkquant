@@ -574,6 +574,43 @@ class ReviewHolidayTest(unittest.TestCase):
         self.assertIn("preopen 주문 실패: 000010", self.at("2026-10-05", bad))
 
 
+lab_read = lab.read_json
+
+
+class ReviewLateRunTest(unittest.TestCase):
+    """밤 점검 기록 날짜: 16시 이후는 오늘, 저녁 계산이 자정을 넘겨 늦게 돌면(0~8시) 어제 것 — 어제 칸 결과로. 장중은 안 씀(10/8 · 10/13 기록 누락 재현)."""
+
+    def test_review_day(self):
+        at = lambda s: lab.datetime.fromisoformat(s + "+09:00")
+        self.assertEqual(lab.review_day(at("2026-10-13T18:40:00")), "2026-10-13")
+        self.assertEqual(lab.review_day(at("2026-10-14T02:06:00")), "2026-10-13")   # 23:40 예약이 02:06 에 돈 날
+        self.assertEqual(lab.review_day(at("2026-10-14T07:13:00")), "2026-10-13")
+        self.assertIsNone(lab.review_day(at("2026-10-14T12:05:00")))                # 장중엔 안 씀
+
+    def test_late_run_writes_yesterday_with_prev_cells(self):
+        import tempfile
+        rep = {"paper": {"summary": {}}, "daily": {"rows": [
+            dict(side="claude", group="시초가", name="①", prevDate="2026-10-13", prev=-0.9, lastDate="2026-10-14", last="pending", plan="p"),
+            dict(side="gpt", group="시초가", name="g", prevDate="2026-10-13", prev=1.0, lastDate="2026-10-14", last=2.0)]}}
+        led = {"ledger": {"events": [{"stage": "preopen", "payload": {"picks": [{"name": "펩트론"}], "breadth": {"qualified": 30}, "orders": []}}]}}
+        old = (lab.REVIEW, lab.read_json)
+        with tempfile.TemporaryDirectory() as d:
+            lab.REVIEW = Path(d)
+            lab.read_json = lambda p: led if str(p).endswith("2026-10-13.json") else ({} if "opening-gapdown-live" in str(p) else lab_read(p))
+            try:
+                lab.write_review(rep, lab.datetime.fromisoformat("2026-10-14T02:06:00+09:00"))
+                lab.write_review(rep, lab.datetime.fromisoformat("2026-10-14T12:05:00+09:00"))     # 장중 — 쓰지 않는다
+                files = sorted(x.name for x in Path(d).glob("*.json"))
+                e = json.loads((Path(d) / "2026-10-13.json").read_text(encoding="utf-8"))
+            finally:
+                lab.REVIEW, lab.read_json = old
+        self.assertEqual(files, ["2026-10-13.json"])
+        self.assertEqual(e["date"], "2026-10-13")
+        self.assertEqual(e["tabs"]["시초가"], dict(name="①", date="2026-10-13", result=-0.9, plan="p"))   # 어제 칸 값
+        self.assertEqual(e["opening"]["breadth"], 30)                                                      # 어제 원본 기록
+        self.assertNotIn("원본 기록 없음", " ".join(e["issues"]))
+
+
 class CoinParityTest(unittest.TestCase):
     """③ 같은 규칙을 밤 계산(Python)과 실시간·마감 장부(JS)가 각자 계산한다 — 변수를 바꿔도 결과가 같아야 한다."""
 

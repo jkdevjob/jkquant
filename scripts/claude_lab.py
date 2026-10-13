@@ -1985,9 +1985,20 @@ def krx_closed(d):
     return date.fromisoformat(d).weekday() >= 5 or d in KRX_HOLIDAYS
 
 
-def review_entry(report):
-    """매일 검증·분석 기록 — 날짜별 한 번만 쓴다(저녁 첫 실행 기준). 자동 점검 결과 + 판단 근거."""
-    today = datetime.now(KST).strftime("%Y-%m-%d")
+def review_day(now=None):
+    """그날 점검 기록 날짜 — 장 마감 뒤(16시~) 실행은 오늘. 저녁 계산이 GitHub 지연 · 누락으로 자정을 넘겨 돌면(0~8시) 어제 것으로 남긴다
+    (2026-10-08 · 10-13 은 18:40 예약이 늦거나 빠져 그날 기록이 없었다). 장중(8~16시) 실행은 남기지 않는다."""
+    now = now or datetime.now(KST)
+    if now.hour >= 16:
+        return now.strftime("%Y-%m-%d")
+    if now.hour < 8:
+        return (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    return None
+
+
+def review_entry(report, day=None):
+    """매일 검증·분석 기록 — 날짜별 한 번만 쓴다(장 마감 뒤 첫 실행 기준). 자동 점검 결과 + 판단 근거. day: 기록 날짜(없으면 오늘)."""
+    today = day or datetime.now(KST).strftime("%Y-%m-%d")
     paper = (report.get("paper") or {}).get("summary") or {}
     led = read_json(DATA / "opening-gapdown-live" / f"{today}.json") or {}
     ev = {e.get("stage"): e.get("payload") or {} for e in ((led.get("ledger") or {}).get("events") or []) if e}
@@ -1996,7 +2007,7 @@ def review_entry(report):
         for o in (ev.get(st_name) or {}).get("orders") or ([(ev.get(st_name) or {}).get("order")] if (ev.get(st_name) or {}).get("order") else []):
             if o and not ((o.get("vts") or {}).get("ok")):
                 issues.append(f"{st_name} 주문 실패: {o.get('code')} {(o.get('vts') or {}).get('msg', '')}")
-    if datetime.now(KST).weekday() < 5 and not led and not krx_closed(today):     # 휴장일엔 원본이 없어도 정상(주문 실패는 휴장일이라도 그대로 점검)
+    if date.fromisoformat(today).weekday() < 5 and not led and not krx_closed(today):     # 휴장일엔 원본이 없어도 정상(주문 실패는 휴장일이라도 그대로 점검)
         issues.append("오늘 ①② 원본 기록 없음 — 개장일인데 08:56 기록이 없음(점검)")
     for k, v in paper.items():
         if (v.get("status") or {}).get("code") == "below":
@@ -2005,8 +2016,9 @@ def review_entry(report):
             issues.append(f"{k}: {v['lossStreak']}일 연속 손실")
     tabs = {}
     for r in (report.get("daily") or {}).get("rows", []):
-        if r.get("side") == "claude":
-            tabs[r["group"]] = dict(name=r["name"], date=r.get("lastDate"), result=r.get("last"), plan=r.get("plan"))
+        if r.get("side") == "claude":                    # 기록 날짜의 칸(늦은 실행이면 표의 '어제' 칸)
+            res = r.get("last") if r.get("lastDate") == today else r.get("prev") if r.get("prevDate") == today else None
+            tabs[r["group"]] = dict(name=r["name"], date=today, result=res, plan=r.get("plan"))
     pre = ev.get("preopen") or {}
     return dict(date=today, writtenAt=datetime.now(KST).isoformat(), tabs=tabs,
                 opening=dict(reason=pre.get("decisionReason"), picks=[p.get("name") for p in pre.get("picks") or []],
@@ -2017,10 +2029,11 @@ def review_entry(report):
                 issues=issues, verdict="문제 없음" if not issues else f"점검 필요 {len(issues)}건")
 
 
-def write_review(report):
-    e = review_entry(report)
-    if datetime.now(KST).hour >= 16:                     # 장 마감 뒤 첫 실행만 그날 기록으로 남긴다
-        write_once(REVIEW / f"{e['date']}.json", e)
+def write_review(report, now=None):
+    day = review_day(now)
+    e = review_entry(report, day)
+    if day:                                              # 장 마감 뒤 첫 실행만 그날 기록으로 남긴다(자정을 넘긴 늦은 실행은 어제 것)
+        write_once(REVIEW / f"{day}.json", e)
     out = []
     for f in sorted(REVIEW.glob("*.json"))[-20:] if REVIEW.exists() else []:
         j = read_json(f)
