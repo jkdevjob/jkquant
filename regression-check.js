@@ -708,7 +708,7 @@ console.log('[10] 모의 장부 정합');
      && /const from=\(start && start<first\) \? start : first;/.test(stat));
   // 여러 세션을 한 표에 나열하므로 통화는 줄마다 따로
   ok('성과 행에 통화를 실어 보낸다', /cur:curOf\(st\)/.test(stat));
-  ok('성과 표 금액은 원화-only로 찍는다', /paperInflowText\(r\)/.test(idx) && /paperWon\(r\.total,r\.wonRate\)/.test(idx));
+  ok('성과 표: 달러 종목은 달러+원화 병기 · 국내는 원화', /paperInflowText\(r\)/.test(idx) && /paperDualMoney\(r,r\.total,r\.wonRate\)/.test(idx) && /function paperDualMoney\(r,v,rate,wonValue\)/.test(idx));
   ok('wn은 wnCur 위에 있다(중복 구현 없음)', /function wn\(v\)\{ return wnCur\(v, curCurrency\(\)\); \}/.test(idx));
 }
 
@@ -3371,9 +3371,9 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
     const pr=extractFn(idx,'function paperWonRate(r)');
     ok('모의 성과 목록은 현재 환율로 평가·인출을 표시하고 투입은 입력 원화를 유지한다',
        /await loadFX\(\)/.test(rv) && /liveFX/.test(pr) && !/fxAt\(/.test(pr)
-       && /paperWon\(r\.total,r\.wonRate\)/.test(op)
+       && /paperDualMoney\(r,r\.total,r\.wonRate\)/.test(op)
        && /paperInflowText\(r\)/.test(op)
-       && /paperWon\(outAmt,r\.wonRate\)/.test(op)
+       && /paperUsd\(outAmt\).*paperWon\(outAmt,r\.wonRate\)/s.test(op)
        && /function paperInflowWon\(tab, sess, inflow\)/.test(idx));
   }
 
@@ -11767,7 +11767,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   }
   ok('자산플랜 햄버거는 jk-ui 공용 클릭 핸들러 하나만 쓴다 — 두 번 토글 금지',
      !/\$\("jkmenuBtn"\)\.addEventListener\("click"/.test(pl)
-     && /<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/.test(pl));
+     && /<script src="\/jk-ui\.js\?v=1\.0\.2" defer><\/script>/.test(pl));
 
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
   {
@@ -12252,7 +12252,7 @@ console.log('\n[TENBAGGER] 텐배거 메뉴 · 클로드/지피티 탭 · 분석
   ok('공용 메뉴 정책: 텐배거 메뉴 숨김 · 직접 주소·저장 순서·관리자 설정 보존',
      /\{path:'\/paper',label:'모의',mode:'public',order:60\},\n\s*\{path:'\/tenbagger',label:'텐배거',mode:'public',order:65,after:'\/paper',navHidden:true\},\n\s*\{path:'\/ipo'/.test(acc)
      &&/'\/tenbagger\.html':'\/tenbagger'/.test(acc)&&/if\(x\.after&&!src\[x\.path\]&&src\[x\.after\]/.test(acc)
-     &&/'\/tenbagger':'🔟'/.test(ad)&&/\{path:'\/tenbagger',label:'텐배거',mode:'public',order:65\}/.test(ad)
+     &&/src\.filter\(x=>x\.path!==\'\/tenbagger\'\)/.test(ad)&&!/MENU_ICONS[^\n]*\/tenbagger/.test(ad)
      &&/\(\?:plan\|paper\|tenbagger\|/.test(ui));
   ok('텐배거 화면: 승인 가드 · 버전 #tbVer x.y.z · 클로드 탭이 먼저 · 클로드 칸에서 화면 스크립트 · 지피티 칸은 비워 둠',
      /<script src="\/jk-access\.js" data-guard="1"><\/script>/.test(tb)&&/JKAccess\.guard\(\{auth/.test(tb)&&/id="tbVer">v\d+\.\d+\.\d+<\/span>/.test(tb)
@@ -12284,8 +12284,8 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메
      /function mountMenus\(\)/.test(ui)&&/전체메뉴/.test(ui)&&/btn\.textContent='☰'/.test(ui)
      &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
      &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
-  ok('10개 페이지 모두 jk-ui 공용 UI와 같은 11개 메뉴 링크를 사용',
-     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/.test(s)
+  ok('11개 페이지 모두 jk-ui 공용 UI와 같은 11개 메뉴 링크를 사용',
+     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.2" defer><\/script>/.test(s)
        &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
 }
 
