@@ -5,8 +5,9 @@
 - `node --test tests/research-gpt.test.mjs tests/research-notify.test.mjs`: 10 PASS. 탭 복원/직접 링크/권한, 조회 오류와 404 초기 자료 구분, XSS 변이 1, 연구별 중복/고정 링크/임의 주제 거부, 일부 실패 기기만 재시도.
 - 기존 GPT 자료/UI 격리·지연 로딩 시험 및 3 변이 PASS. 데이터 동시 저장의 실제 Git 경합·충돌/이력 보존 시험 PASS(11 workflows/13 저장 경로). 전체 브라우저 영구저장 쓰기 0 유지.
 - 최초 실제 공개 시세: 2026-10-08 기준, 세 패턴 12신호/12등록. 등록 전 진입 없음, 전향 수익 값 없음. 합성 값 시험 수치를 투자 성과로 보고하지 않는다.
-- 전체 검사·GitHub CI·병합·Pages/Worker·실제 자동 수집은 아래 실제 실행 근거 확인 후 갱신한다. 실제 소유자 로그인 후 화면·iPhone 알림 도착·실매매 수익은 미검증.
-- 첫 전체 회귀 2,757 PASS / 1 FAIL: GPT 머리말의 옛 Morning Scalping/단타 문구를 요구하던 검사를 새 GPT Research/연구 명칭 및 양쪽 사용자 배지 구조로 보완했다. 검사 삭제/완화 없이 최종 전체 재검사 중.
+- 최초 전체 회귀 2,757 PASS / 1 FAIL: GPT 머리말의 옛 Morning Scalping/단타 문구를 요구하던 검사를 새 GPT Research/연구 명칭 및 양쪽 사용자 배지 구조로 보완했다. 검사 삭제/완화 없이 재검사했고 로그인 안내까지 연구 명칭을 일치시켰다.
+- 최종 작업본 `node scripts/check-before-push.cjs`: **48/48 단계 PASS**, 전체 회귀 **2,758 PASS / 0 FAIL**. 외부 Worker dry-run 빌드 포함. Pages Functions 별도 `wrangler pages functions build functions`도 성공했다. 초기 기록의 계산 코드 SHA256은 현재 실제 코드와 일치하며 과거 GPT/Claude JSON은 변경하지 않는다.
+- 기존 일일 검토 자동화 갱신 성공(기존 일정·단타 검토 보존, 텐배거 추가, 중복 자동화 없음). GitHub CI·병합·Pages/Worker·최초 자동 수집/웹푸시 실제 수락은 [PR #481](https://github.com/jkdevjob/jkquant/pull/481)의 최종 실행 로그를 정본으로 확인한다. 실제 소유자 로그인 후 화면·iPhone 알림 도착·실매매 수익은 미검증.
 
 ## 2026-10-13 · 텐배거 GPT 연구 · 페이지 v1.1.0 / 연구 v1.0.0
 
