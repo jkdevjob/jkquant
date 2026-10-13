@@ -179,10 +179,11 @@ await t('P0 모의성과 시세는 종목별 병렬 선취 후 전략 재생만 
 });
 
 await t('P1 원화 환율: 실시간 환율이 아직 없으면 하드코딩 상수(FX) 대신 마지막으로 받은 실제 환율 · 결과와 함께 그 환율을 남긴다',async()=>{
-  const mk=(liveFX,S)=>new Function('liveFX','FX','S',fn('function paperWonRate(r)')+'\n'+fn('function paperFxFallback()')+'\nreturn paperWonRate;')(liveFX,1520.21,S);
+  const mk=(liveFX,S,fx=null)=>new Function('liveFX','FX','S','window',fn('function paperWonRate(r)')+'\n'+fn('function paperFxFallback()')+'\nreturn paperWonRate;')(liveFX,1520.21,S,{JKMoney:{getFX:()=>fx}});
   assert.equal(mk(null,{paperViewCache:{fx:1343.5}})({cur:'usd'}),1343.5);
   assert.equal(mk(1400,{paperViewCache:{fx:1343.5}})({cur:'usd'}),1400);
-  assert.equal(mk(null,{})({cur:'usd'}),1520.21);
+  assert.equal(mk(null,{})({cur:'usd'}),0,'실제 환율이 없으면 고정값 대신 환산 대기');
+  assert.equal(mk(null,{}, {rate:1399})({cur:'usd'}),1399,'공용 포맷터가 받은 실제 환율 사용');
   assert.equal(mk(null,{paperViewCache:{fx:1343.5}})({cur:'krw'}),1);
   const S={}; const w=new Function('S','liveFX','PAPER_VIEW_CACHE_VER','paperKstDate','paperViewSig',fn('function paperViewCacheWrite(rows)')+'\nreturn paperViewCacheWrite;')(S,1343.5,1,()=>'2026-10-06',()=>'sig');
   w([{price:1}]); assert.equal(S.paperViewCache.fx,1343.5);
