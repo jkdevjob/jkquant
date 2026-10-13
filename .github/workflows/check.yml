@@ -46,6 +46,11 @@ jobs:
       - name: 전 페이지 헤더·PC 자산플랜 폭·모의 통화 병기 검사
         run: node scripts/check-unified-layout.cjs
 
+      - name: 달러·원화 병기 및 플랜 판단 근거 값·변이 검사
+        run: |
+          node scripts/check-dual-currency.cjs
+          node scripts/check-plan-evidence.cjs
+
       - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
         run: node scripts/check-sticky-layout.cjs
 

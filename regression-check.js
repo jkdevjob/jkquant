@@ -2598,7 +2598,7 @@ console.log('\n[44] 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞�
      /toLocaleString\('en-US'\)\+'₩'/.test(idx) && /maximumFractionDigits:2\}\)\+'\$'/.test(idx));
   ok('운영 — usd·px·won 도 뒤에 붙인다',
      (idx.match(/\+'\$';/g)||[]).length>=2 && /liveFX:FX\)\)\.toLocaleString\('en-US'\)\+'₩'/.test(idx));
-  ok('백테 — fmtV 가 기호를 뒤에 붙인다', /const fmtV=\(v,t\)=>fmt\(v\)\+curOf\(t\)/.test(bt));
+  ok('백테 — 달러 금액은 공용 병기, 국내는 기존 원화 단위', /const fmtV=\(v,t\)=>!isKRW\(t\)[^\n]+JKMoney\.usdText\(v,\{digits:0\}\):fmt\(v\)\+curOf\(t\)/.test(bt));
   ok('백테 — 로테이션 money 도 뒤에 붙인다', /money=v=>fmt\(Math\.round\(v\)\)\+cur\b/.test(bt));
   ok('백테 — 차트 축도 뒤에 붙인다', /const fmtY=v=>[^\n]*\+cs:[^\n]*\+cs;/.test(bt));
   /* 런타임 앞붙임 — 소스에 '₩1' 같은 글자가 없어도 통화를 변수로 앞에 이어붙이면
@@ -9330,7 +9330,8 @@ console.log('\n[124] 5년 플랜 v1.26.4 — 현재계좌 실시간 평가·초�
      && /id="alphaAssetTotal"/.test(pl)
      && /const assetTotal=marketTotal\+S\.cash,retTotal=costTotal>0\?pnlTotal\/costTotal\*100:null/.test(pl));
   ok('현재계좌 달러 표시는 소수점 둘째자리까지 고정',
-     /const usd2=v=>"\$"\+\(Number\(v\)\|\|0\)\.toLocaleString\("en-US",\{minimumFractionDigits:2,maximumFractionDigits:2\}\)/.test(pl)
+     /const usd2=v=>[^\n]*JKMoney\.usdText\(Number\(v\)\|\|0\)/.test(pl)
+     && /maximumFractionDigits:2\}\);/.test(pl)
      && /function alphaAvgText\(q,avg\)\{return q>0\?\(Number\.isFinite\(avg\)\?'평단 '\+usd2\(avg\)/.test(pl)
      && /\$\('alphaAcctCash'\)\.textContent=usd2\(S\.cash\)/.test(pl)
      && /\(L&&L\.hasLivePrice\?\(L\.marketState==='REGULAR'\?'실시간 ':'최근가 '\):'확정종가 '\)\+usd2\(px\)/.test(pl)

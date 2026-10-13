@@ -7,6 +7,7 @@
 <title>JK 투자 — 자산플랜</title>
 <script src="/plan-session-engine.js"></script>
 <script src="/plan-session-settings.js"></script>
+<script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.0.3" defer></script>
 <style>
@@ -302,7 +303,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.32</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.33</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -370,7 +371,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
         <div class="sub" id="alphaRefreshTime">시세 자동 갱신 중…</div>
         <div class="sub" id="alphaStartState">현재 계좌 기준 주문을 계산하는 중…</div>
         <div class="path-orders" id="alphaActions"><div class="liveitem wait">시세를 불러오면 주문 수량을 계산합니다.</div></div>
-        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 목표 변동성 비중과 17.5%p 이상 벌어질 때만, TQQQ는 Guard 상태가 바뀔 때만 거래합니다.</div>
+        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 몫 안의 목표비율과 10%p를 초과해 벌어질 때, TQQQ는 Guard 상태가 바뀔 때 거래합니다.</div>
         <div class="btnrow"><button class="btn gold" id="alphaRecordFill" disabled>✅ 오늘 주문 체결 반영</button></div>
         <div class="alpha-fill-panel" id="alphaFillPanel" hidden>
           <div class="alpha-account-head"><div><b>오늘 주문 체결 반영</b><div class="alpha-ledger-note">주문수량은 자동 입력됩니다. 부분체결이면 실제 수량으로 줄이고 실제 체결가만 확인하세요. 미체결은 수량 0.</div></div>
@@ -452,10 +453,10 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="todaybox" id="alphaEvidenceSection" data-asset-view="analysis" hidden>
         <h3>3. 🔎 리밸런싱 판단 근거</h3>
         <div class="alpha-evidence-grid">
-          <div class="alpha-ev"><div class="k" id="alphaEv1Label">TECL σ15</div><div class="v" id="alphaSigma">—</div><div class="s" id="alphaEv1Sub">연환산 실현변동성</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv2Label">TECL 슬리브 목표 w</div><div class="v" id="alphaTargetW">—</div><div class="s" id="alphaEv2Sub">w=(55%/σ15)², 최대100%</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv3Label">TECL 슬리브 현재</div><div class="v" id="alphaCurrentW">—</div><div class="s" id="alphaWeightGap">목표와 차이 계산 중</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv4Label">TQQQ Guard</div><div class="v" id="alphaGuardState">—</div><div class="s" id="alphaGuardGap">SMA200 판단 중</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv1Label">TECL σ20</div><div class="v" id="alphaSigma">—</div><div class="s" id="alphaEv1Sub">최근20거래일 수익률의 연환산 실현변동성</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv2Label">TECL 몫 안의 목표 비율</div><div class="v" id="alphaTargetW">—</div><div class="s" id="alphaEv2Sub">w=(55%/σ20)², 최대100% · 전체 자산의 최대70%</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv3Label">TECL 몫 안의 현재 비율</div><div class="v" id="alphaCurrentW">—</div><div class="s" id="alphaWeightGap">목표와 차이 계산 중</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv4Label">TQQQ Guard</div><div class="v" id="alphaGuardState">—</div><div class="s" id="alphaGuardGap">SMA225 판단 중</div></div>
         </div>
         <div class="alpha-charts">
           <div class="alpha-chart">
@@ -467,7 +468,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
           </div>
           <div class="alpha-chart">
             <h4 id="alphaChart2Title">TQQQ Guard · 최근 120거래일</h4>
-            <div class="chart-sub" id="alphaGuardLevels">현재가 · SMA200 · ±1.5% 경계 계산 중…</div>
+            <div class="chart-sub" id="alphaGuardLevels">확정 종가 · SMA225 · ±1.0% 경계 계산 중…</div>
             <div id="alphaGuardChart"></div>
             <div class="legend"><span>● TQQQ 종가</span><span>— SMA200</span><span>⋯ Guard 상·하단</span></div>
           </div>
@@ -478,8 +479,8 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="card" id="alphaStrategySection" data-asset-view="explain" hidden style="margin-top:10px;margin-bottom:0">
         <h3>전략 설명</h3>
         <div class="guidegrid" style="margin-top:10px">
-          <div class="guidekpi"><div class="k" id="alphaKpi1Label">TECL 역분산</div><div class="v" id="alphaKpi1Value">최대 70%</div><div class="sub" id="alphaKpi1Sub">N15 · s0 55% · 밴드 17.5%p</div></div>
-          <div class="guidekpi"><div class="k" id="alphaKpi2Label">TQQQ Guard</div><div class="v" id="alphaKpi2Value">최대 30%</div><div class="sub" id="alphaKpi2Sub">SMA200 · ±1.5%</div></div>
+          <div class="guidekpi"><div class="k" id="alphaKpi1Label">TECL 역분산</div><div class="v" id="alphaKpi1Value">최대 70%</div><div class="sub" id="alphaKpi1Sub">N20 · s0 55% · 밴드 10%p 초과</div></div>
+          <div class="guidekpi"><div class="k" id="alphaKpi2Label">TQQQ Guard</div><div class="v" id="alphaKpi2Value">최대 30%</div><div class="sub" id="alphaKpi2Sub">SMA225 · ±1.0%</div></div>
           <div class="guidekpi"><div class="k" id="alphaKpi3Label">대피자산</div><div class="v" id="alphaKpi3Value">SGOV</div><div class="sub" id="alphaKpi3Sub">미사용 위험예산 보관</div></div>
           <div class="guidekpi"><div class="k" id="alphaKpi4Label">전략 성격</div><div class="v" id="alphaKpi4Value">최공격</div><div class="sub" id="alphaKpi4Sub">5년 성장 우선</div></div>
         </div>
@@ -836,8 +837,8 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=initializeFirestore
 const KEY="jkq_5y_plan_v1";
 const $=id=>document.getElementById(id);
 const num=(id,fallback=0)=>{const v=Number($(id).value);return Number.isFinite(v)?v:fallback};
-const usd=v=>"$"+Math.round(v||0).toLocaleString("en-US");
-const usd2=v=>"$"+(Number(v)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const usd=v=>typeof window!=='undefined'&&window.JKMoney?window.JKMoney.usdText(Number(v)||0,{digits:0}):"$"+Math.round(v||0).toLocaleString("en-US");
+const usd2=v=>typeof window!=='undefined'&&window.JKMoney?window.JKMoney.usdText(Number(v)||0):"$"+(Number(v)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const pct=v=>(Number(v)||0).toFixed(1)+"%";
 const todayISO=()=>{const d=new Date();return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())).toISOString().slice(0,10)};
 const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.getUTCFullYear()+n);return d.toISOString().slice(0,10)};
@@ -865,7 +866,13 @@ function renderHorizonCopy(){
     setTxt('alphaKpi2Label','TQQQ Guard');setTxt('alphaKpi2Value','최대 30%');setTxt('alphaKpi2Sub','SMA225 · ±1.0%');
     setTxt('alphaKpi3Label','대피자산');setTxt('alphaKpi3Value','SGOV');setTxt('alphaKpi3Sub','미사용 위험예산 보관');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','최공격');setTxt('alphaKpi4Sub','5년 성장 우선');
-    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 개선 70/30 역분산 + Guard</strong><br>TECL 70% 슬리브는 σ20 역분산으로 크기를 조절하고 목표와 10%p 이상 벌어질 때만 리밸런싱합니다. TQQQ 30%는 SMA225 ±1.0% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다.';
+    setTxt('alphaEv1Label','TECL σ'+PATH_DEFAULTS.alpha.ivsLook);
+    setTxt('alphaEv1Sub','최근 '+PATH_DEFAULTS.alpha.ivsLook+'거래일 수익률의 연환산 실현변동성');
+    setTxt('alphaEv2Label','TECL 몫 안의 목표 비율');
+    setTxt('alphaEv2Sub','w=('+(PATH_DEFAULTS.alpha.ivsS0*100).toFixed(0)+'%/σ'+PATH_DEFAULTS.alpha.ivsLook+')², 최대100% · 전체 자산의 최대'+(PATH_DEFAULTS.alpha.teclWeight*100).toFixed(0)+'%');
+    setTxt('alphaEv3Label','TECL 몫 안의 현재 비율');setTxt('alphaEv4Label','TQQQ Guard');
+    setTxt('alphaChart1Title','TECL 몫 안의 목표비율 · 최근60거래일');setTxt('alphaChart2Title','TQQQ Guard · 최근120거래일');
+    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 70/30 역분산 + Guard</strong><br>전체 자산의70%를 TECL 몫으로 정하고, 최근20거래일 변동성에 따라 그 안의 투자비율을 조절합니다. 목표와 현재 비율의 차이가 <b>10%p를 초과</b>하면 리밸런싱합니다. TQQQ 30%는 SMA225 ±1.0% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다. <b>TECL 목표100%는 전체 자산의70%</b>를 뜻합니다.';
     if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 독립 재검증:</b> 137개 시작구간 · 평균 CAGR 48.2% · 중앙 CAGR 47.5% · 하위 10% CAGR 31.5% · 최악 CAGR 23.9% · 중앙 MDD -36.4% · 최악 MDD -37.8%.<span class="sub">업로드 TECL·TQQQ 시세 2010-03-12~2026-07-10 · 신호는 전일 확정종가, 다음 거래일 종가 체결 · 거래비용 0.1% · 대피자산 연 4% 가정.</span><span class="sub">세전 과거 백테스트이며 미래 수익을 보장하지 않습니다. 장기 스트레스 MDD -50% 하드제약 탐색은 완료했으며, 실험 후보는 기본값에 아직 반영하지 않았습니다.</span>';
   }else if(y===10){
     setTxt('alphaKpi1Label','상승장 코어');setTxt('alphaKpi1Value','TQQQ 80%');setTxt('alphaKpi1Sub','종가 > SMA250');
@@ -2294,7 +2301,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   if($('alphaSigma'))$('alphaSigma').textContent=(sigma*100).toFixed(1)+'%';
   if($('alphaTargetW'))$('alphaTargetW').textContent=(w*100).toFixed(1)+'%';
   if($('alphaCurrentW'))$('alphaCurrentW').textContent=(sleeveNow*100).toFixed(1)+'%';
-  if($('alphaWeightGap'))$('alphaWeightGap').textContent='목표와 '+(gap*100).toFixed(1)+'%p 차이 · 기준 '+(D.ivsBand*100).toFixed(1)+'%p';
+  if($('alphaWeightGap'))$('alphaWeightGap').textContent='전체 자산의 '+(curTeclW*100).toFixed(1)+'% · 목표와 '+(gap*100).toFixed(1)+'%p 차이 · '+(D.ivsBand*100).toFixed(1)+'%p 초과 시 조정';
   if($('alphaGuardState'))$('alphaGuardState').textContent=guard;
   const guardDist=(qs/sma-1)*100;
   if($('alphaGuardGap'))$('alphaGuardGap').textContent='종가 '+usd(qs)+' · SMA'+D.guardMA+' 대비 '+(guardDist>=0?'+':'')+guardDist.toFixed(2)+'%';
