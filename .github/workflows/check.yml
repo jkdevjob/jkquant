@@ -177,6 +177,13 @@ jobs:
           node scripts/test_opening_gapdown.mjs functions/api
           python scripts/mutation_test_opening_gapdown.py
 
+      - name: 텐배거 GPT 과거 연구 값·미래봉·갭 체결·자료 일치 검사
+        run: |
+          pip install --quiet lxml
+          python scripts/test_tenbagger.py
+          python scripts/mutation_test_tenbagger.py
+          node scripts/test_tenbagger_ui.cjs
+
       - name: BTC 00:00~22:00 기준전략 값·경계 시험
         run: |
           python scripts/test_crypto_midnight_orb.py

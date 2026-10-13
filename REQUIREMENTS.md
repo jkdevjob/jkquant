@@ -28,6 +28,7 @@
 | R-10 | 가입 승인 알림 | 승인 대상 본인의 등록 이메일로 Gmail 발신 시도. 웹푸시는 사전 동의한 **해당 사용자 기기만**. 관리자 발송 상태/실패 원인 확인, 승인 건별 중복방지, 키 비공개 | `admin.html`, `worker/presale-alert/src/index.js`, `integrations/gmail-approval/Code.gs`, 보안 테스트 |
 | R-11 | 부동산 투자판단 | 모바일 첫 화면에서 오늘 할 일 → 후보 가격·자금 → 관심 계획 → 실제 매수 등록 → 보유·매도 기록으로 연결. 미확인 비용·실거래 누락·오래된 자료는 보류, 마감일은 한국 날짜로 판정. 공개 실거래와 실제 매물/계약 가격 구분. 본인의 승인 사용자 하위 문서에만 기록하고 계약 이벤트 보존 및 revision 충돌 확인. 가격 한도는 사용자 가정으로 표시 | realestate.html, realestate-gpt-decision*.js, realestate-gpt-presale.js, tests/realestate-decision.test.cjs |
 | R-12 | 텐배거 연구 | 상장폐지 포함 전 종목 · 그날 종가까지 자료로 신호 → 다음 날 종가 체결 · 비용·상장폐지 손실 포함 · 규칙 고르기는 앞 시기만, 뒤 시기는 검증 · 화면은 결과를 그리기만(재계산 금지) · 연구용 표시(매매 권유 아님) | `scripts/tenbagger_claude/`, `tenbagger.html`, `tenbagger-claude.js`, `scripts/tenbagger_claude/test_analysis.py`·`mutation_test.py`, `scripts/test_tenbagger_claude.cjs` |
+| R-13 | 텐배거 GPT 연구 | 사후 최대 구간과 당시 정보로 실행한 규칙 검증을 구분. 실패·상장폐지·누락/조정 가격·재무 시점 한계 공개. 2015년 말 이후 학습 자료 차단, 다음 시가·갭·비용·미청산 검사. 기존 주문/개인 원장 변경 금지 | scripts/*tenbagger*, tenbagger.html, data/tenbagger/gpt, TENBAGGER_RESEARCH.md |
 
 ## 3. 공식 상태의 의미
 
