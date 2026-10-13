@@ -1,0 +1,577 @@
+{
+  "schema": 3,
+  "date": "2026-10-13",
+  "generatedAt": "2026-10-13T16:04:54+09:00",
+  "source": "server-opening-monitor",
+  "liveSource": "cloudflare-opening-scheduler-durable-ledger",
+  "strategy": {
+    "universe": "Top100",
+    "gap": "+2~+7%",
+    "firstHigh": "첫 3분",
+    "initialBreakout": "+0.5% 이상",
+    "pullback": "0.3~1.0%",
+    "support": "시초가 지지",
+    "rebreak": "전고점 재돌파",
+    "volumeRatio": "1.0배 이상",
+    "amountRatio": "1.2배 이상",
+    "stop": "-1%",
+    "takeProfit": "+1.5%",
+    "finalExit": "09:30",
+    "friction": "0.25%"
+  },
+  "universeChecked": 100,
+  "errors": 0,
+  "trades": [],
+  "mainVariant": "baseline",
+  "operationalTrades": [],
+  "shadowVariants": [
+    {
+      "name": "amount_1.5",
+      "label": "거래대금≥1.5배",
+      "description": "재돌파 추정 거래대금 배수만 강화",
+      "params": {
+        "amountMult": 1.5
+      },
+      "trades": []
+    },
+    {
+      "name": "amount_1.8",
+      "label": "거래대금≥1.8배",
+      "description": "강한 재돌파만 남기는 거래대금 강화 후보",
+      "params": {
+        "amountMult": 1.8
+      },
+      "trades": []
+    },
+    {
+      "name": "cf_g0001",
+      "label": "자동생성 cf_g0001",
+      "description": "전향적 자동생성 파라미터 후보",
+      "params": {
+        "pbMax": 0.4,
+        "amountMult": 1.3,
+        "entryCutoff": 910,
+        "volMult": 1
+      },
+      "trades": []
+    },
+    {
+      "name": "cf_g0002",
+      "label": "자동생성 cf_g0002",
+      "description": "전향적 자동생성 파라미터 후보",
+      "params": {
+        "pbMax": 0.5,
+        "amountMult": 1.3,
+        "entryCutoff": 910,
+        "volMult": 1
+      },
+      "trades": []
+    },
+    {
+      "name": "combo_e0920_vol15",
+      "label": "09:20+거래량1.5배",
+      "description": "조기 진입과 거래량 강화 결합",
+      "params": {
+        "entryCutoff": 920,
+        "volMult": 1.5
+      },
+      "trades": []
+    },
+    {
+      "name": "combo_pb05_e0920",
+      "label": "눌림0.5%+09:20",
+      "description": "얕은 눌림과 조기 진입 결합",
+      "params": {
+        "pbMax": 0.5,
+        "entryCutoff": 920
+      },
+      "trades": []
+    },
+    {
+      "name": "combo_pb07_amt15",
+      "label": "눌림0.7%+대금1.5배",
+      "description": "중간 눌림과 강한 거래대금 결합",
+      "params": {
+        "pbMax": 0.7,
+        "amountMult": 1.5
+      },
+      "trades": []
+    },
+    {
+      "name": "entry_by_0910",
+      "label": "09:10 이전",
+      "description": "초반 모멘텀만 허용하는 조기 진입 후보",
+      "params": {
+        "entryCutoff": 910
+      },
+      "trades": []
+    },
+    {
+      "name": "entry_by_0915",
+      "label": "09:15 이전",
+      "description": "재돌파 진입 시각을 09:15까지로 제한",
+      "params": {
+        "entryCutoff": 915
+      },
+      "trades": []
+    },
+    {
+      "name": "entry_by_0920",
+      "label": "09:20 이전",
+      "description": "기준 09:30보다 일찍 끊되 09:15보다 완화한 진입시간 민감도",
+      "params": {
+        "entryCutoff": 920
+      },
+      "trades": []
+    },
+    {
+      "name": "gap_25_55",
+      "label": "갭2.5~5.5%",
+      "description": "갭 극단부를 줄인 중간 범위 후보",
+      "params": {
+        "gapMin": 2.5,
+        "gapMax": 5.5
+      },
+      "trades": []
+    },
+    {
+      "name": "gap_2_5",
+      "label": "갭 2~5%",
+      "description": "과도한 갭을 제외하고 중간 갭만 허용",
+      "params": {
+        "gapMin": 2,
+        "gapMax": 5
+      },
+      "trades": []
+    },
+    {
+      "name": "gap_3_6",
+      "label": "갭 3~6%",
+      "description": "기준 갭 2~7%보다 중앙 구간만 허용하는 민감도",
+      "params": {
+        "gapMin": 3,
+        "gapMax": 6
+      },
+      "trades": []
+    },
+    {
+      "name": "hold_to_next_open",
+      "label": "다음 거래일 시가 청산",
+      "description": "기준전략과 같은 진입 · 중간 손절/익절 없이 다음 거래일 시가까지 보유 · 연구 전용",
+      "params": {
+        "exitPolicy": "next_session_open"
+      },
+      "trades": []
+    },
+    {
+      "name": "pb_max_0.5",
+      "label": "눌림≤0.5%",
+      "description": "눌림 상한만 0.5%로 강화",
+      "params": {
+        "pbMax": 0.5
+      },
+      "trades": []
+    },
+    {
+      "name": "pb_max_0.7",
+      "label": "눌림≤0.7%",
+      "description": "0.5%와 기준 1.0% 사이의 중간 눌림 민감도",
+      "params": {
+        "pbMax": 0.7
+      },
+      "trades": []
+    },
+    {
+      "name": "stop_0.7",
+      "label": "손절 0.7%",
+      "description": "기준 손절 1.0%보다 빠른 손절 민감도",
+      "params": {
+        "stop": 0.7
+      },
+      "trades": []
+    },
+    {
+      "name": "stop_0.9_tp_1.8",
+      "label": "손절0.9/익절1.8",
+      "description": "손익비를 높인 청산 후보",
+      "params": {
+        "stop": 0.9,
+        "takeProfit": 1.8
+      },
+      "trades": []
+    },
+    {
+      "name": "today_combo_v1",
+      "label": "오늘 개선안 v1",
+      "description": "눌림≤0.5% + 거래대금≥1.5배 + 09:15 이전 진입",
+      "params": {
+        "pbMax": 0.5,
+        "amountMult": 1.5,
+        "entryCutoff": 915
+      },
+      "trades": []
+    },
+    {
+      "name": "tp_1.0",
+      "label": "익절 1.0%",
+      "description": "기준 익절 1.5%보다 빠른 이익실현 민감도",
+      "params": {
+        "takeProfit": 1
+      },
+      "trades": []
+    },
+    {
+      "name": "vol_1.5",
+      "label": "거래량≥1.5배",
+      "description": "재돌파 1분 거래량 배수를 1.5배로 강화",
+      "params": {
+        "volMult": 1.5
+      },
+      "trades": []
+    },
+    {
+      "name": "vol_1.8",
+      "label": "거래량≥1.8배",
+      "description": "재돌파 거래량 강도를 더 높인 후보",
+      "params": {
+        "volMult": 1.8
+      },
+      "trades": []
+    }
+  ],
+  "liveSignalLedger": {
+    "schema": 1,
+    "date": "2026-10-13",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-13T00:05:16.879Z",
+    "updatedAt": "2026-10-13T00:31:15.094Z",
+    "scans": [
+      {
+        "id": "1791849904000:904:full",
+        "scheduledTime": 1791849904000,
+        "capturedAt": "2026-10-13T00:05:16.865Z",
+        "targetHm": 904,
+        "lagMs": 793,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791849964000:905:full",
+        "scheduledTime": 1791849964000,
+        "capturedAt": "2026-10-13T00:06:13.045Z",
+        "targetHm": 905,
+        "lagMs": 796,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850024000:906:full",
+        "scheduledTime": 1791850024000,
+        "capturedAt": "2026-10-13T00:07:14.449Z",
+        "targetHm": 906,
+        "lagMs": 799,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850084000:907:full",
+        "scheduledTime": 1791850084000,
+        "capturedAt": "2026-10-13T00:08:14.620Z",
+        "targetHm": 907,
+        "lagMs": 797,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850144000:908:full",
+        "scheduledTime": 1791850144000,
+        "capturedAt": "2026-10-13T00:09:14.482Z",
+        "targetHm": 908,
+        "lagMs": 801,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850204000:909:full",
+        "scheduledTime": 1791850204000,
+        "capturedAt": "2026-10-13T00:10:15.683Z",
+        "targetHm": 909,
+        "lagMs": 795,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850264000:910:full",
+        "scheduledTime": 1791850264000,
+        "capturedAt": "2026-10-13T00:11:15.003Z",
+        "targetHm": 910,
+        "lagMs": 797,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850324000:911:full",
+        "scheduledTime": 1791850324000,
+        "capturedAt": "2026-10-13T00:12:15.689Z",
+        "targetHm": 911,
+        "lagMs": 800,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850384000:912:full",
+        "scheduledTime": 1791850384000,
+        "capturedAt": "2026-10-13T00:13:14.424Z",
+        "targetHm": 912,
+        "lagMs": 800,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850444000:913:full",
+        "scheduledTime": 1791850444000,
+        "capturedAt": "2026-10-13T00:14:15.769Z",
+        "targetHm": 913,
+        "lagMs": 796,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850504000:914:full",
+        "scheduledTime": 1791850504000,
+        "capturedAt": "2026-10-13T00:15:13.428Z",
+        "targetHm": 914,
+        "lagMs": 854,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850564000:915:full",
+        "scheduledTime": 1791850564000,
+        "capturedAt": "2026-10-13T00:16:14.878Z",
+        "targetHm": 915,
+        "lagMs": 800,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850624000:916:full",
+        "scheduledTime": 1791850624000,
+        "capturedAt": "2026-10-13T00:17:14.058Z",
+        "targetHm": 916,
+        "lagMs": 800,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850684000:917:full",
+        "scheduledTime": 1791850684000,
+        "capturedAt": "2026-10-13T00:18:15.233Z",
+        "targetHm": 917,
+        "lagMs": 797,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850744000:918:full",
+        "scheduledTime": 1791850744000,
+        "capturedAt": "2026-10-13T00:19:12.540Z",
+        "targetHm": 918,
+        "lagMs": 801,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850804000:919:full",
+        "scheduledTime": 1791850804000,
+        "capturedAt": "2026-10-13T00:20:15.349Z",
+        "targetHm": 919,
+        "lagMs": 802,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850864000:920:full",
+        "scheduledTime": 1791850864000,
+        "capturedAt": "2026-10-13T00:21:12.023Z",
+        "targetHm": 920,
+        "lagMs": 798,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850924000:921:full",
+        "scheduledTime": 1791850924000,
+        "capturedAt": "2026-10-13T00:22:15.259Z",
+        "targetHm": 921,
+        "lagMs": 794,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791850984000:922:full",
+        "scheduledTime": 1791850984000,
+        "capturedAt": "2026-10-13T00:23:15.890Z",
+        "targetHm": 922,
+        "lagMs": 869,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791851044000:923:full",
+        "scheduledTime": 1791851044000,
+        "capturedAt": "2026-10-13T00:24:14.740Z",
+        "targetHm": 923,
+        "lagMs": 802,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791851104000:924:full",
+        "scheduledTime": 1791851104000,
+        "capturedAt": "2026-10-13T00:25:14.596Z",
+        "targetHm": 924,
+        "lagMs": 796,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791851164000:925:full",
+        "scheduledTime": 1791851164000,
+        "capturedAt": "2026-10-13T00:26:14.990Z",
+        "targetHm": 925,
+        "lagMs": 799,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791851224000:926:full",
+        "scheduledTime": 1791851224000,
+        "capturedAt": "2026-10-13T00:27:15.814Z",
+        "targetHm": 926,
+        "lagMs": 802,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791851284000:927:full",
+        "scheduledTime": 1791851284000,
+        "capturedAt": "2026-10-13T00:28:13.228Z",
+        "targetHm": 927,
+        "lagMs": 796,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791851344000:928:full",
+        "scheduledTime": 1791851344000,
+        "capturedAt": "2026-10-13T00:29:15.438Z",
+        "targetHm": 928,
+        "lagMs": 799,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791851404000:929:full",
+        "scheduledTime": 1791851404000,
+        "capturedAt": "2026-10-13T00:30:13.121Z",
+        "targetHm": 929,
+        "lagMs": 863,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1791851464000:930:full",
+        "scheduledTime": 1791851464000,
+        "capturedAt": "2026-10-13T00:31:15.080Z",
+        "targetHm": 930,
+        "lagMs": 793,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      }
+    ],
+    "events": []
+  },
+  "signalRecords": []
+}
