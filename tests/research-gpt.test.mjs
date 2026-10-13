@@ -10,6 +10,7 @@ function fn(name){const at=ui.indexOf('function '+name+'(');let start=ui.indexOf
 test('연구 탭 복원·직접 링크와 기존 전략 경로 보존',()=>{
   assert.match(ui,/<title>JK 투자 — 연구\(지피티\)<\/title>/);
   assert.match(ui,/<div class="kicker">GPT Research<\/div><h1>JK <span class="v">투자<\/span> 연구/);
+  assert.match(ui,/<div class="glogo">JK <span class="v">투자<\/span> 연구<\/div>/);
   assert.match(ui,/data-strategy="tenbagger"/);
   assert.match(ui,/id="scVer">v1\.44\.0/);
   const calls=[],ctx={location:{search:'?strategy=tenbagger',hash:''},URLSearchParams,SCALP_PREFS:{strategyTab:'opening'},showStrategy:n=>calls.push(n)};
