@@ -427,7 +427,7 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     getAlarm: async () => alarmAt, setAlarm: async t => { alarmAt = t; } } }, env);
   const ua = nodeCrypto.createECDH("prime256v1"); ua.generateKeys();
   const sub = { endpoint: "https://push.test/s1", keys: { p256dh: PU.b64u(ua.getPublicKey()), auth: PU.b64u(nodeCrypto.randomBytes(16)) } };
-  let live = { ok: true, today: "2026-10-07", tabs: { opening: { rows: [{ name: "가", status: "보유중" }] }, daytrading: { rows: [] }, crypto: { rows: [] }, soxl: { rows: [] } } };
+  let live = { ok: true, today: "2026-10-07", tabs: { opening: { rows: [{ name: "가", status: "보유중", buyPriceKind: "체결", buyPrice: 100 }] }, daytrading: { rows: [] }, crypto: { rows: [] }, soxl: { rows: [] } } };
   const posts = [], oldFetch = globalThis.fetch;
   globalThis.fetch = async (u, init = {}) => {
     u = String(u);
@@ -449,7 +449,7 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     assert.equal(r1.dropped, 1); assert.equal((await call("/push-key")).subscribers, 1);            // 410 받은 구독은 지운다
     posts.length = 0;
     assert.equal((await W.claudePushWatch(env, now + 3e5)).fresh || 0, 0); assert.deepEqual(posts, []);   // 같은 매수는 다시 안 보냄
-    live.tabs.opening.rows[0] = { name: "가", status: "청산", realized: true, pnlPct: 1.2 };
+    live.tabs.opening.rows[0] = { name: "가", status: "청산", realized: true, pnlPct: 1.2, buyPriceKind: "체결", buyPrice: 100, sellPrice: 101.2 };
     alarmAt = null;
     await store.alarm();                                                                              // 저장소 알람이 감시를 돌리고 다음 5분 알람을 다시 건다
     assert.deepEqual(posts, ["https://push.test/s1"]);                                                // 매수는 이미 보냄 — 새로 생긴 매도 한 건만
