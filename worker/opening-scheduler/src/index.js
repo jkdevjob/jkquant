@@ -571,8 +571,8 @@ export function claudeSendState(ledger,strategy){
   const has=id=>ev.some(e=>e&&e.id===id);
   const fails=ev.filter(e=>e&&String(e.id).startsWith("tg:"+strategy+":fail:")).length;
   const rec=(ev.find(e=>e&&e.id==="close:"+strategy)||{}).payload||null;
-  return {done:has("tg:"+strategy+":sent")||has("tg:"+strategy+":unknown"),fails,record:rec,
-    canSend:!(has("tg:"+strategy+":sent")||has("tg:"+strategy+":unknown"))&&fails<CLAUDE_TG_MAX_FAILS};
+  const finished=has("tg:"+strategy+":sent")||has("tg:"+strategy+":unknown")||has("tg:"+strategy+":skipped");
+  return {done:finished,fails,record:rec,canSend:!finished&&fails<CLAUDE_TG_MAX_FAILS};
 }
 async function claudeAppend(env,date,id,stage,payload,ms){
   const event={id,date,capturedAt:new Date().toISOString(),targetHm:kstHm(ms),strategy:"claude_day",stage,payload};
@@ -597,7 +597,7 @@ async function claudeDayClose(env,strategy,date,ms,extra={}){
     let res;
     try{res=await claudePost(env,{op:"send",strategy,date,result:s.record,records:extra.records});}
     catch(e){res={ok:false,definite:false,error:String(e.message||e)};}
-    const tag=res.ok?"sent":res.definite?"fail:"+(s.fails+1):"unknown";
+    const tag=res.skipped?"skipped":res.ok?"sent":res.definite?"fail:"+(s.fails+1):"unknown";
     await claudeAppend(env,date,"tg:"+strategy+":"+tag,"telegram",{ok:!!res.ok,messageId:res.messageId||null,error:res.error||null},ms);
     console.log(JSON.stringify({type:"claude_day_telegram",strategy,date,result:tag,error:res.error||null}));
     return s;
