@@ -8,7 +8,9 @@ const JOB_APP=BASE_APP+"/job";
 const IPO_APP=BASE_APP+"/ipo";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
 const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl"]);
-const VALID_TOPICS=new Set(["presale","job","ipo",...TRADE_TOPICS]);
+const VALID_TOPICS=new Set(["presale","job","ipo","research",...TRADE_TOPICS]);
+/* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
+const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
 const APPROVAL_ADMIN="jk82investing@gmail.com";
 const FIRESTORE_PROFILE="https://firestore.googleapis.com/v1/projects/jk-invest/databases/(default)/documents/profiles/";
 
@@ -464,6 +466,10 @@ export class PresaleAlertStore{
       id:"test-ipo-"+Date.now(),type:"ipo",title:"📈 공모주 웹알림 테스트",
       body:"IPO 일정 및 평가점수 웹알림이 정상 연결되었습니다.",
       url:IPO_APP,createdAt:new Date().toISOString()
+    }:topic==="research"?{
+      id:"test-research-"+Date.now(),type:"research",title:"🔬 매일 연구 웹알림 테스트",
+      body:"무매·5년 플랜 매일 연구 결과 알림이 정상 연결되었습니다.",
+      url:RESEARCH_APP,createdAt:new Date().toISOString()
     }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
       body:"대전·세종 신규 채용공고 알림이 정상 연결되었습니다.",
@@ -620,6 +626,23 @@ export class PresaleAlertStore{
     await this.state.storage.put("lastSent:ipo",today);
     return json(request,{ok:true,date:today,sent:delivery.sent,digest,delivery});
   }
+  /* 매일 연구 결과 알림 — 감시키를 아는 호출(GitHub Actions)만 게시한다. 같은 날 같은 요약은 한 번만 보낸다. */
+  async researchNote(request){
+    if(!this.env.MONITOR_KEY||request.headers.get("x-monitor-key")!==this.env.MONITOR_KEY)
+      return json(request,{ok:false,error:"unauthorized"},401);
+    const b=await request.json().catch(()=>null);
+    const date=clean(b&&b.date,10),body=clean(b&&b.body,240),found=!!(b&&b.discovery);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!body)return json(request,{ok:false,error:"date·body required"},400);
+    const id="research:"+date+":"+(await hashText(body)).slice(0,12);
+    if(await this.state.storage.get("sent:"+id))return json(request,{ok:true,skipped:true,reason:"이미 보낸 연구 요약",id});
+    const alert={id,type:"research",title:(found?"★ ":"🔬 ")+"무매·5년 플랜 연구 "+date.slice(5).replace("-","/")+(found?" — 발견":""),
+      body,url:RESEARCH_APP,createdAt:new Date().toISOString()};
+    await this.recordAlert(alert);
+    await this.state.storage.put("lastCheck:research",alert.createdAt);
+    const delivery=await this.notifyAll("research");
+    await this.state.storage.put("sent:"+id,alert.createdAt);
+    return json(request,{ok:true,id,alert,delivery});
+  }
   async ipoDaily(request){
     const day=clean(new URL(request.url).searchParams.get("date"),10)||kstDate(0);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return json(request,{ok:false,error:"invalid date"},400);
@@ -634,13 +657,13 @@ export class PresaleAlertStore{
       const jobLastCheck=await this.state.storage.get("lastCheck:job");
       const counts=Object.fromEntries([...VALID_TOPICS].map(t=>[t,0]));
       for(const [,s] of subs)for(const t of this.topicsOf(s))counts[t]++;
-      const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null};
+      const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null,research:await this.state.storage.get("lastCheck:research")||null};
       const lastDeliveries={};
       for(const t of TRADE_TOPICS){
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
       }
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.2.3",subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.3.0",subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
@@ -673,6 +696,7 @@ export class PresaleAlertStore{
     if(path==="/check-jobs"&&request.method==="POST")return this.checkJobs(request);
     if(path==="/check-ipo"&&request.method==="POST")return this.checkIPO(request);
     if(path==="/ipo-daily"&&request.method==="GET")return this.ipoDaily(request);
+    if(path==="/research-note"&&request.method==="POST")return this.researchNote(request);
     return json(request,{ok:false,error:"not found"},404);
   }
 }
