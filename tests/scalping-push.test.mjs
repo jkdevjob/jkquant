@@ -188,3 +188,56 @@ test("데이트레이딩 최근 8분만 매수·매도 푸시 복구 — 날짜�
   assert.equal(fn({...ledger,targetHm:1030}).length,0);
   assert.match(source,/await retryPaperWebPush\(env,saved\)/);
 });
+
+
+test("GPT 연구 정책: 후보 매수 알림 금지, 확정 1분봉 시가와 청산 때만 발송",async()=>{
+  const source=readFileSync(new URL("../worker/daytrading-scheduler/src/index.js",import.meta.url),"utf8");
+  const first=source.indexOf("async function notifyPaperTransitions("),last=source.indexOf("// 장부 기록 후 첫 알림",first);
+  assert.ok(first>=0&&last>first);
+  const code=source.slice(first,last);
+  const out=[],fn=new Function("sendScalpingAlert","hmLabel","signedPct","exitLabel","PAPER_STOP_PCT","PAPER_TAKE_PROFIT_PCT","PAPER_FINAL_EXIT_HM","PAPER_FRICTION_PCT",code+"; return notifyPaperTransitions;")(
+    async (_env,b)=>{out.push(b);return {ok:true}},n=>String(n||"").padStart(4,"0"),
+    n=>(Number(n)>=0?"+":"")+Number(n).toFixed(2)+"%",n=>n==="stop"?"손절":String(n),1,2,1510,.25);
+  const candidate={id:"247540:1426",code:"247540",name:"에코프로비엠",status:"pending",signalTime:1426,signalPrice:114000,
+    entryTime:1427,entryPrice:null,exitTime:null,exitPrice:null,sessionRet:1.33,score:70,volRatio:1.56};
+  const book=x=>({date:"2026-10-13",trades:[x],stopPct:1,takeProfitPct:2});
+  await fn(null,null,book(candidate));
+  assert.equal(out.length,0,"14:26 후보 신호는 Telegram과 Push 모두 금지");
+  const opened={...candidate,status:"open",entryPrice:114200};
+  await fn(null,book(candidate),book(opened));
+  assert.equal(out.length,1);
+  assert.equal(out[0].stage,"buy");
+  assert.equal(out[0].time,"1427");
+  assert.ok(out[0].lines.some(x=>x.includes("모의 매수 확정")));
+  assert.ok(out[0].lines.every(x=>!x.includes("진입 대기")));
+  const closed={...opened,status:"closed",exitTime:1430,exitPrice:112770,reason:"stop",pnl:-1.25};
+  await fn(null,book(opened),book(closed));
+  assert.equal(out.length,2);
+  assert.equal(out[1].stage,"sell");
+  await fn(null,book(closed),book(closed));
+  assert.equal(out.length,2);
+});
+
+test("GPT 연구 마감요약 금지, 연구 전략명 메시지 첫 줄 검증",async()=>{
+  const {onRequestPost}=await import("../functions/api/scalping-alert.js");
+  const old=globalThis.fetch,calls=[];
+  globalThis.fetch=async(url,options)=>{
+    calls.push({url:String(url),body:JSON.parse(options.body)});
+    return new Response(JSON.stringify(String(url).includes("api.telegram.org")?{ok:true,result:{message_id:19}}:{ok:true,delivery:{sent:1}}),{status:200});
+  };
+  try{
+    const env={AUTOTRADE_KEY:"test",TELEGRAM_BOT_TOKEN:"token",TELEGRAM_CHAT_ID:"chat"};
+    const run=async stage=>{const r=await onRequestPost({env,request:new Request("https://host.invalid/api/scalping-alert",{
+      method:"POST",headers:{"x-monitor-key":"test","content-type":"application/json"},
+      body:JSON.stringify({strategy:"opening",stage,eventId:"test-"+stage,date:"2026-10-13",time:"09:08"})})});return r.json()};
+    assert.equal((await run("summary")).skipped,"trade_notifications_only");
+    assert.equal(calls.length,0);
+    assert.equal((await run("buy")).ok,true);
+    assert.equal(calls.length,2);
+    assert.ok(calls.some(x=>String(x.body.text||"").startsWith("[지피티 연구 시초가]")));
+  }finally{globalThis.fetch=old;}
+  const opening=readFileSync(new URL("../functions/api/opening-monitor.js",import.meta.url),"utf8");
+  const worker=readFileSync(new URL("../worker/presale-alert/src/index.js",import.meta.url),"utf8");
+  assert.ok(opening.includes("[지피티 연구 시초가]"));
+  assert.ok(worker.includes('title:"[지피티 연구 "+name+"] "'));
+});
