@@ -516,7 +516,7 @@ export class PresaleAlertStore{
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,200)).filter(Boolean).slice(0,5):[];
     const name={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic];
     const trade={id,type:topic,stage,createdAt:new Date().toISOString(),
-      title:(stage==="buy"?"🟢 ":"🔴 ")+name+" 모의 "+(stage==="buy"?"매수":"매도")+" 타이밍",
+      title:"[지피티 연구 "+name+"] "+(stage==="buy"?"🟢 ":"🔴 ")+"모의 "+(stage==="buy"?"매수":"매도")+" 타이밍",   // 2026-10-13: 모든 연구 메뉴 같은 머리말
       body:[date,time,...lines].filter(Boolean).join(" · ").slice(0,245),url:BASE_APP+"/scalping?strategy="+topic};
     // 송신 중인 같은 eventId 중복 요청 차단. 성공 응답 전 실패 건은 재시도 가능하도록 해제한다.
     await this.state.storage.put(claimKey,{status:"sending",at:trade.createdAt,sentKeys:[...delivered]});
@@ -682,7 +682,7 @@ export class PresaleAlertStore{
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
       }
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.4.0",subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.4.1",subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}

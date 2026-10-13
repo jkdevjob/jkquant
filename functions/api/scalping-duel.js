@@ -90,19 +90,6 @@ function message(date,d){
   L.push("자세히: jkquant.pages.dev/scalping → 🆚 클로드 대결");
   return L.join("\n");
 }
-async function claim(id){
-  if(typeof caches==="undefined"||!caches.default)return true;
-  const key="https://scalping-duel.internal/"+encodeURIComponent(id);
-  if(await caches.default.match(key))return false;
-  await caches.default.put(key,new Response("1",{headers:{"cache-control":"max-age=1209600"}}));
-  return true;
-}
-async function send(env,body){
-  const token=String(env.TELEGRAM_BOT_TOKEN||"").trim(),chatId=String(env.TELEGRAM_CHAT_ID||"").trim();
-  if(!token||!chatId)throw new Error("Telegram 환경변수 없음");
-  const r=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({chat_id:chatId,text:body,disable_web_page_preview:true})});
-  const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.description||("HTTP "+r.status));return j.result&&j.result.message_id;
-}
 export async function onRequestGet(){
   try{return json({ok:true,report:await loadReport()});}catch(e){return json({ok:false,error:String(e.message||e)},502);}
 }
@@ -114,14 +101,8 @@ export async function onRequestPost({request,env}){
     const report=await loadReport();
     const row=(report.total.days||[]).find(x=>x.date===date);
     if(!row)return json({ok:true,pending:true,reason:"same_day_record_wait",date});
-    if(!(await claim("gpt-claude-duel:"+date)))return json({ok:true,duplicate:true,date});
-    try{
-      const id=await send(env,message(date,report));
-      return json({ok:true,date,messageId:id});
-    }catch(e){
-      // 알림 실패는 장부·주문 경로와 완전히 분리되어 있으며 호출자에만 실패를 알린다.
-      return json({ok:false,date,error:String(e.message||e)},502);
-    }
+    // 사용자 요청(2026-10-13): 텔레그램은 실제 매수 · 매도 때만 — 대결 요약은 보내지 않는다(화면 GET 보고서는 그대로).
+    return json({ok:true,date,skipped:"buy_sell_only"});
   }catch(e){return json({ok:false,error:String(e.message||e)},500);}
 }
 export {loadReport,message,csv};

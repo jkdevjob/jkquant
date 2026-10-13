@@ -390,8 +390,8 @@ jobs:
             ['u.pathname==="/paper"','Durable Object 장중 모의장부 조회']
           ];
           for(const [needle,label] of must){if(!c.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
-          if(!m.includes('onRequestPost')||!m.includes('targetHm')||!m.includes('claimEvent')){
-            console.error('✗ daytrading-monitor POST/완료분/중복알림 가드 없음'); fail++;
+          if(!m.includes('onRequestPost')||!m.includes('targetHm')||m.includes('api.telegram.org')){
+            console.error('✗ daytrading-monitor POST/완료분 없음 또는 후보 신호 텔레그램 발송(연구 메뉴 알림은 실제 매수·매도 때만)'); fail++;
           }
           if(!r.includes('DAY_WORKER')||!r.includes('snapshotHm|tonumber) <= 1015')){
             console.error('✗ 연구 workflow가 Cloudflare 정시 스냅샷을 우선 사용하지 않음'); fail++;

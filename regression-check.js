@@ -11271,19 +11271,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&route(Date.parse('2026-10-05T00:05:00Z'))==='opening'&&route(Date.parse('2026-10-05T00:31:00Z'))==='opening'
        &&route(Date.parse('2026-10-05T06:31:00Z'))===null,JSON.stringify(count));
   }
-  { // 주간 Telegram: 같은 cron 한 줄의 한 주 예약시각 중 토요일 09:05 KST 한 번만
-    const crons=JSON.parse(wr).triggers.crons;
-    const kp=ow.slice(ow.indexOf('function kstParts('),ow.indexOf('\n}\n',ow.indexOf('function kstParts('))+2);
-    const wf2=ow.slice(ow.indexOf('export function claudeWeeklyDue('),ow.indexOf('\n}\n',ow.indexOf('export function claudeWeeklyDue('))+2).replace('export ','');
-    const due=new Function(kp+wf2+'\nreturn claudeWeeklyDue;')();
-    const expand=(f,max)=>f==='*'?Array.from({length:max},(_,i)=>i):f.split(',').flatMap(x=>{const m=x.match(/^(\d+)-(\d+)$/);if(!m)return [+x];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(i);return a;});
-    const hits=[];
-    for(let d=0;d<7;d++)for(const c of crons){const [mi,h]=c.split(' ');for(const hh of expand(h,24))for(const mm of expand(mi,60)){
-      const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;if(due(ms))hits.push(new Date(ms).toISOString());}}
-    ok('클로드 주간 Telegram: 한 주에 토요일 09:05 KST 딱 한 번 · Worker 가 weekly 로 호출',
-       hits.length===1&&hits[0]==='2026-10-10T00:05:00.000Z'
-       &&/if\(claudeWeeklyDue\(at\)\)ctx\.waitUntil\(claudeTelegram\(env,kstParts\(at\)\.date,"weekly"\)\);/.test(ow),JSON.stringify(hits));
-  }
+  // 알림 정책(사용자 요청 2026-10-13): 모든 연구 메뉴는 실제 매수·매도 때만 — 주간·판단·마감 결과 텔레그램 없음
+  ok('클로드 알림: 주간 · 08:56 판단 · 15:21 판단 · 마감 결과 텔레그램 호출 없음(Worker) · 매수·매도 감시를 ①② 기록 직후에도 바로 돌림',
+     !/claudeWeeklyDue|claudeTelegram\(|"weekly"|op:"send"/.test(ow)
+     &&/await claudeAlertsNow\(env\);\s+\/\/ ① 매수 · ② 매도 기록 직후 바로 알림/.test(ow)
+     &&/if\(stage!=="close"\)await claudeKrClose\(env,date,ms\);[^\n]*\n\s*await claudeAlertsNow\(env\);/.test(ow));
   ok('Worker: 매 단계 응답을 gapdown ledger 에 먼저 저장 + 일부 조회 시 주문 없음 + 라우팅으로만 실행',
      /gapdownRecord\(env,date,"quote",q,ms\)/.test(ow)&&/gapdown_quote_partial/.test(ow)
      &&/if\(route==="opening"\)ctx\.waitUntil\(runMinute\(controller,env\)\);/.test(ow)
@@ -11311,22 +11303,19 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
-    ok('클로드 Telegram: 서버키 인증·주문 경로 없음 · 08:56 매수·15:21 판단 알림 · 15:40 체결조회 뒤 ①② 하루 마감 → 전일·당일 요약',
-       /function authorized\(request,env\)/.test(tg)&&/claim\("claude:"\+date\+":"\+kind\+\(kind==="promote"\?":"\+b\.event\.tab:""\)\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
-       &&/await claudeTelegram\(env,date,"preopen"\);/.test(ow)&&/if\(stage==="close"\)await claudeTelegram\(env,date,"etfbuy"\);\n\s*else await claudeKrClose\(env,date,ms\);/.test(ow)
-       &&!/claudeMorningDue/.test(ow));
-    // 하루 마감 알림: 마감 장부를 DO 에 한 번만 저장(먼저 저장된 것이 정본) → 그 장부로 발송 → 보냄·모름 기록(중복 없음) · 거절만 최대 5번 재시도
-    const fnS=ow.slice(ow.indexOf('export function claudeSendState('),ow.indexOf('\n}\n',ow.indexOf('export function claudeSendState('))+2).replace('export ','');
-    const st=new Function('const CLAUDE_TG_MAX_FAILS=5;'+fnS+'\nreturn claudeSendState;')();
+    ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로',
+       /function authorized\(request,env\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
+       &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\)\\\] \/;/.test(tg)
+       &&/if\(b\.op==="send"\|\|KINDS\.includes\(String\(b\.kind\|\|""\)\)\)return json\(\{ok:true,skipped:"buy_sell_only"\}\);/.test(tg)
+       &&(tg.match(/await sendOnce\(env,/g)||[]).length===1&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
+    // 하루 마감 장부: DO 에 한 번만 저장(먼저 저장된 것이 정본) — 밤 계산 · 대결 비교가 읽는다. 텔레그램은 보내지 않는다
+    const fnR=ow.slice(ow.indexOf('export function claudeCloseRecord('),ow.indexOf('\n}\n',ow.indexOf('export function claudeCloseRecord('))+2).replace('export ','');
+    const rec=new Function(fnR+'\nreturn claudeCloseRecord;')();
     const ev=(...ids)=>({events:ids.map(id=>({id,payload:id.startsWith('close:')?{v:1}:{}}))});
-    ok('클로드 하루 마감 알림 상태: 장부 정본 · 보냄/모름이면 다시 안 보냄 · 거절은 5번까지 재시도',
-       st(ev('close:crypto'),'crypto').canSend&&st(ev('close:crypto'),'crypto').record.v===1
-       &&!st(ev('close:crypto','tg:crypto:sent'),'crypto').canSend&&!st(ev('close:crypto','tg:crypto:unknown'),'crypto').canSend
-       &&st(ev('close:crypto','tg:crypto:fail:1','tg:crypto:fail:2'),'crypto').canSend
-       &&!st(ev('close:crypto','tg:crypto:fail:1','tg:crypto:fail:2','tg:crypto:fail:3','tg:crypto:fail:4','tg:crypto:fail:5'),'crypto').canSend
-       &&st(ev('tg:soxl:sent'),'crypto').canSend
-       &&/await claudeAppend\(env,date,"close:"\+strategy,"close",c\.result,ms\);\n\s*L=await readLedger\(env,date,"claude"\);s=claudeSendState\(L,strategy\);/.test(ow)
-       &&/res\.ok\?"sent":res\.definite\?"fail:"\+\(s\.fails\+1\):"unknown"/.test(ow));
+    ok('클로드 하루 마감 장부: 한 번만 저장 · 이미 있으면 다시 계산 안 함 · 텔레그램 발송 없음',
+       rec(ev('close:crypto'),'crypto').v===1&&rec(ev('close:soxl'),'crypto')===null&&rec(null,'crypto')===null
+       &&/if\(claudeCloseRecord\(await readLedger\(env,date,"claude"\),strategy\)\)return true;/.test(ow)
+       &&/await claudeAppend\(env,date,"close:"\+strategy,"close",c\.result,ms\);/.test(ow)&&!/composeDay|composeOverview/.test(tg));
     ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 상태 줄 + 1분 자동 갱신',
        /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/opsBoard\(tab\)\+docCard\(tab\)\+planCard\(tab,T,wl\)\+buyCard\(tab\)\+sellCard\(tab\)\+liveCard\(tab\)/.test(scl2)
        &&/html\+=shadowCard\(tab\)\+reviewCard\(tab\)\+paperCard\(tab\);/.test(scl2)
@@ -11373,7 +11362,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        /<div id="gate">/.test(scl2)&&/fetch\("\/api\/owner"/.test(scl2)&&/headers:await authHeaders\(\)/.test(scl2)
        &&/if\(!\(await claudeAuthorized\(request,env\)\)\)return json\(\{ok:false,error:"unauthorized"\},401\);/.test(lv3)
        &&/if\(!\(await claudeAuthorized\(request,env\)\)\)return new Response/.test(lb3)
-       &&/fetch\(origin\+"\/api\/claude-live",\{headers:\{Accept:"application\/json","x-monitor-key":/.test(tg3));
+       &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live",\{headers:\{"x-monitor-key":env\.MONITOR_KEY/.test(fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'))   // 알림 감시(Worker)가 감시키로 실시간 자료를 읽는다
+       &&/function authorized\(request,env\)/.test(tg3));
   }
   ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·이번 주·추이 범례·GPT 대결 날짜별',
      /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/q\.noTrade\?NOTRADE:pct\(q\.tabPct\)/.test(scl2)
@@ -12068,6 +12058,16 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      &&/@media\(max-width:760px\)\{table\.fit\{min-width:0!important;font-size:11px\}/.test(ch)&&/table\.fit td:first-child,table\.fit th:first-child\{position:sticky;left:0;/.test(ch)
      &&/table\.fit\.arena td\.nm,table\.fit\.arena th:nth-child\(2\)\{position:sticky;left:20px;/.test(ch)&&!/table\.stack thead\{display:none\}/.test(ch)&&/window\.addEventListener\("resize"/.test(ch)
      &&/<span class='tag' style='margin:0 6px 0 0'>"\+esc\(ARENA_TAB\[x\.tab\]/.test(ch)&&/"<span class='sub'>"\+arenaReason\(x\.reason,names\)\+"<\/span>/.test(ch));
+  { // 연구 메뉴 알림 정책(사용자 요청 2026-10-13): '[지피티 연구 시초가]' · '[클로드 연구 시초가]' 처럼 시작 · 실제 매수·매도 때만(후보 · 일일결과 · 대결 없음)
+    const sa=fs.readFileSync(__d+'/functions/api/scalping-alert.js','utf8'),pa=fs.readFileSync(__d+'/worker/presale-alert/src/index.js','utf8'),
+      om=fs.readFileSync(__d+'/functions/api/opening-monitor.js','utf8'),dm=fs.readFileSync(__d+'/functions/api/daytrading-monitor.js','utf8'),
+      du=fs.readFileSync(__d+'/functions/api/scalping-duel.js','utf8'),cp2=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8');
+    ok('연구 메뉴 알림: [지피티 연구 탭] · [클로드 연구 탭] 머리말 · 실제 매수·매도만(지피티 일일결과 · 데이트레이딩 후보 · 대결 요약 텔레그램 없음)',
+       /"\[지피티 연구 "\+LABELS\[strategy\]\+"\] "\+icon/.test(sa)&&/if\(stage==="summary"\)return json\(\{ok:true,eventId,skipped:"buy_sell_only"\}\);/.test(sa)
+       &&/title:"\[지피티 연구 "\+name\+"\] "/.test(pa)&&/"\[지피티 연구 시초가\] 🟢 모의 매수 신호 · "/.test(om)&&/text:title\+/.test(om)
+       &&!/api\.telegram\.org|모의 후보 신호/.test(dm)&&!/api\.telegram\.org/.test(du)
+       &&/open: "\[클로드 연구 시초가\]", etf: "\[클로드 연구 데이트레이딩\]", coin: "\[클로드 연구 비트코인\]", soxl: "\[클로드 연구 SOXL\]"/.test(cp2));
+  }
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
     ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만',
