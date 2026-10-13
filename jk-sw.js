@@ -5,7 +5,8 @@ const CONFIG="/data/realestate/gpt/push-config.json";
 const META_CACHE="jk-push-meta-v2";
 const TOPICS_KEY="/__jk_push_topics";
 const SHOWN_KEY="/__jk_push_shown";
-const VALID_TOPICS=new Set(["presale","job","ipo","research","opening","daytrading","crypto","soxl"]);
+const GPT_TOPICS=new Set(["opening","daytrading","crypto","soxl","tenbagger_gpt"]);
+const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
 
 async function getConfig(){
   const r=await fetch(CONFIG+"?ts="+Date.now(),{cache:"no-store"});
@@ -48,7 +49,12 @@ async function writeMeta(key,value){
 }
 async function topics(){
   const v=await readMeta(TOPICS_KEY,[]);
-  return Array.isArray(v)?v:[];
+  return normalizePushTopics(Array.isArray(v)?v:v&&v.topics,Array.isArray(v)?1:v&&v.topicSchemaVersion);
+}
+function normalizePushTopics(value,version){
+  const out=Array.isArray(value)?[...new Set(value.filter(x=>VALID_TOPICS.has(x)))]:[];
+  if(Number(version||1)<2&&out.includes("research")&&!out.includes("tenbagger_gpt"))out.push("tenbagger_gpt");
+  return out;
 }
 async function shownIds(){
   const v=await readMeta(SHOWN_KEY,[]);
@@ -70,7 +76,8 @@ function pickAlerts(payload,allowed,shown,now=Date.now()){
     seen.add(a.id);
     const age=now-Date.parse(a.createdAt||"");
     if(!Number.isFinite(age)||age<0||age>20*60*1000)continue;
-    if(!allowed.includes(String(a.type||""))||shown.includes(a.id))continue;
+    const topic=a.type==="research"&&a.study==="tenbagger"?"tenbagger_gpt":String(a.type||"");
+    if(!(allowed.includes(topic)||(allowed.includes("gpt")&&GPT_TOPICS.has(topic)))||shown.includes(a.id))continue;
     uniq.push(a);
   }
   uniq.sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));
@@ -79,8 +86,12 @@ function pickAlerts(payload,allowed,shown,now=Date.now()){
 self.addEventListener("message",event=>{
   const d=event.data||{};
   if(d.type==="JK_PUSH_TOPICS"){
-    const a=Array.isArray(d.topics)?d.topics.filter(x=>VALID_TOPICS.has(x)):[];
-    event.waitUntil(writeMeta(TOPICS_KEY,[...new Set(a)]));
+    event.waitUntil((async()=>{
+      const previous=await readMeta(TOPICS_KEY,null);
+      const version=d.topicSchemaVersion||(previous&&!Array.isArray(previous)&&previous.topicSchemaVersion)||1;
+      const a=normalizePushTopics(d.topics,version);
+      await writeMeta(TOPICS_KEY,{topics:a,topicSchemaVersion:2});
+    })());
   }
 });
 self.addEventListener("push",event=>{
