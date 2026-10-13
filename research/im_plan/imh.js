@@ -26,6 +26,14 @@ const SETUP=`(()=>{
   inj('{ const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)','{ const eq=cash+__res+shares*c+savedProfit-addedCash; __H.eqs.push([d,eq,savedProfit]); if(eq>mddPeak)');
   inj('const buys=_imBuyPlan(','if((flat0||__H.divsDaily)&&__H.divsAt){ const _nd=__H.divsAt(d,i,tkr); if(_nd&&_nd!==divs){ divs=_nd; starSlope=starBase*0.1*20/divs; } }\\n    if(flat0&&__H.tpAt){ const _tp=__H.tpAt(d,i,tkr); if(_tp&&_tp!==curTP){ curTP=_tp; starBase=_tp; starSlope=starBase*0.1*20/divs; exitMul=1-starBase/100; } }\\n    const buys=(flat0&&__H.gate&&!__H.gate(d,i,tkr))?[]:_imBuyPlan(');
   inj('if(flat0&&__H.tpAt)','if(flat0&&__H.budget&&__res===0){ const _b=__H.budget(d,i,tkr); if(_b<1){ __res=cash*(1-_b); cash-=__res; } }\\n    if(flat0&&__H.tpAt)');
+  inj('let __res=0;','let __res=0, __m1x=false, __m1pause=false, __age=0;');
+  inj('if(AUTO&&cycleStart&&shares>0&&curTP===20){','if(cycleStart&&shares>0) __age++;\\n    if(AUTO&&cycleStart&&shares>0&&curTP===20&&!__m1x){');
+  inj('if(P&&P.tp===10){curTP=10;starBase=10;starSlope=starBase*0.1*20/divs;exitMul=1-starBase/100;m1N++;}','if(P&&P.tp===10){ const _m=__H.m1||{}; m1N++; __m1x=true; if(__H.trace) __H.m1d.push(d);\\n        if(_m.maxAge&&__age>_m.maxAge){ }\\n        else if(_m.mode==="tpOnly"){ curTP=10; }\\n        else if(_m.mode==="starOnly"){ starBase=10;starSlope=starBase*0.1*20/divs;exitMul=1-starBase/100; }\\n        else if(_m.mode==="pause"){ __m1pause=true; }\\n        else if(_m.mode==="pauseTp"){ __m1pause=true; curTP=10;starBase=10;starSlope=starBase*0.1*20/divs;exitMul=1-starBase/100; }\\n        else { curTP=10;starBase=10;starSlope=starBase*0.1*20/divs;exitMul=1-starBase/100; } }');
+  inj('const buys=(flat0&&__H.gate','const buys=(__m1pause&&!flat0)?[]:(flat0&&__H.gate');
+  inj('if(AUTO && flat0 && shares>0){ cycleStart=d;','if(flat0 && shares>0){ __m1x=false; __m1pause=false; __age=0; if(__H.trace) __H.cyc.push([d,curTP]); }\\n    if(AUTO && flat0 && shares>0){ cycleStart=d;');
+  inj('    if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);\\n    peakInvested=Math.max(peakInvested, cap-cash);\\n  });','    if(__H.trace) __H.tr.push([d,c,cash,shares,avg,T,curTP,starBase]);\\n    if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);\\n    peakInvested=Math.max(peakInvested, cap-cash);\\n  });');
+  inj('if(tp!==curTP){ curTP=tp; starBase=tp;','if(tp!==curTP){ curTP=tp; starBase=(__H.m1&&__H.m1.all)?targetPct:tp;');
+  inj('const buys=(__m1pause&&!flat0)','if(__H.m1&&__H.m1.slope20){ starSlope=((__H.m1.slope20==="all"||__m1x)?targetPct:starBase)*0.1*20/divs; }\\n    const buys=(__m1pause&&!flat0)');
   window.__H={eqs:[]};
   (0,eval)(src);
   window.RUN=function(o){
@@ -56,11 +64,12 @@ const SETUP=`(()=>{
       const st={}; for(let k=1;k<closes.length;k++){ const kk=k-1; if(m[kk]>0){ if(on&&closes[kk]<m[kk]*lo) on=false; else if(!on&&closes[kk]>m[kk]*hi) on=true; } st[all[k]]=on; }
       __H.exit=(d)=>st[d]===false; __H.gate=(d)=>st[d]!==false; }
     if(sig.slowMA){ const m=maOf(sig.slowMA); __H.divsAt=(d)=>{ const k=P(idx[d]); return (m[k]>0&&closes[k]<m[k]*(1-(sig.slowBand||0)))?sig.slowDivs:(o.divs||20); }; __H.divsDaily=true; }
+    __H.m1=o.m1||null; if(o.trace){ __H.trace=true; __H.tr=[]; __H.m1d=[]; __H.cyc=[]; }
     if(typeof o.autoTp==='boolean') imAutoTp=o.autoTp; else imAutoTp=false;
     imCostOn=o.cost!==false; imReverse=!!o.reverse;
     const r=runIMx(days,tkr,o.cap||10000,o.divs||20,o.tgt||20,o.compound!==false,o.big);
     Object.assign(IM_AUTOTP,_A0); Object.assign(IM_AUTOTP_M1,_M0); imAutoTP=window.__imAutoTP0;
-    return {sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, first:days[0], last:days[days.length-1], n:days.length};
+    return {trace:o.trace?{tr:__H.tr,m1d:__H.m1d,cyc:__H.cyc}:null, sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, first:days[0], last:days[days.length-1], n:days.length};
   };
 })()`;
 function stats(r,cap){ const yrs=(Date.parse(r.last)-Date.parse(r.first))/(365.25*864e5); const cagr=(Math.pow(r.final/cap,1/yrs)-1)*100;
