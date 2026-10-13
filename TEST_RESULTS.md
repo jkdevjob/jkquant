@@ -1,5 +1,11 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-14 · 모의 헤더 `/paper` 회귀검증 · 운영 v3.110.34
+
+- 공통 UI 실함수 `normalizeHeader()`의 모의 직접 진입·body 모드 전환·운영 복귀·재진입·버전 ID 보존 검사 추가.
+- 운영 `paperPageMode()`가 공통 헤더를 재호출하는지 실제 코드와 regression fake window 양쪽에서 검사. 공용 UI 캐시 키 기대값 v1.0.4.
+- 최신 main의 달러·원화 병기 및 기존 전략 회귀검사 유지. 전체 GitHub CI 및 배포는 PR에서 최종 확인.
+
 ## 2026-10-14 · 설정 연구 알림 이름·상태 표시 · v1.3.4
 
 - `node --test tests/settings-notifications.test.mjs tests/research-notify.test.mjs`: **14 PASS / 0 FAIL**.

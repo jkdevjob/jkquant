@@ -8,7 +8,7 @@
 <script src="/plan-session-engine.js"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js?v=1.0.3" defer></script>
+<script src="/jk-ui.js?v=1.0.4" defer></script>
 <style>
 :root{
   --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
@@ -585,7 +585,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.33</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.34</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1698,7 +1698,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.33</b> · 2026-10-13</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.34</b> · 2026-10-13</div>
   </footer>
 </div>
 
@@ -8709,6 +8709,8 @@ function paperPageMode(on){
   const home=document.querySelector('#jkmenuPop a[href="/"]'), pp=$('jkPaper');
   if(home) home.classList.toggle('cur', !on); if(pp) pp.classList.toggle('cur', !!on);
   document.title = on ? 'JK 투자 — 모의투자' : APP_TITLE;
+  // /paper는 운영과 HTML을 공유하므로 화면 모드가 바뀔 때 제목도 재정규화한다.
+  if(window.JKUnifiedUI&&typeof window.JKUnifiedUI.normalizeHeader==='function')window.JKUnifiedUI.normalizeHeader();
   if(on && $('paper_body') && !$('paper_body').innerHTML.trim())
     $('paper_body').innerHTML='<p class="lead">기록을 맞추는 중… <span style="color:var(--faint)">클라우드 기록을 읽은 뒤 전 전략 모의 세션을 오늘까지 굴립니다.</span></p>';
 }
