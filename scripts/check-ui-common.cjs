@@ -249,7 +249,9 @@ function cssRules(src,origin){
 }
 function mediaOk(m,W){ if(!m) return true; return m.split(',').some(q=>{ if(/print/.test(q)) return false; const fs=q.match(/\([^)]*\)/g)||[];
   return fs.every(f=>{ let x; if((x=/max-width:\s*(\d+)px/.exec(f))) return W<=+x[1]; if((x=/min-width:\s*(\d+)px/.exec(f))) return W>=+x[1]; return false; }); }); }
-function compound(c,el){ if(/[:\[]/.test(c)) return false; const tag=(c.match(/^[a-z][\w-]*/i)||[''])[0];
+function compound(c,el){ /* 가상 클래스는 :first-child · :last-child 만 안다(요소에 first/last 표시) — 그 밖은 맞지 않는 것으로 본다 */
+  let ok=true; c=c.replace(/:(first|last)-child/g,(_,k)=>{ if(!el[k]) ok=false; return ''; }); if(!ok) return false; if(c==='') return true;
+  if(/[:\[]/.test(c)) return false; const tag=(c.match(/^[a-z][\w-]*/i)||[''])[0];
   if(tag&&tag!=='*'&&tag.toLowerCase()!==el.tag) return false;
   return (c.match(/#[\w-]+/g)||[]).every(x=>el.id===x.slice(1)) && (c.match(/\.[\w-]+/g)||[]).every(x=>el.cls.includes(x.slice(1))); }
 function selMatch(sel,chain){            // chain: 뿌리 → 대상
@@ -259,7 +261,7 @@ function selMatch(sel,chain){            // chain: 뿌리 → 대상
     if(comb) return ci>0&&go(next,ci-1); for(let j=ci-1;j>=0;j--) if(go(next,j)) return true; return false; };
   return go(parts.length-1,chain.length-1);
 }
-function specOf(sel){ const ids=(sel.match(/#[\w-]+/g)||[]).length, cls=(sel.match(/\.[\w-]+/g)||[]).length;
+function specOf(sel){ const ids=(sel.match(/#[\w-]+/g)||[]).length, cls=(sel.match(/\.[\w-]+/g)||[]).length+(sel.match(/:(first|last)-child/g)||[]).length; sel=sel.replace(/:(first|last)-child/g,'');
   const tags=(sel.replace(/[#.][\w-]+/g,' ').replace(/>/g,' ').match(/[a-z][\w-]*/gi)||[]).length; return ids*1e4+cls*100+tags; }
 function computed(rules,chain,prop,W){
   let best=null;
@@ -327,6 +329,23 @@ t('U14 모의 성과 표 고정 첫 칸 — 가로줄은 본문 칸과 같은 1p
   assert(!/inset\s+0\s+-?1px/.test(sh),'가로 그림자 줄 없음: '+sh);
   assert(/inset\s+-1px\s+0\s+0\s+var\(--line\)/.test(sh),'세로 경계는 둔다');
   assert(/\.htable td\{[^}]*border-bottom:1px solid var\(--line\)/.test(html),'가로줄은 칸 아래 테두리');
+});
+t('U15 관리자 > 이용 승인 표 — 폰에서 옆으로 밀어도 고정 첫 칸(계정)에 불투명 바탕이 칠해져 뒤 칸 날짜가 비치지 않는다 · 행 선은 그대로(마지막 행 포함)',()=>{
+  const ad=fs.readFileSync(path.join(ROOT,'admin.html'),'utf8'), mob=fs.readFileSync(path.join(ROOT,'jk-mobile.css'),'utf8');
+  const fitRule=(ui.match(/'(table\.jk-fit tr>:first-child\{[^}]*\})'/)||[])[1]; assert(fitRule,'jk-fit 고정 첫 칸 규칙');
+  const styles=[...ad.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m=>m[1]).join('\n');
+  const rules=[...cssRules(mob,'jk-mobile'),...cssRules('@media (max-width:760px){'+fitRule+'}','jk-ui'),...cssRules(styles,'admin')];
+  const E=(tag,id,cls,x)=>Object.assign({tag,id:id||'',cls:cls||[]},x||{});
+  const tbl=[E('html'),E('body'),E('div','',['wrap']),E('div','',['layout']),E('main','body',['body']),E('div','',['card']),E('div','u_body'),E('div','',['htable-wrap']),E('table','',['htable','jk-fit']),E('tbody')];
+  const cell=(rowLast,first)=>[...tbl,E('tr','',[],{last:rowLast}),E('td','',[],{first})];
+  const v=(c,p,W)=>{ const b=computed(rules,c,p,W); return b&&b.v; };
+  for(const last of [false,true]){
+    const sh=v(cell(last,true),'box-shadow',375);
+    assert.equal(v(cell(last,true),'position',375),'sticky',`고정 첫 칸(${last?'마지막 행':'중간 행'})`);
+    assert(/inset 0 0 0 100vmax var\(--jk-fit-bg/.test(sh),`불투명 바탕이 빠지면 밀린 날짜가 비친다(${last?'마지막 행':'중간 행'}): ${sh}`);
+    assert(/inset 0 -1px 0 var\(--line\)/.test(sh) && sh.indexOf('-1px')<sh.indexOf('100vmax'),'행 선이 바탕 위에(먼저) 그려진다: '+sh);
+  }
+  assert.equal(v(cell(false,false),'box-shadow',375),'inset 0 -1px 0 var(--line)','다른 칸은 행 선만');
 });
 Promise.all(PENDING).then(()=>{
   console.log(results.join('\n'));

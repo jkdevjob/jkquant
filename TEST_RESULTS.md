@@ -1,5 +1,10 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-14 · 관리자 이용 승인 표 겹침 · v0.12.24
+
+- `node scripts/check-ui-common.cjs`: U15 포함 ALL PASS(18). 변이 2종(첫 칸 행 선만 · 옛 마지막 행 규칙 부활) 모두 U15 FAIL.
+- 렌더(Chromium 330px · 3배, 표 scrollLeft 110px): 수정 전 날짜가 계정 칸 위로 비침 → 수정 후 첫 칸 그림자 `inset 0 -1px … , inset 0 0 0 100vmax rgb(23,28,46)` · 겹침 없음.
+
 ## 2026-10-14 · 밤 점검 기록 누락 수정
 
 - `python scripts/test_opening_gapdown.py`: 68 OK. 값 시험 2건 추가(10/14 02:06 → 10/13 기록 · 어제 칸 값 · 장중 미기록).

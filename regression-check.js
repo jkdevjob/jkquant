@@ -11789,7 +11789,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   ok('관리자 승인목록: 모바일 가로 스크롤에서도 계정·접속·방문·버튼 열의 행 하단선이 끊기지 않는다',
      /#u_body \.htable\{border-collapse:separate;border-spacing:0\}/.test(adm)
      && /#u_body \.htable tbody td\{[\s\S]*?border-bottom:0;[\s\S]*?box-shadow:inset 0 -1px 0 var\(--line\);[\s\S]*?vertical-align:middle;[\s\S]*?\}/.test(adm)
-     && /#u_body \.htable tbody tr:last-child td\{[\s\S]*?box-shadow:inset 0 -1px 0 var\(--line\);/.test(adm)
+     && /#u_body \.htable tbody tr td:first-child\{[\s\S]*?box-shadow:inset 0 -1px 0 var\(--line\),inset 0 0 0 100vmax var\(--jk-fit-bg,var\(--panel\)\);/.test(adm)   // 고정 첫 칸: 행 선 + 불투명 바탕(마지막 행 포함 · 2026-10-14 겹침 수정)
      && /#u_body \.htable-wrap \+ \.note\{/.test(adm)
      && !/\.htable\{border-collapse:separate/.test(adm.slice(0,adm.indexOf('#u_body .htable'))));
 

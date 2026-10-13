@@ -114,11 +114,10 @@ input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var
   padding-top:10px;padding-bottom:10px;
   vertical-align:middle;
 }
-#u_body .htable tbody td:first-child{
-  box-shadow:inset 0 -1px 0 var(--line);
-}
-#u_body .htable tbody tr:last-child td{
-  box-shadow:inset 0 -1px 0 var(--line);
+/* 고정 첫 칸(계정)은 행 선 + 불투명 바탕을 같이 칠한다. 예전엔 행 선만 칠해 jk-fit 의 바탕(100vmax 그림자)을 덮어써,
+   표를 옆으로 밀면 뒤 칸(신청·마지막 접속 날짜)이 계정 글자 위로 비쳐 겹쳐 보였다(2026-10-13 사용자 화면). */
+#u_body .htable tbody tr td:first-child{
+  box-shadow:inset 0 -1px 0 var(--line),inset 0 0 0 100vmax var(--jk-fit-bg,var(--panel));
 }
 #u_body .htable-wrap + .note{
   margin-top:12px;
@@ -192,7 +191,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.23</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.24</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
