@@ -1,5 +1,10 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-14 · 모의 페이지 헤더 누락 회귀검증 · 운영 v3.110.33
+
+- `node scripts/check-unified-layout.cjs`: `/paper` 경로 매핑과 body `paperpage` 상태·운영 복귀·뒤로가기 시 제목 재계산을 실제 `normalizeHeader()` 함수로 검사하며 버전 DOM id 보존도 확인하도록 확장.
+- 기존 11개 페이지 캐시 키 검사를 `jk-ui.js?v=1.0.4`로 갱신. GitHub 전체 CI, merge, Pages 운영 반영은 해당 PR 진행 이후 확인한다.
+
 ## 2026-10-14 · 설정 연구 알림 이름·상태 표시 · v1.3.4
 
 - `node --test tests/settings-notifications.test.mjs tests/research-notify.test.mjs`: **14 PASS / 0 FAIL**.
