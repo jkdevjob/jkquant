@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="/jk-mobile.css?v=1.0.1">
 <meta name="theme-color" content="#0f1320">
 <meta name="robots" content="noindex,nofollow">
-<title>JK 투자 — 단타(지피티)</title>
+<title>JK 투자 — 연구(지피티)</title>
 <style>
 :root{
   --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
@@ -273,12 +273,14 @@ canvas{display:block;width:100%;height:auto}
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="JK 투자">
+<link rel="stylesheet" href="/tenbagger-gpt.css?v=1.2.0">
+<script src="/tenbagger-gpt.js?v=1.2.0" defer></script>
 </head>
 <body>
 
 <div id="gate">
   <div class="gbox">
-    <div class="glogo">JK <span class="v">투자</span> 단타</div>
+    <div class="glogo">JK <span class="v">투자</span> 연구</div>
     <div class="gsub" id="gate_sub">이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.</div>
     <button id="gbtn" onclick="googleLogin()">
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -291,7 +293,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.16</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -300,7 +302,7 @@ canvas{display:block;width:100%;height:auto}
         <a href="/"><span class="mi">🏠</span>운영</a>
                 <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
 <a href="/backtest"><span class="mi">📊</span>백테</a>
-        <a href="/scalping" class="cur"><span class="mi">⚡</span>단타(지피티)</a>
+        <a href="/scalping" class="cur"><span class="mi">⚡</span>연구(지피티)</a>
         <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
         <a href="/paper"><span class="mi">🧪</span>모의</a>
         <a href="/tenbagger"><span class="mi">🔟</span>텐배거</a>
@@ -316,6 +318,7 @@ canvas{display:block;width:100%;height:auto}
 
 <div class="wrap" id="app" style="display:none">
   <div class="strategy-tabs">
+    <button class="strategy-tab" data-strategy="tenbagger" onclick="showStrategy('tenbagger')">🔟 텐배거 연구</button>
     <button class="strategy-tab on" data-strategy="daily" onclick="showStrategy('daily')">📅 오늘</button>
     <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
     <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
@@ -323,6 +326,20 @@ canvas{display:block;width:100%;height:auto}
     <button class="strategy-tab" data-strategy="soxl" onclick="showStrategy('soxl')">⚡ SOXL</button>
     <button class="strategy-tab" data-strategy="duel" onclick="showStrategy('duel')">🆚 클로드 대결</button>
   </div>
+
+  <div id="strategy_tenbagger" class="strategy-pane"><div id="tbg-root" data-host="research" data-default-view="forward">
+<div class="hero"><span class="pill">GPT 연구</span><h2>과거 패턴에서 후보를 찾고,<br>앞으로의 결과로 검증합니다.</h2><p id="tb-period">과거 연구 → 고정 가설 → 신규 후보 등록 → 전향 관찰</p></div>
+<div class="tb-subtabs" role="tablist" aria-label="GPT 텐배거 분석">
+<button class="tb-subtab on" role="tab" aria-selected="true" data-view="forward">앞으로 모의 검증</button>
+<button class="tb-subtab" role="tab" aria-selected="false" data-view="overview">GPT 요약</button>
+<button class="tb-subtab" role="tab" aria-selected="false" data-view="patterns">상승 전 패턴</button>
+<button class="tb-subtab" role="tab" aria-selected="false" data-view="rules">매수 · 매도</button>
+<button class="tb-subtab" role="tab" aria-selected="false" data-view="cases">종목별 분석</button>
+<button class="tb-subtab" role="tab" aria-selected="false" data-view="method">검증 · 출처</button>
+</div>
+<div id="tb-status" role="status" aria-live="polite">가격 패턴 탐색 실험 · 실주문 없음</div>
+<div id="tb-content"></div>
+</div></div>
 
   <div id="strategy_daily" class="strategy-pane on">
     <div class="strategy-head">모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>
@@ -2547,13 +2564,14 @@ async function loadShadowRankings(force=false){
 
 function showStrategy(name){
   const active=['opening','daytrading','crypto','soxl'];
-  const tabs=['daily','duel',...active];
+  const tabs=['daily','duel','tenbagger',...active];
   if(!tabs.includes(name))name='daily';
   document.querySelectorAll('.strategy-pane').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
   const p=$('strategy_'+name); if(p)p.classList.add('on');
   SCALP_PREFS.strategyTab=name;if(me)void cloudSave();
   if(name==='duel'){ loadScalpingDuel(false); }
+  if(name==='tenbagger'){window.TenbaggerResearch?.boot();}
   if(name==='daily'){
     /* 오늘 탭의 핵심은 '오늘 결과'다. 연구/누적 그래프 9개 요청을 동시에 던져
        첫 카드까지 늦추지 말고, 핵심 결과가 끝난 뒤 낮은 우선순위로 나눠 불러온다. */
@@ -2577,9 +2595,9 @@ function showStrategy(name){
   else stopGlobalPaperAuto();
 }
 function restoreStrategy(){
-  const linked=new URLSearchParams(location.search).get('strategy');
+  const linked=new URLSearchParams(location.search).get('strategy')||(location.hash==='#tenbagger'?'tenbagger':null);
   let n=String(linked||(SCALP_PREFS&&SCALP_PREFS.strategyTab)||'daily');
-  if(!['daily','duel','opening','daytrading','crypto','soxl'].includes(n))n='daily';
+  if(!['daily','duel','tenbagger','opening','daytrading','crypto','soxl'].includes(n))n='daily';
   showStrategy(n);
 }
 

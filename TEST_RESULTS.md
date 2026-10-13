@@ -1,4 +1,14 @@
 # JKQuant 검증 결과와 미확인 사항
+## 2026-10-13 · 연구 GPT 허브·텐배거 전향 실험 · v1.44.0
+
+- `python scripts/test_tenbagger_forward.py`: 14 값 시험 PASS + 핵심 변이 8/8 값 실패로 차단. 마감 자료 경계·등록 전 수익 금지·모든 초기 후보·버전 잠금·다음 종가 손절/갭 손실·정지·추적 청산·수정 이력·누락/폐지 보존·미래 봉 제거·직전 유동성·중복/역행 날짜 검사.
+- `node --test tests/research-gpt.test.mjs tests/research-notify.test.mjs`: 10 PASS. 탭 복원/직접 링크/권한, 조회 오류와 404 초기 자료 구분, XSS 변이 1, 연구별 중복/고정 링크/임의 주제 거부, 일부 실패 기기만 재시도.
+- 기존 GPT 자료/UI 격리·지연 로딩 시험 및 3 변이 PASS. 데이터 동시 저장의 실제 Git 경합·충돌/이력 보존 시험 PASS(11 workflows/13 저장 경로). 전체 브라우저 영구저장 쓰기 0 유지.
+- 최초 실제 공개 시세: 2026-10-08 기준, 세 패턴 12신호/12등록. 등록 전 진입 없음, 전향 수익 값 없음. 합성 값 시험 수치를 투자 성과로 보고하지 않는다.
+- 최초 전체 회귀 2,757 PASS / 1 FAIL: GPT 머리말의 옛 Morning Scalping/단타 문구를 요구하던 검사를 새 GPT Research/연구 명칭 및 양쪽 사용자 배지 구조로 보완했다. 검사 삭제/완화 없이 재검사했고 로그인 안내까지 연구 명칭을 일치시켰다.
+- 최종 작업본 `node scripts/check-before-push.cjs`: **48/48 단계 PASS**, 전체 회귀 **2,758 PASS / 0 FAIL**. 외부 Worker dry-run 빌드 포함. Pages Functions 별도 `wrangler pages functions build functions`도 성공했다. 초기 기록의 계산 코드 SHA256은 현재 실제 코드와 일치하며 과거 GPT/Claude JSON은 변경하지 않는다.
+- 기존 일일 검토 자동화 갱신 성공(기존 일정·단타 검토 보존, 텐배거 추가, 중복 자동화 없음). GitHub CI·병합·Pages/Worker·최초 자동 수집/웹푸시 실제 수락은 [PR #481](https://github.com/jkdevjob/jkquant/pull/481)의 최종 실행 로그를 정본으로 확인한다. 실제 소유자 로그인 후 화면·iPhone 알림 도착·실매매 수익은 미검증.
+
 ## 2026-10-13 · 텐배거 GPT 연구 · 페이지 v1.1.0 / 연구 v1.0.0
 
 - 값 검사 21개 PASS, 핵심 변이 12/12 차단 + 대조군 PASS. 다음 봉·갭 손절·매도 뒤 종가·거래정지·누락봉/휴장·달력 기한·미청산·폐지 스트레스·학습 경계·코드 정체성·문자 인코딩·당일 거래량의 시가 혼입을 확인했다.

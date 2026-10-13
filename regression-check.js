@@ -11125,7 +11125,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
 
   ok('공통 Telegram API는 서버키 인증 + eventId 중복방지',
      /x-monitor-key/.test(alertApi) && /eventId required/.test(alertApi) && /caches\.default/.test(alertApi));
-  ok('공통 Telegram API는 매수/매도 외 요약을 발송하지 않고 주문 API 없음',
+  ok('공통 Telegram API는 매수/매도만 전송하고 연구 요약 차단',
      /\["buy","sell","summary"\]\.includes\(stage\)/.test(alertApi) && /stage==="buy"/.test(alertApi) && !/op=order|opening-execute/.test(alertApi));
   ok('데이트레이딩 ③매수·④매도 상태변화 Telegram',
      /notifyPaperTransitions/.test(dayWorker) && /strategy:"daytrading",stage:"buy"/.test(dayWorker) && /strategy:"daytrading",stage:"sell"/.test(dayWorker));
@@ -11300,10 +11300,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   const scl2=fs.readFileSync(__d+'/claude.html','utf8');
   const orApi=fs.readFileSync(__d+'/functions/api/claude-lab.js','utf8');
   const gptScl=fs.readFileSync(__d+'/scalping.html','utf8'),gptApi=fs.readFileSync(__d+'/functions/api/opening-research.js','utf8');
-  ok('단타(클로드)는 별도 페이지: GPT 단타 화면·API 에 클로드 내용 없음 · 모든 페이지 메뉴에서 단타(지피티) 바로 아래',
+  ok('단타(클로드)는 별도 페이지: GPT 단타 화면·API 에 클로드 내용 없음 · 모든 페이지 메뉴에서 연구(지피티) 바로 아래',
      !/gapdown|D-1 갭하락|etfOvernight|claude-lab/.test(gptScl)&&!/gapdown|etf-overnight|claude-lab/.test(gptApi)
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
-       .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>단타\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>단타\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+       .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>연구\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>단타\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('단타(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) + 합산 · 탭마다 GPT 같은 기간 비교',
      ['today','opening','daytrading','crypto','soxl','all'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
@@ -11474,10 +11474,11 @@ console.log('\n[CLAUDE HEADER] 머리말 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8'), sh=fs.readFileSync(__d+'/scalping.html','utf8');
   const hd=(ch.match(/<header>[\s\S]*?<\/header>/)||[''])[0];
-  ok('클로드 머리말이 지피티와 같은 구조(영문 머리 · JK 투자 단타 · 사용자 배지 → 메뉴)',
+  ok('클로드/연구 GPT 머리말 구조 유지(각 영문 머리 · 단타/연구 · 사용자 배지 → 메뉴)',
      /<div class="kicker">Claude Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(hd)
      &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(hd)
-     &&/<div class="kicker">Morning Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(sh));
+     &&/<div class="kicker">GPT Research<\/div><h1>JK <span class="v">투자<\/span> 연구/.test(sh)
+     &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(sh));
   ok('클로드 사용자 배지 = 사진 · 이름 · 로그아웃(lo), 옛 이메일 글자 배지 없음',
      /document\.getElementById\("userbadge"\)/.test(ch)
      &&/user\.photoURL\?"<img src=/.test(ch)&&/esc\(user\.displayName\|\|user\.email\|\|""\)/.test(ch)
@@ -11686,7 +11687,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
 
   // ── 가리는 CSS · 메뉴 ──
   { const E=loadAccess({guard:true}), css=(E.els['jkaccess-css']||{}).textContent||'';
-    ok('메뉴: 단타(지피티)·단타(클로드)·관리자 링크는 소유자(jk-admin) 아니면 숨김',
+    ok('메뉴: 연구(지피티)·단타(클로드)·관리자 링크는 소유자(jk-admin) 아니면 숨김',
        ['/scalping','/claude','/admin'].every(h=>css.includes('html:not(.jk-admin) a[href="'+h+'"]')) && /a\[href="\/admin"\]\{display:none!important\}/.test(css));
     // 자산플랜은 로그인 전 'body>*:not(#authgate)' 를 숨긴다 — 승인 화면이 거기 걸려 안 보이면 대기 계정은 '확인 중'만 본다
     ok('가림: 승인 화면 자체는 페이지가 본문을 숨겨도 보인다 (visibility 직접 켬)', css.includes('#jkgate.on{display:flex;visibility:visible!important}')

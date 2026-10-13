@@ -74,7 +74,7 @@ const exactTitles={
   'index.html':'JK 투자 — 운영',
   'plan.html':'JK 투자 — 자산플랜',
   'backtest.html':'JK 투자 — 백테스트',
-  'scalping.html':'JK 투자 — 단타(지피티)',
+  'scalping.html':'JK 투자 — 연구(지피티)',
   'claude.html':'JK 투자 — 단타(클로드)',
   'ipo.html':'JK 투자 — 공모주',
   'job.html':'JK 투자 — JOB',

@@ -75,7 +75,39 @@ test("주제 목록이 세 곳(푸시 서버 · 서비스워커 · 설정 화면
   const st = fs.readFileSync(new URL("../settings-notifications.js", import.meta.url), "utf8");
   assert.match(w, /const VALID_TOPICS=new Set\(\[[^\]]*"research"/);
   assert.match(sw, /const VALID_TOPICS=new Set\(\[[^\]]*"research"/);
-  assert.match(st, /\{topic:"research",href:"\/plan"/);
+  assert.match(st, /\{topic:"research",href:"\/scalping"/);
   const yml = fs.readFileSync(new URL("../.github/workflows/research-notify.yml", import.meta.url), "utf8");
   assert.match(yml, /branches: \[research\/daily\]/); assert.match(yml, /\/research-note/); assert.match(yml, /secrets\.AUTOTRADE_KEY/);
+});
+
+test('텐배거 연구: 고정 링크·연구별 중복·임의 링크와 프로토타입 주제 거부', async()=>{
+  const {app,values,pushed}=store({MONITOR_KEY:'k1'});
+  values.set('sub:a',{endpoint:'https://push.example/a',topics:['research']});
+  const note={date:'2026-10-13',body:'시세 10/08 · 실험 후보 12 · 수익성 미검증',study:'tenbagger',url:'https://evil.example/'};
+  let r=await (await app.fetch(req(note,'k1'))).json();
+  assert.equal(r.ok,true);assert.match(r.id,/research:tenbagger:/);
+  assert.equal(r.alert.url,'https://jkquant.pages.dev/scalping?strategy=tenbagger');
+  assert.equal(r.alert.title,'🔬 텐배거 전향 연구 10/13');
+  r=await (await app.fetch(req(note,'k1'))).json();assert.equal(r.skipped,true);assert.equal(pushed.length,1);
+  await app.fetch(req({...note,study:'im_plan'},'k1'));assert.equal(pushed.length,2,'연구 주제가 달라 별도 알림');
+  assert.equal((await app.fetch(req({...note,study:'constructor'},'k1'))).status,400);
+});
+
+test('연구 알림 일부 실패: 성공 기기 재전송 없이 실패 기기만 재시도',async()=>{
+  const {app,values}=store({MONITOR_KEY:'k1'}),calls=[];let failing=true;
+  for(const id of ['a','b'])values.set('sub:'+id,{endpoint:'https://push.example/'+id,topics:['research']});
+  app.pushOne=async(endpoint)=>{calls.push(endpoint);return {ok:!(endpoint.endsWith('/b')&&failing),status:endpoint.endsWith('/b')&&failing?503:201};};
+  const note={date:'2026-10-13',body:'실험 후보 12',study:'tenbagger'};
+  assert.equal((await app.fetch(req(note,'k1'))).status,502);
+  failing=false;assert.equal((await app.fetch(req(note,'k1'))).status,200);
+  assert.deepEqual(calls,['https://push.example/a','https://push.example/b','https://push.example/b']);
+  assert.equal((await (await app.fetch(req(note,'k1'))).json()).skipped,true);
+});
+
+test('동시 연구 발송은 같은 research 최신 요약을 중간에 덮어쓰지 않음',async()=>{
+  const {app,values}=store({MONITOR_KEY:'k1'}),seen=[];
+  values.set('sub:a',{endpoint:'https://push.example/a',topics:['research']});
+  app.pushOne=async()=>{const before=values.get('latest:research').study;await new Promise(r=>setTimeout(r,5));seen.push([before,values.get('latest:research').study]);return {ok:true,status:201};};
+  await Promise.all(['tenbagger','im_plan'].map(study=>app.fetch(req({study,date:'2026-10-13',body:'연구 동시 실행'},'k1'))));
+  assert.deepEqual(seen,[['tenbagger','tenbagger'],['im_plan','im_plan']]);
 });
