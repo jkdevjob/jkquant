@@ -1,0 +1,87 @@
+name: 텐배거 클로드 전향 시험
+
+# 30년 분석에서 고른 패턴(고정 모형 상위 20종목 · 1년 · 과열 뒤 20% 하락)을 등록 뒤 날짜에만 모의로 사고판다. 실주문 없음.
+# 원천: KRX 전종목시세(FinanceData/marcap) — 보통 다음 날 01~04시(KST)에 전날 자료가 올라온다.
+on:
+  schedule:
+    - cron: "10 22 * * 1-5" # 07:10 KST 화~토
+    - cron: "40 3 * * 2-6"  # 12:40 KST 화~토 · 원천 자료가 늦은 날 보완
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tenbagger-claude-forward.yml"
+      - "scripts/tenbagger_claude/forward.py"
+      - "data/tenbagger/claude/forward-model-1.0.0.json"
+
+permissions:
+  contents: write
+concurrency:
+  group: tenbagger-claude-forward
+  cancel-in-progress: false
+
+jobs:
+  forward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet numpy pandas pyarrow
+      - name: 고정 모형으로 등록 뒤 날짜만 모의 매매 (기록은 고치지 않고 덧붙임)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python .app/scripts/tenbagger_claude/forward.py --app .app --out data/tenbagger-claude-forward --cache /tmp/tbc-inputs --note-out /tmp/tbc-note.json
+      - name: 장부·기록 저장 (scalping-data)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tenbagger-claude-forward
+          if ! git diff --cached --quiet; then
+            git commit -m "data: tenbagger claude forward ledger [skip ci]"
+            bash .app/scripts/push-scalping-data.sh
+          fi
+      - name: 매수·매도 알림 (웹 알림 research 구독 기기 + 텔레그램 · 머리말 [클로드 연구 텐배거] · 매수·매도 때만)
+        env:
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+          BASE: https://jkquant.pages.dev
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f /tmp/tbc-note.json ] || { echo "매수·매도 없음 — 알림 없음"; exit 0; }
+          [ -n "$MONITOR_KEY" ] || { echo "AUTOTRADE_KEY 미설정"; exit 1; }
+          WORKER=$(node -e 'console.log(require("./.app/data/realestate/gpt/push-config.json").workerUrl)')
+          PUSH=0
+          for attempt in 1 2 3 4 5 6; do
+            if curl -sf --max-time 40 -X POST "$WORKER/research-note" -H "content-type: application/json" -H "x-monitor-key: $MONITOR_KEY" --data-binary @/tmp/tbc-note.json -o /tmp/research-delivery.json; then
+              cat /tmp/research-delivery.json; PUSH=1; break
+            fi
+            sleep 30
+          done
+          # 텔레그램은 이 실행에서 처음 만든 알림만(같은 자료일 재실행은 보내지 않음) · 거절(definite)만 3번까지 · 모름은 다시 보내지 않음
+          TG=1
+          if jq -e '.fresh == true' /tmp/tbc-note.json >/dev/null; then
+            jq '{op:"event", text:.telegram}' /tmp/tbc-note.json > /tmp/tbc-tg.json
+            TG=0
+            for attempt in 1 2 3; do
+              CODE=$(curl -sS --max-time 40 -o /tmp/tg-out.json -w '%{http_code}' -X POST "$BASE/api/claude-telegram" -H "content-type: application/json" -H "x-monitor-key: $MONITOR_KEY" --data-binary @/tmp/tbc-tg.json || echo 000)
+              cat /tmp/tg-out.json 2>/dev/null || true; echo
+              if [ "$CODE" = "200" ]; then TG=1; break; fi
+              if [ "$CODE" = "502" ] && jq -e '.definite == true' /tmp/tg-out.json >/dev/null 2>&1; then sleep 20; continue; fi
+              break
+            done
+          fi
+          [ "$PUSH" = 1 ] || { echo "장부는 저장됨 · 웹 알림 실패"; exit 1; }
+          [ "$TG" = 1 ] || { echo "장부는 저장됨 · 텔레그램 실패(모름이면 다시 보내지 않음)"; exit 1; }

@@ -96,6 +96,9 @@ PY = [
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
     ("gpt blank date crashes", "claude_lab.py", "        try:\n            v = float(r[col])", "        by.setdefault(r.get(\"date\"), [])\n        try:\n            v = float(r[col])"),
     ("review holiday ignored", "claude_lab.py", " and not led and not krx_closed(today):", " and not led:"),
+    ("review late run skipped", "claude_lab.py", "    if now.hour < 8:\n        return (now - timedelta(days=1)).strftime(\"%Y-%m-%d\")\n", ""),
+    ("review late uses today cell", "claude_lab.py", 'res = r.get("last") if r.get("lastDate") == today else r.get("prev") if r.get("prevDate") == today else None', 'res = r.get("last")'),
+    ("review intraday written", "claude_lab.py", "    return None\n\n\ndef review_entry(", "    return now.strftime(\"%Y-%m-%d\")\n\n\ndef review_entry("),
 ]
 JS = [
     ("base price first", "_gapdown.js", "const base=+(q&&q.basePrice)>0?+q.basePrice:+prevClose||0;", "const base=+prevClose||0;"),
@@ -165,6 +168,15 @@ JS = [
     ("buy lookup wait past deadline", "opening-gapdown.js", "const limitMs=Math.min(BUYABLE_TIMEOUT_MS,left);", "const limitMs=BUYABLE_TIMEOUT_MS;"),
     ("buy lookup timeout not applied", "opening-gapdown.js", "b=await buyable(origin,env,code,limitMs,fetchImpl);", "b=await buyable(origin,env,code,BUYABLE_TIMEOUT_MS,fetchImpl);"),
     ("buy sizing uses first lookup", "opening-gapdown.js", "    if(!b.error)break;\n", "    break;\n"),
+    ("alert main-day gate off", "_claude_push.js", "const o = br && openingCounts(P, br.qualified) ? (ot.rows || []).filter(r => keep.has(String(r.code))) : [];", "const o = ot.rows || [];"),
+    ("alert main picks ignored", "_claude_push.js", "(ot.rows || []).filter(r => keep.has(String(r.code))) : [];", "(ot.rows || []) : [];"),
+    ("alert header dropped", "_claude_push.js", 'open: "[클로드 연구 시초가]"', 'open: "🤖 ① 시초가"'),
+    ("telegram endpoint sends summaries", "claude-telegram.js", 'if(b.op==="send"||KINDS.includes(String(b.kind||"")))return json({ok:true,skipped:"buy_sell_only"});', ""),
+    ("telegram endpoint no header check", "claude-telegram.js", "if(!ALERT_HEAD.test(text)||text.length>1500)", "if(text.length>1500)"),
+    ("watch skips telegram", "worker", "    const result=await tg(m);\n", '    const result="sent";\n'),
+    ("telegram retries unknown", "worker", 'sent[e.id].tg==="fail"', 'sent[e.id].tg!=="sent"'),
+    ("telegram retry unlimited", "worker", "export const CLAUDE_TG_TRIES=3;", "export const CLAUDE_TG_TRIES=99;"),
+    ("watch resends web push", "worker", "const out=msgs.length?await pushBroadcast(env,msgs,call):{subs:0,sent:[],dropped:0};", "const out=await pushBroadcast(env,[...msgs,...again],call);"),
     ("push failed order counted", "_claude_push.js", 'const ob = o.filter(r => r.status && r.status !== "주문 실패");', "const ob = o.filter(r => r.status);"),
     ("push stopped coin sold again", "_claude_push.js", ' || sent["coin:" + pud + ":" + mm[2] + ":stop"]', ""),
     ("push coin sell wrong day", "_claude_push.js", "if (!mm || mm[1] !== pud ||", "if (!mm ||"),
@@ -182,8 +194,9 @@ def run_py(folder):
     return r.returncode != 0 and "FAILED (" in r.stderr, r.stderr[-800:]
 
 
-def run_js(folder):
-    r = subprocess.run(["node", str(ROOT / "test_opening_gapdown.mjs"), str(folder)], capture_output=True, text=True, encoding="utf-8")
+def run_js(folder, worker_src=None):
+    env = dict(os.environ, JKQ_WORKER_SRC=str(worker_src)) if worker_src else None
+    r = subprocess.run(["node", str(ROOT / "test_opening_gapdown.mjs"), str(folder)], capture_output=True, text=True, encoding="utf-8", env=env)
     return r.returncode != 0 and "AssertionError" in (r.stderr + r.stdout), (r.stdout + r.stderr)[-800:]
 
 
@@ -204,11 +217,13 @@ for label, filename, before, after in JS:
         folder = Path(tmp)
         for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js"):
             shutil.copy(API / name, folder / name)
-        path = folder / filename
+        worker_src = folder / "worker_index.js"                  # 'worker' = worker/opening-scheduler/src/index.js 사본(시험이 JKQ_WORKER_SRC 로 읽는다)
+        shutil.copy(ROOT.parent / "worker" / "opening-scheduler" / "src" / "index.js", worker_src)
+        path = worker_src if filename == "worker" else folder / filename
         src = path.read_text(encoding="utf-8")
         assert before in src, label + ": target missing"
         path.write_text(src.replace(before, after, 1), encoding="utf-8")
-        killed, log = run_js(folder)
+        killed, log = run_js(folder, worker_src)
         assert killed, label + ": survived\n" + log
         print("PASS killed:", label)
 print("D-1/D-3 mutations: ALL PASS")

@@ -50,10 +50,10 @@ try{
     assert(text.includes('bash .app/scripts/push-scalping-data.sh'),file);writers++;
     saves+=(text.match(/bash \.app\/scripts\/push-scalping-data\.sh/g)||[]).length;
   }
-  assert.equal(writers,10,'모든 데이터 저장 workflow');
-  assert.equal(saves,12,'조건부 저장을 포함한 모든 데이터 저장 경로');
+  assert.equal(writers,12,'텐배거(지피티·클로드) 포함 모든 데이터 저장 workflow');
+  assert.equal(saves,14,'조건부 저장을 포함한 모든 데이터 저장 경로');
   for(const file of ['daytrading-research.yml','soxl-research.yml','daily1-shadow-research.yml'])
     assert(!fs.readFileSync(path.join(root,'.github/workflows',file),'utf8').includes('- "scalping.html"'),file+' UI 수정은 연구 수집을 실행하지 않음');
-  console.log('PASS 10개 workflow의 모든 저장 경로 공용화 · UI 수정으로 연구 수집 재실행 없음');
+  console.log('PASS 12개 workflow의 모든 저장 경로 공용화 · UI 수정으로 연구 수집 재실행 없음');
 }finally{fs.rmSync(temp,{recursive:true,force:true});}
 console.log('ALL PASS data push race');

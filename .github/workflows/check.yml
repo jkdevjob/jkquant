@@ -31,11 +31,20 @@ jobs:
       - name: 매일 연구 결과 웹알림 (요약 · 서버 인증 · 주제)
         run: node --test tests/research-notify.test.mjs
 
+      - name: 연구 GPT 허브·텐배거 전향 기록 값·변이 검사
+        run: |
+          pip install --quiet numpy pandas pyarrow
+          python scripts/test_tenbagger_forward.py
+          node --test tests/research-gpt.test.mjs
+
       - name: 승인 알림 Worker 빌드 검증 (실배포 없음)
         run: npx --yes wrangler@4 deploy --dry-run --config worker/presale-alert/wrangler.jsonc --outdir /tmp/jkquant-approval-worker-check
 
       - name: 전 페이지 모바일 기본 레이아웃 검사
         run: node scripts/check-mobile-pages.cjs
+
+      - name: 전 페이지 헤더·PC 자산플랜 폭·모의 통화 병기 검사
+        run: node scripts/check-unified-layout.cjs
 
       - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
         run: node scripts/check-sticky-layout.cjs
@@ -163,12 +172,28 @@ jobs:
       - name: 부동산 GPT 투자판단·자금·계약 기록 값 및 변이 검사
         run: node --test tests/realestate-decision.test.cjs
 
+      - name: 텐배거(클로드) 계산·전향 시험·화면 값 시험 + 변이 시험
+        run: |
+          pip install --quiet numpy pandas pyarrow
+          python scripts/tenbagger_claude/test_analysis.py
+          python scripts/tenbagger_claude/test_forward.py
+          python scripts/tenbagger_claude/mutation_test.py
+          node scripts/test_tenbagger_claude.cjs
+          node --test tests/research-claude-tenbagger.test.mjs
+
       - name: D-1 갭하락 · D-3 BTC 급락 값 시험 + 변이 시험
         run: |
           pip install --quiet pandas pyarrow
           python scripts/test_opening_gapdown.py
           node scripts/test_opening_gapdown.mjs functions/api
           python scripts/mutation_test_opening_gapdown.py
+
+      - name: 텐배거 GPT 과거 연구 값·미래봉·갭 체결·자료 일치 검사
+        run: |
+          pip install --quiet lxml
+          python scripts/test_tenbagger.py
+          python scripts/mutation_test_tenbagger.py
+          node scripts/test_tenbagger_ui.cjs
 
       - name: BTC 00:00~22:00 기준전략 값·경계 시험
         run: |
@@ -370,8 +395,8 @@ jobs:
             ['u.pathname==="/paper"','Durable Object 장중 모의장부 조회']
           ];
           for(const [needle,label] of must){if(!c.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
-          if(!m.includes('onRequestPost')||!m.includes('targetHm')||!m.includes('claimEvent')){
-            console.error('✗ daytrading-monitor POST/완료분/중복알림 가드 없음'); fail++;
+          if(!m.includes('onRequestPost')||!m.includes('targetHm')||m.includes('api.telegram.org')){
+            console.error('✗ daytrading-monitor POST/완료분 없음 또는 후보 신호 텔레그램 발송(연구 메뉴 알림은 실제 매수·매도 때만)'); fail++;
           }
           if(!r.includes('DAY_WORKER')||!r.includes('snapshotHm|tonumber) <= 1015')){
             console.error('✗ 연구 workflow가 Cloudflare 정시 스냅샷을 우선 사용하지 않음'); fail++;

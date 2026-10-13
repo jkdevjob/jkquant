@@ -20,6 +20,7 @@
 | `backtest.html` | `#btVer` |
 | `admin.html` · `scalping.html` · `ipo.html` | 각 머리말 |
 | `realestate.html` | `#reVer` |
+| `tenbagger.html` | `#tbVer` |
 
 회귀 `[76]`이 형식과 페이지 내 일치를 검사한다.
 

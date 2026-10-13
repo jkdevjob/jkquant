@@ -74,12 +74,12 @@ await t('L3 앱 내장 브라우저 감지 — 이름을 아는 앱 + 이름 모
   assert.equal(fs_(iOS+' Mobile/15E148'),null,'홈 화면 앱(standalone)은 내장 화면이 아니다');
 });
 
-await t('L4 Firestore 전송은 iOS(데스크탑 웹사이트 요청으로 맥처럼 보이는 아이폰·아이패드 포함)·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지 — 9개 페이지가 같은 판정',async()=>{
-  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','admin.html'];
+await t('L4 Firestore 전송은 iOS(데스크탑 웹사이트 요청으로 맥처럼 보이는 아이폰·아이패드 포함)·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지 — 10개 페이지가 같은 판정',async()=>{
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','admin.html','tenbagger.html'];
   const lines=pages.map(p=>{ const s=fs.readFileSync(path.join(ROOT,p),'utf8');
     assert(/JK_FORCE_FIRESTORE_LONG_POLLING\?\{experimentalForceLongPolling:true\}:\{experimentalAutoDetectLongPolling:true\}/.test(s),p+' conditional firestore transport missing');
     const m=s.match(/const JK_FORCE_FIRESTORE_LONG_POLLING=(.+?);\s+\/\/ 아이폰/); assert(m,p+' 판정 줄'); return m[1]; });
-  assert.equal(new Set(lines).size,1,'9개 페이지 판정이 글자까지 같다(갈라지면 한 페이지만 아이폰을 못 알아본다)');
+  assert.equal(new Set(lines).size,1,pages.length+'개 페이지 판정이 글자까지 같다(갈라지면 한 페이지만 아이폰을 못 알아본다)');
   const force=(ua,touch)=>new Function('navigator','return '+lines[0]+';')({userAgent:ua,maxTouchPoints:touch});
   const IOS='Mozilla/5.0 (iPhone; CPU iPhone OS 26_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1';
   const DESK='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Safari/605.1.15';   // 사용자 진단 화면 그대로
@@ -456,12 +456,13 @@ await t('P9 원화 평가와 달러 수익률이 어긋나 보이던 것 — 줄
   assert.equal(K(row(1e8,{price:0})),null,'시세 없는 줄은 비운다'); assert.equal(K(row(1e8,{inflowWon:null})),null);
   const line=L([a,b,c,{cur:'krw',price:1,inflow:1,inflowWon:1,wonRate:1}]);
   assert(/시작일 환율 1,508원 → 지금 1,338원 \(−11\.3%\)/.test(line),line);
-  assert(/평가\(원\)<\/b>는 지금 환율로 바꾼 값, <b>최종·현재·연\(%\)<\/b>은 달러 기준/.test(line));
+  assert(/달러 종목 금액은 달러 \+ 원화<\/b>로 함께 표시합니다/.test(line));
   assert(/시작일 환율 1,450~1,508원\(세션마다 다름\) → 지금 1,338원/.test(L([a,Object.assign(row(1e8),{inflow:1e8/1450})])),'시작일이 다르면 범위');
   assert.equal(L([{cur:'krw',price:1,inflow:1,inflowWon:1,wonRate:1}]),'','원화 종목뿐이면 안 적는다');
   const op=fn('async function openPaper()');
   assert(op.indexOf('h=paperFxLine(rows)+h;')>0 && op.indexOf('h=paperFxLine(rows)+h;')<op.indexOf('if(paperStaleNote) h=')
-     && /원화 \$\{paperKrwRet\(r\)>=0\?'\+':''\}\$\{paperKrwRet\(r\)\.toFixed\(1\)\}%/.test(op),'표 배선');
+     && /paperDualMoney\(r,r\.total,r\.wonRate\)/.test(op)
+     && /원화 수익률 \$\{paperKrwRet\(r\)>=0\?'\+':''\}\$\{paperKrwRet\(r\)\.toFixed\(1\)\}%/.test(op),'표 배선');
 });
 await t('P10 폰 폭: 첫 칸 윗줄(줄바꿈 없음)은 설정 2개까지 — 3개면 375px 폰에서 최종 칸이 잘렸다',async()=>{
   const op=fn('async function openPaper()');

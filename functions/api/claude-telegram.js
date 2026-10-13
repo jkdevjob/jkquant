@@ -1,16 +1,17 @@
 // Cloudflare Pages Function — POST /api/claude-telegram
-// 단타(클로드) Telegram 알림 — opening-scheduler Worker 가 부른다. 주문을 만들지 않는다.
-//  알림(kind):  preopen 08:5x ① 오늘 매수 종목 · etfbuy 15:21 ② 종가 매수 판단 · weekly 토 09:05 주간 결과
-//  하루 마감(op=close → op=send): 각 전략의 당일 모의매매가 끝난 뒤 그 장부로 결과 메시지
-//    ① 시초가 · ② 데이트레이딩 · 📅 전일·당일 = 15:40 체결조회 뒤 · ③ 코인 = 한국 00:05(전날 00:00~24:00) · ④ SOXL = 뉴욕 16:05
-//  마감 장부는 Worker 가 Durable Object 에 한 번만 저장하고, 보냄·모름을 기록해 중복 발송을 막는다(재시도는 텔레그램이 거절한 경우만).
+// 단타(클로드) Telegram — opening-scheduler Worker 가 부른다. 주문을 만들지 않는다.
+//  사용자 요청(2026-10-13): 텔레그램은 실제 매수 · 매도 때만 보낸다(op=event). 웹 알림과 같은 사건(_claude_push.js pushEvents)이고
+//  메시지는 '[클로드 연구 시초가]' 처럼 시작한다. 판단 · 매매 없음 · 휴장 · 하루 마감 결과 · 주간 · 대결 · 메인 교체 메시지는 보내지 않는다
+//  (옛 호출 kind=… · op=send 가 와도 보내지 않고 skipped 로 답한다).
+//  하루 마감 장부 계산(op=close)은 그대로 — Worker 가 Durable Object 에 한 번만 저장하고 밤 계산 · 대결 비교가 그 장부를 읽는다.
 import { ledger, quote } from "./claude-live.js";
-import { openingDay, etfDay, coinDay, soxlDay, composeDay, composeOverview } from "./_claude_day.js";
+import { openingDay, etfDay, coinDay, soxlDay } from "./_claude_day.js";
 import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts } from "./_claude_main.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const KINDS=["preopen","etfbuy","weekly","duel","promote"];
+export const ALERT_HEAD=/^\[클로드 연구 (시초가|데이트레이딩|비트코인|SOXL|텐배거)\] /;   // 텐배거 = 전향 시험 매수·매도(GitHub Actions 가 부른다)
 const SX_ACT={enter:"시가 매수",hold:"보유",exit:"시가 매도",flat:"쉼"};
 const SX_NEXT={buy:"시가 매수 (과매도 신호)",sell:"시가 매도"};
 const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL"};
@@ -23,22 +24,7 @@ function authorized(request,env){
 }
 export function p(v,d=2){return v==null||!isFinite(v)?"—":(v>=0?"+":"")+(+v).toFixed(d)+"%";}
 function n(v){return v==null||!isFinite(v)?"—":(+v>=1000?Math.round(+v).toLocaleString("en-US"):(+v).toFixed(2));}
-async function claim(id){
-  if(typeof caches==="undefined"||!caches.default)return true;
-  const key="https://claude-telegram.internal/"+encodeURIComponent(id);
-  try{if(await caches.default.match(key))return false;await caches.default.put(key,new Response("1",{headers:{"cache-control":"max-age=172800"}}));}catch(e){return true;}
-  return true;
-}
-async function send(env,text){
-  const token=String(env.TELEGRAM_BOT_TOKEN||"").trim(),chatId=String(env.TELEGRAM_CHAT_ID||"").trim();
-  if(!token||!chatId)throw new Error("Telegram 환경변수 없음");
-  const r=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({chat_id:chatId,text,disable_web_page_preview:true})});
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok||!j.ok)throw new Error(j.description||("HTTP "+r.status));
-  return j.result&&j.result.message_id;
-}
-// 메시지 본문 — 순수 함수(값 시험 대상)
+// 옛 메시지 본문(판단 · 주간 · 대결 · 교체) — 2026-10-13 부터 보내지 않는다. 순수 함수만 남겨 둔다(값 시험 · 되살릴 때 참고).
 export function compose(kind,date,live,extra={}){
   const T=(live&&live.tabs)||{},L=[];
   const o=T.opening||{},d=T.daytrading||{};
@@ -173,36 +159,18 @@ export async function sendOnce(env,text){
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
   let b={};try{b=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
-  if(b.op==="close"||b.op==="send"){
-    const strategy=String(b.strategy||""),date=String(b.date||"");
-    if(!DAY_STRATEGIES.includes(strategy)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"strategy/date 오류"},400);
-    if(b.op==="close"){
-      try{const result=await closeDay(new URL(request.url).origin,env,strategy,date);return json({ok:!!result,result});}
-      catch(e){return json({ok:false,error:String(e.message||e)},502);}
-    }
-    const text=strategy==="overview"?composeOverview(date,b.records||{}):(b.result?composeDay(b.result):null);
-    if(!text)return json({ok:false,definite:true,error:"마감 장부 없음"},400);
+  if(b.op==="event"){                               // 실제 매수 · 매도 — Worker 감시가 웹 알림과 같은 사건으로 부른다
+    const text=String(b.text||"");
+    if(!ALERT_HEAD.test(text)||text.length>1500)return json({ok:false,definite:true,error:"알림 형식 오류(머리말 [클로드 연구 탭])"},400);
     const r=await sendOnce(env,text);
     return json(r,r.ok?200:502);
   }
-  const kind=String(b.kind||""),date=String(b.date||"");
-  if(!KINDS.includes(kind)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"kind/date 오류"},400);
-  if(kind==="promote"&&!(b.event&&TABN[b.event.tab]))return json({ok:false,error:"event 오류"},400);
-  if(!(await claim("claude:"+date+":"+kind+(kind==="promote"?":"+b.event.tab:""))))return json({ok:true,duplicate:true});
-  try{
-    const origin=new URL(request.url).origin;
-    const live=await fetch(origin+"/api/claude-live",{headers:{Accept:"application/json","x-monitor-key":String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim()}}).then(r=>r.json()).catch(()=>null);
-    const extra={};
-    if(kind==="duel")extra.duel=b.duel;
-    if(kind==="promote")extra.event=b.event;
-    if(kind==="weekly"){
-      extra.lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
-      extra.weekStart=mondayOf(date);
-    }
-    const text=compose(kind,date,live,extra);
-    const id=await send(env,text);
-    return json({ok:true,kind,date,messageId:id});
-  }catch(e){
-    return json({ok:false,kind,date,error:String(e.message||e)},502);
+  if(b.op==="close"){
+    const strategy=String(b.strategy||""),date=String(b.date||"");
+    if(!DAY_STRATEGIES.includes(strategy)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"strategy/date 오류"},400);
+    try{const result=await closeDay(new URL(request.url).origin,env,strategy,date);return json({ok:!!result,result});}
+    catch(e){return json({ok:false,error:String(e.message||e)},502);}
   }
+  if(b.op==="send"||KINDS.includes(String(b.kind||"")))return json({ok:true,skipped:"buy_sell_only"});   // 마감 결과 · 판단 · 주간 · 대결 · 교체는 보내지 않는다
+  return json({ok:false,error:"op/kind 오류"},400);
 }

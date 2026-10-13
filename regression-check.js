@@ -58,7 +58,7 @@ console.log('[0] 파일 문법');
 /* ── 공통 로그인·시세 부팅 경로 ── */
 console.log('[0-A] 공통 로그인·실시간 시세 의존성');
 {
-  const authPages=['index.html','plan.html','backtest.html','ipo.html','realestate.html','job.html','admin.html','scalping.html','claude.html'];
+  const authPages=['index.html','plan.html','backtest.html','ipo.html','realestate.html','job.html','admin.html','scalping.html','claude.html','tenbagger.html'];
   for(const p of authPages){
     const s=fs.readFileSync(path.join(__d,p),'utf8');
     ok(p+' Firebase SDK 12.19.0 통일',
@@ -708,7 +708,7 @@ console.log('[10] 모의 장부 정합');
      && /const from=\(start && start<first\) \? start : first;/.test(stat));
   // 여러 세션을 한 표에 나열하므로 통화는 줄마다 따로
   ok('성과 행에 통화를 실어 보낸다', /cur:curOf\(st\)/.test(stat));
-  ok('성과 표 금액은 원화-only로 찍는다', /paperInflowText\(r\)/.test(idx) && /paperWon\(r\.total,r\.wonRate\)/.test(idx));
+  ok('성과 표: 달러 종목은 달러+원화 병기 · 국내는 원화', /paperInflowText\(r\)/.test(idx) && /paperDualMoney\(r,r\.total,r\.wonRate\)/.test(idx) && /function paperDualMoney\(r,v,rate,wonValue\)/.test(idx));
   ok('wn은 wnCur 위에 있다(중복 구현 없음)', /function wn\(v\)\{ return wnCur\(v, curCurrency\(\)\); \}/.test(idx));
 }
 
@@ -3371,9 +3371,9 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
     const pr=extractFn(idx,'function paperWonRate(r)');
     ok('모의 성과 목록은 현재 환율로 평가·인출을 표시하고 투입은 입력 원화를 유지한다',
        /await loadFX\(\)/.test(rv) && /liveFX/.test(pr) && !/fxAt\(/.test(pr)
-       && /paperWon\(r\.total,r\.wonRate\)/.test(op)
+       && /paperDualMoney\(r,r\.total,r\.wonRate\)/.test(op)
        && /paperInflowText\(r\)/.test(op)
-       && /paperWon\(outAmt,r\.wonRate\)/.test(op)
+       && /paperUsd\(outAmt\).*paperWon\(outAmt,r\.wonRate\)/s.test(op)
        && /function paperInflowWon\(tab, sess, inflow\)/.test(idx));
   }
 
@@ -4772,7 +4772,7 @@ console.log('\n[76] 버전 형식 (x.y.z)');
 {
   const SEMVER=/^v\d+\.\d+\.\d+$/;
   const pages=[['index.html',idx],['backtest.html',bt]];
-  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html']){
+  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html','tenbagger.html']){
     const fp=__d+'/'+f;
     if(fs.existsSync(fp)) pages.push([f, fs.readFileSync(fp,'utf8')]);
   }
@@ -11271,19 +11271,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&route(Date.parse('2026-10-05T00:05:00Z'))==='opening'&&route(Date.parse('2026-10-05T00:31:00Z'))==='opening'
        &&route(Date.parse('2026-10-05T06:31:00Z'))===null,JSON.stringify(count));
   }
-  { // 주간 Telegram: 같은 cron 한 줄의 한 주 예약시각 중 토요일 09:05 KST 한 번만
-    const crons=JSON.parse(wr).triggers.crons;
-    const kp=ow.slice(ow.indexOf('function kstParts('),ow.indexOf('\n}\n',ow.indexOf('function kstParts('))+2);
-    const wf2=ow.slice(ow.indexOf('export function claudeWeeklyDue('),ow.indexOf('\n}\n',ow.indexOf('export function claudeWeeklyDue('))+2).replace('export ','');
-    const due=new Function(kp+wf2+'\nreturn claudeWeeklyDue;')();
-    const expand=(f,max)=>f==='*'?Array.from({length:max},(_,i)=>i):f.split(',').flatMap(x=>{const m=x.match(/^(\d+)-(\d+)$/);if(!m)return [+x];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(i);return a;});
-    const hits=[];
-    for(let d=0;d<7;d++)for(const c of crons){const [mi,h]=c.split(' ');for(const hh of expand(h,24))for(const mm of expand(mi,60)){
-      const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;if(due(ms))hits.push(new Date(ms).toISOString());}}
-    ok('클로드 주간 Telegram: 한 주에 토요일 09:05 KST 딱 한 번 · Worker 가 weekly 로 호출',
-       hits.length===1&&hits[0]==='2026-10-10T00:05:00.000Z'
-       &&/if\(claudeWeeklyDue\(at\)\)ctx\.waitUntil\(claudeTelegram\(env,kstParts\(at\)\.date,"weekly"\)\);/.test(ow),JSON.stringify(hits));
-  }
+  // 알림 정책(사용자 요청 2026-10-13): 모든 연구 메뉴는 실제 매수·매도 때만 — 주간·판단·마감 결과 텔레그램 없음
+  ok('클로드 알림: 주간 · 08:56 판단 · 15:21 판단 · 마감 결과 텔레그램 호출 없음(Worker) · 매수·매도 감시를 ①② 기록 직후에도 바로 돌림',
+     !/claudeWeeklyDue|claudeTelegram\(|"weekly"|op:"send"/.test(ow)
+     &&/await claudeAlertsNow\(env\);\s+\/\/ ① 매수 · ② 매도 기록 직후 바로 알림/.test(ow)
+     &&/if\(stage!=="close"\)await claudeKrClose\(env,date,ms\);[^\n]*\n\s*await claudeAlertsNow\(env\);/.test(ow));
   ok('Worker: 매 단계 응답을 gapdown ledger 에 먼저 저장 + 일부 조회 시 주문 없음 + 라우팅으로만 실행',
      /gapdownRecord\(env,date,"quote",q,ms\)/.test(ow)&&/gapdown_quote_partial/.test(ow)
      &&/if\(route==="opening"\)ctx\.waitUntil\(runMinute\(controller,env\)\);/.test(ow)
@@ -11301,32 +11293,29 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   const scl2=fs.readFileSync(__d+'/claude.html','utf8');
   const orApi=fs.readFileSync(__d+'/functions/api/claude-lab.js','utf8');
   const gptScl=fs.readFileSync(__d+'/scalping.html','utf8'),gptApi=fs.readFileSync(__d+'/functions/api/opening-research.js','utf8');
-  ok('단타(클로드)는 별도 페이지: GPT 단타 화면·API 에 클로드 내용 없음 · 모든 페이지 메뉴에서 단타(지피티) 바로 아래',
+  ok('연구(클로드)는 별도 페이지: GPT 단타 화면·API 에 클로드 내용 없음 · 모든 페이지 메뉴에서 연구(지피티) 바로 아래',
      !/gapdown|D-1 갭하락|etfOvernight|claude-lab/.test(gptScl)&&!/gapdown|etf-overnight|claude-lab/.test(gptApi)
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
-       .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>단타\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>단타\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+       .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>연구\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>연구\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('단타(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) + 합산 · 탭마다 GPT 같은 기간 비교',
      ['today','opening','daytrading','crypto','soxl','all'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
-    ok('클로드 Telegram: 서버키 인증·주문 경로 없음 · 08:56 매수·15:21 판단 알림 · 15:40 체결조회 뒤 ①② 하루 마감 → 전일·당일 요약',
-       /function authorized\(request,env\)/.test(tg)&&/claim\("claude:"\+date\+":"\+kind\+\(kind==="promote"\?":"\+b\.event\.tab:""\)\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
-       &&/await claudeTelegram\(env,date,"preopen"\);/.test(ow)&&/if\(stage==="close"\)await claudeTelegram\(env,date,"etfbuy"\);\n\s*else await claudeKrClose\(env,date,ms\);/.test(ow)
-       &&!/claudeMorningDue/.test(ow));
-    // 하루 마감 알림: 마감 장부를 DO 에 한 번만 저장(먼저 저장된 것이 정본) → 그 장부로 발송 → 보냄·모름 기록(중복 없음) · 거절만 최대 5번 재시도
-    const fnS=ow.slice(ow.indexOf('export function claudeSendState('),ow.indexOf('\n}\n',ow.indexOf('export function claudeSendState('))+2).replace('export ','');
-    const st=new Function('const CLAUDE_TG_MAX_FAILS=5;'+fnS+'\nreturn claudeSendState;')();
+    ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로',
+       /function authorized\(request,env\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
+       &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\|텐배거\)\\\] \/;/.test(tg)
+       &&/if\(b\.op==="send"\|\|KINDS\.includes\(String\(b\.kind\|\|""\)\)\)return json\(\{ok:true,skipped:"buy_sell_only"\}\);/.test(tg)
+       &&(tg.match(/await sendOnce\(env,/g)||[]).length===1&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
+    // 하루 마감 장부: DO 에 한 번만 저장(먼저 저장된 것이 정본) — 밤 계산 · 대결 비교가 읽는다. 텔레그램은 보내지 않는다
+    const fnR=ow.slice(ow.indexOf('export function claudeCloseRecord('),ow.indexOf('\n}\n',ow.indexOf('export function claudeCloseRecord('))+2).replace('export ','');
+    const rec=new Function(fnR+'\nreturn claudeCloseRecord;')();
     const ev=(...ids)=>({events:ids.map(id=>({id,payload:id.startsWith('close:')?{v:1}:{}}))});
-    ok('클로드 하루 마감 알림 상태: 장부 정본 · 보냄/모름이면 다시 안 보냄 · 거절은 5번까지 재시도',
-       st(ev('close:crypto'),'crypto').canSend&&st(ev('close:crypto'),'crypto').record.v===1
-       &&!st(ev('close:crypto','tg:crypto:sent'),'crypto').canSend&&!st(ev('close:crypto','tg:crypto:unknown'),'crypto').canSend
-       &&st(ev('close:crypto','tg:crypto:fail:1','tg:crypto:fail:2'),'crypto').canSend
-       &&!st(ev('close:crypto','tg:crypto:fail:1','tg:crypto:fail:2','tg:crypto:fail:3','tg:crypto:fail:4','tg:crypto:fail:5'),'crypto').canSend
-       &&st(ev('tg:soxl:sent'),'crypto').canSend
-       &&/await claudeAppend\(env,date,"close:"\+strategy,"close",c\.result,ms\);\n\s*L=await readLedger\(env,date,"claude"\);s=claudeSendState\(L,strategy\);/.test(ow)
-       &&/res\.ok\?"sent":res\.definite\?"fail:"\+\(s\.fails\+1\):"unknown"/.test(ow));
+    ok('클로드 하루 마감 장부: 한 번만 저장 · 이미 있으면 다시 계산 안 함 · 텔레그램 발송 없음',
+       rec(ev('close:crypto'),'crypto').v===1&&rec(ev('close:soxl'),'crypto')===null&&rec(null,'crypto')===null
+       &&/if\(claudeCloseRecord\(await readLedger\(env,date,"claude"\),strategy\)\)return true;/.test(ow)
+       &&/await claudeAppend\(env,date,"close:"\+strategy,"close",c\.result,ms\);/.test(ow)&&!/composeDay|composeOverview/.test(tg));
     ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 상태 줄 + 1분 자동 갱신',
        /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/opsBoard\(tab\)\+docCard\(tab\)\+planCard\(tab,T,wl\)\+buyCard\(tab\)\+sellCard\(tab\)\+liveCard\(tab\)/.test(scl2)
        &&/html\+=shadowCard\(tab\)\+reviewCard\(tab\)\+paperCard\(tab\);/.test(scl2)
@@ -11373,7 +11362,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        /<div id="gate">/.test(scl2)&&/fetch\("\/api\/owner"/.test(scl2)&&/headers:await authHeaders\(\)/.test(scl2)
        &&/if\(!\(await claudeAuthorized\(request,env\)\)\)return json\(\{ok:false,error:"unauthorized"\},401\);/.test(lv3)
        &&/if\(!\(await claudeAuthorized\(request,env\)\)\)return new Response/.test(lb3)
-       &&/fetch\(origin\+"\/api\/claude-live",\{headers:\{Accept:"application\/json","x-monitor-key":/.test(tg3));
+       &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live",\{headers:\{"x-monitor-key":env\.MONITOR_KEY/.test(fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'))   // 알림 감시(Worker)가 감시키로 실시간 자료를 읽는다
+       &&/function authorized\(request,env\)/.test(tg3));
   }
   ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·이번 주·추이 범례·GPT 대결 날짜별',
      /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/q\.noTrade\?NOTRADE:pct\(q\.tabPct\)/.test(scl2)
@@ -11475,10 +11465,11 @@ console.log('\n[CLAUDE HEADER] 머리말 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8'), sh=fs.readFileSync(__d+'/scalping.html','utf8');
   const hd=(ch.match(/<header>[\s\S]*?<\/header>/)||[''])[0];
-  ok('클로드 머리말이 지피티와 같은 구조(영문 머리 · JK 투자 단타 · 사용자 배지 → 메뉴)',
-     /<div class="kicker">Claude Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(hd)
+  ok('연구(클로드)/연구(지피티) 머리말 구조 유지(각 영문 머리 · JK 투자 연구 · 사용자 배지 → 메뉴)',
+     /<div class="kicker">Claude Research<\/div><h1>JK <span class="v">투자<\/span> 연구/.test(hd)
      &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(hd)
-     &&/<div class="kicker">Morning Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(sh));
+     &&/<div class="kicker">GPT Research<\/div><h1>JK <span class="v">투자<\/span> 연구/.test(sh)
+     &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(sh));
   ok('클로드 사용자 배지 = 사진 · 이름 · 로그아웃(lo), 옛 이메일 글자 배지 없음',
      /document\.getElementById\("userbadge"\)/.test(ch)
      &&/user\.photoURL\?"<img src=/.test(ch)&&/esc\(user\.displayName\|\|user\.email\|\|""\)/.test(ch)
@@ -11687,7 +11678,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
 
   // ── 가리는 CSS · 메뉴 ──
   { const E=loadAccess({guard:true}), css=(E.els['jkaccess-css']||{}).textContent||'';
-    ok('메뉴: 단타(지피티)·단타(클로드)·관리자 링크는 소유자(jk-admin) 아니면 숨김',
+    ok('메뉴: 연구(지피티)·연구(클로드)·관리자 링크는 소유자(jk-admin) 아니면 숨김',
        ['/scalping','/claude','/admin'].every(h=>css.includes('html:not(.jk-admin) a[href="'+h+'"]')) && /a\[href="\/admin"\]\{display:none!important\}/.test(css));
     // 자산플랜은 로그인 전 'body>*:not(#authgate)' 를 숨긴다 — 승인 화면이 거기 걸려 안 보이면 대기 계정은 '확인 중'만 본다
     ok('가림: 승인 화면 자체는 페이지가 본문을 숨겨도 보인다 (visibility 직접 켬)', css.includes('#jkgate.on{display:flex;visibility:visible!important}')
@@ -11776,7 +11767,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   }
   ok('자산플랜 햄버거는 jk-ui 공용 클릭 핸들러 하나만 쓴다 — 두 번 토글 금지',
      !/\$\("jkmenuBtn"\)\.addEventListener\("click"/.test(pl)
-     && /<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/.test(pl));
+     && /<script src="\/jk-ui\.js\?v=1\.0\.3" defer><\/script>/.test(pl));
 
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
   {
@@ -11798,7 +11789,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   ok('관리자 승인목록: 모바일 가로 스크롤에서도 계정·접속·방문·버튼 열의 행 하단선이 끊기지 않는다',
      /#u_body \.htable\{border-collapse:separate;border-spacing:0\}/.test(adm)
      && /#u_body \.htable tbody td\{[\s\S]*?border-bottom:0;[\s\S]*?box-shadow:inset 0 -1px 0 var\(--line\);[\s\S]*?vertical-align:middle;[\s\S]*?\}/.test(adm)
-     && /#u_body \.htable tbody tr:last-child td\{[\s\S]*?box-shadow:inset 0 -1px 0 var\(--line\);/.test(adm)
+     && /#u_body \.htable tbody tr td:first-child\{[\s\S]*?box-shadow:inset 0 -1px 0 var\(--line\),inset 0 0 0 100vmax var\(--jk-fit-bg,var\(--panel\)\);/.test(adm)   // 고정 첫 칸: 행 선 + 불투명 바탕(마지막 행 포함 · 2026-10-14 겹침 수정)
      && /#u_body \.htable-wrap \+ \.note\{/.test(adm)
      && !/\.htable\{border-collapse:separate/.test(adm.slice(0,adm.indexOf('#u_body .htable'))));
 
@@ -12067,6 +12058,16 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      &&/@media\(max-width:760px\)\{table\.fit\{min-width:0!important;font-size:11px\}/.test(ch)&&/table\.fit td:first-child,table\.fit th:first-child\{position:sticky;left:0;/.test(ch)
      &&/table\.fit\.arena td\.nm,table\.fit\.arena th:nth-child\(2\)\{position:sticky;left:20px;/.test(ch)&&!/table\.stack thead\{display:none\}/.test(ch)&&/window\.addEventListener\("resize"/.test(ch)
      &&/<span class='tag' style='margin:0 6px 0 0'>"\+esc\(ARENA_TAB\[x\.tab\]/.test(ch)&&/"<span class='sub'>"\+arenaReason\(x\.reason,names\)\+"<\/span>/.test(ch));
+  { // 연구 메뉴 알림 정책(사용자 요청 2026-10-13): '[지피티 연구 시초가]' · '[클로드 연구 시초가]' 처럼 시작 · 실제 매수·매도 때만(후보 · 일일결과 · 대결 없음)
+    const sa=fs.readFileSync(__d+'/functions/api/scalping-alert.js','utf8'),pa=fs.readFileSync(__d+'/worker/presale-alert/src/index.js','utf8'),
+      om=fs.readFileSync(__d+'/functions/api/opening-monitor.js','utf8'),dm=fs.readFileSync(__d+'/functions/api/daytrading-monitor.js','utf8'),
+      du=fs.readFileSync(__d+'/functions/api/scalping-duel.js','utf8'),cp2=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8');
+    ok('연구 메뉴 알림: [지피티 연구 탭] · [클로드 연구 탭] 머리말 · 실제 매수·매도만(지피티 일일결과 · 데이트레이딩 후보 · 대결 요약 텔레그램 없음)',
+       /"\[지피티 연구 "\+LABELS\[strategy\]\+"\] "\+icon/.test(sa)&&/if\(stage==="summary"\)return json\(\{ok:true,eventId,skipped:"buy_sell_only"\}\);/.test(sa)
+       &&/title:"\[지피티 연구 "\+name\+"\] "/.test(pa)&&/"\[지피티 연구 시초가\] 🟢 모의 매수 신호 · "/.test(om)&&/text:title\+/.test(om)
+       &&!/api\.telegram\.org|모의 후보 신호/.test(dm)&&!/api\.telegram\.org/.test(du)
+       &&/open: "\[클로드 연구 시초가\]", etf: "\[클로드 연구 데이트레이딩\]", coin: "\[클로드 연구 비트코인\]", soxl: "\[클로드 연구 SOXL\]"/.test(cp2));
+  }
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
     ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만',
@@ -12130,7 +12131,7 @@ console.log('\n[DANTA LOGIN] 소유자 확인 빠르게 · 토큰/서버 따로 
 console.log('\n[REAL ESTATE] 부동산 메뉴 · 클로드/지피티 탭');
 {
   const re=fs.readFileSync(__d+'/realestate.html','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
-  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html'];
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html','tenbagger.html'];
   ok('모든 페이지 메뉴에서 부동산이 공모주 바로 아래',
      pages.every(f=>/<a href="\/ipo"[^>]*><span class="mi">🎯<\/span>공모주<\/a>\s*\n\s*<a href="\/realestate"[^>]*><span class="mi">🏢<\/span>부동산<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('공용 메뉴 정책·관리자 메뉴 관리에 부동산(공모주 70 < 부동산 75 < JOB 80)',
@@ -12240,11 +12241,38 @@ console.log('\n[SCALPING TODAY KST/AUTO] KST 전일·당일 · 전략분석 자�
 }
 
 
+/* ════ 텐배거 메뉴(모의 바로 아래) · 🤖 클로드 탭 — 계산은 scripts/tenbagger_claude(파이썬) 한 곳, 화면은 그리기만 ════ */
+console.log('\n[TENBAGGER] 텐배거 메뉴 · 클로드/지피티 탭 · 분석 값 시험');
+{
+  const cp=require('child_process'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
+  const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),tb=fs.readFileSync(__d+'/tenbagger.html','utf8'),ck=fs.readFileSync(__d+'/.github/workflows/check.yml','utf8');
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html'];
+  ok('11개 페이지 기존 텐배거 링크·모의/공모주 상대 순서 보존(메뉴 노출은 공용 정책에서 숨김)',
+     pages.every(f=>/<a href="\/paper"[^>]*><span class="mi">🧪<\/span>모의<\/a>\s*\n\s*<a href="\/tenbagger"[^>]*><span class="mi">🔟<\/span>텐배거<\/a>\s*\n\s*<a href="\/ipo"/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+  ok('공용 메뉴 정책: 텐배거 메뉴 숨김 · 직접 주소·저장 순서·관리자 설정 보존',
+     /\{path:'\/paper',label:'모의',mode:'public',order:60\},\n\s*\{path:'\/tenbagger',label:'텐배거',mode:'public',order:65,after:'\/paper',navHidden:true\},\n\s*\{path:'\/ipo'/.test(acc)
+     &&/'\/tenbagger\.html':'\/tenbagger'/.test(acc)&&/if\(x\.after&&!src\[x\.path\]&&src\[x\.after\]/.test(acc)
+     &&/src\.filter\(x=>x\.path!==\'\/tenbagger\'\)/.test(ad)&&!/MENU_ICONS[^\n]*\/tenbagger/.test(ad)
+     &&/\(\?:plan\|paper\|tenbagger\|/.test(ui));
+  ok('텐배거 화면: 승인 가드 · 버전 #tbVer x.y.z · 클로드 탭이 먼저 · 클로드 칸에서 화면 스크립트 · 지피티 칸은 비워 둠',
+     /<script src="\/jk-access\.js" data-guard="1"><\/script>/.test(tb)&&/JKAccess\.guard\(\{auth/.test(tb)&&/id="tbVer">v\d+\.\d+\.\d+<\/span>/.test(tb)
+     &&tb.indexOf('data-tab="claude"')<tb.indexOf('data-tab="gpt"')&&tb.indexOf('id="pane-claude"')<tb.indexOf('tenbagger-claude.js')
+     &&tb.indexOf('tenbagger-claude.js')<tb.indexOf('id="pane-gpt"'));
+  const tj=cp.spawnSync(process.execPath,[__d+'/scripts/test_tenbagger_claude.cjs'],{encoding:'utf8'});
+  ok('텐배거 화면·메뉴 값 시험 + 변이(목록·숫자 형식·메뉴 기준점·분석 파일 정합성)', tj.status===0,
+     (tj.stdout||'').split('\n').filter(l=>/^FAIL|시험:/.test(l)).join(' / ')+(tj.stderr||'').slice(0,300));
+  const tp=cp.spawnSync('python3',['-I',__d+'/scripts/tenbagger_claude/test_analysis.py'],{encoding:'utf8'});
+  ok('텐배거 계산 값 시험 — 수정주가 보정 · 펀드 거르기 · 텐배거 구간 · 다음 날 체결(룩어헤드 금지) · 모형', tp.status===0,
+     (tp.stdout||'').split('\n').filter(l=>/^FAIL|시험:/.test(l)).join(' / ')+(tp.stderr||'').slice(0,300));
+  ok('CI 에서 텐배거 값 시험·변이 시험을 돌린다',
+     /scripts\/tenbagger_claude\/test_analysis\.py/.test(ck)&&/scripts\/tenbagger_claude\/mutation_test\.py/.test(ck)&&/scripts\/test_tenbagger_claude\.cjs/.test(ck));
+}
+
 /* ════ 공용 로그인 · 상단 전체메뉴 통일 ════ */
-console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 9개 페이지 전체메뉴');
+console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메뉴');
 {
   const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8');
-  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html'];
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html','tenbagger.html'];
   ok('공용 승인 로그인 브랜드는 JK 투자 — 퀀트 잔존 없음',
      /var head='<div class="jl">JK <b>투자<\/b><\/div>'/.test(acc)
      &&!/JK <b>퀀트<\/b>/.test(acc)&&!/\/\* JK 퀀트 — 이용 승인/.test(acc));
@@ -12256,9 +12284,9 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 9개 페이지 전체메�
      /function mountMenus\(\)/.test(ui)&&/전체메뉴/.test(ui)&&/btn\.textContent='☰'/.test(ui)
      &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
      &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
-  ok('9개 페이지 모두 jk-ui 공용 UI와 같은 10개 메뉴 링크를 사용',
-     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/.test(s)
-       &&['/','/plan','/backtest','/scalping','/claude','/paper','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
+  ok('11개 페이지 모두 jk-ui 공용 UI와 같은 11개 메뉴 링크를 사용',
+     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.3" defer><\/script>/.test(s)
+       &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
 }
 
 Promise.all(PENDING).then(()=>{

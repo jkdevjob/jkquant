@@ -1,5 +1,7 @@
 // Cloudflare Pages Function — POST /api/scalping-alert
-// 단타 전략 공통 Telegram 알림. 서버 스케줄러 전용이며 주문을 만들지 않는다.
+// 연구(지피티) 전략 공통 Telegram 알림. 서버 스케줄러 전용이며 주문을 만들지 않는다.
+// 사용자 요청(2026-10-13): 모든 연구 메뉴는 실제 매수 · 매도 때만 알린다 — 메시지는 '[지피티 연구 시초가]' 처럼 시작하고,
+// 장 종료 일일결과(summary)는 보내지 않는다(요청은 받아 skipped 로 답한다).
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const LABELS={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL",swing:"과매도 반등"};
@@ -61,25 +63,25 @@ export async function onRequestPost({request,env}){
       if(!Number.isFinite(at))return json({ok:false,error:"invalid eventAt"},400);
       if(age>20*60_000||age< -90_000)return json({ok:true,eventId,skipped:"stale_or_future_signal"});
     }
+    if(stage==="summary")return json({ok:true,eventId,skipped:"buy_sell_only"});
     const webOnly=b.webOnly===true;
     // Web push has its own durable receipt. A Telegram receipt must not suppress its retry.
-    webDelivery=stage==="summary"?{ok:true,skipped:"summary"}:
-      await webPush(env,{...b,strategy,stage,eventId});
+    webDelivery=await webPush(env,{...b,strategy,stage,eventId});
     if(webOnly)return json({ok:webDelivery.ok,eventId,webPush:webDelivery},webDelivery.ok?200:502);
     if(!(await claim(eventId)))return json({ok:webDelivery.ok,duplicate:true,eventId,webPush:webDelivery},webDelivery.ok?200:502);
     claimed=true;
 
-    const icon=stage==="buy"?"🟢":stage==="sell"?"🔴":"📊";
-    const action=stage==="buy"?"매수 타이밍":stage==="sell"?"매도 타이밍":"장 종료 일일결과";
+    const icon=stage==="buy"?"🟢":"🔴";
+    const action=stage==="buy"?"매수 타이밍":"매도 타이밍";
     const when=[clean(b.date,20),clean(b.time,20)].filter(Boolean).join(" ");
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,500)).filter(Boolean).slice(0,16):[];
     const msg=[
-      icon+" ["+LABELS[strategy]+"] "+action,
+      "[지피티 연구 "+LABELS[strategy]+"] "+icon+" "+action,
       when,
       "",
       ...lines,
       "",
-      stage==="summary"?"JKQuant 기준전략 당일 모의매매 마감":"JKQuant 기준전략 모의/연구 신호"
+      "JKQuant 기준전략 모의/연구 신호"
     ].filter((x,i,a)=>!(x===""&&a[i-1]==="")).join("\n");
     const id=await telegram(env,msg);
     claimed=false; // Keep only a successful Telegram receipt; web push can still retry independently.

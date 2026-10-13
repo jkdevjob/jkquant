@@ -240,7 +240,7 @@
   window.JKSticky={mount:mount,update:update};
 })();
 
-/* JK 투자 공용 로그인·전체메뉴 UI — 9개 페이지가 같은 모양과 동작을 쓴다.
+/* JK 투자 공용 로그인·전체메뉴 UI — 11개 페이지가 같은 모양과 동작을 쓴다. 공용 헤더/PC 폭도 함께 정규화한다.
    페이지별 기존 메뉴 링크/권한 로직은 유지하고, 공용 파일이 시각·열고닫기만 통일한다. */
 (function(){
   'use strict';
@@ -268,6 +268,17 @@
       '#authgate #gbtn,#gate #gbtn,#jkgate .jbtn.jg{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;width:100%!important;min-height:48px!important;padding:12px 16px!important;border:0!important;border-radius:12px!important;background:#fff!important;color:#1f1f1f!important;font-size:15px!important;font-weight:800!important;cursor:pointer!important}'+
       '#authgate #gbtn svg,#gate #gbtn svg,#jkgate .jbtn.jg svg{width:20px!important;height:20px!important;flex:none!important}'+
       '#authgate .gnote,#gate .gnote{margin-top:16px!important;color:#6f7ba0!important;font-size:11px!important;line-height:1.6!important}'+
+      ':root{--jk-desktop-width:1100px}'+
+      '@media(min-width:769px){body .wrap{box-sizing:border-box!important;width:100%!important;max-width:var(--jk-desktop-width)!important;margin-left:auto!important;margin-right:auto!important;padding-left:16px!important;padding-right:16px!important}body.paperpage #paperModal{box-sizing:border-box!important;width:100%!important;max-width:var(--jk-desktop-width)!important;margin-left:auto!important;margin-right:auto!important}}'+
+      'header{border-bottom:1px solid #2a3354!important;background:rgba(15,19,32,.94)!important;backdrop-filter:blur(12px)!important;-webkit-backdrop-filter:blur(12px)!important}'+
+      '.jk-page-top{box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;min-height:72px!important;padding:13px 0 11px!important}'+
+      'body.jk-top-in-wrap>.wrap>.jk-page-top{border-bottom:1px solid #2a3354!important}'+
+      '.jk-page-brand{min-width:0!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:2px!important}'+
+      '.jk-page-kicker{margin:0!important;color:#f5c451!important;font:800 10px/1.2 system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif!important;letter-spacing:.12em!important}'+
+      '.jk-page-heading{margin:0!important;color:#f3f6ff!important;font-family:system-ui,-apple-system,"Segoe UI","Noto Sans KR",sans-serif!important;font-size:23px!important;font-weight:850!important;line-height:1.18!important;letter-spacing:-.035em!important;white-space:nowrap!important}'+
+      '.jk-page-title{color:#f3f6ff!important}'+
+      '.jk-page-version{margin-left:7px!important;color:#7783a8!important;font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;vertical-align:middle!important;letter-spacing:0!important}'+
+      '@media(max-width:768px){.jk-page-top{min-height:64px!important;padding:10px 0 9px!important;gap:10px!important}.jk-page-version{font-size:10px!important;margin-left:5px!important}}'+
       '@media(max-width:600px){.jkmenu-pop{position:fixed!important;right:12px!important;top:68px!important;width:min(260px,calc(100vw - 24px))!important;max-height:calc(100dvh - 84px)!important}.jkmenu-pop a{min-height:42px!important;font-size:14px!important}#authgate .gbox,#gate .gbox,#jkgate .jb{width:calc(100% - 28px)!important;padding:24px 18px!important}}';
     (document.head||document.documentElement).appendChild(s);
   }
@@ -281,7 +292,7 @@
       if(warmCount>=2)return;
       var u=new URL(href,location.href);
       if(u.origin!==location.origin||u.pathname===location.pathname||warmPages[u.pathname])return;
-      if(!/^\/(?:plan|paper|backtest|settings|job|realestate|ipo|scalping|claude|admin)?(?:\.html)?$/.test(u.pathname))return;
+      if(!/^\/(?:plan|paper|tenbagger|backtest|settings|job|realestate|ipo|scalping|claude|admin)?(?:\.html)?$/.test(u.pathname))return;
       warmPages[u.pathname]=true;warmCount++;
       var link=document.createElement('link');
       link.rel='prefetch';link.as='document';link.href=u.pathname;
@@ -330,6 +341,20 @@
       pop.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('a'))pop.hidden=true;});
     });
   }
+  var HEADER_LABELS={'/':'운영','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
+  function routeKey(){var p=(location.pathname||'/').replace(/\/index\.html$/,'/').replace(/\.html$/,'').replace(/\/$/,'')||'/';return p;}
+  function normalizeHeader(){
+    if(!document.querySelector)return;
+    var label=HEADER_LABELS[routeKey()];if(!label)return;
+    var row=document.querySelector('header .htop,header .top,body > .wrap > .top,body > .wrap > .htop');if(!row)return;
+    var h1=row.querySelector('h1');if(!h1)return;
+    row.classList.add('jk-page-top');
+    if(row.parentElement&&row.parentElement.classList&&row.parentElement.classList.contains('wrap')&&row.parentElement.parentElement===document.body)document.body.classList.add('jk-top-in-wrap');
+    var box=h1.parentElement||row;box.classList.add('jk-page-brand');
+    var kicker=box.querySelector('.kicker,.logo');if(!kicker){kicker=document.createElement('div');box.insertBefore(kicker,h1);}kicker.textContent='JK 투자';kicker.classList.add('jk-page-kicker');
+    var version=null,sp=h1.querySelectorAll('span,b');for(var i=0;i<sp.length;i++){if(/^v\d+\.\d+\.\d+/.test((sp[i].textContent||'').trim())){version=sp[i];break;}}
+    h1.textContent='';var title=document.createElement('span');title.className='jk-page-title';title.textContent=label;h1.appendChild(title);if(version){version.classList.add('jk-page-version');h1.appendChild(version);}h1.classList.add('jk-page-heading');
+  }
   function normalizeLogin(){
     if(!document.querySelectorAll)return;
     document.querySelectorAll('#authgate .glogo,#gate .glogo').forEach(function(x){x.innerHTML='JK <span class="v">투자</span>';});
@@ -339,12 +364,12 @@
       b.appendChild(document.createTextNode('Google로 로그인'));
     });
   }
-  function mount(){style();mountMenus();normalizeLogin();}
+  function mount(){style();mountMenus();normalizeHeader();normalizeLogin();}
   document.addEventListener('click',function(e){
     if(!document.querySelectorAll)return;
     document.querySelectorAll('.jkmenu-pop').forEach(function(p){var w=p.closest('.jkmenu');if(w&&!w.contains(e.target))p.hidden=true;});
   });
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
-  window.JKUnifiedUI={mount:mount,mountMenus:mountMenus,normalizeLogin:normalizeLogin};
+  window.JKUnifiedUI={mount:mount,mountMenus:mountMenus,normalizeHeader:normalizeHeader,normalizeLogin:normalizeLogin};
 })();
 

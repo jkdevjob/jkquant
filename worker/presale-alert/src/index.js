@@ -11,6 +11,11 @@ const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl"]);
 const VALID_TOPICS=new Set(["presale","job","ipo","research",...TRADE_TOPICS]);
 /* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
 const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
+const RESEARCH_STUDIES={im_plan:{name:"무매·5년 플랜 연구",url:RESEARCH_APP},
+  tenbagger:{name:"텐배거 전향 연구",url:BASE_APP+"/scalping?strategy=tenbagger"},
+  tenbagger_claude:{name:"[클로드 연구 텐배거]",url:BASE_APP+"/claude?tab=tenbagger",trade:true}};
+/* 매매 연구(trade:true)는 실제 매수·매도 때만 보낸다(사용자 요청 2026-10-13) — 제목은 '[클로드 연구 텐배거] 🟢 매수 10/15' 처럼 머리말로 시작 */
+const RESEARCH_STAGE={buy:"🟢 매수",sell:"🔴 매도",both:"🟢🔴 매수·매도"};
 const APPROVAL_ADMIN="jk82investing@gmail.com";
 const FIRESTORE_PROFILE="https://firestore.googleapis.com/v1/projects/jk-invest/databases/(default)/documents/profiles/";
 
@@ -468,7 +473,7 @@ export class PresaleAlertStore{
       url:IPO_APP,createdAt:new Date().toISOString()
     }:topic==="research"?{
       id:"test-research-"+Date.now(),type:"research",title:"🔬 매일 연구 웹알림 테스트",
-      body:"무매·5년 플랜 매일 연구 결과 알림이 정상 연결되었습니다.",
+      body:"무매·5년 플랜·텐배거(지피티·클로드) 연구 결과 알림이 정상 연결되었습니다.",
       url:RESEARCH_APP,createdAt:new Date().toISOString()
     }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
@@ -514,7 +519,7 @@ export class PresaleAlertStore{
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,200)).filter(Boolean).slice(0,5):[];
     const name={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic];
     const trade={id,type:topic,stage,createdAt:new Date().toISOString(),
-      title:(stage==="buy"?"🟢 ":"🔴 ")+name+" 모의 "+(stage==="buy"?"매수":"매도")+" 타이밍",
+      title:"[지피티 연구 "+name+"] "+(stage==="buy"?"🟢 ":"🔴 ")+"모의 "+(stage==="buy"?"매수":"매도")+" 타이밍",   // 2026-10-13: 모든 연구 메뉴 같은 머리말
       body:[date,time,...lines].filter(Boolean).join(" · ").slice(0,245),url:BASE_APP+"/scalping?strategy="+topic};
     // 송신 중인 같은 eventId 중복 요청 차단. 성공 응답 전 실패 건은 재시도 가능하도록 해제한다.
     await this.state.storage.put(claimKey,{status:"sending",at:trade.createdAt,sentKeys:[...delivered]});
@@ -628,18 +633,38 @@ export class PresaleAlertStore{
   }
   /* 매일 연구 결과 알림 — 감시키를 아는 호출(GitHub Actions)만 게시한다. 같은 날 같은 요약은 한 번만 보낸다. */
   async researchNote(request){
+    // Empty web pushes read latest:research: serialize studies so another note
+    // cannot replace that summary halfway through one topic's delivery.
+    const pending=(this.researchQueue||Promise.resolve()).catch(()=>{}).then(()=>this.deliverResearchNote(request));
+    this.researchQueue=pending;
+    return pending;
+  }
+  async deliverResearchNote(request){
     if(!this.env.MONITOR_KEY||request.headers.get("x-monitor-key")!==this.env.MONITOR_KEY)
       return json(request,{ok:false,error:"unauthorized"},401);
     const b=await request.json().catch(()=>null);
     const date=clean(b&&b.date,10),body=clean(b&&b.body,240),found=!!(b&&b.discovery);
+    const study=clean(b&&b.study,30)||"im_plan",spec=Object.hasOwn(RESEARCH_STUDIES,study)?RESEARCH_STUDIES[study]:null;
+    if(!spec)return json(request,{ok:false,error:"unknown study"},400);
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!body)return json(request,{ok:false,error:"date·body required"},400);
-    const id="research:"+date+":"+(await hashText(body)).slice(0,12);
+    const stage=spec.trade?clean(b&&b.stage,8):"";
+    if(spec.trade&&!Object.hasOwn(RESEARCH_STAGE,stage))return json(request,{ok:false,error:"stage required (buy·sell·both)"},400);
+    const id="research:"+(study==="im_plan"?"":study+":")+date+":"+(await hashText(body)).slice(0,12);
     if(await this.state.storage.get("sent:"+id))return json(request,{ok:true,skipped:true,reason:"이미 보낸 연구 요약",id});
-    const alert={id,type:"research",title:(found?"★ ":"🔬 ")+"무매·5년 플랜 연구 "+date.slice(5).replace("-","/")+(found?" — 발견":""),
-      body,url:RESEARCH_APP,createdAt:new Date().toISOString()};
-    await this.recordAlert(alert);
+    const claim="research-delivery:"+id,prev=await this.state.storage.get(claim);
+    if(prev?.status==="sending"&&Date.now()-Date.parse(prev.at)<120000)return json(request,{ok:false,retryable:true,error:"delivery in progress"},409);
+    const delivered=new Set(prev?.sentKeys||[]);
+    const alert={id,type:"research",study,title:spec.trade?spec.name+" "+RESEARCH_STAGE[stage]+" "+date.slice(5).replace("-","/")
+        :(found?"★ ":"🔬 ")+spec.name+" "+date.slice(5).replace("-","/")+(found?" — 발견":""),
+      body,url:spec.url,createdAt:new Date().toISOString()};
+    await this.state.storage.put(claim,{status:"sending",at:alert.createdAt,sentKeys:[...delivered]});
+    let delivery;
+    try{await this.recordAlert(alert);delivery=await this.notifyAll("research",delivered);}
+    catch(e){await this.state.storage.put(claim,{status:"delivery_failed",at:alert.createdAt,sentKeys:[...delivered]});return json(request,{ok:false,retryable:true,error:String(e.message||e)},502);}
+    const sentKeys=[...new Set([...delivered,...(delivery.sentKeys||[])])];
+    await this.state.storage.put(claim,{status:delivery.failed>delivery.removed?"delivery_failed":"sent",at:alert.createdAt,sentKeys});
     await this.state.storage.put("lastCheck:research",alert.createdAt);
-    const delivery=await this.notifyAll("research");
+    if(delivery.failed>delivery.removed)return json(request,{ok:false,retryable:true,id,delivery,error:"research delivery incomplete"},502);
     await this.state.storage.put("sent:"+id,alert.createdAt);
     return json(request,{ok:true,id,alert,delivery});
   }
@@ -663,7 +688,7 @@ export class PresaleAlertStore{
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
       }
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.3.0",subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.5.0",subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}

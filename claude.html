@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>JK 투자 — 단타(클로드)</title>
+<title>JK 투자 — 연구(클로드)</title>
 <style>
 :root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;--text:#e8ecf7;--dim:#9aa6c9;--faint:#6f7ba0;--accent:#d9825b;--green:#36d399;--red:#f87b8c;--gold:#f5c451;--vio:#8b8cf0}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}body{font-size:14px;line-height:1.55}a{color:inherit}
@@ -38,13 +38,16 @@ table.fit.arena td.nm,table.fit.arena th:nth-child(2){position:sticky;left:20px;
 table.fit td:first-child,table.fit th:first-child{position:sticky;left:0;z-index:1;background:var(--surf)}
 .daily-result-label,.daily-result-goal,.tag{font-size:11px}.daily-result-list{grid-template-columns:1fr}
 table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog tr{padding:8px 0;border-bottom:1px solid var(--border)}table.alog td{display:inline;border:0;padding:0 8px 0 0}table.alog td:last-child{display:block;padding:3px 0 0}}
+.tbf-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin-top:8px}.tbf-item{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:12.5px}
+.tbf-item .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.tbf-item .top b{font-size:14px}.tbf-item .r{font-weight:900;font-size:15px;white-space:nowrap}.tbf-item .m{color:var(--dim);margin-top:3px}.tbf-item .s{margin-top:4px;font-size:12px}
+.tbf-ev>div{padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px}.tbf-ev .t{color:var(--faint);font-size:11px;margin-top:2px}
 #gate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
 #gate .gbox{max-width:380px;width:100%}#gate .glogo{font-size:26px;font-weight:800;margin-bottom:6px}#gate .gsub{color:var(--dim);font-size:13px;margin-bottom:24px;line-height:1.6}
 #gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px}
 </style>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js?v=1.0.1" defer></script>
+<script src="/jk-ui.js?v=1.0.3" defer></script>
 <script type="module">
   // 소유자만 보는 화면 — 단타(GPT)와 같은 Google 로그인 · /api/owner 판정. 자료 API 도 로그인 토큰 없이는 401.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
@@ -58,7 +61,8 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
 </script>
 <link rel="stylesheet" href="/jk-mobile.css?v=1.0.1">
 
-<script src="/claude-push-client.js?v=1.0.0" defer></script>
+<script src="/claude-push-client.js?v=1.0.1" defer></script>
+<script src="/claude-tenbagger.js?v=1.0.0" defer></script>
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/jk-invest-192.png?v=1.0.0">
@@ -69,13 +73,13 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
 <body>
 <div id="gate"><div class="gbox">
   <div class="glogo">JK <span class="v">투자</span></div>
-  <div class="gsub" id="gate_sub">단타(클로드)는 <b>소유자 계정</b>만 볼 수 있습니다.</div>
+  <div class="gsub" id="gate_sub">연구(클로드)는 <b>소유자 계정</b>만 볼 수 있습니다.</div>
   <button id="gbtn" onclick="googleLogin()">Google로 로그인</button>
   <div class="sub" id="gate_err" style="margin-top:14px;min-height:16px;color:var(--red)"></div>
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.15.0</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.17.1</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -84,9 +88,10 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
       <a href="/"><span class="mi">🏠</span>운영</a>
       <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
       <a href="/backtest"><span class="mi">📊</span>백테</a>
-      <a href="/scalping"><span class="mi">⚡</span>단타(지피티)</a>
-      <a href="/claude" class="cur"><span class="mi">🤖</span>단타(클로드)</a>
+      <a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a>
+      <a href="/claude" class="cur"><span class="mi">🤖</span>연구(클로드)</a>
       <a href="/paper"><span class="mi">🧪</span>모의</a>
+      <a href="/tenbagger"><span class="mi">🔟</span>텐배거</a>
       <a href="/ipo"><span class="mi">🎯</span>공모주</a>
       <a href="/realestate"><span class="mi">🏢</span>부동산</a>
       <a href="/job"><span class="mi">💼</span>JOB</a>
@@ -103,6 +108,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
     <button class="tab" data-tab="daytrading" onclick="showTab('daytrading')">📈 데이트레이딩</button>
     <button class="tab" data-tab="crypto" onclick="showTab('crypto')">₿ 비트코인</button>
     <button class="tab" data-tab="soxl" onclick="showTab('soxl')">⚡ SOXL</button>
+    <button class="tab" data-tab="tenbagger" onclick="showTab('tenbagger')">🔟 텐배거</button>
     <button class="tab" data-tab="all" onclick="showTab('all')">🎯 전체 계좌</button>
     <button class="tab" data-tab="duel" onclick="showTab('duel')">🆚 GPT 대결</button>
   </div>
@@ -445,6 +451,17 @@ function statusBar(){
     "<button class='ghostbtn' style='padding:3px 9px;font-size:11.5px' onclick='pushToggle()'>"+(PUSH.state==="on"?"🔔 매매 알림 켜짐":PUSH.state==="busy"?"🔔 설정 중…":"🔕 매매 알림 켜기")+"</button></div>";
 }
 var J=null,TAB="today";
+// 직접 링크(?tab=tenbagger · #tenbagger) — 연구 알림을 누르면 그 탭으로 연다
+(function(){try{var q=new URLSearchParams(location.search).get("tab")||location.hash.slice(1);if(/^(today|opening|daytrading|crypto|soxl|all|duel|tenbagger)$/.test(q))TAB=q}catch(e){}})();
+// 🔟 텐배거 전향 시험 — 자료는 공개 가격 연구(/api/tenbagger-claude), 탭을 처음 열 때 한 번 받는다
+var TBF=null,TBF_BUSY=false;
+async function loadTbf(){
+  if(TBF_BUSY)return;TBF_BUSY=true;
+  try{var r=await fetch("/api/tenbagger-claude",{cache:"no-store",headers:{Accept:"application/json"}});var j=await r.json();TBF=r.ok?j:{ok:false,error:j.error||("HTTP "+r.status)}}
+  catch(e){TBF={ok:false,error:String(e&&e.message||e)}}
+  finally{TBF_BUSY=false}
+  if(TAB==="tenbagger")render();
+}
 // 🔔 매수·매도 웹 알림 — 서비스워커(/claude-sw.js)로 받는다. 보내는 쪽은 Worker 가 5분마다 실시간 자료로 새 매수·매도를 찾아 보낸다.
 var PUSH={state:"off"};
 // 켜기/끄기는 claude-push-client.js 하나로 한다(설정 → 알림 화면도 같은 것을 쓴다)
@@ -563,7 +580,13 @@ function stackTables(root){
 }
 var __stackT=null;window.addEventListener("resize",function(){clearTimeout(__stackT);__stackT=setTimeout(function(){stackTables(document.getElementById("body"))},200)});
 function render(){
-  var body=document.getElementById("body");if(!J)return;
+  var body=document.getElementById("body");
+  if(TAB==="tenbagger"){                       // 단타 자료(J) 없이도 열린다
+    if(!TBF)loadTbf();
+    body.innerHTML=window.ClaudeTenbagger?ClaudeTenbagger.view(TBF):"<div class='loading'>불러오는 중…</div>";
+    stackTables(body);return;
+  }
+  if(!J)return;
   var gd=J.gapdown||{},et=J.etf||{},wl=J.watchlist||{},lab=J.lab||{tabs:{}},T=lab.tabs||{},html="";
   if(TAB==="today"){
     html+=todayPage(lab);

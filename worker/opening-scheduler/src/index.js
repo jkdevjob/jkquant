@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { krxDay } from "../../../functions/api/_krx_calendar.js";   // KRX 휴장일 — 주문 경로(Pages)와 같은 목록
-import { pushEvents, sendPush, vapidPublic } from "../../../functions/api/_claude_push.js";   // 단타(클로드) 매수·매도 웹 알림
+import { pushEvents, sendPush, vapidPublic, alertText } from "../../../functions/api/_claude_push.js";   // 단타(클로드) 매수·매도 알림(웹 알림 · 텔레그램 같은 사건)
 
 // Cloudflare Worker — jkquant opening scheduler
 // Primary realtime trigger for the opening strategy.
@@ -143,6 +143,11 @@ export class OpeningSignalStore extends DurableObject {
       for(const k of Object.keys(sent))if(now-(+sent[k].at||0)>10*864e5)delete sent[k];
       await st.put("pushSent",sent);
       return json({ok:true,fresh});
+    }
+    if(op==="tg"){                                      // 텔레그램 결과(sent · fail · unknown)와 시도 횟수 — 거절(fail)만 다음 감시에서 다시 보낸다
+      const sent=(await st.get("pushSent"))||{},x=sent[String(b.id||"")];
+      if(x){x.tg=String(b.result||"");x.tgTries=(+x.tgTries||0)+1;await st.put("pushSent",sent);}
+      return json({ok:!!x});
     }
     return {ok:false,error:"push op",status:404};
   }
@@ -482,10 +487,6 @@ async function runMinute(controller,env){
 // Workers 무료 요금제는 계정 전체 cron 5개가 한도라 이 Worker 는 cron 한 줄만 쓴다(wrangler.jsonc).
 // "5-31,40,56 0,6,23 * * *" 로 필요한 시각을 모두 덮고, 실제로 할 일은 한국시각으로 여기서 고른다.
 // 토요일 09:05 — 금요일 밤(23:40) 장부로 이번 주 결과를 보낸다(코인 금요일 하루는 토 09시에 끝나 다음 주 계산에 들어감).
-export function claudeWeeklyDue(ms){
-  const p=kstParts(ms),wd=new Date(Date.parse(p.date+"T00:00:00Z")).getUTCDay();
-  return wd===6&&p.hh===9&&p.mm===5;
-}
 export function scheduleRoute(ms){
   const p=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
   const g=t=>p.find(x=>x.type===t)?.value||"";
@@ -554,25 +555,16 @@ async function sendDuelSummary(env,date){
     return null;
   }
 }
-async function claudeTelegram(env,date,kind){
-  try{
-    const r=await fetch(baseUrl(env)+"/api/claude-telegram",{method:"POST",
-      headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},body:JSON.stringify({kind,date})});
-    const j=await r.json().catch(()=>({}));
-    console.log(JSON.stringify({type:"claude_telegram",kind,date,ok:!!j.ok,duplicate:!!j.duplicate,error:j.error||null}));
-  }catch(e){console.error(JSON.stringify({type:"claude_telegram_failed",kind,date,error:String(e.message||e)}));}
+async function claudeAlertsNow(env){
+  try{await claudePushWatch(env);}
+  catch(e){console.error(JSON.stringify({type:"claude_alert_now_failed",error:String(e.message||e)}));}
 }
-// ── 단타(클로드) 전략별 하루 마감 → Telegram ──
-// 1) Pages 가 그 시점까지의 원본으로 마감 장부를 계산 → 2) Durable Object(claude:{거래일})에 한 번만 저장(먼저 저장된 것이 정본)
-// → 3) 저장된 장부로 메시지를 만들어 보낸다. 보냄·모름은 기록해 다시 보내지 않고, 텔레그램이 거절한 경우만 최대 5번 다시 시도한다.
-export const CLAUDE_TG_MAX_FAILS=5;
-export function claudeSendState(ledger,strategy){
+// ── 단타(클로드) 전략별 하루 마감 장부 ──
+// Pages 가 그 시점까지의 원본으로 마감 장부를 계산 → Durable Object(claude:{거래일})에 한 번만 저장(먼저 저장된 것이 정본).
+// 밤 계산(data/claude-live 사본)과 GPT 대결 비교가 이 장부를 읽는다. 사용자 요청(2026-10-13)으로 마감 결과 텔레그램은 보내지 않는다.
+export function claudeCloseRecord(ledger,strategy){
   const ev=(ledger&&Array.isArray(ledger.events)?ledger.events:[]);
-  const has=id=>ev.some(e=>e&&e.id===id);
-  const fails=ev.filter(e=>e&&String(e.id).startsWith("tg:"+strategy+":fail:")).length;
-  const rec=(ev.find(e=>e&&e.id==="close:"+strategy)||{}).payload||null;
-  return {done:has("tg:"+strategy+":sent")||has("tg:"+strategy+":unknown"),fails,record:rec,
-    canSend:!(has("tg:"+strategy+":sent")||has("tg:"+strategy+":unknown"))&&fails<CLAUDE_TG_MAX_FAILS};
+  return (ev.find(e=>e&&e.id==="close:"+strategy)||{}).payload||null;
 }
 async function claudeAppend(env,date,id,stage,payload,ms){
   const event={id,date,capturedAt:new Date().toISOString(),targetHm:kstHm(ms),strategy:"claude_day",stage,payload};
@@ -583,38 +575,19 @@ async function claudePost(env,body){
   const r=await fetch(baseUrl(env)+"/api/claude-telegram",{method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},body:JSON.stringify(body)});
   return r.json().catch(()=>({ok:false,error:"HTTP "+r.status,definite:r.status<500}));
 }
-async function claudeDayClose(env,strategy,date,ms,extra={}){
+async function claudeDayClose(env,strategy,date,ms){
   try{
-    let L=await readLedger(env,date,"claude");
-    let s=claudeSendState(L,strategy);
-    if(!s.canSend)return s;
-    if(!s.record&&strategy!=="overview"){
-      const c=await claudePost(env,{op:"close",strategy,date});
-      if(!c.ok||!c.result){console.error(JSON.stringify({type:"claude_close_failed",strategy,date,error:c.error||""}));return s;}
-      await claudeAppend(env,date,"close:"+strategy,"close",c.result,ms);
-      L=await readLedger(env,date,"claude");s=claudeSendState(L,strategy);          // 먼저 저장된 장부가 정본
-    }
-    let res;
-    try{res=await claudePost(env,{op:"send",strategy,date,result:s.record,records:extra.records});}
-    catch(e){res={ok:false,definite:false,error:String(e.message||e)};}
-    const tag=res.ok?"sent":res.definite?"fail:"+(s.fails+1):"unknown";
-    await claudeAppend(env,date,"tg:"+strategy+":"+tag,"telegram",{ok:!!res.ok,messageId:res.messageId||null,error:res.error||null},ms);
-    console.log(JSON.stringify({type:"claude_day_telegram",strategy,date,result:tag,error:res.error||null}));
-    return s;
+    if(claudeCloseRecord(await readLedger(env,date,"claude"),strategy))return true;     // 이미 저장
+    const c=await claudePost(env,{op:"close",strategy,date});
+    if(!c.ok||!c.result){console.error(JSON.stringify({type:"claude_close_failed",strategy,date,error:c.error||""}));return false;}
+    await claudeAppend(env,date,"close:"+strategy,"close",c.result,ms);
+    console.log(JSON.stringify({type:"claude_day_close",strategy,date}));
+    return true;
   }catch(e){console.error(JSON.stringify({type:"claude_day_error",strategy,date,error:String(e.message||e)}));return null;}
 }
 async function claudeKrClose(env,date,ms){
   await claudeDayClose(env,"opening",date,ms);
   await claudeDayClose(env,"daytrading",date,ms);
-  // 전일·당일 요약: 각 전략의 마지막 마감 장부(코인은 한국 00:00, SOXL 은 미국장 마감 기준)
-  const recs={};
-  for(const [k,back] of [["opening",0],["daytrading",0],["crypto",1],["soxl",1]]){
-    for(let i=back;i<=back+4&&!recs[k];i++){
-      const d=kstParts(ms-i*864e5).date;
-      try{const s=claudeSendState(await readLedger(env,d,"claude"),k);if(s.record)recs[k]=s.record;}catch(e){}
-    }
-  }
-  await claudeDayClose(env,"overview",date,ms,{records:recs});
 }
 export function nyDate(ms){
   return new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(ms));
@@ -642,7 +615,6 @@ async function runGapdown(stage,controller,env){
     if(hol==="notice"){
       try{await gapdownRecord(env,date,"preopen",{stage:"preopen",date,decisionReason:"krx_holiday",holiday:true,picks:[],orders:[],candidates:0},ms);}
       catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"holiday",error:String(e.message||e)}));}
-      await claudeTelegram(env,date,"preopen");
     }
     console.log(JSON.stringify({type:"gapdown_holiday",date,stage,action:hol}));
     return;
@@ -678,7 +650,7 @@ async function runGapdown(stage,controller,env){
     try{await gapdownRecord(env,date,"preopen",res,ms);}
     catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"preopen",error:String(e.message||e)}));}
     console.log(JSON.stringify({type:"gapdown_preopen",date,picks:(res.picks||[]).length,orders:(res.orders||[]).length,reason:res.decisionReason||res.error||""}));
-    await claudeTelegram(env,date,"preopen");
+    await claudeAlertsNow(env);                      // ① 매수 · ② 매도 기록 직후 바로 알림(5분 감시를 기다리지 않게)
     return;
   }
   let ledger=null;
@@ -694,8 +666,8 @@ async function runGapdown(stage,controller,env){
   }
   // ② ETF: 15:21 종가 매수 판단(매일) · 15:40 체결 조회(매일)
   await runEtf(env,date,stage==="close"?"etf_buy":"etf_reconcile",ms);
-  if(stage==="close")await claudeTelegram(env,date,"etfbuy");
-  else await claudeKrClose(env,date,ms);            // 15:40 체결조회로 ①② 장부가 마감된 뒤 전략별 결과 → 전일·당일 요약
+  if(stage!=="close")await claudeKrClose(env,date,ms);   // 15:40 체결조회로 ①② 장부가 마감된 뒤 전략별 마감 장부 저장(텔레그램 없음)
+  await claudeAlertsNow(env);                      // ② 매수(15:21) · ① 매도 체결(15:40) 직후 바로 알림
 }
 
 export const CLAUDE_CONFIG_KEY="main";
@@ -726,7 +698,17 @@ async function pushBroadcast(env,msgs,call=(op,b)=>pushStore(env,op,b)){
   if(gone.length)await call("drop",{endpoints:gone});
   return {subs:subs.length,sent:res,dropped:gone.length};
 }
-export async function claudePushWatch(env,nowMs=Date.now(),call=(op,b)=>pushStore(env,op,b)){
+// 텔레그램 — Pages(/api/claude-telegram op=event)가 보낸다. 결과: sent(보냄) · fail(텔레그램이 거절 → 다시 보내도 됨) · unknown(보냈는지 모름 → 다시 안 보냄)
+export const CLAUDE_TG_TRIES=3;
+async function claudeTgSend(env,m){
+  try{
+    const r=await fetch(baseUrl(env)+"/api/claude-telegram",{method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
+      body:JSON.stringify({op:"event",text:alertText(m)})});
+    const j=await r.json().catch(()=>null);
+    return r.ok&&j&&j.ok?"sent":j&&j.definite?"fail":"unknown";
+  }catch(e){return "unknown";}
+}
+export async function claudePushWatch(env,nowMs=Date.now(),call=(op,b)=>pushStore(env,op,b),tg=m=>claudeTgSend(env,m)){
   const r=await fetch(baseUrl(env)+"/api/claude-live",{headers:{"x-monitor-key":env.MONITOR_KEY,Accept:"application/json"}});
   const live=await r.json().catch(()=>null);
   if(!r.ok||!live||!live.ok)throw new Error("claude-live "+r.status);
@@ -735,10 +717,17 @@ export async function claudePushWatch(env,nowMs=Date.now(),call=(op,b)=>pushStor
   if(!evs.length)return {events:0};
   const {fresh}=await call("claim",{events:evs});           // 먼저 기록 — 보내다 실패해도 같은 알림을 되풀이하지 않는다
   const msgs=evs.filter(e=>fresh.includes(e.id));
-  if(!msgs.length)return {events:evs.length,fresh:0};
-  const out=await pushBroadcast(env,msgs,call);
-  console.log(JSON.stringify({type:"claude_push",fresh:msgs.map(m=>m.id),...out}));
-  return {events:evs.length,fresh:msgs.length,...out};
+  const again=evs.filter(e=>!fresh.includes(e.id)&&sent[e.id]&&sent[e.id].tg==="fail"&&(+sent[e.id].tgTries||0)<CLAUDE_TG_TRIES);
+  if(!msgs.length&&!again.length)return {events:evs.length,fresh:0};
+  const out=msgs.length?await pushBroadcast(env,msgs,call):{subs:0,sent:[],dropped:0};   // 웹 알림은 처음 한 번만
+  const telegram=[];
+  for(const m of [...msgs,...again]){                       // 텔레그램은 같은 사건 · 같은 머리말 — 거절된 것만 최대 3번까지
+    const result=await tg(m);
+    telegram.push({id:m.id,result});
+    await call("tg",{id:m.id,result});
+  }
+  console.log(JSON.stringify({type:"claude_push",fresh:msgs.map(m=>m.id),...out,telegram}));
+  return {events:evs.length,fresh:msgs.length,...out,telegram};
 }
 
 export default {
@@ -746,9 +735,6 @@ export default {
     const at=Number(controller.scheduledTime)||Date.now();
     ctx.waitUntil(pushStore(env,"ensure",{}).catch(()=>null));   // 알림 감시 알람이 살아 있는지만 확인(감시는 저장소 알람이 5분마다 — 장 일정과 따로)
     const route=scheduleRoute(at);
-    // 09:05 KST 매일(주말 포함 — 코인은 쉬지 않는다): 코인 하루 마감·미국 지난 세션 결과 알림
-    if(claudeWeeklyDue(at))ctx.waitUntil(claudeTelegram(env,kstParts(at).date,"weekly"));
-
     const krRoute=route==="opening"||route==="claude_kr"||route==="duel"||(route&&route.startsWith("gapdown_"));
     if(krRoute){
       const date=kstParts(at).date;

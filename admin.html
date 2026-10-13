@@ -114,11 +114,10 @@ input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var
   padding-top:10px;padding-bottom:10px;
   vertical-align:middle;
 }
-#u_body .htable tbody td:first-child{
-  box-shadow:inset 0 -1px 0 var(--line);
-}
-#u_body .htable tbody tr:last-child td{
-  box-shadow:inset 0 -1px 0 var(--line);
+/* 고정 첫 칸(계정)은 행 선 + 불투명 바탕을 같이 칠한다. 예전엔 행 선만 칠해 jk-fit 의 바탕(100vmax 그림자)을 덮어써,
+   표를 옆으로 밀면 뒤 칸(신청·마지막 접속 날짜)이 계정 글자 위로 비쳐 겹쳐 보였다(2026-10-13 사용자 화면). */
+#u_body .htable tbody tr td:first-child{
+  box-shadow:inset 0 -1px 0 var(--line),inset 0 0 0 100vmax var(--jk-fit-bg,var(--panel));
 }
 #u_body .htable-wrap + .note{
   margin-top:12px;
@@ -147,7 +146,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 </style>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js?v=1.0.1" defer></script>
+<script src="/jk-ui.js?v=1.0.3" defer></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
@@ -192,7 +191,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.18</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.24</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -201,9 +200,10 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
         <a href="/"><span class="mi">🏠</span>운영</a>
                 <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
 <a href="/backtest"><span class="mi">📊</span>백테</a>
-        <a href="/scalping"><span class="mi">⚡</span>단타(지피티)</a>
-        <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
+        <a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a>
+        <a href="/claude"><span class="mi">🤖</span>연구(클로드)</a>
         <a href="/paper"><span class="mi">🧪</span>모의</a>
+        <a href="/tenbagger"><span class="mi">🔟</span>텐배거</a>
         <a href="/ipo"><span class="mi">🎯</span>공모주</a>
         <a href="/realestate"><span class="mi">🏢</span>부동산</a>
         <a href="/job"><span class="mi">💼</span>JOB</a>
@@ -735,12 +735,13 @@ function queueMenuSave(){
 function menuBase(){
   const src=(window.JKAccess&&JKAccess.MENU_ITEMS)||[
     {path:'/',label:'운영',mode:'public',order:10},{path:'/plan',label:'자산플랜',mode:'public',order:20},
-    {path:'/backtest',label:'백테',mode:'public',order:30},{path:'/scalping',label:'단타(지피티)',mode:'admin',order:40},
-    {path:'/claude',label:'단타(클로드)',mode:'admin',order:50},{path:'/paper',label:'모의',mode:'public',order:60},
+    {path:'/backtest',label:'백테',mode:'public',order:30},{path:'/scalping',label:'연구(지피티)',mode:'admin',order:40},
+    {path:'/claude',label:'연구(클로드)',mode:'admin',order:50},{path:'/paper',label:'모의',mode:'public',order:60},
+    {path:'/tenbagger',label:'텐배거',mode:'public',order:65},
     {path:'/ipo',label:'공모주',mode:'public',order:70},{path:'/realestate',label:'부동산',mode:'public',order:75},{path:'/job',label:'JOB',mode:'public',order:80},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
-  return src.map(x=>({path:x.path,label:x.label,mode:x.mode,order:x.order}));
+  return src.filter(x=>x.path!=='/tenbagger').map(x=>({path:x.path,label:x.label,mode:x.mode,order:x.order}));
 }
 function renderMenus(el){
   el.innerHTML='<div class="card"><h3><span class="dot"></span>공용 메뉴 관리</h3>'
@@ -751,7 +752,7 @@ function renderMenus(el){
     +'<div id="menuStatus" class="cfgstatus"></div>'
     +'<p class="note"><b>전체 숨김</b>: 메뉴에서 누구에게도 보이지 않습니다. 관리자는 주소를 직접 입력하면 열 수 있지만 일반 사용자는 직접 URL도 차단됩니다.<br>'
     +'<b>관리자만</b>: 관리자 메뉴에는 보이고 일반 사용자에게는 숨겨지며 직접 URL도 차단됩니다.<br>'
-    +'단타(지피티)·단타(클로드)·관리자는 기존 소유자 보안이 있으므로 공개로 낮추지 않고 <b>관리자만/전체 숨김</b>만 선택합니다.</p></div>';
+    +'연구(지피티)·연구(클로드)·관리자는 기존 소유자 보안이 있으므로 공개로 낮추지 않고 <b>관리자만/전체 숨김</b>만 선택합니다.</p></div>';
   loadMenus();
 }
 function menuModeOptions(r){

@@ -85,20 +85,20 @@ function item(topic,icon,name,desc){
   '</div>';
 }
 const NOTIFY_DEFS=[
-  {topic:"opening",href:"/scalping",icon:"⚡",name:"단타(지피티) · 시초가 매수·매도",
+  {topic:"opening",href:"/scalping",icon:"⚡",name:"연구(지피티) · 시초가 매수·매도",
     desc:"기준전략의 시초가 모의매수·매도 신호를 알립니다. 알림을 누르면 해당 전략 화면으로 이동합니다."},
-  {topic:"daytrading",href:"/scalping",icon:"📈",name:"단타(지피티) · 데이트레이딩 매수·매도",
+  {topic:"daytrading",href:"/scalping",icon:"📈",name:"연구(지피티) · 데이트레이딩 매수·매도",
     desc:"기준전략의 모의매수·매도 전환 시 알려줍니다."},
-  {topic:"crypto",href:"/scalping",icon:"₿",name:"단타(지피티) · 비트코인 매수·매도",
+  {topic:"crypto",href:"/scalping",icon:"₿",name:"연구(지피티) · 비트코인 매수·매도",
     desc:"KRW-BTC 기준전략 모의매수·매도 신호 알림입니다."},
-  {topic:"soxl",href:"/scalping",icon:"⚡",name:"단타(지피티) · SOXL 매수·매도",
+  {topic:"soxl",href:"/scalping",icon:"⚡",name:"연구(지피티) · SOXL 매수·매도",
     desc:"미국장 SOXL 기준전략의 모의매수·매도 신호를 알립니다."},
   {topic:"ipo",href:"/ipo",icon:"📈",name:"공모주·청약 일정",
    desc:"매일 오전 8:10경 청약 중·7일 내 청약 예정·당일 상장 종목과 공모가/경쟁률 기반 투자 조사 점수를 보내드립니다."},
   {topic:"presale",href:"/realestate",icon:"🏢",name:"대전·세종 신규분양",
    desc:"대전·세종 일반·무순위/잔여·임의공급 신규공고를 30분 간격으로 확인하고 분양가·주변 실거래 기반 점수로 안내합니다."},
-  {topic:"research",href:"/plan",icon:"🔬",name:"무매·5년 플랜 매일 연구",
-   desc:"매일 아침 자동 연구가 끝나면 시험한 아이디어와 결과(CAGR·MDD)를 알려드립니다. MDD↓·CAGR↑ 후보를 찾으면 제목에 ★ 발견으로 표시합니다."},
+  {topic:"research",href:"/scalping",icon:"🔬",name:"연구 결과 · 무매·플랜·텐배거",
+   desc:"기존 무매·5년 플랜 연구와 텐배거 전향 연구(지피티 고정 패턴 후보 · 클로드 고정 모형 20종목 모의 장부) 요약을 함께 받습니다. 텐배거는 실험이며 매수 추천·수익성 검증이 아닙니다."},
   {topic:"job",href:"/job",icon:"💼",name:"대전·세종 JOB 신규공고",
    desc:"30분마다 채용공고를 확인하고 새 공고가 있을 때만 알려줍니다."}
 ];

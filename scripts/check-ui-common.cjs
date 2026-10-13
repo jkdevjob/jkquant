@@ -5,7 +5,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=req
 const ROOT=path.join(__dirname,'..');
 const ui=fs.readFileSync(path.join(ROOT,'jk-ui.js'),'utf8');
 const html=fs.readFileSync(process.argv[2]||path.join(ROOT,'index.html'),'utf8');
-const PAGES=['index.html','backtest.html','plan.html','admin.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','settings.html'];
+const PAGES=['index.html','backtest.html','plan.html','admin.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','settings.html','tenbagger.html'];
 const results=[];let failed=0;
 function t(name,body){ try{ body(); results.push('PASS '+name); }catch(e){ failed++; results.push('FAIL '+name+' — '+(e&&e.message||e)); } }
 function fnOf(src,marker){const start=src.indexOf(marker);assert(start>=0,marker);let i=src.indexOf('{',start),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(start,i+1);}throw Error('unclosed '+marker);}
@@ -57,11 +57,11 @@ t('U2 자리 — 오른쪽 가장자리 · 화면 세로 가운데 · 모달(z-i
   assert(/#jkToTop\.on\{opacity:\.8;visibility:visible\}/.test(ui) && /opacity:0;visibility:hidden/.test(ui),'평소 숨김 · on 이면 보임');
   assert(/@media print\{#jkToTop\{display:none\}\}/.test(ui));
 });
-t('U3 모든 페이지(10개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
+t('U3 모든 페이지(11개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
   for(const f of PAGES){
     const s=fs.readFileSync(path.join(ROOT,f),'utf8');
-    assert.equal((s.match(/<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/g)||[]).length,1,f+' 한 번');
-    assert(/<script src="\/jk-access\.js"[^>]*><\/script>\n<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/.test(s),f+' jk-access 다음');
+    assert.equal((s.match(/<script src="\/jk-ui\.js\?v=1\.0\.3" defer><\/script>/g)||[]).length,1,f+' 한 번');
+    assert(/<script src="\/jk-access\.js"[^>]*><\/script>\n<script src="\/jk-ui\.js\?v=1\.0\.3" defer><\/script>/.test(s),f+' jk-access 다음');
   }
   const htmls=fs.readdirSync(ROOT).filter(f=>/\.html$/.test(f)).sort();
   assert.deepEqual(htmls,[...PAGES].sort(),'페이지가 늘면 여기에도 넣는다: '+htmls.join(','));
@@ -89,9 +89,11 @@ t('U5 자산플랜 맨 위 "다음 단계 조건" 카드를 뺐다 — 화면·�
 
 /* 전체메뉴 순서 — 관리자가 바꾼 순서(settings/siteMenu)가 첫 읽기가 늦거나 끊겨도 결국 메뉴에 붙는다 (2026-10-07 사용자 화면) */
 const acc=fs.readFileSync(path.join(ROOT,'jk-access.js'),'utf8');
-const HREFS=['/','/plan','/backtest','/scalping','/claude','/paper','/ipo','/realestate','/job','/admin'];
-const SAVED={'/':10,'/plan':20,'/paper':30,'/scalping':40,'/claude':50,'/backtest':60,'/ipo':70,'/realestate':80,'/job':90,'/admin':100};
-const ORDER_SAVED=Object.keys(SAVED).sort((a,b)=>SAVED[a]-SAVED[b]).join(',');
+const HREFS=['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'];
+const SAVED={'/':10,'/plan':20,'/paper':30,'/scalping':40,'/claude':50,'/backtest':60,'/ipo':70,'/realestate':80,'/job':90,'/admin':100};   // 텐배거가 생기기 전에 저장된 설정
+/* 저장된 설정에 텐배거가 없으면 '모의 바로 아래'(모의 +5)에 붙는다(jk-access.js MENU_ITEMS after:'/paper') */
+const ORDER_OF=cfg=>{ const o={...cfg}; if(!('/tenbagger' in o)) o['/tenbagger']=o['/paper']+5; return Object.keys(o).sort((a,b)=>o[a]-o[b]).join(','); };
+const ORDER_SAVED=ORDER_OF(SAVED);
 function menuDom(o={}){
   const pop={hidden:o.open?false:true, children:[], appendChild(a){ const i=this.children.indexOf(a); if(i>=0) this.children.splice(i,1); this.children.push(a); return a; },
              querySelectorAll(q){ return q==='a[href]'?this.children.slice():[]; }};
@@ -130,7 +132,7 @@ ta('U8 첫 읽기가 실패(끊김)하면 한 번 더 읽어 그 순서를 붙�
   await sleep(60);
   assert.equal(F.reads(),2,'한 번 더 읽었다'); assert.equal(D.order(),ORDER_SAVED,'다시 읽은 순서');
   const NEW={...SAVED,'/backtest':15};                                 // 관리자가 백테를 운영 바로 아래로 다시 옮겨 저장
-  const ORDER_NEW=Object.keys(NEW).sort((a,b)=>NEW[a]-NEW[b]).join(',');
+  const ORDER_NEW=ORDER_OF(NEW);
   const E=menuDom(), G=mkFb([()=>sleep(80).then(()=>menuDoc(SAVED)),()=>Promise.resolve(menuDoc(NEW))]);
   await E.A.applyMenuConfig(ADM,G.fb,{timeoutMs:15});                 // 느린 첫 읽기(옛 순서)
   await E.A.applyMenuConfig(ADM,G.fb,{force:true});                   // 저장 직후 새로 읽기
@@ -247,7 +249,9 @@ function cssRules(src,origin){
 }
 function mediaOk(m,W){ if(!m) return true; return m.split(',').some(q=>{ if(/print/.test(q)) return false; const fs=q.match(/\([^)]*\)/g)||[];
   return fs.every(f=>{ let x; if((x=/max-width:\s*(\d+)px/.exec(f))) return W<=+x[1]; if((x=/min-width:\s*(\d+)px/.exec(f))) return W>=+x[1]; return false; }); }); }
-function compound(c,el){ if(/[:\[]/.test(c)) return false; const tag=(c.match(/^[a-z][\w-]*/i)||[''])[0];
+function compound(c,el){ /* 가상 클래스는 :first-child · :last-child 만 안다(요소에 first/last 표시) — 그 밖은 맞지 않는 것으로 본다 */
+  let ok=true; c=c.replace(/:(first|last)-child/g,(_,k)=>{ if(!el[k]) ok=false; return ''; }); if(!ok) return false; if(c==='') return true;
+  if(/[:\[]/.test(c)) return false; const tag=(c.match(/^[a-z][\w-]*/i)||[''])[0];
   if(tag&&tag!=='*'&&tag.toLowerCase()!==el.tag) return false;
   return (c.match(/#[\w-]+/g)||[]).every(x=>el.id===x.slice(1)) && (c.match(/\.[\w-]+/g)||[]).every(x=>el.cls.includes(x.slice(1))); }
 function selMatch(sel,chain){            // chain: 뿌리 → 대상
@@ -257,7 +261,7 @@ function selMatch(sel,chain){            // chain: 뿌리 → 대상
     if(comb) return ci>0&&go(next,ci-1); for(let j=ci-1;j>=0;j--) if(go(next,j)) return true; return false; };
   return go(parts.length-1,chain.length-1);
 }
-function specOf(sel){ const ids=(sel.match(/#[\w-]+/g)||[]).length, cls=(sel.match(/\.[\w-]+/g)||[]).length;
+function specOf(sel){ const ids=(sel.match(/#[\w-]+/g)||[]).length, cls=(sel.match(/\.[\w-]+/g)||[]).length+(sel.match(/:(first|last)-child/g)||[]).length; sel=sel.replace(/:(first|last)-child/g,'');
   const tags=(sel.replace(/[#.][\w-]+/g,' ').replace(/>/g,' ').match(/[a-z][\w-]*/gi)||[]).length; return ids*1e4+cls*100+tags; }
 function computed(rules,chain,prop,W){
   let best=null;
@@ -325,6 +329,23 @@ t('U14 모의 성과 표 고정 첫 칸 — 가로줄은 본문 칸과 같은 1p
   assert(!/inset\s+0\s+-?1px/.test(sh),'가로 그림자 줄 없음: '+sh);
   assert(/inset\s+-1px\s+0\s+0\s+var\(--line\)/.test(sh),'세로 경계는 둔다');
   assert(/\.htable td\{[^}]*border-bottom:1px solid var\(--line\)/.test(html),'가로줄은 칸 아래 테두리');
+});
+t('U15 관리자 > 이용 승인 표 — 폰에서 옆으로 밀어도 고정 첫 칸(계정)에 불투명 바탕이 칠해져 뒤 칸 날짜가 비치지 않는다 · 행 선은 그대로(마지막 행 포함)',()=>{
+  const ad=fs.readFileSync(path.join(ROOT,'admin.html'),'utf8'), mob=fs.readFileSync(path.join(ROOT,'jk-mobile.css'),'utf8');
+  const fitRule=(ui.match(/'(table\.jk-fit tr>:first-child\{[^}]*\})'/)||[])[1]; assert(fitRule,'jk-fit 고정 첫 칸 규칙');
+  const styles=[...ad.matchAll(/<style>([\s\S]*?)<\/style>/g)].map(m=>m[1]).join('\n');
+  const rules=[...cssRules(mob,'jk-mobile'),...cssRules('@media (max-width:760px){'+fitRule+'}','jk-ui'),...cssRules(styles,'admin')];
+  const E=(tag,id,cls,x)=>Object.assign({tag,id:id||'',cls:cls||[]},x||{});
+  const tbl=[E('html'),E('body'),E('div','',['wrap']),E('div','',['layout']),E('main','body',['body']),E('div','',['card']),E('div','u_body'),E('div','',['htable-wrap']),E('table','',['htable','jk-fit']),E('tbody')];
+  const cell=(rowLast,first)=>[...tbl,E('tr','',[],{last:rowLast}),E('td','',[],{first})];
+  const v=(c,p,W)=>{ const b=computed(rules,c,p,W); return b&&b.v; };
+  for(const last of [false,true]){
+    const sh=v(cell(last,true),'box-shadow',375);
+    assert.equal(v(cell(last,true),'position',375),'sticky',`고정 첫 칸(${last?'마지막 행':'중간 행'})`);
+    assert(/inset 0 0 0 100vmax var\(--jk-fit-bg/.test(sh),`불투명 바탕이 빠지면 밀린 날짜가 비친다(${last?'마지막 행':'중간 행'}): ${sh}`);
+    assert(/inset 0 -1px 0 var\(--line\)/.test(sh) && sh.indexOf('-1px')<sh.indexOf('100vmax'),'행 선이 바탕 위에(먼저) 그려진다: '+sh);
+  }
+  assert.equal(v(cell(false,false),'box-shadow',375),'inset 0 -1px 0 var(--line)','다른 칸은 행 선만');
 });
 Promise.all(PENDING).then(()=>{
   console.log(results.join('\n'));

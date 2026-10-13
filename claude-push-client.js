@@ -11,7 +11,7 @@ async function api(getToken,body){
   if(body)h["content-type"]="application/json";
   var r=await fetch("/api/claude-push",body?{method:"POST",headers:h,body:JSON.stringify(body)}:{headers:h});
   var j=await r.json().catch(function(){return {}});
-  if(r.status===401)throw new Error("단타(클로드) 알림은 소유자 계정으로 로그인해야 켤 수 있습니다.");
+  if(r.status===401)throw new Error("연구(클로드) 알림은 소유자 계정으로 로그인해야 켤 수 있습니다.");
   if(!r.ok||j.ok===false)throw new Error(j.error||("HTTP "+r.status));
   return j;
 }

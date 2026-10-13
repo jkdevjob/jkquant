@@ -39,7 +39,7 @@ async function sendTelegram(env,title,lines){
   if(!token||!chatId)throw new Error("Telegram 환경변수 없음");
   const r=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({chat_id:chatId,text:"🔥 "+title+"\n\n"+lines.join("\n"),disable_web_page_preview:true})
+    body:JSON.stringify({chat_id:chatId,text:title+"\n\n"+lines.join("\n"),disable_web_page_preview:true})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error("Telegram 전송 실패: "+(j.description||r.status));
@@ -205,13 +205,13 @@ export async function onRequestGet({request,env}){
     // 스케줄러가 응답을 먼저 영구 보관하고, 알림 실패가 있으면 VTS 실행은 안전하게 건너뛴다.
     if(buys.length){
       try{
-        const t=await sendTelegram(env,"시초가 모의 매수 신호 · "+String(liveTargetHm).padStart(4,"0"),buyLines(buys));
+        const t=await sendTelegram(env,"[지피티 연구 시초가] 🟢 모의 매수 신호 · "+String(liveTargetHm).padStart(4,"0"),buyLines(buys));
         telegram.buySent=true;telegram.buyMessageId=t.messageId||null;
       }catch(e){telegram.buyError=String(e.message||e).slice(0,240);}
     }
     if(sells.length){
       try{
-        const t=await sendTelegram(env,"시초가 모의 매도 신호 · "+String(liveTargetHm).padStart(4,"0"),sellLines(sells));
+        const t=await sendTelegram(env,"[지피티 연구 시초가] 🔴 모의 매도 신호 · "+String(liveTargetHm).padStart(4,"0"),sellLines(sells));
         telegram.sellSent=true;telegram.sellMessageId=t.messageId||null;
       }catch(e){telegram.sellError=String(e.message||e).slice(0,240);}
     }

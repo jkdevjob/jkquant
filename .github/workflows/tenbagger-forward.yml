@@ -1,0 +1,72 @@
+name: 텐배거 GPT 전향 모의 연구
+
+on:
+  schedule:
+    - cron: "30 10 * * 1-5" # 19:30 KST · 마감 후 공개 KRX 자료
+    - cron: "30 23 * * 0-4" # 08:30 KST · 공개 자료 발표 지연 보완
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/tenbagger-forward.yml"
+      - "scripts/tenbagger_forward.py"
+
+permissions:
+  contents: write
+concurrency:
+  group: tenbagger-forward
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --quiet numpy pandas pyarrow
+      - name: 고정 패턴 검사·등록 후 새 세션만 관찰
+        run: python .app/scripts/tenbagger_forward.py --cache /tmp/tenbagger-forward-inputs --seed .app/data/tenbagger/gpt/forward-state-1.0.0.json
+      - name: 원천 자료 보관 (코드·후보와 분리)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenbagger-forward-inputs-${{ github.run_id }}
+          path: /tmp/tenbagger-forward-inputs/*-*.parquet
+          retention-days: 90
+      - name: 날짜별 실험 기록·상태 저장
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/tenbagger-forward
+          if ! git diff --cached --quiet; then
+            git commit -m "data: tenbagger prospective research [skip ci]"
+            bash .app/scripts/push-scalping-data.sh
+          fi
+      - name: 기존 research 구독 기기에 일일 요약 (일부 실패 기기만 재시도)
+        env:
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$MONITOR_KEY" ] || { echo "AUTOTRADE_KEY 미설정"; exit 1; }
+          WORKER=$(node -e 'console.log(require("./.app/data/realestate/gpt/push-config.json").workerUrl)')
+          for attempt in 1 2 3 4; do
+            if curl -sf --max-time 40 -X POST "$WORKER/research-note" -H "content-type: application/json" -H "x-monitor-key: $MONITOR_KEY" --data-binary @data/tenbagger-forward/note.json -o /tmp/research-delivery.json; then
+              cat /tmp/research-delivery.json
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "연구 기록은 저장됨 · 웹알림 실패"; exit 1
