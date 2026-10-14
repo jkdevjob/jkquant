@@ -764,6 +764,53 @@ t("오늘 탭 전일·당일 칸(밤 확정 전 값): ① 마감 장부·장중 
   assert.equal(LV.soxlDayCell({ ...nx, basedOn: "2026-10-13" }, q4, 0.5), null);                             // 밤 계산이 이미 확정한 세션
   assert.equal(LV.soxlDayCell({ ...nx, holding: false }, q4, 0.5).cell.v, "no_trade");
 });
+t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마다 days 칸 — ① 어제 마감 장부 −0.885 · 오늘 장중 +7.27 / ② 어제 −5.953 · 오늘 매매 없음 / ③ 쉼 / ④ 밤 계산 확정분 없음", async () => {
+  await Promise.all(pending.slice());                                         // 전역 fetch · 시계를 바꾸므로 앞 시험이 다 끝난 뒤에
+  const oldFetch = globalThis.fetch, oldNow = Date.now, NOW = Date.parse("2026-10-14T09:41:00+09:00");
+  const W = "https://jkquant-opening-scheduler.mumae4.workers.dev", RAWB = "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
+  const ev = (stage, payload) => ({ stage, payload });
+  const GAP = {
+    "2026-10-14": { events: [ev("preopen", { picks: [{ code: "000001", name: "가", expectedPrice: 1000, expectedGapPct: -5 }, { code: "000002", name: "나", expectedPrice: 2000, expectedGapPct: -4 }],
+      orders: [{ side: "buy", code: "000001", vts: { ok: true } }, { side: "buy", code: "000002", vts: { ok: true } }], breadth: { qualified: 30 } })] },
+    "2026-10-13": { events: [ev("etf_buy", { signal: false, dropPct: -2.44 }), ev("etf_reconcile", { fills: { closeBuy: { qty: 0 }, openSell: { qty: 0 } } })] },
+    "2026-10-12": { events: [ev("etf_buy", { signal: true, quote: { expectedPrice: 7185 } }), ev("etf_reconcile", { fills: { closeBuy: { qty: 0 }, openSell: { qty: 0 } } })] } };
+  const CLOSE = { "2026-10-13": { events: [{ id: "close:opening", payload: { status: "closed", trades: [{ pnlPct: -3.49 }, { pnlPct: 1.72 }], open: [] } }] } };
+  const Q = { "000001": { price: 1100, ohlc: [] }, "000002": { price: 2100, ohlc: [] },
+    "233740": { price: 6900, ohlc: [{ date: "2026-10-12", open: 7900, close: 7175 }, { date: "2026-10-13", open: 6760, close: 7000 }, { date: "2026-10-14", open: 6935, close: 6900 }] },
+    SOXL: { price: 127.57, marketState: "CLOSED", ohlc: [{ date: "2026-10-13", open: 126, close: 127.57 }] } };
+  const day = i => LV.addDays("2026-10-14", -i);
+  const daily = Array.from({ length: 30 }, (_, i) => ({ candle_date_time_kst: day(i) + "T09:00:00", opening_price: 100, trade_price: 100 + i, high_price: 101 + i, low_price: 99 }));   // 내림세 → 쉼
+  const hourly = Array.from({ length: 48 }, (_, k) => { const d = new Date(NOW - k * 36e5 + 9 * 36e5).toISOString();          // 최신순 · 0 = 진행 중 09:00 봉
+    return { candle_date_time_kst: d.slice(0, 13) + ":00:00", opening_price: 100, high_price: 101, low_price: 99, trade_price: 100 }; });
+  const J = o => new Response(JSON.stringify(o), { status: 200, headers: { "Content-Type": "application/json" } });
+  globalThis.fetch = async (u) => {
+    u = String(u);
+    if (u.startsWith(W + "/claude-config")) return J({ ok: true, events: [] });
+    if (u.startsWith(W + "/gapdown?date=")) return J({ ok: true, ledger: GAP[u.split("date=")[1]] || { events: [] } });
+    if (u.startsWith(W + "/claude?date=")) return J({ ok: true, ledger: CLOSE[u.split("date=")[1]] || { events: [] } });
+    if (u.includes("/api/quote?symbol=")) { const sym = decodeURIComponent(u.split("symbol=")[1].split("&")[0]); return Q[sym] ? J(Q[sym]) : new Response("{}", { status: 404 }); }
+    if (u.includes("api.upbit.com/v1/ticker")) return J([{ market: "KRW-BTC", trade_price: 100 }, { market: "KRW-ETH", trade_price: 100 }]);
+    if (u.includes("api.upbit.com/v1/candles/days")) return J(daily);
+    if (u.includes("api.upbit.com/v1/candles/minutes/60")) return J(hourly);
+    if (u.startsWith(RAWB + "claude-lab/latest.json")) return J({ tabs: { soxl: { nextSignal: { basedOn: "2026-10-13", close: 127.57, action: null, holding: true, heldDays: 6, rsi2: 0, ma: 121 } } } });
+    if (u.startsWith(RAWB + "claude-lab/soxl-mr-decisions.csv")) return new Response("date,strategyVersion,action,pnlPct\n2026-10-13,v1,hold,-0.646\n");
+    throw new Error("unexpected fetch " + u);
+  };
+  Date.now = () => NOW;
+  try {
+    const r = await LV.onRequestGet({ request: new Request("https://p.test/api/claude-live", { headers: { "x-monitor-key": "k" } }), env: { OPENING_MONITOR_KEY: "k" } });
+    const j = await r.json();
+    assert.equal(r.status, 200, JSON.stringify(j).slice(0, 300)); assert.equal(j.today, "2026-10-14");
+    const D = k => j.tabs[k].days;
+    near(D("opening")["2026-10-13"].v, -0.885); assert.equal(D("opening")["2026-10-13"].src, "vts");
+    near(D("opening")["2026-10-14"].v, ((10 - 0.23) + (5 - 0.23)) / 2); assert.equal(D("opening")["2026-10-14"].final, false);
+    near(D("daytrading")["2026-10-13"].v, -5.953344947735195); assert.equal(D("daytrading")["2026-10-14"].v, "no_trade");
+    assert.deepEqual([D("crypto")["2026-10-13"].v, D("crypto")["2026-10-13"].final, D("crypto")["2026-10-14"].final], ["no_trade", true, false]);
+    assert.equal(D("crypto")["2026-10-13"].note, "BTC·ETH 쉼(추세 평균 아래)");
+    assert.deepEqual(D("soxl"), {});                                                   // 10/13 세션은 밤 계산이 이미 확정 — 실시간 칸 없음
+    assert.ok(Array.isArray(j.tabs.opening.rows) && j.tabs.opening.rows.length === 2);   // 기존 응답(알림이 읽는 rows)은 그대로
+  } finally { globalThis.fetch = oldFetch; Date.now = oldNow; }
+});
 t("텔레그램 엔드포인트: 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 보냄 · 판단·주간·대결·교체·마감 결과는 보내지 않음", async () => {
   await Promise.all(pending.slice());                                         // 전역 fetch 를 바꾸므로 앞 시험이 다 끝난 뒤에(파일 맨 끝)
   const old = globalThis.fetch, sentTexts = [];
