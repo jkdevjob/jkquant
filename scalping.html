@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.6</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.7</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -347,9 +347,9 @@ canvas{display:block;width:100%;height:auto}
     <div class="card">
       <h3><span class="dot"></span>📅 오늘 기준전략 결과 <span class="sub">KST 전일·당일 · 순수익</span></h3>
       <p class="lead">시초가·데이트레이딩·비트코인·SOXL을 <b>한국시간(KST) 달력 날짜의 전일·당일</b>로 맞춰 한 번에 보여줍니다.
-        SOXL의 미국 거래일도 <b>정규장 종료가 속한 KST 날짜</b>로 변환하며, 아직 끝나지 않은 당일 세션은 결과를 억지로 당겨 쓰지 않고 <b>확정 대기</b>로 표시합니다.
-        BTC·SOXL은 <b>서버 실시간 모의장부를 우선</b> 사용하고, 없을 때만 연구 확정 이력으로 보완합니다.
-        한 전략에서 같은 날 여러 종목을 거래하면 <b>동일비중 평균 순손익</b>을 일일 결과로 사용하고, 거래가 없으면 0%입니다.</p>
+        당일은 <b>서버 원본 신호·모의장부를 30초마다 자동 조회</b>하여 신호 없음·진입 대기·보유·청산 상태를 표시합니다. 보유 평가손익은 잠정값이며 확정 일별 수익률과 구분합니다.
+        SOXL은 <b>미국 거래일과 한국 마감일</b>을 함께 표시합니다. 자료가 없거나 오래됐으면 실행 미확인·갱신 지연을 표시하며 매매없음/0%로 단정하지 않습니다.
+        시초가는 원본 신호의 동일비중 평균, 데이트레이딩은 당시 장부의 자금 슬롯, BTC·SOXL은 1슬롯 기준입니다.</p>
       <div class="row" style="margin-bottom:10px">
         <button class="ghostbtn" onclick="refreshDailyDashboard()">🔄 결과 새로고침</button>
         <span class="sub" id="daily_results_meta">불러오는 중…</span>
@@ -1615,8 +1615,14 @@ function paperMissingText(strategy){
     ? '현재 미국 거래일의 서버 장부가 아직 없습니다. 개장 전·휴장인지 확인하세요. 정규장 감시 시간에 장부가 없으면 실행 여부 점검이 필요합니다.'
     : '오늘 서버 장부가 아직 없습니다. 첫 감시 전에는 준비 중일 수 있습니다. 감시 시간에 장부가 없으면 실행 여부 점검이 필요하며, 매매없음으로 확정하지 않습니다.';
 }
+function dailyLiveState(x){
+  const labels={market_closed:'휴장',scheduled:'감시 시작 전',no_signal:'신호 없음',entry_pending:'진입 대기',holding:'보유 중',closed:'청산 완료',unavailable:'실행 미확인'};
+  const value=x.returnPct==null||x.returnPct===''?null:Number(x.returnPct);
+  return {label:labels[x.state]||'확인필요',detail:(x.stale?'갱신 지연 · ':'')+(x.reason||''),returnPct:value!=null&&Number.isFinite(value)?value:null};
+}
 function dailyResultState(x){
   if(!x)return {label:'대기',detail:'확정 결과 대기',returnPct:null};
+  if(x.live)return dailyLiveState(x);
   if(x.marketClosed)return {label:'휴장',detail:'시장 비개장일 · 수익률 계산 제외',returnPct:null};
   if(x.marketDayUnknown)return {label:'확인필요',detail:x.marketDayError||'개장일 확인 실패',returnPct:null};
   if(x.pending||x.incomplete||x.finalized===false)return {label:'대기',detail:x.pendingReason||'체결·청산·손익 확정 대기',returnPct:null};
@@ -1636,6 +1642,7 @@ function dailyResultCell(x,label,strategy=''){
   const heading=soxl?label+' · 미국 '+(marketDate?marketDate.slice(5):'거래일 확인 중')+'장':label+' · '+date;
   const top='<div class="daily-result-label">'+esc(heading)+'</div>'+
     (soxl?'<div class="daily-result-market-date">한국 '+esc(date)+' 새벽 마감 기준</div>':'');
+  if(x.live)return dailyLiveResultCell(x,top);
   if(x.pending)return '<div class="daily-result-box">'+top+'<div class="daily-result-ret">대기</div><div class="daily-result-meta">'+esc(x.pendingReason||'KST 당일 세션 확정 대기')+'</div><span class="daily-result-goal">확정 후 수익률 반영</span></div>';
   if(x.marketClosed)return '<div class="daily-result-box">'+top+'<div class="daily-result-ret">휴장</div><div class="daily-result-meta">해당 시장 비개장일 · 전략 미실행</div><span class="daily-result-goal">수익률 계산 제외</span></div>';
   if(x.marketDayUnknown)return '<div class="daily-result-box">'+top+'<div class="daily-result-ret">확인필요</div><div class="daily-result-meta">'+esc(x.marketDayError||'개장일 확인 실패')+'</div><span class="daily-result-goal">전략 실행 보류</span></div>';
@@ -1652,6 +1659,20 @@ function dailyResultCell(x,label,strategy=''){
     (x.sourceConflict?'<div class="warn">운영장부 '+trades+'건 ≠ 재구성 '+Number(x.sourceConflict.researchTrades||0)+'건 · 운영값 유지 · 실행 누락 여부 점검 필요</div>':'')+
     '<div class="daily-result-meta">'+esc(scalpingResultSource(x.source))+'</div>'+
     '<span class="daily-result-goal '+(hit?'hit':'')+'">'+target+'</span></div>';
+}
+function dailyLiveResultCell(x,top){
+  const s=dailyLiveState(x),value=s.returnPct,cls=value>0?'win':value<0?'loss':'';
+  const result=['scheduled','unavailable','market_closed'].includes(x.state)||value==null||x.noTrade?s.label:dailyResultPct(value);
+  return '<div class="daily-result-box">'+top+'<div class="daily-result-meta">장중 원본 · '+esc(s.label)+(x.open?' · 보유 평가손익':'')+'</div>'+
+    '<div class="daily-result-ret '+cls+'">'+esc(result)+'</div>'+
+    '<div class="daily-result-meta">선정 '+Number(x.trades||0)+' · 진입대기 '+Number(x.pendingTrades||0)+' · 보유 '+Number(x.open||0)+' · 청산 '+Number(x.closed||0)+'</div>'+
+    (x.realizedReturnPct!=null?'<div class="daily-result-meta">실현 계좌손익 '+dailyResultPct(x.realizedReturnPct)+(x.slots?' · '+Number(x.slots)+'슬롯':'')+'</div>':'')+
+    '<div class="daily-result-meta">'+esc(s.detail)+'</div>'+
+    (x.sourceWarning?'<div class="warn">'+esc(x.sourceWarning)+'</div>':'')+
+    (x.stale?'<div class="warn">서버 갱신 지연 · 아래 원본 시각 기준의 이전 값입니다.</div>':'')+
+    '<div class="daily-result-meta">원본 '+esc(scalpingKstStamp(x.updatedAt))+'</div>'+
+    ((x.positions||[]).length?'<div class="daily-result-meta">'+x.positions.map(p=>esc(p.name||'')+' · '+esc(p.status==='open'?'보유':p.status==='closed'?'청산':'진입대기')).join('<br>')+'</div>':'')+
+    '<span class="daily-result-goal">'+(x.open?'장중 평가 잠정값 · 청산 후 확정':'장중 상태 · 확정 일별 결과와 분리')+'</span></div>';
 }
 const DAILY_CHART_COLORS={opening:'#f5c451',daytrading:'#8b8cf0',crypto:'#36d399',soxl:'#f87b8c'};
 function scalpingResultSource(source){
@@ -1733,12 +1754,71 @@ async function renderDailyCumulativeChart(force=false){
 
 function refreshDailyDashboard(){
   loadDailyStrategyResults(true);
+  refreshDailyLiveResults();
   renderDailyCumulativeChart(true);
   loadShadowRankings(true);
 }
 const DAILY_RESULTS_TTL_MS=60000;
 let DAILY_RESULTS_PAYLOAD=null,DAILY_RESULTS_AT=0,DAILY_RESULTS_PROMISE=null;
+let DAILY_RESULTS_CONTROLLER=null;
+let DAILY_LIVE_PAYLOAD=null,DAILY_LIVE_PROMISE=null,DAILY_LIVE_CONTROLLER=null,DAILY_LIVE_TIMER=null,DAILY_LIVE_SEQ=0;
+const DAILY_LIVE_INTERVAL_MS=30000;
+function mergeDailyLivePayload(j){
+  const live=DAILY_LIVE_PAYLOAD;
+  if(!live||live.kstDate!==j.kstDate)return j;
+  const by=new Map((live.strategies||[]).map(x=>[x.strategy,x.current]));
+  return {...j,strategies:(j.strategies||[]).map(x=>({...x,current:by.get(x.strategy)||x.current}))};
+}
+function stopDailyLiveAuto(){
+  if(DAILY_LIVE_TIMER)clearInterval(DAILY_LIVE_TIMER);
+  DAILY_LIVE_TIMER=null;DAILY_LIVE_SEQ++;
+  DAILY_LIVE_CONTROLLER?.abort();DAILY_RESULTS_CONTROLLER?.abort();
+  DAILY_LIVE_CONTROLLER=null;DAILY_LIVE_PROMISE=null;DAILY_LIVE_PAYLOAD=null;
+  DAILY_RESULTS_PROMISE=null;DAILY_RESULTS_PAYLOAD=null;DAILY_RESULTS_AT=0;
+  for(const name of ['opening','daytrading','crypto','soxl'])delete DAILY_RESULT_CACHE[name];
+}
+function startDailyLiveAuto(){
+  if(DAILY_LIVE_TIMER)return;
+  DAILY_LIVE_TIMER=setInterval(()=>{if(me&&!document.hidden)void refreshDailyLiveResults();},DAILY_LIVE_INTERVAL_MS);
+  void refreshDailyLiveResults();
+}
+function resumeDailyLive(){if(me&&!document.hidden)void refreshDailyLiveResults();}
+document.addEventListener('visibilitychange',resumeDailyLive);
+window.addEventListener('focus',resumeDailyLive);
+window.addEventListener('online',resumeDailyLive);
+async function refreshDailyLiveResults(){
+  if(!me||document.hidden)return null;
+  if(DAILY_LIVE_PROMISE)return DAILY_LIVE_PROMISE;
+  const user=me,epoch=SCALPING_AUTH_EPOCH,seq=++DAILY_LIVE_SEQ,ctl=new AbortController();
+  const current=()=>me?.uid===user.uid&&epoch===SCALPING_AUTH_EPOCH&&seq===DAILY_LIVE_SEQ;
+  DAILY_LIVE_CONTROLLER=ctl;
+  const timer=setTimeout(()=>ctl.abort(),10000);
+  const p=(async()=>{
+    try{
+      const token=await user.getIdToken();if(!current())return null;
+      const r=await fetch('/api/scalping-live-results',{cache:'no-store',signal:ctl.signal,headers:{Accept:'application/json',Authorization:'Bearer '+token}});
+      const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'HTTP '+r.status);
+      if(!current())return null;
+      DAILY_LIVE_PAYLOAD=j;
+      if(!DAILY_RESULTS_PAYLOAD||DAILY_RESULTS_PAYLOAD.kstDate!==j.kstDate||Date.now()-DAILY_RESULTS_AT>300000)void loadDailyStrategyResults(true);
+      const base=DAILY_RESULTS_PAYLOAD?.kstDate===j.kstDate?DAILY_RESULTS_PAYLOAD:{kstDate:j.kstDate,generatedAt:j.generatedAt,strategies:j.strategies};
+      renderDailyStrategyResultsPayload(base);return j;
+    }catch(e){
+      if(!current())return null;
+      const date=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+      const old=DAILY_LIVE_PAYLOAD?.kstDate===date?DAILY_LIVE_PAYLOAD:null;
+      DAILY_LIVE_PAYLOAD={kstDate:date,generatedAt:new Date().toISOString(),strategies:['opening','daytrading','crypto','soxl'].map(strategy=>{
+        const previous=old?.strategies?.find(x=>x.strategy===strategy)?.current;
+        return {strategy,current:previous?{...previous,stale:true,sourceWarning:'실시간 조회 실패 · '+String(e.message||e)}:{date,live:true,state:'unavailable',returnPct:null,reason:'실시간 조회 실패 · '+String(e.message||e)}};
+      })};
+      renderDailyStrategyResultsPayload(DAILY_RESULTS_PAYLOAD?.kstDate===date?DAILY_RESULTS_PAYLOAD:{kstDate:date,strategies:DAILY_LIVE_PAYLOAD.strategies});return null;
+    }finally{clearTimeout(timer);if(DAILY_LIVE_CONTROLLER===ctl)DAILY_LIVE_CONTROLLER=null;}
+  })();
+  DAILY_LIVE_PROMISE=p;
+  try{return await p;}finally{if(DAILY_LIVE_PROMISE===p)DAILY_LIVE_PROMISE=null;}
+}
 function renderDailyStrategyResultsPayload(j,force=false){
+  j=mergeDailyLivePayload(j);
   const body=$('daily_results_body'),meta=$('daily_results_meta');if(!body)return j;
   const rows=(j.strategies||[]).map(z=>{
     DAILY_RESULT_CACHE[z.strategy]=z;
@@ -1756,7 +1836,7 @@ function renderDailyStrategyResultsPayload(j,force=false){
   }).join('');
   body.innerHTML='<div class="daily-result-list">'+rows+'</div>';
   body.dataset.loaded='1';
-  meta.textContent='기준일 '+(j.kstDate||'')+' · 갱신 '+scalpingKstStamp(j.generatedAt)+(force?' · 새로고침 완료':'');
+  meta.textContent='기준일 '+(j.kstDate||'')+' · 30초 자동조회 · 조회 '+scalpingKstStamp(DAILY_LIVE_PAYLOAD?.generatedAt||j.generatedAt)+(force?' · 확정 이력 새로고침 완료':'');
   return j;
 }
 async function loadDailyStrategyResults(force){
@@ -1765,21 +1845,27 @@ async function loadDailyStrategyResults(force){
   const now=Date.now();
   if(!force&&DAILY_RESULTS_PAYLOAD&&now-DAILY_RESULTS_AT<DAILY_RESULTS_TTL_MS)
     return renderDailyStrategyResultsPayload(DAILY_RESULTS_PAYLOAD,false);
-  if(!force&&DAILY_RESULTS_PROMISE)return DAILY_RESULTS_PROMISE;
+  if(DAILY_RESULTS_PROMISE)return DAILY_RESULTS_PROMISE;
+  const epoch=SCALPING_AUTH_EPOCH,user=me,ctl=new AbortController();
+  const current=()=>epoch===SCALPING_AUTH_EPOCH&&user?.uid===me?.uid;
+  DAILY_RESULTS_CONTROLLER=ctl;const timer=setTimeout(()=>ctl.abort(),10000);
   meta.textContent='전략별 결과 불러오는 중…';
   const p=(async()=>{
     try{
       const url='/api/scalping-daily-results'+(force?('?refresh=1&ts='+Date.now()):'');
-      const r=await fetch(url,{headers:{Accept:'application/json'},cache:force?'no-store':'default'});
+      const r=await fetch(url,{headers:{Accept:'application/json'},cache:force?'no-store':'default',signal:ctl.signal});
       const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+      if(!current())return null;
       DAILY_RESULTS_PAYLOAD=j;DAILY_RESULTS_AT=Date.now();
       return renderDailyStrategyResultsPayload(j,force);
     }catch(e){
+      if(!current())return null;
+      if(DAILY_LIVE_PAYLOAD){renderDailyStrategyResultsPayload({...DAILY_LIVE_PAYLOAD});meta.textContent+=' · 확정 이력 조회 실패';return null;}
       meta.textContent='결과 조회 실패';
       body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
       body.dataset.loaded='0';
       return null;
-    }
+    }finally{clearTimeout(timer);if(DAILY_RESULTS_CONTROLLER===ctl)DAILY_RESULTS_CONTROLLER=null;}
   })();
   DAILY_RESULTS_PROMISE=p;
   try{return await p;}finally{if(DAILY_RESULTS_PROMISE===p)DAILY_RESULTS_PROMISE=null;}
@@ -2026,6 +2112,8 @@ function renderStrategyCockpit(name){
   const src=DAILY1_CACHE&&DAILY1_CACHE.latestSourceDates&&DAILY1_CACHE.latestSourceDates[name]||'—';
   const todayState=dailyResultState(cur),todayRet=todayState.returnPct,todayTrades=cur?Number(cur.trades||0):0;
   const hit=todayRet!=null&&Number.isFinite(todayRet)&&todayRet>=1;
+  const todayValue=cur?.live?(cur.noTrade||todayRet==null?esc(todayState.label):cockpitPct(todayRet)):(todayRet==null?esc(todayState.label):cur.noTrade?'매매없음':cockpitPct(todayRet));
+  const todayDetail=cur?.live?todayState.label+' · '+todayState.detail+' · 장중 잠정값':todayRet==null?todayState.detail:todayTrades+'건 · '+(hit?'+1% 달성':todayTrades?'목표 미달':'거래 없음');
   const reviewDays=o?Number(o.days||0):0,reviewTrades=o?Number(o.trades||0):0;
   const reviewReady=!!o&&reviewDays>=20&&reviewTrades>=20&&Number(o.avgDailyReturnPct||0)>0&&Number(o.profitFactor||0)>=1.10&&Number(o.maxDrawdownPct||0)>=-15&&Number(o.worstDayPct||0)>=-8;
   const shadowStatus=sh?(reviewReady?'교체 검토 조건 충족':('수집 '+reviewDays+'/20일 · '+reviewTrades+'/20건')):'그림자 로딩';
@@ -2033,7 +2121,7 @@ function renderStrategyCockpit(name){
     '<div class="cockpit-box wide"><div class="cockpit-label">기준전략 · 운영모드</div><div class="cockpit-value">'+esc(m.version||'—')+'</div><div class="cockpit-detail">'+esc(m.execution||'')+'</div></div>'+
     '<div class="cockpit-box wide"><div class="cockpit-label">시장 · 종목선정</div><div class="cockpit-value">'+esc(m.market||'—')+'</div><div class="cockpit-detail">'+esc(m.selection||'')+'</div></div>'+
     '<div class="cockpit-box"><div class="cockpit-label">매도 · 리스크</div><div class="cockpit-value">'+esc(m.risk||'—')+'</div><div class="cockpit-detail">필터·손절·익절은 목표 맞추려고 자동 완화하지 않음</div></div>'+
-    '<div class="cockpit-box '+(todayRet==null?'watch':todayRet>=0?'good':'bad')+'"><div class="cockpit-label">오늘 운영/기준 결과</div><div class="cockpit-value">'+(todayRet==null?esc(todayState.label):cur.noTrade?'매매없음':cockpitPct(todayRet))+'</div><div class="cockpit-detail">'+(cur?esc(cur.date||'')+' · '+esc(todayRet==null?todayState.detail:todayTrades+'건 · '+(hit?'+1% 달성':todayTrades?'목표 미달':'거래 없음')):'최근 세션 결과 불러오는 중')+'</div></div>'+
+    '<div class="cockpit-box '+(todayRet==null?'watch':todayRet>=0?'good':'bad')+'"><div class="cockpit-label">오늘 운영/기준 결과</div><div class="cockpit-value">'+todayValue+'</div><div class="cockpit-detail">'+(cur?esc(cur.date||'')+' · '+esc(todayDetail):'최근 세션 결과 불러오는 중')+'</div></div>'+
     '<div class="cockpit-box '+(sc&&sc.avgPnl>=0?'good':sc?'bad':'watch')+'"><div class="cockpit-label">원래 기준전략 누적 연구</div><div class="cockpit-value">'+(sc?(sc.trades+'건 · 승률 '+sc.winRate.toFixed(1)+'%'):'불러오는 중')+'</div><div class="cockpit-detail">'+(sc?('거래당 '+cockpitPct(sc.avgPnl)+' · '+esc(sc.progress)):'워크포워드/누적 연구 대기')+'</div></div>'+
     '<div class="cockpit-box '+(reviewReady?'good':'watch')+'"><div class="cockpit-label">그림자 prospective</div><div class="cockpit-value">'+shadowStatus+'</div><div class="cockpit-detail">'+(o?('일평균 '+cockpitPct(o.avgDailyReturnPct)+' · PF '+Number(o.profitFactor||0).toFixed(2)+' · +1%일 '+Number(o.plus1Days||0)):'2026-10-01 이후 고정 규칙 모의')+'</div></div>'+
     '<div class="cockpit-box '+(Number(risk.currentDrawdownPct||0)<=-5||Number(risk.lossStreakTradeDays||0)>=3?'bad':'')+'"><div class="cockpit-label">조회기간 누적 위험</div><div class="cockpit-value">'+(HISTORY_RISK_CACHE[name]?'낙폭 '+cockpitPct(risk.currentDrawdownPct)+' · 연속손실 '+Number(risk.lossStreakTradeDays||0)+'일':'확인 대기')+'</div><div class="cockpit-detail">조회 마지막 주 '+esc(risk.weekStart||'—')+'부터 · '+cockpitPct(risk.weeklyReturnPct)+' · +5%까지 '+cockpitPct(risk.weeklyTargetGapPct)+'</div></div>'+
@@ -2575,6 +2663,7 @@ function showStrategy(name){
   if(name==='duel'){ loadScalpingDuel(false); }
   if(name==='tenbagger'){window.TenbaggerResearch?.boot();}
   if(name==='daily'){
+    void refreshDailyLiveResults();
     /* 오늘 탭의 핵심은 '오늘 결과'다. 연구/누적 그래프 9개 요청을 동시에 던져
        첫 카드까지 늦추지 말고, 핵심 결과가 끝난 뒤 낮은 우선순위로 나눠 불러온다. */
     Promise.resolve(loadDailyStrategyResults(false)).finally(()=>{
@@ -4100,6 +4189,7 @@ async function kisBalance(){
    이메일을 공개 저장소에 박지 않고 환경변수(OWNER_EMAIL)로 바꾸기 위함. */
 let me=null, OWNSRC='',SCALPING_AUTH_EPOCH=0;
 function stopScalpingActivity(){
+  stopDailyLiveAuto();
   stopLive();stopOpeningLive();stopGlobalPaperAuto();stopDayTradingPaperAuto();stopOpeningPaperAuto();
   if(STRATEGY_STATUS_TIMER){clearInterval(STRATEGY_STATUS_TIMER);STRATEGY_STATUS_TIMER=null;}
 }
@@ -4176,6 +4266,7 @@ function boot(){
     Promise.all(['opening','daytrading','crypto','soxl'].map(loadStrategyScorecard)).catch(()=>{});
     loadDaily1Shadow(false);
     restoreStrategy();
+    startDailyLiveAuto();
   });
 }
 if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
