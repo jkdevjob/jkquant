@@ -53,7 +53,7 @@ async function checkDeliveries(Worker=PresaleAlertStore){
   assert.deepEqual(x.calls.filter(c=>c.topic==="research").map(c=>c.endpoint).sort(),
     [ep("legacy-research"),ep("other-research")].sort(),"지피티 공통 설정이 다른 연구를 임의로 켜지 않음");
   const health=await (await x.get("/health")).json();
-  assert.equal(health.version,"2.7.0");assert.equal(health.topicSchemaVersion,2);
+  assert.equal(health.version,"2.7.1");assert.equal(health.topicSchemaVersion,2);
   assert.equal(health.topicSubscriptions.gpt,4,"부분 구독 포함 등록기기는 중복 없이 집계");
   assert.equal(health.topicSubscriptions.opening,3);assert.equal(health.topicSubscriptions.tenbagger_gpt,3);
   assert.equal(health.topicSubscriptions.research,2);assert.ok(health.lastChecks.gpt);
@@ -116,6 +116,18 @@ async function checkServiceWorker(code=swSource){
   assert.deepEqual([...await x.ctx.topics()],["gpt"],"미지원 주제 제외");
 }
 test("서비스워커: 공통 탭 선택·원천 구분·중복/오래된 신호 차단·기존 캐시 동의·OFF 보존",()=>checkServiceWorker());
+
+test("다섯 탭 개별 동의는 설정 화면과 같이 전체 보고 동의 · 일부 탭은 제외",async()=>{
+  const all=["opening","daytrading","crypto","soxl","tenbagger_gpt"],x=fixture(),endpoint="https://push.example/all-individual";
+  await x.seed(endpoint,all);await x.seed("https://push.example/four",all.slice(0,4));
+  const delivery=await x.app.notifyAll("gpt");assert.equal(delivery.sent,1);assert.equal(delivery.eligible,1);
+  assert.deepEqual(x.calls,[{endpoint,topic:"gpt"}]);
+  assert.equal((await(await x.get("/health")).json()).topicSubscriptions.gpt,2,"전체 기기를 두 번 집계하지 않음");
+  const sw=swFixture(),now=Date.now(),payload={alerts:[{id:"morning",type:"gpt",createdAt:new Date(now).toISOString()}]};
+  assert.deepEqual([...sw.ctx.pickAlerts(payload,all,[],now)].map(a=>a.id),["morning"]);
+  assert.equal(sw.ctx.pickAlerts(payload,all.slice(0,4),[],now).length,0);
+  assert.equal(sw.ctx.pickAlerts(payload,["research"],[],now).length,0);
+});
 
 test("공통 알림 변이 2종: 서버 또는 기기 공통 주제 누락을 실제 전달/표시 결과로 차단",async()=>{
   const badWorker=workerSource.replace('||(GPT_TOPICS.has(topic)&&t.includes("gpt"))','');assert.notEqual(badWorker,workerSource);

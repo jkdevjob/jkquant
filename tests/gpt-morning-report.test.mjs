@@ -36,6 +36,23 @@ test('08:00 delivers once to common GPT only and Telegram, then schedules tomorr
 test('concurrent submission is immutable and one report per date',async()=>{
  const x=fixture();await clock(at('07:00'),async()=>{const r=await Promise.all([x.post(report()),x.post({...report(),summary:'later'})]);assert.equal((await r[1].json()).duplicate,true);assert.equal(x.values.get('gpt-report:2026-10-15').summary,report().summary);});
 });
+test('all five individual consents receive the morning report; partial consent does not',async()=>{
+ const x=fixture(),all=['opening','daytrading','crypto','soxl','tenbagger_gpt'];
+ x.values.set('sub:individual',{endpoint:'https://push.example/all',topics:all,topicSchemaVersion:2});
+ x.values.set('sub:partial',{endpoint:'https://push.example/partial',topics:all.slice(0,4),topicSchemaVersion:2});
+ await clock(at('07:00'),()=>x.post(report()));await clock(at('08:00'),()=>mockTelegram(async c=>{await x.fire();assert.equal(c.length,1);assert.deepEqual(x.push.map(p=>p.ep),['https://push.example/gpt','https://push.example/all']);}));
+});
+test('zero-recipient report can recover newly recognized full consent without replaying Telegram',async()=>{
+ const x=fixture();x.values.delete('sub:gpt');await clock(at('07:00'),()=>x.post(report()));
+ await mockTelegram(async c=>{
+  await clock(at('08:00'),()=>x.fire());assert.equal(c.length,1);assert.equal(x.values.get('gpt-report-delivery:2026-10-15').push.eligible,0);
+  x.values.set('sub:individual',{endpoint:'https://push.example/all',topics:['opening','daytrading','crypto','soxl','tenbagger_gpt'],topicSchemaVersion:2});
+  await clock(at('08:01'),async()=>{const r=await(await x.post(report())).json();assert.equal(r.requeuedPush,true);assert.equal(x.getAlarm(),at('08:01')+1000);});
+  await clock(at('08:02'),()=>x.fire());assert.equal(c.length,1);assert.equal(x.push.length,1);assert.equal(x.values.get('gpt-report-delivery:2026-10-15').push.sent,1);
+  await clock(at('08:03'),async()=>{assert.equal((await(await x.post(report())).json()).requeuedPush,undefined);});
+  assert.equal(x.values.get('gpt-report:2026-10-15').summary,report().summary);
+ });
+});
 test('missing preparation still gives honest 08:00 blocked report for every tab',async()=>{
  const x=fixture();await clock(at('07:07'),()=>x.app.armGptMorningReport());await clock(at('08:00'),()=>mockTelegram(async c=>{await x.fire();const r=x.values.get('gpt-report:2026-10-15');assert.equal(r.missing,true);assert.equal(r.sections.length,7);assert.ok(r.sections.every(s=>s.status==='blocked'));assert.match(c[0].body.text,/미완료/);assert.doesNotMatch(c[0].body.text,/수익률.*0\.00/);}));
 });
