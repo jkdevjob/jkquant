@@ -585,7 +585,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.38</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.39</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1692,7 +1692,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.38</b> · 2026-10-14</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.39</b> · 2026-10-14</div>
   </footer>
 </div>
 
@@ -3883,34 +3883,33 @@ function renderInfAnal(){
 /* 월별·사이클별 실현손익.
    매도로 확정된 것만 센다 — 평가손익을 섞으면 '언제 얼마를 벌었나'가 흐려진다.
    손익률 분모는 거래이력과 같은 원금이다. 그래야 줄을 더한 값이 곧 그 기간 손익률이 된다.
-   원화는 달러 세션에서만 붙인다 — 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이다. */
+   원화 칸은 따로 두지 않는다 — 손익금·인출 칸(wn)이 달러와 원화를 함께 찍으므로, 회색 원화 칸은 같은 금액을 두 번 쓰는 꼴이었다(2026-10-14 사용자). */
 function renderInfBreak(c){
-  const st=c.st, cap=+st.principal||0, isKrw=isKrwSt(st);
+  const st=c.st, cap=+st.principal||0;
   const sells=(c.rows||[]).filter(h=>isSell(h.kind));
   const pctTxt=v=>cap?`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${(v/cap*100).toFixed(2)}%</span>`:'—';
   const amtTxt=v=>`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${wn(v)}</span>`;
-  const krwTxt=v=>`<span style="color:var(--faint)">${v>=0?'+':''}${won(v)}</span>`;
   /* 단리는 사이클이 닫힐 때 잔액이 원금을 넘으면 넘은 만큼만 인출한다.
      못 넘으면 인출도 보충도 없다 — 들어오는 칸이 없으니 나간 칸 하나면 된다.
      월별로 얼마가 나왔는지가 곧 그 달의 수입이라 단리 세션에만 붙인다. */
   const simple=!!c.simple;
   const netTxt=v=>!cap?'—':`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${wn(v)} <span style="font-size:10px">(${v>=0?'+':''}${(v/cap*100).toFixed(1)}%)</span></span>`;
   const head=lbl=>`<tr><th>${lbl}</th><th>매도</th>`
-    + (simple?`<th>인출</th>${isKrw?'':'<th>원화</th>'}`:'')
-    + `<th>손익금</th><th>손익률</th>${isKrw?'':'<th>원화</th>'}</tr>`;
+    + (simple?`<th>인출</th>`:'')
+    + `<th>손익금</th><th>손익률</th></tr>`;
   const body=(list,empty)=>{
-    const nCol=(isKrw?4:5)+(simple?(isKrw?1:2):0);
+    const nCol=4+(simple?1:0);
     if(!list.length) return head('구분')+`<tr><td class="empty" colspan="${nCol}">${empty}</td></tr>`;
     let tot=0, n=0, to=0;
     const flowCells=x=>{ if(!simple) return '';
       to+=(x.out||0);
       // 그 달에 안 나왔으면 비운다 — +0.00$ (+0.0%) 는 잡음이다
       const v=x.out||0, dash='<span style="color:var(--faint)">—</span>';
-      return `<td>${v?netTxt(v):dash}</td>` + (isKrw?'':`<td>${v?krwTxt(v):dash}</td>`); };
+      return `<td>${v?netTxt(v):dash}</td>`; };
     const rows=list.map(x=>{ tot+=x.p; n+=x.n;
-      return `<tr><td>${x.label}</td><td>${x.n}</td>${flowCells(x)}<td>${amtTxt(x.p)}</td><td>${pctTxt(x.p)}</td>${isKrw?'':`<td>${krwTxt(x.p)}</td>`}</tr>`; }).join('');
-    const sumFlow = simple ? `<td>${netTxt(to)}</td>` + (isKrw?'':`<td>${krwTxt(to)}</td>`) : '';
-    const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td>${sumFlow}<td>${amtTxt(tot)}</td><td>${pctTxt(tot)}</td>${isKrw?'':`<td>${krwTxt(tot)}</td>`}</tr>`;
+      return `<tr><td>${x.label}</td><td>${x.n}</td>${flowCells(x)}<td>${amtTxt(x.p)}</td><td>${pctTxt(x.p)}</td></tr>`; }).join('');
+    const sumFlow = simple ? `<td>${netTxt(to)}</td>` : '';
+    const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td>${sumFlow}<td>${amtTxt(tot)}</td><td>${pctTxt(tot)}</td></tr>`;
     return rows+sum;
   };
   // 월별 — 최근이 위로
@@ -7592,15 +7591,13 @@ function paintCashFlow(pre, opt){
     put('in', fmt(inn), 'var(--sell)');
     put('net', `${sg}${wn(a)} (${sg}${(a/base*100).toFixed(1)}%)`, net>=0?'var(--buy)':'var(--sell)'); }
   fillFlowRows({avg:id('avg'), avgSub:id('avgsub'), hit:id('hit'), last:id('last')}, st2, fmt);
-  // 월별 표 — 최근이 위로. 원화 세션엔 원화 칸을 겹쳐 넣지 않는다.
+  // 월별 표 — 최근이 위로. 원화 칸은 따로 두지 않는다 — 금액 칸(wn)이 달러와 원화를 함께 찍는다(2026-10-14 사용자: 회색 원화 중복).
   const tb=$(id('tbl'));
   if(tb){
-    const kw=!!o.isKrw;
     const head=`<tr><th>월</th>`
       + (split?kinds.map(k=>`<th>${k.label}</th>`).join(''):`<th>${o.outK||'출금'}</th>`)
       + (split?'<th>합계</th>':'')
-      + (hasIn?`<th>${o.inK||'입금'}</th><th>순</th>`:'')
-      + (kw?'':'<th>원화</th>')+`</tr>`;
+      + (hasIn?`<th>${o.inK||'입금'}</th><th>순</th>`:'')+`</tr>`;
     const byM={};
     flows.forEach(f=>{ const m=String(f.date).slice(0,7); if(m.length!==7) return;
       const b=byM[m]=byM[m]||{o:0,i:0,k:{}};
@@ -7612,14 +7609,12 @@ function paintCashFlow(pre, opt){
       return `<tr><td>${m.m.replace('-','년 ')+'월'}</td>`
         + (split?kinds.map(k=>cell(d.k[k.k]||0,'var(--gold)')).join(''):cell(d.o,'var(--gold)'))
         + (split?cell(d.o,'var(--gold)'):'')
-        + (hasIn?cell(d.i,'var(--sell)')+`<td style="color:${net>0?'var(--buy)':(net<0?'var(--sell)':'var(--faint)')}">${net?wn(net):'—'}</td>`:'')
-        + (kw?'':`<td style="color:var(--faint)">${net?won(net):'—'}</td>`)+`</tr>`; }).join('');
-    const nCol=1+(split?kinds.length+1:1)+(hasIn?2:0)+(kw?0:1);
+        + (hasIn?cell(d.i,'var(--sell)')+`<td style="color:${net>0?'var(--buy)':(net<0?'var(--sell)':'var(--faint)')}">${net?wn(net):'—'}</td>`:'')+`</tr>`; }).join('');
+    const nCol=1+(split?kinds.length+1:1)+(hasIn?2:0);
     const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td>`
       + (split?kinds.map(k=>`<td style="color:var(--gold)"><b>${wn(k.sum)}</b></td>`).join(''):'')
       + `<td style="color:var(--gold)"><b>${wn(out)}</b></td>`
-      + (hasIn?`<td style="color:var(--sell)"><b>${wn(inn)}</b></td><td style="color:${out-inn>=0?'var(--buy)':'var(--sell)'}"><b>${wn(out-inn)}</b></td>`:'')
-      + (kw?'':`<td style="color:var(--faint)">${won(out-inn)}</td>`)+`</tr>`;
+      + (hasIn?`<td style="color:var(--sell)"><b>${wn(inn)}</b></td><td style="color:${out-inn>=0?'var(--buy)':'var(--sell)'}"><b>${wn(out-inn)}</b></td>`:'')+`</tr>`;
     tb.innerHTML=body? head+body+sum : `<tr><td colspan="${nCol}" style="color:var(--faint)">아직 없습니다</td></tr>`;
   }
 }
