@@ -72,7 +72,7 @@ export async function onRequestPost({request,env}){
     claimed=true;
 
     const icon=stage==="buy"?"🟢":"🔴";
-    const action=stage==="buy"?"매수 타이밍":"매도 타이밍";
+    const action=stage==="buy"?"매수":"매도";
     const when=[clean(b.date,20),clean(b.time,20)].filter(Boolean).join(" ");
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,500)).filter(Boolean).slice(0,16):[];
     const msg=[
@@ -81,7 +81,7 @@ export async function onRequestPost({request,env}){
       "",
       ...lines,
       "",
-      "JKQuant 기준전략 모의/연구 신호"
+      "JKQuant 기준전략 알림"
     ].filter((x,i,a)=>!(x===""&&a[i-1]==="")).join("\n");
     const id=await telegram(env,msg);
     claimed=false; // Keep only a successful Telegram receipt; web push can still retry independently.
