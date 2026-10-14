@@ -80,7 +80,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.17.2</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.17.3</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -110,7 +110,6 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
     <button class="tab" data-tab="crypto" onclick="showTab('crypto')">₿ 비트코인</button>
     <button class="tab" data-tab="soxl" onclick="showTab('soxl')">⚡ SOXL</button>
     <button class="tab" data-tab="tenbagger" onclick="showTab('tenbagger')">🔟 텐배거</button>
-    <button class="tab" data-tab="all" onclick="showTab('all')">🎯 전체 계좌</button>
     <button class="tab" data-tab="duel" onclick="showTab('duel')">🆚 GPT 대결</button>
   </div>
   <div id="body"><div class="loading">불러오는 중…</div></div>
@@ -211,19 +210,6 @@ function planCard(tab,T,wl){
 function promoBadge(pr){
   if(!pr)return "";
   return "<div class='"+(pr.code==="candidate"?"win":"sub")+"' style='margin:2px 0 4px'>"+(pr.code==="candidate"?"⭐ ":pr.code==="keep"?"· ":"⏳ ")+esc(pr.text||"")+"</div>";
-}
-function weekCard(){
-  var w=(J.lab||{}).week;if(!w)return "";      // 실제 장부만(규칙 재구성 값은 보이지 않는다)
-  if(w.error)return "<div class='card'><h3>🗓 이번 주 결과</h3><div class='warn'>"+esc(w.error)+"</div></div>";
-  var a=w.account||{},P=w.parts||{},N={opening_d1v2:"① 시초가 (국내)",daytrading_etf:"② ETF 야간 (국내)",coin_bo_btc:"③ BTC",coin_bo_eth:"③ ETH",us_soxl:"④ SOXL (미국)"};
-  var rows=Object.keys(N).map(function(k){var z=P[k]||{},nt=!(z.tradeDays>0);return "<tr><td class='nm'>"+esc(N[k])+"</td>"+(nt?"<td colspan='2'>"+NOTRADE+"</td>":"<td class='"+cls(z.contribPct)+"'><b>"+pct(z.contribPct)+"</b></td><td class='"+cls(z.weekPct)+"'>"+pct(z.weekPct,1)+"</td>")+"<td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='sub'>"+(z.through?esc(z.through.slice(5)):"—")+"</td></tr>"}).join("");
-  var cand=[];Object.keys((J.lab||{}).shadows||{}).forEach(function(t){var r=J.lab.shadows[t];(Array.isArray(r)?r:[]).forEach(function(x){if(x.promotion&&x.promotion.code==="candidate")cand.push(x.name+" — "+x.promotion.text)})});
-  return "<div class='card'><h3>🗓 이번 주 결과 ("+esc((w.weekStart||"").slice(5))+" ~ "+esc((w.asOf||"").slice(5))+")"+"</h3>"+
-    "<div class='sub'>"+esc(w.note||"")+" 매주 토요일 09:05 텔레그램으로도 보냅니다.</div>"+
-    "<div class='kpis'><div class='kpi'><div class='l'>🏦 계좌 주간</div><div class='v "+cls(a.weekPct)+"'>"+pct(a.weekPct)+"</div><div class='sub'>목표 +5% "+(a.hit5?"달성 ✅":"까지 "+num(Math.max(0,5-(a.weekPct||0)))+"%p")+"</div></div>"+
-    "<div class='kpi'><div class='l'>+1% 달성일</div><div class='v'>"+(a.plus1Days||0)+"<span class='sub'>/"+(a.days||0)+"일</span></div><div class='sub'>장부 확정분</div></div></div>"+
-    "<div class='tw'><table class='board'><thead><tr><th>칸</th><th>계좌 기여</th><th>칸 안 주간</th><th>매매일</th><th>~까지</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
-    "<p class='note'>"+(cand.length?"⭐ 그림자 교체 후보: "+esc(cand.join(" / ")):"그림자 교체 후보 없음 — 판정 표본(10/1~) 매매 20일 이상 + 기준보다 누적이 높고 +1% 달성일이 적지 않고 MDD 가 5%p 넘게 나쁘지 않을 때만 후보로 띄웁니다. 자동으로 바꾸지 않습니다.")+"</p></div>";
 }
 // 📈 전략별 누적 수익률 추이 — 모의 장부(실제 기록) / 최근 60일 규칙 재구성(참고)을 나눠 보인다(섞지 않음)
 var TREND_C={opening_d1v2:"#3987e5",daytrading_etf:"#d95926",coin_bo:"#199e70",us_soxl:"#c98500",account:"#d55181"};
@@ -453,7 +439,7 @@ function statusBar(){
 }
 var J=null,TAB="today";
 // 직접 링크(?tab=tenbagger · #tenbagger) — 연구 알림을 누르면 그 탭으로 연다
-(function(){try{var q=new URLSearchParams(location.search).get("tab")||location.hash.slice(1);if(/^(today|opening|daytrading|crypto|soxl|all|duel|tenbagger)$/.test(q))TAB=q}catch(e){}})();
+(function(){try{var q=new URLSearchParams(location.search).get("tab")||location.hash.slice(1);if(/^(today|opening|daytrading|crypto|soxl|duel|tenbagger)$/.test(q))TAB=q}catch(e){}})();
 // 🔟 텐배거 전향 시험 — 자료는 공개 가격 연구(/api/tenbagger-claude), 탭을 처음 열 때 한 번 받는다
 var TBF=null,TBF_BUSY=false;
 async function loadTbf(){
@@ -549,7 +535,7 @@ function todayPage(lab){
     "<div class='row' style='margin-bottom:10px'><button class='ghostbtn' onclick='refreshToday()'>🔄 결과 새로고침</button><span class='sub' id='daily_results_meta'>기준일 "+esc(dl.today||"")+" · 갱신 "+esc(stamp)+"</span></div>"+
     "<div class='daily-result-list'>"+cards+"</div>"+
     "<div style='margin-top:14px'>"+trendBlock()+"</div>"+
-    "<p class='note'>목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 단순 합산하지 않습니다(전체 계좌 합산은 🎯 전체 계좌 탭).<br><b>보유 원칙:</b> ①②③ 은 하루를 넘기지 않고, ④ SOXL 만 최대 5거래일까지 보유합니다. 6거래일 이상은 단타 전략에서 제외합니다.</p></div>"+
+    "<p class='note'>목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 단순 합산하지 않습니다.<br><b>보유 원칙:</b> ①②③ 은 하루를 넘기지 않고, ④ SOXL 만 최대 5거래일까지 보유합니다. 6거래일 이상은 단타 전략에서 제외합니다.</p></div>"+
     "<div class='card'><h3><span class='dot'></span>📊 4전략 누적 상태 <span class='sub'>기준전략 · 성과 순위가 아니라 현재 측정값</span></h3>"+
     "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>표본</th><th>승률</th><th>거래당</th><th>필요승률</th><th>엣지</th><th>검증상태</th></tr></thead><tbody>"+ov+"</tbody></table></div>"+
     "<p class='note'>표본·승률·거래당은 설계 표본(백테스트, 매매일 단위) 값입니다. 승률 = 손실이 아닌 매매일 비율, 필요승률 = 평균 이익·손실로 본 손익분기 승률, 엣지 = 승률 − 필요승률. 검증상태는 10/1 부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.</p></div>"+arenaOverview(lab);
@@ -595,24 +581,8 @@ function render(){
     html+=duelPage();
   }else if(TAB==="opening"||TAB==="daytrading"||TAB==="crypto"||TAB==="soxl"){
     html+=tabPage(TAB,T,gd,et,wl);
-  }else{
-    var pf=et.portfolio||{},gate=lab.gate||et.gate||{},p=pf.design||{};
-    html+="<div class='card'><h3>🎯 ①+② 포트폴리오 — 목표 지표</h3><div class='sub'>같은 원금. 같은 날 두 전략이 다 나오면 반씩(수익률을 그냥 더하지 않음). 거르기: 기대값 &gt; 0 · MDD ≥ "+num(gate.mdd,0)+"% · 최악일 ≥ "+num(gate.worstDay,0)+"%</div>"+
-      "<div class='kpis'><div class='kpi'><div class='l'>+1% 달성일/년</div><div class='v good'>"+num(p.plus1DaysPerYear,0)+"일</div></div><div class='kpi'><div class='l'>+5% 달성주/년</div><div class='v'>"+num(p.plus5WeeksPerYear)+"주</div></div><div class='kpi'><div class='l'>주 평균</div><div class='v "+(p.weeklyAvgPct>=0?"good":"bad")+"'>"+pct(p.weeklyAvgPct)+"</div></div><div class='kpi'><div class='l'>최악의 날 · MDD</div><div class='v bad'>"+pct(p.worstDayPct,1)+" · "+mddTxt(p.mddPct)+"</div></div></div>"+
-      goalTable("설계 표본",goalRow("① D-1 v2",(et.d1v2||{}).design)+goalRow("② ETF 하락일 야간",(et.etf||{}).design)+goalRow("①+② 포트폴리오",pf.design))+
-      goalTable("판정용 (10/1~)",goalRow("① D-1 v2",(et.d1v2||{}).outOfSample)+goalRow("② ETF 하락일 야간",(et.etf||{}).outOfSample)+goalRow("①+② 포트폴리오",pf.outOfSample))+
-      "<p class='note'>이 표는 국내 ①+② 만입니다. 코인·미국까지 합친 전체 계좌는 위 카드에 있습니다.</p></div>";
-    var ac=lab.account;
-    if(ac){
-      var q=ac.design||{},ly=ac.lastYear||{};
-      html="<div class='card'><h3>🏦 전체 계좌안 — 국내 30% · 코인 30% · 미국 40%</h3><div class='sub'>"+esc((ac.plan||{}).note||"")+" 매일 같은 원금 기준 손익.</div>"+
-        "<div class='kpis'><div class='kpi'><div class='l'>+1% 달성일/년</div><div class='v good'>"+num(q.plus1DaysPerYear,0)+"일</div><div class='sub'>최근 1년 "+(ly.plus1Days||0)+"일</div></div>"+
-        "<div class='kpi'><div class='l'>+5% 달성주/년</div><div class='v'>"+num(q.plus5WeeksPerYear)+"주</div><div class='sub'>최근 1년 "+(ly.plus5Weeks||0)+"주</div></div>"+
-        "<div class='kpi'><div class='l'>주 평균</div><div class='v good'>"+pct(q.weeklyAvgPct)+"</div><div class='sub'>최근 1년 누적 "+pct(ly.totalPct,1)+"</div></div>"+
-        "<div class='kpi'><div class='l'>최악의 날 · MDD</div><div class='v bad'>"+pct(q.worstDayPct,1)+" · "+mddTxt(q.mddPct)+"</div><div class='sub'>최근 1년 MDD "+mddTxt(ly.mddPct)+"</div></div></div>"+
-        goalTable("전체 계좌",goalRow("설계 표본 (2018~2026-09)",ac.design)+goalRow("최근 1년 (25-10~26-09)",ac.lastYear)+goalRow("판정용 (10/1~)",ac.outOfSample))+
-        "<p class='note'>국내 칸은 KIS 모의투자로 매일 체결을 재고, 코인·미국 칸은 일봉으로 기록합니다. 비중은 10% 단위 후보 중 손실 기준을 지키며 +1% 달성일이 많은 쪽에서 끝자리가 둥근 값을 골랐습니다(맨 위 값을 고르면 과거에 맞추게 됨). 실전 전환은 승인 후에만 엽니다.</p></div>"+weekCard()+html;
-    }
+  }else{                                       // 옛 '🎯 전체 계좌' 탭은 2026-10-14 사용자 요청으로 지웠다 — 모르는 탭은 오늘 탭으로
+    TAB="today";html+=todayPage(lab);
   }
   body.innerHTML=statusBar()+html;
   stackTables(body);

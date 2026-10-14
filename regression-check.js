@@ -11298,8 +11298,9 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      !/gapdown|D-1 갭하락|etfOvernight|claude-lab/.test(gptScl)&&!/gapdown|etf-overnight|claude-lab/.test(gptApi)
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
        .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>연구\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>연구\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
-  ok('단타(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) + 합산 · 탭마다 GPT 같은 기간 비교',
-     ['today','opening','daytrading','crypto','soxl','all'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))
+  ok('연구(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) · 전체 계좌 탭 없음(2026-10-14 삭제) · 탭마다 GPT 같은 기간 비교',
+     ['today','opening','daytrading','crypto','soxl'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))&&!/data-tab="all"|showTab\('all'\)/.test(scl2)
+     &&/if\(\/\^\(today\|opening\|daytrading\|crypto\|soxl\|duel\|tenbagger\)\$\/\.test\(q\)\)TAB=q/.test(scl2)
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
@@ -11326,11 +11327,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
-    ok('전략 경쟁: 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 신규 투입 · 7일 1위 자동 승격(다음 날부터) · 이번 주 결과 카드(전체 탭)',
+    ok('전략 경쟁: 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 신규 투입 · 7일 1위 자동 승격(다음 날부터) · 이번 주 결과 카드는 전체 계좌 탭과 함께 삭제',
        /POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, EVAL_BUDGET = 12, 10, 7, 3, 48/.test(lp)&&/report\["arena"\], astate = arena\(ctx\)/.test(lp)
        &&/attach_promotions\(report\)/.test(lp)&&/report\["week"\] = week_summary\(/.test(lp)
        &&!/CRYPTO\[[^\]]+\] = |US\[[^\]]+\] = /.test(lp.slice(lp.indexOf('def arena('),lp.indexOf('def week_summary(')))
-       &&/function promoBadge\(pr\)/.test(scl2)&&/function weekCard\(\)/.test(scl2)&&(scl2.match(/weekCard\(\)/g)||[]).length===2);
+       &&/function promoBadge\(pr\)/.test(scl2)&&!/weekCard\(/.test(scl2));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'),lv=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
     const hold=[...lp.matchAll(/maxHoldDays=(\d+)/g)].map(m=>+m[1]);
@@ -11366,9 +11367,9 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live",\{headers:\{"x-monitor-key":env\.MONITOR_KEY/.test(fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'))   // 알림 감시(Worker)가 감시키로 실시간 자료를 읽는다
        &&/function authorized\(request,env\)/.test(tg3));
   }
-  ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·이번 주·추이 범례·GPT 대결 날짜별',
+  ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·추이 범례·GPT 대결 날짜별',
      /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/q\.noTrade\?NOTRADE:pct\(q\.tabPct\)/.test(scl2)
-     &&/if\(tdy&&tdy\.noTrade\)head\+=/.test(scl2)&&/nt=!\(z\.tradeDays>0\)/.test(scl2)&&/\(nt\?NOTRADE:/.test(scl2)
+     &&/if\(tdy&&tdy\.noTrade\)head\+=/.test(scl2)
      &&/x\.claude\.entries\?/.test(scl2)&&/tradeDays=trades\)/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('📅 오늘 탭에서 \'전일 · 당일 결과\' 표 삭제(사용자 요청 2026-10-02)', !/전일 · 당일 결과 — 모든 전략/.test(scl2));
   ok('📅 오늘 탭 전략별 누적 수익률 추이: 모의 장부 / 최근 60일 재구성(참고) 따로 · 섞지 않음 · 5색(검증) + 범례',
@@ -11401,8 +11402,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/if\(buyDate\)await runEtf\(env,date,"etf_sell",ms,\{buyDate\}\);/.test(ow)
      &&/await runEtf\(env,date,stage==="close"\?"etf_buy":"etf_reconcile",ms\);/.test(ow)
      &&/backtest_etf_overnight\.py/.test(wf)&&/finance-datareader/.test(wf));
-  ok('목표 지표 화면: +1% 달성일·+5% 달성주·손실일·MDD·거르기 통과 · 같은 원금 반반 합산',
-     /목표 지표/.test(scl2)&&/같은 날 두 전략이 다 나오면 반씩/.test(scl2)&&/\+1%↑일\/년/.test(scl2)
+  ok('목표 지표 화면: +1% 달성일·+5% 달성주·손실일·MDD·거르기 통과(탭별) · 합산 API 는 그대로',
+     /목표 지표/.test(scl2)&&/\+1%↑일\/년/.test(scl2)
      &&/portfolio:etf\.portfolio/.test(orApi));
   ok('D-3 BTC 그림자: 완료된 시간봉만·다음 시간 시가 진입·24시간 보유·주문 없음',
      /DIP24_VERSION = "btc_dip24_v1"/.test(bt)&&/hb\[h - one\]\["c"\] \/ hb\[h - one \* \(lb \+ 1\)\]\["c"\]/.test(bt)
