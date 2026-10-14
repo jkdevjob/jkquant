@@ -11368,7 +11368,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/function authorized\(request,env\)/.test(tg3));
   }
   ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·추이 범례·GPT 대결 날짜별',
-     /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/q\.noTrade\?NOTRADE:pct\(q\.tabPct\)/.test(scl2)
+     /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/nt\?\(lv\.final\?"매매없음":"매매 전"\):pct\(v\)/.test(scl2)
      &&/if\(tdy&&tdy\.noTrade\)head\+=/.test(scl2)
      &&/x\.claude\.entries\?/.test(scl2)&&/tradeDays=trades\)/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('📅 오늘 탭에서 \'전일 · 당일 결과\' 표 삭제(사용자 요청 2026-10-02)', !/전일 · 당일 결과 — 모든 전략/.test(scl2));
@@ -11486,14 +11486,15 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
   const ch=fs.readFileSync(__d+'/claude.html','utf8');
   ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 4전략 누적 상태: 표본·승률·거래당·필요승률·엣지·검증상태)',
      /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익<\/span>/.test(ch)
-     &&/resultCell\(r\.prev,r\.prevDate,"전일",cl\)\+resultCell\(r\.last,r\.lastDate,"당일",cl\)/.test(ch)
+     &&/var pr=dayPair\(r,lt\.days,\(LIVE&&!LIVE\.error&&LIVE\.today\)\|\|""\);/.test(ch)
+     &&/resultCell\(pr\[0\]\.v,pr\[0\]\.date,"전일",cl,pr\[0\]\.lv\)\+resultCell\(pr\[1\]\.v,pr\[1\]\.date,"당일",cl,pr\[1\]\.lv\)/.test(ch)
      &&/📊 4전략 누적 상태/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
      &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
   // 값 시험 — 화면 함수를 그대로 떼어 실행
   const grab=n=>{const i=ch.indexOf('function '+n+'(');let d=0,j=ch.indexOf('{',i);for(;j<ch.length;j++){if(ch[j]==='{')d++;else if(ch[j]==='}'&&--d===0)break;}return ch.slice(i,j+1);};
-  const env='var NOTRADE="매매 없음";function esc(s){return String(s)}function cls(v){return v>0?"win":v<0?"loss":""}function pct(v){return (v>=0?"+":"")+(+v).toFixed(2)+"%"}';
-  let f={dayCell:()=>'',scoreOf:()=>null};
-  try{f=new Function(env+grab('resultCell')+grab('scoreOf')+';return {dayCell:resultCell,scoreOf:scoreOf}')();}catch(e){console.log('  (오늘 탭 함수 추출 실패: '+e.message+')');}
+  const env='var NOTRADE="매매 없음",LIVE={asOf:"2026-10-14T00:41:00Z"};function kstTime(){return "09:41"}function esc(s){return String(s)}function cls(v){return v>0?"win":v<0?"loss":""}function pct(v){return (v>=0?"+":"")+(+v).toFixed(2)+"%"}';
+  let f={dayCell:()=>'',scoreOf:()=>null,dayPair:()=>[]};
+  try{f=new Function(env+grab('resultCell')+grab('liveCell')+grab('prevDateOf')+grab('dayPair')+grab('scoreOf')+';return {dayCell:resultCell,scoreOf:scoreOf,dayPair:dayPair}')();}catch(e){console.log('  (오늘 탭 함수 추출 실패: '+e.message+')');}
   const s1=f.scoreOf({tradeDays:152,lossDays:57,lossDayAvgPct:-3.5132163740225857,expectancyPct:1.3304699743160744});
   const agree=f.dayCell(-0.5,'2026-10-02','당일',{date:'2026-10-02',trades:[{},{}],wins:1,losses:1});
   const clash=f.dayCell('no_trade','2026-10-02','당일',{date:'2026-10-02',trades:[{}],wins:0,losses:1});
@@ -11503,6 +11504,24 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
      &&/매매없음/.test(clash)&&/기준전략 0건/.test(clash)&&!/1건/.test(clash)
      &&/daily-result-goal hit'>\+1% 달성/.test(f.dayCell(1.2,'2026-10-02','당일',null))&&f.scoreOf({tradeDays:0})===null,
      JSON.stringify(s1));
+  { // 확정 전 실시간 칸(2026-10-14 사용자 요청 '실시간으로 반영해') — 확정 값이 먼저, 없을 때만 점선 칸에 출처·시각·'확정 전'
+    const lvNow=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0});
+    const lvNt=f.dayCell('pending','2026-10-14','당일',null,{v:'no_trade',final:true,src:'vts',trades:0,note:'전날 15:21 매수 신호 없음'});
+    const lvWait=f.dayCell(null,'2026-10-14','당일',null,{v:'no_trade',final:false,src:'rule',trades:0,note:'아직 매수 없음 — BTC 쉼(추세 평균 아래)'});
+    const lvDone=f.dayCell('pending','2026-10-13','전일',null,{v:-5.953344947735195,final:true,src:'rule',trades:1,wins:0,losses:1,note:'모의투자 매수 안 됨 — 규칙대로 계산'});
+    const conf=f.dayCell(-5.95,'2026-10-13','전일',null,{v:-6,final:true,src:'rule',trades:1});
+    const none=f.dayCell('pending','2026-10-13','전일',null,null);
+    const pr=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:'pending',last:-1.2},{'2026-10-14':{v:1},'2026-10-15':{v:2}},'2026-10-15');
+    const pr0=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:0.5,last:'pending'},null,'');
+    ok('오늘 탭 실시간 칸: 장중 +10.75%(2건 · 모의투자 체결 · ⏱ 09:41 실시간 · 확정 전 · 점선) / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중 매수 전 / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
+       /class='daily-result-box live'/.test(lvNow)&&/\+10\.75%/.test(lvNow)&&/기준전략 2건 · 승 2 · 패 0 · 모의투자 체결/.test(lvNow)&&/\+1% 달성 · ⏱ 09:41 실시간 · 확정 전/.test(lvNow)
+       &&/>매매없음</.test(lvNt)&&/마감 · 밤 확정 전/.test(lvNt)&&/전날 15:21 매수 신호 없음/.test(lvNt)&&!/확정 대기/.test(lvNt)
+       &&/>매매 전</.test(lvWait)&&/아직 매수 없음/.test(lvWait)&&/-5\.95%/.test(lvDone)&&/기준전략 1건 · 승 0 · 패 1 · 시세로 계산/.test(lvDone)&&/>기준전략 0건<br>전날 15:21 매수 신호 없음</.test(lvNt)&&/목표까지 6\.95%p · 마감 · 밤 확정 전/.test(lvDone)
+       &&/-5\.95%/.test(conf)&&/모의 장부 확정/.test(conf)&&!/live|확정 전/.test(conf)&&/확정 대기/.test(none)&&!/live/.test(none)
+       &&pr.length===2&&pr[0].date==='2026-10-14'&&pr[0].v===-1.2&&pr[0].lv.v===1&&pr[1].date==='2026-10-15'&&pr[1].v===null&&pr[1].lv.v===2
+       &&pr0[0].date==='2026-10-13'&&pr0[0].v===0.5&&pr0[1].v==='pending'&&pr0[1].lv===null,
+       lvNow.slice(0,160));
+  }
   const fnames=[...ch.matchAll(/(?:^|[;\s}])function ([A-Za-z_$][\w$]*)\(/g)].map(m=>m[1]),dup=fnames.filter((n,i)=>fnames.indexOf(n)!==i);
   ok('클로드 화면 함수 이름 중복 없음(뒤에 선언한 함수가 앞의 것을 덮어쓰지 않게)',dup.length===0,dup.join(','));
   { let g=null,err='';
