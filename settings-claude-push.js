@@ -8,7 +8,7 @@ function token(){var a=window.jkAuth,u=a&&a.currentUser;return u?u.getIdToken():
 function render(){
   var on=st==="on",dis=busy||st==="unsupported";
   var desc=st==="unsupported"?"이 브라우저는 웹 알림을 지원하지 않습니다.":P.iosNeedsHome()?"iPhone은 Safari에서 JK투자를 홈 화면에 추가한 뒤 홈화면 아이콘으로 실행해야 켤 수 있습니다.":
-    "① 시초가 · ② 데이트레이딩 · ③ 비트코인 · ④ SOXL 의 모의 매수·매도가 생기면 5분 안에 알려줍니다(같은 알림은 한 번). 소유자 계정만 켤 수 있습니다.";
+    "① 시초가 · ② 데이트레이딩 · ③ 비트코인 · ④ SOXL 의 모의 매수·매도가 생기면 5분 안에 알려줍니다(같은 알림은 한 번). 매일 아침 08:00 연구 리포트도 보냅니다. 소유자 계정만 켤 수 있습니다.";
   host.innerHTML='<div class="alert-list"><div class="alert-item"><div class="alert-top"><div><div class="alert-name">⚡ 연구(클로드) · 매수·매도</div><div class="alert-desc">'+desc+'</div></div>'+
     '<span class="badge '+(on?'on':'')+'">'+(on?'ON':'OFF')+'</span></div><div class="actions">'+
     (on?'<button data-a="test" '+(busy?'disabled':'')+'>테스트 알림</button><button class="secondary" data-a="off" '+(busy?'disabled':'')+'>알림 끄기</button>'

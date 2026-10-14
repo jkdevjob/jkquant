@@ -694,7 +694,7 @@ t("알림 이름은 연구(클로드) — 켜짐 확인 알림 제목 · 서비�
   const P = { state: async () => "off", iosNeedsHome: () => false, enable: async () => "on", disable: async () => { throw new Error("거절"); }, test: async () => {} };
   vm.runInNewContext(read("settings-claude-push.js"), { window: { ClaudePush: P, jkAuth: null }, document: { getElementById: id => id === "claudePushSettings" ? host : null }, alert: m => alerts.push(m) });
   await tick();
-  assert.match(host.innerHTML, /<div class="alert-name">⚡ 연구\(클로드\) · 매수·매도<\/div>/);
+  assert.match(host.innerHTML, /<div class="alert-name">⚡ 연구\(클로드\) · 매수·매도<\/div>/); assert.match(host.innerHTML, /매일 아침 08:00 연구 리포트도 보냅니다/);
   host.btn.on(); await tick();
   assert.match(host.innerHTML, /data-a="off"/);
   host.btn.off(); await tick();
@@ -764,6 +764,51 @@ t("오늘 탭 전일·당일 칸(밤 확정 전 값): ① 마감 장부·장중 
   assert.equal(LV.soxlDayCell({ ...nx, basedOn: "2026-10-13" }, q4, 0.5), null);                             // 밤 계산이 이미 확정한 세션
   assert.equal(LV.soxlDayCell({ ...nx, holding: false }, q4, 0.5).cell.v, "no_trade");
 });
+t("매일 08:00 연구 리포트: 머리말 [클로드 연구 리포트] · 글 길이 · 링크 고정(/claude) · Worker /push-report 는 감시키 · 같은 날 한 번 · 웹 알림 + 텔레그램(op=report) · 거절만 3번 · 모름은 한 번", async () => {
+  await Promise.all(pending.slice());                                         // 전역 fetch 를 바꾸므로 앞 시험이 다 끝난 뒤에
+  const ok = PU.reportMsg({ date: "2026-10-15", title: "[클로드 연구 리포트] 10/15", push: "① −1.12%", text: "[클로드 연구 리포트] 10/15\n…", url: "https://evil.test" });
+  assert.deepEqual([ok.ok, ok.id, ok.url, ok.tag], [true, "report:2026-10-15", "/claude", "claude-report"]);   // 받은 글의 링크는 쓰지 않는다
+  for (const bad of [{ title: "연구 리포트" }, { text: "리포트" }, { push: "" }, { push: "x".repeat(301) }, { text: "[클로드 연구 리포트]" + "x".repeat(3500) }, { date: "10/15" }])
+    assert.equal(PU.reportMsg({ date: "2026-10-15", title: "[클로드 연구 리포트] 10/15", push: "p", text: "[클로드 연구 리포트] t", ...bad }).ok, false, JSON.stringify(bad).slice(0, 40));
+  const fs = await import("node:fs"), os = await import("node:os");
+  let src = fs.readFileSync(process.env.JKQ_WORKER_SRC || new URL("../worker/opening-scheduler/src/index.js", import.meta.url), "utf8");
+  src = src.replace('import { DurableObject } from "cloudflare:workers";', "class DurableObject{constructor(ctx,env){this.ctx=ctx;this.env=env}}")
+    .replace(/"\.\.\/\.\.\/\.\.\/functions\/api\/([^"]+)"/g, (_, f) => JSON.stringify(pathToFileURL(path.join(dir, f)).href));
+  const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "wk-")), "worker.mjs"); fs.writeFileSync(tmp, src);
+  const W = await import(pathToFileURL(tmp).href);
+  const mem = new Map(); let alarmAt = null;
+  const env = { MONITOR_KEY: "mk", BASE_URL: "https://pages.test", SIGNAL_STORE: { idFromName: n => n, get: () => ({ fetch: (u, i) => store.fetch(new Request(u, i)) }) } };
+  const store = new W.OpeningSignalStore({ storage: { get: async k => mem.get(k), put: async (k, v) => { mem.set(k, v); }, getAlarm: async () => alarmAt, setAlarm: async t => { alarmAt = t; } } }, env);
+  const ua = nodeCrypto.createECDH("prime256v1"); ua.generateKeys();
+  const sub = { endpoint: "https://push.test/s1", keys: { p256dh: PU.b64u(ua.getPublicKey()), auth: PU.b64u(nodeCrypto.randomBytes(16)) } };
+  const posts = [], tgs = [], oldFetch = globalThis.fetch; let tgReplies = [];
+  globalThis.fetch = async (u, init = {}) => {
+    u = String(u);
+    if (u.startsWith("https://push.test/")) { posts.push(u); return new Response("", { status: 201 }); }
+    if (u.endsWith("/api/claude-telegram")) { const b = JSON.parse(init.body); assert.equal(b.op, "report"); assert.equal(init.headers["x-monitor-key"], "mk"); tgs.push(b.text);
+      const r = tgReplies.shift() || { ok: true }; return new Response(JSON.stringify(r), { status: r.ok ? 200 : 502 }); }
+    throw new Error("unexpected fetch " + u);
+  };
+  try {
+    const call = (p, body, key = "mk") => W.default.fetch(new Request("https://w.test" + p, { method: "POST", headers: { "x-monitor-key": key }, body: JSON.stringify(body) }), env).then(async r => ({ status: r.status, j: await r.json() }));
+    await call("/push-subscribe", { subscription: sub });
+    const rep = d => ({ date: d, title: "[클로드 연구 리포트] " + d.slice(5), push: "① −1.12% · ② 매매 없음 · 연구 R5", text: "[클로드 연구 리포트] " + d.slice(5) + "\n① …\n자세히: jkquant.pages.dev/claude" });
+    assert.equal((await call("/push-report", rep("2026-10-15"), "bad")).status, 401);                  // 감시키 없이는 못 씀
+    assert.equal((await call("/push-report", { ...rep("2026-10-15"), title: "연구 리포트" })).status, 400);
+    assert.deepEqual([posts.length, tgs.length], [0, 0]);
+    const r1 = await call("/push-report", rep("2026-10-15"));
+    assert.equal(r1.status, 200); assert.equal(r1.j.id, "report:2026-10-15"); assert.equal(r1.j.push.subs, 1); assert.deepEqual(r1.j.telegram, { result: "sent", tries: 1 });
+    assert.deepEqual(posts, ["https://push.test/s1"]); assert.deepEqual(tgs, [rep("2026-10-15").text]);
+    const r2 = await call("/push-report", rep("2026-10-15"));                                          // 같은 날 다시 불러도 안 보냄
+    assert.equal(r2.j.duplicate, true); assert.deepEqual([posts.length, tgs.length], [1, 1]);
+    tgReplies = [1, 2, 3].map(() => ({ ok: false, definite: true, error: "거절" }));
+    const r3 = await call("/push-report", rep("2026-10-16"));                                          // 텔레그램 거절은 3번까지
+    assert.deepEqual([r3.j.telegram.result, r3.j.telegram.tries, tgs.length], ["fail", 3, 4]);
+    tgReplies = [{ ok: false, error: "timeout" }];
+    const r4 = await call("/push-report", rep("2026-10-17"));                                          // 보냈는지 모르면 다시 보내지 않음
+    assert.deepEqual([r4.j.telegram.result, r4.j.telegram.tries, tgs.length], ["unknown", 1, 5]);
+  } finally { globalThis.fetch = oldFetch; }
+});
 t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마다 days 칸 — ① 어제 마감 장부 −0.885 · 오늘 장중 +7.27 / ② 어제 −5.953 · 오늘 매매 없음 / ③ 메인 바뀐 날도 어제·오늘 칸(BTC+ETH → ETH) / ④ 밤 계산 확정분 없음", async () => {
   await Promise.all(pending.slice());                                         // 전역 fetch · 시계를 바꾸므로 앞 시험이 다 끝난 뒤에
   const oldFetch = globalThis.fetch, oldNow = Date.now, NOW = Date.parse("2026-10-14T09:41:00+09:00");
@@ -814,7 +859,7 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
     assert.ok(Array.isArray(j.tabs.opening.rows) && j.tabs.opening.rows.length === 2);   // 기존 응답(알림이 읽는 rows)은 그대로
   } finally { globalThis.fetch = oldFetch; Date.now = oldNow; }
 });
-t("텔레그램 엔드포인트: 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 보냄 · 판단·주간·대결·교체·마감 결과는 보내지 않음", async () => {
+t("텔레그램 엔드포인트: 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 보냄 · 판단·주간·대결·교체·마감 결과는 보내지 않음 · 예외: 매일 08:00 연구 리포트(op=report, [클로드 연구 리포트])", async () => {
   await Promise.all(pending.slice());                                         // 전역 fetch 를 바꾸므로 앞 시험이 다 끝난 뒤에(파일 맨 끝)
   const old = globalThis.fetch, sentTexts = [];
   globalThis.fetch = async (u, init = {}) => {
@@ -833,6 +878,10 @@ t("텔레그램 엔드포인트: 실제 매수·매도(op=event, [클로드 연�
       const r = await post(b); assert.equal(r.status, 200); assert.equal(r.j.skipped, "buy_sell_only", JSON.stringify(b));
     }
     assert.equal(sentTexts.length, 1);                                                                // 매수·매도 말고는 하나도 안 보냄
+    const rp = await post({ op: "report", text: "[클로드 연구 리포트] 10/15\n① 시초가 …" });              // 사용자 요청(2026-10-14) 매일 08:00 리포트
+    assert.equal(rp.status, 200); assert.equal(sentTexts.length, 2); assert.ok(sentTexts[1].startsWith("[클로드 연구 리포트] 10/15"));
+    const rb = await post({ op: "report", text: "연구 리포트 10/15" });                                  // 머리말 없으면 거절(정의된 실패)
+    assert.equal(rb.status, 400); assert.equal(rb.j.definite, true); assert.equal(sentTexts.length, 2);
     assert.equal((await post({ op: "nope" })).status, 400);
   } finally { globalThis.fetch = old; }
 });
