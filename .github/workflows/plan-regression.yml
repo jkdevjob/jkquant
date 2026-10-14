@@ -1,0 +1,29 @@
+name: JKQuant regression on PR
+on:
+  pull_request:
+    paths:
+      - plan.html
+      - index.html
+      - plan-session-engine.js
+      - scripts/check-plan-signal-fill.cjs
+      - regression-check.js
+      - .github/workflows/plan-regression.yml
+  workflow_dispatch:
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install analysis regression dependencies
+        run: python -m pip install --disable-pip-version-check numpy pandas
+      - name: JKQuant full regression
+        run: node regression-check.js

@@ -1,6 +1,7 @@
 import { buildDailyDigest, IPO_SCORE_VERSION } from "./ipo-score.mjs";
 import { verifyFirebaseToken } from "../../../functions/api/_firebase_token.js";
 import { evaluatePresale, describeEvaluation, won, SCORING_VERSION } from "./presale-score.mjs";
+import {normalizeGptReport,missingGptReport,gptReportDate,gptReportDue,gptReportMessage} from "../../../functions/api/_gpt_morning_report.js";
 const enc=new TextEncoder();
 const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
@@ -8,7 +9,8 @@ const JOB_APP=BASE_APP+"/job";
 const IPO_APP=BASE_APP+"/ipo";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
 const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl"]);
-const VALID_TOPICS=new Set(["presale","job","ipo","research",...TRADE_TOPICS]);
+const GPT_TOPICS=new Set([...TRADE_TOPICS,"tenbagger_gpt"]);
+const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
 /* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
 const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
 const RESEARCH_STUDIES={im_plan:{name:"무매·5년 플랜 연구",url:RESEARCH_APP},
@@ -103,9 +105,12 @@ function kstDate(offsetDays=0){
   return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");
 }
 function clean(v,max=500){return String(v==null?"":v).replace(/[<>\r\n]/g," ").trim().slice(0,max)}
-function normalizeTopics(v,fallback){
+function normalizeTopics(v,fallback,legacy=false){
   const a=Array.isArray(v)?v:(fallback||[]);
-  return [...new Set(a.map(x=>String(x||"").trim()).filter(x=>VALID_TOPICS.has(x)))];
+  const out=[...new Set(a.map(x=>String(x||"").trim()).filter(x=>VALID_TOPICS.has(x)))];
+  // 기존 research 동의는 지피티 텐배거에도 적용됐다. 다른 단타 탭까지 자동으로 켜지 않는다.
+  if(legacy&&out.includes("research")&&!out.includes("tenbagger_gpt"))out.push("tenbagger_gpt");
+  return out;
 }
 async function hashText(s){
   const d=new Uint8Array(await crypto.subtle.digest("SHA-256",enc.encode(String(s))));
@@ -272,21 +277,95 @@ async function jobFeed(baseUrl){
 
 export class PresaleAlertStore{
   constructor(state,env){this.state=state;this.env=env}
+  async armGptMorningReport(){
+    const now=Date.now(),today=gptReportDate(now),date=now<gptReportDue(today)?today:gptReportDate(now+86400000);
+    const due=gptReportDue(date),old=await this.state.storage.getAlarm();
+    if(!old||old<=now||old>due)await this.state.storage.setAlarm(due);
+    return {ok:true,date,dueAt:new Date(due).toISOString()};
+  }
+  async gptMorningReport(request){
+    if(!this.env.MONITOR_KEY||request.headers.get('x-monitor-key')!==this.env.MONITOR_KEY)return json(request,{ok:false,error:'unauthorized'},401);
+    const st=this.state.storage;
+    if(request.method==='GET'){
+      const date=new URL(request.url).searchParams.get('date')||await st.get('gpt-report:latest');
+      return json(request,{ok:true,report:date?await st.get('gpt-report:'+date)||null:null,delivery:date?await st.get('gpt-report-delivery:'+date)||null:null});
+    }
+    let report;try{report=normalizeGptReport(await request.json());}catch(e){return json(request,{ok:false,error:String(e.message)},400);}
+    const receipt=await st.get('gpt-report-delivery:'+report.date);
+    if(receipt){
+      // Full consent saved as five individual tabs has the same meaning as the settings card.
+      // Recover only a report that reached no push recipients; retain sent/unknown Telegram.
+      if(report.date===gptReportDate()&&receipt.push?.eligible===0&&!receipt.pushKeys.length&&receipt.pushAttempts<3){
+        const subs=await this.subscriptions();
+        if([...subs.values()].some(s=>this.subscribedTo(s,'gpt'))){
+          receipt.pushComplete=false;receipt.complete=false;await st.put('gpt-report-delivery:'+report.date,receipt);
+          await st.setAlarm(Date.now()+1000);
+          return json(request,{ok:true,duplicate:true,requeuedPush:true,date:report.date,delivery:receipt});
+        }
+      }
+      return json(request,{ok:true,duplicate:true,date:report.date,delivery:receipt});
+    }
+    if(await st.get('gpt-report:'+report.date))return json(request,{ok:true,duplicate:true,date:report.date});
+    await st.put('gpt-report:'+report.date,report);await st.put('gpt-report:latest',report.date);
+    const due=Math.max(Date.now()+1000,gptReportDue(report.date)),alarm=await st.getAlarm();
+    if(!alarm||alarm>due)await st.setAlarm(due);
+    return json(request,{ok:true,queued:true,date:report.date,dueAt:new Date(due).toISOString()});
+  }
+  async alarm(){
+    const p=(this.gptReportQueue||Promise.resolve()).catch(()=>{}).then(async()=>{
+      try{await this.deliverGptMorningReport();}finally{await this.armGptMorningReport();}
+    });this.gptReportQueue=p;return p;
+  }
+  async deliverGptMorningReport(){
+    const now=Date.now(),date=gptReportDate(now),st=this.state.storage;
+    if(now<gptReportDue(date))return;
+    const key='gpt-report-delivery:'+date;
+    let receipt=await st.get(key)||{date,pushKeys:[],pushAttempts:0,telegram:{result:'not_sent',tries:0}};
+    const report=await st.get('gpt-report:'+date)||missingGptReport(date,now),m=gptReportMessage(report);
+    await st.put('gpt-report:'+date,report);await st.put('gpt-report:latest',date);
+    if(receipt.complete)return receipt;
+    await st.put(key,receipt);
+    if(receipt.pushAttempts<3&&!receipt.pushComplete){
+      await this.recordAlert({...m,createdAt:new Date(now).toISOString()});
+      receipt.pushAttempts++;
+      try{const p=await this.notifyAll('gpt',new Set(receipt.pushKeys));receipt.pushKeys=[...new Set([...receipt.pushKeys,...p.sentKeys])];receipt.push={sent:receipt.pushKeys.length,eligible:p.eligible,failed:p.failed,removed:p.removed};receipt.pushComplete=p.failed<=p.removed;}
+      catch(e){receipt.push={error:'push delivery failed'};}
+      await st.put(key,receipt);
+    }
+    if(!['sent','unknown'].includes(receipt.telegram.result)){
+      for(let n=receipt.telegram.tries+1;n<=3;n++){
+        receipt.telegram={result:'unknown',tries:n};await st.put(key,receipt);
+        try{
+          const r=await fetch((this.env.BASE_URL||BASE_APP)+'/api/gpt-morning-report',{method:'POST',headers:{'content-type':'application/json','x-monitor-key':this.env.MONITOR_KEY},body:JSON.stringify({text:m.text}),signal:AbortSignal.timeout(15000)});
+          const j=await r.json().catch(()=>null);
+          receipt.telegram={result:r.ok&&j?.ok?'sent':j?.definite?'fail':'unknown',tries:n};await st.put(key,receipt);
+          if(receipt.telegram.result!=='fail')break;
+        }catch(e){break;}
+      }
+    }
+    receipt.complete=(receipt.pushComplete||receipt.pushAttempts>=3)&&(['sent','unknown'].includes(receipt.telegram.result)||receipt.telegram.tries>=3);
+    receipt.updatedAt=new Date().toISOString();await st.put(key,receipt);
+    await st.put('gpt-report:last-delivery',date);
+    if(!receipt.complete)await st.setAlarm(Date.now()+60000);
+    return receipt;
+  }
   async vapid(){
     let v=await this.state.storage.get("vapid");
     if(!v){v=await generateVapid();await this.state.storage.put("vapid",v)}
     return v;
   }
   async subscriptions(){return this.state.storage.list({prefix:"sub:"})}
-  topicsOf(s){return normalizeTopics(s&&s.topics,s&&s.topics?[]:["presale"])}
+  topicsOf(s){return normalizeTopics(s&&s.topics,s&&s.topics?[]:["presale"],Number(s&&s.topicSchemaVersion||1)<2)}
+  subscribedTo(s,topic){const t=this.topicsOf(s);return t.includes(topic)||(GPT_TOPICS.has(topic)&&t.includes("gpt"))||(topic==="gpt"&&[...GPT_TOPICS].every(x=>t.includes(x)))}
   async subscribe(request){
     const body=await request.json().catch(()=>null),s=body&&body.subscription;
     const endpoint=clean(s&&s.endpoint,2000);
     if(!endpoint||!/^https:\/\//.test(endpoint))return json(request,{ok:false,error:"invalid subscription"},400);
     const id=await hashText(endpoint),old=await this.state.storage.get("sub:"+id);
-    const topics=normalizeTopics(body&&body.topics,old?this.topicsOf(old):["presale"]);
+    const schema=Number(body&&body.topicSchemaVersion||old&&old.topicSchemaVersion||1);
+    const topics=normalizeTopics(body&&body.topics,old?this.topicsOf(old):["presale"],schema<2);
     await this.state.storage.put("sub:"+id,{
-      endpoint,topics,createdAt:(old&&old.createdAt)||new Date().toISOString(),
+      endpoint,topics,topicSchemaVersion:2,createdAt:(old&&old.createdAt)||new Date().toISOString(),
       updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),
       approvalUid:old&&old.approvalUid||null
     });
@@ -302,7 +381,7 @@ export class PresaleAlertStore{
     const changed=old&&old.approvalUid&&old.approvalUid!==user.uid;
     if(changed)await this.state.storage.delete("approval:event:"+id);
     await this.state.storage.put("sub:"+id,{
-      endpoint,topics:old?this.topicsOf(old):[],createdAt:old&&old.createdAt||new Date().toISOString(),
+      endpoint,topics:old?this.topicsOf(old):[],topicSchemaVersion:2,createdAt:old&&old.createdAt||new Date().toISOString(),
       updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),approvalUid:user.uid
     });
     return json(request,{ok:true,registered:true});
@@ -412,7 +491,7 @@ export class PresaleAlertStore{
     const u=new URL(request.url),endpoint=clean(u.searchParams.get("endpoint"),2000);
     if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
     const id=await hashText(endpoint),s=await this.state.storage.get("sub:"+id);
-    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[],approvalLinked:!!(s&&s.approvalUid)});
+    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[],topicSchemaVersion:2,approvalLinked:!!(s&&s.approvalUid)});
   }
   async unsubscribe(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
@@ -430,7 +509,7 @@ export class PresaleAlertStore{
   async notifyAll(topic,delivered=new Set()){
     const subs=await this.subscriptions();let sent=0,failed=0,removed=0,eligible=0;const sentKeys=[];
     for(const [key,s] of subs){
-      if(!this.topicsOf(s).includes(topic))continue;
+      if(!this.subscribedTo(s,topic))continue;
       eligible++;
       if(delivered.has(key))continue;
       try{
@@ -463,7 +542,12 @@ export class PresaleAlertStore{
     if(!sub)return json(request,{ok:false,error:"subscription not registered"},404);
     const last=Number(await this.state.storage.get("test:"+id)||0);
     if(Date.now()-last<30000)return json(request,{ok:false,error:"테스트는 30초에 한 번 가능합니다."},429);
-    const alert=TRADE_TOPICS.has(topic)?{
+    const gptType=this.topicsOf(sub).includes("gpt")?"gpt":this.topicsOf(sub).find(t=>GPT_TOPICS.has(t))||"gpt";
+    const alert=topic==="gpt"?{
+      id:"test-gpt-"+Date.now(),type:gptType,title:"[지피티 연구] 🔔 전체 탭 알림 테스트",
+      body:"시초가·데이트레이딩·비트코인·SOXL·텐배거를 한 설정으로 관리합니다.",
+      url:BASE_APP+"/scalping",createdAt:new Date().toISOString()
+    }:TRADE_TOPICS.has(topic)?{
       id:"test-"+topic+"-"+Date.now(),type:topic,title:"🔔 "+({opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic])+" 매매알림 테스트",
       body:"매수·매도 알림 수신이 정상 연결되었습니다. 실제 주문이 아닌 모의매매 신호입니다.",
       url:BASE_APP+"/scalping?strategy="+topic,createdAt:new Date().toISOString()
@@ -473,7 +557,7 @@ export class PresaleAlertStore{
       url:IPO_APP,createdAt:new Date().toISOString()
     }:topic==="research"?{
       id:"test-research-"+Date.now(),type:"research",title:"🔬 매일 연구 웹알림 테스트",
-      body:"무매·5년 플랜·텐배거(지피티·클로드) 연구 결과 알림이 정상 연결되었습니다.",
+      body:"무매·5년 플랜·클로드 텐배거 연구 알림이 정상 연결되었습니다.",
       url:RESEARCH_APP,createdAt:new Date().toISOString()
     }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
@@ -519,7 +603,7 @@ export class PresaleAlertStore{
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,200)).filter(Boolean).slice(0,5):[];
     const name={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic];
     const trade={id,type:topic,stage,createdAt:new Date().toISOString(),
-      title:"[지피티 연구 "+name+"] "+(stage==="buy"?"🟢 ":"🔴 ")+"모의 "+(stage==="buy"?"매수":"매도")+" 타이밍",   // 2026-10-13: 모든 연구 메뉴 같은 머리말
+      title:"[지피티 연구 "+name+"] "+(stage==="buy"?"🟢 ":"🔴 ")+(stage==="buy"?"매수":"매도"),   // 2026-10-13: 모든 연구 메뉴 같은 머리말
       body:[date,time,...lines].filter(Boolean).join(" · ").slice(0,245),url:BASE_APP+"/scalping?strategy="+topic};
     // 송신 중인 같은 eventId 중복 요청 차단. 성공 응답 전 실패 건은 재시도 가능하도록 해제한다.
     await this.state.storage.put(claimKey,{status:"sending",at:trade.createdAt,sentKeys:[...delivered]});
@@ -654,16 +738,17 @@ export class PresaleAlertStore{
     const claim="research-delivery:"+id,prev=await this.state.storage.get(claim);
     if(prev?.status==="sending"&&Date.now()-Date.parse(prev.at)<120000)return json(request,{ok:false,retryable:true,error:"delivery in progress"},409);
     const delivered=new Set(prev?.sentKeys||[]);
-    const alert={id,type:"research",study,title:spec.trade?spec.name+" "+RESEARCH_STAGE[stage]+" "+date.slice(5).replace("-","/")
+    const topic=study==="tenbagger"?"tenbagger_gpt":"research";
+    const alert={id,type:topic,study,title:spec.trade?spec.name+" "+RESEARCH_STAGE[stage]+" "+date.slice(5).replace("-","/")
         :(found?"★ ":"🔬 ")+spec.name+" "+date.slice(5).replace("-","/")+(found?" — 발견":""),
       body,url:spec.url,createdAt:new Date().toISOString()};
     await this.state.storage.put(claim,{status:"sending",at:alert.createdAt,sentKeys:[...delivered]});
     let delivery;
-    try{await this.recordAlert(alert);delivery=await this.notifyAll("research",delivered);}
+    try{await this.recordAlert(alert);delivery=await this.notifyAll(topic,delivered);}
     catch(e){await this.state.storage.put(claim,{status:"delivery_failed",at:alert.createdAt,sentKeys:[...delivered]});return json(request,{ok:false,retryable:true,error:String(e.message||e)},502);}
     const sentKeys=[...new Set([...delivered,...(delivery.sentKeys||[])])];
     await this.state.storage.put(claim,{status:delivery.failed>delivery.removed?"delivery_failed":"sent",at:alert.createdAt,sentKeys});
-    await this.state.storage.put("lastCheck:research",alert.createdAt);
+    await this.state.storage.put("lastCheck:"+topic,alert.createdAt);
     if(delivery.failed>delivery.removed)return json(request,{ok:false,retryable:true,id,delivery,error:"research delivery incomplete"},502);
     await this.state.storage.put("sent:"+id,alert.createdAt);
     return json(request,{ok:true,id,alert,delivery});
@@ -677,19 +762,33 @@ export class PresaleAlertStore{
   async fetch(request){
     if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
     const u=new URL(request.url),path=u.pathname;
+    if(path==='/gpt-morning-report'){
+      const p=(this.gptReportQueue||Promise.resolve()).catch(()=>{}).then(()=>this.gptMorningReport(request));this.gptReportQueue=p;return p;
+    }
+    if(path==='/gpt-morning-arm'){
+      if(!this.env.MONITOR_KEY||request.headers.get('x-monitor-key')!==this.env.MONITOR_KEY)return json(request,{ok:false,error:'unauthorized'},401);
+      return json(request,await this.armGptMorningReport());
+    }
     if(path==="/health"){
       const subs=await this.subscriptions(),lastCheck=await this.state.storage.get("lastCheck");
       const jobLastCheck=await this.state.storage.get("lastCheck:job");
       const counts=Object.fromEntries([...VALID_TOPICS].map(t=>[t,0]));
-      for(const [,s] of subs)for(const t of this.topicsOf(s))counts[t]++;
+      for(const [,s] of subs){
+        for(const t of VALID_TOPICS)if(this.subscribedTo(s,t))counts[t]++;
+        if(!this.subscribedTo(s,"gpt")&&this.topicsOf(s).some(t=>GPT_TOPICS.has(t)))counts.gpt++;
+      }
       const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null,research:await this.state.storage.get("lastCheck:research")||null};
       const lastDeliveries={};
       for(const t of TRADE_TOPICS){
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
       }
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.5.0",subscriptions:subs.size,
-        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
+      lastChecks.tenbagger_gpt=await this.state.storage.get("lastCheck:tenbagger_gpt")||null;
+      lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
+      const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
+      const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.7.1",topicSchemaVersion:2,subscriptions:subs.size,
+        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
     if(path==="/latest"){
@@ -744,6 +843,7 @@ export default{
     }
     if(minute!==7&&minute!==37)return;
     ctx.waitUntil(Promise.allSettled([
+      stub.fetch(new Request('https://internal/gpt-morning-arm',{method:'POST',headers:{'x-monitor-key':env.MONITOR_KEY||''}})),
       stub.fetch(new Request("https://internal/check",{method:"POST"})),
       stub.fetch(new Request("https://internal/check-jobs",{method:"POST"}))
     ]));

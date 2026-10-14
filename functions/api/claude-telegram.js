@@ -3,10 +3,12 @@
 //  사용자 요청(2026-10-13): 텔레그램은 실제 매수 · 매도 때만 보낸다(op=event). 웹 알림과 같은 사건(_claude_push.js pushEvents)이고
 //  메시지는 '[클로드 연구 시초가]' 처럼 시작한다. 판단 · 매매 없음 · 휴장 · 하루 마감 결과 · 주간 · 대결 · 메인 교체 메시지는 보내지 않는다
 //  (옛 호출 kind=… · op=send 가 와도 보내지 않고 skipped 로 답한다).
+//  예외 하나: 매일 08:00 연구 리포트(op=report, 머리말 [클로드 연구 리포트]) — 사용자 요청(2026-10-14). Worker /push-report 가 하루 한 번 부른다.
 //  하루 마감 장부 계산(op=close)은 그대로 — Worker 가 Durable Object 에 한 번만 저장하고 밤 계산 · 대결 비교가 그 장부를 읽는다.
 import { ledger, quote } from "./claude-live.js";
 import { openingDay, etfDay, coinDay, soxlDay } from "./_claude_day.js";
 import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts } from "./_claude_main.js";
+import { REPORT_HEAD } from "./_claude_push.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
@@ -162,6 +164,12 @@ export async function onRequestPost({request,env}){
   if(b.op==="event"){                               // 실제 매수 · 매도 — Worker 감시가 웹 알림과 같은 사건으로 부른다
     const text=String(b.text||"");
     if(!ALERT_HEAD.test(text)||text.length>1500)return json({ok:false,definite:true,error:"알림 형식 오류(머리말 [클로드 연구 탭])"},400);
+    const r=await sendOnce(env,text);
+    return json(r,r.ok?200:502);
+  }
+  if(b.op==="report"){                              // 매일 08:00 연구 리포트 — 매수·매도 알림과 머리말이 다르다
+    const text=String(b.text||"");
+    if(!text.startsWith(REPORT_HEAD)||text.length>3500)return json({ok:false,definite:true,error:"리포트 형식 오류(머리말 "+REPORT_HEAD+")"},400);
     const r=await sendOnce(env,text);
     return json(r,r.ok?200:502);
   }

@@ -7,6 +7,8 @@ if(!host)return;
 let cfg=null,reg=null,sub=null,health=null,busy=false;
 let topics=new Set();
 let approvalLinked=false;
+let topicSchemaVersion=1;
+const GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent||"")}
@@ -31,23 +33,24 @@ async function server(path,opt){
 }
 async function currentSub(){
   if(!supported())return null;
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.1.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.2.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   sub=await reg.pushManager.getSubscription();
   return sub;
 }
-async function loadTopics(){
-  topics=new Set();
+async function loadTopics(required=false){
   if(!sub||!cfg)return;
   try{
     const j=await server("/subscription?endpoint="+encodeURIComponent(sub.endpoint));
-    (j.topics||[]).forEach(x=>topics.add(x));
+    topics=new Set(j.topics||[]);
     approvalLinked=!!j.approvalLinked;
-  }catch(e){}
+    topicSchemaVersion=Number(j.topicSchemaVersion||1);
+    if(topicSchemaVersion<2&&topics.has("research"))topics.add("tenbagger_gpt");
+  }catch(e){if(required)throw e}
 }
 async function syncWorkerTopics(){
   if(!reg&&"serviceWorker" in navigator)reg=await navigator.serviceWorker.ready.catch(()=>null);
-  const msg={type:"JK_PUSH_TOPICS",topics:[...topics]};
+  const msg={type:"JK_PUSH_TOPICS",topics:[...topics],topicSchemaVersion};
   try{if(navigator.serviceWorker.controller)navigator.serviceWorker.controller.postMessage(msg)}catch(e){}
   try{if(reg&&reg.active)reg.active.postMessage(msg)}catch(e){}
   try{if(reg&&reg.waiting)reg.waiting.postMessage(msg)}catch(e){}
@@ -68,37 +71,38 @@ function commonDescription(){
   if(Notification.permission==="denied")return "알림 권한이 차단돼 있습니다. 기기 설정에서 JK 투자 알림을 허용해 주세요.";
   return "";
 }
+function topicState(topic){
+  if(topic!=="gpt")return topics.has(topic)?"on":"off";
+  if(topics.has("gpt")||GPT_TOPICS.every(t=>topics.has(t)))return "on";
+  return GPT_TOPICS.some(t=>topics.has(t))?"partial":"off";
+}
 function item(topic,icon,name,desc){
-  const on=topics.has(topic),iosNeed=isIOS()&&!standalone(),blocked=typeof Notification!=="undefined"&&Notification.permission==="denied";
+  const state=topicState(topic),on=state!=="off",partial=state==="partial";
+  const iosNeed=isIOS()&&!standalone(),blocked=typeof Notification!=="undefined"&&Notification.permission==="denied";
   const common=commonDescription();
   const statusDesc=common||desc;
   return '<div class="alert-item">'+
     '<div class="alert-top"><div><div class="alert-name">'+icon+" "+esc(name)+'</div><div class="alert-desc">'+esc(statusDesc)+'</div></div>'+
-    '<span class="badge '+(on?'on':'')+'">'+(on?'ON':'OFF')+'</span></div>'+
+    '<span class="badge '+(on?'on':'')+'">'+(partial?'일부 ON':on?'ON':'OFF')+'</span></div>'+
     '<div class="actions">'+
-      (!on?'<button data-action="on" data-topic="'+topic+'" '+((busy||iosNeed||blocked||!supported()||!cfg)?'disabled':'')+'>알림 켜기</button>':'')+
+      (!on||partial?'<button data-action="on" data-topic="'+topic+'" '+((busy||iosNeed||blocked||!supported()||!cfg)?'disabled':'')+'>'+(partial?'전체 탭 알림 켜기':'알림 켜기')+'</button>':'')+
       (on?'<button data-action="test" data-topic="'+topic+'" '+(busy?'disabled':'')+'>테스트 알림</button>'+
            '<button class="secondary" data-action="off" data-topic="'+topic+'" '+(busy?'disabled':'')+'>알림 끄기</button>':'')+
     '</div>'+
+    (partial?'<div class="help">기존에 선택한 일부 탭만 켜져 있습니다. 전체 탭 알림 켜기를 누르면 한 번에 통합됩니다.</div>':'')+
     (iosNeed?'<div class="help"><b>iPhone 설정</b><br>Safari에서 JK투자를 연 뒤 공유 → <b>홈 화면에 추가</b> → 홈화면의 JK투자 아이콘으로 실행 → 설정 → 알림에서 다시 켜세요.</div>':'')+
     '<div class="server">'+(health?('등록기기 '+topicCount(topic)+'대 · 최근 확인 '+esc(fmtServerTime(lastCheck(topic)))):(cfg?'푸시 서버 연결 확인 중':'푸시 서버 연결 안 됨'))+'</div>'+
   '</div>';
 }
 const NOTIFY_DEFS=[
-  {topic:"opening",href:"/scalping",icon:"⚡",name:"연구(지피티) · 시초가 매수·매도",
-    desc:"기준전략의 시초가 모의매수·매도 신호를 알립니다. 알림을 누르면 해당 전략 화면으로 이동합니다."},
-  {topic:"daytrading",href:"/scalping",icon:"📈",name:"연구(지피티) · 데이트레이딩 매수·매도",
-    desc:"기준전략의 모의매수·매도 전환 시 알려줍니다."},
-  {topic:"crypto",href:"/scalping",icon:"₿",name:"연구(지피티) · 비트코인 매수·매도",
-    desc:"KRW-BTC 기준전략 모의매수·매도 신호 알림입니다."},
-  {topic:"soxl",href:"/scalping",icon:"⚡",name:"연구(지피티) · SOXL 매수·매도",
-    desc:"미국장 SOXL 기준전략의 모의매수·매도 신호를 알립니다."},
+  {topic:"gpt",href:"/scalping",icon:"⚡",name:"연구(지피티) · 전체 탭",
+    desc:"시초가 · 데이트레이딩 · 비트코인 · SOXL의 모의 매수·매도와 텐배거 전향 연구 알림을 함께 켜고 끕니다. 매일 08:00 전체 탭 연구 리포트도 보냅니다. 알림을 누르면 해당 탭으로 이동합니다."},
   {topic:"ipo",href:"/ipo",icon:"📈",name:"공모주·청약 일정",
    desc:"매일 오전 8:10경 청약 중·7일 내 청약 예정·당일 상장 종목과 공모가/경쟁률 기반 투자 조사 점수를 보내드립니다."},
   {topic:"presale",href:"/realestate",icon:"🏢",name:"대전·세종 신규분양",
    desc:"대전·세종 일반·무순위/잔여·임의공급 신규공고를 30분 간격으로 확인하고 분양가·주변 실거래 기반 점수로 안내합니다."},
-  {topic:"research",href:"/scalping",icon:"🔬",name:"연구 결과 · 무매·플랜·텐배거",
-   desc:"기존 무매·5년 플랜 연구와 텐배거 전향 연구(지피티 고정 패턴 후보 · 클로드 고정 모형 20종목 모의 장부) 요약을 함께 받습니다. 텐배거는 실험이며 매수 추천·수익성 검증이 아닙니다."},
+  {topic:"research",href:"/scalping",icon:"🔬",name:"연구 결과 · 무매·플랜·클로드 텐배거",
+   desc:"무매·5년 플랜 연구 결과와 클로드 텐배거 모의 매수·매도 알림입니다. 지피티 텐배거는 연구(지피티) 전체 탭 설정에서 관리합니다."},
   {topic:"job",href:"/job",icon:"💼",name:"대전·세종 JOB 신규공고",
    desc:"30분마다 채용공고를 확인하고 새 공고가 있을 때만 알려줍니다."}
 ];
@@ -123,53 +127,65 @@ async function ensurePushSubscription(){
   const perm=Notification.permission==="granted"?"granted":await Notification.requestPermission();
   if(perm!=="granted")throw new Error("알림 권한이 허용되지 않았습니다.");
   cfg=cfg||await getConfig();
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.1.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.2.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   const v=await server("/vapid");
   sub=await reg.pushManager.getSubscription();
   if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(v.publicKey)});
 }
-async function saveTopics(){
-  if(!sub)return;
+async function saveTopics(nextTopics=topics){
+  if(!sub)throw new Error("기기의 알림 구독을 확인할 수 없습니다.");
+  if(topicSchemaVersion<2)throw new Error("알림 서버 업데이트 중입니다. 잠시 후 다시 시도하세요.");
   await server("/subscribe",{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent,topics:[...topics]})
+    body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent,topics:[...nextTopics],topicSchemaVersion:2})
   });
+  topics=new Set(nextTopics);
   await syncWorkerTopics();
 }
 async function enable(topic){
   if(busy)return;busy=true;render();
+  let message;
   try{
     await ensurePushSubscription();
-    await loadTopics();
-    topics.add(topic);
-    await saveTopics();
+    await loadTopics(true);
+    const nextTopics=new Set(topics);
+    if(topic==="gpt")GPT_TOPICS.forEach(t=>nextTopics.delete(t));
+    nextTopics.add(topic);
+    await saveTopics(nextTopics);
     try{health=await server("/health")}catch(e){}
-    alert(({ipo:"공모주·청약 매일",job:"JOB 신규공고",presale:"신규분양",opening:"시초가 매수·매도",daytrading:"데이트레이딩 매수·매도",crypto:"비트코인 매수·매도",soxl:"SOXL 매수·매도"})[topic]+" 알림을 켰습니다.");
-  }catch(e){alert("알림 설정 실패: "+String(e&&e.message||e))}
+    const def=NOTIFY_DEFS.find(x=>x.topic===topic);
+    message=(def?def.name:"선택한 항목")+" 알림을 켰습니다.";
+  }catch(e){message="알림 설정 실패: "+String(e&&e.message||e)}
   finally{busy=false;render()}
+  // 차단형 팝업을 띄우기 전에 저장 결과와 버튼 상태가 실제 화면에 그려지게 한다.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  alert(message);
 }
 async function disable(topic){
   if(busy||!sub)return;busy=true;render();
   try{
-    topics.delete(topic);
-    if(topics.size||approvalLinked){
-      await saveTopics();
+    await loadTopics(true);
+    const nextTopics=new Set(topics);nextTopics.delete(topic);
+    if(topic==="gpt")GPT_TOPICS.forEach(t=>nextTopics.delete(t));
+    if(nextTopics.size||approvalLinked){
+      await saveTopics(nextTopics);
     }else{
       await server("/subscribe",{
         method:"DELETE",headers:{"content-type":"application/json"},
         body:JSON.stringify({endpoint:sub.endpoint})
-      }).catch(()=>{});
+      });
+      topics=nextTopics;
+      await syncWorkerTopics();
       await sub.unsubscribe();
       sub=null;
-      await syncWorkerTopics();
     }
     try{health=await server("/health")}catch(e){}
   }catch(e){alert("알림 해제 실패: "+String(e&&e.message||e))}
   finally{busy=false;render()}
 }
 async function test(topic){
-  if(busy||!sub||!topics.has(topic))return;busy=true;render();
+  if(busy||!sub||topicState(topic)==="off")return;busy=true;render();
   try{
     const j=await server("/test",{
       method:"POST",headers:{"content-type":"application/json"},

@@ -41,7 +41,8 @@ test('연구(클로드) 이름 · 🔟 텐배거 탭 · 직접 링크(?tab=tenba
   assert.match(PAGE,/<div class="kicker">Claude Research<\/div><h1>JK <span class="v">투자<\/span> 연구 <span class="ver" id="clVer">v\d+\.\d+\.\d+<\/span>/);
   assert.match(PAGE,/<button class="tab" data-tab="tenbagger" onclick="showTab\('tenbagger'\)">🔟 텐배거<\/button>/);
   const at=t=>PAGE.indexOf('data-tab="'+t+'"');
-  assert.ok(at('soxl')<at('tenbagger')&&at('tenbagger')<at('all')&&at('all')<at('duel'),'연구(지피티)와 같게 SOXL 다음 · 비교 탭 앞');
+  assert.ok(at('soxl')>0&&at('soxl')<at('tenbagger')&&at('tenbagger')<at('duel'),'연구(지피티)와 같게 SOXL 다음 · 비교 탭 앞');
+  assert.equal(at('all'),-1,'🎯 전체 계좌 탭은 2026-10-14 사용자 요청으로 지웠다');
   assert.match(fs.readFileSync(new URL('../jk-ui.js',import.meta.url),'utf8'),/'\/claude':'연구\(클로드\)'/,'공용 머리말도 연구(클로드)');
   assert.match(PAGE,/<script src="\/claude-tenbagger\.js\?v=1\.0\.0" defer><\/script>/);
   assert.match(fs.readFileSync(new URL('../jk-access.js',import.meta.url),'utf8'),/\{path:'\/claude',label:'연구\(클로드\)',mode:'admin',order:50\}/);

@@ -12,6 +12,20 @@ const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toI
 export const HEAD = { open: "[클로드 연구 시초가]", etf: "[클로드 연구 데이트레이딩]", coin: "[클로드 연구 비트코인]", soxl: "[클로드 연구 SOXL]" };
 export const APP_URL = "jkquant.pages.dev/claude";
 
+// 매일 08:00 연구 리포트 — 사용자 요청(2026-10-14): "연구 모든탭에 대해 매일 아침 8시 일정한 시간에 더 나은 방향으로 연구해서 결과 알려줘 앱푸시랑 텔레그램으로".
+// 매수 · 매도 알림과 머리말이 다르다(하루 한 번 · 같은 날 다시 보내지 않음). 아침 연구(Claude 루틴)가 GitHub Actions(claude-research-report.yml)로 넘기면
+// 그 workflow 가 08:00 KST 까지 기다렸다가 Worker /push-report 를 부른다. 링크는 고정(/claude) — 받은 글로 다른 주소를 열지 않는다.
+export const REPORT_HEAD = "[클로드 연구 리포트]";
+export function reportMsg(b) {
+  b = b || {};
+  const date = String(b.date || ""), title = String(b.title || "").trim(), body = String(b.push || "").trim(), text = String(b.text || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: "date(YYYY-MM-DD)" };
+  if (!title.startsWith(REPORT_HEAD) || title.length > 80) return { ok: false, error: "title(" + REPORT_HEAD + " 로 시작 · 80자 이하)" };
+  if (!body || body.length > 300) return { ok: false, error: "push(1~300자)" };
+  if (!text.startsWith(REPORT_HEAD) || text.length > 3500) return { ok: false, error: "text(" + REPORT_HEAD + " 로 시작 · 3500자 이하)" };
+  return { ok: true, id: "report:" + date, title, body, text, tag: "claude-report", url: "/claude" };
+}
+
 // live: /api/claude-live 응답 · nowMs: 지금 · sent: 이미 보낸 알림 {id: {at, price}} (③ 다음 날 09:00 매도 알림에 쓴다)
 // 돌려주는 것: [{id, title, body, tag, url, price?}]
 export function pushEvents(live, nowMs, sent = {}) {

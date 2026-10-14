@@ -111,7 +111,7 @@ await check('logout during owner lookup or menu loading cannot reopen the app',a
     let authCallback,releaseLookup,initialized=0;
     const delayed=new Promise(resolve=>releaseLookup=resolve);
     const ctx={console,AbortController,setTimeout,clearTimeout,clearInterval,$:node,esc:String,
-      stopLive(){},stopOpeningLive(){},stopGlobalPaperAuto(){},stopDayTradingPaperAuto(){},stopOpeningPaperAuto(){},STRATEGY_STATUS_TIMER:null,
+      stopDailyLiveAuto(){},startDailyLiveAuto(){},stopLive(){},stopOpeningLive(){},stopGlobalPaperAuto(){},stopDayTradingPaperAuto(){},stopOpeningPaperAuto(){},STRATEGY_STATUS_TIMER:null,
       loadAll(){initialized++;},cloudLoad:async()=>true,setupUnifiedStrategyFlow(){},setupDaily1ShadowCards(){},startStrategyStatusAuto(){},
       loadStrategyScorecard:async()=>{},loadDaily1Shadow(){},restoreStrategy(){},
       window:{fb:{auth:{currentUser:user},onAuthStateChanged(_auth,cb){authCallback=cb;}}},

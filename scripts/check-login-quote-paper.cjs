@@ -179,10 +179,11 @@ await t('P0 모의성과 시세는 종목별 병렬 선취 후 전략 재생만 
 });
 
 await t('P1 원화 환율: 실시간 환율이 아직 없으면 하드코딩 상수(FX) 대신 마지막으로 받은 실제 환율 · 결과와 함께 그 환율을 남긴다',async()=>{
-  const mk=(liveFX,S)=>new Function('liveFX','FX','S',fn('function paperWonRate(r)')+'\n'+fn('function paperFxFallback()')+'\nreturn paperWonRate;')(liveFX,1520.21,S);
+  const mk=(liveFX,S,fx=null)=>new Function('liveFX','FX','S','window',fn('function paperWonRate(r)')+'\n'+fn('function paperFxFallback()')+'\nreturn paperWonRate;')(liveFX,1520.21,S,{JKMoney:{getFX:()=>fx}});
   assert.equal(mk(null,{paperViewCache:{fx:1343.5}})({cur:'usd'}),1343.5);
   assert.equal(mk(1400,{paperViewCache:{fx:1343.5}})({cur:'usd'}),1400);
-  assert.equal(mk(null,{})({cur:'usd'}),1520.21);
+  assert.equal(mk(null,{})({cur:'usd'}),0,'실제 환율이 없으면 고정값 대신 환산 대기');
+  assert.equal(mk(null,{}, {rate:1399})({cur:'usd'}),1399,'공용 포맷터가 받은 실제 환율 사용');
   assert.equal(mk(null,{paperViewCache:{fx:1343.5}})({cur:'krw'}),1);
   const S={}; const w=new Function('S','liveFX','PAPER_VIEW_CACHE_VER','paperKstDate','paperViewSig',fn('function paperViewCacheWrite(rows)')+'\nreturn paperViewCacheWrite;')(S,1343.5,1,()=>'2026-10-06',()=>'sig');
   w([{price:1}]); assert.equal(S.paperViewCache.fx,1343.5);
@@ -441,7 +442,7 @@ await t('P8 모의 표는 계산이 끝나면 바로 다시 그린다 — 클라
   assert.equal(fail(),true); assert(/재계산에 실패했습니다/.test(note.textContent) && !/다시 계산하는 중/.test(note.textContent),note.textContent);
   assert.equal(new Function('$',fn('function paperStaleFail()')+'\nreturn paperStaleFail;')(()=>null)(),false,'안내가 없으면 할 일 없음');
 });
-await t('P9 원화 평가와 달러 수익률이 어긋나 보이던 것 — 줄마다 원화 수익률(평가÷투입) · 표 위에 시작일 환율 → 지금 환율',async()=>{
+await t('P9 원화 최종 수익률을 최종 칸 둘째 줄로 표기 · 환율 반영 수익률 검증',async()=>{
   const K=new Function(fn('function paperKrwRet(r)')+'\nreturn paperKrwRet;')();
   const L=new Function(fn('function paperFxLine(rows)')+'\nreturn paperFxLine;')();
   // 사용자 화면(2026-10-06): 원금 1억원 · 시작일 환율 1,508.45 → 달러 원금 66,293.03$ · 지금 1,338.47원
@@ -462,7 +463,10 @@ await t('P9 원화 평가와 달러 수익률이 어긋나 보이던 것 — 줄
   const op=fn('async function openPaper()');
   assert(op.indexOf('h=paperFxLine(rows)+h;')>0 && op.indexOf('h=paperFxLine(rows)+h;')<op.indexOf('if(paperStaleNote) h=')
      && /paperDualMoney\(r,r\.total,r\.wonRate\)/.test(op)
-     && /원화 수익률 \$\{paperKrwRet\(r\)>=0\?'\+':''\}\$\{paperKrwRet\(r\)\.toFixed\(1\)\}%/.test(op),'표 배선');
+     && /const _krwFinalRet=ok\?paperKrwRet\(r\):null;/.test(op)
+     && op.includes('paperDualMoney(r,r.total,r.wonRate)}</td>')
+     && op.includes('Number.isFinite(_krwFinalRet)')
+     && op.includes('원화 ${_krwFinalRet>=0'),'표 배선');
 });
 await t('P10 폰 폭: 첫 칸 윗줄(줄바꿈 없음)은 설정 2개까지 — 3개면 375px 폰에서 최종 칸이 잘렸다',async()=>{
   const op=fn('async function openPaper()');

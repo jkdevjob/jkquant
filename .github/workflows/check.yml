@@ -29,13 +29,15 @@ jobs:
       - name: 승인 이메일·개인별 웹푸시 보안 및 중복방지 검사
         run: node --test tests/approval-notification.test.mjs
       - name: 매일 연구 결과 웹알림 (요약 · 서버 인증 · 주제)
-        run: node --test tests/research-notify.test.mjs
+        run: node --test tests/research-notify.test.mjs tests/settings-notifications.test.mjs tests/gpt-common-notifications.test.mjs
 
       - name: 연구 GPT 허브·텐배거 전향 기록 값·변이 검사
         run: |
           pip install --quiet numpy pandas pyarrow
           python scripts/test_tenbagger_forward.py
           node --test tests/research-gpt.test.mjs
+          node --test tests/scalping-live-results.test.mjs
+          node --test tests/gpt-morning-report.test.mjs
 
       - name: 승인 알림 Worker 빌드 검증 (실배포 없음)
         run: npx --yes wrangler@4 deploy --dry-run --config worker/presale-alert/wrangler.jsonc --outdir /tmp/jkquant-approval-worker-check
@@ -45,6 +47,11 @@ jobs:
 
       - name: 전 페이지 헤더·PC 자산플랜 폭·모의 통화 병기 검사
         run: node scripts/check-unified-layout.cjs
+
+      - name: 달러·원화 병기 및 플랜 판단 근거 값·변이 검사
+        run: |
+          node scripts/check-dual-currency.cjs
+          node scripts/check-plan-evidence.cjs
 
       - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
         run: node scripts/check-sticky-layout.cjs

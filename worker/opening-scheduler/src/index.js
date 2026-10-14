@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { krxDay } from "../../../functions/api/_krx_calendar.js";   // KRX 휴장일 — 주문 경로(Pages)와 같은 목록
-import { pushEvents, sendPush, vapidPublic, alertText } from "../../../functions/api/_claude_push.js";   // 단타(클로드) 매수·매도 알림(웹 알림 · 텔레그램 같은 사건)
+import { pushEvents, sendPush, vapidPublic, alertText, reportMsg } from "../../../functions/api/_claude_push.js";   // 단타(클로드) 매수·매도 알림(웹 알림 · 텔레그램 같은 사건)
 
 // Cloudflare Worker — jkquant opening scheduler
 // Primary realtime trigger for the opening strategy.
@@ -341,7 +341,7 @@ async function notifyOpeningWebPush(env,date,buys,sells,mainVariant){
     const hm=String((stage==="buy"?x.entryTime:x.exitTime)||"").padStart(4,"0");
     const code=String(x.code||""),price=Number(stage==="buy"?x.entryPrice:x.exitPrice);
     const lines=[String(x.name||code).slice(0,50)+" ("+code+")",Number.isFinite(price)?Math.round(price).toLocaleString("ko-KR")+"원":"가격 확인 중",
-      stage==="sell"&&Number.isFinite(Number(x.pnl))?"모의손익 "+Number(x.pnl).toFixed(2)+"%":"기준전략 "+mainVariant];
+      stage==="sell"&&Number.isFinite(Number(x.pnl))?"전략 손익 "+Number(x.pnl).toFixed(2)+"%":"기준전략 "+mainVariant];
     const eventId=["opening",date,mainVariant,code,stage,hm].join(":");
     try{
       const r=await fetch(baseUrl(env)+"/api/scalping-alert",{method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
@@ -365,7 +365,7 @@ export function recentOpeningAlertEvents(ledger,target,windowMin=8){
       time:hm.slice(0,2)+":"+hm.slice(2)+" KST",
       eventAt:new Date(Date.parse(ledger.date+"T00:00:00+09:00")+(minute(e.targetHm)+1)*60_000).toISOString(),
       lines:[String(x.name||e.name||e.code)+" ("+String(x.code||e.code)+")","보관된 운영 메인 "+variant+" 신호 재전송",
-        e.stage==="sell"&&x.pnl!=null?"모의손익 "+Number(x.pnl).toFixed(2)+"%":"모의 매수 "+hm]});
+        e.stage==="sell"&&x.pnl!=null?"전략 손익 "+Number(x.pnl).toFixed(2)+"%":"매수 "+hm]});
   }
   return out;
 }
@@ -698,6 +698,26 @@ async function pushBroadcast(env,msgs,call=(op,b)=>pushStore(env,op,b)){
   if(gone.length)await call("drop",{endpoints:gone});
   return {subs:subs.length,sent:res,dropped:gone.length};
 }
+// 매일 08:00 연구 리포트(사용자 요청 2026-10-14) — 같은 날 리포트는 한 번만(먼저 기록하고 보낸다 · 다시 불러도 안 보냄) · 웹 알림 + 텔레그램.
+// 텔레그램은 Pages /api/claude-telegram op=report — 거절(definite)만 3번까지, 보냈는지 모르면 다시 보내지 않는다(매수·매도 알림과 같은 규칙).
+export async function claudeReport(env,b,call=(op,x)=>pushStore(env,op,x)){
+  const m=reportMsg(b);
+  if(!m.ok)return {ok:false,error:m.error,status:400};
+  const {fresh}=await call("claim",{events:[{id:m.id}]});
+  if(!(fresh||[]).includes(m.id))return {ok:true,duplicate:true,id:m.id};
+  let push;try{push=await pushBroadcast(env,[m],call);}catch(e){push={error:String(e.message||e)};}
+  let telegram={result:"fail",tries:0};
+  for(let i=1;i<=CLAUDE_TG_TRIES;i++){
+    try{
+      const r=await fetch(baseUrl(env)+"/api/claude-telegram",{method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},body:JSON.stringify({op:"report",text:m.text})});
+      const j=await r.json().catch(()=>null);
+      if(r.ok&&j&&j.ok){telegram={result:"sent",tries:i};break;}
+      if(!(j&&j.definite)){telegram={result:"unknown",tries:i,error:(j&&j.error)||("HTTP "+r.status)};break;}
+      telegram={result:"fail",tries:i,error:j.error||("HTTP "+r.status)};
+    }catch(e){telegram={result:"unknown",tries:i,error:String(e.message||e)};break;}
+  }
+  return {ok:true,id:m.id,push,telegram};
+}
 // 텔레그램 — Pages(/api/claude-telegram op=event)가 보낸다. 결과: sent(보냄) · fail(텔레그램이 거절 → 다시 보내도 됨) · unknown(보냈는지 모름 → 다시 안 보냄)
 export const CLAUDE_TG_TRIES=3;
 async function claudeTgSend(env,m){
@@ -802,8 +822,9 @@ export default {
         if(op==="subscribe")return json(await pushStore(env,"sub",await request.json().catch(()=>({}))));
         if(op==="alarm")return json(await pushStore(env,"ensure",{}));
         if(op==="unsubscribe")return json(await pushStore(env,"unsub",await request.json().catch(()=>({}))));
-        if(op==="test")return json({ok:true,...await pushBroadcast(env,[{id:"test",title:"🔔 단타(클로드) 알림 켜짐",body:"매수 · 매도 때마다 이렇게 알려 드립니다.",tag:"test",url:"/claude"}])});
+        if(op==="test")return json({ok:true,...await pushBroadcast(env,[{id:"test",title:"🔔 연구(클로드) 알림 켜짐",body:"매수 · 매도 때마다 이렇게 알려 드립니다.",tag:"test",url:"/claude"}])});
         if(op==="watch")return json({ok:true,...await claudePushWatch(env)});
+        if(op==="report"&&request.method==="POST"){const r=await claudeReport(env,await request.json().catch(()=>({})));return json(r,r.status||200);}
         return json({ok:false,error:"not found"},404);
       }catch(e){return json({ok:false,error:String(e.message||e)},500);}
     }

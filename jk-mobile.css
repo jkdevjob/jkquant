@@ -1,4 +1,4 @@
-/* JKQuant common mobile layout v1.0.1 */
+/* JKQuant common mobile layout v1.0.2 */
 /* hidden은 overflow-y:auto도 만들어 sticky가 창 대신 스크롤하지 않는 body/main을 붙잡는다.
    clip은 가로 넘침만 자르고 새 스크롤 영역을 만들지 않는다. 표의 가로 스크롤은 아래 상자가 맡는다. */
 html{max-width:100%;overflow-x:clip;-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -58,3 +58,7 @@ header{max-width:100vw}.htop h1,.brand h1{font-size:18px!important}
 .grid4,.guidegrid,.kpis,.cashgrid,.ledger-summary,.path-holdings,.alpha-account-grid,.alpha-base-edit-grid,.alpha-account-total,.alpha-evidence-grid,.steps,.calcgrid,.daily-result-cols,.duel-summary,.fivegrid,.statgrid,.sheetbtns{grid-template-columns:minmax(0,1fr)!important}
 }
 
+
+/* Date control locale text stays on one line in WebKit/iOS. */
+input[type="date"]{box-sizing:border-box;min-width:0;white-space:nowrap;word-break:normal;overflow-wrap:normal;color-scheme:dark}
+input[type="date"]::-webkit-date-and-time-value{white-space:nowrap;min-width:0;text-align:left}

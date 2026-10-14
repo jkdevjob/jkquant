@@ -5,10 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 자산플랜</title>
-<script src="/plan-session-engine.js"></script>
+<script src="/plan-session-engine.js?v=2"></script>
 <script src="/plan-session-settings.js"></script>
+<script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js?v=1.0.3" defer></script>
+<script src="/jk-ui.js?v=1.0.6" defer></script>
 <style>
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
@@ -170,6 +171,14 @@ th:first-child,td:first-child{text-align:left}
 .alpha-ev .k{font-size:10px;color:var(--dim)}.alpha-ev .v{font-size:15px;font-weight:850;margin-top:2px}.alpha-ev .s{font-size:10px;color:var(--dim);margin-top:2px}
 .alpha-decision{margin-top:10px;padding:11px 12px;border-radius:9px;border:1px solid rgba(245,196,81,.32);background:rgba(245,196,81,.055);font-size:12px;line-height:1.7}
 .alpha-decision.go{border-color:rgba(54,211,153,.34);background:rgba(54,211,153,.055)}
+.alpha-guide{margin-top:9px;padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--surf2)}
+.alpha-guide[hidden]{display:none}
+.alpha-guide-title{font-size:12.5px;font-weight:850;margin-bottom:8px}
+.alpha-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.alpha-guide-item{padding:10px;border-radius:9px;background:var(--surf);border:1px solid var(--border);font-size:11px;line-height:1.65;min-width:0;overflow-wrap:anywhere}
+.alpha-guide-item b{display:block;font-size:11.5px;margin-bottom:4px;color:var(--text)}
+.alpha-guide-foot{margin-top:8px;font-size:10px;line-height:1.55;color:var(--dim)}
+@media(max-width:780px){.alpha-guide-grid{grid-template-columns:1fr}}
 .alpha-charts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .alpha-chart{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px;min-width:0}
 .alpha-chart h4{font-size:11.5px;margin:0 0 3px}.alpha-chart .chart-sub{font-size:10px;color:var(--dim);margin-bottom:7px}
@@ -251,7 +260,7 @@ html.had-user #authgate .bootwait{display:block}
 #gbtn svg{width:20px;height:20px}
 #authgate .gerr{color:var(--red);font-size:12px;margin-top:14px;min-height:16px;line-height:1.6}
 </style>
-<link rel="stylesheet" href="/jk-mobile.css?v=1.0.1">
+<link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
 
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
@@ -302,7 +311,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.32</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.37</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -365,12 +374,12 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div id="assetPaperPanel" data-asset-view="analysis" hidden><div class="asset-session-paper-result" id="assetPaperResult" hidden></div></div>
 
       <div class="todaybox" id="alphaOrderSection" data-asset-view="current">
-        <h3>1. 📋 오늘 주문</h3>
+        <h3>1. 📋 오늘 예상 주문</h3>
         <div class="sub" id="alphaMeta">TECL·TQQQ·SGOV 확정 일봉을 불러오는 중…</div>
         <div class="sub" id="alphaRefreshTime">시세 자동 갱신 중…</div>
         <div class="sub" id="alphaStartState">현재 계좌 기준 주문을 계산하는 중…</div>
         <div class="path-orders" id="alphaActions"><div class="liveitem wait">시세를 불러오면 주문 수량을 계산합니다.</div></div>
-        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 목표 변동성 비중과 17.5%p 이상 벌어질 때만, TQQQ는 Guard 상태가 바뀔 때만 거래합니다.</div>
+        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 몫 안의 목표비율과 10%p를 초과해 벌어질 때, TQQQ는 Guard 상태가 바뀔 때 거래합니다.</div>
         <div class="btnrow"><button class="btn gold" id="alphaRecordFill" disabled>✅ 오늘 주문 체결 반영</button></div>
         <div class="alpha-fill-panel" id="alphaFillPanel" hidden>
           <div class="alpha-account-head"><div><b>오늘 주문 체결 반영</b><div class="alpha-ledger-note">주문수량은 자동 입력됩니다. 부분체결이면 실제 수량으로 줄이고 실제 체결가만 확인하세요. 미체결은 수량 0.</div></div>
@@ -452,11 +461,13 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="todaybox" id="alphaEvidenceSection" data-asset-view="analysis" hidden>
         <h3>3. 🔎 리밸런싱 판단 근거</h3>
         <div class="alpha-evidence-grid">
-          <div class="alpha-ev"><div class="k" id="alphaEv1Label">TECL σ15</div><div class="v" id="alphaSigma">—</div><div class="s" id="alphaEv1Sub">연환산 실현변동성</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv2Label">TECL 슬리브 목표 w</div><div class="v" id="alphaTargetW">—</div><div class="s" id="alphaEv2Sub">w=(55%/σ15)², 최대100%</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv3Label">TECL 슬리브 현재</div><div class="v" id="alphaCurrentW">—</div><div class="s" id="alphaWeightGap">목표와 차이 계산 중</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv4Label">TQQQ Guard</div><div class="v" id="alphaGuardState">—</div><div class="s" id="alphaGuardGap">SMA200 판단 중</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv1Label">TECL σ20</div><div class="v" id="alphaSigma">—</div><div class="s" id="alphaEv1Sub">최근20거래일 수익률의 연환산 실현변동성</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv2Label">TECL 몫 안의 목표 비율</div><div class="v" id="alphaTargetW">—</div><div class="s" id="alphaEv2Sub">w=(55%/σ20)², 최대100% · 전체 자산의 최대70%</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv3Label">TECL 몫 안의 현재 비율</div><div class="v" id="alphaCurrentW">—</div><div class="s" id="alphaWeightGap">목표와 차이 계산 중</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv4Label">TQQQ Guard</div><div class="v" id="alphaGuardState">—</div><div class="s" id="alphaGuardGap">SMA225 판단 중</div></div>
         </div>
+        <div class="alpha-decision" id="alphaDecision" role="status" aria-live="polite"><b>오늘 판단:</b> 지표를 불러오는 중입니다.</div>
+        <div class="alpha-guide" id="alphaGuide" hidden aria-label="자산별 다음 행동 기준"></div>
         <div class="alpha-charts">
           <div class="alpha-chart">
             <h4 id="alphaChart1Title">TECL 슬리브 리밸런싱 밴드</h4>
@@ -467,19 +478,18 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
           </div>
           <div class="alpha-chart">
             <h4 id="alphaChart2Title">TQQQ Guard · 최근 120거래일</h4>
-            <div class="chart-sub" id="alphaGuardLevels">현재가 · SMA200 · ±1.5% 경계 계산 중…</div>
+            <div class="chart-sub" id="alphaGuardLevels">확정 종가 · SMA225 · ±1.0% 경계 계산 중…</div>
             <div id="alphaGuardChart"></div>
-            <div class="legend"><span>● TQQQ 종가</span><span>— SMA200</span><span>⋯ Guard 상·하단</span></div>
+            <div class="legend"><span>● TQQQ 종가</span><span>— SMA225</span><span>⋯ Guard 상·하단(±1%)</span></div>
           </div>
         </div>
-        <div class="alpha-decision" id="alphaDecision"><b>오늘 판단:</b> 지표를 불러오는 중입니다.</div>
       </div>
 
       <div class="card" id="alphaStrategySection" data-asset-view="explain" hidden style="margin-top:10px;margin-bottom:0">
         <h3>전략 설명</h3>
         <div class="guidegrid" style="margin-top:10px">
-          <div class="guidekpi"><div class="k" id="alphaKpi1Label">TECL 역분산</div><div class="v" id="alphaKpi1Value">최대 70%</div><div class="sub" id="alphaKpi1Sub">N15 · s0 55% · 밴드 17.5%p</div></div>
-          <div class="guidekpi"><div class="k" id="alphaKpi2Label">TQQQ Guard</div><div class="v" id="alphaKpi2Value">최대 30%</div><div class="sub" id="alphaKpi2Sub">SMA200 · ±1.5%</div></div>
+          <div class="guidekpi"><div class="k" id="alphaKpi1Label">TECL 역분산</div><div class="v" id="alphaKpi1Value">최대 70%</div><div class="sub" id="alphaKpi1Sub">N20 · s0 55% · 밴드 10%p 초과</div></div>
+          <div class="guidekpi"><div class="k" id="alphaKpi2Label">TQQQ Guard</div><div class="v" id="alphaKpi2Value">최대 30%</div><div class="sub" id="alphaKpi2Sub">SMA225 · ±1.0%</div></div>
           <div class="guidekpi"><div class="k" id="alphaKpi3Label">대피자산</div><div class="v" id="alphaKpi3Value">SGOV</div><div class="sub" id="alphaKpi3Sub">미사용 위험예산 보관</div></div>
           <div class="guidekpi"><div class="k" id="alphaKpi4Label">전략 성격</div><div class="v" id="alphaKpi4Value">최공격</div><div class="sub" id="alphaKpi4Sub">5년 성장 우선</div></div>
         </div>
@@ -836,8 +846,8 @@ const app=initializeApp(firebaseConfig),auth=getAuth(app),db=initializeFirestore
 const KEY="jkq_5y_plan_v1";
 const $=id=>document.getElementById(id);
 const num=(id,fallback=0)=>{const v=Number($(id).value);return Number.isFinite(v)?v:fallback};
-const usd=v=>"$"+Math.round(v||0).toLocaleString("en-US");
-const usd2=v=>"$"+(Number(v)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const usd=v=>typeof window!=='undefined'&&window.JKMoney?window.JKMoney.usdText(Number(v)||0,{digits:0}):"$"+Math.round(v||0).toLocaleString("en-US");
+const usd2=v=>typeof window!=='undefined'&&window.JKMoney?window.JKMoney.usdText(Number(v)||0):"$"+(Number(v)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const pct=v=>(Number(v)||0).toFixed(1)+"%";
 const todayISO=()=>{const d=new Date();return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())).toISOString().slice(0,10)};
 const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.getUTCFullYear()+n);return d.toISOString().slice(0,10)};
@@ -865,8 +875,14 @@ function renderHorizonCopy(){
     setTxt('alphaKpi2Label','TQQQ Guard');setTxt('alphaKpi2Value','최대 30%');setTxt('alphaKpi2Sub','SMA225 · ±1.0%');
     setTxt('alphaKpi3Label','대피자산');setTxt('alphaKpi3Value','SGOV');setTxt('alphaKpi3Sub','미사용 위험예산 보관');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','최공격');setTxt('alphaKpi4Sub','5년 성장 우선');
-    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 개선 70/30 역분산 + Guard</strong><br>TECL 70% 슬리브는 σ20 역분산으로 크기를 조절하고 목표와 10%p 이상 벌어질 때만 리밸런싱합니다. TQQQ 30%는 SMA225 ±1.0% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 독립 재검증:</b> 137개 시작구간 · 평균 CAGR 48.2% · 중앙 CAGR 47.5% · 하위 10% CAGR 31.5% · 최악 CAGR 23.9% · 중앙 MDD -36.4% · 최악 MDD -37.8%.<span class="sub">업로드 TECL·TQQQ 시세 2010-03-12~2026-07-10 · 신호는 전일 확정종가, 다음 거래일 종가 체결 · 거래비용 0.1% · 대피자산 연 4% 가정.</span><span class="sub">세전 과거 백테스트이며 미래 수익을 보장하지 않습니다. 장기 스트레스 MDD -50% 하드제약 탐색은 완료했으며, 실험 후보는 기본값에 아직 반영하지 않았습니다.</span>';
+    setTxt('alphaEv1Label','TECL σ'+PATH_DEFAULTS.alpha.ivsLook);
+    setTxt('alphaEv1Sub','최근 '+PATH_DEFAULTS.alpha.ivsLook+'거래일 수익률의 연환산 실현변동성');
+    setTxt('alphaEv2Label','TECL 몫 안의 목표 비율');
+    setTxt('alphaEv2Sub','w=('+(PATH_DEFAULTS.alpha.ivsS0*100).toFixed(0)+'%/σ'+PATH_DEFAULTS.alpha.ivsLook+')², 최대100% · 전체 자산의 최대'+(PATH_DEFAULTS.alpha.teclWeight*100).toFixed(0)+'%');
+    setTxt('alphaEv3Label','TECL 몫 안의 현재 비율');setTxt('alphaEv4Label','TQQQ Guard');
+    setTxt('alphaChart1Title','TECL 몫 안의 목표비율 · 최근60거래일');setTxt('alphaChart2Title','TQQQ Guard · 최근120거래일');
+    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 70/30 역분산 + Guard</strong><br>전체 자산의70%를 TECL 몫으로 정하고, 최근20거래일 변동성에 따라 그 안의 투자비율을 조절합니다. 목표와 현재 비율의 차이가 <b>10%p를 초과</b>하면 리밸런싱합니다. TQQQ 30%는 SMA225 ±1.0% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다. <b>TECL 목표100%는 전체 자산의70%</b>를 뜻합니다.';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>⚠️ 과거 롤링 연구치 재검증 대기</b><span class="sub">기존 137개 시작구간 CAGR/MDD는 주문 수량을 미확정 다음날 종가로 계산한 현재 모의 체결규칙과 동일한 조건에서 다시 검증되지 않았습니다. 주문수량 규칙 v2 적용 후 전체·롤링 검증 전에는 공식 성과로 표시하지 않습니다. 운영 전략 기본값은 그대로입니다.</span>';
   }else if(y===10){
     setTxt('alphaKpi1Label','상승장 코어');setTxt('alphaKpi1Value','TQQQ 80%');setTxt('alphaKpi1Sub','종가 > SMA250');
     setTxt('alphaKpi2Label','하락장 3단계');setTxt('alphaKpi2Value','20% → 40% → 60%');setTxt('alphaKpi2Sub','RSI40/35/30 + ATH -12/-22/-32%');
@@ -1064,7 +1080,7 @@ function assetSessionSettingsFromView(capOverride){
   return {ticker:'PLAN5',horizon:activeHorizon,startCapital:cap,targetCapital:Math.max(1,num('targetCapital',150000)),monthlyAdd:Math.max(0,num('monthlyAdd',0)),
     targetIncome:Math.max(0,num('targetIncome',0)),stageMode:String($('stageMode').value||'auto'),
     startDate:String($('startDate').value||todayISO()),targetDate:String($('targetDate').value||plusYears(todayISO(),activeHorizon)),
-    engine:'asset-plan-v1'};
+    engine:'asset-plan-v2'};
 }
 function writeAssetSessionLocal(){
   if(liveState)liveState._updated=Date.now();
@@ -1096,7 +1112,7 @@ function assetPaperStatsHtml(x,R){
   const z=R&&R.stats;if(!z)return '<div class="sub">모의 성과를 계산할 수 없습니다.</div>';
   const col=z.ret>=0?'var(--green)':'var(--red)';
   return '<div class="asset-session-head"><div><b>'+String(x.name||'모의 세션').replace(/</g,'&lt;')+'</b><div class="sub">'+z.from+' ~ '+z.to+' · 자동 재생 결과</div></div><a class="btn" href="/paper" style="text-decoration:none">모의투자 성과에서 비교</a></div>'+
-    '<div class="kpis"><div class="kpi"><div class="k">평가액</div><div class="v">'+usd2(z.total)+'</div></div>'+
+    '<div class="path-note">모의 체결 v'+(R.orderSizingVersion||'?')+' · 전일 확정종가로 주수를 결정하고 다음 거래일 종가로 체결합니다.</div><div class="kpis"><div class="kpi"><div class="k">평가액</div><div class="v">'+usd2(z.total)+'</div></div>'+
     '<div class="kpi"><div class="k">최종 수익률</div><div class="v" style="color:'+col+'">'+(z.ret>=0?'+':'')+z.ret.toFixed(1)+'%</div></div>'+
     '<div class="kpi"><div class="k">MDD</div><div class="v" style="color:var(--red)">-'+z.mdd.toFixed(1)+'%</div></div>'+
     '<div class="kpi"><div class="k">CAGR</div><div class="v">'+(z.cagr>=0?'+':'')+z.cagr.toFixed(1)+'%</div></div></div>';
@@ -2207,6 +2223,7 @@ function _momentumPoint(rows,idx){
   return {date:rows[idx].date,p,m9,m12,score,ok:m12>0};
 }
 function renderAlternativePlan(qTecl,qTqqq,qSgov){
+  if($('alphaGuide')){$('alphaGuide').hidden=true;$('alphaGuide').innerHTML='';}
   if(!qTecl||!qTqqq||!qSgov||!qTecl.settled||!qTqqq.settled||!qSgov.settled)return;
   const tr=qTecl.rows.filter(x=>x.date<=qTecl.settled.date),qr=qTqqq.rows.filter(x=>x.date<=qTqqq.settled.date);
   const ts=+qTecl.settled.close,qs=+qTqqq.settled.close,ss=+qSgov.settled.close;
@@ -2257,8 +2274,9 @@ function renderAlternativePlan(qTecl,qTqqq,qSgov){
   if($('alphaTeclBandText'))$('alphaTeclBandText').textContent=meta;
   if($('alphaGuardLevels'))$('alphaGuardLevels').textContent=decision;
   if($('alphaDecision')){$('alphaDecision').className='alpha-decision'+(need?' go':'');$('alphaDecision').innerHTML='<b>오늘 판단: '+(need?'주문 필요':'유지')+'</b><br>'+decision+'<br><span class="sub">신호는 확정 종가/직전 월말 기준 · 장중가격은 주문수량 추정에만 사용</span>';}
-  const targetTq=need?Math.max(0,Math.floor(total*targetW.TECL/tp)):tq,targetQq=need?Math.max(0,Math.floor(total*targetW.TQQQ/qp)):qq;
-  const targetSq=need?Math.max(0,Math.floor(Math.max(0,total-targetTq*tp-targetQq*qp)/sp)):sq;
+  // 사전 주문 주수는 확정종가(ts/qs/ss)로 고정하고 장중가격은 예상금액·수수료 계산에만 사용한다.
+  const targetTq=need?Math.max(0,Math.floor(total*targetW.TECL/ts)):tq,targetQq=need?Math.max(0,Math.floor(total*targetW.TQQQ/qs)):qq;
+  const targetSq=need?Math.max(0,Math.floor(Math.max(0,total-targetTq*ts-targetQq*qs)/ss)):sq;
   const targets={TECL:targetTq,TQQQ:targetQq,SGOV:targetSq},orders=_planOrderTargets(targets,pxs,pos,cash);
   pendingAlphaOrders=orders.map(o=>({...o}));
   if($('alphaRecordFill')){$('alphaRecordFill').disabled=!orders.length;$('alphaRecordFill').textContent=orders.length?'✅ 오늘 주문 체결 반영 ('+orders.length+'건)':'✅ 오늘 주문 체결 반영';}
@@ -2269,6 +2287,12 @@ function renderAlternativePlan(qTecl,qTqqq,qSgov){
   if($('alphaRefreshTime'))$('alphaRefreshTime').textContent='시세 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   $('alphaSummary').innerHTML='<b>'+activeHorizon+'년 목표 보유금액:</b> TECL '+usd(teclAmt)+' · TQQQ '+usd(tqqqAmt)+' · SGOV '+usd(sgovAmt)+' · 잔여현금 약 '+usd(Math.max(0,total-teclAmt-tqqqAmt-sgovAmt))+'<br><b>전략:</b> '+horizonStrategy().name+'<br><span class="sub">실제 체결가에 따라 수량은 달라질 수 있습니다.</span>';
   if(horizonRebalancePending)horizonRebalancePending=false;
+}
+/* 설명용 경계값: 매매 신호/주문 규칙은 변경하지 않는다. */
+function alphaExplainBounds(target,current,band){
+  const gap=Math.abs(target-current);
+  return {low:target-band,high:target+band,gap,distance:Math.max(0,band-gap),
+    side:current<target?'부족':current>target?'초과':'일치'};
 }
 function renderAlphaPlan(qTecl,qTqqq,qSgov){
   if(activeHorizon!==5){renderAlternativePlan(qTecl,qTqqq,qSgov);return;}
@@ -2294,11 +2318,11 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   if($('alphaSigma'))$('alphaSigma').textContent=(sigma*100).toFixed(1)+'%';
   if($('alphaTargetW'))$('alphaTargetW').textContent=(w*100).toFixed(1)+'%';
   if($('alphaCurrentW'))$('alphaCurrentW').textContent=(sleeveNow*100).toFixed(1)+'%';
-  if($('alphaWeightGap'))$('alphaWeightGap').textContent='목표와 '+(gap*100).toFixed(1)+'%p 차이 · 기준 '+(D.ivsBand*100).toFixed(1)+'%p';
+  if($('alphaWeightGap'))$('alphaWeightGap').textContent='전체 자산의 '+(curTeclW*100).toFixed(1)+'% · 목표와 '+(gap*100).toFixed(1)+'%p 차이 · '+(D.ivsBand*100).toFixed(1)+'%p 초과 시 조정';
   if($('alphaGuardState'))$('alphaGuardState').textContent=guard;
   const guardDist=(qs/sma-1)*100;
   if($('alphaGuardGap'))$('alphaGuardGap').textContent='종가 '+usd(qs)+' · SMA'+D.guardMA+' 대비 '+(guardDist>=0?'+':'')+guardDist.toFixed(2)+'%';
-  if($('alphaTeclBandText'))$('alphaTeclBandText').textContent='목표 '+(w*100).toFixed(1)+'% · 허용 '+(bandLo*100).toFixed(1)+'~'+(bandHi*100).toFixed(1)+'% · 현재 '+(sleeveNow*100).toFixed(1)+'%';
+  if($('alphaTeclBandText'))$('alphaTeclBandText').textContent='목표 '+(w*100).toFixed(1)+'% · 실제 판정경계 '+((w-D.ivsBand)*100).toFixed(1)+'~'+((w+D.ivsBand)*100).toFixed(1)+'% · 현재 '+(sleeveNow*100).toFixed(1)+'%'+(w+D.ivsBand>1?' (막대는 100%까지 표시)':'');
   const band=$('alphaTeclBand'),tm=$('alphaTeclTargetMark'),cm=$('alphaTeclCurrentMark');
   if(band){band.style.left=(bandLo*100)+'%';band.style.width=((bandHi-bandLo)*100)+'%';}
   if(tm)tm.style.left=(Math.max(0,Math.min(1,w))*100)+'%';
@@ -2327,10 +2351,10 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     $('alphaDecision').innerHTML='<b>오늘 판단: '+(needRebalance?'리밸런싱/상태조정':'유지')+'</b><br>'+teclReason+'<br>'+guardReason+'<br><span class="sub">판정일 '+qTecl.settled.date+' 확정종가 기준 · 장중가격은 신호가 아니라 주문수량 추정에만 사용</span>';
   }
 
-  // 확정 종가로 정한 목표 금액을 현재가에서 정수 주수로 환산한다.
-  const targetTq=(teclHit||horizonRebalancePending)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/tp)):tq;
-  const targetQq=(guardFlip||horizonRebalancePending)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qp)):0):qq;
-  const targetSq=needRebalance?Math.max(0,Math.floor(Math.max(0,signalTotal-targetTq*tp-targetQq*qp)/sp)):sq;
+  // 확정종가로 목표 주수를 미리 계산한다. 다음 거래일 체결가는 주문 시점에는 알 수 없다.
+  const targetTq=(teclHit||horizonRebalancePending)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/ts)):tq;
+  const targetQq=(guardFlip||horizonRebalancePending)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qs)):0):qq;
+  const targetSq=needRebalance?Math.max(0,Math.floor(Math.max(0,signalTotal-targetTq*ts-targetQq*qs)/ss)):sq;
 
   // 수수료까지 예약해 '화면 수량 그대로' 넣었을 때 현금 부족 주문이 되지 않게 매도→위험자산 매수→SGOV 순서로 제한한다.
   const F=ALPHA_FEE_RATE, orders=[];let avail=Math.max(0,cash);
@@ -2357,7 +2381,34 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     '<br><b>목표비중:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 신호기준 평가액 '+usd(signalTotal)+
     '<br><b>오늘 매수금액:</b> TECL '+usd(buyMap.TECL)+' · TQQQ '+usd(buyMap.TQQQ)+' · SGOV '+usd(buyMap.SGOV)+' · 합계 '+usd(totalBuy)+' · <b>수수료 포함 필요현금 약 '+usd(totalNeed)+'</b>'+
     '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+
-    '<br><span class="sub">주문 수량·금액은 현재가와 토스증권 미국주식 수수료 0.1%를 반영한 예상치입니다.</span>';
+    '<br><span class="sub">목표 주수는 전일 확정종가로 계산하며, 매수가능 주수와 거래금액은 현재가·수수료(0.1%)로 추정합니다. 실제 체결가가 달라지면 매수량이 감소할 수 있습니다.</span>';
+  // 실제 매매결과를 바꾸지 않고, 확정 종가 기준 판단과 발주 가능 건수를 구분해 표시한다.
+  const guide=$('alphaGuide');
+  if(guide){
+    const b=alphaExplainBounds(w,sleeveNow,D.ivsBand);
+    const teclStatus=tq===0?'첫 진입 판정':teclHit?(sleeveNow<w?'비중 확대 조건 충족':'비중 축소 조건 충족'):'유지';
+    const guardStatus=guardFlip?(guard==='ON'?'TQQQ 매수 전환':'TQQQ 매도 전환'):'Guard '+guard+' 유지';
+    const guardNext=guard==='ON'?'다음 OFF: 확정 종가 '+usd(lower)+' 미만':'다음 ON: 확정 종가 '+usd(upper)+' 초과';
+    const orderText=orders.length?'주문 '+orders.length+'건 · '+orders.map(o=>o.sym+' '+(o.side==='buy'?'매수 ':'매도 ')+o.qty+'주').join(' / '):
+      needRebalance?'조건 충족 · 정수주수·현금 등을 반영한 실제 주문 0건':'주문 없음 · 기존 보유 유지';
+    const difference=b.side==='부족'?'목표보다 부족':b.side==='초과'?'목표보다 초과':'목표와 일치';
+    guide.hidden=false;
+    guide.innerHTML='<div class="alpha-guide-title">📌 이번 판단과 다음 거래 조건</div>'
+      +'<div class="alpha-guide-grid">'
+      +'<div class="alpha-guide-item"><b>TECL · '+teclStatus+'</b>'
+      +'전체 자산: 현재 '+(curTeclW*100).toFixed(1)+'% / 목표 '+(D.teclWeight*w*100).toFixed(1)+'%. '
+      +'TECL 몫 기준 '+(b.gap*100).toFixed(1)+'%p '+difference+'.<br>'
+      +'매수/매도 판정 경계: '+(b.low*100).toFixed(1)+'% 미만 또는 '+(b.high*100).toFixed(1)+'% 초과. '
+      +(teclHit?'이번에 조정 조건 충족.':'경계까지 약 '+(b.distance*100).toFixed(1)+'%p 남음(목표 고정 가정).')
+      +'<br>확정 종가 평가액: '+usd(tq*ts)+' / 목표액 '+usd(signalTotal*D.teclWeight*w)+'</div>'
+      +'<div class="alpha-guide-item"><b>TQQQ · '+guardStatus+'</b>'
+      +'종가 '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' ('+(guardDist>=0?'+':'')+guardDist.toFixed(2)+'%).<br>'
+      +guardNext+'. 이동평균이 매일 달라져 다음 거래일 경계도 변동합니다.<br>'
+      +'ON이면 30% 목표로 진입, OFF이면 SGOV로 대피. 이미 ON/OFF 상태가 유지되면 비중 변화만으로는 재조정하지 않습니다.</div>'
+      +'</div>'
+      +'<div class="alpha-guide-foot"><b>실제 주문표:</b> '+orderText+'<br>'
+      +'신호는 확정 종가, 주문 수량·금액은 현재가 추정입니다. SGOV는 남는 투자금을 보유하며 정수 주수·수수료에 따라 실제 주문이 달라집니다.</div>';
+  }
   if(horizonRebalancePending)horizonRebalancePending=false;
 }
 function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV)renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);}

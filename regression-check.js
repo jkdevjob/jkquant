@@ -1930,38 +1930,34 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('진단이 멈춘 자리를 보여준다', /멈춘 자리 '\+authStep/.test(extractFn(idx,'function authDiag()')));
 }
 
-console.log('[36] 분석 머리 — 여섯 탭 모두 손익금·손익률·원화');
+console.log('[36] 분석 머리 — 여섯 탭 모두 달러·원화 병기 손익금과 손익률, 회색 중복 줄 없음');
 {
-  // 탭마다 id 접두사가 달라 한 탭만 고치면 티가 안 난다 — 여섯 개를 한 번에 본다
-  const TRIO=[
-    ['무매',  'a_realized',   'a_realized_pct',   'a_realized_krw'],
-    ['VR',    'vc_profit',    'vc_pct',           'vc_profit_krw'],
-    ['이평',  'ana_realized', 'ana_realized_pct', 'ana_realized_krw'],
-    ['섀넌',  'anaI_realized','anaI_realized_pct','anaI_realized_krw'],
-    ['적립식','anaD_pnl',     'anaD_pnlpct',      'anaD_pnl_krw'],
-    ['ASAP',  'anaA_pnl',     'anaA_pnlpct',      'anaA_pnl_krw'],
+  const DUOS=[
+    ['무매', 'a_realized', 'a_realized_pct', 'a_realized_krw'],
+    ['VR', 'vc_profit', 'vc_pct', 'vc_profit_krw'],
+    ['이평', 'ana_realized', 'ana_realized_pct', 'ana_realized_krw'],
+    ['섀넌', 'anaI_realized', 'anaI_realized_pct', 'anaI_realized_krw'],
+    ['적립식', 'anaD_pnl', 'anaD_pnlpct', 'anaD_pnl_krw'],
+    ['ASAP', 'anaA_pnl', 'anaA_pnlpct', 'anaA_pnl_krw'],
   ];
-  TRIO.forEach(([nm,amt,pct,krw])=>{
+  DUOS.forEach(([nm,amt,pct,krw])=>{
     const has=id=>idx.includes('id="'+id+'"');
-    ok(nm+' 분석에 손익금·손익률·원화가 다 있다',
-       has(amt)&&has(pct)&&has(krw),
-       [amt,pct,krw].filter(id=>!has(id)).join(', ')+' 없음');
-  });
-  // 손익률은 금액 바로 옆 같은 줄에 온다
-  TRIO.forEach(([nm,amt,pct])=>{
+    ok(nm+' 분석에 손익금과 손익률은 유지, 중복 회색 원화줄은 제거',
+       has(amt)&&has(pct)&&!has(krw)&&!idx.includes("'"+krw+"'"),
+       [amt,pct,krw].map(id=>id+':'+has(id)).join(', '));
     const i=idx.indexOf('id="'+amt+'"'), j=idx.indexOf('id="'+pct+'"');
-    ok(nm+' 손익률이 금액 옆 같은 줄', i>0 && j>i && (j-i)<300, '거리 '+(j-i));
+    ok(nm+' 손익률이 금액 옆 같은 줄',i>0&&j>i&&(j-i)<300,'거리 '+(j-i));
   });
   const sp=extractFn(idx,'function setRealizedPct(id, v, base)');
-  ok('손익률 헬퍼 존재', !!sp);
-  ok('원금이 없으면 나누지 않는다', /if\(!\(base>0\)\)\{[\s\S]*?'—'/.test(sp));
-  ok('금액과 색을 맞춘다', /var\(--buy\)/.test(sp) && /var\(--sell\)/.test(sp));
-  // 원화는 달러 세션에서만 — 원화 세션에 원화를 또 쓰면 같은 수가 두 번 나온다
-  const krwLines=(idx.match(/\$\('(?:a_realized_krw|ana_realized_krw|anaI_realized_krw)'\)\.textContent=isKrwSt\(st\)\?'':/g)||[]).length;
-  ok('무매·이평·섀넌이 같은 원화 규약', krwLines===3, krwLines+'곳');
+  ok('손익률 헬퍼 존재',!!sp);
+  ok('원금이 없으면 나누지 않는다',/if\(!\(base>0\)\)\{[\s\S]*?'—'/.test(sp));
+  ok('금액과 색을 맞춘다',/var\(--buy\)/.test(sp)&&/var\(--sell\)/.test(sp));
+  ok('달러 금액은 공용 JKMoney 원화 병기를 유지한다',
+     idx.includes('window.JKMoney.usdText(v)') && idx.includes('/jk-money.js?v=1.0.0'));
   const va=extractFn(idx,'function renderVrAnal()');
-  ok('VR도 같은 원화 규약', /vc_profit_krw[\s\S]{0,80}isKrwSt\(st\)/.test(va) && /won\(profit\)/.test(va));
-  ok('VR 손익률에도 색이 붙는다', /\$\('vc_pct'\)\.style\.color=/.test(va));
+  ok('VR 분석 손익률 유지',/\$\('vc_pct'\)\.style\.color=/.test(va));
+  const generic=extractFn(idx,'function _analPaint(pre,{inv,evalNow,cash,avg,qty,cnt,cashLbl,rows,cur})');
+  ok('적립·ASAP 분석도 회색 중복 원화를 다시 쓰지 않는다',generic&&!generic.includes("pre+'_pnl_krw'"));
 }
 
 console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
@@ -2598,7 +2594,7 @@ console.log('\n[44] 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞�
      /toLocaleString\('en-US'\)\+'₩'/.test(idx) && /maximumFractionDigits:2\}\)\+'\$'/.test(idx));
   ok('운영 — usd·px·won 도 뒤에 붙인다',
      (idx.match(/\+'\$';/g)||[]).length>=2 && /liveFX:FX\)\)\.toLocaleString\('en-US'\)\+'₩'/.test(idx));
-  ok('백테 — fmtV 가 기호를 뒤에 붙인다', /const fmtV=\(v,t\)=>fmt\(v\)\+curOf\(t\)/.test(bt));
+  ok('백테 — 달러 금액은 공용 병기, 국내는 기존 원화 단위', /const fmtV=\(v,t\)=>!isKRW\(t\)[^\n]+JKMoney\.usdText\(v,\{digits:0\}\):fmt\(v\)\+curOf\(t\)/.test(bt));
   ok('백테 — 로테이션 money 도 뒤에 붙인다', /money=v=>fmt\(Math\.round\(v\)\)\+cur\b/.test(bt));
   ok('백테 — 차트 축도 뒤에 붙인다', /const fmtY=v=>[^\n]*\+cs:[^\n]*\+cs;/.test(bt));
   /* 런타임 앞붙임 — 소스에 '₩1' 같은 글자가 없어도 통화를 변수로 앞에 이어붙이면
@@ -8278,6 +8274,24 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /guardClose\.push\(\+qr\[i\]\.close\);guardMa\.push\(mv\)/.test(pl)
      && /오늘 판단: '\+\(needRebalance\?'리밸런싱\/상태조정':'유지'\)/.test(pl)
      && /장중가격은 신호가 아니라 주문수량 추정에만 사용/.test(pl));
+  // 사용자에게 보이는 판정경계와 수량을 실제 값으로 검증한다.
+  const alphaBounds=new Function(extractFn(pl,'function alphaExplainBounds(target,current,band)')+';return alphaExplainBounds;')();
+  const b90p4=alphaBounds(1,.904,.10),b90=alphaBounds(1,.9,.10),b89=alphaBounds(1,.89,.10),b111=alphaBounds(1,1.11,.10);
+  ok('PATH A 표시판정 실제 상단110%·하단90%',
+     near(b90p4.low,.9,1e-12)&&near(b90p4.high,1.1,1e-12)
+     && /실제 판정경계/.test(pl)&&/막대는 100%까지 표시/.test(pl));
+  ok('PATH A 판정 90.4 유지·90 유지·89 조정',
+     near(b90p4.gap,.096,1e-12)&&near(b90p4.distance,.004,1e-12)
+     && !(b90.gap>.10)&&b89.gap>.10);
+  ok('PATH A 표시판정 111%면 상단 초과',
+     b111.gap>.10&&b111.side==='초과'&&near(b111.high,1.1,1e-12));
+  ok('PATH A 판단 UI는 그래프 전·5년 외 안내 숨김',
+     pl.indexOf('id="alphaDecision"')<pl.indexOf('class="alpha-charts"')
+     && /id="alphaGuide" hidden/.test(pl)
+     && /if\(\$\('alphaGuide'\)\)\{\$\('alphaGuide'\)\.hidden=true/.test(pl));
+  ok('PATH A SMA225 범례와 주문0건 안내',
+     /<span>— SMA225<\/span>/.test(pl)&&!/— SMA200<\/span>/.test(pl)
+     && /조건 충족 · 정수주수·현금 등을 반영한 실제 주문 0건/.test(pl));
   ok('초기자금은 입력만으로 장부를 바꾸지 않고 초기화 때 확정',
      /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
      && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
@@ -9330,7 +9344,8 @@ console.log('\n[124] 5년 플랜 v1.26.4 — 현재계좌 실시간 평가·초�
      && /id="alphaAssetTotal"/.test(pl)
      && /const assetTotal=marketTotal\+S\.cash,retTotal=costTotal>0\?pnlTotal\/costTotal\*100:null/.test(pl));
   ok('현재계좌 달러 표시는 소수점 둘째자리까지 고정',
-     /const usd2=v=>"\$"\+\(Number\(v\)\|\|0\)\.toLocaleString\("en-US",\{minimumFractionDigits:2,maximumFractionDigits:2\}\)/.test(pl)
+     /const usd2=v=>[^\n]*JKMoney\.usdText\(Number\(v\)\|\|0\)/.test(pl)
+     && /maximumFractionDigits:2\}\);/.test(pl)
      && /function alphaAvgText\(q,avg\)\{return q>0\?\(Number\.isFinite\(avg\)\?'평단 '\+usd2\(avg\)/.test(pl)
      && /\$\('alphaAcctCash'\)\.textContent=usd2\(S\.cash\)/.test(pl)
      && /\(L&&L\.hasLivePrice\?\(L\.marketState==='REGULAR'\?'실시간 ':'최근가 '\):'확정종가 '\)\+usd2\(px\)/.test(pl)
@@ -10625,6 +10640,22 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
 /* ════════════════════════════════════════════════════════════════════
    [136] 모의성과 — 5년 시작일 + 무매 LOC 줄수 식별
    ════════════════════════════════════════════════════════════════════ */
+{
+  const {spawnSync}=require('child_process');
+  const r=spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-signal-fill.cjs')],{encoding:'utf8',timeout:20000});
+  ok('H2 자산플랜 전일 확정가 주문수량 · 미래 종가 변이 검증 5/10/15/20년',
+    r.status===0&&(r.stdout||'').includes('PLAN FILL LOOKAHEAD: 7 groups PASS'),
+    String(r.stdout||'')+String(r.stderr||''));
+  const plan=fs.readFileSync(path.join(__d,'plan.html'),'utf8');
+  const shared=fs.readFileSync(path.join(__d,'plan-session-engine.js'),'utf8');
+  ok('H3 모의 규칙 v2 · 운영/모의 동일 주수 기준 · 캐시 버전',
+    /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
+    && /plan-session-engine\.js\?v=2/.test(plan)
+    && /plan-session-engine\.js\?v=2/.test(idx)
+    && /v1\.43\.37/.test(plan) && /v3\.110\.38/.test(idx)
+    && /asset-plan-v2/.test(plan));
+}
+
 console.log('\n[136] 모의성과 5년 비교 + LOC 줄수 표시');
 {
   const po=extractFn(idx,'function paperOpts(tab, st)');
@@ -11297,17 +11328,18 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      !/gapdown|D-1 갭하락|etfOvernight|claude-lab/.test(gptScl)&&!/gapdown|etf-overnight|claude-lab/.test(gptApi)
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
        .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>연구\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>연구\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
-  ok('단타(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) + 합산 · 탭마다 GPT 같은 기간 비교',
-     ['today','opening','daytrading','crypto','soxl','all'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))
+  ok('연구(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) · 전체 계좌 탭 없음(2026-10-14 삭제) · 탭마다 GPT 같은 기간 비교',
+     ['today','opening','daytrading','crypto','soxl'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))&&!/data-tab="all"|showTab\('all'\)/.test(scl2)
+     &&/if\(\/\^\(today\|opening\|daytrading\|crypto\|soxl\|duel\|tenbagger\)\$\/\.test\(q\)\)TAB=q/.test(scl2)
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
-    ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로',
+    ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로 · 예외 하나: 매일 08:00 연구 리포트(op=report, [클로드 연구 리포트] — 2026-10-14 사용자 요청)',
        /function authorized\(request,env\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
        &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\|텐배거\)\\\] \/;/.test(tg)
        &&/if\(b\.op==="send"\|\|KINDS\.includes\(String\(b\.kind\|\|""\)\)\)return json\(\{ok:true,skipped:"buy_sell_only"\}\);/.test(tg)
-       &&(tg.match(/await sendOnce\(env,/g)||[]).length===1&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
+       &&(tg.match(/await sendOnce\(env,/g)||[]).length===2&&/if\(b\.op==="report"\)\{[\s\S]{0,120}text\.startsWith\(REPORT_HEAD\)/.test(tg)&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
     // 하루 마감 장부: DO 에 한 번만 저장(먼저 저장된 것이 정본) — 밤 계산 · 대결 비교가 읽는다. 텔레그램은 보내지 않는다
     const fnR=ow.slice(ow.indexOf('export function claudeCloseRecord('),ow.indexOf('\n}\n',ow.indexOf('export function claudeCloseRecord('))+2).replace('export ','');
     const rec=new Function(fnR+'\nreturn claudeCloseRecord;')();
@@ -11316,20 +11348,20 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        rec(ev('close:crypto'),'crypto').v===1&&rec(ev('close:soxl'),'crypto')===null&&rec(null,'crypto')===null
        &&/if\(claudeCloseRecord\(await readLedger\(env,date,"claude"\),strategy\)\)return true;/.test(ow)
        &&/await claudeAppend\(env,date,"close:"\+strategy,"close",c\.result,ms\);/.test(ow)&&!/composeDay|composeOverview/.test(tg));
-    ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 상태 줄 + 1분 자동 갱신',
+    ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 1분 자동 갱신 · 상단 상태 줄 없음(2026-10-14 삭제)',
        /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/opsBoard\(tab\)\+docCard\(tab\)\+planCard\(tab,T,wl\)\+buyCard\(tab\)\+sellCard\(tab\)\+liveCard\(tab\)/.test(scl2)
        &&/html\+=shadowCard\(tab\)\+reviewCard\(tab\)\+paperCard\(tab\);/.test(scl2)
        &&['① 전략 · 종목 선정 규칙','② 오늘 종목 선정 · 감시','③ 매수 타이밍','④ 매도 · 손절 · 리스크','⑤ 오늘 장중 모의 매매이력','⑥ 전략 경쟁 · 자동 개선','⑦ 누적 모의 매매이력','⑧ 실행 품질'].every(x=>scl2.includes(x))
        &&/setInterval\(function\(\)\{if\(!document\.hidden&&ME\)loadLive\(\)\},60000\)/.test(scl2)
-       &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=statusBar\(\)\+html;/.test(scl2)
+       &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=html;/.test(scl2)&&!/statusBar/.test(scl2)
        &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
-    ok('전략 경쟁: 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 신규 투입 · 7일 1위 자동 승격(다음 날부터) · 이번 주 결과 카드(전체 탭)',
+    ok('전략 경쟁: 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 신규 투입 · 7일 1위 자동 승격(다음 날부터) · 이번 주 결과 카드는 전체 계좌 탭과 함께 삭제',
        /POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, EVAL_BUDGET = 12, 10, 7, 3, 48/.test(lp)&&/report\["arena"\], astate = arena\(ctx\)/.test(lp)
        &&/attach_promotions\(report\)/.test(lp)&&/report\["week"\] = week_summary\(/.test(lp)
        &&!/CRYPTO\[[^\]]+\] = |US\[[^\]]+\] = /.test(lp.slice(lp.indexOf('def arena('),lp.indexOf('def week_summary(')))
-       &&/function promoBadge\(pr\)/.test(scl2)&&/function weekCard\(\)/.test(scl2)&&(scl2.match(/weekCard\(\)/g)||[]).length===2);
+       &&/function promoBadge\(pr\)/.test(scl2)&&!/weekCard\(/.test(scl2));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'),lv=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
     const hold=[...lp.matchAll(/maxHoldDays=(\d+)/g)].map(m=>+m[1]);
@@ -11365,9 +11397,9 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live",\{headers:\{"x-monitor-key":env\.MONITOR_KEY/.test(fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'))   // 알림 감시(Worker)가 감시키로 실시간 자료를 읽는다
        &&/function authorized\(request,env\)/.test(tg3));
   }
-  ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·이번 주·추이 범례·GPT 대결 날짜별',
-     /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/q\.noTrade\?NOTRADE:pct\(q\.tabPct\)/.test(scl2)
-     &&/if\(tdy&&tdy\.noTrade\)head\+=/.test(scl2)&&/nt=!\(z\.tradeDays>0\)/.test(scl2)&&/\(nt\?NOTRADE:/.test(scl2)
+  ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·추이 범례·GPT 대결 날짜별',
+     /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/nt\?\(lv\.final\?"매매없음":"매매 전"\):pct\(v\)/.test(scl2)
+     &&/if\(tdy&&tdy\.noTrade\)head\+=/.test(scl2)
      &&/x\.claude\.entries\?/.test(scl2)&&/tradeDays=trades\)/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('📅 오늘 탭에서 \'전일 · 당일 결과\' 표 삭제(사용자 요청 2026-10-02)', !/전일 · 당일 결과 — 모든 전략/.test(scl2));
   ok('📅 오늘 탭 전략별 누적 수익률 추이: 모의 장부 / 최근 60일 재구성(참고) 따로 · 섞지 않음 · 5색(검증) + 범례',
@@ -11400,8 +11432,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/if\(buyDate\)await runEtf\(env,date,"etf_sell",ms,\{buyDate\}\);/.test(ow)
      &&/await runEtf\(env,date,stage==="close"\?"etf_buy":"etf_reconcile",ms\);/.test(ow)
      &&/backtest_etf_overnight\.py/.test(wf)&&/finance-datareader/.test(wf));
-  ok('목표 지표 화면: +1% 달성일·+5% 달성주·손실일·MDD·거르기 통과 · 같은 원금 반반 합산',
-     /목표 지표/.test(scl2)&&/같은 날 두 전략이 다 나오면 반씩/.test(scl2)&&/\+1%↑일\/년/.test(scl2)
+  ok('목표 지표 화면: +1% 달성일·+5% 달성주·손실일·MDD·거르기 통과(탭별) · 합산 API 는 그대로',
+     /목표 지표/.test(scl2)&&/\+1%↑일\/년/.test(scl2)
      &&/portfolio:etf\.portfolio/.test(orApi));
   ok('D-3 BTC 그림자: 완료된 시간봉만·다음 시간 시가 진입·24시간 보유·주문 없음',
      /DIP24_VERSION = "btc_dip24_v1"/.test(bt)&&/hb\[h - one\]\["c"\] \/ hb\[h - one \* \(lb \+ 1\)\]\["c"\]/.test(bt)
@@ -11484,14 +11516,15 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
   const ch=fs.readFileSync(__d+'/claude.html','utf8');
   ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 4전략 누적 상태: 표본·승률·거래당·필요승률·엣지·검증상태)',
      /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익<\/span>/.test(ch)
-     &&/resultCell\(r\.prev,r\.prevDate,"전일",cl\)\+resultCell\(r\.last,r\.lastDate,"당일",cl\)/.test(ch)
+     &&/var pr=dayPair\(r,lt\.days,\(LIVE&&!LIVE\.error&&LIVE\.today\)\|\|""\);/.test(ch)
+     &&/resultCell\(pr\[0\]\.v,pr\[0\]\.date,"전일",cl,pr\[0\]\.lv\)\+resultCell\(pr\[1\]\.v,pr\[1\]\.date,"당일",cl,pr\[1\]\.lv\)/.test(ch)
      &&/📊 4전략 누적 상태/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
      &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
   // 값 시험 — 화면 함수를 그대로 떼어 실행
   const grab=n=>{const i=ch.indexOf('function '+n+'(');let d=0,j=ch.indexOf('{',i);for(;j<ch.length;j++){if(ch[j]==='{')d++;else if(ch[j]==='}'&&--d===0)break;}return ch.slice(i,j+1);};
-  const env='var NOTRADE="매매 없음";function esc(s){return String(s)}function cls(v){return v>0?"win":v<0?"loss":""}function pct(v){return (v>=0?"+":"")+(+v).toFixed(2)+"%"}';
-  let f={dayCell:()=>'',scoreOf:()=>null};
-  try{f=new Function(env+grab('resultCell')+grab('scoreOf')+';return {dayCell:resultCell,scoreOf:scoreOf}')();}catch(e){console.log('  (오늘 탭 함수 추출 실패: '+e.message+')');}
+  const env='var NOTRADE="매매 없음",LIVE={asOf:"2026-10-14T00:41:00Z"};function kstTime(){return "09:41"}function esc(s){return String(s)}function cls(v){return v>0?"win":v<0?"loss":""}function pct(v){return (v>=0?"+":"")+(+v).toFixed(2)+"%"}';
+  let f={dayCell:()=>'',scoreOf:()=>null,dayPair:()=>[]};
+  try{f=new Function(env+grab('resultCell')+grab('liveCell')+grab('prevDateOf')+grab('dayPair')+grab('scoreOf')+';return {dayCell:resultCell,scoreOf:scoreOf,dayPair:dayPair}')();}catch(e){console.log('  (오늘 탭 함수 추출 실패: '+e.message+')');}
   const s1=f.scoreOf({tradeDays:152,lossDays:57,lossDayAvgPct:-3.5132163740225857,expectancyPct:1.3304699743160744});
   const agree=f.dayCell(-0.5,'2026-10-02','당일',{date:'2026-10-02',trades:[{},{}],wins:1,losses:1});
   const clash=f.dayCell('no_trade','2026-10-02','당일',{date:'2026-10-02',trades:[{}],wins:0,losses:1});
@@ -11501,6 +11534,24 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
      &&/매매없음/.test(clash)&&/기준전략 0건/.test(clash)&&!/1건/.test(clash)
      &&/daily-result-goal hit'>\+1% 달성/.test(f.dayCell(1.2,'2026-10-02','당일',null))&&f.scoreOf({tradeDays:0})===null,
      JSON.stringify(s1));
+  { // 확정 전 실시간 칸(2026-10-14 사용자 요청 '실시간으로 반영해') — 확정 값이 먼저, 없을 때만 점선 칸에 출처·시각·'확정 전'
+    const lvNow=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0});
+    const lvNt=f.dayCell('pending','2026-10-14','당일',null,{v:'no_trade',final:true,src:'vts',trades:0,note:'전날 15:21 매수 신호 없음'});
+    const lvWait=f.dayCell(null,'2026-10-14','당일',null,{v:'no_trade',final:false,src:'rule',trades:0,note:'아직 매수 없음 — BTC 쉼(추세 평균 아래)'});
+    const lvDone=f.dayCell('pending','2026-10-13','전일',null,{v:-5.953344947735195,final:true,src:'rule',trades:1,wins:0,losses:1,note:'모의투자 매수 안 됨 — 규칙대로 계산'});
+    const conf=f.dayCell(-5.95,'2026-10-13','전일',null,{v:-6,final:true,src:'rule',trades:1});
+    const none=f.dayCell('pending','2026-10-13','전일',null,null);
+    const pr=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:'pending',last:-1.2},{'2026-10-14':{v:1},'2026-10-15':{v:2}},'2026-10-15');
+    const pr0=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:0.5,last:'pending'},null,'');
+    ok('오늘 탭 실시간 칸: 장중 +10.75%(2건 · 모의투자 체결 · ⏱ 09:41 실시간 · 확정 전 · 점선) / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중 매수 전 / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
+       /class='daily-result-box live'/.test(lvNow)&&/\+10\.75%/.test(lvNow)&&/기준전략 2건 · 승 2 · 패 0 · 모의투자 체결/.test(lvNow)&&/\+1% 달성 · ⏱ 09:41 실시간 · 확정 전/.test(lvNow)
+       &&/>매매없음</.test(lvNt)&&/마감 · 밤 확정 전/.test(lvNt)&&/전날 15:21 매수 신호 없음/.test(lvNt)&&!/확정 대기/.test(lvNt)
+       &&/>매매 전</.test(lvWait)&&/아직 매수 없음/.test(lvWait)&&/-5\.95%/.test(lvDone)&&/기준전략 1건 · 승 0 · 패 1 · 시세로 계산/.test(lvDone)&&/>기준전략 0건<br>전날 15:21 매수 신호 없음</.test(lvNt)&&/목표까지 6\.95%p · 마감 · 밤 확정 전/.test(lvDone)
+       &&/-5\.95%/.test(conf)&&/모의 장부 확정/.test(conf)&&!/live|확정 전/.test(conf)&&/확정 대기/.test(none)&&!/live/.test(none)
+       &&pr.length===2&&pr[0].date==='2026-10-14'&&pr[0].v===-1.2&&pr[0].lv.v===1&&pr[1].date==='2026-10-15'&&pr[1].v===null&&pr[1].lv.v===2
+       &&pr0[0].date==='2026-10-13'&&pr0[0].v===0.5&&pr0[1].v==='pending'&&pr0[1].lv===null,
+       lvNow.slice(0,160));
+  }
   const fnames=[...ch.matchAll(/(?:^|[;\s}])function ([A-Za-z_$][\w$]*)\(/g)].map(m=>m[1]),dup=fnames.filter((n,i)=>fnames.indexOf(n)!==i);
   ok('클로드 화면 함수 이름 중복 없음(뒤에 선언한 함수가 앞의 것을 덮어쓰지 않게)',dup.length===0,dup.join(','));
   { let g=null,err='';
@@ -11767,7 +11818,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   }
   ok('자산플랜 햄버거는 jk-ui 공용 클릭 핸들러 하나만 쓴다 — 두 번 토글 금지',
      !/\$\("jkmenuBtn"\)\.addEventListener\("click"/.test(pl)
-     && /<script src="\/jk-ui\.js\?v=1\.0\.3" defer><\/script>/.test(pl));
+     && /<script src="\/jk-ui\.js\?v=1\.0\.6" defer><\/script>/.test(pl));
 
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
   {
@@ -12054,7 +12105,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
        &&/안정 "\+pct\(r\.stable,3\)\+" × 빈도 "\+num\(r\.freqFactor,2\)/.test(ch),(pyF.stderr||'')+(pyF.stdout||'').slice(0,300));
   }
   ok('단타(클로드) 휴대폰 기본: 비교 표는 표 그대로(넘치는 표만 촘촘하게 · 첫 칸 고정, 경쟁표는 순위·이름 고정) · 개선 내역에 전략 표기 · 전략 코드는 이름으로',
-     /\n  body\.innerHTML=statusBar\(\)\+html;\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;\n\s*t\.classList\.add\("fit"\);/.test(ch)
+     /\n  body\.innerHTML=html;[^\n]*\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;\n\s*t\.classList\.add\("fit"\);/.test(ch)
      &&/@media\(max-width:760px\)\{table\.fit\{min-width:0!important;font-size:11px\}/.test(ch)&&/table\.fit td:first-child,table\.fit th:first-child\{position:sticky;left:0;/.test(ch)
      &&/table\.fit\.arena td\.nm,table\.fit\.arena th:nth-child\(2\)\{position:sticky;left:20px;/.test(ch)&&!/table\.stack thead\{display:none\}/.test(ch)&&/window\.addEventListener\("resize"/.test(ch)
      &&/<span class='tag' style='margin:0 6px 0 0'>"\+esc\(ARENA_TAB\[x\.tab\]/.test(ch)&&/"<span class='sub'>"\+arenaReason\(x\.reason,names\)\+"<\/span>/.test(ch));
@@ -12064,19 +12115,19 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
       du=fs.readFileSync(__d+'/functions/api/scalping-duel.js','utf8'),cp2=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8');
     ok('연구 메뉴 알림: [지피티 연구 탭] · [클로드 연구 탭] 머리말 · 실제 매수·매도만(지피티 일일결과 · 데이트레이딩 후보 · 대결 요약 텔레그램 없음)',
        /"\[지피티 연구 "\+LABELS\[strategy\]\+"\] "\+icon/.test(sa)&&/if\(stage==="summary"\)return json\(\{ok:true,eventId,skipped:"buy_sell_only"\}\);/.test(sa)
-       &&/title:"\[지피티 연구 "\+name\+"\] "/.test(pa)&&/"\[지피티 연구 시초가\] 🟢 모의 매수 신호 · "/.test(om)&&/text:title\+/.test(om)
+       &&/title:"\[지피티 연구 "\+name\+"\] "/.test(pa)&&/"\[지피티 연구 시초가\] 🟢 매수 · "/.test(om)&&/text:title\+/.test(om)
        &&!/api\.telegram\.org|모의 후보 신호/.test(dm)&&!/api\.telegram\.org/.test(du)
        &&/open: "\[클로드 연구 시초가\]", etf: "\[클로드 연구 데이트레이딩\]", coin: "\[클로드 연구 비트코인\]", soxl: "\[클로드 연구 SOXL\]"/.test(cp2));
   }
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
-    ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만',
+    ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만 · 켜기/끄기는 설정 → 알림 한 곳(연구 화면 상단 상태 줄과 🔔 버튼은 2026-10-14 사용자 요청으로 삭제)',
        JSON.parse(wr).triggers.crons.join()==="5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
        &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(fs.readFileSync(__d+'/claude-push-client.js','utf8'))
-       &&/<script src="\/claude-push-client\.js\?v=[\d.]+" defer><\/script>/.test(ch)&&/ClaudePush\.enable\(tok\)/.test(ch)
-       &&/Content-Encoding: aes128gcm/.test(pu)&&/onclick='pushToggle\(\)'/.test(ch)&&!/localStorage|sessionStorage/.test(sw+pu));
+       &&!/claude-push-client\.js|ClaudePush|pushToggle|pushInit|function statusBar|statusBar\(\)|class='status'|▶ 다음:|⚠ 점검 "\+/.test(ch)
+       &&/Content-Encoding: aes128gcm/.test(pu)&&!/localStorage|sessionStorage/.test(sw+pu));
   }
   { const og2=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8'),ks=fs.readFileSync(__d+'/functions/api/kis.js','utf8');
     const bb=ks.slice(ks.indexOf('if (op === "buyable") {'),ks.indexOf('if (op === "balance") {'));
@@ -12089,8 +12140,18 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   { const st=fs.readFileSync(__d+'/settings.html','utf8'),sc=fs.readFileSync(__d+'/settings-claude-push.js','utf8');
     ok('설정 → 알림: 단타(클로드) 매수·매도 항목(켜기 · 끄기 · 테스트) — 단타 화면과 같은 ClaudePush 로 · 소유자 토큰 · 기존 JOB/신규분양 항목 그대로',
        /<div id="claudePushSettings"><\/div>\s*<div id="notificationSettings">/.test(st)&&/<script src="\/claude-push-client\.js\?v=[\d.]+" defer><\/script>\s*<script src="\/settings-claude-push\.js\?v=[\d.]+" defer><\/script>/.test(st)
-       &&/window\.jkAuth=auth;/.test(st)&&/<script src="\/settings-notifications\.js" defer><\/script>/.test(st)
+       &&/window\.jkAuth=auth;/.test(st)&&/<script src="\/settings-notifications\.js\?v=\d+\.\d+\.\d+" defer><\/script>/.test(st)
        &&/P\.enable\(token\)/.test(sc)&&/P\.disable\(token\)/.test(sc)&&/P\.test\(token\)/.test(sc)&&!/localStorage|sessionStorage/.test(sc));
+  }
+  { // 매일 08:00 연구 리포트(사용자 요청 2026-10-14 '연구 모든탭 … 매일 아침 8시 일정한 시간에 … 앱푸시랑 텔레그램으로')
+    const rw=fs.readFileSync(__d+'/.github/workflows/claude-research-report.yml','utf8'),wk2=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),
+      tg2=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8'),pu2=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8');
+    const inLines=rw.split('\n').filter(l=>l.includes('${{ inputs.')),cr=wk2.slice(wk2.indexOf('export async function claudeReport('),wk2.indexOf('// 텔레그램 — Pages(/api/claude-telegram op=event)가 보낸다.'));
+    ok('연구 리포트: 아침 연구 뒤 workflow 가 08:00 KST 까지 기다렸다 보냄(일정한 시각) · 입력은 환경변수로만(셸 주입 없음) · Worker /push-report 하나(감시키 · 같은 날 한 번 · 먼저 기록) · 텔레그램 op=report 머리말 [클로드 연구 리포트] · 링크 고정',
+       /\n  workflow_dispatch:\n/.test(rw)&&!/\n  schedule:/.test(rw)&&/TARGET=\$\(TZ=Asia\/Seoul date -d "\$D 08:00:00" \+%s\)/.test(rw)&&/if \[ "\$WAIT" -gt 0 \]; then [^\n]*sleep "\$WAIT"/.test(rw)
+       &&inLines.length===5&&inLines.every(l=>/^ {10}[A-Z]+: \$\{\{ inputs\.(date|title|push|text) \}\}$/.test(l))&&/-X POST "\$WORKER\/push-report"/.test(rw)&&/-H "x-monitor-key: \$KEY"/.test(rw)
+       &&/if\(op==="report"&&request\.method==="POST"\)\{const r=await claudeReport\(env,/.test(wk2)&&cr.indexOf('call("claim"')>0&&cr.indexOf('call("claim"')<cr.indexOf('pushBroadcast(')
+       &&/if\(b\.op==="report"\)\{[\s\S]{0,120}text\.startsWith\(REPORT_HEAD\)/.test(tg2)&&/export const REPORT_HEAD = "\[클로드 연구 리포트\]";/.test(pu2)&&/url: "\/claude" \};/.test(pu2));
   }
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
@@ -12285,7 +12346,7 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메
      &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
      &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
   ok('11개 페이지 모두 jk-ui 공용 UI와 같은 11개 메뉴 링크를 사용',
-     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.3" defer><\/script>/.test(s)
+     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.6" defer><\/script>/.test(s)
        &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
 }
 

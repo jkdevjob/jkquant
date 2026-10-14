@@ -456,7 +456,7 @@ async function notifyPaperTransitions(env,oldLedger,newLedger){
           (x.name||x.code)+" ("+x.code+") · "+exitLabel(x.reason),
           "매수 "+hmLabel(x.entryTime)+" · "+Math.round(x.entryPrice||0).toLocaleString("ko-KR")+"원",
           "매도 "+hmLabel(x.exitTime)+" · "+Math.round(x.exitPrice||0).toLocaleString("ko-KR")+"원",
-          "모의 순손익 "+signedPct(x.pnl)+" · 왕복 마찰비용 "+PAPER_FRICTION_PCT.toFixed(2)+"% 반영"
+          "전략 손익 "+signedPct(x.pnl)+" · 왕복 마찰비용 "+PAPER_FRICTION_PCT.toFixed(2)+"% 반영"
         ]
       });
     }
@@ -468,13 +468,13 @@ export function recentPaperPushEvents(ledger,windowMin=8){
   for(const x of (ledger&&ledger.trades||[])){
     if(!x||!x.id)continue;
     const events=[{stage:"buy",when:+x.signalTime||0,eventId:"daytrading:"+ledger.date+":"+x.id+":buy",
-      lines:[(x.name||x.code)+" ("+x.code+")","신호 "+hmLabel(x.signalTime)+" · 모의진입 "+hmLabel(x.entryTime),
+      lines:[(x.name||x.code)+" ("+x.code+")","신호 "+hmLabel(x.signalTime)+" · 매수 예정 "+hmLabel(x.entryTime),
         "신호가 "+Math.round(x.signalPrice||0).toLocaleString("ko-KR")+"원"]}];
     if(x.status==="closed"&&x.exitTime)events.push({stage:"sell",when:+x.exitTime,
       eventId:"daytrading:"+ledger.date+":"+x.id+":sell:"+String(x.exitTime),
       lines:[(x.name||x.code)+" ("+x.code+") · "+exitLabel(x.reason),
-        "모의매도 "+hmLabel(x.exitTime)+" · "+Math.round(x.exitPrice||0).toLocaleString("ko-KR")+"원",
-        "모의 순손익 "+signedPct(x.pnl)]});
+        "매도 "+hmLabel(x.exitTime)+" · "+Math.round(x.exitPrice||0).toLocaleString("ko-KR")+"원",
+        "전략 손익 "+signedPct(x.pnl)]});
     for(const e of events){const age=now-hmToMin(e.when);
       if(age>=0&&age<=windowMin)rows.push({strategy:"daytrading",stage:e.stage,
         eventId:e.eventId,date:ledger.date,time:hmLabel(e.when)+" KST",lines:e.lines});

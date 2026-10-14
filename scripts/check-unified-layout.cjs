@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html'];
-const labels={'/':'운영','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
+const labels={'/':'운영','/paper':'모의투자','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
 const ui=fs.readFileSync('jk-ui.js','utf8'),mobile=fs.readFileSync('jk-mobile.css','utf8');
 new vm.Script(ui,{filename:'jk-ui.js'});
 function verify(src=ui){
@@ -13,11 +13,28 @@ function verify(src=ui){
   for(const [route,label] of Object.entries(labels))assert(src.includes("'"+route+"':'"+label+"'"),route+' 메뉴명');
 }
 verify();
+assert(ui.includes("classList.contains('paperpage'))?'모의투자':HEADER_LABELS[routeKey()]"),'모의투자는 운영과 별도 헤더 타이틀');
+const paperHtml=fs.readFileSync('index.html','utf8');
+assert(paperHtml.includes("if(typeof window!=='undefined'&&window.JKUnifiedUI)window.JKUnifiedUI.normalizeHeader()"),'모의/운영 SPA 왕복 시 헤더 다시 설정');
+const displayRow=paperHtml.slice(paperHtml.indexOf('h+=`<tr class="${_paperCompact'),paperHtml.indexOf('/* MDD는 종가 이력이'));
+assert(displayRow.includes('<td>${paperDualMoney(r,r.total,r.wonRate)}</td>'),'평가 칸에는 금액만');
+assert(displayRow.includes('Number.isFinite(_krwFinalRet)')&&displayRow.includes('원화 ${_krwFinalRet>=0'),'최종 칸에 원화 수익률');
+assert(!displayRow.includes('원화 수익률 ${paperKrwRet'),'원화 수익률을 평가 칸에 중복 출력하지 않음');
+assert(ui.includes("newHeader.className='jk-site-header'"),'자산플랜/백테 정식 header 셸');
+assert(ui.includes("document.body.insertBefore(newHeader,host)"),'기존 헤더 DOM 보존하며 이동');
+assert(ui.includes("header.jk-site-header .jk-page-top{box-sizing:border-box!important;width:100%!important;height:76px!important;min-height:76px!important"),'PC 헤더 76px');
+assert(ui.includes("height:70px!important;min-height:70px!important"),'모바일 헤더 70px');
+assert(ui.includes("header.jk-site-header>.wrap"),'헤더 콘텐츠 폭 1100px');
+assert(mobile.includes('input[type="date"]::-webkit-date-and-time-value'),'WebKit 날짜 한 줄');
+const bt=fs.readFileSync('backtest.html','utf8');
+assert(bt.includes('.ctrl-grid>.ctrl:has(>input[type=date]){flex:1 1 100%;width:100%;min-width:0}'),'작은 화면 날짜 전체폭');
+assert(bt.includes('.ctrl input[type=date]{width:100%!important;max-width:none!important;min-width:0!important}'),'날짜 140px 제한 해제');
+for(const p of pages)assert(fs.readFileSync(p,'utf8').includes('/jk-mobile.css?v=1.0.2'),p+' CSS 캐시 버전');
 assert(mobile.includes('@media (max-width:768px)'),'모바일 분기 유지');
 assert(/\.wrap\{width:100%!important;max-width:none!important/.test(mobile),'모바일 전체폭 유지');
 for(const p of pages){
   const html=fs.readFileSync(p,'utf8');
-  assert(html.includes('/jk-ui.js?v=1.0.3'),p+' 공용 UI 캐시 버전');
+  assert(html.includes('/jk-ui.js?v=1.0.6'),p+' 공용 UI 캐시 버전');
   assert(html.includes('class="wrap'),p+' wrap 존재');
   assert(html.includes('class="jkmenu'),p+' 공통 메뉴 존재');
 }

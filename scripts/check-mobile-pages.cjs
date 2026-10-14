@@ -8,7 +8,7 @@ for(const f of pages){
   const vp=(src.match(/<meta\s+name=["']viewport["'][^>]*>/i)||[''])[0];
   ck(!!vp,f+' viewport');
   ck(/viewport-fit\s*=\s*cover/i.test(vp),f+' viewport-fit');
-  ck(src.split('/jk-mobile.css?v=1.0.1').length-1===1,f+' mobile css');
+  ck(src.split('/jk-mobile.css?v=1.0.2').length-1===1,f+' mobile css');
 }
 const css=fs.readFileSync('jk-mobile.css','utf8');
 ck(/@media\s*\(max-width:768px\)/.test(css),'768px mobile rules');

@@ -76,6 +76,7 @@ test("주제 목록이 세 곳(푸시 서버 · 서비스워커 · 설정 화면
   assert.match(w, /const VALID_TOPICS=new Set\(\[[^\]]*"research"/);
   assert.match(sw, /const VALID_TOPICS=new Set\(\[[^\]]*"research"/);
   assert.match(st, /\{topic:"research",href:"\/scalping"/);
+  assert.match(st, /\{topic:"gpt",href:"\/scalping"/);
   const yml = fs.readFileSync(new URL("../.github/workflows/research-notify.yml", import.meta.url), "utf8");
   assert.match(yml, /branches: \[research\/daily\]/); assert.match(yml, /\/research-note/); assert.match(yml, /secrets\.AUTOTRADE_KEY/);
 });
@@ -107,7 +108,7 @@ test('연구 알림 일부 실패: 성공 기기 재전송 없이 실패 기기�
 test('동시 연구 발송은 같은 research 최신 요약을 중간에 덮어쓰지 않음',async()=>{
   const {app,values}=store({MONITOR_KEY:'k1'}),seen=[];
   values.set('sub:a',{endpoint:'https://push.example/a',topics:['research']});
-  app.pushOne=async()=>{const before=values.get('latest:research').study;await new Promise(r=>setTimeout(r,5));seen.push([before,values.get('latest:research').study]);return {ok:true,status:201};};
+  app.pushOne=async(_endpoint,topic)=>{const before=values.get('latest:'+topic).study;await new Promise(r=>setTimeout(r,5));seen.push([before,values.get('latest:'+topic).study]);return {ok:true,status:201};};
   await Promise.all(['tenbagger','im_plan'].map(study=>app.fetch(req({study,date:'2026-10-13',body:'연구 동시 실행'},'k1'))));
   assert.deepEqual(seen,[['tenbagger','tenbagger'],['im_plan','im_plan']]);
 });

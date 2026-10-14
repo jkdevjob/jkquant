@@ -131,6 +131,8 @@ function replay(opt){
 
   for(let i=startIdx;i<S.dates.length;i++){
     const date=S.dates[i],month=date.slice(0,7);let force=false;
+    // 확정 종가 p로 미리 주문 수량을 결정하고, i일 종가는 체결·평가에만 사용한다.
+    // 리밸런싱 신호는 미확정 i일 가격을 읽지 않는다.
     if(month!==lastMonth&&monthlyAdd>0){
       cash+=monthlyAdd;inflow+=monthlyAdd;addCash(ledger,date,'dep',monthlyAdd,seq++);lastMonth=month;force=true;
     }else if(month!==lastMonth)lastMonth=month;
@@ -157,9 +159,9 @@ function replay(opt){
           const first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
           need=teclHit||guardFlip||force||first;
           if(need){
-            const tt=(teclHit||force||first)?Math.max(0,Math.floor(total*D.teclWeight*w/ep.TECL)):pos.TECL;
-            const tq=(guardFlip||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/ep.TQQQ)):0):pos.TQQQ;
-            const ts=Math.max(0,Math.floor(Math.max(0,total-tt*ep.TECL-tq*ep.TQQQ)/ep.SGOV));
+            const tt=(teclHit||force||first)?Math.max(0,Math.floor(total*D.teclWeight*w/sp.TECL)):pos.TECL;
+            const tq=(guardFlip||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/sp.TQQQ)):0):pos.TQQQ;
+            const ts=Math.max(0,Math.floor(Math.max(0,total-tt*sp.TECL-tq*sp.TQQQ)/sp.SGOV));
             targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
           }
           meta={horizon,sigma,w,sleeveNow,guard,teclHit,guardFlip};
@@ -183,8 +185,8 @@ function replay(opt){
         const risk=bull?D.bullWeight:D.dipWeights[stage],curQ=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
         need=pos.TECL>0||Math.abs(curQ-risk)>.05||force||first;
         if(need){
-          const tq=Math.max(0,Math.floor(total*risk/ep.TQQQ));
-          const ts=Math.max(0,Math.floor(Math.max(0,total-tq*ep.TQQQ)/ep.SGOV));
+          const tq=Math.max(0,Math.floor(total*risk/sp.TQQQ));
+          const ts=Math.max(0,Math.floor(Math.max(0,total-tq*sp.TQQQ)/sp.SGOV));
           targetShares={TECL:0,TQQQ:tq,SGOV:ts};
         }
         meta={horizon,bull,stage,risk,sma:mv,rsi:trsi[p],ath};
@@ -192,8 +194,8 @@ function replay(opt){
         const D=DEFAULTS[15],cur=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
         need=pos.TECL>0||cur<D.lo||cur>D.hi||force||first;
         if(need){
-          const tq=Math.max(0,Math.floor(total*D.center/ep.TQQQ));
-          const ts=Math.max(0,Math.floor(Math.max(0,total-tq*ep.TQQQ)/ep.SGOV));
+          const tq=Math.max(0,Math.floor(total*D.center/sp.TQQQ));
+          const ts=Math.max(0,Math.floor(Math.max(0,total-tq*sp.TQQQ)/sp.SGOV));
           targetShares={TECL:0,TQQQ:tq,SGOV:ts};
         }
         meta={horizon,current:cur,center:D.center,lo:D.lo,hi:D.hi};
@@ -206,9 +208,9 @@ function replay(opt){
         const curT=pos.TECL*sp.TECL/Math.max(total,1),curQ=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
         need=force||first||(winner==='TECL'?(pos.TQQQ>0||Math.abs(curT-D.winnerWeight)>.05):(winner==='TQQQ'?(pos.TECL>0||Math.abs(curQ-D.winnerWeight)>.05):(pos.TECL>0||pos.TQQQ>0)));
         if(need){
-          const tt=winner==='TECL'?Math.max(0,Math.floor(total*D.winnerWeight/ep.TECL)):0;
-          const tq=winner==='TQQQ'?Math.max(0,Math.floor(total*D.winnerWeight/ep.TQQQ)):0;
-          const ts=Math.max(0,Math.floor(Math.max(0,total-tt*ep.TECL-tq*ep.TQQQ)/ep.SGOV));
+          const tt=winner==='TECL'?Math.max(0,Math.floor(total*D.winnerWeight/sp.TECL)):0;
+          const tq=winner==='TQQQ'?Math.max(0,Math.floor(total*D.winnerWeight/sp.TQQQ)):0;
+          const ts=Math.max(0,Math.floor(Math.max(0,total-tt*sp.TECL-tq*sp.TQQQ)/sp.SGOV));
           targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
         }
         meta={horizon,winner,tecl:tm,tqqq:qm};
@@ -225,8 +227,8 @@ function replay(opt){
     nav.push({date,total,inflow,cash,tecl:pos.TECL,tqqq:pos.TQQQ,sgov:pos.SGOV,teclPx:S.tecl[i],tqqqPx:S.tqqq[i],sgovPx:S.sgov[i]});
   }
 
-  return {horizon,ledger,nav,stats:stats(nav,nTrade),lastDecision,last:nav[nav.length-1]||null,error:''};
+  return {horizon,orderSizingVersion:2,ledger,nav,stats:stats(nav,nTrade),lastDecision,last:nav[nav.length-1]||null,error:''};
 }
 
-g.JKPlanSessionEngine={VERSION:1,DEFAULTS,FEE_RATE,alphaFee,replay,stats};
+g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',DEFAULTS,FEE_RATE,alphaFee,replay,stats};
 })(typeof window!=='undefined'?window:globalThis);
