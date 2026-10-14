@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "strategyVersion": "1.0.0",
   "status": "prospective_experiment",
-  "generatedAt": "2026-10-14T02:02:18.796979+00:00",
-  "asOf": "2026-10-12",
+  "generatedAt": "2026-10-14T15:21:03.180799+00:00",
+  "asOf": "2026-10-13",
   "registeredAt": "2026-10-13T06:39:10.172275+00:00",
   "rules": {
     "version": "1.0.0",
@@ -47,123 +47,109 @@
   "source": {
     "provider": "KRX-via-FinanceData-marcap",
     "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
-    "asOf": "2026-10-12",
-    "cutoff": "2026-10-13",
+    "asOf": "2026-10-13",
+    "cutoff": "2026-10-14",
     "inputs": [
       {
-        "url": "https://raw.githubusercontent.com/FinanceData/marcap/e6283b89b1212f29d6c11061b5a8f3f03de47a1f/data/marcap-2025.parquet",
+        "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2025.parquet",
         "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
         "bytes": 25153419
       },
       {
-        "url": "https://raw.githubusercontent.com/FinanceData/marcap/e6283b89b1212f29d6c11061b5a8f3f03de47a1f/data/marcap-2026.parquet",
-        "sha256": "83f0c91ba39d6c087534596c729fefd1de93ee34da25d579f43cc5ad30b247b9",
-        "bytes": 19914071
+        "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2026.parquet",
+        "sha256": "fb5725fe4b1d32c8160a20fa9a1d4a8813395a6a2d2deeefcbc99596d146739e",
+        "bytes": 20015973
       }
     ],
-    "combinedSha256": "2f533df1659f79a5a5b763dcb115d7cbfa7aff29e5b1af8f5ca5f1986484ea49",
-    "upstreamCommit": "e6283b89b1212f29d6c11061b5a8f3f03de47a1f",
+    "combinedSha256": "146efd3685e956b1d47add22d8a53d19961ca91de3b00494ba4a9301d296fa89",
+    "upstreamCommit": "b1db6653fb0b11e8aa96687dfae68ee39c7259b5",
     "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
     "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
     "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
   },
   "coverage": {
-    "currentRows": 2869,
-    "examined": 2284,
+    "currentRows": 2868,
+    "examined": 2286,
     "excluded": {
       "low_prior_liquidity": 1440,
-      "missing_latest_session": 173,
-      "outside_common_stock_or_watch_status": 508,
-      "not_traded": 35,
+      "missing_latest_session": 174,
+      "outside_common_stock_or_watch_status": 507,
+      "not_traded": 33,
       "invalid_reference_or_action": 1,
       "short_history": 41,
       "prior_spac_or_fund_history": 1
     },
-    "candidateSignals": 10
+    "candidateSignals": 8
   },
   "candidates": [
-    {
-      "code": "002990",
-      "name": "금호건설",
-      "market": "KOSPI",
-      "pattern": "pullback50",
-      "signalDate": "2026-10-12",
-      "signalClose": 13400.0,
-      "features": {
-        "ma200SlopePct": 14.092080163549436,
-        "distancePriorHighPct": -22.588099364529203,
-        "volumeRatio": 8.770782959203082,
-        "prior20AmountWon": 24500665063.25
-      }
-    },
-    {
-      "code": "003690",
-      "name": "코리안리",
-      "market": "KOSPI",
-      "pattern": "pullback50",
-      "signalDate": "2026-10-12",
-      "signalClose": 14660.0,
-      "features": {
-        "ma200SlopePct": 2.6232772420255346,
-        "distancePriorHighPct": -5.235940530058203,
-        "volumeRatio": 1.0732632832642297,
-        "prior20AmountWon": 2881862357.25
-      }
-    },
-    {
-      "code": "011200",
-      "name": "HMM",
-      "market": "KOSPI",
-      "pattern": "pullback50",
-      "signalDate": "2026-10-12",
-      "signalClose": 21800.0,
-      "features": {
-        "ma200SlopePct": 0.7012992723195444,
-        "distancePriorHighPct": -11.020408163265405,
-        "volumeRatio": 4.163292924004213,
-        "prior20AmountWon": 16297965585.75
-      }
-    },
     {
       "code": "028670",
       "name": "팬오션",
       "market": "KOSPI",
       "pattern": "breakout252",
-      "signalDate": "2026-10-12",
-      "signalClose": 6450.0,
+      "signalDate": "2026-10-13",
+      "signalClose": 6550.0,
       "features": {
-        "ma200SlopePct": 3.973107266918885,
-        "distancePriorHighPct": 1.0971786833855912,
-        "volumeRatio": 4.0089203208070465,
-        "prior20AmountWon": 16278719510.25
+        "ma200SlopePct": 3.984963153759713,
+        "distancePriorHighPct": 1.5503875968992276,
+        "volumeRatio": 2.889376853584051,
+        "prior20AmountWon": 18768514428.75
+      }
+    },
+    {
+      "code": "041960",
+      "name": "코미팜",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 11550.0,
+      "features": {
+        "ma200SlopePct": 4.487900604969752,
+        "distancePriorHighPct": 1.6725352112676006,
+        "volumeRatio": 2.0077358363904168,
+        "prior20AmountWon": 2570229493.0
+      }
+    },
+    {
+      "code": "042510",
+      "name": "라온시큐어",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 17340.0,
+      "features": {
+        "ma200SlopePct": 3.146903852661098,
+        "distancePriorHighPct": 3.7701974865349763,
+        "volumeRatio": 4.871893254392203,
+        "prior20AmountWon": 43082675960.25
       }
     },
     {
       "code": "079650",
       "name": "서산",
       "market": "KOSDAQ",
-      "pattern": "pullback50",
-      "signalDate": "2026-10-12",
-      "signalClose": 6760.0,
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 8780.0,
       "features": {
-        "ma200SlopePct": 19.670332588980187,
-        "distancePriorHighPct": -16.748768472906384,
-        "volumeRatio": 1.0198283767811,
-        "prior20AmountWon": 22593074319.75
+        "ma200SlopePct": 19.644852724624705,
+        "distancePriorHighPct": 8.128078817733964,
+        "volumeRatio": 4.9303646019160645,
+        "prior20AmountWon": 15745562288.5
       }
     },
     {
-      "code": "084670",
-      "name": "동양고속",
-      "market": "KOSPI",
-      "pattern": "trend200",
-      "signalDate": "2026-10-12",
-      "signalClose": 41300.0,
+      "code": "080580",
+      "name": "오킨스전자",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 29550.0,
       "features": {
-        "ma200SlopePct": 1.3119792990092582,
-        "distancePriorHighPct": -69.08682634730539,
-        "volumeRatio": 30.158381432451495,
-        "prior20AmountWon": 2968746492.5
+        "ma200SlopePct": 10.133615052456403,
+        "distancePriorHighPct": 1.025641025641022,
+        "volumeRatio": 1.8388028002922974,
+        "prior20AmountWon": 11822583537.75
       }
     },
     {
@@ -171,55 +157,41 @@
       "name": "비아트론",
       "market": "KOSDAQ",
       "pattern": "breakout252",
-      "signalDate": "2026-10-12",
-      "signalClose": 14430.0,
+      "signalDate": "2026-10-13",
+      "signalClose": 14710.0,
       "features": {
-        "ma200SlopePct": 2.937359185989674,
-        "distancePriorHighPct": 4.26300578034684,
-        "volumeRatio": 7.840007597057627,
-        "prior20AmountWon": 5646298944.25
+        "ma200SlopePct": 3.2619375122813876,
+        "distancePriorHighPct": 1.940401940401948,
+        "volumeRatio": 2.75696280036599,
+        "prior20AmountWon": 7947897094.25
       }
     },
     {
-      "code": "171090",
-      "name": "선익시스템",
+      "code": "162300",
+      "name": "신스틸",
       "market": "KOSDAQ",
-      "pattern": "trend200",
-      "signalDate": "2026-10-12",
-      "signalClose": 77700.0,
+      "pattern": "pullback50",
+      "signalDate": "2026-10-13",
+      "signalClose": 2020.0,
       "features": {
-        "ma200SlopePct": 2.8719968544476115,
-        "distancePriorHighPct": -40.6870229007634,
-        "volumeRatio": 2.5249466540636303,
-        "prior20AmountWon": 3139833667.5
+        "ma200SlopePct": 3.0440851459811347,
+        "distancePriorHighPct": -29.370629370629363,
+        "volumeRatio": 0.24380265019134528,
+        "prior20AmountWon": 8321080780.1
       }
     },
     {
-      "code": "282330",
-      "name": "BGF리테일",
-      "market": "KOSPI",
-      "pattern": "trend200",
-      "signalDate": "2026-10-12",
-      "signalClose": 128600.0,
+      "code": "251970",
+      "name": "펌텍코리아",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 68800.0,
       "features": {
-        "ma200SlopePct": 2.0477037807145715,
-        "distancePriorHighPct": -16.002612671456617,
-        "volumeRatio": 1.0857305401013662,
-        "prior20AmountWon": 5945040677.5
-      }
-    },
-    {
-      "code": "457190",
-      "name": "이수스페셜티케미컬",
-      "market": "KOSPI",
-      "pattern": "trend200",
-      "signalDate": "2026-10-12",
-      "signalClose": 84300.0,
-      "features": {
-        "ma200SlopePct": 2.0656957969153344,
-        "distancePriorHighPct": -35.203689469638746,
-        "volumeRatio": 3.711281149908926,
-        "prior20AmountWon": 16279671795.0
+        "ma200SlopePct": 1.3914067463084434,
+        "distancePriorHighPct": 1.3254786450662692,
+        "volumeRatio": 1.7695553963517523,
+        "prior20AmountWon": 5950738812.5
       }
     }
   ],
@@ -1039,6 +1011,482 @@
         }
       },
       "lastObservedDate": null
+    },
+    {
+      "code": "028670",
+      "name": "팬오션",
+      "market": "KOSPI",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 6550.0,
+      "features": {
+        "ma200SlopePct": 3.984963153759713,
+        "distancePriorHighPct": 1.5503875968992276,
+        "volumeRatio": 2.889376853584051,
+        "prior20AmountWon": 18768514428.75
+      },
+      "id": "1.0.0:2026-10-13:028670:breakout252",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-14T15:21:03.180799+00:00",
+      "registeredDate": "2026-10-15",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-13",
+        "cutoff": "2026-10-14",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2026.parquet",
+            "sha256": "fb5725fe4b1d32c8160a20fa9a1d4a8813395a6a2d2deeefcbc99596d146739e",
+            "bytes": 20015973
+          }
+        ],
+        "combinedSha256": "146efd3685e956b1d47add22d8a53d19961ca91de3b00494ba4a9301d296fa89",
+        "upstreamCommit": "b1db6653fb0b11e8aa96687dfae68ee39c7259b5",
+        "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        }
+      },
+      "lastObservedDate": null
+    },
+    {
+      "code": "041960",
+      "name": "코미팜",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 11550.0,
+      "features": {
+        "ma200SlopePct": 4.487900604969752,
+        "distancePriorHighPct": 1.6725352112676006,
+        "volumeRatio": 2.0077358363904168,
+        "prior20AmountWon": 2570229493.0
+      },
+      "id": "1.0.0:2026-10-13:041960:breakout252",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-14T15:21:03.180799+00:00",
+      "registeredDate": "2026-10-15",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-13",
+        "cutoff": "2026-10-14",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2026.parquet",
+            "sha256": "fb5725fe4b1d32c8160a20fa9a1d4a8813395a6a2d2deeefcbc99596d146739e",
+            "bytes": 20015973
+          }
+        ],
+        "combinedSha256": "146efd3685e956b1d47add22d8a53d19961ca91de3b00494ba4a9301d296fa89",
+        "upstreamCommit": "b1db6653fb0b11e8aa96687dfae68ee39c7259b5",
+        "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        }
+      },
+      "lastObservedDate": null
+    },
+    {
+      "code": "042510",
+      "name": "라온시큐어",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 17340.0,
+      "features": {
+        "ma200SlopePct": 3.146903852661098,
+        "distancePriorHighPct": 3.7701974865349763,
+        "volumeRatio": 4.871893254392203,
+        "prior20AmountWon": 43082675960.25
+      },
+      "id": "1.0.0:2026-10-13:042510:breakout252",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-14T15:21:03.180799+00:00",
+      "registeredDate": "2026-10-15",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-13",
+        "cutoff": "2026-10-14",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2026.parquet",
+            "sha256": "fb5725fe4b1d32c8160a20fa9a1d4a8813395a6a2d2deeefcbc99596d146739e",
+            "bytes": 20015973
+          }
+        ],
+        "combinedSha256": "146efd3685e956b1d47add22d8a53d19961ca91de3b00494ba4a9301d296fa89",
+        "upstreamCommit": "b1db6653fb0b11e8aa96687dfae68ee39c7259b5",
+        "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        }
+      },
+      "lastObservedDate": null
+    },
+    {
+      "code": "079650",
+      "name": "서산",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 8780.0,
+      "features": {
+        "ma200SlopePct": 19.644852724624705,
+        "distancePriorHighPct": 8.128078817733964,
+        "volumeRatio": 4.9303646019160645,
+        "prior20AmountWon": 15745562288.5
+      },
+      "id": "1.0.0:2026-10-13:079650:breakout252",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-14T15:21:03.180799+00:00",
+      "registeredDate": "2026-10-15",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-13",
+        "cutoff": "2026-10-14",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2026.parquet",
+            "sha256": "fb5725fe4b1d32c8160a20fa9a1d4a8813395a6a2d2deeefcbc99596d146739e",
+            "bytes": 20015973
+          }
+        ],
+        "combinedSha256": "146efd3685e956b1d47add22d8a53d19961ca91de3b00494ba4a9301d296fa89",
+        "upstreamCommit": "b1db6653fb0b11e8aa96687dfae68ee39c7259b5",
+        "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        }
+      },
+      "lastObservedDate": null
+    },
+    {
+      "code": "080580",
+      "name": "오킨스전자",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 29550.0,
+      "features": {
+        "ma200SlopePct": 10.133615052456403,
+        "distancePriorHighPct": 1.025641025641022,
+        "volumeRatio": 1.8388028002922974,
+        "prior20AmountWon": 11822583537.75
+      },
+      "id": "1.0.0:2026-10-13:080580:breakout252",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-14T15:21:03.180799+00:00",
+      "registeredDate": "2026-10-15",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-13",
+        "cutoff": "2026-10-14",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2026.parquet",
+            "sha256": "fb5725fe4b1d32c8160a20fa9a1d4a8813395a6a2d2deeefcbc99596d146739e",
+            "bytes": 20015973
+          }
+        ],
+        "combinedSha256": "146efd3685e956b1d47add22d8a53d19961ca91de3b00494ba4a9301d296fa89",
+        "upstreamCommit": "b1db6653fb0b11e8aa96687dfae68ee39c7259b5",
+        "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        }
+      },
+      "lastObservedDate": null
+    },
+    {
+      "code": "162300",
+      "name": "신스틸",
+      "market": "KOSDAQ",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-13",
+      "signalClose": 2020.0,
+      "features": {
+        "ma200SlopePct": 3.0440851459811347,
+        "distancePriorHighPct": -29.370629370629363,
+        "volumeRatio": 0.24380265019134528,
+        "prior20AmountWon": 8321080780.1
+      },
+      "id": "1.0.0:2026-10-13:162300:pullback50",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-14T15:21:03.180799+00:00",
+      "registeredDate": "2026-10-15",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-13",
+        "cutoff": "2026-10-14",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2026.parquet",
+            "sha256": "fb5725fe4b1d32c8160a20fa9a1d4a8813395a6a2d2deeefcbc99596d146739e",
+            "bytes": 20015973
+          }
+        ],
+        "combinedSha256": "146efd3685e956b1d47add22d8a53d19961ca91de3b00494ba4a9301d296fa89",
+        "upstreamCommit": "b1db6653fb0b11e8aa96687dfae68ee39c7259b5",
+        "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        }
+      },
+      "lastObservedDate": null
+    },
+    {
+      "code": "251970",
+      "name": "펌텍코리아",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-13",
+      "signalClose": 68800.0,
+      "features": {
+        "ma200SlopePct": 1.3914067463084434,
+        "distancePriorHighPct": 1.3254786450662692,
+        "volumeRatio": 1.7695553963517523,
+        "prior20AmountWon": 5950738812.5
+      },
+      "id": "1.0.0:2026-10-13:251970:breakout252",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-14T15:21:03.180799+00:00",
+      "registeredDate": "2026-10-15",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-13",
+        "cutoff": "2026-10-14",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/b1db6653fb0b11e8aa96687dfae68ee39c7259b5/data/marcap-2026.parquet",
+            "sha256": "fb5725fe4b1d32c8160a20fa9a1d4a8813395a6a2d2deeefcbc99596d146739e",
+            "bytes": 20015973
+          }
+        ],
+        "combinedSha256": "146efd3685e956b1d47add22d8a53d19961ca91de3b00494ba4a9301d296fa89",
+        "upstreamCommit": "b1db6653fb0b11e8aa96687dfae68ee39c7259b5",
+        "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null
+        }
+      },
+      "lastObservedDate": null
     }
   ],
   "patternStats": [
@@ -1092,8 +1540,8 @@
     },
     {
       "pattern": "breakout252",
-      "registrations": 5,
-      "uniqueStocks": 5,
+      "registrations": 11,
+      "uniqueStocks": 11,
       "entered": 0,
       "horizons": {
         "20": {
@@ -1140,8 +1588,8 @@
     },
     {
       "pattern": "pullback50",
-      "registrations": 0,
-      "uniqueStocks": 0,
+      "registrations": 1,
+      "uniqueStocks": 1,
       "entered": 0,
       "horizons": {
         "20": {
@@ -1187,7 +1635,7 @@
       }
     }
   ],
-  "newRegistrations": 0,
+  "newRegistrations": 7,
   "entered": 0,
   "closedArms": 0,
   "warnings": [
