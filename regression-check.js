@@ -11788,7 +11788,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   }
   ok('자산플랜 햄버거는 jk-ui 공용 클릭 핸들러 하나만 쓴다 — 두 번 토글 금지',
      !/\$\("jkmenuBtn"\)\.addEventListener\("click"/.test(pl)
-     && /<script src="\/jk-ui\.js\?v=1\.0\.4" defer><\/script>/.test(pl));
+     && /<script src="\/jk-ui\.js\?v=1\.0\.5" defer><\/script>/.test(pl));
 
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
   {
@@ -12306,7 +12306,7 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메
      &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
      &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
   ok('11개 페이지 모두 jk-ui 공용 UI와 같은 11개 메뉴 링크를 사용',
-     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.4" defer><\/script>/.test(s)
+     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.5" defer><\/script>/.test(s)
        &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
 }
 
