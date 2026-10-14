@@ -8,7 +8,7 @@
 <script src="/plan-session-engine.js"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js?v=1.0.4" defer></script>
+<script src="/jk-ui.js?v=1.0.5" defer></script>
 <style>
 :root{
   --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
@@ -585,7 +585,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.34</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.35</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1698,7 +1698,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.34</b> · 2026-10-13</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.35</b> · 2026-10-13</div>
   </footer>
 </div>
 
@@ -8046,7 +8046,7 @@ function paperFxLine(rows){
   const same=(hi/lo-1)<0.005, base=(lo+hi)/2, chg=(now/base-1)*100;
   const head=same ? `시작일 환율 ${won(base)}원 → 지금 ${won(now)}원 (${chg>=0?'+':'−'}${Math.abs(chg).toFixed(1)}%)`
                   : `시작일 환율 ${won(lo)}~${won(hi)}원(세션마다 다름) → 지금 ${won(now)}원`;
-  return `<p class="note" id="paper_fx_line" style="margin:2px 0 6px">💱 ${head} · <b>달러 종목 금액은 달러 + 원화</b>로 함께 표시합니다. 평가·인출 원화는 지금 환율, 투입 원화는 입력한 원화 원본입니다. <b>최종·현재·연(%)</b>은 달러 기준입니다.</p>`;
+  return `<p class="note" id="paper_fx_line" style="margin:2px 0 6px">💱 ${head} · <b>달러 종목 금액은 달러 + 원화</b>로 함께 표시합니다. 평가·인출 원화는 지금 환율, 투입 원화는 입력한 원화 원본입니다. <b>최종의 첫 줄·현재·연(%)</b>은 달러 기준, <b>최종의 둘째 줄(원화)</b>은 현재 환율을 반영한 원화 기준 수익률입니다.</p>`;
 }
 function paperWonRate(r){
   if(!r||r.cur==='krw') return 1;
@@ -8268,6 +8268,7 @@ async function openPaper(){
       const _sortOut=(ok&&Number.isFinite(+r.retOut))?+r.retOut:'';
       const _sortCagr=(ok&&long&&Number.isFinite(+r.cagr))?+r.cagr:'';
       const _sortInflow=r.inflowWon!=null?(+r.inflowWon||0):((+r.inflow||0)*(+r.wonRate||1));
+      const _krwFinalRet=ok?paperKrwRet(r):null;
       /* 전략 설명은 표 폭을 잡아먹지 않게 핵심 단위로 끊는다.
          ASAP부터는 캡처처럼 긴 설명 때문에 첫 칸이 넓어지므로 2줄로 강제 분리하고 행 패딩도 줄인다. */
       const _paperOpts=(r.opts||[]).map(x=>String(x));
@@ -8282,8 +8283,8 @@ async function openPaper(){
       h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell"><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
-          ? `<td>${paperDualMoney(r,r.total,r.wonRate)}${Number.isFinite(paperKrwRet(r))?`<span class="cw" title="원화 평가 ÷ 투입 원화 — 지금 환율 기준">원화 수익률 ${paperKrwRet(r)>=0?'+':''}${paperKrwRet(r).toFixed(1)}%</span>`:''}</td>
-             <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>`
+          ? `<td>${paperDualMoney(r,r.total,r.wonRate)}</td>
+             <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%${Number.isFinite(_krwFinalRet)?`<span class="cw" style="color:${_krwFinalRet>=0?'var(--buy)':'var(--sell)'}" title="원화 최종 수익률 = 현재 환율로 환산한 총평가액 ÷ 투입 원화 - 1">원화 ${_krwFinalRet>=0?'+':''}${_krwFinalRet.toFixed(1)}%</span>`:''}</td>`
              /* MDD는 종가 이력이 있어야 잰다 — 못 재면 0%처럼 보이지 않게 비운다 */
              + `<td style="color:${r.mdd?'var(--sell)':'var(--faint)'}" title="${r.mdd?r.mdd.nDay+'거래일을 하루하루 재봤습니다':'종가 이력이 모자라 못 쟀습니다'}">${r.mdd?'−'+r.mdd.pct.toFixed(1)+'%':'—'}</td>`
              + `<td style="color:${Number.isFinite(_mar)?(_mar>=0?'var(--buy)':'var(--sell)'):'var(--faint)'}" title="${Number.isFinite(_mar)?('CAGR '+r.cagr.toFixed(1)+'% ÷ MDD '+r.mdd.pct.toFixed(1)+'%'):'45일 미만이거나 MDD가 0/미계산이라 MAR을 표시하지 않습니다'}">${Number.isFinite(_mar)?_mar.toFixed(2):'—'}</td>`
@@ -8709,6 +8710,7 @@ function paperPageMode(on){
   const home=document.querySelector('#jkmenuPop a[href="/"]'), pp=$('jkPaper');
   if(home) home.classList.toggle('cur', !on); if(pp) pp.classList.toggle('cur', !!on);
   document.title = on ? 'JK 투자 — 모의투자' : APP_TITLE;
+  if(window.JKUnifiedUI)window.JKUnifiedUI.normalizeHeader();
   if(on && $('paper_body') && !$('paper_body').innerHTML.trim())
     $('paper_body').innerHTML='<p class="lead">기록을 맞추는 중… <span style="color:var(--faint)">클라우드 기록을 읽은 뒤 전 전략 모의 세션을 오늘까지 굴립니다.</span></p>';
 }
