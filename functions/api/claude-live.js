@@ -323,21 +323,24 @@ export async function onRequestGet({request,env}){
     const lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
     // ③ 업비트 하루(09:00 시작) 날짜의 메인 — 09시 전이면 아직 어제 하루
     const ud=kstToday(Date.now()-9*36e5).date,m3=mainOf("crypto",ud),P3=m3.params;
-    const Y=addDays(now.date,-1),nd=Math.min(200,Math.max(...[P3,mainOf("crypto",Y).params,mainOf("crypto",now.date).params].map(coinDaysNeeded))+3),coinRaw=[];
-    const coins=await Promise.all(P3.markets.map(async m=>{
-      const name=m.replace("KRW-","");
+    // 봉은 오늘 탭 어제·오늘 칸의 메인 코인까지 받는다(메인이 바뀐 날 — 예: 10/14 부터 ETH 만 — 어제 칸은 그 전 메인의 BTC 도 필요)
+    const Y=addDays(now.date,-1),P3s=[P3,mainOf("crypto",Y).params,mainOf("crypto",now.date).params];
+    const nd=Math.min(200,Math.max(...P3s.map(coinDaysNeeded))+3),allM=[...new Set(P3s.flatMap(p=>p.markets))],coinRaw=[];
+    const coins=(await Promise.all(allM.map(async m=>{
+      const name=m.replace("KRW-",""),mine=P3.markets.includes(m);            // mine: 지금 업비트 하루의 메인 코인(탭 표시) · 아니면 칸 계산용 봉만
       try{
         const [dc,hc]=await Promise.all(["days?market="+m+"&count="+nd,"minutes/60?market="+m+"&count=48"].map(q=>
           fetch("https://api.upbit.com/v1/candles/"+q,{headers:{Accept:"application/json"}}).then(r=>r.json())));
         coinRaw.push({market:m,daily:dc,hourly:hc});
+        if(!mine)return null;
         const h=coinHoldToday(dc,P3);
         const day=String((dc[0]||{}).candle_date_time_kst||"").slice(0,10);
         const t=ticks[m],now=t?+t.trade_price:null;
         const r=coinBreakoutDay(h,barsOfDay(hc,day),now,P3);
         return {code:m,name,nowPrice:now,sellTime:"다음 날 09:00",signalBasedOn:h&&h.basedOn,signalClose:h&&h.prevClose,ma20:h&&h.ma,maDays:P3.ma,...(r||{status:"판단 없음"}),
           realized:!!(r&&r.stopped)};
-      }catch(e){return {code:m,name,status:"시세 없음",pnlPct:null};}
-    }));
+      }catch(e){return mine?{code:m,name,status:"시세 없음",pnlPct:null}:null;}
+    }))).filter(Boolean);
     const basket=coins.reduce((s,c)=>s+(c.pnlPct||0),0)/P3.markets.length;
     out.tabs.crypto={rows:coins,basketPct:basket,tabPct:basket*P3.tabSize,main:m3,
       note:"업비트 하루는 09:00 시작. 어제 종가가 "+P3.ma+"일 평균 위인 날만, "+(P3.level==="vb"?"오늘 시가+"+P3.k+"×어제 폭":(P3.hiN>1?"최근 "+P3.hiN+"일 고가":"어제 고가"))+"를 넘는 순간 매수"+

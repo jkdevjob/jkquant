@@ -764,7 +764,7 @@ t("오늘 탭 전일·당일 칸(밤 확정 전 값): ① 마감 장부·장중 
   assert.equal(LV.soxlDayCell({ ...nx, basedOn: "2026-10-13" }, q4, 0.5), null);                             // 밤 계산이 이미 확정한 세션
   assert.equal(LV.soxlDayCell({ ...nx, holding: false }, q4, 0.5).cell.v, "no_trade");
 });
-t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마다 days 칸 — ① 어제 마감 장부 −0.885 · 오늘 장중 +7.27 / ② 어제 −5.953 · 오늘 매매 없음 / ③ 쉼 / ④ 밤 계산 확정분 없음", async () => {
+t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마다 days 칸 — ① 어제 마감 장부 −0.885 · 오늘 장중 +7.27 / ② 어제 −5.953 · 오늘 매매 없음 / ③ 메인 바뀐 날도 어제·오늘 칸(BTC+ETH → ETH) / ④ 밤 계산 확정분 없음", async () => {
   await Promise.all(pending.slice());                                         // 전역 fetch · 시계를 바꾸므로 앞 시험이 다 끝난 뒤에
   const oldFetch = globalThis.fetch, oldNow = Date.now, NOW = Date.parse("2026-10-14T09:41:00+09:00");
   const W = "https://jkquant-opening-scheduler.mumae4.workers.dev", RAWB = "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
@@ -785,7 +785,8 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
   const J = o => new Response(JSON.stringify(o), { status: 200, headers: { "Content-Type": "application/json" } });
   globalThis.fetch = async (u) => {
     u = String(u);
-    if (u.startsWith(W + "/claude-config")) return J({ ok: true, events: [] });
+    if (u.startsWith(W + "/claude-config")) return J({ ok: true, events: [{ tab: "crypto", version: "g_coin_ma15_s99_hi7_eth", effectiveFrom: "2026-10-14", promotedAt: "2026-10-12T19:18:16Z",
+      params: { ma: 15, stopPct: 99, level: "prevhigh", k: 0.5, hiN: 7, lastEntryHour: null, tabSize: 0.8, markets: ["KRW-ETH"] } }] });   // 실제 승격 기록 — 10/14 부터 ETH 만
     if (u.startsWith(W + "/gapdown?date=")) return J({ ok: true, ledger: GAP[u.split("date=")[1]] || { events: [] } });
     if (u.startsWith(W + "/claude?date=")) return J({ ok: true, ledger: CLOSE[u.split("date=")[1]] || { events: [] } });
     if (u.includes("/api/quote?symbol=")) { const sym = decodeURIComponent(u.split("symbol=")[1].split("&")[0]); return Q[sym] ? J(Q[sym]) : new Response("{}", { status: 404 }); }
@@ -806,7 +807,9 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
     near(D("opening")["2026-10-14"].v, ((10 - 0.23) + (5 - 0.23)) / 2); assert.equal(D("opening")["2026-10-14"].final, false);
     near(D("daytrading")["2026-10-13"].v, -5.953344947735195); assert.equal(D("daytrading")["2026-10-14"].v, "no_trade");
     assert.deepEqual([D("crypto")["2026-10-13"].v, D("crypto")["2026-10-13"].final, D("crypto")["2026-10-14"].final], ["no_trade", true, false]);
-    assert.equal(D("crypto")["2026-10-13"].note, "BTC·ETH 쉼(추세 평균 아래)");
+    assert.equal(D("crypto")["2026-10-13"].note, "BTC·ETH 쉼(추세 평균 아래)");                      // 어제는 그 전 메인(BTC+ETH) — BTC 봉도 받았다
+    assert.equal(D("crypto")["2026-10-14"].note, "아직 매수 없음 — ETH 쉼(추세 평균 아래)");           // 오늘은 새 메인(ETH 만)
+    assert.deepEqual(j.tabs.crypto.rows.map(x => x.code), ["KRW-ETH"]);                                 // 탭 표시는 지금 메인 코인만(칸 계산용 BTC 는 안 섞음)
     assert.deepEqual(D("soxl"), {});                                                   // 10/13 세션은 밤 계산이 이미 확정 — 실시간 칸 없음
     assert.ok(Array.isArray(j.tabs.opening.rows) && j.tabs.opening.rows.length === 2);   // 기존 응답(알림이 읽는 rows)은 그대로
   } finally { globalThis.fetch = oldFetch; Date.now = oldNow; }
