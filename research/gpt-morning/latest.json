@@ -1,1 +1,88 @@
-{"schema":1,"date":"2026-10-14","preparedAt":"2026-10-14T09:06:28.270Z","mainSha":"a8f129a65ee729414529e5ae7e5bb7710577a9bf","summary":"초기 설정 검토: 7개 탭의 손실·표본 부족·자료 날짜를 확인했습니다. 현재 자료로 수익 개선을 확정할 수 없습니다. 다음 집중 과제는 시초가 진입 시간제한의 비용 차감 효과 검증이며, 새 백테스트·운영 전략 변경은 실행하지 않았습니다.","sections":[{"tab":"today","status":"collecting","findings":"초기 설정 검토입니다. 지피티 야간 연구와 +1% 그림자 자료의 최근 원천 거래일은 10/13입니다. 10/14 장중 수익으로 보지 않습니다. 클로드 자료도 탭별 거래일·운영 버전이 달라 먼저 정렬해야 합니다. 이번 검토에서 새 백테스트를 실행하거나 전략을 채택하지 않았습니다.","nextTest":"내일 07시에는 전일 확정 원본과 이전 보고서를 먼저 대조하고, 시초가 진입 시간제한의 비용 차감 효과와 표본 부족을 집중 검증합니다.","evidence":["https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json","https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daily1-shadow/latest.json","https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/latest.json"]},{"tab":"opening","status":"collecting","findings":"기존 야간 자료(9/22~10/13) baseline 33거래의 평균 손익은 −0.518%입니다. 상위 gap_2_5도 12거래·평균 −0.312%로 sampleReady=false입니다. 09:20 이전 진입 후보는 7거래뿐이라 개선 확정 근거가 부족합니다. 이 재구성 표본을 현재 원본 모의장부 전체와 혼합하지 않습니다.","nextTest":"기존 entry_by_0920 가설을 원본 신호와 대조하고, 같은 거래일의 늦은 진입 실패 대조군·유동성·왕복 비용을 나눠 확인합니다. 최소 표본 전에는 채택을 보류합니다.","evidence":["https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json"]},{"tab":"daytrading","status":"collecting","findings":"기존 야간 baseline 26거래는 PF 0.364, 계좌 환산 누적 −5.015%입니다. 별도 +1% 그림자 OOS는 7일·21거래, 평균 일수익 −0.302%, PF 0.552, MDD −3.187%입니다. 두 범위가 다르므로 개선률로 단순 비교하지 않습니다.","nextTest":"VWAP 기울기·거래량 후보를 같은 날짜/슬롯 자본/비용으로 비교하고 거래 빈도 감소까지 평가합니다. OOS 7일 결과로 운영 규칙을 바꾸지 않습니다.","evidence":["https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json","https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daily1-shadow/latest.json"]},{"tab":"crypto","status":"collecting","findings":"+1% 코인 그림자의 OOS 13일은 0거래입니다. 표시된 수익·MDD 0은 거래 성과를 입증하지 않습니다. 이를 운영 비트코인 전략의 무거래나 안전성으로 해석하지 않습니다. 클로드 코인 자료와는 운영 버전·보유기간을 맞춰야 합니다.","nextTest":"완료 봉만 사용해 기존 ORB의 시간대·추세/변동성별 실패를 분류하고 수수료 차감 후 검증합니다. 조건 완화로 거래를 늘리기 전에 무진입 원인을 구분합니다.","evidence":["https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daily1-shadow/latest.json","https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/latest.json"]},{"tab":"soxl","status":"collecting","findings":"+1% SOXL 그림자의 OOS 9일은 0거래로 성과 미검증입니다. 클로드의 단기 과매도 보유 전략과 지피티의 당일 ORB는 보유기간이 달라 손익 숫자만으로 우열을 확정할 수 없습니다. 미국 거래일과 KST 보고일도 분리합니다.","nextTest":"미국 거래일·DST·완료 봉·동일 자본을 고정하고 추세/과매도 국면별 당일청산과 야간보유 비용을 비교합니다. 현재 운영 전략은 유지합니다.","evidence":["https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daily1-shadow/latest.json","https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/latest.json"]},{"tab":"tenbagger","status":"blocked","findings":"지피티 전향 자료 기준일은 10/12이며 진입 0·종료 청산군 0입니다. 클로드도 10/12 자료에서 waiting_kickoff로 실제 kickoff=null입니다. 생성일이 10/14여도 관찰 기준일은 10/12입니다. 재무 시점 패널·시장 대조·성숙 표본이 없어 텐배거 수익성은 미검증입니다.","nextTest":"원천 날짜와 최초 등록/관찰 진입부터 확인합니다. 등록 후 20·60·120·252·756·1260 세션 및 실패 대조군을 누적하고, 결측·정지·폐지 미정산을 0손익으로 채우지 않습니다.","evidence":["https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/tenbagger-forward/latest.json","https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/tenbagger-claude-forward/latest.json"]},{"tab":"duel","status":"collecting","findings":"원본 모의기록을 같은 시작일·비용·4탭 각 25% 자본으로 맞춘 기존 대결(10/5~10/13, 9일)은 지피티 −1.289%, 클로드 −0.688%입니다. 둘 다 손실입니다. 단기 우세를 수익 전략의 검증으로 보지 않으며 별도 장기 재구성(fair) 표와 혼합하지 않습니다.","nextTest":"각 탭의 동일 거래일 원본·버전·누락 원인을 확인한 뒤 PF/MDD/최악일과 비용 포함 계좌 손익을 이어갑니다. 두 쪽 기록이 없는 날은 승패로 채우지 않습니다.","evidence":["https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/latest.json"]}]}
+{
+  "schema": 1,
+  "date": "2026-10-15",
+  "preparedAt": "2026-10-14T22:21:39.828Z",
+  "mainSha": "9e22f4c0ba086ad2f6a4d4ed426a22f2289c161e",
+  "summary": "시초가 09:20 제한도 전일 −1.950% 손실을 막지 못했습니다. 운영 데이트레이딩 −1.250%, +1% 그림자 −0.250%. 시초가 분봉 누락·비트코인 원본 조회 지연·대결 부분 합계를 확인해 변경은 보류합니다.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "collecting",
+      "findings": "10/14 자료가 새로 반영됐습니다. 운영 데이트레이딩 모의원본은 3거래·−1.250%, 별도 +1% 그림자는 3거래·−0.250%입니다. 시초가 실제 API 재현·그림자 4종 원본 재계산을 완료했지만 수익 개선은 입증하지 못했습니다. 비트코인 모의장부 조회는 두 번 시간초과했습니다. 로그인된 화면·기기 표시는 미확인입니다.",
+      "nextTest": "분봉 누락·휴장일·시장별 기준일과 메인/그림자/재구성을 먼저 정렬하고 체결·호가 비용을 검증합니다. 운영 전략·주문·장부는 유지합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/nightly-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-10-15-research.json"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "collecting",
+      "findings": "10/14 대주전자재료: 원본 API·기존 엔진 재현에서 기준/09:20 제한 모두 09:14 진입, 순손익 −1.950%(가격 −1.290%, 비용가정 0.660%)였습니다. 시간제한만으로 이 손실을 못 막아 채택 보류합니다. +1% 그림자: 7자료일/4거래, 일평균 −0.323%, PF 0.141, MDD −2.247%, 최악일 −0.987%, +1%일 0, +5%주 0. 이번 주 −0.306%는 10/12 분봉 누락으로 부분치입니다. 운영 CSV의 주간 참고값은 −1.060%입니다.",
+      "nextTest": "누락된 10/12 원천을 복원·대조하고 호가 비용/지연 체결의 실측 대조를 누적합니다. 현재 기준 전체34거래·09:20 후보8거래로 기존 20일/50기준/30후보 기준 미달입니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/quote?symbol=078600&minute=1",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/opening-history/2026-10-14.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-10-15-research.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "collecting",
+      "findings": "10/14 운영 원본 3거래 −1.250%, 주간 −2.891%(+5%까지7.891%p). 별도 +1% 그림자 신규3건은 LG전자 −1.05%·에이피알 +1.35%·제주반도체 −1.05%, 3슬롯 일손익 −0.250%입니다. 그림자 OOS 8일/24거래, 일평균 −0.296%, PF 0.564, MDD −3.429%, 최악일 −1.050%, +1%일 1, +5%주 0; 주간 −1.544%(목표까지6.544%p). 일수20 미달·순기대값 음수로 보류합니다.",
+      "nextTest": "운영 모의원본22거래와 재구성29거래를 섞지 않고 동일 기록일/슬롯/비용으로 비교합니다. 10/5 휴장0기록을 거래일 표본으로 세지 않는 대조도 필요합니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-10-14",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-10-15-research.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "blocked",
+      "findings": "모의장부 API가 재조회에도 시간초과해 10/14 운영 결과는 미확인입니다. fallback CSV는 10/13까지7거래·기록일평균 +0.100%, PF 2.010, MDD −0.555%, +1%일0·주간 +0.569%지만 원본 실측으로 확정하지 않습니다. +1% 그림자는 13일/0거래로 수익·PF·MDD 미검증입니다. 기존 30분보유 후보도 전체 평균 −0.130%·holdout −0.101%로 손실이 덜할 뿐 수익 전략은 아닙니다.",
+      "nextTest": "모의원본 날짜·시간초과 원인을 확인하고 완료 봉/UTC·KST 날짜를 맞춘 뒤 추세·시간대·비용 대조를 합니다. 누락을 무매매·0수익으로 채우지 않습니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-10-14",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/crypto-research/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-10-15-research.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "collecting",
+      "findings": "공개 이력 API의 모의원본은 미국 거래일10/14 무매매·0%를 확인했습니다(KST10/15 표시일). 10/1 이후10기록일/3거래, 기록일평균 −0.420%, PF0, MDD −4.141%, 최악일 −1.400%, +1%일0·주간0%(+5%까지5%p). +1% 그림자는 미국10/13까지9일/0거래로 미검증입니다. 클로드 보유 전략·지피티 당일청산의 기간을 그대로 섞어 우열을 정하지 않습니다.",
+      "nextTest": "미국10/14 분봉을 확보해 그림자의 신규 신호 여부를 확인하고 같은 KST 종료시각·자본·비용으로 비교합니다. 거래를 늘리기 위해 조건을 완화하지 않습니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-10-14",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-10-15-research.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "원천이10/12→10/13으로 진행했고 신규 등록7건, 누적19등록/19종목입니다. 신규7건의 실제 등록일은10/15로 과거13일 수익을 성과에 넣을 수 없습니다. 진입0·두 청산군 종료0·20/60/120/252/756/1260 세션 표본 모두0이며 2/5/10배 도달·MFE/MAE/MDD는 아직 미검증입니다. v1.0.0·규칙 SHA5e690dd8 유지, 원천·엔진 해시 확인, 수정 감지0. 클로드는 여전히10/12 자료·kickoff=null입니다.",
+      "nextTest": "10/14 새 KRX 시세와 등록시각 이후 첫 진입을 확인합니다. 새7건은10/15 등록 다음 세션부터만 관찰하고 재무 시점 패널·시장/실패 대조군과 결측·폐지 미정산을 누적합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/tenbagger-forward/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/tenbagger-claude-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-10-15-research.json"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "대결 표는10/14까지 지피티 −1.950%·클로드 −0.890%를 표시하지만, 코인10/14 GPT 기록이 누락되고 SOXL 비교는10/13까지입니다. 합계 코드가 탭 날짜의 합집합을 쓰며 빠진 탭 몫을0으로 합산하므로 완결된 같은기간 계좌 성과로 확정하지 않습니다. 시초가 대결 고정비용0.25%의 당일 −1.540%와 운영 호가비용가정0.660%의 −1.950%도 다른 비용 기준입니다. 10/13 GPT 누적도 전일보고 −1.289%→현재 −1.261%로 재집계됐습니다.",
+      "nextTest": "네 탭 원본이 모두 확정된 같은 KST 기준일의 완전 사례와 현재 부분 합계를 대조하고 비용 가정·늦은 자료 반영을 표시합니다. 자료 누락으로 승패를 확정하지 않습니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/962141e839a88f1de419ee349134587bae8be9d3/data/claude-lab/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/9e22f4c0ba086ad2f6a4d4ed426a22f2289c161e/scripts/claude_lab.py",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-10-15-research.json"
+      ]
+    }
+  ]
+}
