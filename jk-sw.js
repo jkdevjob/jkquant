@@ -77,7 +77,7 @@ function pickAlerts(payload,allowed,shown,now=Date.now()){
     const age=now-Date.parse(a.createdAt||"");
     if(!Number.isFinite(age)||age<0||age>20*60*1000)continue;
     const topic=a.type==="research"&&a.study==="tenbagger"?"tenbagger_gpt":String(a.type||"");
-    if(!(allowed.includes(topic)||(allowed.includes("gpt")&&GPT_TOPICS.has(topic)))||shown.includes(a.id))continue;
+    if(!(allowed.includes(topic)||(allowed.includes("gpt")&&GPT_TOPICS.has(topic))||(topic==="gpt"&&[...GPT_TOPICS].every(t=>allowed.includes(t))))||shown.includes(a.id))continue;
     uniq.push(a);
   }
   uniq.sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));

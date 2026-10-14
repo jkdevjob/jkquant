@@ -292,7 +292,19 @@ export class PresaleAlertStore{
     }
     let report;try{report=normalizeGptReport(await request.json());}catch(e){return json(request,{ok:false,error:String(e.message)},400);}
     const receipt=await st.get('gpt-report-delivery:'+report.date);
-    if(receipt)return json(request,{ok:true,duplicate:true,date:report.date,delivery:receipt});
+    if(receipt){
+      // Full consent saved as five individual tabs has the same meaning as the settings card.
+      // Recover only a report that reached no push recipients; retain sent/unknown Telegram.
+      if(report.date===gptReportDate()&&receipt.push?.eligible===0&&!receipt.pushKeys.length&&receipt.pushAttempts<3){
+        const subs=await this.subscriptions();
+        if([...subs.values()].some(s=>this.subscribedTo(s,'gpt'))){
+          receipt.pushComplete=false;receipt.complete=false;await st.put('gpt-report-delivery:'+report.date,receipt);
+          await st.setAlarm(Date.now()+1000);
+          return json(request,{ok:true,duplicate:true,requeuedPush:true,date:report.date,delivery:receipt});
+        }
+      }
+      return json(request,{ok:true,duplicate:true,date:report.date,delivery:receipt});
+    }
     if(await st.get('gpt-report:'+report.date))return json(request,{ok:true,duplicate:true,date:report.date});
     await st.put('gpt-report:'+report.date,report);await st.put('gpt-report:latest',report.date);
     const due=Math.max(Date.now()+1000,gptReportDue(report.date)),alarm=await st.getAlarm();
@@ -344,7 +356,7 @@ export class PresaleAlertStore{
   }
   async subscriptions(){return this.state.storage.list({prefix:"sub:"})}
   topicsOf(s){return normalizeTopics(s&&s.topics,s&&s.topics?[]:["presale"],Number(s&&s.topicSchemaVersion||1)<2)}
-  subscribedTo(s,topic){const t=this.topicsOf(s);return t.includes(topic)||(GPT_TOPICS.has(topic)&&t.includes("gpt"))}
+  subscribedTo(s,topic){const t=this.topicsOf(s);return t.includes(topic)||(GPT_TOPICS.has(topic)&&t.includes("gpt"))||(topic==="gpt"&&[...GPT_TOPICS].every(x=>t.includes(x)))}
   async subscribe(request){
     const body=await request.json().catch(()=>null),s=body&&body.subscription;
     const endpoint=clean(s&&s.endpoint,2000);
@@ -763,7 +775,7 @@ export class PresaleAlertStore{
       const counts=Object.fromEntries([...VALID_TOPICS].map(t=>[t,0]));
       for(const [,s] of subs){
         for(const t of VALID_TOPICS)if(this.subscribedTo(s,t))counts[t]++;
-        if(!this.topicsOf(s).includes("gpt")&&this.topicsOf(s).some(t=>GPT_TOPICS.has(t)))counts.gpt++;
+        if(!this.subscribedTo(s,"gpt")&&this.topicsOf(s).some(t=>GPT_TOPICS.has(t)))counts.gpt++;
       }
       const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null,research:await this.state.storage.get("lastCheck:research")||null};
       const lastDeliveries={};
@@ -775,7 +787,7 @@ export class PresaleAlertStore{
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
       const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
       const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.7.0",topicSchemaVersion:2,subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.7.1",topicSchemaVersion:2,subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
