@@ -347,6 +347,30 @@ t('U15 관리자 > 이용 승인 표 — 폰에서 옆으로 밀어도 고정 �
   }
   assert.equal(v(cell(false,false),'box-shadow',375),'inset 0 -1px 0 var(--line)','다른 칸은 행 선만');
 });
+t('U16 운영 분석 표 — 원화를 두 번 쓰지 않는다: 금액 칸(wn)이 달러·원화를 함께 찍으므로 회색 원화 칸이 없다 (무매 월별·사이클별 · 단리 인출 · 현금 수입 월별)',()=>{
+  const wn=v=>`$${Math.abs(+v).toFixed(2)} (${Math.round(Math.abs(+v)*1350).toLocaleString('ko-KR')}원)`;   // JKMoney.usdText 와 같은 모양
+  const E={}; const $=id=>E[id]||(E[id]={innerHTML:'',textContent:'',style:{}});
+  const check=(h,what,amt)=>{ const rows=h.match(/<tr[^>]*>[\s\S]*?<\/tr>/g)||[]; assert(rows.length>1,what+' 줄');
+    assert(!/원화/.test(rows[0]),what+' 머리줄에 원화 칸 없음: '+rows[0]);
+    const nh=(rows[0].match(/<th[ >]/g)||[]).length;
+    rows.slice(1).forEach(r=>assert.equal((r.match(/<td[ >]/g)||[]).length,nh,what+' 칸 수 = 머리 칸 수: '+r));
+    const krw=Math.round(amt*1350).toLocaleString('ko-KR')+'원', r1=rows.find(r=>r.includes(krw)); assert(r1,what+' 금액 줄');
+    assert.equal(r1.split(krw).length-1,1,what+' 같은 원화 금액은 한 줄에 한 번: '+r1); };
+  const br=new Function('$','wn','won','isKrwSt','isSell','dshort',fnOf(html,'function renderInfBreak(c){')+'\nreturn renderInfBreak;')
+    ($,wn,v=>'W'+v,()=>false,k=>/매도/.test(k),d=>String(d).slice(5));
+  for(const simple of [false,true]){
+    for(const k in E) delete E[k];
+    br({st:{principal:10000},simple,rows:[{kind:'지정가매도',date:'2026-10-02',profit:271.22,cycleSeq:3,cycleEnd:true},{kind:'쿼터매도',date:'2026-09-10',profit:-50,cycleSeq:2}],
+        flows:simple?[{date:'2026-10-02',out:300,seq:3}]:[]});
+    check(E.a_bymonth.innerHTML,`무매 월별(${simple?'단리':'복리'})`,271.22); check(E.a_bycycle.innerHTML,`무매 사이클별(${simple?'단리':'복리'})`,271.22);
+    if(simple) check(E.a_bymonth.innerHTML,'단리 인출',300);
+  }
+  for(const k in E) delete E[k];
+  const pc=new Function('$','wn','won','flowStats','fillFlowRows',fnOf(html,'function paintCashFlow(pre, opt){')+'\nreturn paintCashFlow;')
+    ($,wn,v=>'W'+v,()=>({months:[{m:'2026-09'},{m:'2026-10'}]}),()=>{});
+  pc('vc',{show:true,base:10000,isKrw:false,flows:[{date:'2026-10-05',out:420},{date:'2026-09-05',out:100}]});
+  check(E.vc_cf_tbl.innerHTML,'현금 수입 월별',420);
+});
 Promise.all(PENDING).then(()=>{
   console.log(results.join('\n'));
   console.log(failed?`\n${failed} FAIL`:'\nALL PASS');

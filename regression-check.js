@@ -1569,12 +1569,11 @@ console.log('[27] 무매 분석 — 월별·사이클별');
      && /\$\{x\.seq\}사이클/.test(br) && !/x\.seq\+1/.test(br));
   ok('cycleSeq 시작값이 1', /let avg=0,qty=0,inv=0,realized=0,T=0,totbuy=0,totsell=0,cycleSeq=1;/.test(idx));
   ok('안 닫힌 사이클은 진행중으로', /closed\.has\(x\.seq\)\?'':' <span style="color:var\(--gold\)[^"]*">진행중/.test(br));
-  // 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이 된다
-  ok('원화 열은 달러 세션에서만', /isKrw=isKrwSt\(st\)/.test(br)
-     && /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(br));
-  // 단리면 출금·입금·합계에 달러 세션은 합계원화까지 — 원화 세션은 셋, 달러 세션은 넷
+  // 손익금 칸(wn)이 달러·원화를 함께 찍는다 — 따로 원화 칸을 두면 같은 금액이 두 번 나온다(2026-10-14 사용자)
+  ok('원화 열은 따로 없다(손익금 칸이 달러·원화를 함께)', !/<th>원화<\/th>/.test(br) && !/krwTxt/.test(br) && /const amtTxt=v=>`[^`]*\$\{wn\(v\)\}/.test(br));
+  // 월·매도·손익금·손익률 넷, 단리면 인출 하나 더
   ok('빈 표 colspan이 열 수를 따라간다',
-     /const nCol=\(isKrw\?4:5\)\+\(simple\?\(isKrw\?1:2\):0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
+     /const nCol=4\+\(simple\?1:0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
   ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
 }
 
@@ -2958,13 +2957,13 @@ console.log('\n[55] 단리 현금 흐름');
      손익금·손익률은 그 뒤로 민다. 달러 세션엔 합계원화까지 붙는다. */
   /* 채워 넣는 일이 없어져 들어오는 칸이 사라졌다 — 나간 칸 하나면 된다 */
   ok('단리 세션에만 붙고, 매도 바로 오른쪽이다',
-     /<th>\$\{lbl\}<\/th><th>매도<\/th>`\s*\+ \(simple\?`<th>인출<\/th>\$\{isKrw\?'':'<th>원화<\/th>'\}`:''\)/.test(br2)
+     /<th>\$\{lbl\}<\/th><th>매도<\/th>`\s*\+ \(simple\?`<th>인출<\/th>`:''\)/.test(br2)
      && /\+ `<th>손익금<\/th><th>손익률<\/th>/.test(br2));
   ok('입금 칸은 없앴다', !/<th>입금<\/th>/.test(br2) && !/x\.in\|\|0/.test(br2));
   ok('줄에서도 매도 바로 뒤에 온다',
      /<td>\$\{x\.label\}<\/td><td>\$\{x\.n\}<\/td>\$\{flowCells\(x\)\}<td>\$\{amtTxt\(x\.p\)\}/.test(br2)
      && /<td><b>합계<\/b><\/td><td>\$\{n\}<\/td>\$\{sumFlow\}<td>\$\{amtTxt\(tot\)\}/.test(br2));
-  ok('원화 칸은 달러 세션에만', /\(isKrw\?'':`<td>\$\{v\?krwTxt\(v\):dash\}<\/td>`\)/.test(br2));
+  ok('인출 칸 옆 원화 칸도 없다(인출 칸이 달러·원화를 함께)', /return `<td>\$\{v\?netTxt\(v\):dash\}<\/td>`; \};/.test(br2) && !/krwTxt/.test(br2));
   // 안 나온 달에 +0.00$ (+0.0%) 가 뜨면 잡음이다
   ok('안 나온 달은 비운다', /const v=x\.out\|\|0, dash=/.test(br2) && /\$\{v\?netTxt\(v\):dash\}/.test(br2));
 }
@@ -3154,8 +3153,9 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   ok('무매와 같은 함수로 센다',
      /function paintCashFlow[\s\S]*?flowStats\(flows,/.test(idx)
      && /function paintCashFlow[\s\S]*?fillFlowRows\(\{avg:id\('avg'\)/.test(idx));
-  // 원화 세션에 원화 칸을 겹쳐 넣으면 같은 수가 두 번 나온다
-  ok('원화 세션엔 원화 칸을 겹쳐 넣지 않는다', /const kw=!!o\.isKrw;[\s\S]{0,700}\+\s*\(kw\?'':'<th>원화<\/th>'\)/.test(idx));
+  // 금액 칸(wn)이 달러·원화를 함께 찍는다 — 원화 칸을 따로 두면 같은 수가 두 번 나온다(2026-10-14 사용자)
+  { const pcf=(()=>{ try{ return extractFn(idx,'function paintCashFlow(pre, opt)'); }catch(e){ return ''; } })();
+    ok('현금 수입 월별 표에 원화 칸을 따로 두지 않는다', !!pcf && !/<th>원화<\/th>/.test(pcf) && !/won\(/.test(pcf)); }
   ok('입금이 없으면 입금·합계 칸을 안 만든다', /const hasIn=inn>0;/.test(idx) && /\(hasIn\?row\(/.test(idx));
 
   // 수익률 세 줄도 한 곳에서
@@ -10652,7 +10652,10 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
     /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
     && /plan-session-engine\.js\?v=2/.test(plan)
     && /plan-session-engine\.js\?v=2/.test(idx)
-    && /v1\.43\.37/.test(plan) && /v3\.110\.38/.test(idx)
+    && (()=>{ /* 모의 규칙 v2 가 들어간 버전 이상이면 된다 — 숫자를 딱 고정하면 다음 배포(버전 올림)마다 깨진다 */
+         const ge=(src,re,min)=>{ const m=src.match(re); if(!m) return false; const a=m[1].split('.').map(Number), b=min.split('.').map(Number);
+           for(let i=0;i<3;i++){ if(a[i]!==b[i]) return a[i]>b[i]; } return true; };
+         return ge(plan,/<span class="ver">v(\d+\.\d+\.\d+)</,'1.43.37') && ge(idx,/id="appVerTop"[^>]*>v(\d+\.\d+\.\d+)</,'3.110.38'); })()
     && /asset-plan-v2/.test(plan));
 }
 
