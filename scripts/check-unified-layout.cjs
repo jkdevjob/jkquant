@@ -13,11 +13,21 @@ function verify(src=ui){
   for(const [route,label] of Object.entries(labels))assert(src.includes("'"+route+"':'"+label+"'"),route+' 메뉴명');
 }
 verify();
+assert(ui.includes("newHeader.className='jk-site-header'"),'자산플랜/백테 정식 header 셸');
+assert(ui.includes("document.body.insertBefore(newHeader,host)"),'기존 헤더 DOM 보존하며 이동');
+assert(ui.includes("header.jk-site-header .jk-page-top{box-sizing:border-box!important;width:100%!important;height:76px!important;min-height:76px!important"),'PC 헤더 76px');
+assert(ui.includes("height:70px!important;min-height:70px!important"),'모바일 헤더 70px');
+assert(ui.includes("header.jk-site-header>.wrap"),'헤더 콘텐츠 폭 1100px');
+assert(mobile.includes('input[type="date"]::-webkit-date-and-time-value'),'WebKit 날짜 한 줄');
+const bt=fs.readFileSync('backtest.html','utf8');
+assert(bt.includes('.ctrl-grid>.ctrl:has(>input[type=date]){flex:1 1 100%;width:100%;min-width:0}'),'작은 화면 날짜 전체폭');
+assert(bt.includes('.ctrl input[type=date]{width:100%!important;max-width:none!important;min-width:0!important}'),'날짜 140px 제한 해제');
+for(const p of pages)assert(fs.readFileSync(p,'utf8').includes('/jk-mobile.css?v=1.0.2'),p+' CSS 캐시 버전');
 assert(mobile.includes('@media (max-width:768px)'),'모바일 분기 유지');
 assert(/\.wrap\{width:100%!important;max-width:none!important/.test(mobile),'모바일 전체폭 유지');
 for(const p of pages){
   const html=fs.readFileSync(p,'utf8');
-  assert(html.includes('/jk-ui.js?v=1.0.3'),p+' 공용 UI 캐시 버전');
+  assert(html.includes('/jk-ui.js?v=1.0.4'),p+' 공용 UI 캐시 버전');
   assert(html.includes('class="wrap'),p+' wrap 존재');
   assert(html.includes('class="jkmenu'),p+' 공통 메뉴 존재');
 }
