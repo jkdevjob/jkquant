@@ -12,6 +12,7 @@ function check(source=src){
   assert(el('alphaExplain').innerHTML.includes('10%p를 초과'));assert.equal(el('alphaEv3Label').textContent,'TECL 몫 안의 현재 비율');
   el('alphaEv1Label').textContent='TQQQ 추세';el('alphaEv2Sub').textContent='10년';c.renderHorizonCopy();assert.equal(el('alphaEv1Label').textContent,'TECL σ20','다른 기간에서 돌아와도5년 설명 복원');
   Object.assign(c,{realizedVol:(rows,n)=>{assert.equal(n,20);return .503;},indicatorSeries:(rows,n)=>{assert.equal(n,225);return [63.459];},num:(id,f=0)=>({aTeclQty:64,aTqqqQty:38,aSgovQty:6,aCash:70,startCapital:10000}[id]??f),usd:x=>'$'+x.toFixed(2),alphaWeightHistory:()=>[],alphaSvg:()=>'',alphaCloseFillEditor:()=>{},ALPHA_FEE_RATE:.001,alphaFee:()=>0,alphaOrderHtml:()=>'',waitHtml:()=>'',pendingAlphaOrders:[]});
+  vm.runInContext(fn(source,'function alphaExplainBounds(target,current,band)'),c);   // renderAlphaPlan 이 부르는 도우미(plan 1.43.35 에서 추가) — 없으면 시험이 ReferenceError
   vm.runInContext(fn(source,'function renderAlphaPlan(qTecl,qTqqq,qSgov)'),c);
   const quote=(close)=>({rows:[{date:'2026-10-12',close}],settled:{date:'2026-10-12',close},price:close});
   c.renderAlphaPlan(quote(98.875),quote(79),quote(100));
