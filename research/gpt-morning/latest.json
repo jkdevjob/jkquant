@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "date": "2026-10-14",
+  "preparedAt": "2026-10-14T09:06:28.270Z",
+  "mainSha": "a8f129a65ee729414529e5ae7e5bb7710577a9bf",
+  "summary": "초기 설정 검토: 7개 탭의 손실·표본 부족·자료 날짜를 확인했습니다. 현재 자료로 수익 개선을 확정할 수 없습니다. 다음 집중 과제는 시초가 진입 시간제한의 비용 차감 효과 검증이며, 새 백테스트·운영 전략 변경은 실행하지 않았습니다.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "collecting",
+      "findings": "초기 설정 검토입니다. 지피티 야간 연구와 +1% 그림자 자료의 최근 원천 거래일은 10/13입니다. 10/14 장중 수익으로 보지 않습니다. 클로드 자료도 탭별 거래일·운영 버전이 달라 먼저 정렬해야 합니다. 이번 검토에서 새 백테스트를 실행하거나 전략을 채택하지 않았습니다.",
+      "nextTest": "내일 07시에는 전일 확정 원본과 이전 보고서를 먼저 대조하고, 시초가 진입 시간제한의 비용 차감 효과와 표본 부족을 집중 검증합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/latest.json"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "collecting",
+      "findings": "기존 야간 자료(9/22~10/13) baseline 33거래의 평균 손익은 −0.518%입니다. 상위 gap_2_5도 12거래·평균 −0.312%로 sampleReady=false입니다. 09:20 이전 진입 후보는 7거래뿐이라 개선 확정 근거가 부족합니다. 이 재구성 표본을 현재 원본 모의장부 전체와 혼합하지 않습니다.",
+      "nextTest": "기존 entry_by_0920 가설을 원본 신호와 대조하고, 같은 거래일의 늦은 진입 실패 대조군·유동성·왕복 비용을 나눠 확인합니다. 최소 표본 전에는 채택을 보류합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "collecting",
+      "findings": "기존 야간 baseline 26거래는 PF 0.364, 계좌 환산 누적 −5.015%입니다. 별도 +1% 그림자 OOS는 7일·21거래, 평균 일수익 −0.302%, PF 0.552, MDD −3.187%입니다. 두 범위가 다르므로 개선률로 단순 비교하지 않습니다.",
+      "nextTest": "VWAP 기울기·거래량 후보를 같은 날짜/슬롯 자본/비용으로 비교하고 거래 빈도 감소까지 평가합니다. OOS 7일 결과로 운영 규칙을 바꾸지 않습니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "collecting",
+      "findings": "+1% 코인 그림자의 OOS 13일은 0거래입니다. 표시된 수익·MDD 0은 거래 성과를 입증하지 않습니다. 이를 운영 비트코인 전략의 무거래나 안전성으로 해석하지 않습니다. 클로드 코인 자료와는 운영 버전·보유기간을 맞춰야 합니다.",
+      "nextTest": "완료 봉만 사용해 기존 ORB의 시간대·추세/변동성별 실패를 분류하고 수수료 차감 후 검증합니다. 조건 완화로 거래를 늘리기 전에 무진입 원인을 구분합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/latest.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "collecting",
+      "findings": "+1% SOXL 그림자의 OOS 9일은 0거래로 성과 미검증입니다. 클로드의 단기 과매도 보유 전략과 지피티의 당일 ORB는 보유기간이 달라 손익 숫자만으로 우열을 확정할 수 없습니다. 미국 거래일과 KST 보고일도 분리합니다.",
+      "nextTest": "미국 거래일·DST·완료 봉·동일 자본을 고정하고 추세/과매도 국면별 당일청산과 야간보유 비용을 비교합니다. 현재 운영 전략은 유지합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/latest.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "blocked",
+      "findings": "지피티 전향 자료 기준일은 10/12이며 진입 0·종료 청산군 0입니다. 클로드도 10/12 자료에서 waiting_kickoff로 실제 kickoff=null입니다. 생성일이 10/14여도 관찰 기준일은 10/12입니다. 재무 시점 패널·시장 대조·성숙 표본이 없어 텐배거 수익성은 미검증입니다.",
+      "nextTest": "원천 날짜와 최초 등록/관찰 진입부터 확인합니다. 등록 후 20·60·120·252·756·1260 세션 및 실패 대조군을 누적하고, 결측·정지·폐지 미정산을 0손익으로 채우지 않습니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/tenbagger-forward/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/tenbagger-claude-forward/latest.json"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "collecting",
+      "findings": "원본 모의기록을 같은 시작일·비용·4탭 각 25% 자본으로 맞춘 기존 대결(10/5~10/13, 9일)은 지피티 −1.289%, 클로드 −0.688%입니다. 둘 다 손실입니다. 단기 우세를 수익 전략의 검증으로 보지 않으며 별도 장기 재구성(fair) 표와 혼합하지 않습니다.",
+      "nextTest": "각 탭의 동일 거래일 원본·버전·누락 원인을 확인한 뒤 PF/MDD/최악일과 비용 포함 계좌 손익을 이어갑니다. 두 쪽 기록이 없는 날은 승패로 채우지 않습니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/latest.json"
+      ]
+    }
+  ]
+}
