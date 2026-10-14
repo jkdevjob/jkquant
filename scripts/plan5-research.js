@@ -138,6 +138,55 @@ async function run(){
   rolling.push(group);
  }
  print('ROLLING',rolling);
+
+ // Second stage: refine 60/40 region and 70/30 control without peeking at holdout to rank candidates.
+ const refined=[];
+ for(const tw of [.50,.55,.60,.65,.70,.75,.80])
+ for(const band of [.05,.075,.10,.125,.15,.175,.20])
+ for(const ma of [200,225,250])
+ for(const look of [20,30])
+ for(const s0 of [.50,.55,.60]){
+   const c={...baseline,teclWeight:tw,guardWeight:1-tw,ivsBand:band,guardMA:ma,ivsLook:look,ivsS0:s0};
+   const train=replay(c,'train');
+   refined.push({c,train,score:fmt(trainScore(train))});
+ }
+ refined.sort((a,b)=>b.score-a.score);
+ const refinedPareto=findPareto(refined,'train');
+ const refineSelect=new Map();
+ for(const x of refined.slice(0,50))refineSelect.set(key(x.c),x);
+ for(const x of refinedPareto)refineSelect.set(key(x.c),x);
+ // Always include fixed pre-declared controls for honest out-of-sample comparison.
+ for(const [w,b,m] of [[.7,.1,225],[.7,.15,225],[.6,.15,225],[.6,.05,225],[.6,.05,250],[.65,.125,225],[.65,.15,225],[.55,.125,225]]){
+   const c={...baseline,teclWeight:w,guardWeight:1-w,ivsBand:b,guardMA:m};
+   const x=refined.find(z=>key(z.c)===key(c))||{c,train:replay(c,'train')};
+   refineSelect.set(key(c),x);
+ }
+ const refVal=[...refineSelect.values()].map(x=>({...x,holdout:replay(x.c,'holdout'),full:replay(x.c,'full')}));
+ const dualImprovers=refVal.filter(x=>
+   x.full.cagr>base.full.cagr&&x.full.mdd<base.full.mdd
+   && x.holdout.cagr>=base.holdout.cagr&&x.holdout.mdd<=base.holdout.mdd);
+ const capChecks=dualImprovers.slice().sort((a,b)=>(b.full.cagr-.35*b.full.mdd)-(a.full.cagr-.35*a.full.mdd)).slice(0,8);
+ for(const x of capChecks){
+    x.cap75={full:replay(x.c,'full',75000),holdout:replay(x.c,'holdout',75000)};
+    x.cap10={full:replay(x.c,'full',10000),holdout:replay(x.c,'holdout',10000)};
+ }
+ print('REFINE_GRID',{tested:refined.length,trainPareto:refinedPareto.length,validation:refVal.length,dualImprovers:dualImprovers.length,
+    topTrain:refined.slice(0,6).map(x=>({c:x.c,train:x.train}))});
+ print('REFINE_DUAL_TOP',capChecks.map(x=>({c:x.c,train:x.train,holdout:x.holdout,full:x.full,cap75:x.cap75,cap10:x.cap10})));
+ print('REFINE_TRAIN_TOP',refVal.slice().sort((a,b)=>b.score-a.score).slice(0,8).map(x=>({c:x.c,train:x.train,holdout:x.holdout,full:x.full})));
+ // Additional fixed control for plausible one-million-KRW exchange-rate equivalent in USD.
+ const controlConfigs=[
+  {name:'current_70_30',c:baseline},
+  {name:'candidate_70_30_band15',c:{...baseline,ivsBand:.15}},
+  {name:'candidate_60_40_band15',c:{...baseline,teclWeight:.6,guardWeight:.4,ivsBand:.15}},
+  {name:'candidate_60_40_band5_ma250',c:{...baseline,teclWeight:.6,guardWeight:.4,ivsBand:.05,guardMA:250}},
+  {name:'candidate_65_35_band125',c:{...baseline,teclWeight:.65,guardWeight:.35,ivsBand:.125}}
+ ];
+ print('CAPITAL_SENS',controlConfigs.map(x=>({name:x.name,c:x.c,
+    cap75:{full:replay(x.c,'full',75000),holdout:replay(x.c,'holdout',75000)},
+    cap25:{full:replay(x.c,'full',25000),holdout:replay(x.c,'holdout',25000)}
+ })));
+
  print('DONE',{simulations:nSim,officialLiveStrategyUnchanged:true});
 }
 run().catch(e=>{console.error('RESEARCH_ERROR',e.stack||String(e));process.exitCode=1;});
