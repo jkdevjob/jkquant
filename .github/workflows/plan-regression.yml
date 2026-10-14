@@ -1,0 +1,21 @@
+name: JKQuant regression on PR
+on:
+  pull_request:
+    paths:
+      - plan.html
+      - regression-check.js
+      - .github/workflows/plan-regression.yml
+  workflow_dispatch:
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JKQuant full regression
+        run: node regression-check.js
