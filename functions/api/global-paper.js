@@ -25,6 +25,8 @@ async function ownerAuthorized(request,env){
   }catch(e){return false;}
 }
 
+export {ownerAuthorized};
+
 export async function onRequestGet({request,env}){
   if(!(await ownerAuthorized(request,env)))return json({ok:false,error:"unauthorized"},401);
   const u=new URL(request.url);

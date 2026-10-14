@@ -36,6 +36,7 @@ jobs:
           pip install --quiet numpy pandas pyarrow
           python scripts/test_tenbagger_forward.py
           node --test tests/research-gpt.test.mjs
+          node --test tests/scalping-live-results.test.mjs
 
       - name: 승인 알림 Worker 빌드 검증 (실배포 없음)
         run: npx --yes wrangler@4 deploy --dry-run --config worker/presale-alert/wrangler.jsonc --outdir /tmp/jkquant-approval-worker-check

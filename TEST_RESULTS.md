@@ -10,6 +10,15 @@
 - `node scripts/test_opening_gapdown.mjs functions/api`: **40 ALL PASS**(전체 실행 시험에 실제 승격 기록 — 10/14 부터 ETH 만 — 을 넣음). 변이: '지금 메인 코인만 받기' 잡힘.
 - 운영 화면(소유자 로그인) 자체는 이 환경에서 열 수 없다 — 같은 코드를 실제 원천으로 돌린 결과로 확인.
 
+## 2026-10-14 · 지피티 오늘 카드 장중 원본 · v1.44.7
+
+- `node --test tests/scalping-live-results.test.mjs tests/research-gpt.test.mjs`: **23 PASS / 0 FAIL**. 09:39 완료 감시/10:00 감시 시작, 부분 원천, 메인/그림자 분리, null 손익, 3/1슬롯, 비용 포함 BTC 평가, SOXL ET/KST·DST, 읽기 전용 인증·개별 장애, 30초·복귀·로그아웃 경계·이스케이프를 실제 함수로 실행.
+- 변이 **3/3 차단**: null 숫자 보호 제거, 메인 전략 필터 제거, 조회 주기를 60초로 변경. 구문 오류가 아닌 값 단언 실패를 확인했다.
+- 기존 `test_scalping_daily_results`, `test_scalping_audit`, `test_scalping_deep_audit`(17/17), `test_scalping_self_contained_ui` 모두 PASS. 인증 시험의 독립 실행 환경에 새 타이머 시작/중지 스텁만 추가, 기존 단언 유지.
+- 최신 main의 플랜 값 시험이 `alphaExplainBounds`를 누락해 ReferenceError로 중단되는 것을 확인하고 시험 환경에 실제 함수를 로드해 기존 값·변이 2/2를 유지했다. 이후 main #505에 같은 보완이 반영되어 그 정본을 보존한다. 플랜 운영 코드는 변경하지 않았다.
+- 로컬 전체 **50/50 단계 PASS · 회귀 2,766 PASS / 0 FAIL**, 외부 Worker dry-run 포함(`gpt-live-final-check.log`, main 6423428 기반). 검증 중 반영된 main #505는 별도 최신 변경 값 검사 및 PR 통합 CI로 확인한다.
+- 최종 전체 CI 및 배포 판정은 PR 실행 로그로 기록한다. 소유자 인증된 운영 장부 응답과 실제 iPhone 표시는 미검증이며 단위시험을 실제 거래/수익 증거로 간주하지 않는다.
+
 ## 2026-10-14 · 연구(클로드) 오늘 탭 실시간 칸 · v2.17.7
 
 - `node scripts/test_opening_gapdown.mjs functions/api`: **40 ALL PASS**(+2 — 칸 값 시험 · 가짜 원천으로 API 전체 실행(10/14 09:41 시계 고정) 200 · 탭마다 days · 기존 rows 그대로). 실제 값 대조: ② 10/12 종가 7175 → 10/13 시가 6760 = **−5.953344947735195%**(밤 장부 값과 같음), ④ 10/13 보유일 **−0.6464%**(밤 SOXL 기록과 같음).
