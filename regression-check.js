@@ -8278,6 +8278,24 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /guardClose\.push\(\+qr\[i\]\.close\);guardMa\.push\(mv\)/.test(pl)
      && /오늘 판단: '\+\(needRebalance\?'리밸런싱\/상태조정':'유지'\)/.test(pl)
      && /장중가격은 신호가 아니라 주문수량 추정에만 사용/.test(pl));
+  // 사용자에게 보이는 판정경계와 수량을 실제 값으로 검증한다.
+  const alphaBounds=new Function(extractFn(pl,'function alphaExplainBounds(target,current,band)')+';return alphaExplainBounds;')();
+  const b90p4=alphaBounds(1,.904,.10),b90=alphaBounds(1,.9,.10),b89=alphaBounds(1,.89,.10),b111=alphaBounds(1,1.11,.10);
+  ok('PATH A 표시판정 실제 상단110%·하단90%',
+     near(b90p4.low,.9,1e-12)&&near(b90p4.high,1.1,1e-12)
+     && /실제 판정경계/.test(pl)&&/막대는 100%까지 표시/.test(pl));
+  ok('PATH A 판정 90.4 유지·90 유지·89 조정',
+     near(b90p4.gap,.096,1e-12)&&near(b90p4.distance,.004,1e-12)
+     && !(b90.gap>.10)&&b89.gap>.10);
+  ok('PATH A 표시판정 111%면 상단 초과',
+     b111.gap>.10&&b111.side==='초과'&&near(b111.high,1.1,1e-12));
+  ok('PATH A 판단 UI는 그래프 전·5년 외 안내 숨김',
+     pl.indexOf('id="alphaDecision"')<pl.indexOf('class="alpha-charts"')
+     && /id="alphaGuide" hidden/.test(pl)
+     && /if\(\$\('alphaGuide'\)\)\{\$\('alphaGuide'\)\.hidden=true/.test(pl));
+  ok('PATH A SMA225 범례와 주문0건 안내',
+     /<span>— SMA225<\/span>/.test(pl)&&!/— SMA200<\/span>/.test(pl)
+     && /조건 충족 · 정수주수·현금 등을 반영한 실제 주문 0건/.test(pl));
   ok('초기자금은 입력만으로 장부를 바꾸지 않고 초기화 때 확정',
      /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
      && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)

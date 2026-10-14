@@ -171,6 +171,14 @@ th:first-child,td:first-child{text-align:left}
 .alpha-ev .k{font-size:10px;color:var(--dim)}.alpha-ev .v{font-size:15px;font-weight:850;margin-top:2px}.alpha-ev .s{font-size:10px;color:var(--dim);margin-top:2px}
 .alpha-decision{margin-top:10px;padding:11px 12px;border-radius:9px;border:1px solid rgba(245,196,81,.32);background:rgba(245,196,81,.055);font-size:12px;line-height:1.7}
 .alpha-decision.go{border-color:rgba(54,211,153,.34);background:rgba(54,211,153,.055)}
+.alpha-guide{margin-top:9px;padding:11px;border:1px solid var(--border);border-radius:10px;background:var(--surf2)}
+.alpha-guide[hidden]{display:none}
+.alpha-guide-title{font-size:12.5px;font-weight:850;margin-bottom:8px}
+.alpha-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.alpha-guide-item{padding:10px;border-radius:9px;background:var(--surf);border:1px solid var(--border);font-size:11px;line-height:1.65;min-width:0;overflow-wrap:anywhere}
+.alpha-guide-item b{display:block;font-size:11.5px;margin-bottom:4px;color:var(--text)}
+.alpha-guide-foot{margin-top:8px;font-size:10px;line-height:1.55;color:var(--dim)}
+@media(max-width:780px){.alpha-guide-grid{grid-template-columns:1fr}}
 .alpha-charts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .alpha-chart{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px;min-width:0}
 .alpha-chart h4{font-size:11.5px;margin:0 0 3px}.alpha-chart .chart-sub{font-size:10px;color:var(--dim);margin-bottom:7px}
@@ -303,7 +311,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.34</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.35</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -458,6 +466,8 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
           <div class="alpha-ev"><div class="k" id="alphaEv3Label">TECL 몫 안의 현재 비율</div><div class="v" id="alphaCurrentW">—</div><div class="s" id="alphaWeightGap">목표와 차이 계산 중</div></div>
           <div class="alpha-ev"><div class="k" id="alphaEv4Label">TQQQ Guard</div><div class="v" id="alphaGuardState">—</div><div class="s" id="alphaGuardGap">SMA225 판단 중</div></div>
         </div>
+        <div class="alpha-decision" id="alphaDecision" role="status" aria-live="polite"><b>오늘 판단:</b> 지표를 불러오는 중입니다.</div>
+        <div class="alpha-guide" id="alphaGuide" hidden aria-label="자산별 다음 행동 기준"></div>
         <div class="alpha-charts">
           <div class="alpha-chart">
             <h4 id="alphaChart1Title">TECL 슬리브 리밸런싱 밴드</h4>
@@ -470,10 +480,9 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
             <h4 id="alphaChart2Title">TQQQ Guard · 최근 120거래일</h4>
             <div class="chart-sub" id="alphaGuardLevels">확정 종가 · SMA225 · ±1.0% 경계 계산 중…</div>
             <div id="alphaGuardChart"></div>
-            <div class="legend"><span>● TQQQ 종가</span><span>— SMA200</span><span>⋯ Guard 상·하단</span></div>
+            <div class="legend"><span>● TQQQ 종가</span><span>— SMA225</span><span>⋯ Guard 상·하단(±1%)</span></div>
           </div>
         </div>
-        <div class="alpha-decision" id="alphaDecision"><b>오늘 판단:</b> 지표를 불러오는 중입니다.</div>
       </div>
 
       <div class="card" id="alphaStrategySection" data-asset-view="explain" hidden style="margin-top:10px;margin-bottom:0">
@@ -873,7 +882,7 @@ function renderHorizonCopy(){
     setTxt('alphaEv3Label','TECL 몫 안의 현재 비율');setTxt('alphaEv4Label','TQQQ Guard');
     setTxt('alphaChart1Title','TECL 몫 안의 목표비율 · 최근60거래일');setTxt('alphaChart2Title','TQQQ Guard · 최근120거래일');
     if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 70/30 역분산 + Guard</strong><br>전체 자산의70%를 TECL 몫으로 정하고, 최근20거래일 변동성에 따라 그 안의 투자비율을 조절합니다. 목표와 현재 비율의 차이가 <b>10%p를 초과</b>하면 리밸런싱합니다. TQQQ 30%는 SMA225 ±1.0% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다. <b>TECL 목표100%는 전체 자산의70%</b>를 뜻합니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 독립 재검증:</b> 137개 시작구간 · 평균 CAGR 48.2% · 중앙 CAGR 47.5% · 하위 10% CAGR 31.5% · 최악 CAGR 23.9% · 중앙 MDD -36.4% · 최악 MDD -37.8%.<span class="sub">업로드 TECL·TQQQ 시세 2010-03-12~2026-07-10 · 신호는 전일 확정종가, 다음 거래일 종가 체결 · 거래비용 0.1% · 대피자산 연 4% 가정.</span><span class="sub">세전 과거 백테스트이며 미래 수익을 보장하지 않습니다. 장기 스트레스 MDD -50% 하드제약 탐색은 완료했으며, 실험 후보는 기본값에 아직 반영하지 않았습니다.</span>';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 과거 참고치(기준일 고정):</b> 137개 시작구간 · 평균 CAGR 48.2% · 중앙 CAGR 47.5% · 하위 10% CAGR 31.5% · 최악 CAGR 23.9% · 중앙 MDD -36.4% · 최악 MDD -37.8%.<span class="sub">업로드 TECL·TQQQ 시세 2010-03-12~2026-07-10 · 신호는 전일 확정종가, 다음 거래일 종가 체결 · 거래비용 0.1% · 대피자산 연 4% 가정.</span><span class="sub">이 수치는 2026-07-10까지의 업로드 시세·가정으로 얻은 세전 참고치이며 최신 운영 데이터로 다시 산출한 성과가 아닙니다. 미래 수익을 보장하지 않으며, 실험 후보는 검증 전 운영에 반영하지 않습니다.</span>';
   }else if(y===10){
     setTxt('alphaKpi1Label','상승장 코어');setTxt('alphaKpi1Value','TQQQ 80%');setTxt('alphaKpi1Sub','종가 > SMA250');
     setTxt('alphaKpi2Label','하락장 3단계');setTxt('alphaKpi2Value','20% → 40% → 60%');setTxt('alphaKpi2Sub','RSI40/35/30 + ATH -12/-22/-32%');
@@ -2214,6 +2223,7 @@ function _momentumPoint(rows,idx){
   return {date:rows[idx].date,p,m9,m12,score,ok:m12>0};
 }
 function renderAlternativePlan(qTecl,qTqqq,qSgov){
+  if($('alphaGuide')){$('alphaGuide').hidden=true;$('alphaGuide').innerHTML='';}
   if(!qTecl||!qTqqq||!qSgov||!qTecl.settled||!qTqqq.settled||!qSgov.settled)return;
   const tr=qTecl.rows.filter(x=>x.date<=qTecl.settled.date),qr=qTqqq.rows.filter(x=>x.date<=qTqqq.settled.date);
   const ts=+qTecl.settled.close,qs=+qTqqq.settled.close,ss=+qSgov.settled.close;
@@ -2277,6 +2287,12 @@ function renderAlternativePlan(qTecl,qTqqq,qSgov){
   $('alphaSummary').innerHTML='<b>'+activeHorizon+'년 목표 보유금액:</b> TECL '+usd(teclAmt)+' · TQQQ '+usd(tqqqAmt)+' · SGOV '+usd(sgovAmt)+' · 잔여현금 약 '+usd(Math.max(0,total-teclAmt-tqqqAmt-sgovAmt))+'<br><b>전략:</b> '+horizonStrategy().name+'<br><span class="sub">실제 체결가에 따라 수량은 달라질 수 있습니다.</span>';
   if(horizonRebalancePending)horizonRebalancePending=false;
 }
+/* 설명용 경계값: 매매 신호/주문 규칙은 변경하지 않는다. */
+function alphaExplainBounds(target,current,band){
+  const gap=Math.abs(target-current);
+  return {low:target-band,high:target+band,gap,distance:Math.max(0,band-gap),
+    side:current<target?'부족':current>target?'초과':'일치'};
+}
 function renderAlphaPlan(qTecl,qTqqq,qSgov){
   if(activeHorizon!==5){renderAlternativePlan(qTecl,qTqqq,qSgov);return;}
   if(!qTecl||!qTqqq||!qSgov||!qTecl.settled||!qTqqq.settled||!qSgov.settled)return;
@@ -2305,7 +2321,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   if($('alphaGuardState'))$('alphaGuardState').textContent=guard;
   const guardDist=(qs/sma-1)*100;
   if($('alphaGuardGap'))$('alphaGuardGap').textContent='종가 '+usd(qs)+' · SMA'+D.guardMA+' 대비 '+(guardDist>=0?'+':'')+guardDist.toFixed(2)+'%';
-  if($('alphaTeclBandText'))$('alphaTeclBandText').textContent='목표 '+(w*100).toFixed(1)+'% · 허용 '+(bandLo*100).toFixed(1)+'~'+(bandHi*100).toFixed(1)+'% · 현재 '+(sleeveNow*100).toFixed(1)+'%';
+  if($('alphaTeclBandText'))$('alphaTeclBandText').textContent='목표 '+(w*100).toFixed(1)+'% · 실제 판정경계 '+((w-D.ivsBand)*100).toFixed(1)+'~'+((w+D.ivsBand)*100).toFixed(1)+'% · 현재 '+(sleeveNow*100).toFixed(1)+'%'+(w+D.ivsBand>1?' (막대는 100%까지 표시)':'');
   const band=$('alphaTeclBand'),tm=$('alphaTeclTargetMark'),cm=$('alphaTeclCurrentMark');
   if(band){band.style.left=(bandLo*100)+'%';band.style.width=((bandHi-bandLo)*100)+'%';}
   if(tm)tm.style.left=(Math.max(0,Math.min(1,w))*100)+'%';
@@ -2365,6 +2381,33 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     '<br><b>오늘 매수금액:</b> TECL '+usd(buyMap.TECL)+' · TQQQ '+usd(buyMap.TQQQ)+' · SGOV '+usd(buyMap.SGOV)+' · 합계 '+usd(totalBuy)+' · <b>수수료 포함 필요현금 약 '+usd(totalNeed)+'</b>'+
     '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+
     '<br><span class="sub">주문 수량·금액은 현재가와 토스증권 미국주식 수수료 0.1%를 반영한 예상치입니다.</span>';
+  // 실제 매매결과를 바꾸지 않고, 확정 종가 기준 판단과 발주 가능 건수를 구분해 표시한다.
+  const guide=$('alphaGuide');
+  if(guide){
+    const b=alphaExplainBounds(w,sleeveNow,D.ivsBand);
+    const teclStatus=tq===0?'첫 진입 판정':teclHit?(sleeveNow<w?'비중 확대 조건 충족':'비중 축소 조건 충족'):'유지';
+    const guardStatus=guardFlip?(guard==='ON'?'TQQQ 매수 전환':'TQQQ 매도 전환'):'Guard '+guard+' 유지';
+    const guardNext=guard==='ON'?'다음 OFF: 확정 종가 '+usd(lower)+' 미만':'다음 ON: 확정 종가 '+usd(upper)+' 초과';
+    const orderText=orders.length?'주문 '+orders.length+'건 · '+orders.map(o=>o.sym+' '+(o.side==='buy'?'매수 ':'매도 ')+o.qty+'주').join(' / '):
+      needRebalance?'조건 충족 · 정수주수·현금 등을 반영한 실제 주문 0건':'주문 없음 · 기존 보유 유지';
+    const difference=b.side==='부족'?'목표보다 부족':b.side==='초과'?'목표보다 초과':'목표와 일치';
+    guide.hidden=false;
+    guide.innerHTML='<div class="alpha-guide-title">📌 이번 판단과 다음 거래 조건</div>'
+      +'<div class="alpha-guide-grid">'
+      +'<div class="alpha-guide-item"><b>TECL · '+teclStatus+'</b>'
+      +'전체 자산: 현재 '+(curTeclW*100).toFixed(1)+'% / 목표 '+(D.teclWeight*w*100).toFixed(1)+'%. '
+      +'TECL 몫 기준 '+(b.gap*100).toFixed(1)+'%p '+difference+'.<br>'
+      +'매수/매도 판정 경계: '+(b.low*100).toFixed(1)+'% 미만 또는 '+(b.high*100).toFixed(1)+'% 초과. '
+      +(teclHit?'이번에 조정 조건 충족.':'경계까지 약 '+(b.distance*100).toFixed(1)+'%p 남음(목표 고정 가정).')
+      +'<br>확정 종가 평가액: '+usd(tq*ts)+' / 목표액 '+usd(signalTotal*D.teclWeight*w)+'</div>'
+      +'<div class="alpha-guide-item"><b>TQQQ · '+guardStatus+'</b>'
+      +'종가 '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' ('+(guardDist>=0?'+':'')+guardDist.toFixed(2)+'%).<br>'
+      +guardNext+'. 이동평균이 매일 달라져 다음 거래일 경계도 변동합니다.<br>'
+      +'ON이면 30% 목표로 진입, OFF이면 SGOV로 대피. 이미 ON/OFF 상태가 유지되면 비중 변화만으로는 재조정하지 않습니다.</div>'
+      +'</div>'
+      +'<div class="alpha-guide-foot"><b>실제 주문표:</b> '+orderText+'<br>'
+      +'신호는 확정 종가, 주문 수량·금액은 현재가 추정입니다. SGOV는 남는 투자금을 보유하며 정수 주수·수수료에 따라 실제 주문이 달라집니다.</div>';
+  }
   if(horizonRebalancePending)horizonRebalancePending=false;
 }
 function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV)renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);}
