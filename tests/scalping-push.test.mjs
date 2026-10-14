@@ -23,7 +23,7 @@ function today(tz){
 }
 
 test("신호 인증·중복 차단·시장일 제한·매수/매도 각각 푸시",async()=>{
-  const x=fakeStore(),b={strategy:"opening",stage:"buy",eventId:"opening-test-1",date:today("Asia/Seoul"),time:"09:07 KST",lines:["000001 테스트","모의 매수"]};
+  const x=fakeStore(),b={strategy:"opening",stage:"buy",eventId:"opening-test-1",date:today("Asia/Seoul"),time:"09:07 KST",lines:["000001 테스트","매수 알림"]};
   assert.equal((await x.send(b,"wrong")).status,401);
   assert.equal((await x.send({...b,stage:"summary"})).status,400);
   assert.equal((await x.send({...b,date:"2025-01-01"})).status,409);
@@ -34,9 +34,10 @@ test("신호 인증·중복 차단·시장일 제한·매수/매도 각각 푸�
   assert.equal(x.deliveries.length,1);
   const latest=await (await x.worker.fetch(new Request("https://push.invalid/latest"))).json();
   assert.equal(latest.alert.type,"opening");
-  assert.match(latest.alert.title,/모의 매수 타이밍/);
-  assert.equal(latest.alert.title,"[지피티 연구 시초가] 🟢 모의 매수 타이밍");   // 2026-10-13: 모든 연구 메뉴 같은 머리말
+  assert.match(latest.alert.title,/🟢 매수$/);
+  assert.equal(latest.alert.title,"[지피티 연구 시초가] 🟢 매수");   // 2026-10-13: 모든 연구 메뉴 같은 머리말
   assert.equal(latest.alert.url,"https://jkquant.pages.dev/scalping?strategy=opening");
+   assert.ok(!latest.alert.body.includes("모의"),"푸시 본문에는 모의 문구 없음");
   assert.equal(latest.alerts.length,1);
   assert.equal((await x.send({...b,stage:"sell",eventId:"opening-test-1:sell"})).status,200);
   assert.deepEqual(x.deliveries,["opening","opening"]);
@@ -46,7 +47,7 @@ test("네 전략의 시장별 거래일 검증과 알림 주제를 유지한다"
   const x=fakeStore();
   for(const topic of ["opening","daytrading","crypto","soxl"]){
     const date=today(topic==="soxl"?"America/New_York":"Asia/Seoul");
-    const resp=await x.send({strategy:topic,stage:"sell",eventId:"test:"+topic,date,time:"09:50",lines:["모의손익 +1%"]});
+    const resp=await x.send({strategy:topic,stage:"sell",eventId:"test:"+topic,date,time:"09:50",lines:["전략 손익 +1%"]});
     assert.equal(resp.status,200,topic);
   }
   assert.deepEqual(x.deliveries,["opening","daytrading","crypto","soxl"]);
@@ -105,7 +106,7 @@ test("푸시 전체 실패이면 실패 영수증을 남기고 다음 감시에�
     return attempts===1?{eligible:1,sent:0,failed:1,removed:0,total:1}:
       {eligible:1,sent:1,failed:0,removed:0,total:1};
   };
-  const payload={strategy:"daytrading",stage:"buy",eventId:"daytrading-retry-test",date,time:"10:12 KST",lines:["모의 신호"]};
+  const payload={strategy:"daytrading",stage:"buy",eventId:"daytrading-retry-test",date,time:"10:12 KST",lines:["매수 신호"]};
   const first=await x.send(payload);
   assert.equal(first.status,502);
   assert.equal((await first.json()).retryable,true);
@@ -206,9 +207,9 @@ test("연구(지피티) 텔레그램: 실제 매수·매도만 · [지피티 연
   try{
     const r=await post({strategy:"daytrading",stage:"buy",eventId:"d:1",date:"2026-10-13",time:"10:21 KST",lines:["005930 삼성전자"]});
     assert.equal(r.status,200);
-    assert.ok(texts[0].startsWith("[지피티 연구 데이트레이딩] 🟢 매수 타이밍\n2026-10-13 10:21 KST"),texts[0]);
-    await post({strategy:"crypto",stage:"sell",eventId:"c:1",date:"2026-10-13",lines:["모의손익 +1%"]});
-    assert.ok(texts[1].startsWith("[지피티 연구 비트코인] 🔴 매도 타이밍"),texts[1]);
+    assert.ok(texts[0].startsWith("[지피티 연구 데이트레이딩] 🟢 매수\n2026-10-13 10:21 KST"),texts[0]);
+    await post({strategy:"crypto",stage:"sell",eventId:"c:1",date:"2026-10-13",lines:["전략 손익 +1%"]});
+    assert.ok(texts[1].startsWith("[지피티 연구 비트코인] 🔴 매도"),texts[1]);
     const s=await (await post({strategy:"opening",stage:"summary",eventId:"o:sum",date:"2026-10-13",lines:["요약"]})).json();
     assert.equal(s.skipped,"buy_sell_only");
     assert.equal(texts.length,2);assert.equal(pushes.length,2);                     // 요약은 텔레그램 · 웹 알림 모두 없음
@@ -221,5 +222,5 @@ test("연구(지피티) 후보 신호 · 대결 요약은 텔레그램으로 보
   const om=readFileSync(new URL("../functions/api/opening-monitor.js",import.meta.url),"utf8");
   assert.ok(!dm.includes("api.telegram.org")&&!dm.includes("모의 후보 신호"));
   assert.ok(!du.includes("api.telegram.org")&&du.includes('skipped:"buy_sell_only"'));
-  assert.ok(om.includes('"[지피티 연구 시초가] 🟢 모의 매수 신호 · "')&&om.includes('"[지피티 연구 시초가] 🔴 모의 매도 신호 · "')&&om.includes('text:title+"\\n\\n"'));
+  assert.ok(om.includes('"[지피티 연구 시초가] 🟢 매수 · "')&&om.includes('"[지피티 연구 시초가] 🔴 매도 · "')&&om.includes('text:title+"\\n\\n"'));
 });
