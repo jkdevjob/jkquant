@@ -11335,11 +11335,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
-    ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로',
+    ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로 · 예외 하나: 매일 08:00 연구 리포트(op=report, [클로드 연구 리포트] — 2026-10-14 사용자 요청)',
        /function authorized\(request,env\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
        &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\|텐배거\)\\\] \/;/.test(tg)
        &&/if\(b\.op==="send"\|\|KINDS\.includes\(String\(b\.kind\|\|""\)\)\)return json\(\{ok:true,skipped:"buy_sell_only"\}\);/.test(tg)
-       &&(tg.match(/await sendOnce\(env,/g)||[]).length===1&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
+       &&(tg.match(/await sendOnce\(env,/g)||[]).length===2&&/if\(b\.op==="report"\)\{[\s\S]{0,120}text\.startsWith\(REPORT_HEAD\)/.test(tg)&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
     // 하루 마감 장부: DO 에 한 번만 저장(먼저 저장된 것이 정본) — 밤 계산 · 대결 비교가 읽는다. 텔레그램은 보내지 않는다
     const fnR=ow.slice(ow.indexOf('export function claudeCloseRecord('),ow.indexOf('\n}\n',ow.indexOf('export function claudeCloseRecord('))+2).replace('export ','');
     const rec=new Function(fnR+'\nreturn claudeCloseRecord;')();
@@ -12142,6 +12142,16 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
        /<div id="claudePushSettings"><\/div>\s*<div id="notificationSettings">/.test(st)&&/<script src="\/claude-push-client\.js\?v=[\d.]+" defer><\/script>\s*<script src="\/settings-claude-push\.js\?v=[\d.]+" defer><\/script>/.test(st)
        &&/window\.jkAuth=auth;/.test(st)&&/<script src="\/settings-notifications\.js\?v=\d+\.\d+\.\d+" defer><\/script>/.test(st)
        &&/P\.enable\(token\)/.test(sc)&&/P\.disable\(token\)/.test(sc)&&/P\.test\(token\)/.test(sc)&&!/localStorage|sessionStorage/.test(sc));
+  }
+  { // 매일 08:00 연구 리포트(사용자 요청 2026-10-14 '연구 모든탭 … 매일 아침 8시 일정한 시간에 … 앱푸시랑 텔레그램으로')
+    const rw=fs.readFileSync(__d+'/.github/workflows/claude-research-report.yml','utf8'),wk2=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),
+      tg2=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8'),pu2=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8');
+    const inLines=rw.split('\n').filter(l=>l.includes('${{ inputs.')),cr=wk2.slice(wk2.indexOf('export async function claudeReport('),wk2.indexOf('// 텔레그램 — Pages(/api/claude-telegram op=event)가 보낸다.'));
+    ok('연구 리포트: 아침 연구 뒤 workflow 가 08:00 KST 까지 기다렸다 보냄(일정한 시각) · 입력은 환경변수로만(셸 주입 없음) · Worker /push-report 하나(감시키 · 같은 날 한 번 · 먼저 기록) · 텔레그램 op=report 머리말 [클로드 연구 리포트] · 링크 고정',
+       /\n  workflow_dispatch:\n/.test(rw)&&!/\n  schedule:/.test(rw)&&/TARGET=\$\(TZ=Asia\/Seoul date -d "\$D 08:00:00" \+%s\)/.test(rw)&&/if \[ "\$WAIT" -gt 0 \]; then [^\n]*sleep "\$WAIT"/.test(rw)
+       &&inLines.length===5&&inLines.every(l=>/^ {10}[A-Z]+: \$\{\{ inputs\.(date|title|push|text) \}\}$/.test(l))&&/-X POST "\$WORKER\/push-report"/.test(rw)&&/-H "x-monitor-key: \$KEY"/.test(rw)
+       &&/if\(op==="report"&&request\.method==="POST"\)\{const r=await claudeReport\(env,/.test(wk2)&&cr.indexOf('call("claim"')>0&&cr.indexOf('call("claim"')<cr.indexOf('pushBroadcast(')
+       &&/if\(b\.op==="report"\)\{[\s\S]{0,120}text\.startsWith\(REPORT_HEAD\)/.test(tg2)&&/export const REPORT_HEAD = "\[클로드 연구 리포트\]";/.test(pu2)&&/url: "\/claude" \};/.test(pu2));
   }
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)

@@ -1,0 +1,66 @@
+name: 연구(클로드) 아침 연구 리포트 — 08:00 앱 푸시·텔레그램
+
+# 사용자 요청(2026-10-14): "연구 모든탭에 대해 매일 아침 8시 일정한 시간에 더 나은 방향으로 연구해서 결과 알려줘 앱푸시랑 텔레그램으로"
+# 아침 연구(Claude 루틴, 07:07 KST)가 끝나면 이 workflow 를 부른다. 08:00 KST 전이면 08:00 까지 기다렸다가 보낸다(매일 같은 시각).
+# 보내기는 opening-scheduler Worker /push-report 하나 — 같은 날 리포트는 한 번만(다시 실행해도 안 보냄) · 웹 알림 + 텔레그램.
+# 입력 글은 셸에 직접 넣지 않는다(환경변수 → jq 로 JSON).
+
+on:
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "리포트 날짜(한국, YYYY-MM-DD)"
+        required: true
+      title:
+        description: "제목 — [클로드 연구 리포트] 로 시작(80자 이하)"
+        required: true
+      push:
+        description: "앱 푸시 본문(300자 이하)"
+        required: true
+      text:
+        description: "텔레그램 본문 — [클로드 연구 리포트] 로 시작(3500자 이하)"
+        required: true
+
+concurrency:
+  group: claude-research-report
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: 08:00 KST 까지 기다림(연구가 일찍 끝났으면) · 날짜 확인
+        env:
+          D: ${{ inputs.date }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$D" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || { echo "date 형식 오류: $D"; exit 1; }
+          TARGET=$(TZ=Asia/Seoul date -d "$D 08:00:00" +%s); NOW=$(date +%s); WAIT=$((TARGET-NOW))
+          if [ "$WAIT" -gt 7200 ]; then echo "08:00 KST 까지 2시간 넘게 남음 — 날짜를 확인하세요"; exit 1; fi
+          if [ "$WAIT" -gt 0 ]; then echo "08:00 KST 까지 ${WAIT}초 기다림"; sleep "$WAIT"; else echo "08:00 KST 지남 — 바로 보냄"; fi
+
+      - name: 보내기 (웹 알림 + 텔레그램 · 같은 날 한 번)
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          WORKER: https://jkquant-opening-scheduler.mumae4.workers.dev
+          D: ${{ inputs.date }}
+          TITLE: ${{ inputs.title }}
+          PUSH: ${{ inputs.push }}
+          TEXT: ${{ inputs.text }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$KEY" ] || { echo "AUTOTRADE_KEY 미설정"; exit 1; }
+          jq -n --arg date "$D" --arg title "$TITLE" --arg push "$PUSH" --arg text "$TEXT" \
+            '{date:$date,title:$title,push:$push,text:$text}' > /tmp/report.json
+          CODE=$(curl -sS --max-time 120 -o /tmp/out.json -w '%{http_code}' -X POST "$WORKER/push-report" \
+            -H "content-type: application/json" -H "x-monitor-key: $KEY" --data-binary @/tmp/report.json || echo 000)
+          jq -c '{ok,id,duplicate,error,subs:.push.subs,sent:[.push.sent[]?.status],telegram}' /tmp/out.json 2>/dev/null || cat /tmp/out.json || true
+          [ "$CODE" = "200" ] || { echo "Worker 응답 $CODE"; exit 1; }
+          if jq -e '.duplicate == true' /tmp/out.json >/dev/null; then echo "같은 날 리포트는 이미 보냄 — 다시 보내지 않음"; exit 0; fi
+          jq -e '.telegram.result == "sent"' /tmp/out.json >/dev/null || { echo "텔레그램 전송 확인 안 됨(웹 알림 결과는 위에)"; exit 1; }
