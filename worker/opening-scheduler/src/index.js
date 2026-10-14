@@ -802,7 +802,7 @@ export default {
         if(op==="subscribe")return json(await pushStore(env,"sub",await request.json().catch(()=>({}))));
         if(op==="alarm")return json(await pushStore(env,"ensure",{}));
         if(op==="unsubscribe")return json(await pushStore(env,"unsub",await request.json().catch(()=>({}))));
-        if(op==="test")return json({ok:true,...await pushBroadcast(env,[{id:"test",title:"🔔 단타(클로드) 알림 켜짐",body:"매수 · 매도 때마다 이렇게 알려 드립니다.",tag:"test",url:"/claude"}])});
+        if(op==="test")return json({ok:true,...await pushBroadcast(env,[{id:"test",title:"🔔 연구(클로드) 알림 켜짐",body:"매수 · 매도 때마다 이렇게 알려 드립니다.",tag:"test",url:"/claude"}])});
         if(op==="watch")return json({ok:true,...await claudePushWatch(env)});
         return json({ok:false,error:"not found"},404);
       }catch(e){return json({ok:false,error:String(e.message||e)},500);}

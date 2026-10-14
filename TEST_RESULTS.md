@@ -1,5 +1,12 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-14 · 연구(클로드) 알림 이름 · v2.17.4 · 설정 v1.4.1
+
+- `node scripts/test_opening_gapdown.mjs functions/api`: **38 ALL PASS**(+1). 새 값 시험은 서비스워커와 설정 카드 스크립트를 실제로 돌려 기본 제목·카드 이름·켜기 성공/끄기 실패 안내를 보고, Worker 시험 알림 제목을 원문에서 확인한다('단타' 없음).
+- 변이 3/3 잡힘: Worker 시험 알림 제목 · 서비스워커 기본 제목 · 설정 켜기 안내를 '단타'로 되돌림.
+- `node scripts/check-before-push.cjs`: **50/50 단계 PASS · 회귀 2,760 PASS / 0 FAIL**.
+- 실제 휴대폰 수신 문구는 배포 뒤 사용자가 '테스트 알림'으로 확인해야 한다(미검증).
+
 ## 2026-10-14 · 연구(클로드) '🎯 전체 계좌' 탭 삭제 · v2.17.3
 
 - `node regression-check.js index.html backtest.html testdata`: **2,760 PASS / 0 FAIL**. 탭 목록·직접 링크 검사를 새 탭 구성(오늘·①~④·비교·텐배거, `all` 없음)으로 바꿨다.
