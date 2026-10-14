@@ -1,22 +1,34 @@
 {
-  "updatedAt": "2026-10-14T06:35:23+09:00",
+  "updatedAt": "2026-10-14T11:18:44+09:00",
   "rangeDays": 180,
   "cutoffDate": "2026-04-17",
   "historyCount": 0,
   "sourceStatuses": {
     "잡코리아": {
       "ok": true,
-      "count": 487,
+      "count": 495,
       "failed_pages": 0,
       "mode": "직접"
     },
     "사람인": {
       "ok": true,
-      "count": 374,
-      "failed_pages": 0,
+      "count": 371,
+      "failed_pages": 2,
       "max_pages": 8,
-      "errors": [],
+      "errors": [
+        "대전 Java p1: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=1&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7f58f79ec110>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))",
+        "대전 Java p2: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=2&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7f58f79ec5f0>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))"
+      ],
       "mode": "직접"
+    },
+    "원티드": {
+      "ok": true,
+      "count": 5,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
     },
     "고용24": {
       "ok": true,
@@ -36,7 +48,7 @@
       "errors": [],
       "mode": "검색"
     },
-    "원티드": {
+    "인크루트": {
       "ok": true,
       "count": 2,
       "successful_queries": 8,
@@ -47,16 +59,25 @@
     },
     "점핏": {
       "ok": true,
-      "count": 7,
+      "count": 9,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
       "errors": [],
       "mode": "검색"
     },
-    "인크루트": {
+    "링크드인": {
       "ok": true,
-      "count": 1,
+      "count": 0,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "알바몬": {
+      "ok": true,
+      "count": 7,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
@@ -72,34 +93,16 @@
       "errors": [],
       "mode": "검색"
     },
-    "로켓펀치": {
-      "ok": true,
-      "count": 0,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "알바몬": {
-      "ok": true,
-      "count": 6,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
     "알바천국": {
       "ok": true,
-      "count": 6,
+      "count": 2,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
       "errors": [],
       "mode": "검색"
     },
-    "링크드인": {
+    "로켓펀치": {
       "ok": true,
       "count": 0,
       "successful_queries": 8,
@@ -109,8 +112,45 @@
       "mode": "검색"
     }
   },
-  "count": 447,
+  "count": 451,
   "jobs": [
+    {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55284697",
+      "title": "펌웨어(Firmware) 개발자 모집(D-30)",
+      "company": "(주)에스씨에스",
+      "body": "펌웨어(Firmware) 개발자 모집 스크랩 ~ 11/13(금) 입사지원 세종특별자치시 경력 5~15년 대졸↑ 정규직 RTOS , S/W , AI(인공지능) , C++ , C언어 외 등록일 26/10/14",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55284697",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "세종"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "employmentTypes": [
+        "정규직"
+      ],
+      "career": "경력 5~15년",
+      "education": "대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-10-14",
+      "dateSource": "등록/수정일",
+      "deadline": "2026-10-14",
+      "deadlineSource": "지원마감일",
+      "deadlineCheckedAt": "2026-10-14",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-10-14",
+      "lastSeen": "2026-10-14",
+      "lastChecked": "2026-10-14"
+    },
     {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50163304",
       "title": "자율주행SW개발 엔지니어 세종",
@@ -297,6 +337,117 @@
       "lastChecked": "2026-10-14"
     },
     {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55282821",
+      "title": "[휴머노이드·협동로봇 상장사] 웹개발 세종(D-15)",
+      "company": "(주)링크앤스카우트",
+      "body": "[휴머노이드·협동로봇 상장사] 웹개발 세종",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55282821",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "세종"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "경력 5~12년",
+      "education": "",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-10-14",
+      "deadlineSource": "지원마감일",
+      "deadlineCheckedAt": "2026-10-14",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-10-14",
+      "lastSeen": "2026-10-14",
+      "lastChecked": "2026-10-14"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50164639",
+      "title": "[대전]신입 JAVA 웹 프로그램 개발자 채용",
+      "company": "㈜한국이디에스",
+      "body": "신입 지원 가능 스크랩 [대전]신입 JAVA 웹 프로그램 개발자 채용 ㈜한국이디에스 대전 서구 솔루션·SI·CRM·ERP, 웹개발자 즉시 지원 신입",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50164639",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "신입",
+      "education": "대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-10-30",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-10-14",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-10-14",
+      "lastSeen": "2026-10-14",
+      "lastChecked": "2026-10-14"
+    },
+    {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55284082",
+      "title": "[대전]신입 JAVA 웹 프로그래머 채용(D-47)",
+      "company": "(주)한국이디에스",
+      "body": "[대전]신입 JAVA 웹 프로그래머 채용",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55284082",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "신입",
+      "education": "",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-10-14",
+      "deadlineSource": "지원마감일",
+      "deadlineCheckedAt": "2026-10-14",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-10-14",
+      "lastSeen": "2026-10-14",
+      "lastChecked": "2026-10-14"
+    },
+    {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50163308",
       "title": "Web 백엔드 개발 세종",
       "company": "휴머노이드·협동로봇 상장사",
@@ -322,7 +473,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-10-14",
+      "deadline": "2026-11-14",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-14",
       "status": "active",
@@ -520,9 +671,9 @@
     },
     {
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55269878",
-      "title": "[누구나 지원가능] 배우며 함께 성장할 프로젝트 매니저 보조",
+      "title": "[누구나 지원가능] 배우며 함께 성장할 프로젝트 매니저 보조(D-14)",
       "company": "(주)데이터메이커",
-      "body": "[누구나 지원가능] 배우며 함께 성장할 프로젝트 매니저 보조 스크랩 진행예정 접수예정 대전 유성구 경력무관 학력무관 기간제·계약직 250 만원 PM(프로젝트매니저) , 데이터라벨링 , 사무보조 , 소프트웨어개발 등록일 26/10/13",
+      "body": "[누구나 지원가능] 배우며 함께 성장할 프로젝트 매니저 보조 스크랩 ~ 10/28(수) 홈페이지 지원 대전 유성구 경력무관 학력무관 기간제·계약직 250 만원 PM(프로젝트매니저) , 데이터라벨링 , 사무보조 , 소프트웨어개발 등록일 26/10/13",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55269878",
       "source": "사람인",
       "sources": [
@@ -2655,7 +2806,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-10-14",
+      "deadline": "2026-11-11",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-14",
       "status": "active",
@@ -7486,10 +7637,10 @@
       "deadline": "2026-10-21",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-10-14",
-      "status": "active",
+      "status": "closed",
       "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "closedAt": "2026-10-14",
+      "closeReason": "원문 마감 표시",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-10-14",
       "lastChecked": "2026-10-14"
@@ -7937,7 +8088,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-10-14",
+      "deadline": "2027-01-11",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-14",
       "status": "active",
