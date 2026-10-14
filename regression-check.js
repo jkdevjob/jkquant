@@ -10652,7 +10652,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
     /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
     && /plan-session-engine\.js\?v=2/.test(plan)
     && /plan-session-engine\.js\?v=2/.test(idx)
-    && /v1\.43\.36/.test(plan) && /v3\.110\.36/.test(idx)
+    && /v1\.43\.36/.test(plan) && /v3\.110\.37/.test(idx)
     && /asset-plan-v2/.test(plan));
 }
 
