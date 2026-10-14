@@ -516,7 +516,7 @@ async function runBtc(env,now){
         "KRW-BTC · 메인 "+mainVariant+" · "+reasonKo(t.exit.reason),
         "매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),
         "매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),
-        "모의 순손익 "+signed(net)+" · 왕복 비용 0.14% 반영"
+        "전략 손익 "+signed(net)+" · 왕복 비용 0.14% 반영"
       ]
     });
   }
@@ -554,7 +554,7 @@ async function runSoxl(env,now){
         "SOXL · 메인 "+mainVariant+" · "+reasonKo(t.exit.reason),
         "매수 "+t.entry.time+" ET · "+money(t.entryPrice,"USD"),
         "매도 "+t.exit.bar.time+" ET · "+money(t.exit.price,"USD"),
-        "모의 순손익 "+signed(net)+" · 왕복 마찰 0.20% 반영"
+        "전략 손익 "+signed(net)+" · 왕복 마찰 0.20% 반영"
       ]
     });
   }
@@ -609,7 +609,7 @@ async function runCloseSummaries(env,now){
         await writePaper(env,paperLedger("crypto",date,t,{currency:"KRW",timezone:"Asia/Seoul",version:old.strategyVersion,mainVariant:vp.name,params:old.strategyParams||vp.params,friction:.14,decision:old.decision}));
         if(t.exit)await alert(env,{strategy:"crypto",stage:"sell",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+vp.name+":"+date+":"+t.signal.time+":sell:"+t.exit.bar.time,
           date,time:t.exit.bar.time,eventAt:new Date(t.exit.bar.ms+FIVE).toISOString(),
-          lines:["KRW-BTC · 메인 "+vp.name+" · "+reasonKo(t.exit.reason),"매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),"매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),"모의 순손익 "+signed(pct(t.exit.price,t.entryPrice)-.14)+" · 왕복 비용 0.14% 반영"]});
+          lines:["KRW-BTC · 메인 "+vp.name+" · "+reasonKo(t.exit.reason),"매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),"매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),"전략 손익 "+signed(pct(t.exit.price,t.entryPrice)-.14)+" · 왕복 비용 0.14% 반영"]});
       }
     }
   }
