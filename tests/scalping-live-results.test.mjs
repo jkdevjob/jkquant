@@ -75,11 +75,11 @@ test('owner endpoint reads only immutable /events and /paper; isolates source fa
  }finally{globalThis.fetch=old;Date.now=oldNow;}
 });
 const ui=fs.readFileSync(new URL('../scalping.html',import.meta.url),'utf8');
-const block=ui.slice(ui.indexOf('const DAILY_RESULTS_TTL_MS='),ui.indexOf('function renderDailyStrategyResultsPayload'));
+const block=ui.slice(ui.indexOf('const DAILY_RESULTS_TTL_MS='),ui.indexOf('let GPT_MORNING_AT='))+ui.slice(ui.indexOf('let DAILY_RESULTS_PAYLOAD='),ui.indexOf('function renderDailyStrategyResultsPayload'));
 function browser(source=block){
  const intervals=[],listeners={},renders=[];
  const ctx={me:{uid:'owner',getIdToken:async()=>'token'},SCALPING_AUTH_EPOCH:1,DAILY_RESULT_CACHE:{opening:{old:true}},document:{hidden:false,addEventListener:(k,f)=>listeners[k]=f},window:{addEventListener:(k,f)=>listeners[k]=f},AbortController,Date,Intl,Map,
- setInterval:(f,ms)=>{intervals.push({f,ms});return intervals.length;},clearInterval:()=>{},setTimeout:()=>1,clearTimeout:()=>{},loadDailyStrategyResults:async()=>{},renderDailyStrategyResultsPayload:j=>renders.push(j),fetch:async()=>Response.json({ok:true,kstDate:'2026-10-14',strategies:[]})};
+ setInterval:(f,ms)=>{intervals.push({f,ms});return intervals.length;},clearInterval:()=>{},setTimeout:()=>1,clearTimeout:()=>{},loadDailyStrategyResults:async()=>{},loadGptMorningReport:async()=>{},stopGptMorningReport:()=>{},renderDailyStrategyResultsPayload:j=>renders.push(j),fetch:async()=>Response.json({ok:true,kstDate:'2026-10-14',strategies:[]})};
  vm.createContext(ctx);vm.runInContext(source,ctx);return {ctx,intervals,listeners,renders,run:s=>vm.runInContext(s,ctx)};
 }
 test('merge overlays only same-day current, never mutates previous/history',()=>{

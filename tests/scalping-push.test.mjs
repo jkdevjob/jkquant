@@ -9,6 +9,7 @@ function fakeStore(){
     async get(k){return state.get(k)},
     async put(k,v){state.set(k,v)},
     async delete(k){state.delete(k)},
+    async getAlarm(){return null},
     async list({prefix}){return new Map([...state].filter(([k])=>k.startsWith(prefix)))}
   };
   const worker=new PresaleAlertStore({storage},{MONITOR_KEY:"test-monitor-key"});
@@ -92,8 +93,8 @@ test("Cloudflare 무료 Cron 한 개로 IPO 08:10 KST와 기존 :07/:37 수집�
     return paths;
   }
   assert.deepEqual(run("2026-10-07T23:10:00Z"),["/check-ipo"]);
-  assert.deepEqual(run("2026-10-07T23:07:00Z"),["/check","/check-jobs"]);
-  assert.deepEqual(run("2026-10-07T23:37:00Z"),["/check","/check-jobs"]);
+  assert.deepEqual(run("2026-10-07T23:07:00Z"),["/gpt-morning-arm","/check","/check-jobs"]);
+  assert.deepEqual(run("2026-10-07T23:37:00Z"),["/gpt-morning-arm","/check","/check-jobs"]);
   assert.deepEqual(run("2026-10-08T00:10:00Z"),[]);
 });
 
