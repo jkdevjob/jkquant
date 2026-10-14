@@ -25,7 +25,6 @@ main{padding:0 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(--di
 table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}table.board td,table.board th{padding:7px 6px}.tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);color:var(--dim);margin-left:6px}
 .sec>summary{cursor:pointer;list-style:none}.sec>summary::-webkit-details-marker{display:none}.sec>summary h3:before{content:"▸ ";color:var(--faint)}.sec[open]>summary h3:before{content:"▾ "}
 .ops .why,.sec .why{margin:8px 0;padding:8px 10px;border-radius:8px;background:var(--surf2);font-weight:700;font-size:13px;white-space:normal}
-.status{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--dim);background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:10px}
 table.doc td{padding:6px 6px}
 .loading{padding:40px;text-align:center;color:var(--dim)}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:12px}
 @media(max-width:560px){.wrap{padding:0 11px}.hero h2{font-size:20px}.kpi .v{font-size:17px}}
@@ -62,7 +61,6 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
 </script>
 <link rel="stylesheet" href="/jk-mobile.css?v=1.0.1">
 
-<script src="/claude-push-client.js?v=1.0.1" defer></script>
 <script src="/claude-tenbagger.js?v=1.0.0" defer></script>
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
@@ -80,7 +78,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.17.4</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.17.5</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -425,18 +423,6 @@ function tabPage(tab,T,gd,et,wl){
   if(tab==="crypto"||tab==="soxl")html+=sec("⑧ 실행 품질","<p class='note'>"+(tab==="crypto"?"주문 없이 업비트 60분봉으로 기록합니다: 돌파한 봉에서 max(봉 시가, 어제 고가)+0.05% 에 매수, 다음 날 09:00 직전 봉 종가에 매도, 손절은 매수가 −5%(+0.1% 미끄러짐), 왕복 비용 0.14%. 같은 봉 안에서 손절선과 종가 순서를 모르면 손절로 봅니다(보수적). 실주문 전에는 실제 체결 차이를 따로 재야 합니다.":"주문 없이 일봉으로 기록합니다: 마감 확정 종가로 판단 → 다음 미국장 시가 매수 · 매도(같은 종가로 판단하고 체결하지 않음), 왕복 비용 0.20%. 미국장 결과는 한국시각 다음 날 아침에 확정됩니다.")+"</p>",false);
   return html;
 }
-// 상단 상태 줄 — 데이터 갱신 시각 · 다음 이벤트 · 점검 필요
-function statusBar(){
-  if(!J)return "";
-  var now=new Date(),k=new Date(now.getTime()+9*3600e3),hm=k.getUTCHours()*100+k.getUTCMinutes(),dow=k.getUTCDay();
-  var ev=[[856,"① 08:56 예상갭 판단"],[859,"① 08:59 매수"],[905,"③④ 09:05 코인·미국 결과"],[1521,"② 15:21 ETF 판단 · ① 매도"],[1540,"①② 15:40 결과"],[1840,"18:40 장부·검증 기록"],[1925,"19:25 클로드 점검"]];
-  ev.unshift([520,"④ 05:20 SOXL 미국장 마감 알림(겨울 06:20)"]);
-  var nx=ev.filter(function(e){return e[0]>hm})[0];var nextTxt=nx?nx[1]:"내일 08:56 ① 판단";
-  if(dow===0||dow===6)nextTxt="(주말) 09:05 코인 결과 · 월요일 08:56";
-  var iss=(((J.lab||{}).review||{}).today||{}).issues||[];
-  return "<div class='status'><span>📊 기록 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</span><span>⏱ 장중 "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"—")+"</span><span>▶ 다음: "+esc(nextTxt)+"</span>"+(iss.length?"<span class='loss'>⚠ 점검 "+iss.length+"건</span>":"<span class='win'>✔ 점검 이상 없음</span>")+
-    "<button class='ghostbtn' style='padding:3px 9px;font-size:11.5px' onclick='pushToggle()'>"+(PUSH.state==="on"?"🔔 매매 알림 켜짐":PUSH.state==="busy"?"🔔 설정 중…":"🔕 매매 알림 켜기")+"</button></div>";
-}
 var J=null,TAB="today";
 // 직접 링크(?tab=tenbagger · #tenbagger) — 연구 알림을 누르면 그 탭으로 연다
 (function(){try{var q=new URLSearchParams(location.search).get("tab")||location.hash.slice(1);if(/^(today|opening|daytrading|crypto|soxl|duel|tenbagger)$/.test(q))TAB=q}catch(e){}})();
@@ -448,19 +434,6 @@ async function loadTbf(){
   catch(e){TBF={ok:false,error:String(e&&e.message||e)}}
   finally{TBF_BUSY=false}
   if(TAB==="tenbagger")render();
-}
-// 🔔 매수·매도 웹 알림 — 서비스워커(/claude-sw.js)로 받는다. 보내는 쪽은 Worker 가 5분마다 실시간 자료로 새 매수·매도를 찾아 보낸다.
-var PUSH={state:"off"};
-// 켜기/끄기는 claude-push-client.js 하나로 한다(설정 → 알림 화면도 같은 것을 쓴다)
-async function pushInit(){PUSH.state=window.ClaudePush?await ClaudePush.state():"unsupported";if(PUSH.state==="unsupported")PUSH.state="off"}
-async function pushToggle(){
-  if(!window.ClaudePush)return alert("알림 모듈을 못 불러왔습니다 — 새로고침해 주세요.");
-  var tok=function(){return ME?ME.getIdToken():Promise.resolve("")};
-  try{
-    if(PUSH.state==="on"){PUSH.state=await ClaudePush.disable(tok);render();return}
-    PUSH.state="busy";render();
-    PUSH.state=await ClaudePush.enable(tok);render();
-  }catch(e){PUSH.state=await ClaudePush.state().catch(function(){return "off"});if(PUSH.state!=="on")PUSH.state="off";render();alert("알림 켜기 실패: "+(e.message||e))}
 }
 function showTab(t){TAB=t;document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});render()}
 // 클로드 vs GPT — 같은 날짜 구간·같은 달력
@@ -584,7 +557,7 @@ function render(){
   }else{                                       // 옛 '🎯 전체 계좌' 탭은 2026-10-14 사용자 요청으로 지웠다 — 모르는 탭은 오늘 탭으로
     TAB="today";html+=todayPage(lab);
   }
-  body.innerHTML=statusBar()+html;
+  body.innerHTML=html;                         // 상단 상태 줄(기록·장중·다음·점검 수·🔔 버튼)은 2026-10-14 사용자 요청으로 지웠다 — 점검은 탭마다 ⑦, 알림 켜기/끄기는 설정 → 알림
   stackTables(body);
 }
 var LIVE=null;
@@ -676,7 +649,6 @@ async function onUser(user){{
     document.getElementById("gate").style.display="none";
     if(ub)ub.innerHTML=(user.photoURL?"<img src=\""+esc(user.photoURL)+"\" alt=\"\">":"")+"<span>"+esc(user.displayName||user.email||"")+"</span> · <button class=\"lo\" onclick=\"doLogout()\">로그아웃</button>";
     load();
-    pushInit().then(function(){if(J)render()});
   }
 }
 if(window.fb)boot();else window.addEventListener("fb-ready",boot);

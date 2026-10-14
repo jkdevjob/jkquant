@@ -11318,12 +11318,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        rec(ev('close:crypto'),'crypto').v===1&&rec(ev('close:soxl'),'crypto')===null&&rec(null,'crypto')===null
        &&/if\(claudeCloseRecord\(await readLedger\(env,date,"claude"\),strategy\)\)return true;/.test(ow)
        &&/await claudeAppend\(env,date,"close:"\+strategy,"close",c\.result,ms\);/.test(ow)&&!/composeDay|composeOverview/.test(tg));
-    ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 상태 줄 + 1분 자동 갱신',
+    ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 1분 자동 갱신 · 상단 상태 줄 없음(2026-10-14 삭제)',
        /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/opsBoard\(tab\)\+docCard\(tab\)\+planCard\(tab,T,wl\)\+buyCard\(tab\)\+sellCard\(tab\)\+liveCard\(tab\)/.test(scl2)
        &&/html\+=shadowCard\(tab\)\+reviewCard\(tab\)\+paperCard\(tab\);/.test(scl2)
        &&['① 전략 · 종목 선정 규칙','② 오늘 종목 선정 · 감시','③ 매수 타이밍','④ 매도 · 손절 · 리스크','⑤ 오늘 장중 모의 매매이력','⑥ 전략 경쟁 · 자동 개선','⑦ 누적 모의 매매이력','⑧ 실행 품질'].every(x=>scl2.includes(x))
        &&/setInterval\(function\(\)\{if\(!document\.hidden&&ME\)loadLive\(\)\},60000\)/.test(scl2)
-       &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=statusBar\(\)\+html;/.test(scl2)
+       &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=html;/.test(scl2)&&!/statusBar/.test(scl2)
        &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
@@ -12056,7 +12056,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
        &&/안정 "\+pct\(r\.stable,3\)\+" × 빈도 "\+num\(r\.freqFactor,2\)/.test(ch),(pyF.stderr||'')+(pyF.stdout||'').slice(0,300));
   }
   ok('단타(클로드) 휴대폰 기본: 비교 표는 표 그대로(넘치는 표만 촘촘하게 · 첫 칸 고정, 경쟁표는 순위·이름 고정) · 개선 내역에 전략 표기 · 전략 코드는 이름으로',
-     /\n  body\.innerHTML=statusBar\(\)\+html;\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;\n\s*t\.classList\.add\("fit"\);/.test(ch)
+     /\n  body\.innerHTML=html;[^\n]*\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;\n\s*t\.classList\.add\("fit"\);/.test(ch)
      &&/@media\(max-width:760px\)\{table\.fit\{min-width:0!important;font-size:11px\}/.test(ch)&&/table\.fit td:first-child,table\.fit th:first-child\{position:sticky;left:0;/.test(ch)
      &&/table\.fit\.arena td\.nm,table\.fit\.arena th:nth-child\(2\)\{position:sticky;left:20px;/.test(ch)&&!/table\.stack thead\{display:none\}/.test(ch)&&/window\.addEventListener\("resize"/.test(ch)
      &&/<span class='tag' style='margin:0 6px 0 0'>"\+esc\(ARENA_TAB\[x\.tab\]/.test(ch)&&/"<span class='sub'>"\+arenaReason\(x\.reason,names\)\+"<\/span>/.test(ch));
@@ -12072,13 +12072,13 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   }
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
-    ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만',
+    ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만 · 켜기/끄기는 설정 → 알림 한 곳(연구 화면 상단 상태 줄과 🔔 버튼은 2026-10-14 사용자 요청으로 삭제)',
        JSON.parse(wr).triggers.crons.join()==="5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
        &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(fs.readFileSync(__d+'/claude-push-client.js','utf8'))
-       &&/<script src="\/claude-push-client\.js\?v=[\d.]+" defer><\/script>/.test(ch)&&/ClaudePush\.enable\(tok\)/.test(ch)
-       &&/Content-Encoding: aes128gcm/.test(pu)&&/onclick='pushToggle\(\)'/.test(ch)&&!/localStorage|sessionStorage/.test(sw+pu));
+       &&!/claude-push-client\.js|ClaudePush|pushToggle|pushInit|function statusBar|statusBar\(\)|class='status'|▶ 다음:|⚠ 점검 "\+/.test(ch)
+       &&/Content-Encoding: aes128gcm/.test(pu)&&!/localStorage|sessionStorage/.test(sw+pu));
   }
   { const og2=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8'),ks=fs.readFileSync(__d+'/functions/api/kis.js','utf8');
     const bb=ks.slice(ks.indexOf('if (op === "buyable") {'),ks.indexOf('if (op === "balance") {'));
