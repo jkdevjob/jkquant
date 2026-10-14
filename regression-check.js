@@ -1930,38 +1930,34 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('진단이 멈춘 자리를 보여준다', /멈춘 자리 '\+authStep/.test(extractFn(idx,'function authDiag()')));
 }
 
-console.log('[36] 분석 머리 — 여섯 탭 모두 손익금·손익률·원화');
+console.log('[36] 분석 머리 — 여섯 탭 모두 달러·원화 병기 손익금과 손익률, 회색 중복 줄 없음');
 {
-  // 탭마다 id 접두사가 달라 한 탭만 고치면 티가 안 난다 — 여섯 개를 한 번에 본다
-  const TRIO=[
-    ['무매',  'a_realized',   'a_realized_pct',   'a_realized_krw'],
-    ['VR',    'vc_profit',    'vc_pct',           'vc_profit_krw'],
-    ['이평',  'ana_realized', 'ana_realized_pct', 'ana_realized_krw'],
-    ['섀넌',  'anaI_realized','anaI_realized_pct','anaI_realized_krw'],
-    ['적립식','anaD_pnl',     'anaD_pnlpct',      'anaD_pnl_krw'],
-    ['ASAP',  'anaA_pnl',     'anaA_pnlpct',      'anaA_pnl_krw'],
+  const DUOS=[
+    ['무매', 'a_realized', 'a_realized_pct', 'a_realized_krw'],
+    ['VR', 'vc_profit', 'vc_pct', 'vc_profit_krw'],
+    ['이평', 'ana_realized', 'ana_realized_pct', 'ana_realized_krw'],
+    ['섀넌', 'anaI_realized', 'anaI_realized_pct', 'anaI_realized_krw'],
+    ['적립식', 'anaD_pnl', 'anaD_pnlpct', 'anaD_pnl_krw'],
+    ['ASAP', 'anaA_pnl', 'anaA_pnlpct', 'anaA_pnl_krw'],
   ];
-  TRIO.forEach(([nm,amt,pct,krw])=>{
+  DUOS.forEach(([nm,amt,pct,krw])=>{
     const has=id=>idx.includes('id="'+id+'"');
-    ok(nm+' 분석에 손익금·손익률·원화가 다 있다',
-       has(amt)&&has(pct)&&has(krw),
-       [amt,pct,krw].filter(id=>!has(id)).join(', ')+' 없음');
-  });
-  // 손익률은 금액 바로 옆 같은 줄에 온다
-  TRIO.forEach(([nm,amt,pct])=>{
+    ok(nm+' 분석에 손익금과 손익률은 유지, 중복 회색 원화줄은 제거',
+       has(amt)&&has(pct)&&!has(krw)&&!idx.includes("'"+krw+"'"),
+       [amt,pct,krw].map(id=>id+':'+has(id)).join(', '));
     const i=idx.indexOf('id="'+amt+'"'), j=idx.indexOf('id="'+pct+'"');
-    ok(nm+' 손익률이 금액 옆 같은 줄', i>0 && j>i && (j-i)<300, '거리 '+(j-i));
+    ok(nm+' 손익률이 금액 옆 같은 줄',i>0&&j>i&&(j-i)<300,'거리 '+(j-i));
   });
   const sp=extractFn(idx,'function setRealizedPct(id, v, base)');
-  ok('손익률 헬퍼 존재', !!sp);
-  ok('원금이 없으면 나누지 않는다', /if\(!\(base>0\)\)\{[\s\S]*?'—'/.test(sp));
-  ok('금액과 색을 맞춘다', /var\(--buy\)/.test(sp) && /var\(--sell\)/.test(sp));
-  // 원화는 달러 세션에서만 — 원화 세션에 원화를 또 쓰면 같은 수가 두 번 나온다
-  const krwLines=(idx.match(/\$\('(?:a_realized_krw|ana_realized_krw|anaI_realized_krw)'\)\.textContent=isKrwSt\(st\)\?'':/g)||[]).length;
-  ok('무매·이평·섀넌이 같은 원화 규약', krwLines===3, krwLines+'곳');
+  ok('손익률 헬퍼 존재',!!sp);
+  ok('원금이 없으면 나누지 않는다',/if\(!\(base>0\)\)\{[\s\S]*?'—'/.test(sp));
+  ok('금액과 색을 맞춘다',/var\(--buy\)/.test(sp)&&/var\(--sell\)/.test(sp));
+  ok('달러 금액은 공용 JKMoney 원화 병기를 유지한다',
+     idx.includes('window.JKMoney.usdText(v)') && idx.includes('/jk-money.js?v=1.0.0'));
   const va=extractFn(idx,'function renderVrAnal()');
-  ok('VR도 같은 원화 규약', /vc_profit_krw[\s\S]{0,80}isKrwSt\(st\)/.test(va) && /won\(profit\)/.test(va));
-  ok('VR 손익률에도 색이 붙는다', /\$\('vc_pct'\)\.style\.color=/.test(va));
+  ok('VR 분석 손익률 유지',/\$\('vc_pct'\)\.style\.color=/.test(va));
+  const generic=extractFn(idx,'function _analPaint(pre,{inv,evalNow,cash,avg,qty,cnt,cashLbl,rows,cur})');
+  ok('적립·ASAP 분석도 회색 중복 원화를 다시 쓰지 않는다',generic&&!generic.includes("pre+'_pnl_krw'"));
 }
 
 console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
