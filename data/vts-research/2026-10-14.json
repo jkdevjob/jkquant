@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-14T14:28:12.649874+09:00",
+  "mode": "read-only-vts-execution-research",
+  "from": "2026-09-25",
+  "to": "2026-10-14",
+  "archiveDays": 14,
+  "strategies": [
+    {
+      "strategy": "opening",
+      "days": 14,
+      "reports": 14,
+      "internalTrades": 22,
+      "kisOrders": 28,
+      "completeMatches": 4,
+      "buyMatches": 6,
+      "sellMatches": 4,
+      "avgEntrySlippageCostPct": -0.12204731530452428,
+      "avgExitSlippageCostPct": 0.03692270460884106,
+      "avgRoundTripSlippageCostPct": 0.12476538978968832,
+      "avgInternalPnlPct": -1.1250597397753324,
+      "avgVtsGrossPnlPct": -0.4714181353214969,
+      "avgVtsNetPnlPct": -0.9248270242397778,
+      "avgBrokerCostRatePct": 0.45340888891827963,
+      "avgObservedExecutionDragPct": 0.578174278707968,
+      "frictionGapVsInternal025Pct": 0.328174278707968,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 4,
+      "totalBrokerEstimatedCostsWon": 34230.0,
+      "avgBrokerEstimatedCostsWon": 8557.5,
+      "avgEntryOrderLagSecApprox": 126.0,
+      "avgExitOrderLagSecApprox": 130.75,
+      "avgBrokerNotifyLagSec": 0.0,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    },
+    {
+      "strategy": "daytrading",
+      "days": 7,
+      "reports": 7,
+      "internalTrades": 15,
+      "kisOrders": 9,
+      "completeMatches": 0,
+      "buyMatches": 0,
+      "sellMatches": 0,
+      "avgEntrySlippageCostPct": null,
+      "avgExitSlippageCostPct": null,
+      "avgRoundTripSlippageCostPct": null,
+      "avgInternalPnlPct": null,
+      "avgVtsGrossPnlPct": null,
+      "avgVtsNetPnlPct": null,
+      "avgBrokerCostRatePct": null,
+      "avgObservedExecutionDragPct": null,
+      "frictionGapVsInternal025Pct": null,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 0,
+      "totalBrokerEstimatedCostsWon": 0,
+      "avgBrokerEstimatedCostsWon": null,
+      "avgEntryOrderLagSecApprox": null,
+      "avgExitOrderLagSecApprox": null,
+      "avgBrokerNotifyLagSec": null,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    }
+  ],
+  "latest": {
+    "date": "2026-10-14",
+    "reports": [
+      {
+        "strategy": "opening",
+        "internalTrades": 1,
+        "kisOrders": 4,
+        "matched": 1,
+        "matches": [
+          {
+            "code": "078600",
+            "name": "대주전자재료",
+            "internalEntryTime": 914,
+            "internalEntryPrice": 116300,
+            "internalExitTime": 919,
+            "internalExitPrice": 114800,
+            "internalReason": "손절",
+            "internalPnl": -1.9496904557179733,
+            "vtsBuy": {
+              "orderNo": "0000009892",
+              "orderTime": "091603",
+              "notifyTime": "091603",
+              "orderQty": 17,
+              "fillQty": 17,
+              "fillPrice": 116705,
+              "fillAmount": 1984000,
+              "remainingQty": 0,
+              "rejectedQty": 0,
+              "canceled": false,
+              "estimatedCosts": 4469
+            },
+            "vtsSell": {
+              "orderNo": "0000011449",
+              "orderTime": "092110",
+              "notifyTime": "092110",
+              "orderQty": 17,
+              "fillQty": 17,
+              "fillPrice": 115267,
+              "fillAmount": 1959550,
+              "remainingQty": 0,
+              "rejectedQty": 0,
+              "canceled": false,
+              "estimatedCosts": 4469
+            },
+            "entryOrderLagSecApprox": 123,
+            "exitOrderLagSecApprox": 130,
+            "entryBrokerNotifyLagSec": 0,
+            "exitBrokerNotifyLagSec": 0,
+            "entrySlippageCostPct": 0.34823731728288454,
+            "exitSlippageCostPct": -0.4051463124745136,
+            "vtsGrossPnlPct": -1.2321665738400212,
+            "vtsNetPnlPct": -1.6826740121523096,
+            "vtsBrokerEstimatedCosts": 8938,
+            "vtsBrokerCostRatePct": 0.45050743831228557,
+            "observedExecutionDragPct": 0.3935984431206565,
+            "matched": true
+          }
+        ],
+        "unmatched": [
+          {
+            "code": "222040",
+            "name": "코스맥스엔비티",
+            "side": "매수",
+            "orderTime": "085802",
+            "orderQty": 157,
+            "fillQty": 157,
+            "fillPrice": 5420,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "214150",
+            "name": "클래시스",
+            "side": "매수",
+            "orderTime": "085800",
+            "orderQty": 79,
+            "fillQty": 79,
+            "fillPrice": 27650,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          }
+        ]
+      }
+    ]
+  }
+}
