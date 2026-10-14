@@ -13,5 +13,32 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
+      - name: Smoke-check Cloudflare production plan rules
+        run: |
+          node - <<'JS'
+          const checks=[
+            ['plan-session-engine.js?v=2','VERSION:2,ORDER_SIZING_BASIS', 'engine'],
+            ['plan','v1.43.36','plan'],
+            ['','v3.110.36','home']
+          ];
+          (async()=>{
+            for(let attempt=1;attempt<=6;attempt++){
+              let errs=[];
+              for(const [p,needle,name] of checks){
+                const u='https://jkquant.pages.dev/'+p+(p.includes('?')?'&':'?')+'smoke='+Date.now();
+                try{
+                  const r=await fetch(u,{signal:AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});
+                  const text=await r.text();
+                  const pass=r.ok&&text.includes(needle);
+                  console.log(JSON.stringify({attempt,name,url:u,status:r.status,found:pass,bytes:text.length}));
+                  if(!pass)errs.push(name);
+                }catch(e){errs.push(name);console.log(name+' '+String(e));}
+              }
+              if(!errs.length){console.log('PRODUCTION_SMOKE_PASS all 3');return;}
+              if(attempt<6)await new Promise(res=>setTimeout(res,12000));
+              else throw Error('PRODUCTION_SMOKE_FAIL '+errs.join(','));
+            }
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS
       - name: Run research on actual quote pathway
         run: node scripts/plan5-exante-grid.js
