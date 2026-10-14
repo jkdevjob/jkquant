@@ -1,0 +1,47 @@
+name: 연구 R11 — 헤드라인 · 분봉 쌓기 (매매에 쓰지 않음)
+
+# 사용자 요청(2026-10-15): 속보를 투자에 — 바로 매매하지 않고 공식 RSS 헤드라인과 시각을 먼저 쌓고, 뒤에 5 · 10 · 30분 가격 경로를 잰다.
+# 헤드라인은 제목 · 링크 · 발행 시각만(본문 저장 안 함). 분봉은 끝난 하루만 한 번 쓴다. 저장: scalping-data data/news · data/minute.
+on:
+  schedule:
+    - cron: "7,37 * * * *"   # 30분마다
+  workflow_dispatch:
+
+permissions:
+  contents: write
+concurrency:
+  group: news-collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: 헤드라인 · 분봉 수집
+        run: python -I .app/scripts/news_collect.py --data data
+      - name: 저장 (scalping-data · 새 것이 있을 때만)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/news data/minute 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "data: news headlines · minute bars [skip ci]"
+            bash .app/scripts/push-scalping-data.sh
+          else
+            echo "새 헤드라인 · 분봉 없음"
+          fi
