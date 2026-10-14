@@ -279,6 +279,22 @@
       '.jk-page-title{color:#f3f6ff!important}'+
       '.jk-page-version{margin-left:7px!important;color:#7783a8!important;font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;vertical-align:middle!important;letter-spacing:0!important}'+
       '@media(max-width:768px){.jk-page-top{min-height:64px!important;padding:10px 0 9px!important;gap:10px!important}.jk-page-version{font-size:10px!important;margin-left:5px!important}}'+
+      /* Shared asset-plan header: one content width, title style and fixed row height. */
+      'header.jk-site-header{box-sizing:border-box!important;width:100%!important;padding:0!important;margin:0!important;border-bottom:1px solid #2a3354!important;background:rgba(15,19,32,.96)!important}'+
+      'html.plan-hydrating body>header.jk-site-header{visibility:visible!important}'+
+      'header.jk-site-header>.wrap{box-sizing:border-box!important;width:100%!important;max-width:var(--jk-desktop-width)!important;margin:0 auto!important;padding-top:0!important;padding-bottom:0!important}'+
+      'header.jk-site-header .jk-page-top{box-sizing:border-box!important;width:100%!important;height:76px!important;min-height:76px!important;margin:0!important;padding:10px 0!important;border:0!important;align-items:center!important}'+
+      'header.jk-site-header .jk-page-heading{margin:0!important;font-size:22px!important;line-height:1.2!important;letter-spacing:-.035em!important;white-space:nowrap!important;overflow-wrap:normal!important;word-break:keep-all!important}'+
+      'header.jk-site-header .jk-page-version{display:inline-block!important;margin-left:7px!important;font-size:11px!important;font-weight:600!important;white-space:nowrap!important}'+
+      'header.jk-site-header .jk-page-brand{min-width:0!important;flex-shrink:1!important;align-items:flex-start!important;justify-content:center!important;gap:3px!important}'+
+      'header.jk-site-header .hright{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:9px!important;min-width:0!important;flex-shrink:1!important}'+
+      'header.jk-site-header .jkmenu{flex:0 0 auto!important}'+
+      'header.jk-site-header .jkmenu-btn{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;border-radius:11px!important}'+
+      'header.jk-site-header .userbadge{min-width:0!important;max-width:100%!important;flex-wrap:nowrap!important;gap:6px!important;white-space:nowrap!important}'+
+      'header.jk-site-header .userbadge>span{overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;max-width:145px!important}'+
+      'header.jk-site-header .userbadge .lo{white-space:nowrap!important;flex:none!important}'+
+      '@media(max-width:768px){header.jk-site-header .jk-page-top{height:70px!important;min-height:70px!important;padding:8px 0!important;gap:10px!important}header.jk-site-header .jk-page-heading{font-size:21px!important}header.jk-site-header .userbadge>span{max-width:75px!important}header.jk-site-header .jkmenu-btn{width:44px!important;height:44px!important}}'+
+      '@media(max-width:390px){header.jk-site-header .jk-page-heading{font-size:19px!important}header.jk-site-header .jk-page-version{font-size:10px!important;margin-left:5px!important}header.jk-site-header .userbadge img{display:none!important}header.jk-site-header .userbadge>span{max-width:42px!important}header.jk-site-header .hright{gap:6px!important}}'+
       '@media(max-width:600px){.jkmenu-pop{position:fixed!important;right:12px!important;top:68px!important;width:min(260px,calc(100vw - 24px))!important;max-height:calc(100dvh - 84px)!important}.jkmenu-pop a{min-height:42px!important;font-size:14px!important}#authgate .gbox,#gate .gbox,#jkgate .jb{width:calc(100% - 28px)!important;padding:24px 18px!important}}';
     (document.head||document.documentElement).appendChild(s);
   }
@@ -347,9 +363,21 @@
     if(!document.querySelector)return;
     var label=HEADER_LABELS[routeKey()];if(!label)return;
     var row=document.querySelector('header .htop,header .top,body > .wrap > .top,body > .wrap > .htop');if(!row)return;
+    /* Plan and backtest previously rendered .top inside the main content wrap.
+       Move the existing DOM node to a proper header; preserve its listeners and badges. */
+    if(!row.closest('header')){
+      var host=row.parentElement;
+      if(host&&host.classList.contains('wrap')&&host.parentElement===document.body){
+        var newHeader=document.createElement('header'),newWrap=document.createElement('div');
+        newHeader.className='jk-site-header';newWrap.className='wrap';
+        newHeader.appendChild(newWrap);newWrap.appendChild(row);
+        document.body.insertBefore(newHeader,host);
+        document.body.classList.add('jk-header-extracted');
+      }
+    }
+    var head=row.closest('header');if(head)head.classList.add('jk-site-header');
     var h1=row.querySelector('h1');if(!h1)return;
     row.classList.add('jk-page-top');
-    if(row.parentElement&&row.parentElement.classList&&row.parentElement.classList.contains('wrap')&&row.parentElement.parentElement===document.body)document.body.classList.add('jk-top-in-wrap');
     var box=h1.parentElement||row;box.classList.add('jk-page-brand');
     var kicker=box.querySelector('.kicker,.logo');if(!kicker){kicker=document.createElement('div');box.insertBefore(kicker,h1);}kicker.textContent='JK 투자';kicker.classList.add('jk-page-kicker');
     var version=null,sp=h1.querySelectorAll('span,b');for(var i=0;i<sp.length;i++){if(/^v\d+\.\d+\.\d+/.test((sp[i].textContent||'').trim())){version=sp[i];break;}}
@@ -369,6 +397,8 @@
     if(!document.querySelectorAll)return;
     document.querySelectorAll('.jkmenu-pop').forEach(function(p){var w=p.closest('.jkmenu');if(w&&!w.contains(e.target))p.hidden=true;});
   });
+  /* Defer runs before DOMContentLoaded. Build the unified shell before JKSticky measures it. */
+  if(document.body&&document.querySelector){style();normalizeHeader();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
   window.JKUnifiedUI={mount:mount,mountMenus:mountMenus,normalizeHeader:normalizeHeader,normalizeLogin:normalizeLogin};
 })();

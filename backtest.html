@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js" data-guard="1"></script>
-<script src="/jk-ui.js?v=1.0.3" defer></script>
+<script src="/jk-ui.js?v=1.0.4" defer></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
@@ -306,8 +306,18 @@ td:first-child{text-align:left;}
   .stab{font-size:12px;padding:9px 4px;}
   .stabs{grid-template-columns:repeat(3,1fr);}
 }
+/* Mobile Safari date controls must not wrap: the old 140px cap was too narrow. */
+.ctrl input[type=date]{width:190px;max-width:100%;min-height:44px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:16px;letter-spacing:0;white-space:nowrap;overflow-wrap:normal;word-break:normal;text-align:left;color-scheme:dark}
+.ctrl input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:left;white-space:nowrap}
+.ctrl input[type=date]::-webkit-datetime-edit{white-space:nowrap;min-width:0}
+@media(max-width:720px){
+  .ctrl-card{padding:14px 12px}
+  .ctrl-grid{gap:12px}
+  .ctrl-grid>.ctrl:has(>input[type=date]){flex:1 1 100%;width:100%;min-width:0}
+  .ctrl input[type=date]{width:100%!important;max-width:none!important;min-width:0!important}
+}
 </style>
-<link rel="stylesheet" href="/jk-mobile.css?v=1.0.1">
+<link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
 
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
@@ -323,7 +333,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.22</span></h1>
+      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.23</span></h1>
     </div>
   </div>
   <div class="hright">
