@@ -1,7 +1,9 @@
 // Value tests for the D-1 live path (pure parts). Usage: node scripts/test_opening_gapdown.mjs [functions/api dir]
 import assert from "node:assert/strict";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import fs from "node:fs";
+import vm from "node:vm";
 
 const dir = path.resolve(process.argv[2] || "functions/api");
 const G = await import(pathToFileURL(path.join(dir, "_gapdown.js")).href);
@@ -675,6 +677,29 @@ t("claude auth: owner token or server key only; APIs answer 401 without it", asy
   assert.equal(await AUTH.claudeAuthorized(req({}), { OWNER_EMAIL: "me@x.com" }, look), false);       // 서버키 미설정이어도 빈 값으로 통과 안 됨
   assert.equal((await LV.onRequestGet({ request: req({}), env })).status, 401);
   assert.equal((await LAB.onRequestGet({ request: req({}), env })).status, 401);
+});
+t("알림 이름은 연구(클로드) — 켜짐 확인 알림 제목 · 서비스워커 기본 제목 · 설정 카드 이름과 켜기/실패 안내에 '단타' 없음", async () => {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."), read = f => fs.readFileSync(path.join(root, f), "utf8");
+  // ① 켜기 직후 자동으로 한 번 · '테스트 알림' 버튼 — Worker 가 보내는 시험 알림
+  const tm = read("worker/opening-scheduler/src/index.js").match(/if\(op==="test"\)[^\n]*?title:"([^"]*)",body:"([^"]*)"/);
+  assert.ok(tm, "시험 알림 줄"); assert.equal(tm[1], "🔔 연구(클로드) 알림 켜짐"); assert.ok(!/단타/.test(tm[1] + tm[2]));
+  // ② 서비스워커 — 제목이 없는 알림의 기본 제목 · 제목이 있으면 그대로
+  const on = {}, shown = [];
+  vm.runInNewContext(read("claude-sw.js"), { self: { addEventListener: (k, f) => { on[k] = f; }, registration: { showNotification: t => { shown.push(t); return Promise.resolve(); } } } });
+  for (const d of [{ body: "b" }, { title: "[클로드 연구 시초가] 🟢 매수", body: "b" }]) on.push({ data: { json: () => d, text: () => "" }, waitUntil() {} });
+  assert.deepEqual(shown, ["JK 투자 연구(클로드)", "[클로드 연구 시초가] 🟢 매수"]);
+  // ③ 설정 → 알림 카드 — 실제 스크립트를 돌려 이름 · 켜기 성공 · 끄기 실패 안내를 본다
+  const host = { innerHTML: "", btn: {}, querySelectorAll() { return [...this.innerHTML.matchAll(/data-a="(\w+)"/g)].map(m => ({ getAttribute: () => m[1], addEventListener: (k, f) => { host.btn[m[1]] = f; } })); } };
+  const alerts = [], tick = () => new Promise(r => setTimeout(r, 0));
+  const P = { state: async () => "off", iosNeedsHome: () => false, enable: async () => "on", disable: async () => { throw new Error("거절"); }, test: async () => {} };
+  vm.runInNewContext(read("settings-claude-push.js"), { window: { ClaudePush: P, jkAuth: null }, document: { getElementById: id => id === "claudePushSettings" ? host : null }, alert: m => alerts.push(m) });
+  await tick();
+  assert.match(host.innerHTML, /<div class="alert-name">⚡ 연구\(클로드\) · 매수·매도<\/div>/);
+  host.btn.on(); await tick();
+  assert.match(host.innerHTML, /data-a="off"/);
+  host.btn.off(); await tick();
+  assert.deepEqual(alerts, ["연구(클로드) 매수·매도 알림을 켰습니다.", "연구(클로드) 알림 설정 실패: 거절"]);
+  assert.ok(!/단타/.test(host.innerHTML + alerts.join("")));
 });
 t("텔레그램 엔드포인트: 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 보냄 · 판단·주간·대결·교체·마감 결과는 보내지 않음", async () => {
   await Promise.all(pending.slice());                                         // 전역 fetch 를 바꾸므로 앞 시험이 다 끝난 뒤에(파일 맨 끝)
