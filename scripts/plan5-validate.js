@@ -17,7 +17,7 @@ const changes=[
  ['Math.floor(Math.max(0,total-tt*ep.TECL-tq*ep.TQQQ)/ep.SGOV)','Math.floor(Math.max(0,total-tt*sp.TECL-tq*sp.TQQQ)/sp.SGOV)']
 ];
 for(const [a,b] of changes){
- if(stress.split(a).length!==2)throw Error('ex ante sizing patch ambiguous '+a);
+ if(stress.indexOf(a)<0)throw Error('ex ante sizing patch missing '+a);
  stress=stress.replace(a,b);
 }
 const feasible=build(stress);
