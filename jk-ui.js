@@ -236,7 +236,9 @@
     window.addEventListener('load',schedule);
     if(document.fonts&&document.fonts.ready)document.fonts.ready.then(schedule);
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+  // Defer scripts see "interactive": let the unified UI below finish moving
+  // .top into its outer header before choosing the sticky stacking context.
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else Promise.resolve().then(mount);
   window.JKSticky={mount:mount,update:update};
 })();
 
