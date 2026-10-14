@@ -2,6 +2,8 @@ name: JKQuant 5yr research
 on:
   push:
     branches: [research/asset-plan-optimization-20261014]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 jobs:
   research:
