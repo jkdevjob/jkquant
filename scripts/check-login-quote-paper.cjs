@@ -442,7 +442,7 @@ await t('P8 모의 표는 계산이 끝나면 바로 다시 그린다 — 클라
   assert.equal(fail(),true); assert(/재계산에 실패했습니다/.test(note.textContent) && !/다시 계산하는 중/.test(note.textContent),note.textContent);
   assert.equal(new Function('$',fn('function paperStaleFail()')+'\nreturn paperStaleFail;')(()=>null)(),false,'안내가 없으면 할 일 없음');
 });
-await t('P9 원화 평가와 달러 수익률이 어긋나 보이던 것 — 줄마다 원화 수익률(평가÷투입) · 표 위에 시작일 환율 → 지금 환율',async()=>{
+await t('P9 원화 최종 수익률을 최종 칸 둘째 줄로 표기 · 환율 반영 수익률 검증',async()=>{
   const K=new Function(fn('function paperKrwRet(r)')+'\nreturn paperKrwRet;')();
   const L=new Function(fn('function paperFxLine(rows)')+'\nreturn paperFxLine;')();
   // 사용자 화면(2026-10-06): 원금 1억원 · 시작일 환율 1,508.45 → 달러 원금 66,293.03$ · 지금 1,338.47원
@@ -463,7 +463,10 @@ await t('P9 원화 평가와 달러 수익률이 어긋나 보이던 것 — 줄
   const op=fn('async function openPaper()');
   assert(op.indexOf('h=paperFxLine(rows)+h;')>0 && op.indexOf('h=paperFxLine(rows)+h;')<op.indexOf('if(paperStaleNote) h=')
      && /paperDualMoney\(r,r\.total,r\.wonRate\)/.test(op)
-     && /원화 수익률 \$\{paperKrwRet\(r\)>=0\?'\+':''\}\$\{paperKrwRet\(r\)\.toFixed\(1\)\}%/.test(op),'표 배선');
+     && /const _krwFinalRet=ok\?paperKrwRet\(r\):null;/.test(op)
+     && op.includes('paperDualMoney(r,r.total,r.wonRate)}</td>')
+     && op.includes('Number.isFinite(_krwFinalRet)')
+     && op.includes('원화 ${_krwFinalRet>=0'),'표 배선');
 });
 await t('P10 폰 폭: 첫 칸 윗줄(줄바꿈 없음)은 설정 2개까지 — 3개면 375px 폰에서 최종 칸이 잘렸다',async()=>{
   const op=fn('async function openPaper()');
