@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.5</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.6</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -3240,12 +3240,12 @@ function renderTop2(now,candidates,latestByCode){
   if(!TOP2HIST.some(h=>h&&h.date===OB_TOP2.date)) upsertTop2History(OB_TOP2,rows,false);
   if(exitNow) upsertTop2History(OB_TOP2,rows,true);
   if(!OB_TOP2.entryNotified){
-    const ok=notifyOpeningEvent('top2-entry-'+now.date,'Top2 모의 매수 시점 · 09:09',
-      rows.map(x=>x.rank+'위 '+x.name+' '+x.qty+'주 · 약 '+commas(Math.round(x.buyAmount))+'원 @ '+commas(Math.round(x.entry))).join(' / ')+' · 09:30 전량 모의매도');
+    const ok=notifyOpeningEvent('top2-entry-'+now.date,'Top2 매수 · 09:09',
+      rows.map(x=>x.rank+'위 '+x.name+' '+x.qty+'주 · 약 '+commas(Math.round(x.buyAmount))+'원 @ '+commas(Math.round(x.entry))).join(' / ')+' · 09:30 전량 매도 예정');
     if(ok){OB_TOP2.entryNotified=true;saveTop2Lock();}
   }
   if(exitNow&&!OB_TOP2.exitNotified){
-    const ok=notifyOpeningEvent('top2-exit-'+now.date,'Top2 모의 매도 시점 · 09:30',
+    const ok=notifyOpeningEvent('top2-exit-'+now.date,'Top2 매도 · 09:30',
       rows.map(x=>x.name+' '+x.qty+'주 전량 · 약 '+(x.sellAmount==null?'—':commas(Math.round(x.sellAmount))+'원')+' · '+(x.profit==null?'—':(x.profit>=0?'+':'')+commas(Math.round(x.profit))+'원')).join(' / '));
     if(ok){OB_TOP2.exitNotified=true;saveTop2Lock();}
   }

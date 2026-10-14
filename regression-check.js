@@ -12085,7 +12085,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
       du=fs.readFileSync(__d+'/functions/api/scalping-duel.js','utf8'),cp2=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8');
     ok('연구 메뉴 알림: [지피티 연구 탭] · [클로드 연구 탭] 머리말 · 실제 매수·매도만(지피티 일일결과 · 데이트레이딩 후보 · 대결 요약 텔레그램 없음)',
        /"\[지피티 연구 "\+LABELS\[strategy\]\+"\] "\+icon/.test(sa)&&/if\(stage==="summary"\)return json\(\{ok:true,eventId,skipped:"buy_sell_only"\}\);/.test(sa)
-       &&/title:"\[지피티 연구 "\+name\+"\] "/.test(pa)&&/"\[지피티 연구 시초가\] 🟢 모의 매수 신호 · "/.test(om)&&/text:title\+/.test(om)
+       &&/title:"\[지피티 연구 "\+name\+"\] "/.test(pa)&&/"\[지피티 연구 시초가\] 🟢 매수 · "/.test(om)&&/text:title\+/.test(om)
        &&!/api\.telegram\.org|모의 후보 신호/.test(dm)&&!/api\.telegram\.org/.test(du)
        &&/open: "\[클로드 연구 시초가\]", etf: "\[클로드 연구 데이트레이딩\]", coin: "\[클로드 연구 비트코인\]", soxl: "\[클로드 연구 SOXL\]"/.test(cp2));
   }

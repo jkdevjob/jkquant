@@ -341,7 +341,7 @@ async function notifyOpeningWebPush(env,date,buys,sells,mainVariant){
     const hm=String((stage==="buy"?x.entryTime:x.exitTime)||"").padStart(4,"0");
     const code=String(x.code||""),price=Number(stage==="buy"?x.entryPrice:x.exitPrice);
     const lines=[String(x.name||code).slice(0,50)+" ("+code+")",Number.isFinite(price)?Math.round(price).toLocaleString("ko-KR")+"원":"가격 확인 중",
-      stage==="sell"&&Number.isFinite(Number(x.pnl))?"모의손익 "+Number(x.pnl).toFixed(2)+"%":"기준전략 "+mainVariant];
+      stage==="sell"&&Number.isFinite(Number(x.pnl))?"전략 손익 "+Number(x.pnl).toFixed(2)+"%":"기준전략 "+mainVariant];
     const eventId=["opening",date,mainVariant,code,stage,hm].join(":");
     try{
       const r=await fetch(baseUrl(env)+"/api/scalping-alert",{method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
@@ -365,7 +365,7 @@ export function recentOpeningAlertEvents(ledger,target,windowMin=8){
       time:hm.slice(0,2)+":"+hm.slice(2)+" KST",
       eventAt:new Date(Date.parse(ledger.date+"T00:00:00+09:00")+(minute(e.targetHm)+1)*60_000).toISOString(),
       lines:[String(x.name||e.name||e.code)+" ("+String(x.code||e.code)+")","보관된 운영 메인 "+variant+" 신호 재전송",
-        e.stage==="sell"&&x.pnl!=null?"모의손익 "+Number(x.pnl).toFixed(2)+"%":"모의 매수 "+hm]});
+        e.stage==="sell"&&x.pnl!=null?"전략 손익 "+Number(x.pnl).toFixed(2)+"%":"매수 "+hm]});
   }
   return out;
 }
