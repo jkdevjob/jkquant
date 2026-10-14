@@ -1,0 +1,15 @@
+name: JKQuant 5yr research
+on:
+  push:
+    branches: [research/asset-plan-optimization-20261014]
+  workflow_dispatch:
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Run research on actual quote pathway
+        run: node scripts/plan5-research.js
