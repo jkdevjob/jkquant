@@ -15,7 +15,7 @@ function verify(src=ui){
 verify();
 assert(ui.includes("classList.contains('paperpage'))?'모의투자':HEADER_LABELS[routeKey()]"),'모의투자는 운영과 별도 헤더 타이틀');
 const paperHtml=fs.readFileSync('index.html','utf8');
-assert(paperHtml.includes('if(typeof window!=='undefined'&&window.JKUnifiedUI)window.JKUnifiedUI.normalizeHeader()'),'모의/운영 SPA 왕복 시 헤더 다시 설정');
+assert(paperHtml.includes("if(typeof window!=='undefined'&&window.JKUnifiedUI)window.JKUnifiedUI.normalizeHeader()"),'모의/운영 SPA 왕복 시 헤더 다시 설정');
 const displayRow=paperHtml.slice(paperHtml.indexOf('h+=`<tr class="${_paperCompact'),paperHtml.indexOf('/* MDD는 종가 이력이'));
 assert(displayRow.includes('<td>${paperDualMoney(r,r.total,r.wonRate)}</td>'),'평가 칸에는 금액만');
 assert(displayRow.includes('Number.isFinite(_krwFinalRet)')&&displayRow.includes('원화 ${_krwFinalRet>=0'),'최종 칸에 원화 수익률');
