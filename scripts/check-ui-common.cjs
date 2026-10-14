@@ -356,8 +356,8 @@ t('U16 운영 분석 표 — 원화를 두 번 쓰지 않는다: 금액 칸(wn)�
     rows.slice(1).forEach(r=>assert.equal((r.match(/<td[ >]/g)||[]).length,nh,what+' 칸 수 = 머리 칸 수: '+r));
     const krw=Math.round(amt*1350).toLocaleString('ko-KR')+'원', r1=rows.find(r=>r.includes(krw)); assert(r1,what+' 금액 줄');
     assert.equal(r1.split(krw).length-1,1,what+' 같은 원화 금액은 한 줄에 한 번: '+r1); };
-  const br=new Function('$','wn','won','isKrwSt','isSell','dshort',fnOf(html,'function renderInfBreak(c){')+'\nreturn renderInfBreak;')
-    ($,wn,v=>'W'+v,()=>false,k=>/매도/.test(k),d=>String(d).slice(5));
+  const br=new Function('$','wn','won','isKrwSt','isSell','isBuy','dshort',fnOf(html,'function renderInfBreak(c){')+'\nreturn renderInfBreak;')
+    ($,wn,v=>'W'+v,()=>false,k=>/매도/.test(k),k=>/매수/.test(k),d=>String(d).slice(5));
   for(const simple of [false,true]){
     for(const k in E) delete E[k];
     br({st:{principal:10000},simple,rows:[{kind:'지정가매도',date:'2026-10-02',profit:271.22,cycleSeq:3,cycleEnd:true},{kind:'쿼터매도',date:'2026-09-10',profit:-50,cycleSeq:2}],
