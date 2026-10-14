@@ -1,0 +1,139 @@
+{
+  "ok": true,
+  "date": "2026-10-14",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-14",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-14T06:40:33.711Z",
+    "updatedAt": "2026-10-14T06:40:34.603Z",
+    "scans": [
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1791960026000,
+        "capturedAt": "2026-10-14T06:40:34.518Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1791960026000,
+        "capturedAt": "2026-10-14T06:40:33.619Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-14",
+        "capturedAt": "2026-10-14T06:40:34.518Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-14",
+          "currency": "KRW",
+          "trades": [],
+          "open": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "15:30 종가",
+              "entryPrice": 6700,
+              "qty": 79,
+              "pnlPct": 0,
+              "reason": "내일 09:00 시가 매도"
+            }
+          ],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "candidates": 1,
+          "entries": 1,
+          "strategyVersion": "etf_dip_overnight_v1",
+          "note": "15:21 예상 하락 -3.93% → 종가 매수"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-14",
+        "capturedAt": "2026-10-14T06:40:33.619Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-14",
+          "currency": "KRW",
+          "trades": [
+            {
+              "name": "클래시스",
+              "code": "214150",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 27650,
+              "qty": 79,
+              "notional": 2184350,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 27850,
+              "pnlPct": 0.493327305605781,
+              "pnlAmount": 10775.994999999877,
+              "reason": "종가 청산"
+            },
+            {
+              "name": "코스맥스엔비티",
+              "code": "222040",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 5420,
+              "qty": 157,
+              "notional": 850940,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 5320,
+              "pnlPct": -2.075018450184499,
+              "pnlAmount": -17657.161999999975,
+              "reason": "종가 청산"
+            }
+          ],
+          "open": [],
+          "measure": [],
+          "exits": 2,
+          "wins": 1,
+          "losses": 1,
+          "winRate": 50,
+          "realizedAmount": -6881.167000000098,
+          "realizedPct": -0.22670542188720344,
+          "status": "closed",
+          "watched": 56,
+          "candidates": 25,
+          "entries": 2,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "note": "메인 매매일(통과 25종목)"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}

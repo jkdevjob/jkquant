@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-14T10:19:35.804195+09:00",
+  "generatedAt": "2026-10-14T23:40:37.757456+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -83,6 +83,12 @@
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-13.csv",
       "rows": 2868,
       "lastDate": "2026-10-13",
+      "status": "provisional"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-14.csv",
+      "rows": 2867,
+      "lastDate": "2026-10-14",
       "status": "provisional"
     }
   ],
@@ -2148,9 +2154,9 @@
     }
   },
   "live": {
-    "trades": 13,
-    "days": 5,
-    "actualGapQualifiesRate": 30.76923076923077,
+    "trades": 16,
+    "days": 6,
+    "actualGapQualifiesRate": 25.0,
     "openVsExpectedPct": {
       "n": 7,
       "mean": 2.056919244160138
@@ -2164,8 +2170,8 @@
       "mean": 0.0
     },
     "realizedNetPct": {
-      "n": 7,
-      "mean": -1.9924406203838998
+      "n": 9,
+      "mean": -1.725419498585113
     },
     "modelNet0tPct": {
       "n": 7,
@@ -2524,12 +2530,93 @@
       "realizedGrossPct": null,
       "realizedNetPct": null,
       "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-14",
+      "code": "214150",
+      "name": "클래시스",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 25300,
+      "expectedGapPct": -8.664259927797834,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 79,
+      "buyFill": 27650,
+      "sellQty": 79,
+      "sellFill": 27850,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": 0.723327305605781,
+      "realizedNetPct": 0.493327305605781,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-14",
+      "code": "222040",
+      "name": "코스맥스엔비티",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 5020,
+      "expectedGapPct": -8.058608058608064,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 157,
+      "buyFill": 5420,
+      "sellQty": 157,
+      "sellFill": 5320,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": -1.845018450184499,
+      "realizedNetPct": -2.075018450184499,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-14",
+      "code": "145020",
+      "name": "휴젤",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 158000,
+      "expectedGapPct": -7.004120070629782,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": false,
+      "buyOrderMsg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 12주",
+      "sellOrderOk": false,
+      "sellOrderMsg": null,
+      "buyQty": null,
+      "buyFill": null,
+      "sellQty": null,
+      "sellFill": null,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": null,
+      "realizedNetPct": null,
+      "modelNet0tPct": null
     }
   ],
   "watchlist": {
-    "basedOn": "2026-10-13",
+    "basedOn": "2026-10-14",
     "basedOnStatus": "provisional_snapshot",
-    "size": 56
+    "size": 49
   },
   "finalDataThrough": "2026-10-12"
 }

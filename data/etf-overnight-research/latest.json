@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-14T10:19:47.009976+09:00",
+  "generatedAt": "2026-10-14T23:40:48.290377+09:00",
   "strategyVersion": "etf_dip_overnight_v1",
   "rule": {
     "code": "233740",
@@ -17,7 +17,7 @@
     "worstDay": -15.0
   },
   "from": "2018-04-02",
-  "to": "2026-10-13",
+  "to": "2026-10-14",
   "evaluationOrder": [
     "plus1DaysPerYear",
     "plus5WeeksPerYear",
@@ -50,11 +50,11 @@
       "gate": true
     },
     "outOfSample": {
-      "days": 7,
+      "days": 8,
       "tradeDays": 2,
-      "tradeDaysPerYear": 71.42857142857143,
+      "tradeDaysPerYear": 62.5,
       "plus1RateOfTradeDays": 0.0,
-      "lossDaysPerYear": 71.42857142857143,
+      "lossDaysPerYear": 62.5,
       "tStat": null,
       "plus1Days": 0,
       "plus1DaysPerYear": 0.0,
@@ -96,7 +96,7 @@
       "gate": false
     },
     "outOfSample": {
-      "days": 7,
+      "days": 8,
       "tradeDays": 0,
       "tradeDaysPerYear": 0.0,
       "plus1RateOfTradeDays": null,
@@ -142,11 +142,11 @@
       "gate": true
     },
     "outOfSample": {
-      "days": 7,
+      "days": 8,
       "tradeDays": 2,
-      "tradeDaysPerYear": 71.42857142857143,
+      "tradeDaysPerYear": 62.5,
       "plus1RateOfTradeDays": 0.0,
-      "lossDaysPerYear": 71.42857142857143,
+      "lossDaysPerYear": 62.5,
       "tStat": null,
       "plus1Days": 0,
       "plus1DaysPerYear": 0.0,
@@ -297,7 +297,7 @@
     }
   ],
   "live": {
-    "trades": 2,
+    "trades": 3,
     "rows": [
       {
         "signalDate": "2026-10-07",
@@ -334,6 +334,24 @@
         "sellSlipPct": null,
         "realizedNetPct": null,
         "modelNetPct": -5.953344947735195
+      },
+      {
+        "signalDate": "2026-10-14",
+        "exitDate": null,
+        "strategyVersion": "etf_dip_overnight_v1",
+        "source": "kis-vts-live",
+        "expectedDropPct": -3.9285714285714257,
+        "buyOrderOk": true,
+        "buyQty": 79,
+        "buyFill": 6700,
+        "actualClose": 6700.0,
+        "buySlipPct": 0.0,
+        "sellQty": null,
+        "sellFill": null,
+        "actualNextOpen": null,
+        "sellSlipPct": null,
+        "realizedNetPct": null,
+        "modelNetPct": null
       }
     ]
   }
