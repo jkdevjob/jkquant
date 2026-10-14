@@ -34,6 +34,7 @@ const SETUP=`(()=>{
   inj('    if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);\\n    peakInvested=Math.max(peakInvested, cap-cash);\\n  });','    if(__H.trace) __H.tr.push([d,c,cash,shares,avg,T,curTP,starBase]);\\n    if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);\\n    peakInvested=Math.max(peakInvested, cap-cash);\\n  });');
   inj('if(tp!==curTP){ curTP=tp; starBase=tp;','if(tp!==curTP){ curTP=tp; starBase=(__H.m1&&__H.m1.all)?targetPct:tp;');
   inj('const buys=(__m1pause&&!flat0)','if(__H.m1&&__H.m1.slope20){ starSlope=((__H.m1.slope20==="all"||__m1x)?targetPct:starBase)*0.1*20/divs; }\\n    const buys=(__m1pause&&!flat0)');
+  inj('const buyLimit=prevC*(1+bigPct/100);','const buyLimit=prevC*(1+((__H.bigAt&&__H.bigAt(d)!=null)?__H.bigAt(d):bigPct)/100);');
   window.__H={eqs:[]};
   (0,eval)(src);
   window.RUN=function(o){
@@ -58,6 +59,13 @@ const SETUP=`(()=>{
     if(sig.volDivs){ const v=volOf(sig.volN||60); __H.divsAt=(d)=>{ const k=P(idx[d]); const x=v[k]; if(!(x>0)) return o.divs||20; return x>sig.volHi?sig.volDivs:(o.divs||20); }; }
     if(sig.bearTP){ const m=maOf(sig.bearMA||150); __H.tpAt=(d)=>{ const k=P(idx[d]); return (m[k]>0&&closes[k]<m[k])?sig.bearTP:(o.tgt||20); }; }
     if(sig.daily) __H.divsDaily=true;
+    if(sig.guard){ const g=sig.guard, gs=g.sym||'TQQQ', gd=Object.keys(M[gs]).sort(), gc=gd.map(x=>M[gs][x][C0]), gn=g.ma||225, gb=g.band==null?0.01:g.band;
+      const gm=[]; { let sm=0; for(let k=0;k<gc.length;k++){ sm+=gc[k]; if(k>=gn) sm-=gc[k-gn]; gm.push(k>=gn-1?sm/gn:null); } }
+      let on=null; const gst=[]; for(let k=0;k<gd.length;k++){ if(gm[k]>0){ if(on===null) on=gc[k]>gm[k]; if(gc[k]>gm[k]*(1+gb)) on=true; else if(gc[k]<gm[k]*(1-gb)) on=false; } gst.push(on); }
+      const off=(d)=>{ let a=0,b=gd.length; while(a<b){ const m=(a+b)>>1; if(gd[m]<d) a=m+1; else b=m; } const j=a-1; return j>=0&&gst[j]===false; };   // 전일 확정 — d 보다 앞선 마지막 날의 Guard 상태
+      if(g.tp) __H.tpAt=(d)=>off(d)?g.tp:(o.autoTp?null:(o.tgt||20));
+      if(g.big!=null) __H.bigAt=(d)=>off(d)?g.big:null;
+      __H.guardOff=off; }
     __H.exits=0; __H.savedYield=!!o.savedYield;
     if(sig.budget){ const v=volOf(sig.bN||60); __H.budget=(d)=>{ const k=P(idx[d]); const x=v[k]; if(!(x>0)) return 1; return Math.max(sig.bMin||0,Math.min(1,Math.pow(sig.bT/x,sig.bPow||2))); }; }
     if(sig.exitMA){ const m=maOf(sig.exitMA); const lo=1-(sig.exitBand||0), hi=1+(sig.enterBand||0); let on=true;

@@ -31,6 +31,11 @@ const V={
   tpAllM05:{cashYield:true,autoTp:true,m1:{mode:'tpOnly',all:true},auto:{M:{below:0.05}}}, tpAllM15:{cashYield:true,autoTp:true,m1:{mode:'tpOnly',all:true},auto:{M:{below:0.15}}}, tpAllMa100:{cashYield:true,autoTp:true,m1:{mode:'tpOnly',all:true},auto:{M:{maLen:100}}}, tpAllMa200:{cashYield:true,autoTp:true,m1:{mode:'tpOnly',all:true},auto:{M:{maLen:200}}},
   m1tpNoY:{autoTp:true,m1:{mode:'tpOnly'}}, tpAllNoY:{autoTp:true,m1:{mode:'tpOnly',all:true}},
   m1slope:{cashYield:true,autoTp:true,m1:{slope20:'m1'}}, slopeAll:{cashYield:true,autoTp:true,m1:{slope20:'all'}}, m1slopeM05:{cashYield:true,autoTp:true,m1:{slope20:'m1'},auto:{M:{below:0.05}}}, m1slopeM15:{cashYield:true,autoTp:true,m1:{slope20:'m1'},auto:{M:{below:0.15}}}, m1slopeMa200:{cashYield:true,autoTp:true,m1:{slope20:'m1'},auto:{M:{maLen:200}}}, slopeAllM15:{cashYield:true,autoTp:true,m1:{slope20:'all'},auto:{M:{below:0.15}}},
+  gTp:{sig:{guard:{tp:10}}}, gTpM200:{sig:{guard:{tp:10,ma:200}}}, gTpM250:{sig:{guard:{tp:10,ma:250}}}, gTpB0:{sig:{guard:{tp:10,band:0}}}, gTpB3:{sig:{guard:{tp:10,band:0.03}}}, gTp12:{sig:{guard:{tp:12}}}, gTp8:{sig:{guard:{tp:8}}},
+  gBig0:{sig:{guard:{big:0}}}, gBig5:{sig:{guard:{big:5}}}, gBigm5:{sig:{guard:{big:-5}}}, gTpBig0:{sig:{guard:{tp:10,big:0}}},
+  bearTp:{sig:{bearTP:10,bearMA:150}}, aGTp:{autoTp:true,sig:{guard:{tp:10}}}, aGBig0:{autoTp:true,sig:{guard:{big:0}}},
+  aGTpM200:{autoTp:true,sig:{guard:{tp:10,ma:200}}}, aGTpM250:{autoTp:true,sig:{guard:{tp:10,ma:250}}}, aGTpB3:{autoTp:true,sig:{guard:{tp:10,band:0.03}}}, aGTpB0:{autoTp:true,sig:{guard:{tp:10,band:0}}},
+  aGTpS:{autoTp:true,sig:{guard:{tp:10,sym:'SYNTQQQ'}}}, gTpS:{sig:{guard:{tp:10,sym:'SYNTQQQ'}}},
   base:{}, yield:{cashYield:true},
   g200:{cashYield:true,sig:{gateMA:200}}, g150:{cashYield:true,sig:{gateMA:150}}, g100:{cashYield:true,sig:{gateMA:100}},
   bear40:{cashYield:true,sig:{bearDivs:40,bearMA:150}}, bear30:{cashYield:true,sig:{bearDivs:30,bearMA:150}},
@@ -41,7 +46,7 @@ const V={
   div30:{cashYield:true,divs:30}, div40:{cashYield:true,divs:40},
 };
 const pick=process.argv[2]?process.argv[2].split(','):Object.keys(V);
-(async()=>{ const TK=process.env.TK||'SOXL'; const {pg,close}=await open([{sym:TK}]);
+(async()=>{ const TK=process.env.TK||'SOXL'; const {pg,close}=await open([{sym:TK}].concat((process.env.EXTRA||'').split(',').filter(Boolean).map(sym=>({sym}))));
   const irx={}; require('./data/IRX.json').series.forEach(x=>irx[x.date]=x.close); await pg.evaluate(x=>{window.__IRX=x;},irx);
   const all=await pg.evaluate(t=>Object.keys(M[t]).sort(),TK); const Y0=+(process.env.Y0||2010), F0=all[0];
   const starts=[]; for(let y=Y0;y<=2021;y++) for(let m=1;m<=12;m++){ const s=`${y}-${String(m).padStart(2,'0')}-01`; if(s<all[20]) continue; const e=`${y+5}-${String(m).padStart(2,'0')}-01`; if(e>all[all.length-1]) continue; starts.push([s,e]); }
