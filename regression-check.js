@@ -10640,6 +10640,22 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
 /* ════════════════════════════════════════════════════════════════════
    [136] 모의성과 — 5년 시작일 + 무매 LOC 줄수 식별
    ════════════════════════════════════════════════════════════════════ */
+{
+  const {spawnSync}=require('child_process');
+  const r=spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-signal-fill.cjs')],{encoding:'utf8',timeout:20000});
+  ok('H2 자산플랜 전일 확정가 주문수량 · 미래 종가 변이 검증 5/10/15/20년',
+    r.status===0&&(r.stdout||'').includes('PLAN FILL LOOKAHEAD: 7 groups PASS'),
+    String(r.stdout||'')+String(r.stderr||''));
+  const plan=fs.readFileSync(path.join(__d,'plan.html'),'utf8');
+  const shared=fs.readFileSync(path.join(__d,'plan-session-engine.js'),'utf8');
+  ok('H3 모의 규칙 v2 · 운영/모의 동일 주수 기준 · 캐시 버전',
+    /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
+    && /plan-session-engine\.js\?v=2/.test(plan)
+    && /plan-session-engine\.js\?v=2/.test(idx)
+    && /v1\.43\.36/.test(plan) && /v3\.110\.36/.test(idx)
+    && /asset-plan-v2/.test(plan));
+}
+
 console.log('\n[136] 모의성과 5년 비교 + LOC 줄수 표시');
 {
   const po=extractFn(idx,'function paperOpts(tab, st)');

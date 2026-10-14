@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 자산플랜</title>
-<script src="/plan-session-engine.js"></script>
+<script src="/plan-session-engine.js?v=2"></script>
 <script src="/plan-session-settings.js"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
@@ -311,7 +311,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.35</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.36</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -374,7 +374,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div id="assetPaperPanel" data-asset-view="analysis" hidden><div class="asset-session-paper-result" id="assetPaperResult" hidden></div></div>
 
       <div class="todaybox" id="alphaOrderSection" data-asset-view="current">
-        <h3>1. 📋 오늘 주문</h3>
+        <h3>1. 📋 오늘 예상 주문</h3>
         <div class="sub" id="alphaMeta">TECL·TQQQ·SGOV 확정 일봉을 불러오는 중…</div>
         <div class="sub" id="alphaRefreshTime">시세 자동 갱신 중…</div>
         <div class="sub" id="alphaStartState">현재 계좌 기준 주문을 계산하는 중…</div>
@@ -882,7 +882,7 @@ function renderHorizonCopy(){
     setTxt('alphaEv3Label','TECL 몫 안의 현재 비율');setTxt('alphaEv4Label','TQQQ Guard');
     setTxt('alphaChart1Title','TECL 몫 안의 목표비율 · 최근60거래일');setTxt('alphaChart2Title','TQQQ Guard · 최근120거래일');
     if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 70/30 역분산 + Guard</strong><br>전체 자산의70%를 TECL 몫으로 정하고, 최근20거래일 변동성에 따라 그 안의 투자비율을 조절합니다. 목표와 현재 비율의 차이가 <b>10%p를 초과</b>하면 리밸런싱합니다. TQQQ 30%는 SMA225 ±1.0% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다. <b>TECL 목표100%는 전체 자산의70%</b>를 뜻합니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 과거 참고치(기준일 고정):</b> 137개 시작구간 · 평균 CAGR 48.2% · 중앙 CAGR 47.5% · 하위 10% CAGR 31.5% · 최악 CAGR 23.9% · 중앙 MDD -36.4% · 최악 MDD -37.8%.<span class="sub">업로드 TECL·TQQQ 시세 2010-03-12~2026-07-10 · 신호는 전일 확정종가, 다음 거래일 종가 체결 · 거래비용 0.1% · 대피자산 연 4% 가정.</span><span class="sub">이 수치는 2026-07-10까지의 업로드 시세·가정으로 얻은 세전 참고치이며 최신 운영 데이터로 다시 산출한 성과가 아닙니다. 미래 수익을 보장하지 않으며, 실험 후보는 검증 전 운영에 반영하지 않습니다.</span>';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>⚠️ 과거 롤링 연구치 재검증 대기</b><span class="sub">기존 137개 시작구간 CAGR/MDD는 주문 수량을 미확정 다음날 종가로 계산한 현재 모의 체결규칙과 동일한 조건에서 다시 검증되지 않았습니다. 주문수량 규칙 v2 적용 후 전체·롤링 검증 전에는 공식 성과로 표시하지 않습니다. 운영 전략 기본값은 그대로입니다.</span>';
   }else if(y===10){
     setTxt('alphaKpi1Label','상승장 코어');setTxt('alphaKpi1Value','TQQQ 80%');setTxt('alphaKpi1Sub','종가 > SMA250');
     setTxt('alphaKpi2Label','하락장 3단계');setTxt('alphaKpi2Value','20% → 40% → 60%');setTxt('alphaKpi2Sub','RSI40/35/30 + ATH -12/-22/-32%');
@@ -1080,7 +1080,7 @@ function assetSessionSettingsFromView(capOverride){
   return {ticker:'PLAN5',horizon:activeHorizon,startCapital:cap,targetCapital:Math.max(1,num('targetCapital',150000)),monthlyAdd:Math.max(0,num('monthlyAdd',0)),
     targetIncome:Math.max(0,num('targetIncome',0)),stageMode:String($('stageMode').value||'auto'),
     startDate:String($('startDate').value||todayISO()),targetDate:String($('targetDate').value||plusYears(todayISO(),activeHorizon)),
-    engine:'asset-plan-v1'};
+    engine:'asset-plan-v2'};
 }
 function writeAssetSessionLocal(){
   if(liveState)liveState._updated=Date.now();
@@ -1112,7 +1112,7 @@ function assetPaperStatsHtml(x,R){
   const z=R&&R.stats;if(!z)return '<div class="sub">모의 성과를 계산할 수 없습니다.</div>';
   const col=z.ret>=0?'var(--green)':'var(--red)';
   return '<div class="asset-session-head"><div><b>'+String(x.name||'모의 세션').replace(/</g,'&lt;')+'</b><div class="sub">'+z.from+' ~ '+z.to+' · 자동 재생 결과</div></div><a class="btn" href="/paper" style="text-decoration:none">모의투자 성과에서 비교</a></div>'+
-    '<div class="kpis"><div class="kpi"><div class="k">평가액</div><div class="v">'+usd2(z.total)+'</div></div>'+
+    '<div class="path-note">모의 체결 v'+(R.orderSizingVersion||'?')+' · 전일 확정종가로 주수를 결정하고 다음 거래일 종가로 체결합니다.</div><div class="kpis"><div class="kpi"><div class="k">평가액</div><div class="v">'+usd2(z.total)+'</div></div>'+
     '<div class="kpi"><div class="k">최종 수익률</div><div class="v" style="color:'+col+'">'+(z.ret>=0?'+':'')+z.ret.toFixed(1)+'%</div></div>'+
     '<div class="kpi"><div class="k">MDD</div><div class="v" style="color:var(--red)">-'+z.mdd.toFixed(1)+'%</div></div>'+
     '<div class="kpi"><div class="k">CAGR</div><div class="v">'+(z.cagr>=0?'+':'')+z.cagr.toFixed(1)+'%</div></div></div>';
@@ -2274,8 +2274,9 @@ function renderAlternativePlan(qTecl,qTqqq,qSgov){
   if($('alphaTeclBandText'))$('alphaTeclBandText').textContent=meta;
   if($('alphaGuardLevels'))$('alphaGuardLevels').textContent=decision;
   if($('alphaDecision')){$('alphaDecision').className='alpha-decision'+(need?' go':'');$('alphaDecision').innerHTML='<b>오늘 판단: '+(need?'주문 필요':'유지')+'</b><br>'+decision+'<br><span class="sub">신호는 확정 종가/직전 월말 기준 · 장중가격은 주문수량 추정에만 사용</span>';}
-  const targetTq=need?Math.max(0,Math.floor(total*targetW.TECL/tp)):tq,targetQq=need?Math.max(0,Math.floor(total*targetW.TQQQ/qp)):qq;
-  const targetSq=need?Math.max(0,Math.floor(Math.max(0,total-targetTq*tp-targetQq*qp)/sp)):sq;
+  // 사전 주문 주수는 확정종가(ts/qs/ss)로 고정하고 장중가격은 예상금액·수수료 계산에만 사용한다.
+  const targetTq=need?Math.max(0,Math.floor(total*targetW.TECL/ts)):tq,targetQq=need?Math.max(0,Math.floor(total*targetW.TQQQ/qs)):qq;
+  const targetSq=need?Math.max(0,Math.floor(Math.max(0,total-targetTq*ts-targetQq*qs)/ss)):sq;
   const targets={TECL:targetTq,TQQQ:targetQq,SGOV:targetSq},orders=_planOrderTargets(targets,pxs,pos,cash);
   pendingAlphaOrders=orders.map(o=>({...o}));
   if($('alphaRecordFill')){$('alphaRecordFill').disabled=!orders.length;$('alphaRecordFill').textContent=orders.length?'✅ 오늘 주문 체결 반영 ('+orders.length+'건)':'✅ 오늘 주문 체결 반영';}
@@ -2350,10 +2351,10 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     $('alphaDecision').innerHTML='<b>오늘 판단: '+(needRebalance?'리밸런싱/상태조정':'유지')+'</b><br>'+teclReason+'<br>'+guardReason+'<br><span class="sub">판정일 '+qTecl.settled.date+' 확정종가 기준 · 장중가격은 신호가 아니라 주문수량 추정에만 사용</span>';
   }
 
-  // 확정 종가로 정한 목표 금액을 현재가에서 정수 주수로 환산한다.
-  const targetTq=(teclHit||horizonRebalancePending)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/tp)):tq;
-  const targetQq=(guardFlip||horizonRebalancePending)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qp)):0):qq;
-  const targetSq=needRebalance?Math.max(0,Math.floor(Math.max(0,signalTotal-targetTq*tp-targetQq*qp)/sp)):sq;
+  // 확정종가로 목표 주수를 미리 계산한다. 다음 거래일 체결가는 주문 시점에는 알 수 없다.
+  const targetTq=(teclHit||horizonRebalancePending)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/ts)):tq;
+  const targetQq=(guardFlip||horizonRebalancePending)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qs)):0):qq;
+  const targetSq=needRebalance?Math.max(0,Math.floor(Math.max(0,signalTotal-targetTq*ts-targetQq*qs)/ss)):sq;
 
   // 수수료까지 예약해 '화면 수량 그대로' 넣었을 때 현금 부족 주문이 되지 않게 매도→위험자산 매수→SGOV 순서로 제한한다.
   const F=ALPHA_FEE_RATE, orders=[];let avail=Math.max(0,cash);
@@ -2380,7 +2381,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     '<br><b>목표비중:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 신호기준 평가액 '+usd(signalTotal)+
     '<br><b>오늘 매수금액:</b> TECL '+usd(buyMap.TECL)+' · TQQQ '+usd(buyMap.TQQQ)+' · SGOV '+usd(buyMap.SGOV)+' · 합계 '+usd(totalBuy)+' · <b>수수료 포함 필요현금 약 '+usd(totalNeed)+'</b>'+
     '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+
-    '<br><span class="sub">주문 수량·금액은 현재가와 토스증권 미국주식 수수료 0.1%를 반영한 예상치입니다.</span>';
+    '<br><span class="sub">목표 주수는 전일 확정종가로 계산하며, 매수가능 주수와 거래금액은 현재가·수수료(0.1%)로 추정합니다. 실제 체결가가 달라지면 매수량이 감소할 수 있습니다.</span>';
   // 실제 매매결과를 바꾸지 않고, 확정 종가 기준 판단과 발주 가능 건수를 구분해 표시한다.
   const guide=$('alphaGuide');
   if(guide){
