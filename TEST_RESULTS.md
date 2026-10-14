@@ -1,5 +1,11 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-14 · 연구(클로드) 상단 상태 줄 삭제 · v2.17.5
+
+- `node regression-check.js index.html backtest.html testdata`: **2,760 PASS / 0 FAIL**(상태 줄·화면 알림 버튼 고정 검사 2건을 '없음' 검사로 바꿈).
+- 변이 3/3 잡힘: 상태 줄 되살림(3 FAIL) · 화면 🔔 버튼 모듈 되살림(1 FAIL) · '▶ 다음' 일정 문구 되살림(1 FAIL).
+- claude.html 인라인 스크립트 2개(일반·모듈) `node --check` 통과. `node scripts/check-before-push.cjs`: **50/50 단계 PASS**.
+
 ## 2026-10-14 · 연구(클로드) 알림 이름 · v2.17.4 · 설정 v1.4.1
 
 - `node scripts/test_opening_gapdown.mjs functions/api`: **38 ALL PASS**(+1). 새 값 시험은 서비스워커와 설정 카드 스크립트를 실제로 돌려 기본 제목·카드 이름·켜기 성공/끄기 실패 안내를 보고, Worker 시험 알림 제목을 원문에서 확인한다('단타' 없음).
