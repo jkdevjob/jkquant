@@ -21,7 +21,7 @@ function declarations(src,selector){
   return Object.fromEntries(rule[1].split(';').filter(Boolean).map(s=>{const i=s.indexOf(':');return [s.slice(0,i).trim(),s.slice(i+1).trim()];}));
 }
 function dom(route,width){
-  const values={},observed=[],events={},frames=[];
+  const values={},observed=[],events={},frames=[],microtasks=[];
   const el=(tag,cls,id,h)=>({tagName:tag.toUpperCase(),id:id||'',_classes:new Set(cls.split(' ').filter(Boolean)),_height:h,
     classList:{add(c){this.owner._classes.add(c);},contains(c){return this.owner._classes.has(c);}},
     getBoundingClientRect(){return {height:this._height};},contains(x){return x===this;}});
@@ -30,15 +30,22 @@ function dom(route,width){
   const body=el('body','','',0),sess=route[0]==='index.html'?el('div','sessbar','sessbar',38):null,status=sess?el('div','statusline','statusline',24):null;
   [header,tabs,body,sess,status].filter(Boolean).forEach(e=>e.classList.owner=e);
   if(route[3]==='/paper'){tabs._height=0;sess._height=0;status._height=0;}
-  const menu={closest:s=>s===route[1]?header:null};
+  let shell=route[1]==='header'?header:null;
+  const menu={closest:s=>s==='header'?shell:s==='.top'&&route[1]==='.top'?header:null};
   const document={readyState:'loading',body,documentElement:{style:{setProperty:(k,v)=>values[k]=v}},
     querySelector(s){return s==='.jkmenu'?menu:s.split(',').includes(route[2])?tabs:null;},
     getElementById:id=>id==='sessbar'?sess:id==='statusline'?status:null,
     addEventListener:(n,f)=>(events[n]||=[]).push(f)};
   class RO{constructor(f){this.callback=f;}observe(e){observed.push(e);}}
   const win={ResizeObserver:RO,requestAnimationFrame:f=>{frames.push(f);return frames.length;},addEventListener:(n,f)=>(events[n]||=[]).push(f)};
-  const context={window:win,document};
-  return {context,header,tabs,sess,status,body,values,observed,events,frames,run(src=code){vm.runInNewContext(src,context);},flush(){while(frames.length)frames.shift()();}};
+  const context={window:win,document,Promise:{resolve:()=>({then:f=>microtasks.push(f)})}};
+  return {context,header,tabs,sess,status,body,values,observed,events,frames,microtasks,
+    normalizeHeader(){
+      if(!shell){shell=el('header','jk-site-header','',header._height+1);shell.classList.owner=shell;}
+      return shell;
+    },
+    run(src=code){vm.runInNewContext(src,context);},flush(){while(frames.length)frames.shift()();},
+    flushMicrotasks(){while(microtasks.length)microtasks.shift()();}};
 }
 function verify(route,width,src=code,styles=css){
   const html=fs.readFileSync(path.join(root,route[0]),'utf8');
@@ -78,8 +85,26 @@ function verify(route,width,src=code,styles=css){
   D.context.window.JKSticky.mount();D.run(src);
   assert.equal(D.observed.filter(e=>e===D.header).length,1,'중복 로딩/마운트에도 감시는 하나');
 }
+// The production <script defer> runs at interactive, before DOMContentLoaded.
+// Plan/backtest start with a .top row; the later unified UI moves it into a new
+// backdrop-filter header. Sticky must attach to that outer stacking context.
+function verifyReadyHeader(route,width,state,src=code){
+  const D=dom(route,width);D.context.document.readyState=state;D.run(src);
+  const shell=D.normalizeHeader();
+  if(state==='loading')D.events.DOMContentLoaded.forEach(f=>f());else D.flushMicrotasks();
+  assert(shell._classes.has('jk-sticky-header'),'통합된 바깥 헤더에 고정 레이어: '+state+' '+route[0]);
+  if(route[1]==='.top')assert(!D.header._classes.has('jk-sticky-header'),'이동 전 내부 행에 고정 레이어를 남기지 않는다');
+  assert.equal(D.values['--jk-header-height'],shell._height+'px','바깥 헤더의 테두리까지 포함한 높이');
+  assert.equal(D.observed.filter(e=>e===shell).length,1,'바깥 헤더를 감시');
+  assert(D.tabs._classes.has(route[2]==='#nav'?'jk-sticky-side':'jk-sticky-tabs'),'초기화 뒤 탭 고정');
+  shell._height+=27;D.events.resize[0]();D.flush();
+  assert.equal(D.values['--jk-header-height'],shell._height+'px','바깥 헤더 높이 변경을 반영');
+  D.context.window.JKSticky.mount();D.run(src);D.flushMicrotasks();
+  assert.equal(D.observed.filter(e=>e===shell).length,1,'준비된 DOM에서도 중복 감시 없음');
+}
 for(const route of routes)for(const width of [340,390,768,1280]){
   verify(route,width);console.log('PASS sticky '+(route[3]||route[0])+' '+width+'px');
+  for(const state of ['loading','interactive','complete'])verifyReadyHeader(route,width,state);
 }
 for(const [name,mutCode,mutCss] of [
   ['body hidden 복귀',code,css.replace('body{max-width:100%;min-width:0;overflow-x:clip}','body{max-width:100%;min-width:0;overflow-x:hidden}')],
@@ -89,4 +114,10 @@ for(const [name,mutCode,mutCss] of [
   assert.throws(()=>verify(routes[0],390,mutCode,mutCss),assert.AssertionError,name+'를 검사에서 잡는다');
   console.log('PASS mutation '+name);
 }
-console.log('ALL PASS sticky: '+routes.length+' routes × 4 widths, 3 mutations');
+const immediate=code.replace('else Promise.resolve().then(mount);','else mount();');
+assert.notEqual(immediate,code,'defer 초기화 변이가 실제 소스를 변경한다');
+for(const route of [routes[2],routes[3]]){
+  assert.throws(()=>verifyReadyHeader(route,390,'interactive',immediate),assert.AssertionError,'이동 전 행을 잡는 옛 defer 동작을 검사에서 잡는다');
+}
+console.log('PASS mutation defer 초기화 즉시 실행 복귀 (plan/backtest)');
+console.log('ALL PASS sticky: '+routes.length+' routes × 4 widths; 144 unified header lifecycle cases; 4 mutations');
