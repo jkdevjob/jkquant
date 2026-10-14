@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html'];
-const labels={'/':'운영','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
+const labels={'/':'운영','/paper':'모의투자','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
 const ui=fs.readFileSync('jk-ui.js','utf8'),mobile=fs.readFileSync('jk-mobile.css','utf8');
 new vm.Script(ui,{filename:'jk-ui.js'});
 function verify(src=ui){
@@ -27,7 +27,7 @@ assert(mobile.includes('@media (max-width:768px)'),'모바일 분기 유지');
 assert(/\.wrap\{width:100%!important;max-width:none!important/.test(mobile),'모바일 전체폭 유지');
 for(const p of pages){
   const html=fs.readFileSync(p,'utf8');
-  assert(html.includes('/jk-ui.js?v=1.0.4'),p+' 공용 UI 캐시 버전');
+  assert(html.includes('/jk-ui.js?v=1.0.5'),p+' 공용 UI 캐시 버전');
   assert(html.includes('class="wrap'),p+' wrap 존재');
   assert(html.includes('class="jkmenu'),p+' 공통 메뉴 존재');
 }
@@ -39,6 +39,13 @@ assert(index.includes('function paperDualMoney('),'달러+원화 병기 함수')
 assert(index.includes('paperDualMoney(r,r.total,r.wonRate)'),'모의 평가 달러+원화 병기');
 assert(index.includes('paperDualMoney(r,r.inflow,r.wonRate,r.inflowWon)'),'모의 투입 달러+원화 병기');
 assert(index.includes('달러 종목은 달러 + 원화 병기'),'표 설명 병기 규칙');
+/* /paper is served by index.html: both initial navigation and history.pushState/popstate need the shared header. */
+assert(ui.includes("'/paper':'모의투자'"),'/paper route recognized');
+assert(index.includes("if(window.JKUnifiedUI&&typeof window.JKUnifiedUI.normalizeHeader==='function')window.JKUnifiedUI.normalizeHeader();"),
+  '운영 ↔ 모의투자 경로 변경 시 공통 헤더 재정규화');
+assert(index.includes("function paperPageMode(on){"),'모의투자 SPA route handler still present');
+assert(index.includes("body.paperpage>div.wrap{display:none!important}"),'기존 모의투자 본문 레이아웃 유지');
+assert.throws(()=>verify(ui.replace("'/paper':'모의투자'","'/paper':'누락'")),assert.AssertionError,'모의투자 경로 회귀 차단');
 assert.throws(()=>verify(ui.replace('--jk-desktop-width:1100px','--jk-desktop-width:1180px')),assert.AssertionError,'폭 회귀 차단');
 assert.throws(()=>verify(ui.replace("'/job':'JOB'","'/job':'채용'")),assert.AssertionError,'메뉴명 회귀 차단');
 assert.throws(()=>verify(ui.replace("kicker.textContent='JK 투자'","kicker.textContent='JK'")),assert.AssertionError,'브랜드 회귀 차단');
