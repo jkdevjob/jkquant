@@ -1,5 +1,5 @@
 // Cloudflare Pages Function — /api/opening-monitor
-// 브라우저 없이 시초가 눌림→재돌파 기준전략을 서버에서 감시하고 Telegram으로 모의 매수/매도 신호를 보낸다.
+// 브라우저 없이 시초가 눌림→재돌파 기준전략을 서버에서 감시하고 Telegram으로 매수/매도 신호를 보낸다.
 // 연구용 shadow 전략은 같은 분봉/같은 엔진으로 동시에 계산하지만 실제 알림/주문에는 영향을 주지 않고 기록만 한다.
 
 import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS, openingVariant } from "./_opening.js";
@@ -126,14 +126,14 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="bas
 function buyLines(rows){
   return rows.flatMap((x,i)=>[
     (i+1)+". "+x.name+" ("+x.code+")",
-    "매수신호 "+String(x.entryTime).padStart(4,"0")+" · "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원",
+    "매수 "+String(x.entryTime).padStart(4,"0")+" · "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원",
     "갭 "+(x.gap>=0?"+":"")+x.gap.toFixed(2)+"% · 눌림 -"+x.pullbackPct.toFixed(2)+"% · 거래량 "+x.volRatio.toFixed(2)+"배 · 거래대금 "+x.amountRatio.toFixed(2)+"배"
   ]);
 }
 function sellLines(rows){
   return rows.flatMap((x,i)=>[
     (i+1)+". "+x.name+" ("+x.code+")",
-    "매도신호 "+String(x.exitTime).padStart(4,"0")+" · "+Math.round(x.exitPrice).toLocaleString("ko-KR")+"원 · "+x.reason,
+    "매도 "+String(x.exitTime).padStart(4,"0")+" · "+Math.round(x.exitPrice).toLocaleString("ko-KR")+"원 · "+x.reason,
     "진입 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원 · 비용 "+((x.friction&&x.friction.totalPct)||0).toFixed(2)+"% ("+((x.friction&&x.friction.source)||"unknown")+") · 손익 "+(x.pnl>=0?"+":"")+x.pnl.toFixed(2)+"%"
   ]);
 }
@@ -205,13 +205,13 @@ export async function onRequestGet({request,env}){
     // 스케줄러가 응답을 먼저 영구 보관하고, 알림 실패가 있으면 VTS 실행은 안전하게 건너뛴다.
     if(buys.length){
       try{
-        const t=await sendTelegram(env,"[지피티 연구 시초가] 🟢 모의 매수 신호 · "+String(liveTargetHm).padStart(4,"0"),buyLines(buys));
+        const t=await sendTelegram(env,"[지피티 연구 시초가] 🟢 매수 · "+String(liveTargetHm).padStart(4,"0"),buyLines(buys));
         telegram.buySent=true;telegram.buyMessageId=t.messageId||null;
       }catch(e){telegram.buyError=String(e.message||e).slice(0,240);}
     }
     if(sells.length){
       try{
-        const t=await sendTelegram(env,"[지피티 연구 시초가] 🔴 모의 매도 신호 · "+String(liveTargetHm).padStart(4,"0"),sellLines(sells));
+        const t=await sendTelegram(env,"[지피티 연구 시초가] 🔴 매도 · "+String(liveTargetHm).padStart(4,"0"),sellLines(sells));
         telegram.sellSent=true;telegram.sellMessageId=t.messageId||null;
       }catch(e){telegram.sellError=String(e.message||e).slice(0,240);}
     }
