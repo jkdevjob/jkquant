@@ -281,6 +281,7 @@
       '@media(max-width:768px){.jk-page-top{min-height:64px!important;padding:10px 0 9px!important;gap:10px!important}.jk-page-version{font-size:10px!important;margin-left:5px!important}}'+
       /* Shared asset-plan header: one content width, title style and fixed row height. */
       'header.jk-site-header{box-sizing:border-box!important;width:100%!important;padding:0!important;margin:0!important;border-bottom:1px solid #2a3354!important;background:rgba(15,19,32,.96)!important}'+
+      'html.plan-hydrating body>header.jk-site-header{visibility:visible!important}'+
       'header.jk-site-header>.wrap{box-sizing:border-box!important;width:100%!important;max-width:var(--jk-desktop-width)!important;margin:0 auto!important;padding-top:0!important;padding-bottom:0!important}'+
       'header.jk-site-header .jk-page-top{box-sizing:border-box!important;width:100%!important;height:76px!important;min-height:76px!important;margin:0!important;padding:10px 0!important;border:0!important;align-items:center!important}'+
       'header.jk-site-header .jk-page-heading{margin:0!important;font-size:22px!important;line-height:1.2!important;letter-spacing:-.035em!important;white-space:nowrap!important;overflow-wrap:normal!important;word-break:keep-all!important}'+
