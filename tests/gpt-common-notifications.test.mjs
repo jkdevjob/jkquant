@@ -12,7 +12,7 @@ const day=tz=>new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:
 function fixture(Worker=PresaleAlertStore){
   const values=new Map(),calls=[];
   const storage={get:async k=>values.get(k),put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),
-    list:async({prefix}={})=>new Map([...values].filter(([k])=>!prefix||k.startsWith(prefix)))};
+    list:async({prefix}={})=>new Map([...values].filter(([k])=>!prefix||k.startsWith(prefix))),getAlarm:async()=>null};
   const app=new Worker({storage},{MONITOR_KEY:"test-key"});
   app.pushOne=async(endpoint,topic)=>{calls.push({endpoint,topic});return {ok:true,status:201}};
   const get=path=>app.fetch(new Request(base+path,{headers:{origin}}));
@@ -53,7 +53,7 @@ async function checkDeliveries(Worker=PresaleAlertStore){
   assert.deepEqual(x.calls.filter(c=>c.topic==="research").map(c=>c.endpoint).sort(),
     [ep("legacy-research"),ep("other-research")].sort(),"지피티 공통 설정이 다른 연구를 임의로 켜지 않음");
   const health=await (await x.get("/health")).json();
-  assert.equal(health.version,"2.6.1");assert.equal(health.topicSchemaVersion,2);
+  assert.equal(health.version,"2.7.0");assert.equal(health.topicSchemaVersion,2);
   assert.equal(health.topicSubscriptions.gpt,4,"부분 구독 포함 등록기기는 중복 없이 집계");
   assert.equal(health.topicSubscriptions.opening,3);assert.equal(health.topicSubscriptions.tenbagger_gpt,3);
   assert.equal(health.topicSubscriptions.research,2);assert.ok(health.lastChecks.gpt);

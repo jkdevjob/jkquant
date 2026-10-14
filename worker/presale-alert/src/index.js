@@ -1,6 +1,7 @@
 import { buildDailyDigest, IPO_SCORE_VERSION } from "./ipo-score.mjs";
 import { verifyFirebaseToken } from "../../../functions/api/_firebase_token.js";
 import { evaluatePresale, describeEvaluation, won, SCORING_VERSION } from "./presale-score.mjs";
+import {normalizeGptReport,missingGptReport,gptReportDate,gptReportDue,gptReportMessage} from "../../../functions/api/_gpt_morning_report.js";
 const enc=new TextEncoder();
 const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
@@ -276,6 +277,66 @@ async function jobFeed(baseUrl){
 
 export class PresaleAlertStore{
   constructor(state,env){this.state=state;this.env=env}
+  async armGptMorningReport(){
+    const now=Date.now(),today=gptReportDate(now),date=now<gptReportDue(today)?today:gptReportDate(now+86400000);
+    const due=gptReportDue(date),old=await this.state.storage.getAlarm();
+    if(!old||old<=now||old>due)await this.state.storage.setAlarm(due);
+    return {ok:true,date,dueAt:new Date(due).toISOString()};
+  }
+  async gptMorningReport(request){
+    if(!this.env.MONITOR_KEY||request.headers.get('x-monitor-key')!==this.env.MONITOR_KEY)return json(request,{ok:false,error:'unauthorized'},401);
+    const st=this.state.storage;
+    if(request.method==='GET'){
+      const date=new URL(request.url).searchParams.get('date')||await st.get('gpt-report:latest');
+      return json(request,{ok:true,report:date?await st.get('gpt-report:'+date)||null:null,delivery:date?await st.get('gpt-report-delivery:'+date)||null:null});
+    }
+    let report;try{report=normalizeGptReport(await request.json());}catch(e){return json(request,{ok:false,error:String(e.message)},400);}
+    const receipt=await st.get('gpt-report-delivery:'+report.date);
+    if(receipt)return json(request,{ok:true,duplicate:true,date:report.date,delivery:receipt});
+    if(await st.get('gpt-report:'+report.date))return json(request,{ok:true,duplicate:true,date:report.date});
+    await st.put('gpt-report:'+report.date,report);await st.put('gpt-report:latest',report.date);
+    const due=Math.max(Date.now()+1000,gptReportDue(report.date)),alarm=await st.getAlarm();
+    if(!alarm||alarm>due)await st.setAlarm(due);
+    return json(request,{ok:true,queued:true,date:report.date,dueAt:new Date(due).toISOString()});
+  }
+  async alarm(){
+    const p=(this.gptReportQueue||Promise.resolve()).catch(()=>{}).then(async()=>{
+      try{await this.deliverGptMorningReport();}finally{await this.armGptMorningReport();}
+    });this.gptReportQueue=p;return p;
+  }
+  async deliverGptMorningReport(){
+    const now=Date.now(),date=gptReportDate(now),st=this.state.storage;
+    if(now<gptReportDue(date))return;
+    const key='gpt-report-delivery:'+date;
+    let receipt=await st.get(key)||{date,pushKeys:[],pushAttempts:0,telegram:{result:'not_sent',tries:0}};
+    const report=await st.get('gpt-report:'+date)||missingGptReport(date,now),m=gptReportMessage(report);
+    await st.put('gpt-report:'+date,report);await st.put('gpt-report:latest',date);
+    if(receipt.complete)return receipt;
+    await st.put(key,receipt);
+    if(receipt.pushAttempts<3&&!receipt.pushComplete){
+      await this.recordAlert({...m,createdAt:new Date(now).toISOString()});
+      receipt.pushAttempts++;
+      try{const p=await this.notifyAll('gpt',new Set(receipt.pushKeys));receipt.pushKeys=[...new Set([...receipt.pushKeys,...p.sentKeys])];receipt.push={sent:receipt.pushKeys.length,eligible:p.eligible,failed:p.failed,removed:p.removed};receipt.pushComplete=p.failed<=p.removed;}
+      catch(e){receipt.push={error:'push delivery failed'};}
+      await st.put(key,receipt);
+    }
+    if(!['sent','unknown'].includes(receipt.telegram.result)){
+      for(let n=receipt.telegram.tries+1;n<=3;n++){
+        receipt.telegram={result:'unknown',tries:n};await st.put(key,receipt);
+        try{
+          const r=await fetch((this.env.BASE_URL||BASE_APP)+'/api/gpt-morning-report',{method:'POST',headers:{'content-type':'application/json','x-monitor-key':this.env.MONITOR_KEY},body:JSON.stringify({text:m.text}),signal:AbortSignal.timeout(15000)});
+          const j=await r.json().catch(()=>null);
+          receipt.telegram={result:r.ok&&j?.ok?'sent':j?.definite?'fail':'unknown',tries:n};await st.put(key,receipt);
+          if(receipt.telegram.result!=='fail')break;
+        }catch(e){break;}
+      }
+    }
+    receipt.complete=(receipt.pushComplete||receipt.pushAttempts>=3)&&(['sent','unknown'].includes(receipt.telegram.result)||receipt.telegram.tries>=3);
+    receipt.updatedAt=new Date().toISOString();await st.put(key,receipt);
+    await st.put('gpt-report:last-delivery',date);
+    if(!receipt.complete)await st.setAlarm(Date.now()+60000);
+    return receipt;
+  }
   async vapid(){
     let v=await this.state.storage.get("vapid");
     if(!v){v=await generateVapid();await this.state.storage.put("vapid",v)}
@@ -689,6 +750,13 @@ export class PresaleAlertStore{
   async fetch(request){
     if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
     const u=new URL(request.url),path=u.pathname;
+    if(path==='/gpt-morning-report'){
+      const p=(this.gptReportQueue||Promise.resolve()).catch(()=>{}).then(()=>this.gptMorningReport(request));this.gptReportQueue=p;return p;
+    }
+    if(path==='/gpt-morning-arm'){
+      if(!this.env.MONITOR_KEY||request.headers.get('x-monitor-key')!==this.env.MONITOR_KEY)return json(request,{ok:false,error:'unauthorized'},401);
+      return json(request,await this.armGptMorningReport());
+    }
     if(path==="/health"){
       const subs=await this.subscriptions(),lastCheck=await this.state.storage.get("lastCheck");
       const jobLastCheck=await this.state.storage.get("lastCheck:job");
@@ -705,8 +773,10 @@ export class PresaleAlertStore{
       }
       lastChecks.tenbagger_gpt=await this.state.storage.get("lastCheck:tenbagger_gpt")||null;
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.6.1",topicSchemaVersion:2,subscriptions:subs.size,
-        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
+      const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
+      const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.7.0",topicSchemaVersion:2,subscriptions:subs.size,
+        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
     if(path==="/latest"){
@@ -761,6 +831,7 @@ export default{
     }
     if(minute!==7&&minute!==37)return;
     ctx.waitUntil(Promise.allSettled([
+      stub.fetch(new Request('https://internal/gpt-morning-arm',{method:'POST',headers:{'x-monitor-key':env.MONITOR_KEY||''}})),
       stub.fetch(new Request("https://internal/check",{method:"POST"})),
       stub.fetch(new Request("https://internal/check-jobs",{method:"POST"}))
     ]));

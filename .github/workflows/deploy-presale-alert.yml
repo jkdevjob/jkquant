@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: 아침 보고서 시각·중복·채널 검사
+        run: node --test tests/gpt-morning-report.test.mjs
 
       - name: Cloudflare 배포 자격증명 확인
         env:

@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.7</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.45.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -343,6 +343,10 @@ canvas{display:block;width:100%;height:auto}
 </div></div>
 
   <div id="strategy_daily" class="strategy-pane on">
+    <div class="card" id="gpt_morning_card">
+      <h3><span class="dot"></span>🔬 아침 연구 리포트 <span class="sub">매일 08:00 · 전체 탭</span></h3>
+      <div id="gpt_morning_body"><p class="sub">보고서를 불러오는 중…</p></div>
+    </div>
     <div class="strategy-head">모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>
     <div class="card">
       <h3><span class="dot"></span>📅 오늘 기준전략 결과 <span class="sub">KST 전일·당일 · 순수익</span></h3>
@@ -1759,6 +1763,37 @@ function refreshDailyDashboard(){
   loadShadowRankings(true);
 }
 const DAILY_RESULTS_TTL_MS=60000;
+let GPT_MORNING_AT=0,GPT_MORNING_PROMISE=null,GPT_MORNING_CONTROLLER=null;
+function stopGptMorningReport(){GPT_MORNING_CONTROLLER?.abort();GPT_MORNING_CONTROLLER=null;GPT_MORNING_PROMISE=null;GPT_MORNING_AT=0;}
+function renderGptMorningReport(j){
+  const r=j.report,d=j.delivery;
+  if(!r)return '<p class="sub">아침 연구 보고서가 아직 준비되지 않았습니다. 연구 완료 뒤 모든 탭의 검증 결과와 다음 과제를 표시합니다.</p>';
+  const statuses={verified:'검증 근거 확인',collecting:'표본 수집',blocked:'미검증·자료 미확인',no_change:'새 개선 없음'};
+  const tg={sent:'전송 확인',fail:'전송 실패',unknown:'결과 미확인',not_sent:'전송 대기'};
+  return '<p class="lead"><b>'+esc(r.date)+' · '+esc(r.summary)+'</b></p>'+
+    '<p class="sub">작성 '+esc(scalpingKstStamp(r.preparedAt))+' · 기준 코드 '+esc((r.mainSha||'미확인').slice(0,8))+' · '+(d?'앱푸시 접수 '+Number(d.push?.sent||0)+'건 · 텔레그램 '+esc(tg[d.telegram?.result]||'전송 대기'):'08:00 발송 예약·전송 상태 확인 중')+'</p>'+
+    (r.sections||[]).map(s=>'<details><summary>'+esc(s.label)+' · '+esc(statuses[s.status]||'미확인')+'</summary><p>'+esc(s.findings)+'</p><p><b>다음 검증</b> '+esc(s.nextTest)+'</p>'+
+      (s.evidence||[]).filter(u=>/^https:\/\//.test(u)).map(u=>'<a href="'+esc(u)+'" target="_blank" rel="noopener">근거 자료 ↗</a>').join(' · ')+'</details>').join('');
+}
+async function loadGptMorningReport(force=false){
+  if(!me||document.hidden)return null;
+  if(GPT_MORNING_PROMISE)return GPT_MORNING_PROMISE;
+  if(!force&&Date.now()-GPT_MORNING_AT<60000)return null;
+  const user=me,epoch=SCALPING_AUTH_EPOCH,ctl=new AbortController(),node=$('gpt_morning_body');if(!node)return null;
+  const current=()=>me?.uid===user.uid&&epoch===SCALPING_AUTH_EPOCH;
+  GPT_MORNING_CONTROLLER=ctl;const timer=setTimeout(()=>ctl.abort(),10000);
+  const p=(async()=>{
+    try{
+      const token=await user.getIdToken();if(!current())return null;
+      const q=new URLSearchParams(location.search).get('morningReport'),suffix=q&&/^\d{4}-\d{2}-\d{2}$/.test(q)?'?date='+q:'';
+      const resp=await fetch('/api/gpt-morning-report'+suffix,{signal:ctl.signal,cache:'no-store',headers:{Authorization:'Bearer '+token,Accept:'application/json'}});
+      const j=await resp.json();if(!resp.ok||!j.ok)throw Error(j.error||'조회 실패');if(!current())return null;
+      const html=renderGptMorningReport(j);if(node.innerHTML!==html)node.innerHTML=html;GPT_MORNING_AT=Date.now();return j;
+    }catch(e){if(current())node.innerHTML='<p class="warn">아침 보고서 조회 실패 · '+esc(e.message||e)+'</p>';return null;}
+    finally{clearTimeout(timer);if(GPT_MORNING_CONTROLLER===ctl)GPT_MORNING_CONTROLLER=null;}
+  })();GPT_MORNING_PROMISE=p;
+  try{return await p;}finally{if(GPT_MORNING_PROMISE===p)GPT_MORNING_PROMISE=null;}
+}
 let DAILY_RESULTS_PAYLOAD=null,DAILY_RESULTS_AT=0,DAILY_RESULTS_PROMISE=null;
 let DAILY_RESULTS_CONTROLLER=null;
 let DAILY_LIVE_PAYLOAD=null,DAILY_LIVE_PROMISE=null,DAILY_LIVE_CONTROLLER=null,DAILY_LIVE_TIMER=null,DAILY_LIVE_SEQ=0;
@@ -1770,6 +1805,7 @@ function mergeDailyLivePayload(j){
   return {...j,strategies:(j.strategies||[]).map(x=>({...x,current:by.get(x.strategy)||x.current}))};
 }
 function stopDailyLiveAuto(){
+  stopGptMorningReport();
   if(DAILY_LIVE_TIMER)clearInterval(DAILY_LIVE_TIMER);
   DAILY_LIVE_TIMER=null;DAILY_LIVE_SEQ++;
   DAILY_LIVE_CONTROLLER?.abort();DAILY_RESULTS_CONTROLLER?.abort();
@@ -1800,6 +1836,7 @@ async function refreshDailyLiveResults(){
       const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'HTTP '+r.status);
       if(!current())return null;
       DAILY_LIVE_PAYLOAD=j;
+      void loadGptMorningReport();
       if(!DAILY_RESULTS_PAYLOAD||DAILY_RESULTS_PAYLOAD.kstDate!==j.kstDate||Date.now()-DAILY_RESULTS_AT>300000)void loadDailyStrategyResults(true);
       const base=DAILY_RESULTS_PAYLOAD?.kstDate===j.kstDate?DAILY_RESULTS_PAYLOAD:{kstDate:j.kstDate,generatedAt:j.generatedAt,strategies:j.strategies};
       renderDailyStrategyResultsPayload(base);return j;

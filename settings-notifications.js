@@ -96,7 +96,7 @@ function item(topic,icon,name,desc){
 }
 const NOTIFY_DEFS=[
   {topic:"gpt",href:"/scalping",icon:"⚡",name:"연구(지피티) · 전체 탭",
-    desc:"시초가 · 데이트레이딩 · 비트코인 · SOXL의 모의 매수·매도와 텐배거 전향 연구 알림을 함께 켜고 끕니다. 알림을 누르면 해당 탭으로 이동합니다."},
+    desc:"시초가 · 데이트레이딩 · 비트코인 · SOXL의 모의 매수·매도와 텐배거 전향 연구 알림을 함께 켜고 끕니다. 매일 08:00 전체 탭 연구 리포트도 보냅니다. 알림을 누르면 해당 탭으로 이동합니다."},
   {topic:"ipo",href:"/ipo",icon:"📈",name:"공모주·청약 일정",
    desc:"매일 오전 8:10경 청약 중·7일 내 청약 예정·당일 상장 종목과 공모가/경쟁률 기반 투자 조사 점수를 보내드립니다."},
   {topic:"presale",href:"/realestate",icon:"🏢",name:"대전·세종 신규분양",

@@ -1,0 +1,42 @@
+name: 지피티 아침 연구 보고서 준비 · 서버 08시 발송
+# Model research writes only sanitized evidence/report data on this branch.
+# GitHub queues the report early; Durable Object alarm sends at 08:00 KST.
+on:
+  push:
+    branches: [research/gpt-morning]
+    paths: [research/gpt-morning/latest.json]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: gpt-morning-report-prepare
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/gpt-morning
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: 모든 탭 보고서 검증
+        run: node .app/scripts/validate-gpt-morning-report.mjs research/gpt-morning/latest.json > /tmp/gpt-report.json
+      - name: 기존 푸시 서버에 08시 보고서 예약
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$KEY" ] || { echo "AUTOTRADE_KEY 미설정"; exit 1; }
+          WORKER=$(node -e 'console.log(require("./.app/data/realestate/gpt/push-config.json").workerUrl)')
+          curl -fsS --max-time 30 -X POST "$WORKER/gpt-morning-report" \
+            -H "content-type: application/json" -H "x-monitor-key: $KEY" \
+            --data-binary @/tmp/gpt-report.json -o /tmp/gpt-queued.json
+          jq '{ok,queued,duplicate,date,dueAt,delivery:{push:.delivery.push,telegram:.delivery.telegram}}' /tmp/gpt-queued.json
+          jq -e '.ok==true' /tmp/gpt-queued.json >/dev/null
