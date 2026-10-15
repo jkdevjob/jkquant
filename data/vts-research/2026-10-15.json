@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-15T14:17:18.439549+09:00",
+  "mode": "read-only-vts-execution-research",
+  "from": "2026-09-25",
+  "to": "2026-10-15",
+  "archiveDays": 15,
+  "strategies": [
+    {
+      "strategy": "opening",
+      "days": 15,
+      "reports": 15,
+      "internalTrades": 22,
+      "kisOrders": 33,
+      "completeMatches": 4,
+      "buyMatches": 6,
+      "sellMatches": 4,
+      "avgEntrySlippageCostPct": -0.12204731530452428,
+      "avgExitSlippageCostPct": 0.03692270460884106,
+      "avgRoundTripSlippageCostPct": 0.12476538978968832,
+      "avgInternalPnlPct": -1.1250597397753324,
+      "avgVtsGrossPnlPct": -0.4714181353214969,
+      "avgVtsNetPnlPct": -0.9248270242397778,
+      "avgBrokerCostRatePct": 0.45340888891827963,
+      "avgObservedExecutionDragPct": 0.578174278707968,
+      "frictionGapVsInternal025Pct": 0.328174278707968,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 4,
+      "totalBrokerEstimatedCostsWon": 34230.0,
+      "avgBrokerEstimatedCostsWon": 8557.5,
+      "avgEntryOrderLagSecApprox": 126.0,
+      "avgExitOrderLagSecApprox": 130.75,
+      "avgBrokerNotifyLagSec": 0.0,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    },
+    {
+      "strategy": "daytrading",
+      "days": 8,
+      "reports": 8,
+      "internalTrades": 18,
+      "kisOrders": 16,
+      "completeMatches": 0,
+      "buyMatches": 0,
+      "sellMatches": 0,
+      "avgEntrySlippageCostPct": null,
+      "avgExitSlippageCostPct": null,
+      "avgRoundTripSlippageCostPct": null,
+      "avgInternalPnlPct": null,
+      "avgVtsGrossPnlPct": null,
+      "avgVtsNetPnlPct": null,
+      "avgBrokerCostRatePct": null,
+      "avgObservedExecutionDragPct": null,
+      "frictionGapVsInternal025Pct": null,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 0,
+      "totalBrokerEstimatedCostsWon": 0,
+      "avgBrokerEstimatedCostsWon": null,
+      "avgEntryOrderLagSecApprox": null,
+      "avgExitOrderLagSecApprox": null,
+      "avgBrokerNotifyLagSec": null,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    }
+  ],
+  "latest": {
+    "date": "2026-10-15",
+    "reports": [
+      {
+        "strategy": "opening",
+        "internalTrades": 0,
+        "kisOrders": 2,
+        "matched": 0,
+        "matches": [],
+        "unmatched": [
+          {
+            "code": "094170",
+            "name": "동운아나텍",
+            "side": "매수",
+            "orderTime": "085702",
+            "orderQty": 114,
+            "fillQty": 114,
+            "fillPrice": 19599,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "side": "매도",
+            "orderTime": "085611",
+            "orderQty": 79,
+            "fillQty": 79,
+            "fillPrice": 6080,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          }
+        ]
+      }
+    ]
+  }
+}
