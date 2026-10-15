@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-14T22:58:17.784982+09:00",
+  "generatedAt": "2026-10-15T14:18:44.344391+09:00",
   "mode": "prospective-shadow-paper",
   "paperStart": "2026-10-01",
   "designEnd": "2026-09-30",
@@ -13,8 +13,8 @@
   "latestSourceDates": {
     "opening": "2026-10-14",
     "daytrading": "2026-10-14",
-    "crypto": "2026-10-13",
-    "soxl": "2026-10-13"
+    "crypto": "2026-10-14",
+    "soxl": "2026-10-14"
   },
   "strategies": {
     "opening": {
@@ -2731,7 +2731,7 @@
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 13,
+        "days": 14,
         "trades": 0,
         "tradeDays": 0,
         "winRatePct": 0.0,
@@ -2809,6 +2809,11 @@
           },
           {
             "date": "2026-10-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-14",
             "returnPct": 0.0,
             "trades": 0
           }
@@ -3271,20 +3276,20 @@
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 9,
-        "trades": 0,
-        "tradeDays": 0,
-        "winRatePct": 0.0,
-        "avgTradePnlPct": 0.0,
-        "avgDailyReturnPct": 0.0,
-        "plus1Days": 0,
-        "plus1DayRatePct": 0.0,
+        "days": 10,
+        "trades": 1,
+        "tradeDays": 1,
+        "winRatePct": 100.0,
+        "avgTradePnlPct": 1.3111698447112021,
+        "avgDailyReturnPct": 0.13111698447112022,
+        "plus1Days": 1,
+        "plus1DayRatePct": 10.0,
         "plus5Weeks": 0,
-        "weeklyAvgPct": 0.0,
+        "weeklyAvgPct": 0.43516022390359677,
         "lossDayAvgPct": 0.0,
-        "worstDayPct": 0.0,
-        "profitFactor": 0.0,
-        "compoundReturnPct": 0.0,
+        "worstDayPct": 1.3111698447112021,
+        "profitFactor": 999.0,
+        "compoundReturnPct": 1.311169844711202,
         "maxDrawdownPct": 0.0,
         "daily": [
           {
@@ -3329,34 +3334,61 @@
           },
           {
             "date": "2026-10-13",
+            "returnPct": 1.3111698447112021,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-14",
             "returnPct": 0.0,
             "trades": 0
           }
         ],
-        "plus1DaysPerYear": 0.0,
+        "plus1DaysPerYear": 25.0,
         "plus5WeeksPerYear": 0.0
       },
       "reviewPolicy": "Rules stay frozen. Review after >=20 prospective days AND >=20 prospective trades; positive daily expectancy, PF>=1.10, MDD>=-15%, worst day>=-8%. No automatic live promotion.",
       "targetNote": "+1% day / +5% week are research thresholds, not guaranteed returns.",
-      "recentTrades": []
+      "recentTrades": [
+        {
+          "date": "2026-10-13",
+          "strategy": "soxl",
+          "strategyVersion": "soxl_power_hour_v1",
+          "code": "SOXL",
+          "signalTime": 1515,
+          "entryTime": 1520,
+          "entryPrice": 125.7300033569336,
+          "first30RetPct": 2.930249345007252,
+          "power30RetPct": 1.4443291067538055,
+          "signalVwap": 121.31966370927388,
+          "volumeRatio": 1.2966796344261335,
+          "decisionReason": "first30_strength+power_hour_momentum+vwap+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1555,
+          "exitPrice": 127.62999725341797,
+          "grossPnlPct": 1.511169844711202,
+          "frictionPct": 0.2,
+          "pnlPct": 1.3111698447112021,
+          "reason": "time_exit"
+        }
+      ]
     }
   },
   "equalWeightPortfolio": {
-    "days": 14,
-    "trades": 28,
+    "days": 15,
+    "trades": 29,
     "tradeDays": 8,
-    "winRatePct": 7.142857142857142,
-    "avgTradePnlPct": -0.08268006651744682,
-    "avgDailyReturnPct": -0.08268006651744682,
+    "winRatePct": 13.333333333333334,
+    "avgTradePnlPct": -0.05531523133776366,
+    "avgDailyReturnPct": -0.05531523133776366,
     "plus1Days": 0,
     "plus1DayRatePct": 0.0,
     "plus5Weeks": 0,
-    "weeklyAvgPct": -0.3859757401871833,
-    "lossDayAvgPct": -0.20858328514769164,
+    "weeklyAvgPct": -0.2771841085724702,
+    "lossDayAvgPct": -0.23293049933897358,
     "worstDayPct": -0.5091745283018853,
-    "profitFactor": 0.20722251105688053,
-    "compoundReturnPct": -1.1534636525624364,
-    "maxDrawdownPct": -1.1864628335301886,
+    "profitFactor": 0.4063118452205584,
+    "compoundReturnPct": -0.8292495244501041,
+    "maxDrawdownPct": -1.124665749623699,
     "daily": [
       {
         "date": "2026-10-01",
@@ -3425,7 +3457,12 @@
       },
       {
         "date": "2026-10-14",
-        "returnPct": -0.0625,
+        "returnPct": 0.26529246117780053,
+        "trades": 1
+      },
+      {
+        "date": "2026-10-15",
+        "returnPct": 0.0,
         "trades": 1
       }
     ],
