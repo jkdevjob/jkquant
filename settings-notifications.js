@@ -7,6 +7,7 @@ if(!host)return;
 let cfg=null,reg=null,sub=null,health=null,busy=false;
 let topics=new Set();
 let approvalLinked=false;
+let adminRequests=false;
 let topicSchemaVersion=1;
 const GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
 
@@ -33,7 +34,7 @@ async function server(path,opt){
 }
 async function currentSub(){
   if(!supported())return null;
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.2.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.3.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   sub=await reg.pushManager.getSubscription();
   return sub;
@@ -44,6 +45,7 @@ async function loadTopics(required=false){
     const j=await server("/subscription?endpoint="+encodeURIComponent(sub.endpoint));
     topics=new Set(j.topics||[]);
     approvalLinked=!!j.approvalLinked;
+    adminRequests=!!j.adminRequests;
     topicSchemaVersion=Number(j.topicSchemaVersion||1);
     if(topicSchemaVersion<2&&topics.has("research"))topics.add("tenbagger_gpt");
   }catch(e){if(required)throw e}
@@ -120,14 +122,36 @@ function render(){
       if(a==="on")enable(t);else if(a==="off")disable(t);else if(a==="test")test(t);
     });
   });
+  renderAdminRequests();
 }
+function renderAdminRequests(){
+  const box=document.getElementById('approvalRequestSettings'),u=window.jkAuth&&window.jkAuth.currentUser;
+  if(!box)return;
+  if(!window.JKAccess||!JKAccess.isAdminEmail(u&&u.email)){box.innerHTML='';return;}
+  const desc=commonDescription()||'신규 이용 신청을 관리자에게만 알립니다. 텔레그램은 기존 관리자 대화방으로 자동 전송하며, 앱 푸시는 이 기기에서 켜고 끕니다.';
+  box.innerHTML='<div class="alert-list"><div class="alert-item"><div class="alert-top"><div><div class="alert-name">👤 관리자 · 이용 승인 신청</div><div class="alert-desc">'+esc(desc)+'</div></div><span class="badge '+(adminRequests?'on':'')+'">'+(adminRequests?'ON':'OFF')+'</span></div><div class="actions"><button data-admin-request="'+(adminRequests?'off':'on')+'" '+(busy?'disabled':'')+'>'+(adminRequests?'앱 알림 끄기':'앱 알림 켜기')+'</button><a href="/admin#users">승인 대기 확인</a></div><div class="server">동일 계정의 재로그인·새로고침 중복 발송 방지 · 알림을 누르면 관리자 사용자 화면으로 이동</div></div></div>';
+  box.querySelector('button').addEventListener('click',async()=>{
+    if(busy)return;busy=true;render();
+    try{
+      const enabled=!adminRequests;
+      if(enabled)await ensurePushSubscription();
+      if(!sub)throw new Error('기기 구독이 없습니다.');
+      const bound=await JKAccess.bindAdminApprovalPush(u,sub,enabled);
+      if(!bound)throw new Error('관리자 로그인 상태를 확인해 주세요.');
+      approvalLinked=true;adminRequests=enabled;
+    }catch(e){alert('승인 신청 알림 설정 실패: '+String(e&&e.message||e));}
+    finally{busy=false;render();}
+  });
+}
+window.addEventListener('jk-settings-auth',()=>{renderAdminRequests();});
+window.addEventListener('jk-approval-admin-linked',async()=>{await loadTopics();renderAdminRequests();});
 async function ensurePushSubscription(){
   if(isIOS()&&!standalone())throw new Error("iPhone에서는 먼저 Safari 공유 → 홈 화면에 추가 후 홈화면 앱으로 실행하세요.");
   if(!supported())throw new Error("이 브라우저는 웹푸시를 지원하지 않습니다.");
   const perm=Notification.permission==="granted"?"granted":await Notification.requestPermission();
   if(perm!=="granted")throw new Error("알림 권한이 허용되지 않았습니다.");
   cfg=cfg||await getConfig();
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.2.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.3.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   const v=await server("/vapid");
   sub=await reg.pushManager.getSubscription();

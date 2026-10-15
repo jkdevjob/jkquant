@@ -32,7 +32,7 @@ const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDo
 const force=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
 const auth=getAuth(app),db=initializeFirestore(app,force?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
 window.jkAuth=auth;   // 연구(클로드) 알림 켜기가 소유자 토큰을 쓴다(settings-claude-push.js)
-JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{});
+JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{onUser:()=>window.dispatchEvent(new Event('jk-settings-auth'))});
 </script>
 <link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
@@ -71,9 +71,10 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
     <div class="note">연구(지피티)는 전체 탭을 하나의 설정으로 관리합니다. 연구(클로드) · 연구 결과 · 공모주/청약 · 신규분양 · JOB 알림도 여기서 켜고 끌 수 있습니다.</div>
     <div id="claudePushSettings"></div>
     <div id="notificationSettings"><div class="note" style="margin-top:12px">알림 상태를 확인하는 중…</div></div>
+    <div id="approvalRequestSettings"></div>
   </section>
 </div></main>
-<script src="/settings-notifications.js?v=1.1.1" defer></script>
+<script src="/settings-notifications.js?v=1.2.0" defer></script>
 <script src="/claude-push-client.js?v=1.0.1" defer></script>
 <script src="/settings-claude-push.js?v=1.0.3" defer></script>
 </body>
