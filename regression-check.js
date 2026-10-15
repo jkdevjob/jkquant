@@ -12353,6 +12353,36 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메
        &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
 }
 
+/* ════ 공모주 상세 — 상장 뒤에도 주간사·밴드·시장·경쟁률이 비지 않음 · 라벨/값 구분 ════ */
+console.log('\n[IPO DETAIL] 공모주 상세 정보 보충 · 표시');
+{
+  const f=fs.readFileSync(__d+'/functions/api/ipo.js','utf8'),h=fs.readFileSync(__d+'/ipo.html','utf8');
+  const grab=n=>{const i=f.indexOf('function '+n+'(');if(i<0)throw new Error('추출 실패: '+n);let d=0,j=f.indexOf('{',i);for(;j<f.length;j++){if(f[j]==='{')d++;else if(f[j]==='}'&&--d===0)break;}return f.slice(i,j+1);};
+  const mk=f.slice(f.indexOf('const MARKET'),f.indexOf(';',f.indexOf('const MARKET'))+1);
+  const applyDetail=new Function(mk+'\n'+grab('num')+'\n'+grab('applyDetail')+'\nreturn applyDetail;')();
+  // 멜콘(10/15 상장) — 모바일 목록에서 빠져 캘린더 값(공모가·날짜)만 남은 상태
+  const melcon=()=>({name:'멜콘',code:'179880',poPrice:12300,bandLo:null,bandHi:null,subStart:'2026-10-01',subEnd:'2026-10-02',
+    listDate:'2026-10-15',leadManager:'',instRate:null,subRate:null,status:'상장',market:''});
+  const det={ipoInfo:{ipoStatus:'상장',poStartDate:'2026-10-01',poEndDate:'2026-10-02',lcalDate:'2026-10-15'},
+    listedExamination:{marketType:'KOSDAQ'},registrationStatement:{hopePubStart:'10700',hopePubEnd:'12300'},
+    demandForecastingResult:{fixPubPrice:'12300',cmptnRate:'1136.84'},confirmedInfo:{fnlCmptRatio:'1741.48'},
+    joinManagers:[{orgType:'인수',orgNm:'신영증권'},{orgType:'대표',orgNm:'대신증권'}]};
+  const a=applyDetail(melcon(),det);
+  ok('상장 종목 빈 칸 보충 — 주간사(대표)·시장·밴드·기관/청약 경쟁률',
+     a.leadManager==='대신증권'&&a.market==='코스닥'&&a.bandLo===10700&&a.bandHi===12300
+     &&a.instRate===1136.84&&a.subRate===1741.48&&a.poPrice===12300,JSON.stringify(a));
+  const b=applyDetail({...melcon(),leadManager:'하나증권',market:'코스피',bandLo:1,instRate:5},det);
+  ok('이미 있는 값은 덮지 않음(캘린더·목록 값 우선)',b.leadManager==='하나증권'&&b.market==='코스피'&&b.bandLo===1&&b.instRate===5,JSON.stringify(b));
+  const c=applyDetail(melcon(),{...det,joinManagers:[{orgType:'대표',orgNm:'미래에셋증권'},{orgType:'대표',orgNm:'KB증권'},{orgType:'인수',orgNm:'신영증권'}]});
+  ok('공동 대표주관은 함께 표기(인수단 제외)',c.leadManager==='미래에셋증권·KB증권',c.leadManager);
+  ok('/api/ipo 가 날짜 있는 빈 칸 종목만 상세 조회(8개씩, 실패는 빈 칸 유지)',
+     /async function ipoDetail\(code\)/.test(f)&&/api\/domestic\/ipo\/A\$\{code\}\/detail\/info/.test(f)
+     &&/\(x\.subStart \|\| x\.listDate\) &&\s*\(!x\.leadManager/.test(f)&&/Promise\.allSettled\(need\.slice\(i, i \+ 8\)/.test(f));
+  ok('상세 카드 행은 라벨|값 양쪽 정렬 + 구분선 (.acct 밖에서도)',
+     /\.ipo-detail-card \.ar\{display:flex;justify-content:space-between[^}]*border-bottom:1px solid var\(--line\)/.test(h)
+     &&/\.ipo-detail-card \.ak\{color:var\(--dim\)/.test(h)&&/\.ipo-detail-card \.av\{font-weight:700;text-align:right/.test(h));
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));

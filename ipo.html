@@ -34,6 +34,11 @@ i.lg.list,.ipo-dot.list{background:#9a7bff}
 .ipo-row-sub{display:block;font-size:10px;color:var(--faint);font-weight:500;margin-top:1px}
 .ipo-row-pr{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ipo-detail-card{margin-top:10px;padding:12px;border:1px solid #40277a;border-radius:10px;background:linear-gradient(160deg,#1c1730,var(--panel))}
+/* 상세 행: 라벨(왼쪽·흐림) | 값(오른쪽·굵게) + 행 구분선. 기존 .ar 스타일은 .acct 안에서만 먹어 글자가 붙어 보였다 */
+.ipo-detail-card .ar{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:7px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.ipo-detail-card .ar:last-of-type{border-bottom:none}
+.ipo-detail-card .ak{color:var(--dim);flex:0 0 auto;white-space:nowrap}
+.ipo-detail-card .av{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;word-break:keep-all}
 .ipo-detail-nm{font-weight:800;font-size:15px;margin-bottom:8px}
 .ipo-ctx{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12px;margin-bottom:12px;line-height:1.5}
 .ipo-search-results:empty{display:none}
@@ -535,7 +540,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <body>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.24</span></h1></div>
+    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.25</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
