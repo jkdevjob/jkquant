@@ -5,6 +5,7 @@ const CONFIG="/data/realestate/gpt/push-config.json";
 const META_CACHE="jk-push-meta-v2";
 const TOPICS_KEY="/__jk_push_topics";
 const SHOWN_KEY="/__jk_push_shown";
+const REQUEST_SHOWN_KEY="/__jk_approval_requests_shown";
 const GPT_TOPICS=new Set(["opening","daytrading","crypto","soxl","tenbagger_gpt"]);
 const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
 
@@ -34,6 +35,14 @@ async function approvalAlert(){
   const j=await r.json();
   return j&&j.alert||null;
 }
+async function approvalRequests(){
+  const sub=await self.registration.pushManager.getSubscription();if(!sub)return [];
+  const cfg=await getConfig();if(!cfg.workerUrl)return [];
+  const r=await fetch(cfg.workerUrl+'/approval/request-events',{
+    method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({endpoint:sub.endpoint}),cache:'no-store'
+  });
+  if(!r.ok)return [];const j=await r.json();return Array.isArray(j.alerts)?j.alerts:[];
+}
 async function readMeta(key,fallback){
   try{
     const cache=await caches.open(META_CACHE),r=await cache.match(key);
@@ -57,13 +66,15 @@ function normalizePushTopics(value,version){
   return out;
 }
 async function shownIds(){
-  const v=await readMeta(SHOWN_KEY,[]);
-  return Array.isArray(v)?v:[];
+  const rows=await Promise.all([readMeta(SHOWN_KEY,[]),readMeta(REQUEST_SHOWN_KEY,[])]);
+  return rows.flatMap(v=>Array.isArray(v)?v:[]);
 }
 async function markShown(id){
   if(!id)return;
-  const v=await shownIds();
-  await writeMeta(SHOWN_KEY,[id,...v.filter(x=>x!==id)].slice(0,100));
+  // 신청 알림 영수증이 잦은 매매 알림에 밀려 사라져 재표시되지 않게 분리한다.
+  const key=String(id).startsWith('approval-request:')?REQUEST_SHOWN_KEY:SHOWN_KEY;
+  const old=await readMeta(key,[]),v=Array.isArray(old)?old:[];
+  await writeMeta(key,[id,...v.filter(x=>x!==id)].slice(0,100));
 }
 function pickAlerts(payload,allowed,shown,now=Date.now()){
   if(!allowed.length)return []; // 설정하지 않은 주제의 알림은 표시하지 않는다.
@@ -97,13 +108,16 @@ self.addEventListener("message",event=>{
 self.addEventListener("push",event=>{
   event.waitUntil((async()=>{
     try{
-      const [approval,shown]=await Promise.all([approvalAlert().catch(()=>null),shownIds()]);
+      const [approval,requests,shown]=await Promise.all([approvalAlert().catch(()=>null),approvalRequests().catch(()=>[]),shownIds()]);
       let alerts=[];
-      if(approval&&shown.indexOf(approval.id)<0)alerts=[approval];
-      else{
-        const [j,allowed]=await Promise.all([getLatest(),topics()]);
-        alerts=pickAlerts(j,allowed,shown);
-      }
+      if(approval&&shown.indexOf(approval.id)<0)alerts.push(approval);
+      alerts.push(...requests.filter(a=>a&&a.id&&shown.indexOf(a.id)<0));
+      // 관리자 신청 알림 때문에 같은 시점의 매매/공고 알림이 사라지지 않는다.
+      let latestError;
+      const [j,allowed]=await Promise.all([getLatest().catch(e=>{latestError=e;return null;}),topics()]);
+      alerts.push(...pickAlerts(j,allowed,shown));
+      alerts=alerts.filter((a,i)=>alerts.findIndex(b=>b.id===a.id)===i);
+      if(!alerts.length&&latestError)throw latestError;
       for(const a of alerts){
         await self.registration.showNotification(a.title||"JK 알림",{
           body:a.body||"새로운 정보가 업데이트되었습니다.",

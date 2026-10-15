@@ -161,12 +161,41 @@
   function timeout(p, ms){ var t; return Promise.race([p, new Promise(function(_, rej){ t=setTimeout(function(){ rej(new Error('응답 없음('+Math.round(ms/1000)+'초)')); }, ms); })])
     .finally(function(){ clearTimeout(t); }); }
 
+  var requestNotifyAt={},adminPushLinkedUid='';
+  async function approvalServer(path,user,body){
+    if(!user||!user.getIdToken)throw new Error('로그인 상태를 확인해 주세요.');
+    var r=await fetch('/data/realestate/gpt/push-config.json',{cache:'no-store'}),cfg=await r.json();
+    if(!r.ok||!/^https:\/\/[a-z0-9.-]+\.workers\.dev$/.test(cfg.workerUrl||''))throw new Error('알림 서버 연결 설정이 없습니다.');
+    var out=await fetch(cfg.workerUrl+path,{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+await user.getIdToken()},body:JSON.stringify(body||{}),signal:AbortSignal.timeout(20000)});
+    var result=await out.json();if(!out.ok||result.ok===false)throw new Error(result.error||'알림 연결 실패');return result;
+  }
+  async function notifyApprovalRequest(user){
+    if(Date.now()-(requestNotifyAt[user.uid]||0)<60000)return;
+    requestNotifyAt[user.uid]=Date.now();
+    try{await approvalServer('/approval/request',user,{});}catch(e){console.warn('승인 신청 알림 전송 확인 필요');}
+  }
+  async function bindAdminApprovalPush(user,subscription,enabled){
+    if(!isAdminEmail(user&&user.email)||!user.getIdToken)return false;
+    if(!subscription){
+      if(adminPushLinkedUid===user.uid||!('serviceWorker' in navigator)||!('Notification' in window)||Notification.permission!=='granted')return false;
+      var reg=await navigator.serviceWorker.getRegistration('/');
+      if(!reg)return false;
+      reg=await navigator.serviceWorker.register('/jk-sw.js?v=2.3.0',{scope:'/'});
+      subscription=await reg.pushManager.getSubscription();if(!subscription)return false;
+    }
+    var body={subscription:subscription.toJSON(),userAgent:navigator.userAgent};
+    if(typeof enabled==='boolean')body.adminRequests=enabled;
+    await approvalServer('/approval/subscribe',user,body);adminPushLinkedUid=user.uid;
+    if(window.dispatchEvent&&typeof Event==='function')window.dispatchEvent(new Event('jk-approval-admin-linked'));
+    return true;
+  }
+
   /* 승인 확인 — fb: {db, doc, getDoc, setDoc}. 처음 로그인한 계정은 신청 기록을 남긴다.
      본인이 쓰는 칸은 이메일·이름·사진·신청 시각뿐이다(승인·차단 칸은 규칙상 관리자만 쓴다). */
   async function check(user, fb, opt){
     opt=opt||{};
     if(!user){ cacheSet(null); setAdmin(false); return {state:'signedout'}; }
-    if(isAdminEmail(user.email)){ cacheSet(user, 'admin'); setAdmin(true); return {state:'admin'}; }
+    if(isAdminEmail(user.email)){ cacheSet(user, 'admin'); setAdmin(true); bindAdminApprovalPush(user).catch(function(){console.warn('관리자 승인 신청 알림 연결 확인 필요');}); return {state:'admin'}; }
     setAdmin(false);
     var ref=fb.doc(fb.db, 'profiles', user.uid), prof=null;
     try{ var snap=await timeout(fb.getDoc(ref), opt.timeoutMs||8000); prof=snap.exists()?(snap.data()||{}):null; }
@@ -179,6 +208,7 @@
       prof=Object.assign({}, prof||{}, req);
     }
     var state=decide(user, prof); cacheSet(user, state);
+    if(state==='pending')notifyApprovalRequest(user);
     return {state:state, prof:prof};
   }
   /* 신청 메모 — 관리자가 누구인지 알아보게 이름·관계 같은 걸 남긴다(200자) */
@@ -242,7 +272,7 @@
     if(perm!=='granted')throw new Error('알림 권한을 허용해야 승인 알림을 받을 수 있습니다.');
     var c=await fetch('/data/realestate/gpt/push-config.json',{cache:'no-store'}),cfg=await c.json();
     if(!c.ok||!cfg.workerUrl||!/^https:\/\//.test(cfg.workerUrl))throw new Error('알림 서버 연결 설정이 없습니다.');
-    var reg=await navigator.serviceWorker.register('/jk-sw.js?v=2.1.0',{scope:'/'});
+    var reg=await navigator.serviceWorker.register('/jk-sw.js?v=2.3.0',{scope:'/'});
     var vk=await fetch(cfg.workerUrl+'/vapid'),v=await vk.json();
     if(!vk.ok||!v.publicKey)throw new Error('알림 서버 공개키를 가져오지 못했습니다.');
     var sub=await reg.pushManager.getSubscription();
@@ -393,6 +423,7 @@
   }
 
   window.JKAccess={ADMIN_EMAILS:ADMIN_EMAILS, MENU_ITEMS:MENU_ITEMS, isAdminEmail:isAdminEmail, decide:decide, isOk:isOk, check:check, admit:admit, saveNote:saveNote,
+                   bindAdminApprovalPush:bindAdminApprovalPush,
                    cacheOk:cacheOk, cacheSet:cacheSet, setAdmin:setAdmin, show:show, hide:hide, showing:showing, guard:guard,
                    menuPath:menuPath, menuDefaults:menuDefaults, normalizeMenuConfig:normalizeMenuConfig, loadMenuConfig:loadMenuConfig,
                    applyMenuConfig:applyMenuConfig, menuAccess:menuAccess};
