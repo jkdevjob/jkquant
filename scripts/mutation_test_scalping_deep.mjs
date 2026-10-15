@@ -30,8 +30,8 @@ const mutants=[
   ['ui','auth generation guard','if(!current())return;','','logout during owner'],
   ['ui','private read guard','if(epoch!==SCALPING_AUTH_EPOCH||me?.uid!==user.uid)return false;','','Firestore read'],
   ['history','promoted slot count','capitalSlots:strategy==="daytrading"?Math.max(1,Number(ledger.maxTrades)||3):1','capitalSlots:3','promoted one-slot'],
-  ['alert','failed Telegram receipt','if(claimed)await release(eventId);','','failed Telegram'],
-  ['alert','channel failure status','webDelivery.ok?200:502','200','Telegram success'],
+  ['alert','failed Telegram receipt','const definite=r.status>=400&&r.status<500&&j?.ok===false;','const definite=false;','failed Telegram'],
+  ['alert','channel failure status','telegram:receipt},ok?200:502)','telegram:receipt},200)','Telegram success'],
 ];
 for(const [key,label,from,to,expected] of mutants){
   assert.ok(base[key].includes(from),'missing mutation anchor: '+label);
