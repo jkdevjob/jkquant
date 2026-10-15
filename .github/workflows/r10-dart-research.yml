@@ -1,0 +1,49 @@
+name: 연구 R10 — ① 시초가 + 나쁜 공시(OpenDART) 거르기 검증
+
+# 사용자 요청(2026-10-15): 공시 · 뉴스를 투자에 — ① 갭하락 과매도에서 직전 3일 나쁜 공시 종목을 빼면 나아지는지 시간순으로 잰다.
+# 연구만 한다(주문 · 장부 · 화면을 바꾸지 않음). OpenDART 인증키는 비밀값 DART_API_KEY 로만 쓰고 출력하지 않는다.
+# 자료는 공개 raw(scalping-data)에서 읽는다 — 데이터 브랜치에 쓰지 않는다.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: r10-dart-research
+  cancel-in-progress: false
+
+jobs:
+  r10:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: ① 연구 신호 받기(공개 raw)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/r10data/opening-gapdown-research
+          for f in signals.csv decisions.csv; do
+            curl -sSf --max-time 60 -o "/tmp/r10data/opening-gapdown-research/$f" "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/opening-gapdown-research/$f"
+          done
+          wc -l /tmp/r10data/opening-gapdown-research/*.csv
+      - name: 검증 (키는 비밀값 — 출력하지 않음)
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+          JKQ_DATA: /tmp/r10data
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -n "$DART_API_KEY" ] || { echo "::error::DART_API_KEY 미설정 — opendart.fss.or.kr 에서 인증키를 받아 저장소 비밀값 DART_API_KEY 로 등록하세요"; exit 1; }
+          python -I scripts/research/r10_dart_filter.py --app . --out /tmp/r10.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: r10-result
+          path: /tmp/r10.json
+          if-no-files-found: ignore
