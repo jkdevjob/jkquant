@@ -255,6 +255,26 @@ function setDefaultDates(){
   document.getElementById("toDate").value=kstToday()
 }
 function tagClass(c){return c==="regular_dev"?"reg":c==="java_ai"?"ai":c.indexOf("salary")===0?"pay":c==="short_term"?"hot":""}
+function outboundJobUrl(j){
+  var raw=String((j&&j.url)||"").trim();
+  if(!raw)return "";
+  try{
+    var u=new URL(raw,location.href);
+    var host=(u.hostname||"").toLowerCase();
+    if(host==="www.saramin.co.kr"||host==="saramin.co.kr"||host==="m.saramin.co.kr"){
+      var rec=u.searchParams.get("rec_idx");
+      if(rec)return "https://m.saramin.co.kr/job-search/view?rec_idx="+encodeURIComponent(rec)
+    }
+  }catch(e){}
+  return raw
+}
+function outboundJobTarget(j,url){
+  try{
+    var host=(new URL(url,location.href).hostname||"").toLowerCase();
+    if(host==="m.saramin.co.kr"||host==="www.saramin.co.kr"||host==="saramin.co.kr")return "";
+  }catch(e){}
+  return ' target="_blank" rel="noopener"'
+}
 function resetFilters(){
   document.getElementById("keyword").value="";document.getElementById("region").value="";document.getElementById("employment").value="";document.getElementById("jobStatus").value="active";document.getElementById("source").value="";document.getElementById("sort").value="latest";setDefaultDates();shown=+document.getElementById("pageSize").value||50;applyFilters()
 }
@@ -322,10 +342,11 @@ function renderList(){
     var company='<span class="company-inline">'+esc((j.company||"").trim()||"업체 비공개")+"</span>";
     var dateLabel=j.postedDate?fmtDate(j.postedDate)+" · "+esc(j.dateSource||"등록일"):fmtDate(j.firstSeen)+" · 최초수집";
     var key=scrapKey(j),scrapped=isScrapped(j),applied=isApplied(j);
+    var linkUrl=outboundJobUrl(j),linkTarget=outboundJobTarget(j,linkUrl);
     var scrap='<button class="scrap-btn'+(scrapped?' on':'')+'" type="button" data-scrap-key="'+esc(key)+'" aria-label="'+(scrapped?'스크랩 해제':'스크랩')+'" title="'+(scrapped?'스크랩 해제':'스크랩')+'">'+(scrapped?'★':'☆')+'</button>';
     var applyBtn='<button class="apply-btn'+(applied?' on':'')+'" type="button" data-apply-key="'+esc(key)+'" aria-label="'+(applied?'지원완료 해제':'지원완료 표시')+'" title="'+(applied?'지원완료 해제':'지원완료 표시')+'">'+(applied?'✓ 지원완료':'지원완료 표시')+'</button>';
     var appliedTag=applied?'<span class="tag applied">✓ 지원완료</span>':"";
-    return '<article class="card" data-job-key="'+esc(key)+'"><div class="cardtop"><div class="titleline"><a class="title" href="'+esc(j.url)+'" target="_blank" rel="noopener">'+esc(j.title||"제목 없음")+'</a>'+company+'</div></div><div class="date">'+dateLabel+'</div><div class="meta">'+appliedTag+statusTag+deadline+employment+career+education+historyTag+cats+loc+salary+'</div>'+(j.body?'<div class="desc">'+esc(j.body)+"</div>":"")+'<div class="card-footer"><div class="src">출처: '+esc((j.sources||[]).join(" / ")||j.source||"-")+" · 마지막 확인 "+esc(j.lastSeen||"-")+(st==="closed"&&j.closeReason?" · "+esc(j.closeReason):"")+'</div><div class="card-actions">'+applyBtn+scrap+'</div></div></article>'
+    return '<article class="card" data-job-key="'+esc(key)+'"><div class="cardtop"><div class="titleline"><a class="title job-link" href="'+esc(linkUrl)+'"'+linkTarget+'>'+esc(j.title||"제목 없음")+'</a>'+company+'</div></div><div class="date">'+dateLabel+'</div><div class="meta">'+appliedTag+statusTag+deadline+employment+career+education+historyTag+cats+loc+salary+'</div>'+(j.body?'<div class="desc">'+esc(j.body)+"</div>":"")+'<div class="card-footer"><div class="src">출처: '+esc((j.sources||[]).join(" / ")||j.source||"-")+" · 마지막 확인 "+esc(j.lastSeen||"-")+(st==="closed"&&j.closeReason?" · "+esc(j.closeReason):"")+'</div><div class="card-actions">'+applyBtn+scrap+'</div></div></article>'
   }).join("");
   document.getElementById("moreBtn").hidden=shown>=filtered.length;
   highlightFocusedJob()
