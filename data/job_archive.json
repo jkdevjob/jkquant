@@ -1,60 +1,28 @@
 {
-  "updatedAt": "2026-10-15T18:29:01+09:00",
+  "updatedAt": "2026-10-15T23:38:34+09:00",
   "rangeDays": 180,
   "cutoffDate": "2026-04-18",
   "historyCount": 0,
   "sourceStatuses": {
     "잡코리아": {
       "ok": true,
-      "count": 486,
+      "count": 489,
       "failed_pages": 0,
       "mode": "직접"
     },
     "사람인": {
-      "ok": true,
-      "count": 798,
-      "failed_pages": 0,
+      "ok": false,
+      "count": 0,
+      "failed_pages": 32,
       "max_pages": 8,
-      "errors": [],
+      "errors": [
+        "대전 Java p1: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=1&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7f3702fd8980>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))",
+        "대전 Java p2: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=2&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7f3702fdac90>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))",
+        "세종 Java p1: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EC%84%B8%EC%A2%85+Java&recruitPage=1&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7f3702fd9fd0>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))"
+      ],
       "mode": "직접"
     },
     "원티드": {
-      "ok": true,
-      "count": 0,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "인크루트": {
-      "ok": true,
-      "count": 2,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "점핏": {
-      "ok": true,
-      "count": 8,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "커리어": {
-      "ok": true,
-      "count": 8,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "링크드인": {
       "ok": true,
       "count": 0,
       "successful_queries": 8,
@@ -72,7 +40,61 @@
       "errors": [],
       "mode": "검색"
     },
+    "커리어": {
+      "ok": true,
+      "count": 0,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "점핏": {
+      "ok": true,
+      "count": 0,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "로켓펀치": {
+      "ok": true,
+      "count": 0,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "인크루트": {
+      "ok": true,
+      "count": 3,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
     "아이엠잡": {
+      "ok": true,
+      "count": 0,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "알바천국": {
+      "ok": true,
+      "count": 1,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "링크드인": {
       "ok": true,
       "count": 0,
       "successful_queries": 8,
@@ -83,25 +105,7 @@
     },
     "알바몬": {
       "ok": true,
-      "count": 6,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "알바천국": {
-      "ok": true,
-      "count": 3,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "로켓펀치": {
-      "ok": true,
-      "count": 0,
+      "count": 4,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
@@ -140,10 +144,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-15",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -178,10 +182,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-15",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -253,10 +257,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-15",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -406,10 +410,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-15",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -443,10 +447,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-15",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -479,10 +483,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-15",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -515,10 +519,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-15",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -12025,10 +12029,10 @@
       "deadline": "2026-10-31",
       "deadlineSource": "D-day",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -13694,10 +13698,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -13731,10 +13735,10 @@
       "deadline": "2026-10-15",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-10-15",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-10-15",
       "lastChecked": "2026-10-15"
@@ -14370,7 +14374,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49966586",
       "title": "부동산관련 C/S(Client/Server) 개발자 채용 공고",
       "company": "홍희마케팅",
-      "body": "부동산관련 C/S 개발자 채용 공고 스크랩 상시채용 입사지원 대전 서구 경력무관 학력무관 정규직 퍼블리셔 , 웹개발 , 광고영업 등록일 26/09/10",
+      "body": "스크랩 부동산관련 C/S(Client/Server) 개발자 채용 공고 홍희마케팅 대전 서구 광고·홍보·전시, 웹개발자, 웹퍼블리셔 즉시 지원 경력무관",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49966586",
       "source": "잡코리아",
       "sources": [
@@ -14381,11 +14385,11 @@
         "대전"
       ],
       "categories": [
-        "java_ai",
-        "regular_dev"
+        "java_ai"
       ],
       "employmentTypes": [
-        "정규직"
+        "정규직",
+        "인턴"
       ],
       "career": "경력무관",
       "education": "학력무관",
@@ -14705,7 +14709,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49947063",
       "title": "임베디드 분야 자동제어 소프트웨어 개발 인력 채용",
       "company": "(주)한백전자",
-      "body": "임베디드 분야 자동제어 소프트웨어 개발 인력 채용 스크랩 ~ 11/03(화) 입사지원 대전 유성구 경력무관 학력무관 정규직 임베디드 , 펌웨어 , 자율주행 , 딥러닝 , AI(인공지능) 외 수정일 26/10/07",
+      "body": "신입 지원 가능 스크랩 임베디드 분야 자동제어 소프트웨어 개발 인력 채용 (주)한백전자 대전 유성구 전기·전자·제어, 시스템엔지니어, 소프트웨어개발자, AI/ML엔지니어 즉시 지원 신입·경력",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49947063",
       "source": "잡코리아",
       "sources": [
@@ -14719,9 +14723,10 @@
         "java_ai"
       ],
       "employmentTypes": [
-        "정규직"
+        "정규직",
+        "인턴"
       ],
-      "career": "경력무관",
+      "career": "신입·경력",
       "education": "학력무관",
       "salary": null,
       "shortPay": null,
