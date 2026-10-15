@@ -585,7 +585,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.39</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.40</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1692,7 +1692,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.39</b> · 2026-10-14</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.40</b> · 2026-10-14</div>
   </footer>
 </div>
 
@@ -3924,14 +3924,22 @@ function renderInfBreak(c){
   const mt=$('a_bymonth'); if(mt) mt.innerHTML=head('월')+body(months,'매도 기록이 없습니다').replace(head('구분'),'');
   // 사이클별 — 최근이 위로. cycleEnd가 있는 사이클만 닫힌 것
   const closed=new Set((c.rows||[]).filter(h=>h.cycleEnd).map(h=>h.cycleSeq));
+  /* 기간 = 그 사이클 첫 매매(= 첫 매수)일 ~ 닫힌 날. 손익·매도 수는 매도만 세지만 기간은 매수까지 본다 —
+     예전엔 매도로만 기간을 잡아 6-22에 사서 6-30에 처음 판 사이클이 06-30부터로 보였다(2026-10-14 사용자).
+     출금·배당·리버스복귀는 매매가 아니라 기간에 안 넣는다(닫힌 뒤 적은 출금은 다음 사이클 번호를 단다).
+     안 닫힌 사이클은 끝 날짜를 안 찍는다 — '시작일~ 진행중'. */
+  const span=new Map();
+  (c.rows||[]).forEach(h=>{ if(!h.date||!(isBuy(h.kind)||isSell(h.kind))) return;
+    const k=h.cycleSeq||1, s=span.get(k)||{from:h.date,to:h.date};
+    if(h.date<s.from)s.from=h.date; if(h.date>s.to)s.to=h.date; span.set(k,s); });
   const C=new Map();
   sells.forEach(h=>{ const k=h.cycleSeq||1;      // computeInf의 cycleSeq는 1부터다 — +1 하면 1사이클이 사라진다
-    const o=C.get(k)||{seq:k,p:0,n:0,out:0,in:0,from:h.date,to:h.date}; o.p+=h.profit||0; o.n++;
-    if(h.date<o.from)o.from=h.date; if(h.date>o.to)o.to=h.date; C.set(k,o); });
+    const o=C.get(k)||{seq:k,p:0,n:0,out:0,in:0}; o.p+=h.profit||0; o.n++; C.set(k,o); });
   (c.flows||[]).forEach(f=>{ const o=C.get(f.seq); if(o){ o.out+=f.out||0; o.in+=f.in||0; } });
-  const cycles=[...C.values()].sort((a,b)=>b.seq-a.seq).map(x=>Object.assign(x,{
-    label:`${x.seq}사이클 <span class="sub">${dshort(x.from)}~${dshort(x.to)}</span>`
-      + (closed.has(x.seq)?'':' <span style="color:var(--gold);font-size:10px">진행중</span>')}));
+  const cycles=[...C.values()].sort((a,b)=>b.seq-a.seq).map(x=>{ const s=span.get(x.seq)||{};
+    return Object.assign(x,{
+    label:`${x.seq}사이클 <span class="sub">${dshort(s.from)}~${closed.has(x.seq)?dshort(s.to):''}</span>`
+      + (closed.has(x.seq)?'':' <span style="color:var(--gold);font-size:10px">진행중</span>')}); });
   const ct=$('a_bycycle'); if(ct) ct.innerHTML=head('사이클')+body(cycles,'아직 매도가 없습니다').replace(head('구분'),'');
 }
 function renderInfHist(){

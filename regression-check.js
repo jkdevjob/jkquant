@@ -1575,6 +1575,28 @@ console.log('[27] 무매 분석 — 월별·사이클별');
   ok('빈 표 colspan이 열 수를 따라간다',
      /const nCol=4\+\(simple\?1:0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
   ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
+  /* 기간 = 첫 매수일 ~ 닫힌 날 (2026-10-14 사용자: '두 번째 사이클 시작은 6-22인데').
+     예전엔 매도로만 기간을 잡아 첫 '매도'일이 시작으로 찍혔다. 실제 장부(computeInf)로 사이클 번호를 매기고 실제 표 함수로 그린다.
+     사이클 사이의 출금·배당은 다음 번호를 달지만 매매가 아니라 기간을 앞당기면 안 된다. 안 닫힌 사이클은 끝 날짜가 없다. */
+  if(br){
+    const E={}; const $=id=>E[id]||(E[id]={innerHTML:''});
+    const ds=new Function(extractFn(idx,'function dshort(d)')+'\nreturn dshort;')();
+    const draw=new Function('$','wn','isSell','isBuy','dshort',br+'\nreturn renderInfBreak;')($,v=>'$'+(+v).toFixed(2),isSell,isBuy,ds);
+    __strat={settings:{ticker:'SOXL',div:20,target:20,principal:10000,compound:true},hist:[
+      {kind:'1회매수',date:'2026-05-20',price:10,qty:10},{kind:'쿼터매도',date:'2026-06-02',price:11,qty:2},
+      {kind:'지정가매도',date:'2026-06-18',price:12,qty:8},
+      {kind:'출금',date:'2026-06-19',amt:100},
+      {kind:'1회매수',date:'2026-06-22',price:10,qty:10},{kind:'쿼터매도',date:'2026-06-30',price:11,qty:3},
+      {kind:'지정가매도',date:'2026-09-21',price:12,qty:7},
+      {kind:'배당',date:'2026-09-22',amt:5},
+      {kind:'1회매수',date:'2026-09-24',price:10,qty:10},{kind:'쿼터매도',date:'2026-10-02',price:11,qty:2},
+      {kind:'1회매수',date:'2026-10-13',price:9,qty:5}]};
+    const ci=computeInf(); draw(ci);
+    const lab=[...(E.a_bycycle.innerHTML.match(/<td>(\d사이클 [^]*?)<\/td>/g)||[])].map(x=>x.replace(/<\/?td>|<[^>]+>/g,'').trim());
+    ok('사이클 기간 — 첫 매수일 ~ 닫힌 날 · 사이 출금·배당은 안 넣는다 · 진행중은 끝 날짜 없이',
+       JSON.stringify(lab)===JSON.stringify(['3사이클 26-09-24~ 진행중','2사이클 26-06-22~26-09-21','1사이클 26-05-20~26-06-18'])
+       && ci.rows[3].cycleSeq===2 && ci.rows[7].cycleSeq===3, JSON.stringify(lab));
+  }
 }
 
 
