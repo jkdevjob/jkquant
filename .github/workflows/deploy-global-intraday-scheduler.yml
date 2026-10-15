@@ -20,6 +20,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: 알림 API만 고칠 때 과거 장부 백필은 실행하지 않음
+        id: ledger_scope
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "backfill=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [[ "$BEFORE_SHA" =~ ^[0-9a-f]{40}$ ]] && [[ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]]
+          git fetch --no-tags --depth=1 origin "$BEFORE_SHA"
+          if git diff --quiet "$BEFORE_SHA" HEAD -- worker/global-intraday-scheduler scripts/backfill_scalping_paper.py; then
+            echo "backfill=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "backfill=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Cloudflare 배포 자격증명 확인
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -53,6 +73,7 @@ jobs:
         run: pip install --quiet "requests>=2.32,<3"
 
       - name: 과거 모의장부 Durable DB 백필 + 무결성 감사
+        if: steps.ledger_scope.outputs.backfill == 'true'
         env:
           MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
         run: python scripts/backfill_scalping_paper.py --strategies crypto,soxl --backfill

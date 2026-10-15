@@ -656,6 +656,39 @@ export class PresaleAlertStore{
     const r=await this.pushOne(endpoint,topic);
     return json(request,{ok:r.ok,status:r.status,error:r.ok?null:r.text},r.ok?200:502);
   }
+  async tradingTelegramReceipt(request){
+    if(!this.env.MONITOR_KEY||request.headers.get("x-monitor-key")!==this.env.MONITOR_KEY)
+      return json(request,{ok:false,error:"unauthorized"},401);
+    const b=await request.json().catch(()=>null),topic=String(b?.strategy||"").toLowerCase(),stage=String(b?.stage||"").toLowerCase();
+    const eventId=clean(b?.eventId,220),date=clean(b?.date,20);
+    if(![...TRADE_TOPICS,"swing"].includes(topic)||!["buy","sell"].includes(stage)||!eventId||!/^\d{4}-\d{2}-\d{2}$/.test(date))
+      return json(request,{ok:false,error:"invalid Telegram signal identity"},400);
+    const key="signal-telegram:"+await hashText(topic+":"+stage+":"+eventId),st=this.state.storage;
+    const previous=await st.get(key),at=new Date().toISOString();
+    const audit=receipt=>({stage,status:receipt.status,tries:receipt.tries,at:receipt.updatedAt||at});
+    if(b.op==="claim"){
+      if(previous&&(previous.status!=="failed"||previous.tries>=3))
+        return json(request,{ok:true,claimed:false,duplicate:true,receipt:previous});
+      if(b.eventAt!=null){
+        const age=Date.now()-Date.parse(b.eventAt);
+        if(!Number.isFinite(age)||age>20*60_000||age< -90_000)return json(request,{ok:false,error:"stale or invalid Telegram signal"},409);
+      }
+      const receipt={status:"unknown",tries:(previous?.tries||0)+1,token:crypto.randomUUID(),date,createdAt:previous?.createdAt||at,updatedAt:at};
+      // Persist before granting the one-use send permit. Unknown is deliberately NOT a timed lease.
+      await st.put(key,receipt);await st.put("lastTelegramDelivery:"+topic,audit(receipt));
+      return json(request,{ok:true,claimed:true,token:receipt.token,receipt});
+    }
+    if(b.op!=="complete"||!previous||b.token!==previous.token)return json(request,{ok:false,error:"invalid Telegram receipt token"},409);
+    if(previous.status!=="unknown")return json(request,{ok:true,duplicate:true,receipt:previous});
+    const r=b.receipt||{};
+    if(!["sent","failed","unknown"].includes(r.status)||r.status==="failed"&&r.definite!==true||
+       r.status==="sent"&&(!Number.isSafeInteger(r.messageId)||r.messageId<=0))
+      return json(request,{ok:false,error:"invalid Telegram delivery result"},400);
+    const receipt={...previous,status:r.status,updatedAt:at,
+      ...(r.status==="sent"?{messageId:r.messageId}:{}),...(r.error?{error:clean(r.error,200)}:{})};
+    await st.put(key,receipt);await st.put("lastTelegramDelivery:"+topic,audit(receipt));
+    return json(request,{ok:true,receipt});
+  }
   async recordTradingSignal(request){
     // 서버 감시키를 아는 호출만 실제 푸시를 게시할 수 있다.
     if(!this.env.MONITOR_KEY||request.headers.get("x-monitor-key")!==this.env.MONITOR_KEY)
@@ -861,17 +894,19 @@ export class PresaleAlertStore{
         if(!this.subscribedTo(s,"gpt")&&this.topicsOf(s).some(t=>GPT_TOPICS.has(t)))counts.gpt++;
       }
       const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null,research:await this.state.storage.get("lastCheck:research")||null};
-      const lastDeliveries={};
+      const lastDeliveries={},lastTelegramDeliveries={};
       for(const t of TRADE_TOPICS){
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
+        lastTelegramDeliveries[t]=await this.state.storage.get("lastTelegramDelivery:"+t)||null;
       }
       lastChecks.tenbagger_gpt=await this.state.storage.get("lastCheck:tenbagger_gpt")||null;
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
       const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
       const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.8.0",topicSchemaVersion:2,subscriptions:subs.size,
-        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.8.1",topicSchemaVersion:2,subscriptions:subs.size,
+        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,lastTelegramDeliveries,
+        telegramSignalDedup:{version:1,store:"durable-object",unknownRetry:false},gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
     if(path==="/latest"){
@@ -900,7 +935,12 @@ export class PresaleAlertStore{
     if(path==="/subscribe"&&request.method==="POST")return this.subscribe(request);
     if(path==="/subscribe"&&request.method==="DELETE")return this.unsubscribe(request);
     if(path==="/test"&&request.method==="POST")return this.test(request);
-    if(path==="/signal"&&request.method==="POST")return this.recordTradingSignal(request);
+    if(path==="/signal"&&request.method==="POST"){
+      const p=(this.signalPushQueue||Promise.resolve()).catch(()=>{}).then(()=>this.recordTradingSignal(request));this.signalPushQueue=p;return p;
+    }
+    if(path==="/signal-telegram"&&request.method==="POST"){
+      const p=(this.signalTelegramQueue||Promise.resolve()).catch(()=>{}).then(()=>this.tradingTelegramReceipt(request));this.signalTelegramQueue=p;return p;
+    }
     if(path==="/check"&&request.method==="POST")return this.checkPresale(request);
     if(path==="/check-jobs"&&request.method==="POST")return this.checkJobs(request);
     if(path==="/check-ipo"&&request.method==="POST")return this.checkIPO(request);
