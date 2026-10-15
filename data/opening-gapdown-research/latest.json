@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-15T09:40:32.144294+09:00",
+  "generatedAt": "2026-10-15T23:24:41.945658+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -83,6 +83,12 @@
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-14.csv",
       "rows": 2867,
       "lastDate": "2026-10-14",
+      "status": "provisional"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-15.csv",
+      "rows": 2867,
+      "lastDate": "2026-10-15",
       "status": "provisional"
     }
   ],
@@ -2272,9 +2278,9 @@
     }
   },
   "live": {
-    "trades": 16,
-    "days": 6,
-    "actualGapQualifiesRate": 43.75,
+    "trades": 19,
+    "days": 7,
+    "actualGapQualifiesRate": 36.84210526315789,
     "openVsExpectedPct": {
       "n": 10,
       "mean": 4.622651352685494
@@ -2288,8 +2294,8 @@
       "mean": 0.0
     },
     "realizedNetPct": {
-      "n": 9,
-      "mean": -1.725419498585113
+      "n": 10,
+      "mean": -1.784754482751568
     },
     "modelNet0tPct": {
       "n": 10,
@@ -2729,12 +2735,93 @@
       "realizedGrossPct": null,
       "realizedNetPct": null,
       "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-15",
+      "code": "094170",
+      "name": "동운아나텍",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 17500,
+      "expectedGapPct": -15.458937198067634,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 114,
+      "buyFill": 19599.385964912282,
+      "sellQty": 114,
+      "sellFill": 19190,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": -2.088769340249663,
+      "realizedNetPct": -2.318769340249663,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-15",
+      "code": "298040",
+      "name": "효성중공업",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 1813000,
+      "expectedGapPct": -15.081967213114755,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": false,
+      "buyOrderMsg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 1주",
+      "sellOrderOk": false,
+      "sellOrderMsg": null,
+      "buyQty": null,
+      "buyFill": null,
+      "sellQty": null,
+      "sellFill": null,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": null,
+      "realizedNetPct": null,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-15",
+      "code": "214150",
+      "name": "클래시스",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 25000,
+      "expectedGapPct": -10.23339317773788,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": false,
+      "buyOrderMsg": "초당 요청 제한에 걸려 주문이 접수되지 않았습니다 — 잠시 후 다시 누르세요",
+      "sellOrderOk": false,
+      "sellOrderMsg": null,
+      "buyQty": null,
+      "buyFill": null,
+      "sellQty": null,
+      "sellFill": null,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": null,
+      "realizedNetPct": null,
+      "modelNet0tPct": null
     }
   ],
   "watchlist": {
-    "basedOn": "2026-10-14",
+    "basedOn": "2026-10-15",
     "basedOnStatus": "provisional_snapshot",
-    "size": 49
+    "size": 103
   },
   "finalDataThrough": "2026-10-13"
 }

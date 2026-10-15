@@ -1,0 +1,140 @@
+{
+  "ok": true,
+  "date": "2026-10-15",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-15",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-15T06:40:33.324Z",
+    "updatedAt": "2026-10-15T06:40:34.766Z",
+    "scans": [
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1792046428868,
+        "capturedAt": "2026-10-15T06:40:34.646Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1792046428868,
+        "capturedAt": "2026-10-15T06:40:33.212Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-15",
+        "capturedAt": "2026-10-15T06:40:34.646Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-15",
+          "currency": "KRW",
+          "trades": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "2026-10-14 15:30 종가",
+              "entryPrice": 6700,
+              "exitTime": "09:00 시가",
+              "exitPrice": 6080,
+              "qty": 79,
+              "notional": 529300,
+              "pnlPct": -9.383731343283578,
+              "pnlAmount": -49668.08999999998,
+              "reason": "다음 날 시가 청산"
+            }
+          ],
+          "open": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "15:30 종가",
+              "entryPrice": 5580,
+              "qty": 152,
+              "pnlPct": 0,
+              "reason": "내일 09:00 시가 매도"
+            }
+          ],
+          "watched": 1,
+          "exits": 1,
+          "wins": 0,
+          "losses": 1,
+          "winRate": 0,
+          "realizedAmount": -49668.08999999998,
+          "realizedPct": -9.383731343283578,
+          "status": "closed",
+          "candidates": 1,
+          "entries": 1,
+          "strategyVersion": "etf_dip_overnight_v1",
+          "note": "15:21 예상 하락 -16.42% → 종가 매수"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-15",
+        "capturedAt": "2026-10-15T06:40:33.212Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-15",
+          "currency": "KRW",
+          "trades": [
+            {
+              "name": "동운아나텍",
+              "code": "094170",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 19599.385964912282,
+              "qty": 114,
+              "notional": 2234330,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 19190,
+              "pnlPct": -2.318769340249663,
+              "pnlAmount": -51808.9590000003,
+              "reason": "종가 청산"
+            }
+          ],
+          "open": [],
+          "measure": [],
+          "exits": 1,
+          "wins": 0,
+          "losses": 1,
+          "winRate": 0,
+          "realizedAmount": -51808.9590000003,
+          "realizedPct": -2.318769340249663,
+          "status": "closed",
+          "watched": 49,
+          "candidates": 43,
+          "entries": 1,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "note": "메인 매매일(통과 43종목)"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
