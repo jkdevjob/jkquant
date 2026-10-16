@@ -460,6 +460,10 @@ html.had-user #authgate .bootwait{display:block}
    250px = 좌우 여백 50 + 기간·평가·최종 약 170 + 글자 크기 여유 30. MDD~투입 칸은 그대로 옆으로 넘긴다. */
 .htable.narrow td:first-child .pcell{min-width:clamp(96px,calc(100vw - 250px),170px);overflow-wrap:anywhere;word-break:keep-all}
 .htable.narrow td:first-child .pcell .cw{white-space:normal}
+/* 국내 종목명은 첫 칸의 기존 최소 폭 안에서만 쓴다. 긴 이름이 표를 넓히지 않게 한다. */
+.paper-title{display:flex;align-items:baseline;gap:4px;width:clamp(96px,calc(100vw - 250px),170px);max-width:100%}
+.paper-title .slink{flex:0 0 auto;white-space:nowrap}
+.paper-ticker-name{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:500;color:var(--faint)}
 .htable.narrow tr.paper-row-compact td{padding-top:1px;padding-bottom:1px}
 .htable.narrow tr.paper-row-compact .slink{padding-top:1px;padding-bottom:1px;line-height:17px}
 .htable.narrow tr.paper-row-compact .cw{line-height:1.12}
@@ -588,7 +592,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.40</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.41</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1695,7 +1699,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.40</b> · 2026-10-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.41</b> · 2026-10-16</div>
   </footer>
 </div>
 
@@ -7842,6 +7846,38 @@ function paperOpts(tab, st){
   }
   return bits;
 }
+function paperTickerName(sym){
+  const code=String(sym||'').trim().toUpperCase();
+  if(!isKrCode(code)) return '';
+  const name=tickerLabel(code);
+  return name==='국내 '+code?'':String(name||'').trim();
+}
+function paperTitle(r){
+  const sym=String(r.sym||'').trim().toUpperCase();
+  const link=`<b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${esc(r.label)} 분석으로 이동 — ${esc(r.name||'')}">${esc(r.label)}</b>`;
+  if(!isKrCode(sym)) return link;
+  const name=esc(paperTickerName(sym));
+  return `<div class="paper-title">${link}<span class="paper-ticker-name" data-symbol="${sym}" title="${name}">${name}</span></div>`;
+}
+/* 직접 코드로 입력한 옛 세션도 이름을 찾는다. 결과 표는 먼저 그리고 이름만 채운다. */
+async function paperLoadTickerNames(body){
+  const uid=curUid, els=[...body.querySelectorAll('.paper-ticker-name')];
+  const symbols=[...new Set(els.map(el=>el.dataset.symbol))];
+  await Promise.all(symbols.map(async sym=>{
+    if(!isKrCode(sym)) return;
+    if(!paperTickerName(sym)) try{
+      const r=await fetchT(`/api/search?q=${encodeURIComponent(sym)}&limit=1`,{headers:{'Accept':'application/json'}},6000);
+      if(r.ok){
+        const j=await r.json();
+        const item=(j.items||[]).find(x=>x.kr&&x.symbol===sym&&typeof x.name==='string'&&x.name.trim());
+        if(item&&curUid===uid) rememberTickerName(sym,item.name.trim());
+      }
+    }catch(e){/* 이름 조회 실패는 성과 표를 막지 않는다. 다음 진입 때 다시 조회한다. */}
+    if(curUid!==uid) return;
+    const name=paperTickerName(sym);
+    els.filter(el=>el.dataset.symbol===sym).forEach(el=>{ el.textContent=name; el.title=name; });
+  }));
+}
 function paperStat(tab, sess){
   if(tab==='plan')return paperStatPlan(sess);
   const h=sess.hist||[]; if(!h.length) return null;
@@ -8241,7 +8277,6 @@ async function openPaper(){
         ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${r.cur==='krw'?paperWon(outAmt,1):(paperUsd(outAmt)+' · '+paperWon(outAmt,r.wonRate))}</span>`
         : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
       /* 세션 이름은 툴팁으로 — 칸에는 종목과 주요 설정을 적는다 (이름은 설정과 어긋날 수 있다) */
-      const _nm=String(r.name||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');
       const _sortName=(String(r.label||'')+' '+String(r.sym||'')+' '+String(r.name||''))
         .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
       const _sortTotal=ok?(+r.total||0)*(+r.wonRate||1):'';
@@ -8266,7 +8301,7 @@ async function openPaper(){
       const _paperOptsRest=_paperOpts.slice(_paperSplitAt);
       const _paperOptTopText=_paperOptsTop.length?' · '+_paperOptsTop.join(' · '):'';
       const _paperOptRestText=_paperOptsRest.length?`<span class="cw paper-opt-more">${_paperOptsRest.join(' · ')}</span>`:'';
-      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell"><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>
+      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell">${paperTitle(r)}<span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${paperDualMoney(r,r.total,r.wonRate)}</td>
@@ -8291,6 +8326,7 @@ async function openPaper(){
     h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시). <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
+    void paperLoadTickerNames(body);
   }
 }
 /* 모의 세션 전체의 시작일을 한 번에 바꾼다.

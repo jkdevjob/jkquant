@@ -68,7 +68,7 @@ t('U3 모든 페이지(11개)가 같은 파일을 한 번씩 읽는다 — 공�
 });
 t('U4 모의 성과 첫 칸 — 폭을 정해 두고 줄바꿈 · 폰 폭 340~414px 에서 기간·평가·최종이 한 화면에',()=>{
   const op=fnOf(html,'async function openPaper()');
-  assert(/<td><div class="pcell"><b class="slink"[^`]*\$\{outTag\}<\/div><\/td>/.test(op),'첫 칸을 pcell 로 감싼다');
+  assert(/<td><div class="pcell">\$\{paperTitle\(r\)\}[^`]*\$\{outTag\}<\/div><\/td>/.test(op),'첫 칸을 pcell 로 감싼다');
   const css=(html.match(/\.htable\.narrow td:first-child \.pcell\{[^}]*\}/)||[''])[0];
   assert(/min-width:clamp\(96px,calc\(100vw - 250px\),170px\)/.test(css) && /overflow-wrap:anywhere/.test(css),css);
   assert(/\.htable\.narrow td:first-child \.pcell \.cw\{white-space:normal\}/.test(html),'설정 줄도 접힌다');
