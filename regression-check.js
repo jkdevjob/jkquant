@@ -1474,7 +1474,7 @@ console.log('[25] 모의 성과 → 분석 이동');
   /* 줄 전체를 누르게 했더니 숫자를 보려고 짚기만 해도 화면이 넘어갔다 —
      이제 '전략 이름'만 누른다. 줄에는 onclick 이 남아 있으면 안 된다. */
   ok('전략 이름을 누르면 이동',
-     /<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{r\.label\}<\/b>/.test(idx)
+     /<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{esc\(r\.label\)\}<\/b>/.test(idx)
      && /\.htable \.slink\{/.test(idx));
   ok('줄 전체는 더 이상 안 눌린다', !/<tr class="jump"/.test(idx) && !/\.htable tr\.jump\{/.test(idx));
   ok('눌리는 곳이 폰에서도 짚힌다', /\.htable \.slink\{[^}]*padding:4px 7px/.test(idx)
@@ -1500,9 +1500,9 @@ console.log('[25] 모의 성과 → 분석 이동');
   ok('여섯 탭 모두 분석 칩이 있다', chips===6, chips+'개');
   /* 툴팁에는 '어디로 가는지' 와 '어느 세션인지' 가 같이 있어야 한다 —
      칸에서 세션 이름을 뺐으므로(설정과 어긋날 수 있어서) 이름을 확인할 곳이 여기뿐이다 */
-  ok('누르는 곳 설명도 분석으로', /title="\$\{r\.label\} 분석으로 이동 — \$\{_nm\}"/.test(idx));
+  ok('누르는 곳 설명도 분석으로', /title="\$\{esc\(r\.label\)\} 분석으로 이동 — \$\{esc\(r\.name\|\|''\)\}"/.test(idx));
   ok('세션 이름은 툴팁에만 (칸에는 종목·설정)',
-     /const _nm=String\(r\.name\|\|''\)\.replace\(\/<\/g,'&lt;'\)/.test(idx)
+     /title="[^"\n]*분석으로 이동 — \$\{esc\(r\.name\|\|''\)\}"/.test(idx)
      && /<span class="cw">\$\{r\.sym\}\$\{_paperOptTopText\}<\/span>\$\{_paperOptRestText\}/.test(idx));
   ok('전략 이름을 누르라고 알려 준다', /<b style="color:var\(--vio\)">전략 이름<\/b>을 누르면/.test(idx));
 }
