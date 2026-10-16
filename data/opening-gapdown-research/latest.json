@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-16T09:32:52.990183+09:00",
+  "generatedAt": "2026-10-16T23:13:43.225909+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -83,6 +83,12 @@
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-15.csv",
       "rows": 2867,
       "lastDate": "2026-10-15",
+      "status": "provisional"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-16.csv",
+      "rows": 2867,
+      "lastDate": "2026-10-16",
       "status": "provisional"
     }
   ],
@@ -2272,9 +2278,9 @@
     }
   },
   "live": {
-    "trades": 19,
-    "days": 7,
-    "actualGapQualifiesRate": 36.84210526315789,
+    "trades": 22,
+    "days": 8,
+    "actualGapQualifiesRate": 31.818181818181817,
     "openVsExpectedPct": {
       "n": 13,
       "mean": 5.530838468099171
@@ -2288,8 +2294,8 @@
       "mean": 0.0
     },
     "realizedNetPct": {
-      "n": 10,
-      "mean": -1.784754482751568
+      "n": 12,
+      "mean": -0.9969872959219614
     },
     "modelNet0tPct": {
       "n": 13,
@@ -2810,12 +2816,93 @@
       "realizedGrossPct": null,
       "realizedNetPct": null,
       "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-16",
+      "code": "214150",
+      "name": "클래시스",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 26050,
+      "expectedGapPct": -4.4036697247706424,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 76,
+      "buyFill": 27000,
+      "sellQty": 76,
+      "sellFill": 27600,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": 2.2222222222222143,
+      "realizedNetPct": 1.9922222222222143,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-16",
+      "code": "010130",
+      "name": "고려아연",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 900000,
+      "expectedGapPct": -4.051172707889128,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": false,
+      "buyOrderMsg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 2주",
+      "sellOrderOk": false,
+      "sellOrderMsg": null,
+      "buyQty": null,
+      "buyFill": null,
+      "sellQty": null,
+      "sellFill": null,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": null,
+      "realizedNetPct": null,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-16",
+      "code": "083650",
+      "name": "비에이치아이",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 44100,
+      "expectedGapPct": -3.5010940919037226,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 4,
+      "buyFill": 46100,
+      "sellQty": 4,
+      "sellFill": 48000,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": 4.121475054229928,
+      "realizedNetPct": 3.8914750542299283,
+      "modelNet0tPct": null
     }
   ],
   "watchlist": {
-    "basedOn": "2026-10-15",
+    "basedOn": "2026-10-16",
     "basedOnStatus": "provisional_snapshot",
-    "size": 108
+    "size": 37
   },
   "finalDataThrough": "2026-10-14"
 }

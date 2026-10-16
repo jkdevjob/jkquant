@@ -1,0 +1,143 @@
+{
+  "ok": true,
+  "date": "2026-10-16",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-16",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-16T06:40:38.658Z",
+    "updatedAt": "2026-10-16T06:40:40.425Z",
+    "scans": [
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1792132828868,
+        "capturedAt": "2026-10-16T06:40:40.308Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1792132828868,
+        "capturedAt": "2026-10-16T06:40:38.546Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-16",
+        "capturedAt": "2026-10-16T06:40:40.308Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-16",
+          "currency": "KRW",
+          "trades": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "2026-10-15 15:30 종가",
+              "entryPrice": 5580,
+              "exitTime": "09:00 시가",
+              "exitPrice": 5690,
+              "qty": 152,
+              "notional": 848160,
+              "pnlPct": 1.841326164874543,
+              "pnlAmount": 15617.391999999923,
+              "reason": "다음 날 시가 청산"
+            }
+          ],
+          "open": [],
+          "watched": 1,
+          "exits": 1,
+          "wins": 1,
+          "losses": 0,
+          "winRate": 100,
+          "realizedAmount": 15617.391999999923,
+          "realizedPct": 1.841326164874543,
+          "status": "closed",
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "etf_dip_overnight_v1",
+          "note": "15:21 예상 하락 8.42% (기준 −3% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-16",
+        "capturedAt": "2026-10-16T06:40:38.546Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-16",
+          "currency": "KRW",
+          "trades": [
+            {
+              "name": "클래시스",
+              "code": "214150",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 27000,
+              "qty": 76,
+              "notional": 2052000,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 27600,
+              "pnlPct": 1.9922222222222143,
+              "pnlAmount": 40880.399999999834,
+              "reason": "종가 청산"
+            },
+            {
+              "name": "비에이치아이",
+              "code": "083650",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 46100,
+              "qty": 4,
+              "notional": 184400,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 48000,
+              "pnlPct": 3.8914750542299283,
+              "pnlAmount": 7175.879999999988,
+              "reason": "종가 청산"
+            }
+          ],
+          "open": [],
+          "measure": [],
+          "exits": 2,
+          "wins": 2,
+          "losses": 0,
+          "winRate": 100,
+          "realizedAmount": 48056.279999999824,
+          "realizedPct": 2.1488231085673326,
+          "status": "closed",
+          "watched": 108,
+          "candidates": 14,
+          "entries": 2,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "note": "메인 매매일(통과 14종목)"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
