@@ -176,7 +176,8 @@ export async function onRequest({ request, env }) {
     out.uid = uid;
 
     const rawDoc = await fsGet(tok, pid, "users/" + uid);
-    const doc = await hydratePaperDoc(rawDoc, id=>fsGet(tok,pid,"users/"+uid+"/paperHistory/"+id));
+    const doc = await hydratePaperDoc(rawDoc, id=>fsGet(tok,pid,"users/"+uid+"/paperHistory/"+id),
+      {boxes:['inf'],session:s=>s?.paper===true&&!!s.kis});
     const state = doc && (doc.stateV2 || doc.state);  // stateV2 정본, legacy state는 1회 마이그레이션 전 fallback
     if (!state || !state.inf || !state.inf.sessions) return json({ ...out, error: "저장된 세션이 없습니다" }, 404);
 

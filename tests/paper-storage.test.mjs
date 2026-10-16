@@ -175,6 +175,19 @@ test('cache is scoped to account, and stale embedded full histories take precede
   assert.deepEqual((await createPaperStore(f.sdk).getDoc(f.ref)).data().stateV2,embedded.stateV2);
 });
 
+test('order-server hydration reads only connected IM sessions, while normal browser reads remain complete',async()=>{
+  const d=fixture();d.stateV2.inf.sessions[0].kis=true;
+  d.stateV2.vr.sessions=clone(d.stateV2.inf.sessions).map((s,i)=>({...s,id:'vr'+i}));
+  const p=await packPaperDoc(d),selected=p.data[PAPER_HISTORY_FIELD].sessions.find(x=>x.box==='inf'&&x.id==='p0'),reads=[];
+  const allowed=new Set(selected.parts);
+  const out=await hydratePaperDoc(storedMap(p.data),id=>{reads.push(id);assert(allowed.has(id),'unrelated history must not consume server requests');return p.parts.get(id);},
+    {boxes:['inf'],session:s=>s?.paper===true&&!!s.kis});
+  assert.deepEqual(out.stateV2.inf.sessions[0],d.stateV2.inf.sessions[0]);
+  assert.equal(reads.length,allowed.size);assert(reads.length<5);
+  assert.deepEqual((await hydratePaperDoc(storedMap(p.data),id=>p.parts.get(id))).stateV2,d.stateV2,'browser defaults still hydrate every session');
+  await assert.rejects(hydratePaperDoc(p.data,()=>null,{boxes:['inf'],session:s=>s?.paper===true&&!!s.kis}),{code:'paper-history-unavailable'});
+});
+
 test('session reorder hydrates by identity, and an explicitly cleared history removes the manifest without reviving rows',async()=>{
   const f=firestore({'users/u1':{stateV2:{inf:{sessions:[]}}}}),d=fixture();await save(f,d);
   const raw=f.docs.get('users/u1');raw.stateV2.inf.sessions.reverse();f.docs.set('users/u1',raw);

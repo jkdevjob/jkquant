@@ -76,17 +76,21 @@ export async function packPaperDoc(d){
   }
   out[PAPER_HISTORY_FIELD]={version:1,sessions};return {data:out,parts};
 }
-export async function hydratePaperDoc(d,readPart){
+export async function hydratePaperDoc(d,readPart,options={}){
+  // The order server needs only connected IM paper sessions. Browser reads use
+  // the default (all sessions); excluded sessions must not be used by a caller.
+  const wanted=(box,s)=>(!options.boxes||options.boxes.includes(box))&&(!options.session||options.session(s));
   const hasStub=s=>!!s&&Object.prototype.hasOwnProperty.call(s,SESSION_REF)&&!s.hist?.some(generated);
   const manifest=d?.[PAPER_HISTORY_FIELD];
   if(!manifest){
-    if(BOXES.some(b=>d?.stateV2?.[b]?.sessions?.some(hasStub)))throw failure('모의 기록의 분할 목록이 없습니다. 기존 원장을 보호하기 위해 저장을 중단합니다.');
+    if(BOXES.some(b=>d?.stateV2?.[b]?.sessions?.some(s=>wanted(b,s)&&hasStub(s))))throw failure('모의 기록의 분할 목록이 없습니다. 기존 원장을 보호하기 위해 저장을 중단합니다.');
     return d;
   }
   if(manifest.version!==1||!Array.isArray(manifest.sessions))throw failure('모의 기록 저장 형식을 확인할 수 없습니다. 새로고침 후 다시 시도해 주세요.');
   const out=copy(d),pending=new Map();
   const getPart=id=>{if(!pending.has(id))pending.set(id,Promise.resolve().then(()=>readPart(id)));return pending.get(id);};
   await Promise.all(manifest.sessions.map(async e=>{
+    if(options.boxes&&!options.boxes.includes(e.box))return;
     if(!BOXES.includes(e.box)||!Number.isInteger(e.index)||!Array.isArray(e.parts)||!e.parts.length||!e.parts.every(x=>hashPattern.test(x)))throw failure('모의 기록의 분할 목록이 올바르지 않습니다.');
     const sessions=out.stateV2?.[e.box]?.sessions||[];
     let index=e.index;
@@ -99,6 +103,7 @@ export async function hydratePaperDoc(d,readPart){
     // An old client may have removed/reordered a session or embedded a complete
     // freshly replayed history. Its current state takes precedence over old parts.
     if(!s||String(s.id||'')!==e.id||s.paper!==true)return;
+    if(!wanted(e.box,s))return;
     if(s.hist?.some(generated)){delete s[SESSION_REF];return;}
     if(await sha(stableJson(s))!==e.stubHash)throw failure('모의 설정과 저장 기록의 판이 다릅니다. 다른 열린 창을 새로고침해 주세요. 기록은 삭제하지 않았습니다.');
     const texts=await Promise.all(e.parts.map(async id=>{
@@ -112,7 +117,7 @@ export async function hydratePaperDoc(d,readPart){
     if(original.paper!==true||String(original.id||'')!==e.id||!Array.isArray(original.hist))throw failure('모의 세션 원본을 확인할 수 없습니다.');
     out.stateV2[e.box].sessions[index]=original;
   }));
-  if(BOXES.some(b=>out.stateV2?.[b]?.sessions?.some(hasStub)))throw failure('모의 기록의 분할 목록이 누락되었습니다. 전체 기록을 불러올 때까지 저장을 중단합니다.');
+  if(BOXES.some(b=>out.stateV2?.[b]?.sessions?.some(s=>wanted(b,s)&&hasStub(s))))throw failure('모의 기록의 분할 목록이 누락되었습니다. 전체 기록을 불러올 때까지 저장을 중단합니다.');
   return out;
 }
 /* Firebase adapter. Buffer writes until all reads and hashes finish, keeping
