@@ -4,6 +4,10 @@ import {readFileSync} from 'node:fs';
 import {createPaperStore,packPaperDoc,hydratePaperDoc,previewPaperDoc,PAPER_HISTORY_FIELD} from '../jk-paper-store.mjs';
 
 const clone=x=>JSON.parse(JSON.stringify(x));
+// Firestore sorts stored map keys. Every cold snapshot below models that,
+// including nested maps, rather than preserving the writer's insertion order.
+const storedMap=v=>Array.isArray(v)?v.map(storedMap):v&&typeof v==='object'
+  ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,storedMap(v[k])])):v;
 const DEL={_delete:true};
 function bytes(v){
   if(v==null||typeof v==='boolean')return 1;
@@ -26,7 +30,7 @@ function firestore(initial={}){
   let fail=null,retry=null;
   const db={};
   const doc=(db,...parts)=>({firestore:db,path:parts.join('/')});
-  const snap=ref=>({ref,exists:()=>docs.has(ref.path),data:()=>docs.has(ref.path)?clone(docs.get(ref.path)):undefined});
+  const snap=ref=>({ref,exists:()=>docs.has(ref.path),data:()=>docs.has(ref.path)?storedMap(clone(docs.get(ref.path))):undefined});
   const getDoc=async ref=>{reads.push(ref.path);return snap(ref);};
   const runTransaction=async(db,fn)=>{
     async function attempt(){
@@ -80,6 +84,7 @@ test('multi-MiB generated histories save atomically and cold-read exactly, inclu
   }
   assert.deepEqual(stored.stateV2.asap,original.stateV2.asap,'real sessions are never split');
   const cold=createPaperStore(f.sdk),snap=await cold.getDoc(f.ref),restored=snap.data();
+  assert.notDeepEqual(Object.keys(stored.stateV2.inf.sessions[0]),Object.keys(snap.paperStorageData().stateV2.inf.sessions[0]),'stored map order differs from writer order');
   assert.deepEqual(restored.stateV2,original.stateV2,'all 8,136 rows and session settings survive exactly');
   assert.deepEqual(restored.scalp,original.scalp);assert.deepEqual(restored.fiveYearPlanV2,original.fiveYearPlanV2);
   assert.equal(restored.stateV2Rev,5);
@@ -181,12 +186,13 @@ test('session reorder hydrates by identity, and an explicitly cleared history re
   assert.deepEqual((await createPaperStore(f.sdk).getDoc(f.ref)).data().stateV2,reversed.stateV2);
 });
 
-test('value invariants reject disabled splitting, lost rows, and trusting uncommitted parts (3 mutations)',async()=>{
+test('value invariants reject disabled splitting, lost rows, uncommitted parts and insertion-order signatures (4 mutations)',async()=>{
   const source=readFileSync(new URL('../jk-paper-store.mjs',import.meta.url),'utf8');
   const mutations=[
     ['disabled splitting','const rows=selected(d),out=copy(d),parts=new Map();','const rows=[],out=copy(d),parts=new Map();'],
     ['lost row','out.stateV2[e.box].sessions[index]=original;','original.hist.pop();out.stateV2[e.box].sessions[index]=original;'],
-    ['uncommitted cache','newParts.set(key,{ref:partRef(w.ref,id),data:p});','newParts.set(key,{ref:partRef(w.ref,id),data:p});remember(key,p);']
+    ['uncommitted cache','newParts.set(key,{ref:partRef(w.ref,id),data:p});','newParts.set(key,{ref:partRef(w.ref,id),data:p});remember(key,p);'],
+    ['map order signature','sha(stableJson(r.stub))','sha(JSON.stringify(r.stub))']
   ];
   for(const [name,from,to] of mutations){
     assert(source.includes(from),'mutation target '+name);

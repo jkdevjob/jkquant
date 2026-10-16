@@ -11,6 +11,10 @@ const copy=x=>JSON.parse(JSON.stringify(x));
 const generated=h=>!!(h&&(h.sim||h.auto));
 const userPath=p=>/^users\/[^/]+$/.test(p||'');
 const hashPattern=/^[a-f0-9]{64}$/;
+// Firestore map key order is not the JavaScript insertion order. The signature
+// binds values and array order, while remaining independent of map key order.
+const stableJson=value=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)
+  ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
 function failure(message){return Object.assign(new Error(message),{code:'paper-history-unavailable'});}
 async function sha(s){
   const digest=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
@@ -68,7 +72,7 @@ export async function packPaperDoc(d){
     for(const text of r.texts){const id=await sha(text);ids.push(id);parts.set(id,{version:1,text});}
     const hash=await sha(r.original);r.stub[SESSION_REF]=hash;
     out.stateV2[r.box].sessions[r.index]=r.stub;
-    sessions.push({box:r.box,index:r.index,id:r.id,hash,stubHash:await sha(JSON.stringify(r.stub)),chars:r.original.length,parts:ids});
+    sessions.push({box:r.box,index:r.index,id:r.id,hash,stubHash:await sha(stableJson(r.stub)),chars:r.original.length,parts:ids});
   }
   out[PAPER_HISTORY_FIELD]={version:1,sessions};return {data:out,parts};
 }
@@ -96,7 +100,7 @@ export async function hydratePaperDoc(d,readPart){
     // freshly replayed history. Its current state takes precedence over old parts.
     if(!s||String(s.id||'')!==e.id||s.paper!==true)return;
     if(s.hist?.some(generated)){delete s[SESSION_REF];return;}
-    if(await sha(JSON.stringify(s))!==e.stubHash)throw failure('모의 설정과 저장 기록의 판이 다릅니다. 다른 열린 창을 새로고침해 주세요. 기록은 삭제하지 않았습니다.');
+    if(await sha(stableJson(s))!==e.stubHash)throw failure('모의 설정과 저장 기록의 판이 다릅니다. 다른 열린 창을 새로고침해 주세요. 기록은 삭제하지 않았습니다.');
     const texts=await Promise.all(e.parts.map(async id=>{
       const p=await getPart(id);
       if(!p||p.version!==1||typeof p.text!=='string'||await sha(p.text)!==id)throw failure('모의 기록 일부를 읽지 못했습니다. 전체 기록을 불러올 때까지 저장을 중단합니다.');
