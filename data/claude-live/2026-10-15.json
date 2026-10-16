@@ -6,13 +6,25 @@
     "date": "2026-10-15",
     "mainVariant": "baseline",
     "createdAt": "2026-10-15T06:40:33.324Z",
-    "updatedAt": "2026-10-15T15:05:32.485Z",
+    "updatedAt": "2026-10-15T20:05:31.831Z",
     "scans": [
       {
         "id": "close:crypto",
         "scheduledTime": 1792076728868,
         "capturedAt": "2026-10-15T15:05:32.448Z",
         "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:soxl",
+        "scheduledTime": 1792094728868,
+        "capturedAt": "2026-10-15T20:05:31.740Z",
+        "targetHm": 505,
         "lagMs": 0,
         "partial": false,
         "okShards": 1,
@@ -72,6 +84,47 @@
           "status": "closed",
           "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
           "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "close:soxl",
+        "date": "2026-10-15",
+        "capturedAt": "2026-10-15T20:05:31.740Z",
+        "targetHm": 505,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "soxl",
+          "name": "④ SOXL · 단기 과매도 반등(최대 5일)",
+          "date": "2026-10-15",
+          "currency": "USD",
+          "trades": [
+            {
+              "name": "SOXL",
+              "entryTime": "2026-10-08 시가",
+              "entryPrice": 150.47999572753906,
+              "exitTime": "2026-10-15 09:30 시가",
+              "exitPrice": 98.35,
+              "notional": 10000,
+              "pnlPct": -34.84247554999024,
+              "pnlAmount": -3484.247554999024,
+              "reason": "최대 5일 청산"
+            }
+          ],
+          "open": [],
+          "watched": 1,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 1,
+          "wins": 0,
+          "losses": 1,
+          "winRate": 0,
+          "realizedAmount": -3484.247554999024,
+          "realizedPct": -34.84247554999024,
+          "status": "closed",
+          "strategyVersion": "soxl_rsi2_meanrev_v1",
+          "note": "시가 매도",
+          "capitalNote": "모의 자금 $10,000"
         }
       },
       {
