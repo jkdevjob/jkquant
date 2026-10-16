@@ -22,6 +22,7 @@
 //   · 자동주문 경로는 VTS 모의투자 세션(paper=true)만 허용한다. paper=false 실계좌 세션은 항상 건너뛴다.
 
 import { imOrders, settledLast, staleDays, STALE_MAX_DAYS, orderWindow } from "./_im.js";
+import { hydratePaperDoc } from "../../jk-paper-store.mjs";
 
 const JH = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o, null, 2), { status: s, headers: JH });
@@ -174,7 +175,8 @@ export async function onRequest({ request, env }) {
     if (!uid) return json({ error: "대상 uid 를 찾지 못했습니다 — AUTOTRADE_UID 를 넣어 주세요" }, 400);
     out.uid = uid;
 
-    const doc = await fsGet(tok, pid, "users/" + uid);
+    const rawDoc = await fsGet(tok, pid, "users/" + uid);
+    const doc = await hydratePaperDoc(rawDoc, id=>fsGet(tok,pid,"users/"+uid+"/paperHistory/"+id));
     const state = doc && (doc.stateV2 || doc.state);  // stateV2 정본, legacy state는 1회 마이그레이션 전 fallback
     if (!state || !state.inf || !state.inf.sessions) return json({ ...out, error: "저장된 세션이 없습니다" }, 404);
 
