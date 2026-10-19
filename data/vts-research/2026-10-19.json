@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-19T14:22:52.583067+09:00",
+  "mode": "read-only-vts-execution-research",
+  "from": "2026-09-25",
+  "to": "2026-10-19",
+  "archiveDays": 17,
+  "strategies": [
+    {
+      "strategy": "opening",
+      "days": 17,
+      "reports": 17,
+      "internalTrades": 33,
+      "kisOrders": 48,
+      "completeMatches": 6,
+      "buyMatches": 8,
+      "sellMatches": 6,
+      "avgEntrySlippageCostPct": -0.20135329581366518,
+      "avgExitSlippageCostPct": 0.15126153964804176,
+      "avgRoundTripSlippageCostPct": 0.06339958398824397,
+      "avgInternalPnlPct": -0.8407906524883034,
+      "avgVtsGrossPnlPct": 0.004208870675679692,
+      "avgVtsNetPnlPct": -0.4512706961696123,
+      "avgBrokerCostRatePct": 0.45547956684528934,
+      "avgObservedExecutionDragPct": 0.5188791508335333,
+      "frictionGapVsInternal025Pct": 0.2688791508335333,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 6,
+      "totalBrokerEstimatedCostsWon": 51522.0,
+      "avgBrokerEstimatedCostsWon": 8587.0,
+      "avgEntryOrderLagSecApprox": 123.25,
+      "avgExitOrderLagSecApprox": 130.66666666666666,
+      "avgBrokerNotifyLagSec": 0.0,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    },
+    {
+      "strategy": "daytrading",
+      "days": 10,
+      "reports": 10,
+      "internalTrades": 24,
+      "kisOrders": 31,
+      "completeMatches": 0,
+      "buyMatches": 0,
+      "sellMatches": 0,
+      "avgEntrySlippageCostPct": null,
+      "avgExitSlippageCostPct": null,
+      "avgRoundTripSlippageCostPct": null,
+      "avgInternalPnlPct": null,
+      "avgVtsGrossPnlPct": null,
+      "avgVtsNetPnlPct": null,
+      "avgBrokerCostRatePct": null,
+      "avgObservedExecutionDragPct": null,
+      "frictionGapVsInternal025Pct": null,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 0,
+      "totalBrokerEstimatedCostsWon": 0,
+      "avgBrokerEstimatedCostsWon": null,
+      "avgEntryOrderLagSecApprox": null,
+      "avgExitOrderLagSecApprox": null,
+      "avgBrokerNotifyLagSec": null,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    }
+  ],
+  "latest": {
+    "date": "2026-10-19",
+    "reports": [
+      {
+        "strategy": "opening",
+        "internalTrades": 0,
+        "kisOrders": 2,
+        "matched": 0,
+        "matches": [],
+        "unmatched": [
+          {
+            "code": "475150",
+            "name": "SK이터닉스",
+            "side": "매수",
+            "orderTime": "085738",
+            "orderQty": 18,
+            "fillQty": 18,
+            "fillPrice": 39750,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "439960",
+            "name": "코스모로보틱스",
+            "side": "매수",
+            "orderTime": "085736",
+            "orderQty": 392,
+            "fillQty": 392,
+            "fillPrice": 5340,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          }
+        ]
+      }
+    ]
+  }
+}
