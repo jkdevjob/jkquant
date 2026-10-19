@@ -205,7 +205,23 @@ async function quotePart(origin,date,part){
   const {wl,meta,reason}=await loadWatchlist(date);
   out.watchlist=meta;
   if(!wl){out.decisionReason=reason;return out;}
-  const names=wl.names.slice(0,MAX_QUOTES).slice(part*PART_SIZE,(part+1)*PART_SIZE);
+  return quoteNames(origin,wl.names.slice(0,MAX_QUOTES).slice(part*PART_SIZE,(part+1)*PART_SIZE),out);
+}
+// 읽기 전용: 08:58 다시 보기(2026-10-19 사용자 선택 '가') — 08:56 전체 시세에서 갭 깊은 종목만 다시 묻는다.
+// 명단 안 종목만 · 최대 RECHECK_MAX 개. 08:56 예상가가 실제 시가보다 평균 5.4%p 깊었다(체결 12건) → 동시호가 끝에 가까운 값으로 고른다.
+export const RECHECK_MAX=12;
+export function recheckNames(wl,codes){
+  const want=new Set((Array.isArray(codes)?codes:[]).map(String).slice(0,RECHECK_MAX));
+  return (wl&&Array.isArray(wl.names)?wl.names.slice(0,MAX_QUOTES):[]).filter(x=>want.has(String(x.code)));
+}
+async function quoteCodes(origin,date,codes){
+  const out={stage:"quote",strategyVersion:GAPDOWN_VERSION,date,part:"recheck",startedAt:new Date().toISOString(),watchlist:null,candidates:[],decisionReason:""};
+  const {wl,meta,reason}=await loadWatchlist(date);
+  out.watchlist=meta;
+  if(!wl){out.decisionReason=reason;return out;}
+  return quoteNames(origin,recheckNames(wl,codes),out);
+}
+async function quoteNames(origin,names,out){
   for(const x of names){
     const row=candidateRow(x);
     if(kstNow().hms>=QUOTE_DEADLINE){row.error="quote_deadline";out.candidates.push(row);continue;}
@@ -238,7 +254,14 @@ export function sanitizeCandidates(rows,wl){
   }
   return out;
 }
-async function preopen(origin,env,date,rows){
+// ① 고르기 — 시장 투매 강도(통과 수)는 08:56 전체로 센다. 08:58 에 다시 본 값(fresh)이 있으면 그 종목들 중에서 깊은 3종목을 고른다
+// (다시 보니 갭이 얕아진 종목은 빠진다 · 다시 보지 않은 08:56 값은 섞지 않는다). 다시 본 값이 하나도 없으면 08:56 값으로(주문을 막지 않음).
+export function choosePicks(cands,fresh,rule){
+  const qualified=gapdownPicks(cands,{...rule,picks:1e9}).length;
+  const f=(Array.isArray(fresh)?fresh:[]).filter(r=>r&&Number.isFinite(r.expectedGapPct));
+  return {qualified,picks:gapdownPicks(f.length?f:cands,rule),source:f.length?"recheck":"first",priced:f.length};
+}
+async function preopen(origin,env,date,rows,recheck){
   const out={stage:"preopen",strategyVersion:GAPDOWN_VERSION,date,startedAt:new Date().toISOString(),
     watchlist:null,candidates:0,picks:[],orders:[],decisionReason:""};
   const {wl,meta,reason}=await loadWatchlist(date);
@@ -246,12 +269,14 @@ async function preopen(origin,env,date,rows){
   if(!wl){out.decisionReason=reason;return out;}
   const cands=sanitizeCandidates(rows,wl);
   out.candidates=cands.length;
-  const picks=gapdownPicks(cands,wl.rule);
   // v2 판단 근거: 오늘 조건(갭 범위)을 통과한 종목 수 = 시장 투매 강도. 주문은 v1 그대로 매일 내서 체결을 재고, v2 는 이 값으로 가른다.
-  const qualified=gapdownPicks(cands,{...wl.rule,picks:1e9}).length;
+  const ch=choosePicks(cands,Array.isArray(recheck)?sanitizeCandidates(recheck,wl):[],wl.rule),picks=ch.picks,qualified=ch.qualified;
   out.breadth={qualified,v2MinQualified:BREADTH_V2_MIN,v2Signal:qualified>=BREADTH_V2_MIN};
-  out.picks=picks.map(x=>({code:x.code,name:x.name,expectedPrice:x.expectedPrice,basePrice:x.basePrice,expectedGapPct:x.expectedGapPct,rsi14Prev:x.rsi14Prev}));
-  if(!picks.length){out.decisionReason=cands.some(x=>x.expectedGapPct!==null)?"no_expected_gap_down":"no_expected_prices";return out;}
+  out.recheck=Array.isArray(recheck)?{asked:recheck.length,priced:ch.priced,used:ch.source==="recheck"}:null;
+  const first=new Map(cands.map(c=>[c.code,c]));
+  out.picks=picks.map(x=>({code:x.code,name:x.name,expectedPrice:x.expectedPrice,basePrice:x.basePrice,expectedGapPct:x.expectedGapPct,rsi14Prev:x.rsi14Prev,
+    ...(ch.source==="recheck"?{expectedPrice0856:(first.get(x.code)||{}).expectedPrice??null,expectedGapPct0856:(first.get(x.code)||{}).expectedGapPct??null}:{})}));
+  if(!picks.length){out.decisionReason=(ch.source==="recheck"||cands.some(x=>x.expectedGapPct!==null))?"no_expected_gap_down":"no_expected_prices";return out;}
   out.decisionReason="rsi14_prev<30+expected_gap<=-2%+deepest3";
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
@@ -390,11 +415,12 @@ export async function onRequestPost({request,env}){
   const origin=new URL(request.url).origin;
   try{
     if(stage==="quote"){
+      if(Array.isArray(b.codes))return json({ok:true,...await quoteCodes(origin,date,b.codes),finishedAt:new Date().toISOString()});   // 08:58 다시 보기
       const part=Math.floor(+b.part||0);
       if(!(part>=0&&part*PART_SIZE<MAX_QUOTES))return json({ok:false,error:"part 범위 오류"},400);
       return json({ok:true,...await quotePart(origin,date,part),finishedAt:new Date().toISOString()});
     }
-    if(stage==="preopen")return json({ok:true,...await preopen(origin,env,date,b.candidates),finishedAt:new Date().toISOString()});
+    if(stage==="preopen")return json({ok:true,...await preopen(origin,env,date,b.candidates,b.recheck),finishedAt:new Date().toISOString()});
     if(stage==="etf_buy")return json({ok:true,...await etfBuy(origin,env,date),finishedAt:new Date().toISOString()});
     if(stage==="etf_sell")return json({ok:true,...await etfSell(origin,env,date,String(b.buyDate||"")),finishedAt:new Date().toISOString()});
     if(stage==="etf_reconcile")return json({ok:true,...await etfReconcile(origin,env,date),finishedAt:new Date().toISOString()});

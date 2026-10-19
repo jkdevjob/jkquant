@@ -126,7 +126,8 @@ class GapdownLive(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             live = Path(tmp)
             ledger = {"ok": True, "ledger": {"date": d, "events": [
-                {"stage": "preopen", "payload": {"picks": [{"code": "000010", "name": "N", "expectedPrice": op[-1] * 1.01, "expectedGapPct": -4.0}],
+                {"stage": "preopen", "payload": {"picks": [{"code": "000010", "name": "N", "expectedPrice": op[-1] * 1.01, "expectedGapPct": -4.0,
+                                                             "expectedPrice0856": op[-1] * 0.9, "expectedGapPct0856": -14.0}],
                                                   "orders": [{"code": "000010", "side": "buy", "vts": {"ok": True, "msg": "ok"}}]}},
                 {"stage": "reconcile", "payload": {"positions": [{"code": "000010", "buy": {"qty": 10, "avgPrice": op[-1] + 10},
                                                                     "sell": {"qty": 10, "avgPrice": cl[-1] - 10}}]}}]}}
@@ -144,6 +145,9 @@ class GapdownLive(unittest.TestCase):
         self.assertAlmostEqual(r["sellSlipPct"], -(((cl[-1] - 10) / cl[-1] - 1) * 100))
         self.assertAlmostEqual(r["realizedNetPct"], ((cl[-1] - 10) / (op[-1] + 10) - 1) * 100 - 0.23)
         self.assertAlmostEqual(r["openVsExpectedPct"], (1 / 1.01 - 1) * 100)
+        self.assertAlmostEqual(r["openVsExpected0856Pct"], (1 / 0.9 - 1) * 100)          # 08:58 다시 보기 전(08:56) 값과의 차이도 잰다
+        self.assertEqual(r["expectedGapPct0856"], -14.0)
+        self.assertEqual(g.live_summary(rows)["openVsExpected0856Pct"]["n"], 1)
         self.assertTrue(r["actualGapQualifies"])
         self.assertIsNone(none[0]["actualOpen"], "provisional day must not be priced")
 

@@ -162,7 +162,7 @@ export function todaySummary(tab,t,hm){
     const done=use.filter(r=>r.pnlPct!=null&&(r.buyPrice!=null||r.sellPrice!=null||r.hold===true)&&r.status!=="주문 실패");
     if(rows.length){const w=ACCOUNT_WEIGHT[tab];return {tabPct,sumPct:us,trades,accountPct:tabPct*w,weight:w,noTrade:trades===0,why,
       wins:done.filter(r=>r.pnlPct>0).length,losses:done.filter(r=>r.pnlPct<=0).length};}
-    else if(!d)why=hm<856?"08:56 판단 전":"오늘 판단 기록 없음(휴장일이 아니면 점검)";
+    else if(!d)why=hm<859?"08:58 판단 전":"오늘 판단 기록 없음(휴장일이 아니면 점검)";
     else why=GAP_REASON[d.reason]||("매매 없음 — "+(d.reason||"조건 맞는 종목 없음"));
   }else if(tab==="daytrading"){
     trades=rows.filter(r=>r.buyPrice!=null&&r.status!=="주문 실패").length;tabPct=sum;
@@ -319,9 +319,9 @@ export async function onRequestGet({request,env}){
     const qs=await Promise.all([...codes,"233740"].map(c=>quote(origin,c)));
     const prices=Object.fromEntries([...codes,"233740"].map((c,i)=>[c,qs[i]?qs[i].price:null]));
     const pre=st.preopen||null;
-    out.tabs.opening={rows:openingRows(st,prices),decision:pre?{reason:pre.decisionReason,breadth:pre.breadth||null,candidates:pre.candidates}:null,
+    out.tabs.opening={rows:openingRows(st,prices),decision:pre?{reason:pre.decisionReason,breadth:pre.breadth||null,candidates:pre.candidates,recheck:pre.recheck||null}:null,
       ledgerFound:!!lt,main:mainOf("opening",now.date),
-      note:"08:56 예상체결가로 갭 판단 → 08:59 장전 동시호가 매수 → 15:21 종가 동시호가 매도 → 15:40 체결 조회. 매매일은 통과 "+mainOf("opening",now.date).params.minQ+"종목 이상."};
+      note:"08:56 예상체결가로 명단 전체 확인 → 08:58 갭 깊은 10종목 다시 확인해 판단 → 08:59 장전 동시호가 매수 → 15:21 종가 동시호가 매도 → 15:40 체결 조회. 매매일은 통과 "+mainOf("opening",now.date).params.minQ+"종목 이상."};
     const m2=mainOf("daytrading",now.date);
     out.tabs.daytrading={rows:etfRows(st,pst,prev&&prev.date,prices["233740"]),ledgerFound:!!lt,main:m2,
       note:"전날 "+String(m2.params.th).replace("-","−")+"% 이하 마감이면 15:21 종가 매수 → 다음 거래일 08:59 시가 매도."};

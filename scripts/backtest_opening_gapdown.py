@@ -342,6 +342,7 @@ def live_trades(by, final_last):
                 expectedPrice=exp, expectedGapPct=p.get("expectedGapPct"), actualOpen=o, actualClose=c, actualGapPct=gap,
                 actualGapQualifies=(gap is not None and PARAMS["gapFloor"] < gap <= PARAMS["gapMax"]),
                 openVsExpectedPct=pct(o, exp),
+                expectedGapPct0856=p.get("expectedGapPct0856"), openVsExpected0856Pct=pct(o, p.get("expectedPrice0856")),   # 08:58 다시 보기 전 값(2026-10-20~)
                 buyOrderOk=bool(((orders.get(code) or {}).get("vts") or {}).get("ok")),
                 buyOrderMsg=((orders.get(code) or {}).get("vts") or {}).get("msg"),
                 sellOrderOk=bool(((sells.get(code) or {}).get("vts") or {}).get("ok")),
@@ -359,7 +360,7 @@ def live_summary(rows):
         return dict(n=len(v), mean=statistics.fmean(v) if v else None)
     return dict(trades=len(rows), days=len({r["date"] for r in rows}),
                 actualGapQualifiesRate=(sum(1 for r in rows if r["actualGapQualifies"]) / len(rows) * 100) if rows else None,
-                openVsExpectedPct=m("openVsExpectedPct"), buySlipPct=m("buySlipPct"), sellSlipPct=m("sellSlipPct"),
+                openVsExpectedPct=m("openVsExpectedPct"), openVsExpected0856Pct=m("openVsExpected0856Pct"), buySlipPct=m("buySlipPct"), sellSlipPct=m("sellSlipPct"),
                 realizedNetPct=m("realizedNetPct"), modelNet0tPct=m("modelNet0tPct"),
                 note="buySlip = 매수체결가/시가-1, sellSlip = 1-매도체결가/종가 (양수 = 비용). 판정은 realizedNet 누적으로 한다.")
 
