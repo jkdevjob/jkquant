@@ -148,7 +148,9 @@ export function todaySummary(tab,t,hm){
     const P=(t.main&&t.main.params)||MAIN_DEFAULT.opening.params,isDef=!t.main||t.main.version===MAIN_DEFAULT.opening.version,lab=isDef?"v2 매매일":"메인 매매일";
     const d=t.decision,b=d&&d.breadth,counts=b?openingCounts(P,b.qualified):false;
     const keep=new Set(openingPick(P,rows)),use=counts?rows.filter(r=>keep.has(String(r.code))):rows;
-    const uv=use.filter(r=>r.pnlPct!=null).map(r=>r.pnlPct),us=uv.reduce((a,x)=>a+x,0);
+    // 주문 실패 종목은 예상가로 '샀다면' 손익이 줄에 보여도 칸 · 합계에는 넣지 않는다 — 밤 마감 장부(_claude_day openingDay)도 체결분만 센다.
+    // 2026-10-15: 체결 1 · 실패 2 인데 칸 +5.98% · 합계 +17.93%(실패 2종목 포함)로 보이고 '거래 1건'과 안 맞았다.
+    const uv=use.filter(r=>r.pnlPct!=null&&r.status!=="주문 실패").map(r=>r.pnlPct),us=uv.reduce((a,x)=>a+x,0);
     const ok=use.filter(r=>r.status!=="주문 실패");trades=ok.length;tabPct=uv.length?us/uv.length:0;
     if(rows.length&&b&&!counts){                     // 메인 기준 매매일이 아니면 측정용 주문 — 칸 수익률·계좌에 넣지 않는다(장부와 같게)
       const w=ACCOUNT_WEIGHT[tab];
@@ -261,6 +263,8 @@ export function etfDayCell(buySt,sellSt,bars,holiday){
 // 끝난 하루는 마지막 봉 종가(다음 날 09:00)로, 진행 중이면 지금 봉 종가(현재가)로 평가. coins: [{market, daily(최신순), hourly(최신순)}]
 export function coinDayCell(ud,coins,P,nowMs=Date.now()){
   const s=Date.parse(ud+"T09:00:00+09:00"),final=nowMs>=s+864e5,pnl=[],why=[];
+  const end=P.lastEntryHour!=null?s+((+P.lastEntryHour-9+24)%24)*36e5:s+864e5;   // 그날 새로 살 수 있는 마지막 시각(밤 돌파 금지면 그 시각)
+  let open=false;                                                        // 아직 돌파 매수가 일어날 수 있는 코인이 있나
   if(nowMs<s)return null;                                                // 그 하루가 아직 시작 전
   for(const m of P.markets){
     const c=(coins||[]).find(x=>x.market===m),daily=Array.isArray(c&&c.daily)?c.daily:[];
@@ -270,10 +274,14 @@ export function coinDayCell(ud,coins,P,nowMs=Date.now()){
     const bars=barsOfDay(c.hourly,ud,nowMs);
     if(final&&bars.length<24)return null;                                // 끝난 하루인데 봉이 모자라면 계산하지 않는다
     const r=coinBreakoutDay(h,bars,bars.length?+bars[bars.length-1].trade_price:null,P);
-    if(r&&r.hold&&r.pnlPct!=null)pnl.push(r.pnlPct);else why.push(m.replace("KRW-","")+" "+(!r?"판단 없음":r.action==="쉼"?"쉼(추세 평균 아래)":r.action));
+    if(r&&r.hold&&r.pnlPct!=null)pnl.push(r.pnlPct);else{why.push(m.replace("KRW-","")+" "+(!r?"판단 없음":r.action==="쉼"?"쉼(추세 평균 아래)":r.action));if(r&&r.action==="돌파 없음"&&nowMs<end)open=true;}
   }
   const by={};for(const w of why){const k=w.slice(w.indexOf(" ")+1);(by[k]=by[k]||[]).push(w.slice(0,w.indexOf(" ")));}   // 같은 이유는 묶는다(BTC·ETH 쉼)
-  if(!pnl.length)return {v:"no_trade",final,src:"rule",trades:0,note:(final?"":"아직 매수 없음 — ")+Object.keys(by).map(k=>by[k].join("·")+" "+k).join(" · ")};
+  const reasons=Object.keys(by).map(k=>by[k].join("·")+" "+k).join(" · ");
+  // 매수가 없고 더 살 수도 없으면(모두 쉼 · 매수 마감 시각 뒤) 하루가 안 끝났어도 '매매없음'으로 끝난 값 — 2026-10-15 08:33 전일 칸이 '매매 전'으로 보였다(ETH 쉼)
+  if(!pnl.length&&!open)return {v:"no_trade",final:true,...(final?{}:{decided:true}),src:"rule",trades:0,note:reasons};
+  if(!pnl.length){const u=new Date(end+9*36e5).toISOString();
+    return {v:"no_trade",final:false,src:"rule",trades:0,note:"아직 매수 없음 — "+reasons+" · "+u.slice(5,7)+"/"+u.slice(8,10)+" "+u.slice(11,16)+" 전까지 돌파하면 매수"};}
   return {v:pnl.reduce((a,x)=>a+x,0)/P.markets.length*P.tabSize,final,src:"rule",trades:pnl.length,...wl(pnl)};
 }
 // ④ 칸 d = 전날 밤 미국장(뉴욕 d−1) 하루 손익 × 칸 자금 비율 — 밤 계산 SOXL 칸과 같은 정의:
@@ -288,7 +296,7 @@ export function soxlDayCell(nx,q,tabSize){
   if(nx.action==="buy")v=pct(px,open)-half;
   else if(nx.action==="sell")v=pct(open,+nx.close)-half;
   else if(nx.holding)v=pct(px,+nx.close);
-  else return {date,cell:{v:"no_trade",final,src:"rule",trades:0}};
+  else return {date,cell:{v:"no_trade",final:true,...(final?{}:{decided:true}),src:"rule",trades:0}};   // 밤 판단이 '살 것 · 가진 것 없음' — 세션 중에도 끝난 값
   if(v==null)return null;
   return {date,cell:{v:v*tabSize,final:nx.action==="sell"||final,src:"rule",trades:1,...wl([v])}};
 }

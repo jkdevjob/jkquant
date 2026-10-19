@@ -393,6 +393,34 @@ class ClaudeLabTrend(unittest.TestCase):
         finally:
             lab.claude_trades, lab.gpt_trades = old
 
+    def test_fair_opening_uses_main_of_each_day(self):
+        """⚖️ 같은 조건 비교 ①: 그날 효력 메인으로 고른다(옛 코드는 통과 5 이상 · 3종목 모두 하나로) · 연구 자료가 없는 날은 비교에서 뺀다."""
+        old = (lab.DATA, list(lab.MAIN_EVENTS), lab.gpt_trades)
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d) / "opening-gapdown-research"
+            r.mkdir()
+            (r / "decisions.csv").write_text("date,gapDownCandidates,rsiPassed\n2026-10-08,38,5\n2026-10-14,50,6\n2026-10-15,434,40\n", encoding="utf-8")
+            rows = [("2026-10-08", "가", -2.5, 1.0), ("2026-10-08", "나", -4.0, 2.0), ("2026-10-08", "다", -3.5, -1.0),
+                    ("2026-10-14", "라", -5.0, 3.0), ("2026-10-15", "마", -8.5, -6.0), ("2026-10-15", "바", -2.5, 4.0), ("2026-10-15", "사", -6.8, -2.0)]
+            (r / "signals.csv").write_text("date,name,gapPct,entryPrice,exitPrice,grossPnl,pnl\n" + "".join(
+                f"{a},{b},{c},100,{100 + g},{g},{g}\n" for a, b, c, g in rows), encoding="utf-8")
+            try:
+                lab.DATA = Path(d)
+                lab.MAIN_EVENTS[:] = [dict(tab="opening", version="g_open_q7_k3_gap3", name="m", rule="r", effectiveFrom="2026-10-13", promotedAt="x",
+                                           params=dict(minQ=7, topK=3, gapMax=-3.0))]
+                by, cands = lab.claude_trades("opening")
+                self.assertEqual(sorted(t["name"] for t in by["2026-10-08"]), ["가", "나", "다"])   # 10/13 전: 옛 메인(통과 5 · 3종목 모두)
+                self.assertNotIn("2026-10-14", by)                                                  # 통과 6 < 7 — 옛 코드는 '라'를 샀다
+                self.assertEqual([t["name"] for t in by["2026-10-15"]], ["마", "사"])                 # 갭 −3% 이하만, 깊은 순
+                lab.gpt_trades = lambda tab: ({"2026-10-08": [dict(name="x", entry=1, exit=1, reason="", gross=0.0)],
+                                               "2026-10-16": [dict(name="y", entry=1, exit=1, reason="", gross=0.0)]}, {}, ["v"])
+                f = lab.fair_compare("opening", ["2026-10-08", "2026-10-14", "2026-10-15", "2026-10-16"])
+                self.assertEqual(f["window"], ["2026-10-08", "2026-10-15"])                         # 10/16 은 연구 자료 전 — '매매 없음'으로 넣지 않는다
+                self.assertEqual((f["claude"]["trades"], f["claude"]["wins"]), (5, 2))
+            finally:
+                lab.DATA, lab.gpt_trades = old[0], old[2]
+                lab.MAIN_EVENTS[:] = old[1]
+
     def test_us_open_session_dropped(self):
         from datetime import datetime, timezone
         bars = {"2026-10-01": 1, "2026-10-02": 2}
