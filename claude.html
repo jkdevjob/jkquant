@@ -78,7 +78,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.17.10</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.18.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -477,9 +477,9 @@ function liveCell(lv,date,label){
   var v=lv.v,nt=v==="no_trade",hd=v==="holiday",ok=!nt&&!hd&&isFinite(v),hit=ok&&v>=1;
   var meta=hd?"장이 열리지 않은 날":nt?"기준전략 0건":"기준전략 "+(lv.trades||0)+"건"+(lv.wins||lv.losses?" · 승 "+(lv.wins||0)+" · 패 "+(lv.losses||0):"")+" · "+(lv.src==="vts"?"모의투자 체결":"시세로 계산");
   var g=hit?"+1% 달성 · ":ok?"목표까지 "+Math.max(0,1-v).toFixed(2)+"%p · ":"";
-  var when=lv.final?"마감 · 밤 확정 전":"⏱ "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"")+" 실시간 · 확정 전";
+  var when=lv.decided?"매수 조건 안 됨 · 밤 확정 전":lv.final?"마감 · 밤 확정 전":"⏱ "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"")+" 실시간 · 확정 전";
   return "<div class='daily-result-box live'><div class='daily-result-label'>"+label+" · "+esc(date||"—")+"</div>"+
-    "<div class='daily-result-ret "+(ok?cls(v):"")+"'>"+(hd?"휴장":nt?(lv.final?"매매없음":"매매 전"):pct(v))+"</div>"+
+    "<div class='daily-result-ret "+(ok?cls(v):"")+"'>"+(hd?"휴장":nt?(lv.final?"매매없음":"아직 매수 없음"):pct(v))+"</div>"+
     "<div class='daily-result-meta'>"+meta+(lv.note?"<br>"+esc(lv.note):"")+"</div><span class='daily-result-goal"+(hit?" hit":"")+"'>"+g+when+"</span></div>";
 }
 function resultCell(v,date,label,cl,lv){
@@ -616,7 +616,7 @@ function liveCard0(tab){
     var sell=x.sellPrice?esc(x.sellTime||"")+" · "+won(x.sellPrice):x.stopPrice?"손절선 "+won(x.stopPrice)+(x.nowPrice?" · 현재 "+won(x.nowPrice):""):x.nowPrice?"현재 "+won(x.nowPrice)+(x.sellTime?" · 매도 "+esc(x.sellTime):""):(x.sellTime?esc(x.sellTime):"");
     return "<tr><td class='nm'><b>"+esc(x.name||x.code)+"</b><div class='sub'>"+esc(x.status||"")+"</div>"+(x.note?"<div class='sub'>"+esc(x.note)+"</div>":"")+"</td>"+
       "<td style='white-space:normal;text-align:left;font-size:12px'>매수 "+buy+(sell?"<br>"+sell:"")+"</td>"+
-      "<td><b class='"+cls(x.pnlPct)+"'>"+(x.pnlPct==null?"—":pct(x.pnlPct))+"</b><div class='sub'>"+(x.realized?"확정":(x.pnlPct==null?"":"현재가"))+"</div></td></tr>";
+      "<td><b class='"+(x.status==="주문 실패"?"sub":cls(x.pnlPct))+"'>"+(x.pnlPct==null?"—":pct(x.pnlPct))+"</b><div class='sub'>"+(x.status==="주문 실패"?(x.pnlPct==null?"":"샀다면 · 합계 제외"):x.realized?"확정":(x.pnlPct==null?"":"현재가"))+"</div></td></tr>";
   }).join("");
   if(tab==="soxl"){var u=rows[0]||{},ls=u.lastSession;
     return head+"<div class='kpis'><div class='kpi'><div class='l'>SOXL 상태</div><div class='v' style='font-size:15px'>"+esc(u.status||"")+"</div><div class='sub'>"+esc(u.session||"")+(u.nowPrice?" · 현재 "+won(u.nowPrice):"")+(u.buyPrice?" · 매수 "+won(u.buyPrice):"")+(u.sellPrice?" · 매도 "+won(u.sellPrice):"")+(u.signalClose?" · 판단 종가 "+won(u.signalClose):"")+"</div></div>"+

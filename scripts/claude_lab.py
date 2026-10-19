@@ -1763,14 +1763,26 @@ def claude_trades(tab):
     """클로드 기준전략 매매 목록: {청산일: [dict(name, entry, exit, reason, gross)]} + 후보 수 {날짜: (후보, 통과)}."""
     by, cands = {}, {}
     if tab == "opening":
+        # 그날 효력이 있던 메인 규칙(승격 기록)으로 고른다 — d1_series · 마감 장부와 같은 식. 2026-10-19 까지는 옛 규칙(통과 5 이상 · 3종목 모두)
+        # 하나로 계산해 10/13 부터의 메인(통과 7 이상 · 갭 −3% 이하 · 깊은 3)과 달랐다.
         q = {}
         for r in read_csv(DATA / "opening-gapdown-research/decisions.csv"):
             q[r["date"]] = int(r.get("rsiPassed") or 0)
             cands[r["date"]] = (int(r.get("gapDownCandidates") or 0), int(r.get("rsiPassed") or 0))
+        sig = {}
         for r in read_csv(DATA / "opening-gapdown-research/signals.csv"):
-            if q.get(r["date"], 0) >= 5 and r.get("grossPnl") not in (None, ""):
-                by.setdefault(r["date"], []).append(dict(name=r.get("name"), entry=float(r["entryPrice"]), exit=float(r["exitPrice"]),
-                                                         reason="종가 청산", gross=float(r["grossPnl"])))
+            if r.get("grossPnl") not in (None, ""):
+                sig.setdefault(r["date"], []).append(r)
+        for d, rs in sig.items():
+            p = main_for("opening", d)["params"]
+            if q.get(d, 0) < p["minQ"]:
+                continue
+            rs = sorted(rs, key=lambda r: float(r.get("gapPct") or 0.0))
+            if p.get("gapMax") is not None:
+                rs = [r for r in rs if float(r.get("gapPct") or 0.0) <= p["gapMax"]]
+            for r in rs[:int(p["topK"])]:
+                by.setdefault(d, []).append(dict(name=r.get("name"), entry=float(r["entryPrice"]), exit=float(r["exitPrice"]),
+                                                 reason="종가 청산", gross=float(r["grossPnl"])))
     elif tab == "daytrading":
         for r in read_csv(DATA / "etf-overnight-research/signals.csv"):
             by.setdefault(r["exitDate"], []).append(dict(name="KODEX 코스닥150레버리지", entry=float(r["entryPrice"]), exit=float(r["exitPrice"]),
@@ -1850,6 +1862,8 @@ def fair_compare(tab, calendar):
     cal = sorted(set(calendar))
     start, end = min(gby), max(gby)
     c_last = max([d for d in cal if d <= end] or [end])
+    if tab == "opening" and ccand:                                    # 연구 자료(실제 시가)가 아직 없는 날은 '매매 없음'이 아니라 비교에서 뺀다
+        c_last = min(c_last, max(ccand))
     days = [d for d in cal if start <= d <= min(end, c_last)]
     rows = []
     for d in reversed(days[-20:]):
