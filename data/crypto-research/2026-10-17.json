@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "generatedAt": "2026-10-18T13:39:21.259266+09:00",
+  "generatedAt": "2026-10-19T13:46:58.755245+09:00",
   "market": "KRW-BTC",
   "unitMinutes": 5,
   "source": "Upbit public minute candles",
@@ -1688,6 +1688,77 @@
           "maxDrawdownPct": 0.0
         }
       }
+    },
+    {
+      "params": {
+        "name": "cf_g0003",
+        "range_bars": 3,
+        "volume_mult": 0.9,
+        "use_vwap": true,
+        "entry_cutoff_min": 1075,
+        "stop_pct": 0.5,
+        "take_profit_pct": 1.0,
+        "max_hold_bars": 6,
+        "fee_round_trip_pct": 0.1,
+        "slippage_round_trip_pct": 0.04,
+        "evaluation_start": "2026-10-17"
+      },
+      "summary": {
+        "days": 0,
+        "trades": 0,
+        "signalRatePct": 0.0,
+        "noTradeDays": 0,
+        "winRate": 0.0,
+        "avgPnl": 0.0,
+        "avgDailyReturnPct": 0.0,
+        "positiveDayRatePct": 0.0,
+        "target1PctDayCount": 0,
+        "target1PctDayRatePct": 0.0,
+        "medianPnl": 0.0,
+        "sumPnl": 0,
+        "compoundReturnPct": 0.0,
+        "profitFactor": 0.0,
+        "maxDrawdownPct": 0.0
+      },
+      "validation": {
+        "status": "collecting",
+        "trainDays": 0,
+        "holdoutDays": 0,
+        "train": {
+          "days": 0,
+          "trades": 0,
+          "signalRatePct": 0.0,
+          "noTradeDays": 0,
+          "winRate": 0.0,
+          "avgPnl": 0.0,
+          "avgDailyReturnPct": 0.0,
+          "positiveDayRatePct": 0.0,
+          "target1PctDayCount": 0,
+          "target1PctDayRatePct": 0.0,
+          "medianPnl": 0.0,
+          "sumPnl": 0,
+          "compoundReturnPct": 0.0,
+          "profitFactor": 0.0,
+          "maxDrawdownPct": 0.0
+        },
+        "holdout": {
+          "days": 0,
+          "trades": 0,
+          "signalRatePct": 0.0,
+          "noTradeDays": 0,
+          "winRate": 0.0,
+          "avgPnl": 0.0,
+          "avgDailyReturnPct": 0.0,
+          "positiveDayRatePct": 0.0,
+          "target1PctDayCount": 0,
+          "target1PctDayRatePct": 0.0,
+          "medianPnl": 0.0,
+          "sumPnl": 0,
+          "compoundReturnPct": 0.0,
+          "profitFactor": 0.0,
+          "maxDrawdownPct": 0.0
+        }
+      }
     }
   ],
   "rolling30": {
@@ -2526,53 +2597,7 @@
       }
     }
   ],
-  "currentSession": {
-    "date": "2026-10-18",
-    "status": "trade_closed",
-    "trades": 1,
-    "lastBarKst": "08:55",
-    "trade": {
-      "date": "2026-10-18",
-      "strategyVersion": "btc_midnight_orb_v2",
-      "signalTimeKst": "03:00",
-      "entryTimeKst": "03:05",
-      "exitTimeKst": "04:00",
-      "openingHigh": 110089000.0,
-      "openingLow": 109989000.0,
-      "signalClose": 110132000.0,
-      "signalVwap": 109917931.19958106,
-      "volumeRatio": 3.9114672097620837,
-      "entryPrice": 110132000.0,
-      "exitPrice": 110160000.0,
-      "reason": "time_exit",
-      "grossPnlPct": 0.025424036610610656,
-      "frictionPct": 0.14,
-      "pnlPct": -0.11457596338938936,
-      "variant": "baseline",
-      "evidence": {
-        "source": "Upbit public 5m OHLCV",
-        "rangeBars": 1,
-        "openingHigh": 110089000.0,
-        "openingLow": 109989000.0,
-        "openingRangeBaseVolume": 0.39195568,
-        "signalClose": 110132000.0,
-        "previousClose": 110004000.0,
-        "freshBreakout": true,
-        "signalVwap": 109917931.19958106,
-        "closeAboveVwap": true,
-        "volumeRatio": 3.9114672097620837,
-        "requiredVolumeRatio": 1.2,
-        "entryCutoffKstMinute": 1315,
-        "entryRule": "next_5m_open",
-        "stopPct": 0.5,
-        "takeProfitPct": 1.0,
-        "maxHoldBars": 12,
-        "feeRoundTripPct": 0.1,
-        "slippageRoundTripPct": 0.04,
-        "sameBarConflictRule": "stop_first"
-      }
-    }
-  },
+  "currentSession": null,
   "shadowDip24": {
     "strategyVersion": "btc_dip24_v1",
     "params": {
