@@ -23,7 +23,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     const cur={}; syms.forEach(s=>cur[s]=q[s]*pp[s]/tot);
     const tgt=o.target(kp,cur,st);
     const px={}; syms.forEach(s=>px[s]=C[s][k]);
-    const todo=syms.filter(s=>{ const t=tgt[s]||0; return (t===0)!==(q[s]===0) || Math.abs(t-cur[s])>(o.bandOf?o.bandOf(s):band); });
+    const todo=syms.filter(s=>{ const t=tgt[s]||0; return (t===0)!==(q[s]===0) || Math.abs(t-cur[s])>(o.bandOf?o.bandOf(s,t,cur[s]):band); });   // bandOf(종목, 목표, 현재) — 내릴 때·올릴 때 밴드를 따로 줄 수 있다
     // 매도 먼저
     for(const s of todo){ const want=Math.floor(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n; cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; } }
     for(const s of todo){ const want=Math.floor(tot*(tgt[s]||0)/px[s]); if(want>q[s]){ const n=Math.min(want-q[s],Math.floor(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; } } }
