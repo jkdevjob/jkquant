@@ -2877,7 +2877,16 @@
     "g_coin_ma25_s8_hi15_h21_btc",
     "g_coin_ma30_s99_vb1_both",
     "g_coin_ma80_s99_hi5_h15_both",
-    "g_coin_ma30_s3_hi2_h21_both"
+    "g_coin_ma30_s3_hi2_h21_both",
+    "g_coin_ma100_s10_hi10_h21_eth",
+    "g_coin_ma50_s8_hi10_h18_eth",
+    "g_coin_ma10_s3_vb0.7_h21_both",
+    "g_coin_ma20_s4_hi10_h12_btc",
+    "g_coin_ma15_s8_hi3_h12_eth",
+    "g_coin_ma10_s3_vb0.4_h18_both",
+    "g_coin_ma25_s3_vb0.8_h21_both",
+    "g_coin_ma25_s3_vb0.5_h18_both",
+    "g_coin_ma30_s3_hi7_h12_btc"
    ],
    "snapshots": [
     {
@@ -3212,11 +3221,11 @@
      "accepted": 0
     },
     "explore": {
-     "tried": 1428,
+     "tried": 1447,
      "accepted": 3
     },
     "jump2": {
-     "tried": 320,
+     "tried": 321,
      "accepted": 8
     },
     "struct": {
@@ -5174,7 +5183,28 @@
     "g_soxl_r4lt10_ma0_d5",
     "g_soxl_r4lt25_ibs0.1_ma200_d4",
     "g_soxl_r4lt15_ibs0.6_ma100_d2",
-    "g_soxl_norsi_ibs0.2_dn3_ma0_d3"
+    "g_soxl_norsi_ibs0.2_dn3_ma0_d3",
+    "g_soxl_r2lt25_ibs0.6_ma100_d3",
+    "g_soxl_r2lt25_ibs0.7_dn1_ma150_d3",
+    "g_soxl_r2lt25_ma100_d3",
+    "g_soxl_r2lt25_ibs0.7_ma150_d3",
+    "g_soxl_r2lt20_ibs0.7_ma100_d3",
+    "g_soxl_r2lt25_ma100_d2",
+    "g_soxl_r2lt25_ibs0.7_ma100_d2",
+    "g_soxl_r2lt25_ibs0.6_dn1_ma100_d3",
+    "g_soxl_r2lt25_ibs0.7_ma150_d2",
+    "g_soxl_r2lt25_dn1_ma100_d3",
+    "g_soxl_r2lt25_ma150_d3",
+    "g_soxl_r2lt40_ibs0.2_ma100_d4",
+    "g_soxl_r2lt25_ibs0.7_dn1_ma100_d3",
+    "g_soxl_r2lt20_ibs0.7_ma100_d2",
+    "g_soxl_r3lt25_ibs0.7_dn1_ma100_d3",
+    "g_soxl_r2lt20_ibs0.7_ma50_d3",
+    "g_soxl_r2lt25_ibs0.7_ma50_d4",
+    "g_soxl_r3lt20_ibs0.7_ma100_d3",
+    "g_soxl_r3lt25_ibs0.7_ma150_d3",
+    "g_soxl_r3lt30_ibs0.1_dn2_ma150_d4",
+    "g_soxl_r4lt20_ibs0.3_dn3_ma0_d3"
    ],
    "snapshots": [
     {
@@ -5482,15 +5512,16 @@
      "top": "g_soxl_r2lt30_ibs0.6_ma100_d5",
      "main": "g_soxl_r2lt30_ibs0.6_ma100_d5",
      "bottom": [
+      "g_soxl_r2lt35_ibs0.7_ma50_d4",
       "g_soxl_r2lt35_ma50_d4",
-      "g_soxl_r4lt30_ibs0.7_ma100_d5",
-      "soxl_rsi2_meanrev_v1"
+      "g_soxl_r4lt30_ibs0.7_ma100_d5"
      ],
      "ranks": [
       "g_soxl_r2lt30_ibs0.6_ma100_d5",
       "g_soxl_r2lt40_ibs0.7_ma100_d4",
       "g_soxl_r2lt30_ma100_d5",
       "g_soxl_r2lt30_ibs0.7_dn1_ma100_d5",
+      "g_soxl_r2lt25_ibs0.7_ma100_d3",
       "g_soxl_r2lt30_ibs0.7_ma50_d3",
       "g_soxl_r2lt30_ibs0.6_ma50_d3",
       "g_soxl_r2lt30_ma50_d3",
@@ -5498,8 +5529,7 @@
       "g_soxl_r2lt25_ibs0.7_dn1_ma50_d3",
       "g_soxl_r2lt35_ibs0.7_ma50_d4",
       "g_soxl_r2lt35_ma50_d4",
-      "g_soxl_r4lt30_ibs0.7_ma100_d5",
-      "soxl_rsi2_meanrev_v1"
+      "g_soxl_r4lt30_ibs0.7_ma100_d5"
      ]
     }
    ],
@@ -5509,11 +5539,11 @@
      "accepted": 7
     },
     "explore": {
-     "tried": 954,
+     "tried": 965,
      "accepted": 1
     },
     "jump2": {
-     "tried": 612,
+     "tried": 627,
      "accepted": 23
     },
     "neighbor": {
@@ -5521,7 +5551,7 @@
      "accepted": 6
     },
     "cross": {
-     "tried": 85,
+     "tried": 88,
      "accepted": 10
     }
    }
@@ -8526,8 +8556,26 @@
    "version": "soxl_rsi2_meanrev_v1",
    "name": "기본 · ④ SOXL 단기 과매도 반등 (최대 5일)",
    "reason": "손실 기준 미달 — MDD -26.4% · 최악일 -8.0% · 거래당 +0.16%"
+  },
+  {
+   "date": "2026-10-20",
+   "at": "2026-10-20T05:13+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 20개 계산 → 기준 통과 20 · 투입 0(교체 0) · 탈락: 점수 부족 9"
+  },
+  {
+   "date": "2026-10-20",
+   "at": "2026-10-20T05:13+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 29개 계산 → 기준 통과 17 · 투입 0(교체 0) · 탈락: 손실 기준 미달 12 · 점수 부족 8 · 복제 1"
   }
  ],
- "updatedAt": "2026-10-20T02:30+09:00",
+ "updatedAt": "2026-10-20T05:13+09:00",
  "freqBeta": 0.25
 }
