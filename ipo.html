@@ -56,6 +56,9 @@ i.lg.list,.ipo-dot.list{background:#9a7bff}
 .ipo-broker.on .ipo-broker-c{border-color:var(--vio);color:#fff;background:#40277a}
 .ipo-broker-n{font-size:10px;color:var(--faint);white-space:nowrap;max-width:58px;overflow:hidden;text-overflow:ellipsis}
 .ipo-broker.on .ipo-broker-n{color:var(--ink)}
+.ipo-broker.cand .ipo-broker-c{border-color:var(--gold,#e0b341);border-style:dashed;color:var(--ink)}
+.ipo-brokerhint{font-size:12px;color:var(--gold,#e0b341);margin:4px 2px 0}
+.ipo-brokerhint:empty{display:none}
 .ipo-pnlrow{display:flex;align-items:center;margin-top:12px;padding:12px;background:var(--panel2);border-radius:9px;font-size:13px}
 .ipo-pnlrow b{font-size:16px;margin-left:6px}
 .ipo-del{color:var(--faint);cursor:pointer;font-size:12px;padding:2px 5px}
@@ -540,7 +543,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <body>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.25</span></h1></div>
+    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.26</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -650,6 +653,7 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
           <div class="ipo-selname" id="iprec_name">—</div>
           <label class="ipo-flabel">주관사</label>
           <div class="ipo-brokers" id="iprec_brokers"></div>
+          <div class="ipo-brokerhint" id="iprec_brokerhint"></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div class="field"><label>공모가 (원)</label><input id="iprec_price" type="text" inputmode="numeric" placeholder="공모가" oninput="commaInput(this);ipoRecCalc()"></div>
             <div class="field"><label>수량 (주)</label><input id="iprec_qty" type="text" inputmode="numeric" placeholder="배정 주수" oninput="commaInput(this);ipoRecCalc()"></div>
@@ -1052,12 +1056,17 @@ function ipoRecSearch(q){
     }catch(e){}
   }, 250);
 }
-function ipoRecPick(i){ const it=IPO.feed[i]; ipoRecSel={name:it.name,code:it.code||'',poPrice:it.poPrice||null,broker:it.leadManager||'',openPrice:it.openPrice||null}; ipoRecFill(); }
+// 주관사 문자열('미래에셋증권, 삼성증권' · '미래에셋증권·KB증권') → 목록. 한 곳이면 자동 선택, 두 곳 이상이면 사용자가 고른다.
+function ipoLeadPick(lm){
+  const leads=[...new Set(String(lm||'').split(/[·,，\/]/).map(x=>x.trim()).filter(Boolean))];
+  return { leads, broker: leads.length===1 ? leads[0] : '' };
+}
+function ipoRecPick(i){ const it=IPO.feed[i]; ipoRecSel={name:it.name,code:it.code||'',poPrice:it.poPrice||null,...ipoLeadPick(it.leadManager),openPrice:it.openPrice||null}; ipoRecFill(); }
 function ipoFeedByName(name){ return IPO.feed.find(f=>f.name===name) || null; }
 function ipoRecPickStock(k){
   const s=ipoStockHits[k]; if(!s)return;
   const f=ipoFeedByName(s.name);   // 피드에 있으면 공모가·주간사 자동 채움
-  ipoRecSel={name:s.name,code:s.code||(f&&f.code)||'',poPrice:(f&&f.poPrice)||null,broker:(f&&f.leadManager)||'',openPrice:(f&&f.openPrice)||null};
+  ipoRecSel={name:s.name,code:s.code||(f&&f.code)||'',poPrice:(f&&f.poPrice)||null,...ipoLeadPick(f&&f.leadManager),openPrice:(f&&f.openPrice)||null};
   ipoRecFill();
 }
 function ipoRecPickFree(){ const q=($('iprec_search').value||'').trim()||'직접 입력'; ipoRecSel={name:q,code:'',poPrice:null,broker:''}; ipoRecFill(); }
@@ -1084,9 +1093,14 @@ function ipoUseOpen(){ const op=ipoRecSel&&ipoRecSel.openPrice; if(!op)return; $
 function ipoRenderBrokers(){
   const wrap=$('iprec_brokers'); if(!wrap)return;
   const uniq=[...new Set(IPO_BROKERS)];
-  if(ipoRecSel.broker && !uniq.includes(ipoRecSel.broker)) uniq.unshift(ipoRecSel.broker);
-  wrap.innerHTML=uniq.map(b=>{ const on=b===ipoRecSel.broker; const init=b.replace(/증권|투자|금융/g,'').slice(0,2)||b.slice(0,2);
-    return `<button type="button" class="ipo-broker${on?' on':''}" onclick="ipoRecBroker('${ipoEsc(b)}')"><span class="ipo-broker-c">${ipoEsc(init)}</span><span class="ipo-broker-n">${ipoEsc(b)}</span></button>`;
+  const leads=ipoRecSel.leads||[];
+  // 주관사는 맨 앞에 모은다(목록에 없는 증권사도 추가)
+  for(const b of [ipoRecSel.broker,...leads].filter(Boolean).reverse()){ const k=uniq.indexOf(b); if(k>=0) uniq.splice(k,1); uniq.unshift(b); }
+  const ask=leads.length>=2 && !ipoRecSel.broker;
+  const hint=$('iprec_brokerhint');
+  if(hint) hint.textContent=ask?`주관사가 ${leads.length}곳입니다 (${leads.join(' · ')}) — 청약한 증권사를 고르세요.`:'';
+  wrap.innerHTML=uniq.map(b=>{ const on=b===ipoRecSel.broker, cand=ask&&leads.includes(b); const init=b.replace(/증권|투자|금융/g,'').slice(0,2)||b.slice(0,2);
+    return `<button type="button" class="ipo-broker${on?' on':''}${cand?' cand':''}" onclick="ipoRecBroker('${ipoEsc(b)}')"><span class="ipo-broker-c">${ipoEsc(init)}</span><span class="ipo-broker-n">${ipoEsc(b)}</span></button>`;
   }).join('');
 }
 function ipoRecBroker(b){ if(ipoRecSel){ ipoRecSel.broker=b; ipoRenderBrokers(); } }
@@ -1102,7 +1116,7 @@ function ipoRecCalc(){
 function ipoEditRec(id){
   const r=IPO.records.find(x=>x.id===id); if(!r)return;
   ipoEditRecId=id;
-  ipoRecSel={name:r.name,code:r.code||'',poPrice:r.poPrice||null,broker:r.broker||''};
+  ipoRecSel={name:r.name,code:r.code||'',poPrice:r.poPrice||null,broker:r.broker||'',leads:ipoLeadPick((ipoFeedByName(r.name)||{}).leadManager).leads};
   $('iprec_results').style.display='none';
   $('iprec_form').style.display='';
   $('iprec_save').textContent='수정 저장';
@@ -1120,6 +1134,7 @@ async function ipoRecSave(){
   if(!ipoRecSel){ return; }
   const qty=inputNum('iprec_qty')||null;
   if(!qty){ alert('수량을 입력하세요.'); return; }
+  if(!ipoRecSel.broker && (ipoRecSel.leads||[]).length>=2){ alert('주관사가 여러 곳입니다. 청약한 증권사를 고르세요.'); return; }
   const before=ipoClone(IPO.records);
   const data={ name:ipoRecSel.name, code:(ipoRecSel.code||'').replace(/[^0-9A-Za-z]/g,''), broker:ipoRecSel.broker||'',
     poPrice:inputNum('iprec_price')||null, qty, sellPrice:inputNum('iprec_sell')||null,
@@ -1212,7 +1227,7 @@ function ipoToRecord(i){
   const it=IPO.feed[i]; if(!it)return;
   ipoGoBlk('ipo-rec');
   $('iprec_search').value=it.name;
-  ipoRecSel={name:it.name,code:it.code||'',poPrice:it.poPrice||null,broker:it.leadManager||'',openPrice:it.openPrice||null}; ipoRecFill();
+  ipoRecSel={name:it.name,code:it.code||'',poPrice:it.poPrice||null,...ipoLeadPick(it.leadManager),openPrice:it.openPrice||null}; ipoRecFill();
 }
 
 /* ── 서브탭 전환 ── */

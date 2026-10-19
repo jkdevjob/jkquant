@@ -12383,6 +12383,32 @@ console.log('\n[IPO DETAIL] 공모주 상세 정보 보충 · 표시');
      &&/\.ipo-detail-card \.ak\{color:var\(--dim\)/.test(h)&&/\.ipo-detail-card \.av\{font-weight:700;text-align:right/.test(h));
 }
 
+/* ════ 공모주 기록 — 주관사 한 곳이면 증권사 자동 선택, 두 곳 이상일 때만 묻기 ════ */
+console.log('\n[IPO BROKER] 기록 폼 증권사 자동 선택');
+{
+  const h=fs.readFileSync(__d+'/ipo.html','utf8');
+  const grab=n=>{const i=h.indexOf('function '+n+'(');if(i<0)throw new Error('추출 실패: '+n);let d=0,j=h.indexOf('{',i);for(;j<h.length;j++){if(h[j]==='{')d++;else if(h[j]==='}'&&--d===0)break;}return h.slice(i,j+1);};
+  const bl=h.slice(h.indexOf('const IPO_BROKERS'),h.indexOf(';',h.indexOf('const IPO_BROKERS'))+1);
+  const el={iprec_brokers:{innerHTML:''},iprec_brokerhint:{textContent:''}};
+  const env=new Function('$','ipoEsc',bl+'\nlet ipoRecSel=null;\n'+grab('ipoLeadPick')+'\n'+grab('ipoRenderBrokers')+
+    '\nreturn {pick:ipoLeadPick,render:s=>{ipoRecSel=s;ipoRenderBrokers();}};')(id=>el[id],x=>String(x));
+  const one=env.pick('대신증권'), two=env.pick('미래에셋증권, 삼성증권'), dot=env.pick('미래에셋증권·KB증권'), none=env.pick('');
+  ok('주관사 한 곳 → 자동 선택',one.broker==='대신증권'&&one.leads.length===1,JSON.stringify(one));
+  ok('주관사 두 곳(쉼표·가운뎃점) → 미선택, 후보 2곳',two.broker===''&&two.leads.join('|')==='미래에셋증권|삼성증권'
+     &&dot.broker===''&&dot.leads.join('|')==='미래에셋증권|KB증권'&&none.broker===''&&none.leads.length===0,JSON.stringify([two,dot,none]));
+  env.render({name:'X',...two});
+  const btns=el.iprec_brokers.innerHTML.split('</button>').filter(Boolean);
+  ok('두 곳이면 후보만 표시·안내, 합친 이름 버튼 없음',/주관사가 2곳/.test(el.iprec_brokerhint.textContent)
+     &&/ipo-broker cand/.test(btns[0])&&/미래에셋증권/.test(btns[0])&&/ipo-broker cand/.test(btns[1])&&/삼성증권/.test(btns[1])
+     &&(el.iprec_brokers.innerHTML.match(/ cand/g)||[]).length===2&&!/, 삼성/.test(el.iprec_brokers.innerHTML)&&!/ipo-broker on/.test(el.iprec_brokers.innerHTML),
+     el.iprec_brokerhint.textContent+' / '+btns.slice(0,3).join(''));
+  env.render({name:'Y',...env.pick('iM증권')});
+  ok('한 곳이면 안내 없이 선택(목록 밖 증권사도 맨 앞)',el.iprec_brokerhint.textContent===''&&/ipo-broker on/.test(el.iprec_brokers.innerHTML.split('</button>')[0])
+     &&/iM증권/.test(el.iprec_brokers.innerHTML.split('</button>')[0]),el.iprec_brokers.innerHTML.slice(0,200));
+  ok('여러 곳인데 고르지 않으면 저장 막기',/if\(!ipoRecSel\.broker && \(ipoRecSel\.leads\|\|\[\]\)\.length>=2\)\{ alert/.test(grab('ipoRecSave')));
+  ok('일정·검색·계산기 경로 모두 ipoLeadPick 사용',['ipoRecPick','ipoRecPickStock','ipoToRecord'].every(n=>/\.\.\.ipoLeadPick\(/.test(grab(n))));
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
