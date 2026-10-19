@@ -21,6 +21,16 @@ const RESEARCH_STAGE={buy:"🟢 매수",sell:"🔴 매도",both:"🟢🔴 매수
 const APPROVAL_ADMIN="jk82investing@gmail.com";
 const FIRESTORE_PROFILE="https://firestore.googleapis.com/v1/projects/jk-invest/databases/(default)/documents/profiles/";
 
+// 신규 신청은 UID 당 한 번. requestedAt은 본인 수정 가능하므로 중복 키로 쓰지 않는다.
+export function pendingApplicant(fields,user){
+  const email=String(fields?.email?.stringValue||'').trim().toLowerCase();
+  const requestedAt=Number(fields?.requestedAt?.integerValue||fields?.requestedAt?.doubleValue||0);
+  if(!user||user.email===APPROVAL_ADMIN||fields?.approved?.booleanValue===true
+    ||fields?.blocked?.booleanValue===true||email!==user.email
+    ||!Number.isSafeInteger(requestedAt)||requestedAt<=0||requestedAt>Date.now()+300000)return null;
+  return {uid:user.uid,email,name:clean(fields?.name?.stringValue||'',80),requestedAt};
+}
+
 // Apps Script (계정 소유자가 최초 1회 권한 부여)로 개인 Gmail에서 발송한다.
 // Worker -> Script로만 비밀키를 전송하며, 브라우저/공개 설정에 저장하지 않는다.
 export async function sendGmailApproval(env,to,key){
@@ -367,7 +377,8 @@ export class PresaleAlertStore{
     await this.state.storage.put("sub:"+id,{
       endpoint,topics,topicSchemaVersion:2,createdAt:(old&&old.createdAt)||new Date().toISOString(),
       updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),
-      approvalUid:old&&old.approvalUid||null
+      approvalUid:old&&old.approvalUid||null,approvalEmail:old&&old.approvalEmail||null,
+      adminRequests:!!(old&&old.adminRequests)
     });
     return json(request,{ok:true,subscribed:true,topics});
   }
@@ -382,9 +393,81 @@ export class PresaleAlertStore{
     if(changed)await this.state.storage.delete("approval:event:"+id);
     await this.state.storage.put("sub:"+id,{
       endpoint,topics:old?this.topicsOf(old):[],topicSchemaVersion:2,createdAt:old&&old.createdAt||new Date().toISOString(),
-      updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),approvalUid:user.uid
+      updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220),approvalUid:user.uid,
+      approvalEmail:user.email,
+      adminRequests:user.email===APPROVAL_ADMIN&&(typeof body.adminRequests==='boolean'?body.adminRequests:
+        old&&old.approvalEmail===APPROVAL_ADMIN&&old.approvalUid===user.uid?old.adminRequests!==false:true)
     });
     return json(request,{ok:true,registered:true});
+  }
+  async approvalRequest(request){
+    const user=await authUser(request);
+    if(!user.ok)return json(request,{ok:false,error:user.reason},401);
+    if(!/^[a-zA-Z0-9_-]{1,128}$/.test(user.uid)||user.email===APPROVAL_ADMIN)
+      return json(request,{ok:false,error:'신청자 계정이 아닙니다.'},403);
+    // Durable Object 요청은 외부 I/O 대기 중 교차 실행된다. 같은 UID를 직렬화한다.
+    this.requestJobs=this.requestJobs||new Map();
+    if(this.requestJobs.has(user.uid))return json(request,await this.requestJobs.get(user.uid));
+    const job=this.deliverApprovalRequest(user);this.requestJobs.set(user.uid,job);
+    try{return json(request,await job);}finally{this.requestJobs.delete(user.uid);}
+  }
+  async deliverApprovalRequest(user){
+    const key='approval:request:'+user.uid;
+    let receipt=await this.state.storage.get(key);
+    if(receipt?.telegram==='sent'||receipt?.telegram==='unknown'){
+      if(receipt.pushComplete)return {ok:true,duplicate:true,telegram:receipt.telegram,push:receipt.push};
+    }
+    const r=await fetch(FIRESTORE_PROFILE+encodeURIComponent(user.uid),{
+      headers:{authorization:'Bearer '+user.token,accept:'application/json'},
+      signal:AbortSignal.timeout(8000),cf:{cacheTtl:0,cacheEverything:false}
+    });
+    if(!r.ok)return {ok:false,error:'이용 신청 기록을 확인하지 못했습니다.'};
+    const person=pendingApplicant((await r.json()).fields,user);
+    if(!person)return {ok:true,skipped:true,reason:'not_pending'};
+    const alert={id:'approval-request:'+await hashText(user.uid),type:'approval-request',
+      title:'👤 JK 투자 신규 이용 승인 신청',body:(person.name||'신규 사용자')+' · 관리자에서 신청을 확인해 주세요.',
+      url:BASE_APP+'/admin#users',createdAt:receipt?.createdAt||new Date().toISOString()};
+    receipt=receipt||{createdAt:alert.createdAt,pushKeys:[],telegram:'pending',tries:0};
+    // 공개 /latest에 신청자 정보를 넣지 않는다. 관리자 기기의 비공개 조회만 허용한다.
+    let recent=await this.state.storage.get('approval:request-events')||[];
+    recent=[{alert,at:Date.now()},...recent.filter(x=>x.alert.id!==alert.id&&Date.now()-x.at<7*86400000)].slice(0,50);
+    await this.state.storage.put('approval:request-events',recent);
+    if(!['sent','unknown'].includes(receipt.telegram)&&receipt.tries<3
+      &&(!receipt.lastTry||Date.now()-receipt.lastTry>=60000)){
+      receipt.tries++;receipt.lastTry=Date.now();receipt.telegram='unknown';
+      await this.state.storage.put(key,receipt); // 응답 유실 때 자동 재발송하지 않는다.
+      if(!this.env.MONITOR_KEY){receipt.telegram='not_configured';}
+      else try{
+        const out=await fetch(BASE_APP+'/api/approval-request-telegram',{
+          method:'POST',headers:{'content-type':'application/json','x-monitor-key':this.env.MONITOR_KEY},
+          body:JSON.stringify(person),signal:AbortSignal.timeout(15000)
+        });
+        const j=await out.json().catch(()=>null);
+        receipt.telegram=out.ok&&j?.ok?'sent':out.status===404||j?.definite?'failed':'unknown';
+      }catch(e){receipt.telegram='unknown';}
+      await this.state.storage.put(key,receipt);
+    }
+    const subscribers=[...(await this.subscriptions()).entries()]
+      .filter(([,s])=>s.approvalEmail===APPROVAL_ADMIN&&s.adminRequests===true);
+    let failed=0;
+    for(const [sid,s] of subscribers){
+      if(receipt.pushKeys.includes(sid))continue;
+      try{const out=await this.pushOne(s.endpoint,'approval-request');
+        if(out.ok){receipt.pushKeys.push(sid);await this.state.storage.put(key,receipt);}else failed++;
+      }catch(e){failed++;}
+    }
+    receipt.push=receipt.pushKeys.length?'sent':subscribers.length?'failed':'not_subscribed';
+    receipt.pushComplete=subscribers.length>0&&failed===0;
+    await this.state.storage.put(key,receipt);
+    return {ok:true,telegram:receipt.telegram,push:receipt.push,delivered:receipt.pushKeys.length};
+  }
+  async approvalRequestEvents(request){
+    const body=await request.json().catch(()=>null),endpoint=clean(body?.endpoint,2000);
+    const s=endpoint?await this.state.storage.get('sub:'+await hashText(endpoint)):null;
+    if(!s||s.approvalEmail!==APPROVAL_ADMIN||s.adminRequests!==true)
+      return json(request,{ok:true,alerts:[]});
+    const rows=await this.state.storage.get('approval:request-events')||[];
+    return json(request,{ok:true,alerts:rows.filter(x=>Date.now()-x.at<7*86400000).map(x=>x.alert)});
   }
   async approvalEvent(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
@@ -491,7 +574,7 @@ export class PresaleAlertStore{
     const u=new URL(request.url),endpoint=clean(u.searchParams.get("endpoint"),2000);
     if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
     const id=await hashText(endpoint),s=await this.state.storage.get("sub:"+id);
-    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[],topicSchemaVersion:2,approvalLinked:!!(s&&s.approvalUid)});
+    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[],topicSchemaVersion:2,approvalLinked:!!(s&&s.approvalUid),adminRequests:!!(s&&s.approvalEmail===APPROVAL_ADMIN&&s.adminRequests)});
   }
   async unsubscribe(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
@@ -572,6 +655,39 @@ export class PresaleAlertStore{
     await this.state.storage.put("test:"+id,Date.now());
     const r=await this.pushOne(endpoint,topic);
     return json(request,{ok:r.ok,status:r.status,error:r.ok?null:r.text},r.ok?200:502);
+  }
+  async tradingTelegramReceipt(request){
+    if(!this.env.MONITOR_KEY||request.headers.get("x-monitor-key")!==this.env.MONITOR_KEY)
+      return json(request,{ok:false,error:"unauthorized"},401);
+    const b=await request.json().catch(()=>null),topic=String(b?.strategy||"").toLowerCase(),stage=String(b?.stage||"").toLowerCase();
+    const eventId=clean(b?.eventId,220),date=clean(b?.date,20);
+    if(![...TRADE_TOPICS,"swing"].includes(topic)||!["buy","sell"].includes(stage)||!eventId||!/^\d{4}-\d{2}-\d{2}$/.test(date))
+      return json(request,{ok:false,error:"invalid Telegram signal identity"},400);
+    const key="signal-telegram:"+await hashText(topic+":"+stage+":"+eventId),st=this.state.storage;
+    const previous=await st.get(key),at=new Date().toISOString();
+    const audit=receipt=>({stage,status:receipt.status,tries:receipt.tries,at:receipt.updatedAt||at});
+    if(b.op==="claim"){
+      if(previous&&(previous.status!=="failed"||previous.tries>=3))
+        return json(request,{ok:true,claimed:false,duplicate:true,receipt:previous});
+      if(b.eventAt!=null){
+        const age=Date.now()-Date.parse(b.eventAt);
+        if(!Number.isFinite(age)||age>20*60_000||age< -90_000)return json(request,{ok:false,error:"stale or invalid Telegram signal"},409);
+      }
+      const receipt={status:"unknown",tries:(previous?.tries||0)+1,token:crypto.randomUUID(),date,createdAt:previous?.createdAt||at,updatedAt:at};
+      // Persist before granting the one-use send permit. Unknown is deliberately NOT a timed lease.
+      await st.put(key,receipt);await st.put("lastTelegramDelivery:"+topic,audit(receipt));
+      return json(request,{ok:true,claimed:true,token:receipt.token,receipt});
+    }
+    if(b.op!=="complete"||!previous||b.token!==previous.token)return json(request,{ok:false,error:"invalid Telegram receipt token"},409);
+    if(previous.status!=="unknown")return json(request,{ok:true,duplicate:true,receipt:previous});
+    const r=b.receipt||{};
+    if(!["sent","failed","unknown"].includes(r.status)||r.status==="failed"&&r.definite!==true||
+       r.status==="sent"&&(!Number.isSafeInteger(r.messageId)||r.messageId<=0))
+      return json(request,{ok:false,error:"invalid Telegram delivery result"},400);
+    const receipt={...previous,status:r.status,updatedAt:at,
+      ...(r.status==="sent"?{messageId:r.messageId}:{}),...(r.error?{error:clean(r.error,200)}:{})};
+    await st.put(key,receipt);await st.put("lastTelegramDelivery:"+topic,audit(receipt));
+    return json(request,{ok:true,receipt});
   }
   async recordTradingSignal(request){
     // 서버 감시키를 아는 호출만 실제 푸시를 게시할 수 있다.
@@ -778,17 +894,19 @@ export class PresaleAlertStore{
         if(!this.subscribedTo(s,"gpt")&&this.topicsOf(s).some(t=>GPT_TOPICS.has(t)))counts.gpt++;
       }
       const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null,research:await this.state.storage.get("lastCheck:research")||null};
-      const lastDeliveries={};
+      const lastDeliveries={},lastTelegramDeliveries={};
       for(const t of TRADE_TOPICS){
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
         lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
+        lastTelegramDeliveries[t]=await this.state.storage.get("lastTelegramDelivery:"+t)||null;
       }
       lastChecks.tenbagger_gpt=await this.state.storage.get("lastCheck:tenbagger_gpt")||null;
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
       const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
       const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.7.1",topicSchemaVersion:2,subscriptions:subs.size,
-        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.8.1",topicSchemaVersion:2,subscriptions:subs.size,
+        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,lastTelegramDeliveries,
+        telegramSignalDedup:{version:1,store:"durable-object",unknownRetry:false},gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
     if(path==="/latest"){
@@ -808,6 +926,8 @@ export class PresaleAlertStore{
       return json(request,{ok:false,error:"최근 알림 상세 보관기간이 지났습니다."},404);
     }
     if(path==="/approval/subscribe"&&request.method==="POST")return this.approvalSubscribe(request);
+    if(path==="/approval/request"&&request.method==="POST")return this.approvalRequest(request);
+    if(path==="/approval/request-events"&&request.method==="POST")return this.approvalRequestEvents(request);
     if(path==="/approval/event"&&request.method==="POST")return this.approvalEvent(request);
     if(path==="/approval/notify"&&request.method==="POST")return this.approvalNotify(request);
     if(path==="/approval/status"&&request.method==="POST")return this.approvalStatus(request);
@@ -815,7 +935,12 @@ export class PresaleAlertStore{
     if(path==="/subscribe"&&request.method==="POST")return this.subscribe(request);
     if(path==="/subscribe"&&request.method==="DELETE")return this.unsubscribe(request);
     if(path==="/test"&&request.method==="POST")return this.test(request);
-    if(path==="/signal"&&request.method==="POST")return this.recordTradingSignal(request);
+    if(path==="/signal"&&request.method==="POST"){
+      const p=(this.signalPushQueue||Promise.resolve()).catch(()=>{}).then(()=>this.recordTradingSignal(request));this.signalPushQueue=p;return p;
+    }
+    if(path==="/signal-telegram"&&request.method==="POST"){
+      const p=(this.signalTelegramQueue||Promise.resolve()).catch(()=>{}).then(()=>this.tradingTelegramReceipt(request));this.signalTelegramQueue=p;return p;
+    }
     if(path==="/check"&&request.method==="POST")return this.checkPresale(request);
     if(path==="/check-jobs"&&request.method==="POST")return this.checkJobs(request);
     if(path==="/check-ipo"&&request.method==="POST")return this.checkIPO(request);

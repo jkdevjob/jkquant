@@ -1474,7 +1474,7 @@ console.log('[25] 모의 성과 → 분석 이동');
   /* 줄 전체를 누르게 했더니 숫자를 보려고 짚기만 해도 화면이 넘어갔다 —
      이제 '전략 이름'만 누른다. 줄에는 onclick 이 남아 있으면 안 된다. */
   ok('전략 이름을 누르면 이동',
-     /<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{r\.label\}<\/b>/.test(idx)
+     /<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{esc\(r\.label\)\}<\/b>/.test(idx)
      && /\.htable \.slink\{/.test(idx));
   ok('줄 전체는 더 이상 안 눌린다', !/<tr class="jump"/.test(idx) && !/\.htable tr\.jump\{/.test(idx));
   ok('눌리는 곳이 폰에서도 짚힌다', /\.htable \.slink\{[^}]*padding:4px 7px/.test(idx)
@@ -1500,9 +1500,9 @@ console.log('[25] 모의 성과 → 분석 이동');
   ok('여섯 탭 모두 분석 칩이 있다', chips===6, chips+'개');
   /* 툴팁에는 '어디로 가는지' 와 '어느 세션인지' 가 같이 있어야 한다 —
      칸에서 세션 이름을 뺐으므로(설정과 어긋날 수 있어서) 이름을 확인할 곳이 여기뿐이다 */
-  ok('누르는 곳 설명도 분석으로', /title="\$\{r\.label\} 분석으로 이동 — \$\{_nm\}"/.test(idx));
+  ok('누르는 곳 설명도 분석으로', /title="\$\{esc\(r\.label\)\} 분석으로 이동 — \$\{esc\(r\.name\|\|''\)\}"/.test(idx));
   ok('세션 이름은 툴팁에만 (칸에는 종목·설정)',
-     /const _nm=String\(r\.name\|\|''\)\.replace\(\/<\/g,'&lt;'\)/.test(idx)
+     /title="[^"\n]*분석으로 이동 — \$\{esc\(r\.name\|\|''\)\}"/.test(idx)
      && /<span class="cw">\$\{r\.sym\}\$\{_paperOptTopText\}<\/span>\$\{_paperOptRestText\}/.test(idx));
   ok('전략 이름을 누르라고 알려 준다', /<b style="color:var\(--vio\)">전략 이름<\/b>을 누르면/.test(idx));
 }
@@ -1569,12 +1569,11 @@ console.log('[27] 무매 분석 — 월별·사이클별');
      && /\$\{x\.seq\}사이클/.test(br) && !/x\.seq\+1/.test(br));
   ok('cycleSeq 시작값이 1', /let avg=0,qty=0,inv=0,realized=0,T=0,totbuy=0,totsell=0,cycleSeq=1;/.test(idx));
   ok('안 닫힌 사이클은 진행중으로', /closed\.has\(x\.seq\)\?'':' <span style="color:var\(--gold\)[^"]*">진행중/.test(br));
-  // 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이 된다
-  ok('원화 열은 달러 세션에서만', /isKrw=isKrwSt\(st\)/.test(br)
-     && /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(br));
-  // 단리면 출금·입금·합계에 달러 세션은 합계원화까지 — 원화 세션은 셋, 달러 세션은 넷
+  // 손익금 칸(wn)이 달러·원화를 함께 찍는다 — 따로 원화 칸을 두면 같은 금액이 두 번 나온다(2026-10-14 사용자)
+  ok('원화 열은 따로 없다(손익금 칸이 달러·원화를 함께)', !/<th>원화<\/th>/.test(br) && !/krwTxt/.test(br) && /const amtTxt=v=>`[^`]*\$\{wn\(v\)\}/.test(br));
+  // 월·매도·손익금·손익률 넷, 단리면 인출 하나 더
   ok('빈 표 colspan이 열 수를 따라간다',
-     /const nCol=\(isKrw\?4:5\)\+\(simple\?\(isKrw\?1:2\):0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
+     /const nCol=4\+\(simple\?1:0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
   ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
 }
 
@@ -2958,13 +2957,13 @@ console.log('\n[55] 단리 현금 흐름');
      손익금·손익률은 그 뒤로 민다. 달러 세션엔 합계원화까지 붙는다. */
   /* 채워 넣는 일이 없어져 들어오는 칸이 사라졌다 — 나간 칸 하나면 된다 */
   ok('단리 세션에만 붙고, 매도 바로 오른쪽이다',
-     /<th>\$\{lbl\}<\/th><th>매도<\/th>`\s*\+ \(simple\?`<th>인출<\/th>\$\{isKrw\?'':'<th>원화<\/th>'\}`:''\)/.test(br2)
+     /<th>\$\{lbl\}<\/th><th>매도<\/th>`\s*\+ \(simple\?`<th>인출<\/th>`:''\)/.test(br2)
      && /\+ `<th>손익금<\/th><th>손익률<\/th>/.test(br2));
   ok('입금 칸은 없앴다', !/<th>입금<\/th>/.test(br2) && !/x\.in\|\|0/.test(br2));
   ok('줄에서도 매도 바로 뒤에 온다',
      /<td>\$\{x\.label\}<\/td><td>\$\{x\.n\}<\/td>\$\{flowCells\(x\)\}<td>\$\{amtTxt\(x\.p\)\}/.test(br2)
      && /<td><b>합계<\/b><\/td><td>\$\{n\}<\/td>\$\{sumFlow\}<td>\$\{amtTxt\(tot\)\}/.test(br2));
-  ok('원화 칸은 달러 세션에만', /\(isKrw\?'':`<td>\$\{v\?krwTxt\(v\):dash\}<\/td>`\)/.test(br2));
+  ok('인출 칸 옆 원화 칸도 없다(인출 칸이 달러·원화를 함께)', /return `<td>\$\{v\?netTxt\(v\):dash\}<\/td>`; \};/.test(br2) && !/krwTxt/.test(br2));
   // 안 나온 달에 +0.00$ (+0.0%) 가 뜨면 잡음이다
   ok('안 나온 달은 비운다', /const v=x\.out\|\|0, dash=/.test(br2) && /\$\{v\?netTxt\(v\):dash\}/.test(br2));
 }
@@ -3154,8 +3153,9 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   ok('무매와 같은 함수로 센다',
      /function paintCashFlow[\s\S]*?flowStats\(flows,/.test(idx)
      && /function paintCashFlow[\s\S]*?fillFlowRows\(\{avg:id\('avg'\)/.test(idx));
-  // 원화 세션에 원화 칸을 겹쳐 넣으면 같은 수가 두 번 나온다
-  ok('원화 세션엔 원화 칸을 겹쳐 넣지 않는다', /const kw=!!o\.isKrw;[\s\S]{0,700}\+\s*\(kw\?'':'<th>원화<\/th>'\)/.test(idx));
+  // 금액 칸(wn)이 달러·원화를 함께 찍는다 — 원화 칸을 따로 두면 같은 수가 두 번 나온다(2026-10-14 사용자)
+  { const pcf=(()=>{ try{ return extractFn(idx,'function paintCashFlow(pre, opt)'); }catch(e){ return ''; } })();
+    ok('현금 수입 월별 표에 원화 칸을 따로 두지 않는다', !!pcf && !/<th>원화<\/th>/.test(pcf) && !/won\(/.test(pcf)); }
   ok('입금이 없으면 입금·합계 칸을 안 만든다', /const hasIn=inn>0;/.test(idx) && /\(hasIn\?row\(/.test(idx));
 
   // 수익률 세 줄도 한 곳에서
@@ -10066,9 +10066,10 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
 
   /* ② 서버 — 실코드 onRequest 를 가짜 Firestore(조건부 쓰기까지) · 시세 · 한투 로 돌린다.
      비동기라 자식 프로세스에서 돌리고 결과만 받는다. */
-  function __atHarness(){
+  async function __atHarness(){
     const fs=require('fs'); const IM=process.argv[2], AT=process.argv[3];
-    const body=fs.readFileSync(IM,'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(AT,'utf8').replace(/^import [^\n]*\n/m,'').replace(/^export /gm,'')+'\nreturn onRequest;';
+    const {hydratePaperDoc,packPaperDoc}=await import(require('url').pathToFileURL(require('path').resolve(require('path').dirname(AT),'../../jk-paper-store.mjs')).href);
+    const body=fs.readFileSync(IM,'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(AT,'utf8').replace(/^import [^\n]*\n/gm,'').replace(/^export /gm,'')+'\nreturn onRequest;';
     const W=v=>{ if(v===null||v===undefined) return {nullValue:null}; if(typeof v==='string') return {stringValue:v};
       if(typeof v==='boolean') return {booleanValue:v}; if(typeof v==='number') return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
       if(Array.isArray(v)) return {arrayValue:{values:v.map(W)}}; const f={}; for(const [k,x] of Object.entries(v)) f[k]=W(x); return {mapValue:{fields:f}}; };
@@ -10113,8 +10114,8 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
         throw new Error('예상 못한 호출 '+u); };
       const cryptoM={subtle:{importKey:async()=>({}),sign:async()=>new ArrayBuffer(8)}};
       const fastTimeout=(fn)=>{ Promise.resolve().then(fn); return 0; };
-      const onRequest=new Function('fetch','crypto','setTimeout','Date','Response','URL','URLSearchParams','TextEncoder','btoa','atob',body)
-        (fetchM,cryptoM,fastTimeout,FD,Response,URL,URLSearchParams,TextEncoder,btoa,atob);
+      const onRequest=new Function('fetch','crypto','setTimeout','Date','Response','URL','URLSearchParams','TextEncoder','btoa','atob','hydratePaperDoc',body)
+        (fetchM,cryptoM,fastTimeout,FD,Response,URL,URLSearchParams,TextEncoder,btoa,atob,hydratePaperDoc);
       return async(qs)=>{ const r=await onRequest({request:new Request('https://jkquant.pages.dev/api/autotrade?'+qs,{headers:{'x-autotrade-key':'K'}}),env}); return {status:r.status,j:await r.json()}; }; };
     const IN='2026-09-24T19:30:00Z', users={'users/U1':{state:{inf:{sessions}}}};
     const cnt=(log,t)=>log.filter(x=>x.t===t).length;
@@ -10147,6 +10148,14 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
         out.S7={orders:cnt(log,'order'),claim:r.j.claim||'',marked:r.j.marked}; }
       { const st=mkStore(Object.assign({'autotrade/U1':{lastDate:'2026-09-23'}},users)), log=[];            // S8 차지 전 다시 읽기 실패
         const r=await mkRun(st,log,IN,{name:'G',failGet:true})('dry=0'); out.S8={orders:cnt(log,'order'),claim:r.j.claim||''}; }
+      { // S9 실제 저장 계층의 분할 원본을 서버 주문 계산까지 냉시작으로 읽는다.
+        const big={stateV2:{inf:{sessions:sessions.map((s,i)=>i===1?{...s,hist:[{date:'2026-09-23',kind:'1회매수',price:100,qty:10,fee:1,sim:true,ts:1,note:'x'.repeat(700000)}]}:s)}},stateV2Rev:1};
+        const packed=await packPaperDoc(big),documents={'users/U1':packed.data};
+        for(const [id,data] of packed.parts)documents['users/U1/paperHistory/'+id]=data;
+        const before=await mkRun(mkStore({'users/U1':big}),[],IN,{name:'before'})('dry=1'),log=[];
+        const after=await mkRun(mkStore(documents),log,IN,{name:'after'})('dry=1');
+        out.S9={same:JSON.stringify(before.j.sessions)===JSON.stringify(after.j.sessions),parts:log.filter(x=>x.t==='fsget'&&x.p.includes('/paperHistory/')).length,orders:cnt(log,'order')};
+      }
       console.log(JSON.stringify(out));
     })().catch(e=>console.log(JSON.stringify({error:String(e&&e.stack||e)})));
   }
@@ -10157,7 +10166,7 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
     try{ H=JSON.parse((r.stdout||'').trim().split('\n').pop()||'{}'); }catch(e){ H={error:'출력 해석 실패: '+(r.stdout||'').slice(0,200)+(r.stderr||'').slice(0,300)}; }
     try{ fs.unlinkSync(tmp); }catch(e){} }
   const J=o=>JSON.stringify(o||H.error||{});
-  const {S1={},S2={},S3={},S4={},S5={},S6={},S7={},S8={}}=H;
+  const {S1={},S2={},S3={},S4={},S5={},S6={},S7={},S8={},S9={}}=H;
   ok('② 창 안 첫 실행 — 기본 하방3줄이라 모의 두 세션 4+4건을 VTS 로 · 실계좌 세션은 막힘 · 첫 주문 전에 오늘을 차지(문서가 없을 때만 만든다)',
      S1.orders===8 && S1.sessRes==='p1:4,p2:4' && S1.envs==='vts' && /실계좌 자동주문 차단/.test(S1.realSkip)
      && S1.claimFirst===true && S1.firstCond==='exists=false' && S1.claim==='오늘 주문 차지', J(S1));
@@ -10172,6 +10181,7 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
   ok('② 드라이런 — 주문 0 · 쓰기 0', S6.orders===0 && S6.patches===0 && S6.sent==='드라이런 — 주문 안 냄', J(S6));
   ok('② 차지하지 못하면 안 낸다 — 쓰기 실패(500) · 다시 읽기 실패(500) 둘 다 0건',
      S7.orders===0 && S7.claim==='실행 기록을 쓰지 못했습니다 (500)' && S7.marked===false && S8.orders===0 && S8.claim==='실행 기록을 읽지 못했습니다 (500)', J([S7,S8]));
+  ok('② 모의 자동이력 분할 전후 실제 서버 주문 계산이 같다 · 조각을 읽은 뒤 계산 · 드라이런 주문 0건',S9.same===true&&S9.parts>0&&S9.orders===0,J(S9));
 
   /* ③ 공개 로그 — 워크플로의 요약 스크립트를 그대로 떼어 표본 응답에 돌린다 */
   { const m=y.match(/node - resp\.json <<'NODE'[^\n]*\n([\s\S]*?)\n[ \t]*NODE\n/);
@@ -10652,7 +10662,10 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
     /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
     && /plan-session-engine\.js\?v=2/.test(plan)
     && /plan-session-engine\.js\?v=2/.test(idx)
-    && /v1\.43\.37/.test(plan) && /v3\.110\.38/.test(idx)
+    && (()=>{ /* 모의 규칙 v2 가 들어간 버전 이상이면 된다 — 숫자를 딱 고정하면 다음 배포(버전 올림)마다 깨진다 */
+         const ge=(src,re,min)=>{ const m=src.match(re); if(!m) return false; const a=m[1].split('.').map(Number), b=min.split('.').map(Number);
+           for(let i=0;i<3;i++){ if(a[i]!==b[i]) return a[i]>b[i]; } return true; };
+         return ge(plan,/<span class="ver">v(\d+\.\d+\.\d+)</,'1.43.37') && ge(idx,/id="appVerTop"[^>]*>v(\d+\.\d+\.\d+)</,'3.110.38'); })()
     && /asset-plan-v2/.test(plan));
 }
 
@@ -11155,7 +11168,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const nightly=fs.readFileSync(__d+'/scripts/nightly_scalping_research.py','utf8');
 
   ok('공통 Telegram API는 서버키 인증 + eventId 중복방지',
-     /x-monitor-key/.test(alertApi) && /eventId required/.test(alertApi) && /caches\.default/.test(alertApi));
+     /x-monitor-key/.test(alertApi) && /eventId required/.test(alertApi) && /signal-telegram/.test(alertApi) && /telegramReceipt\(env,signal,"claim"\)/.test(alertApi) && !/caches\.default/.test(alertApi));
   ok('공통 Telegram API는 매수/매도/장 종료 결과만 전송하고 주문 API 없음',
      /\["buy","sell","summary"\]\.includes\(stage\)/.test(alertApi) && /stage==="buy"/.test(alertApi) && !/op=order|opening-execute/.test(alertApi));
   ok('데이트레이딩 ③매수·④매도 상태변화 Telegram',

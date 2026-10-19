@@ -197,9 +197,10 @@ test("데이트레이딩 최근 8분만 매수·매도 푸시 복구 — 날짜�
 test("연구(지피티) 텔레그램: 실제 매수·매도만 · [지피티 연구 탭] 머리말 · 장 종료 일일결과는 보내지 않음",async()=>{
   const alert=await import(process.env.SCALPING_ALERT_MODULE||"../functions/api/scalping-alert.js");
   const oldFetch=globalThis.fetch,oldCaches=globalThis.caches,texts=[],pushes=[];
-  const rows=new Map();
+  const rows=new Map(),receipts=fakeStore();receipts.worker.env.MONITOR_KEY="mk";
   globalThis.caches={default:{async match(k){return rows.get(String(k))?.clone();},async put(k,v){rows.set(String(k),v.clone());},async delete(k){return rows.delete(String(k));}}};
   globalThis.fetch=async(u,init={})=>{
+    if(String(u).endsWith('/signal-telegram'))return receipts.worker.fetch(new Request(u,init));
     if(String(u).includes("api.telegram.org")){texts.push(JSON.parse(init.body).text);return new Response(JSON.stringify({ok:true,result:{message_id:texts.length}}));}
     pushes.push(JSON.parse(init.body));return new Response(JSON.stringify({ok:true,delivery:{sent:1}}));
   };

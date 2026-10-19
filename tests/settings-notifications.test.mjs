@@ -17,7 +17,7 @@ const response=body=>new Response(JSON.stringify(body),{headers:{"content-type":
 const row=(html,topic)=>html.split('<div class="alert-item">').find(x=>x.includes('data-topic="'+topic+'"'))||"";
 
 // 실제 설정 스크립트 전체와 실제 Worker의 구독 경로를 실행한다. 푸시 전송은 호출하지 않는다.
-async function harness(code=source,initial=[],{legacy=false}={}){
+async function harness(code=source,initial=[],{legacy=false,admin=false}={}){
   const values=new Map(),messages=[],alerts=[],requests=[];
   const storage={get:async k=>values.get(k),put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),
     list:async({prefix}={})=>new Map([...values].filter(([k])=>!prefix||k.startsWith(prefix)))};
@@ -51,10 +51,15 @@ async function harness(code=source,initial=[],{legacy=false}={}){
   };
   const postMessage=m=>messages.push(JSON.parse(JSON.stringify(m)));
   const reg={pushManager:{getSubscription:async()=>subscription,subscribe:async()=>subscription},active:{postMessage}};
-  const context={document:{getElementById:id=>id==="notificationSettings"?host:null,
+  const adminBox={innerHTML:'',querySelector:()=>({addEventListener:(_event,cb)=>{h.adminClick=cb;}})};
+  const access={isAdminEmail:email=>email==='jk82investing@gmail.com',bindAdminApprovalPush:async(user,s,on)=>{
+    h.adminBindings=h.adminBindings||[];h.adminBindings.push({email:user.email,endpoint:s.endpoint,on});return true;
+  }};
+  const context={document:{getElementById:id=>id==="notificationSettings"?host:id==='approvalRequestSettings'?adminBox:null,
     querySelectorAll:()=>["/scalping","/ipo","/realestate","/job"].map(href=>({getAttribute:()=>href}))},
     navigator:{userAgent:"iPhone",standalone:true,serviceWorker:{register:async()=>reg,ready:Promise.resolve(reg),controller:{postMessage}}},
-    window:{PushManager:{},Notification:{},matchMedia:()=>({matches:true})},Notification:{permission:"granted"},
+    window:{PushManager:{},Notification:{},matchMedia:()=>({matches:true}),addEventListener(){},JKAccess:access,
+      jkAuth:{currentUser:{email:admin?'jk82investing@gmail.com':'member@example.com'}}},JKAccess:access,Notification:{permission:"granted"},
     atob,Uint8Array,Date,setTimeout,
     requestAnimationFrame:fn=>setImmediate(()=>{h.paintFrames++;fn()}),
     alert:message=>{const a={message,html,paintFrames:h.paintFrames};alerts.push(a);if(alertResolve){const resolve=alertResolve;alertResolve=null;resolve(a)}},
@@ -70,7 +75,7 @@ async function harness(code=source,initial=[],{legacy=false}={}){
       return r;
     }};
   vm.runInNewContext(code.replace(/init\(\);\s*\}\)\(\);\s*$/,"globalThis.initPromise=init();\n})();"),context,{filename:"settings-notifications.js"});
-  await context.initPromise;return h;
+  await context.initPromise;h.adminBox=adminBox;return h;
 }
 
 async function checkEnable(code=source){
@@ -160,4 +165,14 @@ test("회귀 변이 3종: 이름 누락·팝업 뒤 갱신·저장 전 ON을 실
 test("공통 설정 변이: 텐배거 제거 누락을 실제 켜기·끄기 결과로 차단",async()=>{
   const mutant=source.replace(',"tenbagger_gpt"];','];');assert.notEqual(mutant,source);
   await assert.rejects(()=>checkCommonToggle(mutant),{name:"AssertionError"});
+});
+test('관리자 신규 승인 신청 설정: 관리자만 표시·앱 ON/OFF·다른 주제 유지',async()=>{
+  const member=await harness(source,['job']);assert.equal(member.adminBox.innerHTML,'');
+  const h=await harness(source,['job'],{admin:true});
+  assert.match(h.adminBox.innerHTML,/관리자 · 이용 승인 신청/);assert.match(h.adminBox.innerHTML,/>OFF<\/span>/);
+  await h.adminClick();assert.match(h.adminBox.innerHTML,/>ON<\/span>/);
+  assert.deepEqual(h.adminBindings,[{email:'jk82investing@gmail.com',endpoint,on:true}]);
+  await h.adminClick();assert.match(h.adminBox.innerHTML,/>OFF<\/span>/);
+  assert.deepEqual(h.adminBindings.at(-1),{email:'jk82investing@gmail.com',endpoint,on:false});
+  assert.deepEqual(await h.saved(),['job'],'관리자 알림 변경이 JOB 등 기존 구독을 바꾸지 않는다.');
 });

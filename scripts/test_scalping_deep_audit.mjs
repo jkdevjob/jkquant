@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {PresaleAlertStore} from "../worker/presale-alert/src/index.js";
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const mutation=process.env.SCALPING_DEEP_MUTATION?JSON.parse(readFileSync(0,'utf8')):{};
@@ -162,20 +163,25 @@ function fakeCache(){
   return {rows,async match(k){return rows.get(String(k))?.clone();},async put(k,v){rows.set(String(k),v.clone());},async delete(k){return rows.delete(String(k));}};
 }
 const alertEnv={AUTOTRADE_KEY:'fixture-monitor-key',TELEGRAM_BOT_TOKEN:'fixture-token',TELEGRAM_CHAT_ID:'fixture-chat'};
+function telegramReceiptStore(){
+  const rows=new Map();return new PresaleAlertStore({storage:{async get(k){return structuredClone(rows.get(k))},async put(k,v){rows.set(k,structuredClone(v))}}},{MONITOR_KEY:'fixture-monitor-key'});
+}
 const alertReq=body=>new Request('https://fixture.invalid/api/scalping-alert',{method:'POST',headers:{'content-type':'application/json','x-monitor-key':'fixture-monitor-key'},body:JSON.stringify({strategy:'crypto',stage:'buy',eventId:'fixture',date,lines:['fixture'],...body})});
 await check('failed Telegram is retried, successful web push is not duplicated',async()=>{
-  globalThis.caches={default:fakeCache()};let telegram=0,push=0;
-  globalThis.fetch=async url=>{
-    if(String(url).includes('api.telegram.org')){telegram++;return new Response(JSON.stringify(telegram===1?{ok:false,description:'fixture outage'}:{ok:true,result:{message_id:1}}),{status:telegram===1?503:200});}
+  globalThis.caches={default:fakeCache()};let telegram=0,push=0;const receipts=telegramReceiptStore();
+  globalThis.fetch=async (url,init)=>{
+    if(String(url).endsWith('/signal-telegram'))return receipts.fetch(new Request(url,init));
+    if(String(url).includes('api.telegram.org')){telegram++;return new Response(JSON.stringify(telegram===1?{ok:false,description:'fixture rejection'}:{ok:true,result:{message_id:1}}),{status:telegram===1?429:200});}
     push++;return new Response(JSON.stringify({ok:true,duplicate:push>1,delivery:{sent:1}}));
   };
-  assert.equal((await alert.onRequestPost({request:alertReq({}),env:alertEnv})).status,500);
+  assert.equal((await alert.onRequestPost({request:alertReq({}),env:alertEnv})).status,502);
   const recovered=await (await alert.onRequestPost({request:alertReq({}),env:alertEnv})).json();
   assert.equal(telegram,2);assert.equal(recovered.messageId,1);assert.equal(recovered.webPush.ok,true);
 });
 await check('Telegram success cannot lock out a failed web push retry',async()=>{
-  globalThis.caches={default:fakeCache()};let telegram=0,push=0;
-  globalThis.fetch=async url=>{
+  globalThis.caches={default:fakeCache()};let telegram=0,push=0;const receipts=telegramReceiptStore();
+  globalThis.fetch=async (url,init)=>{
+    if(String(url).endsWith('/signal-telegram'))return receipts.fetch(new Request(url,init));
     if(String(url).includes('api.telegram.org')){telegram++;return new Response(JSON.stringify({ok:true,result:{message_id:1}}));}
     push++;return new Response(JSON.stringify(push===1?{ok:false,error:'fixture push outage'}:{ok:true,delivery:{sent:1}}),{status:push===1?502:200});
   };

@@ -13,17 +13,15 @@ function authorized(request,env){
   return !!want&&got===want;
 }
 function clean(v,n=1000){return String(v==null?"":v).replace(/[\u0000-\u001f]+/g," ").trim().slice(0,n);}
-async function claim(eventId){
-  if(!eventId||typeof caches==="undefined"||!caches.default)return true;
-  const key="https://scalping-alert.internal/"+encodeURIComponent(eventId);
-  try{
-    if(await caches.default.match(key))return false;
-    await caches.default.put(key,new Response("1",{headers:{"cache-control":"max-age=604800","content-type":"text/plain"}}));
-  }catch(_){ return true; }
-  return true;
-}
-async function release(eventId){
-  try{await globalThis.caches?.default?.delete("https://scalping-alert.internal/"+encodeURIComponent(eventId));}catch(_){}
+async function telegramReceipt(env,b,op,extra={}){
+  const key=String(env.AUTOTRADE_KEY||"").trim();
+  if(!key)throw new Error("durable Telegram receipt key missing");
+  const endpoint=String(env.PUSH_ALERT_WORKER_URL||"https://jkquant-presale-alert.mumae4.workers.dev").replace(/\/$/,"")+"/signal-telegram";
+  const r=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json","x-monitor-key":key},
+    body:JSON.stringify({strategy:b.strategy,stage:b.stage,eventId:b.eventId,date:b.date,eventAt:b.eventAt,op,...extra}),signal:AbortSignal.timeout(8000)});
+  const j=await r.json().catch(()=>null);
+  if(!r.ok||!j?.ok)throw new Error(j?.error||("durable Telegram receipt HTTP "+r.status));
+  return j;
 }
 async function webPush(env,b){
   const key=String(env.AUTOTRADE_KEY||"").trim();
@@ -38,19 +36,24 @@ async function webPush(env,b){
 }
 async function telegram(env,text){
   const token=String(env.TELEGRAM_BOT_TOKEN||"").trim(),chatId=String(env.TELEGRAM_CHAT_ID||"").trim();
-  if(!token||!chatId)throw new Error("Telegram 환경변수 없음");
-  const r=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{
-    method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({chat_id:chatId,text,disable_web_page_preview:true})
-  });
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok||!j.ok)throw new Error(j.description||("HTTP "+r.status));
-  return j.result&&j.result.message_id;
+  if(!token||!chatId)return {status:"failed",definite:true,error:"Telegram 환경변수 없음"};
+  try{
+    const r=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({chat_id:chatId,text,disable_web_page_preview:true}),signal:AbortSignal.timeout(10000)
+    });
+    const j=await r.json().catch(()=>null);
+    if(r.ok&&j?.ok&&Number.isSafeInteger(j.result?.message_id)&&j.result.message_id>0)
+      return {status:"sent",messageId:j.result.message_id};
+    // A timeout/5xx/malformed response may follow an accepted send. Never replay it.
+    const definite=r.status>=400&&r.status<500&&j?.ok===false;
+    return {status:definite?"failed":"unknown",definite,error:clean(j?.description||("Telegram HTTP "+r.status),200)};
+  }catch(e){return {status:"unknown",definite:false,error:"Telegram delivery uncertain"};}
 }
 
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
-  let claimed=false,eventId="",webDelivery=null;
+  let eventId="",webDelivery=null;
   try{
     const b=await request.json();
     const strategy=clean(b.strategy,30).toLowerCase(),stage=clean(b.stage,20).toLowerCase();
@@ -68,8 +71,13 @@ export async function onRequestPost({request,env}){
     // Web push has its own durable receipt. A Telegram receipt must not suppress its retry.
     webDelivery=await webPush(env,{...b,strategy,stage,eventId});
     if(webOnly)return json({ok:webDelivery.ok,eventId,webPush:webDelivery},webDelivery.ok?200:502);
-    if(!(await claim(eventId)))return json({ok:webDelivery.ok,duplicate:true,eventId,webPush:webDelivery},webDelivery.ok?200:502);
-    claimed=true;
+    // This durable, serialized claim works across Pages locations and survives restarts.
+    // Fail closed: a receipt-store outage must never fall back to a direct Telegram send.
+    const signal={...b,strategy,stage,eventId},claim=await telegramReceipt(env,signal,"claim");
+    if(!claim.claimed){
+      const done=claim.receipt?.status!=="failed";
+      return json({ok:webDelivery.ok&&done,duplicate:true,eventId,webPush:webDelivery,telegram:claim.receipt},webDelivery.ok&&done?200:502);
+    }
 
     const icon=stage==="buy"?"🟢":"🔴";
     const action=stage==="buy"?"매수":"매도";
@@ -83,11 +91,15 @@ export async function onRequestPost({request,env}){
       "",
       "JKQuant 기준전략 알림"
     ].filter((x,i,a)=>!(x===""&&a[i-1]==="")).join("\n");
-    const id=await telegram(env,msg);
-    claimed=false; // Keep only a successful Telegram receipt; web push can still retry independently.
-    return json({ok:webDelivery.ok,eventId,messageId:id,webPush:webDelivery},webDelivery.ok?200:502);
+    const delivery=await telegram(env,msg);
+    // The claim is persisted as unknown BEFORE network I/O. If this completion is lost,
+    // later calls remain blocked rather than risk sending an accepted message twice.
+    let receipt={...delivery,tries:claim.receipt.tries};
+    try{receipt=(await telegramReceipt(env,signal,"complete",{token:claim.token,receipt:delivery})).receipt;}
+    catch(e){receipt={status:"unknown",tries:claim.receipt.tries,completionUnconfirmed:true};}
+    const ok=webDelivery.ok&&receipt.status!=="failed";
+    return json({ok,eventId,messageId:receipt.messageId||null,webPush:webDelivery,telegram:receipt},ok?200:502);
   }catch(e){
-    if(claimed)await release(eventId);
     return json({ok:false,eventId,error:String(e.message||e),webPush:webDelivery},500);
   }
 }
