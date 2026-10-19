@@ -1,0 +1,129 @@
+{
+  "ok": true,
+  "date": "2026-10-19",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-19",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-19T06:40:36.266Z",
+    "updatedAt": "2026-10-19T06:40:39.355Z",
+    "scans": [
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1792392028868,
+        "capturedAt": "2026-10-19T06:40:39.244Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1792392028868,
+        "capturedAt": "2026-10-19T06:40:36.154Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-19",
+        "capturedAt": "2026-10-19T06:40:39.244Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-19",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "etf_dip_overnight_v1",
+          "note": "15:21 예상 하락 4.68% (기준 −3% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-19",
+        "capturedAt": "2026-10-19T06:40:36.154Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-19",
+          "currency": "KRW",
+          "trades": [
+            {
+              "name": "코스모로보틱스",
+              "code": "439960",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 5340,
+              "qty": 392,
+              "notional": 2093280,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 5880,
+              "pnlPct": 9.8823595505618,
+              "pnlAmount": 206865.45600000006,
+              "reason": "종가 청산"
+            },
+            {
+              "name": "SK이터닉스",
+              "code": "475150",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 39750,
+              "qty": 18,
+              "notional": 715500,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 42800,
+              "pnlPct": 7.442955974842765,
+              "pnlAmount": 53254.349999999984,
+              "reason": "종가 청산"
+            }
+          ],
+          "open": [],
+          "measure": [],
+          "exits": 2,
+          "wins": 2,
+          "losses": 0,
+          "winRate": 100,
+          "realizedAmount": 260119.80600000004,
+          "realizedPct": 9.260953367654286,
+          "status": "closed",
+          "watched": 37,
+          "candidates": 27,
+          "entries": 2,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "note": "메인 매매일(통과 27종목)"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
