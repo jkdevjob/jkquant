@@ -313,7 +313,7 @@ t("today summary: tab return vs per-trade sum, account share, no-trade reason", 
   assert.equal(m.tabPct, 0); assert.equal(m.trades, 0); assert.equal(m.accountPct, 0); near(m.measurePct, 2); assert.ok(m.why.includes("측정용 모의 매수") && m.why.includes("칸 수익률에는 안 셈"));
   const z = LV.todaySummary("opening", { rows: [], decision: { reason: "no_expected_gap_down" } }, 1000);
   assert.equal(z.tabPct, 0); assert.equal(z.sumPct, 0); assert.ok(z.noTrade); assert.ok(z.why.includes("예상 갭 −2%~−29% 인 종목 없음"));
-  assert.equal(LV.todaySummary("opening", { rows: [] }, 850).why, "08:56 판단 전");
+  assert.equal(LV.todaySummary("opening", { rows: [] }, 850).why, "08:58 판단 전"); assert.equal(LV.todaySummary("opening", { rows: [] }, 857).why, "08:58 판단 전");
   const e = LV.todaySummary("daytrading", { rows: [{ buyPrice: 100, sellTime: "오늘 09:00 시가", status: "청산", pnlPct: 1.5 },
                                                   { status: "매매 없음", note: "15:21 예상 하락 -1.00% (기준 −3% 이하)" }] }, 1600);
   near(e.tabPct, 1.5); assert.equal(e.trades, 1); assert.ok(e.why.includes("시가 매도(청산)") && e.why.includes("오늘 매수 없음"));
@@ -571,6 +571,164 @@ t("①② 매수가능 조회 지연(2026-10-12 ② 2.5초 초과 → 835주 거
       assert.deepEqual(g.tries.map(x => x.limitMs), [6000, 6000]);
     })(),
   ]);
+});
+t("① 현금이 모자라면 남은 종목에 고르게(2026-10-15 사용자 승인) · 한투 모의 초당 2건 — 조회 · 주문 사이 1.1초(10/15 클래시스 '초당 거래건수 초과' 재현)", async () => {
+  await Promise.all(pending.slice());                                         // 전역 fetch · 호출 간격 기록을 쓰므로 앞 시험이 다 끝난 뒤에
+  assert.deepEqual(F.sizeToBuyable(79, { qty: 120, cash: 3944327 }, 3),
+    { qty: 40, planned: 79, capped: true, cash: 3944327, buyable: 120, split: 3, note: "현금 부족 — 매수가능 120주를 남은 3종목에 고르게: 79→40주" });
+  assert.deepEqual(F.sizeToBuyable(10, { qty: 50, cash: 9e6 }, 3), { qty: 10, planned: 10, capped: false, cash: 9e6, note: "" });   // 넉넉하면 계획 그대로
+  assert.deepEqual(F.sizeToBuyable(79, { qty: 120, cash: 1 }), F.sizeToBuyable(79, { qty: 120, cash: 1 }, 1));                          // ② · 한 종목은 그대로
+  assert.equal(F.sizeToBuyable(79, { error: "x" }, 3).qty, 79);                                                                       // 조회 실패면 계획대로
+  // 2026-10-14 재현: 현금 3,944,327원 · 시장가 매수는 상한가(기준가 ×1.3)로 묶인다 · 계획 = 200만 원 ÷ 예상가(클래시스 79 · 코스맥스엔비티 398 · 휴젤 12주)
+  const run = even => {
+    let cash = 3944327; const held = [];
+    const ps = [{ planned: 79, up: 36000 }, { planned: 398, up: 7090 }, { planned: 12, up: 220500 }];
+    ps.forEach((p, i) => { const s = F.sizeToBuyable(p.planned, { qty: Math.floor(cash / p.up), cash }, even ? ps.length - i : 1); cash -= s.qty * p.up; held.push(s.qty * p.up); });
+    return held;
+  };
+  assert.deepEqual(run(false), [2844000, 1098950, 0]);                                    // 옛 방식: 앞 두 종목이 다 쓰고 휴젤 0주
+  assert.deepEqual(run(true), [1296000, 1318740, 1323000]);                               // 고르게: 세 종목 모두 약 130만 원씩
+  assert.equal(F.kisWaitMs(5000, 0), 0); assert.equal(F.kisWaitMs(1500, 1000), 600); assert.equal(F.kisWaitMs(2200, 1000), 0);
+  // 장전 매수 차례: 깊은 갭 순서 · 남은 종목 수 3 → 2 → 1 · 계획 = 200만 원 ÷ 예상가 · 08:59:40 뒤는 내지 않음
+  const seen = [], picks = [{ code: "214150", expectedPrice: 25300 }, { code: "222040", expectedPrice: 5020 }, { code: "145020", expectedPrice: 158000 }];
+  const fake = async (o, e, d, x, planned, meta) => { seen.push([x.code, planned, meta.split, meta.deadline]); return { code: x.code, qty: planned }; };
+  const pb = await F.preopenBuys("https://o", {}, "2026-10-14", picks, 2000000, { buy: fake, hms: () => 85700 });
+  assert.deepEqual(seen, [["214150", 79, 3, 85940], ["222040", 398, 2, 85940], ["145020", 12, 1, 85940]]); assert.equal(pb.length, 3);
+  seen.length = 0;
+  const late = await F.preopenBuys("https://o", {}, "2026-10-14", picks, 2000000, { buy: fake, hms: () => 85940 });
+  assert.deepEqual(seen, []); assert.ok(late.every(o => o.qty === 0 && /08:59:40 이후/.test(o.vts.msg)));
+  const calls = [], old = globalThis.fetch;
+  let can = 9;
+  globalThis.fetch = async (u, init = {}) => {
+    u = String(u); calls.push([u.includes("op=buyable") ? "buyable" : u.includes("op=order") ? "order" : u, Date.now()]);
+    if (u.includes("op=buyable")) return new Response(JSON.stringify({ code: "214150", cash: 331969, qty: can }));
+    if (u.includes("op=order")) { const b = JSON.parse(init.body); return new Response(JSON.stringify({ ok: true, orderNo: "1", qty: b.qty })); }
+    throw new Error("unexpected " + u);
+  };
+  try {
+    const env = { AUTOTRADE_KEY: "ak" };
+    F._resetPacingForTest();                                                  // 앞 시험의 주문 간격(2.5초)이 조회→주문 간격을 가리지 않게
+    const a = await F.sizedBuy("https://o", env, "2026-10-15", { code: "214150", name: "클래시스" }, 80, { id: "even-a", split: 2 });   // 9주 ÷ 남은 2종목
+    assert.equal(a.qty, 4); assert.equal(a.vts.ok, true); assert.deepEqual([a.sizing.buyable, a.sizing.split, a.sizing.capped], [9, 2, true]);
+    can = 2;
+    const z = await F.sizedBuy("https://o", env, "2026-10-15", { code: "298040", name: "효성중공업" }, 5, { id: "even-z", split: 3 });   // 2주 ÷ 3 = 0 → 주문 없음 · 사유
+    assert.equal(z.qty, 0); assert.equal(z.vts.msg, "매수 생략 — 매수가능 2주를 남은 3종목에 나누면 0주 · 계획 5주");
+    assert.deepEqual(calls.map(c => c[0]), ["buyable", "order", "buyable"]);                   // 0주면 주문을 내지 않는다
+    for (let i = 1; i < calls.length; i++) assert.ok(calls[i][1] - calls[i - 1][1] >= 1090, JSON.stringify(calls));   // 조회→주문 · 주문→다음 조회 모두 1.1초 넘게(옛 0.6초)
+  } finally { globalThis.fetch = old; }
+});
+t("① 08:58 다시 보기(2026-10-19 사용자 선택 '가') — 08:56 전체 → 갭 깊은 10종목 08:58 재조회 → 그 값으로 깊은 3종목 · 늦으면 08:56 값", async () => {
+  await Promise.all(pending.slice());                                         // 전역 fetch · Date.now 를 바꾸므로 앞 시험이 다 끝난 뒤에
+  const rule = { gapMax: -2, gapFloor: -29, picks: 3 };
+  const c = (code, g) => ({ code, expectedGapPct: g });
+  // Pages: 다시 볼 종목은 명단 안 것만 · 명단 순서 · 최대 12 / 고르기는 다시 본 값으로, 통과 수(시장 강도)는 08:56 전체로
+  assert.deepEqual(F.recheckNames({ names: [{ code: "000001" }, { code: "000002" }, { code: "000003" }] }, ["000003", "999999", "000001"]).map(x => x.code), ["000001", "000003"]);
+  assert.equal(F.recheckNames({ names: Array.from({ length: 20 }, (_, i) => ({ code: String(i) })) }, Array.from({ length: 20 }, (_, i) => String(i))).length, 12);
+  const first = [c("A", -15.5), c("B", -15.1), c("C", -10.2), c("D", -5), c("E", -1)];
+  const ch = F.choosePicks(first, [c("A", -5.3), c("B", -1.0), c("C", -9.0), c("D", -4.0)], rule);
+  assert.deepEqual([ch.picks.map(x => x.code), ch.qualified, ch.source, ch.priced], [["C", "A", "D"], 4, "recheck", 4]);   // B 는 08:58 에 얕아져 빠진다
+  const fb = F.choosePicks(first, [{ code: "A", expectedGapPct: null }], rule);
+  assert.deepEqual([fb.picks.map(x => x.code), fb.source], [["A", "B", "C"], "first"]);                                   // 다시 본 값이 없으면 08:56 값으로
+  // Worker: 다시 볼 종목 = 08:56 갭 −2%~−29% 중 깊은 10 · 08:58:00 까지 기다림 · 08:58:45 뒤엔 다시 보지 않음
+  const fs = await import("node:fs"), os = await import("node:os");
+  let src = fs.readFileSync(process.env.JKQ_WORKER_SRC || new URL("../worker/opening-scheduler/src/index.js", import.meta.url), "utf8");
+  src = src.replace('import { DurableObject } from "cloudflare:workers";', "class DurableObject{constructor(ctx,env){this.ctx=ctx;this.env=env}}")
+    .replace(/"\.\.\/\.\.\/\.\.\/functions\/api\/([^"]+)"/g, (_, f) => JSON.stringify(pathToFileURL(path.join(dir, f)).href));
+  const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "wk-")), "worker.mjs"); fs.writeFileSync(tmp, src);
+  const W = await import(pathToFileURL(tmp).href);
+  const many = Array.from({ length: 14 }, (_, i) => c("S" + String(i).padStart(2, "0"), -3 - i)).concat([c("X", -1.5), c("Y", -30), c("Z", null)]);
+  assert.deepEqual(W.recheckCodes(many, rule), ["S13", "S12", "S11", "S10", "S09", "S08", "S07", "S06", "S05", "S04"]);
+  assert.deepEqual([W.recheckCodes(many, null), W.recheckCodes(many, { picks: 3 })], [[], []]);                         // 명단 규칙이 없으면 다시 보지 않는다(하드코딩 기준 없음)
+  const kst = s => Date.parse("2026-10-20T" + s + "+09:00");
+  assert.equal(W.recheckWaitMs(kst("08:57:30.400")), 29600); assert.equal(W.recheckWaitMs(kst("08:58:00")), 0); assert.equal(W.recheckWaitMs(kst("08:58:50")), 0);
+  assert.equal(W.recheckOpen(kst("08:58:44")), true); assert.equal(W.recheckOpen(kst("08:58:45")), false);
+  const run = async hms => {
+    const calls = [], at = [], appended = [], oldFetch = globalThis.fetch, oldNow = Date.now;
+    const env = { MONITOR_KEY: "mk", BASE_URL: "https://pages.test", SIGNAL_STORE: { idFromName: n => n, get: () => ({ fetch: async (u, i) => {
+      if (String(u).endsWith("/append")) appended.push(JSON.parse(i.body));
+      return new Response(JSON.stringify({ ok: true, ledger: null }));
+    } }) } };
+    globalThis.fetch = async (u, init = {}) => {
+      u = String(u);
+      if (u.endsWith("/api/opening-gapdown")) {
+        const b = JSON.parse(init.body); calls.push(b); at.push(performance.now());
+        if (b.stage === "quote" && Array.isArray(b.codes)) return new Response(JSON.stringify({ ok: true, part: "recheck", candidates: b.codes.map(code => ({ code, expectedPrice: 95, basePrice: 100 })) }));
+        if (b.stage === "quote") return new Response(JSON.stringify({ ok: true, part: b.part, watchlist: { size: 3, truncated: false, rule }, candidates: [c("A", -15), c("B", -8), c("E", -1)] }));
+        return new Response(JSON.stringify({ ok: true, picks: [], orders: [] }));
+      }
+      return new Response("{}", { status: 404 });                                // 알림 감시 등 — 실패해도 주문 흐름은 끝까지
+    };
+    Date.now = () => kst(hms);
+    try { await W.runGapdown("preopen", { scheduledTime: kst("08:56:00") }, env); }
+    finally { globalThis.fetch = oldFetch; Date.now = oldNow; }
+    return { calls, at, appended };
+  };
+  const on = await run("08:58:05");
+  assert.deepEqual(on.calls.map(b => [b.stage, b.part ?? null, b.codes || null]), [["quote", 0, null], ["quote", null, ["A", "B"]], ["preopen", null, null]]);
+  assert.deepEqual((on.calls[2].recheck || []).map(x => x.code), ["A", "B"]); assert.equal(on.calls[2].candidates.length, 3);   // 08:56 전체 + 08:58 다시 본 값
+  assert.ok(on.appended.some(p => p.events[0].id === "2026-10-20:opening_gapdown:quote:partrecheck"));             // 다시 본 시세도 장부에 남는다
+  const early = await run("08:57:59.850");                                                   // 08:58:00 까지 0.15초 기다린 뒤 다시 본다
+  assert.deepEqual(early.calls.map(b => b.stage), ["quote", "quote", "preopen"]); assert.ok(early.at[1] - early.at[0] >= 140, JSON.stringify(early.at));
+  const late = await run("08:58:50");
+  assert.deepEqual(late.calls.map(b => b.stage), ["quote", "preopen"]); assert.equal(late.calls[1].recheck, undefined);   // 늦으면 다시 보지 않고 08:56 값
+  // Pages 끝까지: 다시 보기 시세(명단 안 종목만) · preopen 은 다시 본 값으로 고르고 08:56 값도 같이 남긴다
+  const WLURL = "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/opening-gapdown-research/watchlist.json";
+  const nm = (code, name) => ({ code, name, market: "KOSDAQ", rsi14: 20, prevClose: 10000, prevAmountKrw: 5e9 });
+  const wlj = { strategyVersion: G.GAPDOWN_VERSION, basedOn: "2026-10-19", rule, names: [nm("000001", "가"), nm("000002", "나"), nm("000003", "다"), nm("000004", "라")] };
+  const kis = [], oldFetch = globalThis.fetch, oldNow = Date.now;
+  globalThis.fetch = async u => {
+    u = String(u);
+    if (u.startsWith(WLURL)) return new Response(JSON.stringify(wlj));
+    if (u.includes("/api/kis?op=expected")) { const code = u.split("code=")[1]; kis.push(code); return new Response(JSON.stringify({ code, expectedPrice: code === "000001" ? 9400 : 9800, basePrice: 10000 })); }
+    throw new Error("unexpected " + u);
+  };
+  Date.now = () => kst("08:58:10");
+  try {
+    const post = body => F.onRequestPost({ request: new Request("https://p.test/api/opening-gapdown", { method: "POST", headers: { "x-monitor-key": "k" }, body: JSON.stringify(body) }),
+      env: { OPENING_MONITOR_KEY: "k", SCALPING_VTS_AUTO: "0" } }).then(r => r.json());
+    const q = await post({ stage: "quote", date: "2026-10-20", codes: ["000003", "000001", "999999"] });
+    assert.deepEqual([q.ok, q.part, q.candidates.map(x => x.code), kis], [true, "recheck", ["000001", "000003"], ["000001", "000003"]]);
+    near(q.candidates[0].expectedGapPct, -6); near(q.candidates[1].expectedGapPct, -2);
+    const px = (code, p) => ({ code, expectedPrice: p, basePrice: 10000 });
+    const pre = await post({ stage: "preopen", date: "2026-10-20", candidates: [px("000001", 8500), px("000002", 8600), px("000003", 8700), px("000004", 9900)],
+      recheck: [px("000001", 9400), px("000002", 9900), px("000003", 9700)] });
+    assert.deepEqual(pre.picks.map(x => x.code), ["000001", "000003"]);                     // 나(000002)는 08:58 에 −1% 로 얕아져 빠진다
+    near(pre.picks[0].expectedGapPct, -6); near(pre.picks[0].expectedGapPct0856, -15);
+    assert.deepEqual([pre.breadth.qualified, pre.recheck], [3, { asked: 3, priced: 3, used: true }]);
+    assert.equal(pre.ordersSkipped, "SCALPING_VTS_AUTO=0");
+    const pre0 = await post({ stage: "preopen", date: "2026-10-20", candidates: [px("000001", 8500), px("000002", 8600), px("000003", 8700)] });
+    assert.deepEqual([pre0.picks.map(x => x.code), pre0.recheck, "expectedGapPct0856" in pre0.picks[0]], [["000001", "000002", "000003"], null, false]);
+  } finally { globalThis.fetch = oldFetch; Date.now = oldNow; }
+});
+t("① 칸 · 합계는 체결분만(밤 마감 장부와 같게) — 2026-10-15 체결 1 · 실패 2 인데 칸 +5.98% · 합계 +17.93% 로 보였다", () => {
+  const rows = [{ code: "094170", pnlPct: 8.97, status: "보유중", buyPrice: 19600, expectedGapPct: -15.46 },
+                { code: "298040", pnlPct: 1.09, status: "주문 실패", buyPrice: 1813000, expectedGapPct: -15.08 },
+                { code: "214150", pnlPct: 7.87, status: "주문 실패", buyPrice: 25000, expectedGapPct: -10.23 }];
+  const s = LV.todaySummary("opening", { rows, decision: { breadth: { qualified: 43, v2Signal: true } } }, 1342);
+  near(s.tabPct, 8.97); near(s.sumPct, 8.97); assert.deepEqual([s.trades, s.wins, s.losses], [1, 1, 0]); assert.ok(s.why.includes("주문 실패 2건"));
+  const m = LV.todaySummary("opening", { rows, decision: { breadth: { qualified: 3, v2Signal: false } } }, 1342);   // 매매일 아님 — 측정값도 체결분만
+  near(m.measurePct, 8.97); assert.equal(m.tabPct, 0);
+});
+t("③ · ④ 칸: 더 살 수 없는 날은 하루가 안 끝나도 '매매없음'(2026-10-15 08:33 전일 칸 '매매 전' 혼동) · 살 수 있으면 언제까지인지", () => {
+  const P = { ma: 20, stopPct: 5, level: "prevhigh", k: 0.5, hiN: 1, lastEntryHour: null, tabSize: 0.8, markets: ["KRW-BTC", "KRW-ETH"] };
+  const day = i => LV.addDays("2026-10-14", -i);
+  const at = s => Date.parse(s + "+09:00");
+  const mk = up => Array.from({ length: 26 }, (_, i) => ({ candle_date_time_kst: day(i) + "T09:00:00", opening_price: 100, trade_price: up ? 125 - i : 100 + i, high_price: up ? 126 - i : 101 + i, low_price: 90 }));
+  const bars = Array.from({ length: 24 }, (_, k) => ({ candle_date_time_kst: (k < 15 ? "2026-10-13" : "2026-10-14") + "T" + String((9 + k) % 24).padStart(2, "0") + ":00:00",
+    opening_price: 100, high_price: 101, low_price: 99, trade_price: 100 })).reverse();     // 어느 봉도 기준선(어제 고가)을 못 넘음
+  const rest = LV.coinDayCell("2026-10-13", ["KRW-BTC", "KRW-ETH"].map(m => ({ market: m, daily: mk(false), hourly: bars })), P, at("2026-10-14T08:33:00"));
+  assert.deepEqual([rest.v, rest.final, rest.decided, rest.note], ["no_trade", true, true, "BTC·ETH 쉼(추세 평균 아래)"]);       // 둘 다 쉼 → 더 살 수 없음
+  const wait = LV.coinDayCell("2026-10-13", ["KRW-BTC", "KRW-ETH"].map(m => ({ market: m, daily: mk(true), hourly: bars })), P, at("2026-10-14T08:33:00"));
+  assert.deepEqual([wait.v, wait.final, wait.decided], ["no_trade", false, undefined]);
+  assert.equal(wait.note, "아직 매수 없음 — BTC·ETH 돌파 없음 · 10/14 09:00 전까지 돌파하면 매수");
+  const late = LV.coinDayCell("2026-10-13", ["KRW-BTC", "KRW-ETH"].map(m => ({ market: m, daily: mk(true), hourly: bars })), { ...P, lastEntryHour: 21 }, at("2026-10-13T22:00:00"));
+  assert.deepEqual([late.v, late.final, late.decided], ["no_trade", true, true]);                                                  // 밤 돌파 금지 21시 뒤
+  const early = LV.coinDayCell("2026-10-13", ["KRW-BTC", "KRW-ETH"].map(m => ({ market: m, daily: mk(true), hourly: bars })), { ...P, lastEntryHour: 21 }, at("2026-10-13T20:00:00"));
+  assert.equal(early.final, false); assert.ok(early.note.endsWith("10/13 21:00 전까지 돌파하면 매수"));
+  const nx = { basedOn: "2026-10-12", close: 128.4, action: null, holding: false };
+  const q4 = { ohlc: [{ date: "2026-10-12", open: 130, close: 128.4 }, { date: "2026-10-13", open: 126, close: 127.5 }], price: 127.5, marketState: "REGULAR" };
+  assert.deepEqual(LV.soxlDayCell(nx, q4, 0.5).cell, { v: "no_trade", final: true, decided: true, src: "rule", trades: 0 });       // 정규장 중이어도 살 것 · 가진 것 없음
+  assert.deepEqual(LV.soxlDayCell(nx, { ...q4, marketState: "POST" }, 0.5).cell, { v: "no_trade", final: true, src: "rule", trades: 0 });
 });
 t("soxl live: planned open buy/sell executes only in the session after the decision", () => {
   const q = (date, open, c, prev) => ({ price: c, ohlc: [{ date: "2026-10-01", open: prev, close: prev }, { date, open, close: c }], intraday: { regular: { c }, date } });
@@ -851,9 +1009,9 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
     near(D("opening")["2026-10-13"].v, -0.885); assert.equal(D("opening")["2026-10-13"].src, "vts");
     near(D("opening")["2026-10-14"].v, ((10 - 0.23) + (5 - 0.23)) / 2); assert.equal(D("opening")["2026-10-14"].final, false);
     near(D("daytrading")["2026-10-13"].v, -5.953344947735195); assert.equal(D("daytrading")["2026-10-14"].v, "no_trade");
-    assert.deepEqual([D("crypto")["2026-10-13"].v, D("crypto")["2026-10-13"].final, D("crypto")["2026-10-14"].final], ["no_trade", true, false]);
+    assert.deepEqual([D("crypto")["2026-10-13"].v, D("crypto")["2026-10-13"].final, D("crypto")["2026-10-14"].final, D("crypto")["2026-10-14"].decided], ["no_trade", true, true, true]);   // 오늘도 쉼 — 더 살 수 없어 끝난 값
     assert.equal(D("crypto")["2026-10-13"].note, "BTC·ETH 쉼(추세 평균 아래)");                      // 어제는 그 전 메인(BTC+ETH) — BTC 봉도 받았다
-    assert.equal(D("crypto")["2026-10-14"].note, "아직 매수 없음 — ETH 쉼(추세 평균 아래)");           // 오늘은 새 메인(ETH 만)
+    assert.equal(D("crypto")["2026-10-14"].note, "ETH 쉼(추세 평균 아래)");                           // 오늘은 새 메인(ETH 만)
     assert.deepEqual(j.tabs.crypto.rows.map(x => x.code), ["KRW-ETH"]);                                 // 탭 표시는 지금 메인 코인만(칸 계산용 BTC 는 안 섞음)
     assert.deepEqual(D("soxl"), {});                                                   // 10/13 세션은 밤 계산이 이미 확정 — 실시간 칸 없음
     assert.ok(Array.isArray(j.tabs.opening.rows) && j.tabs.opening.rows.length === 2);   // 기존 응답(알림이 읽는 rows)은 그대로

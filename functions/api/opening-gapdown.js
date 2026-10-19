@@ -90,15 +90,21 @@ async function vtsOrder(origin,env,date,side,x,qty,meta={}){
     rec.vts={ok:r.ok&&!!j.ok,env:"vts",priceType:"market",orderNo:j.orderNo||"",msg:j.msg||j.error||("HTTP "+r.status),httpStatus:r.status};
   }catch(e){
     rec.vts.msg="전송 결과 불명 — 안전상 자동 재시도하지 않음: "+String(e.message||e);
-  }
+  }finally{_lastKisAt=Date.now();}
   return rec;
 }
 // 매수 직전 계좌 현금 확인 — 같은 모의계좌를 다른 전략도 쓰므로(2026-10-07 ② 주문 '주문가능금액 부족' 거절) 살 수 있는 만큼만 산다.
 // 2026-10-12 ② 는 조회가 2.5초 제한에 걸려(모의투자 서버 지연) 계획 수량 835주를 그대로 냈다가 같은 사유로 다시 거절됐다 →
-// 제한 6초 · 실패하면 0.7초 쉬고 조회만 한 번 더(읽기라 안전). 마감이 있으면(① 08:59:40) 주문 몫 4초를 남긴 시간 안에서만 묻는다.
+// 제한 6초 · 실패하면 1.1초 쉬고 조회만 한 번 더(읽기라 안전). 마감이 있으면(① 08:59:40) 주문 몫 4초를 남긴 시간 안에서만 묻는다.
 // 끝내 모르면 계획 수량 그대로 낸다(주문을 막지 않는다). 주문 재시도는 여전히 없다.
-const BUYABLE_TIMEOUT_MS=6000,BUYABLE_RETRY_GAP_MS=700,ORDER_RESERVE_MS=4000;
+// 한투 모의투자는 초당 2건 — 2026-10-15 ① 클래시스: 앞 종목 조회 직후 다음 종목 조회 → 0.6초 뒤 주문이 '초당 거래건수 초과'로 거절됐다.
+// 조회 · 주문은 앞 호출이 끝난 뒤 KIS_GAP_MS 넘게 띄운다(paceKis). 거절된 주문을 다시 내지는 않는다.
+const BUYABLE_TIMEOUT_MS=6000,KIS_GAP_MS=1100,BUYABLE_RETRY_GAP_MS=KIS_GAP_MS,ORDER_RESERVE_MS=4000;
 const secOfHms=h=>Math.floor(h/10000)*3600+Math.floor(h/100)%100*60+h%100;
+let _lastKisAt=0;
+export function kisWaitMs(now=Date.now(),last=_lastKisAt){return last?Math.max(0,KIS_GAP_MS-(now-last)):0;}
+async function paceKis(){const w=kisWaitMs();if(w>0)await sleep(w);}
+export function _resetPacingForTest(){_lastKisAt=0;_lastOrderAt=0;}
 async function buyable(origin,env,code,timeoutMs,fetchImpl){
   const t0=Date.now(),ac=new AbortController(),t=setTimeout(()=>ac.abort(),timeoutMs);
   try{
@@ -106,7 +112,7 @@ async function buyable(origin,env,code,timeoutMs,fetchImpl){
     const j=await r.json().catch(()=>({}));
     return r.ok&&!j.error?{...j,ms:Date.now()-t0}:{error:j.error||("HTTP "+r.status),ms:Date.now()-t0};
   }catch(e){return {error:ac.signal.aborted?"응답 지연 "+(timeoutMs/1000).toFixed(1)+"초 초과":String(e.message||e),ms:Date.now()-t0};}
-  finally{clearTimeout(t);}
+  finally{clearTimeout(t);_lastKisAt=Date.now();}
 }
 // 조회 결과 + 시도별 기록(tries: 걸린 ms · 제한 ms · 실패 사유) — 장부에 남아 지연을 나중에 확인할 수 있다.
 // hmsNow · fetchImpl 은 시험용(기본 = 지금 한국시각 · 전역 fetch).
@@ -123,21 +129,27 @@ export async function lookupBuyable(origin,env,code,deadline=0,hmsNow=()=>kstNow
   }
   return {...b,tries};
 }
-export function sizeToBuyable(planned,b){
+// split = 이 종목을 포함해 아직 살 종목 수(①). 현금이 모자라면 매수가능 수량 ÷ split 까지만 산다 — 2026-10-15 사용자 승인:
+// 앞 종목부터 200만 원씩 사면 현금이 모자란 날 마지막 종목이 0주가 됐다(10/14 휴젤 · 10/15 효성중공업 · 10/16 고려아연).
+// 매수가능 수량은 주문 직전에 다시 묻는 값이라 앞 종목 주문만큼 줄어 있다 → 남은 현금이 남은 종목에 고르게 나뉜다. 현금이 넉넉하면 계획 그대로.
+export function sizeToBuyable(planned,b,split=1){
   planned=Math.max(0,Math.floor(+planned||0));
   if(!b||b.error||!Number.isFinite(+b.qty))return {qty:planned,planned,capped:false,note:"매수가능 조회 실패 — 계획 수량 그대로("+((b&&b.error)||"응답 없음")+")"};
-  const q=Math.max(0,Math.floor(+b.qty));
-  return q<planned?{qty:q,planned,capped:true,cash:+b.cash||0,note:"계좌 현금에 맞춰 "+planned+"→"+q+"주"}:{qty:planned,planned,capped:false,cash:+b.cash||0,note:""};
+  const all=Math.max(0,Math.floor(+b.qty)),n=Math.max(1,Math.floor(+split||1)),q=Math.floor(all/n);
+  if(q>=planned)return {qty:planned,planned,capped:false,cash:+b.cash||0,note:""};
+  return n>1?{qty:q,planned,capped:true,cash:+b.cash||0,buyable:all,split:n,note:"현금 부족 — 매수가능 "+all+"주를 남은 "+n+"종목에 고르게: "+planned+"→"+q+"주"}
+    :{qty:q,planned,capped:true,cash:+b.cash||0,note:"계좌 현금에 맞춰 "+planned+"→"+q+"주"};
 }
 // 계획 수량 → 현금 확인 → 0 주면 주문하지 않고 기록만(사유 남김) · 아니면 그 수량으로 주문
 export async function sizedBuy(origin,env,date,x,planned,meta={}){
+  await paceKis();                                                     // 앞 조회 · 주문과 1.1초 넘게(초당 2건)
   const b=await lookupBuyable(origin,env,x.code,meta.deadline);
-  const s={...sizeToBuyable(planned,b),lookup:b.tries};
+  const s={...sizeToBuyable(planned,b,meta.split),lookup:b.tries};
   if(!(s.qty>0)){
     return {signalId:meta.id||signalId(date,x.code,"buy"),strategy:meta.strategy||"opening_gapdown",strategyVersion:meta.version||GAPDOWN_VERSION,date,side:"buy",code:x.code,name:x.name||x.code,qty:0,
-      sizing:s,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",msg:"매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 "+s.planned+"주"}};
+      sizing:s,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",msg:"매수 생략 — "+(s.split>1&&s.buyable>0?"매수가능 "+s.buyable+"주를 남은 "+s.split+"종목에 나누면 0주":"매수가능 0주(계좌 현금 부족)")+" · 계획 "+s.planned+"주"}};
   }
-  await sleep(600);                                                    // 조회 직후 주문이 초당 한도에 몰리지 않게
+  await paceKis();                                                     // 조회 직후 주문이 초당 한도에 몰리지 않게(2026-10-15 거절)
   if(meta.deadline&&kstNow().hms>=meta.deadline)                       // 조회하는 사이 마감이 지났으면 내지 않는다(① 08:59:40)
     return {signalId:meta.id||signalId(date,x.code,"buy"),code:x.code,side:"buy",qty:0,sizing:s,vts:{ok:false,env:"vts",msg:"08:59:40 이후 — 동시호가 마감 전 접수 보장이 안 돼 주문 생략"}};
   const rec=await vtsOrder(origin,env,date,"buy",x,s.qty,meta);
@@ -193,7 +205,23 @@ async function quotePart(origin,date,part){
   const {wl,meta,reason}=await loadWatchlist(date);
   out.watchlist=meta;
   if(!wl){out.decisionReason=reason;return out;}
-  const names=wl.names.slice(0,MAX_QUOTES).slice(part*PART_SIZE,(part+1)*PART_SIZE);
+  return quoteNames(origin,wl.names.slice(0,MAX_QUOTES).slice(part*PART_SIZE,(part+1)*PART_SIZE),out);
+}
+// 읽기 전용: 08:58 다시 보기(2026-10-19 사용자 선택 '가') — 08:56 전체 시세에서 갭 깊은 종목만 다시 묻는다.
+// 명단 안 종목만 · 최대 RECHECK_MAX 개. 08:56 예상가가 실제 시가보다 평균 5.4%p 깊었다(체결 12건) → 동시호가 끝에 가까운 값으로 고른다.
+export const RECHECK_MAX=12;
+export function recheckNames(wl,codes){
+  const want=new Set((Array.isArray(codes)?codes:[]).map(String).slice(0,RECHECK_MAX));
+  return (wl&&Array.isArray(wl.names)?wl.names.slice(0,MAX_QUOTES):[]).filter(x=>want.has(String(x.code)));
+}
+async function quoteCodes(origin,date,codes){
+  const out={stage:"quote",strategyVersion:GAPDOWN_VERSION,date,part:"recheck",startedAt:new Date().toISOString(),watchlist:null,candidates:[],decisionReason:""};
+  const {wl,meta,reason}=await loadWatchlist(date);
+  out.watchlist=meta;
+  if(!wl){out.decisionReason=reason;return out;}
+  return quoteNames(origin,recheckNames(wl,codes),out);
+}
+async function quoteNames(origin,names,out){
   for(const x of names){
     const row=candidateRow(x);
     if(kstNow().hms>=QUOTE_DEADLINE){row.error="quote_deadline";out.candidates.push(row);continue;}
@@ -226,7 +254,14 @@ export function sanitizeCandidates(rows,wl){
   }
   return out;
 }
-async function preopen(origin,env,date,rows){
+// ① 고르기 — 시장 투매 강도(통과 수)는 08:56 전체로 센다. 08:58 에 다시 본 값(fresh)이 있으면 그 종목들 중에서 깊은 3종목을 고른다
+// (다시 보니 갭이 얕아진 종목은 빠진다 · 다시 보지 않은 08:56 값은 섞지 않는다). 다시 본 값이 하나도 없으면 08:56 값으로(주문을 막지 않음).
+export function choosePicks(cands,fresh,rule){
+  const qualified=gapdownPicks(cands,{...rule,picks:1e9}).length;
+  const f=(Array.isArray(fresh)?fresh:[]).filter(r=>r&&Number.isFinite(r.expectedGapPct));
+  return {qualified,picks:gapdownPicks(f.length?f:cands,rule),source:f.length?"recheck":"first",priced:f.length};
+}
+async function preopen(origin,env,date,rows,recheck){
   const out={stage:"preopen",strategyVersion:GAPDOWN_VERSION,date,startedAt:new Date().toISOString(),
     watchlist:null,candidates:0,picks:[],orders:[],decisionReason:""};
   const {wl,meta,reason}=await loadWatchlist(date);
@@ -234,25 +269,37 @@ async function preopen(origin,env,date,rows){
   if(!wl){out.decisionReason=reason;return out;}
   const cands=sanitizeCandidates(rows,wl);
   out.candidates=cands.length;
-  const picks=gapdownPicks(cands,wl.rule);
   // v2 판단 근거: 오늘 조건(갭 범위)을 통과한 종목 수 = 시장 투매 강도. 주문은 v1 그대로 매일 내서 체결을 재고, v2 는 이 값으로 가른다.
-  const qualified=gapdownPicks(cands,{...wl.rule,picks:1e9}).length;
+  const ch=choosePicks(cands,Array.isArray(recheck)?sanitizeCandidates(recheck,wl):[],wl.rule),picks=ch.picks,qualified=ch.qualified;
   out.breadth={qualified,v2MinQualified:BREADTH_V2_MIN,v2Signal:qualified>=BREADTH_V2_MIN};
-  out.picks=picks.map(x=>({code:x.code,name:x.name,expectedPrice:x.expectedPrice,basePrice:x.basePrice,expectedGapPct:x.expectedGapPct,rsi14Prev:x.rsi14Prev}));
-  if(!picks.length){out.decisionReason=cands.some(x=>x.expectedGapPct!==null)?"no_expected_gap_down":"no_expected_prices";return out;}
+  out.recheck=Array.isArray(recheck)?{asked:recheck.length,priced:ch.priced,used:ch.source==="recheck"}:null;
+  const first=new Map(cands.map(c=>[c.code,c]));
+  out.picks=picks.map(x=>({code:x.code,name:x.name,expectedPrice:x.expectedPrice,basePrice:x.basePrice,expectedGapPct:x.expectedGapPct,rsi14Prev:x.rsi14Prev,
+    ...(ch.source==="recheck"?{expectedPrice0856:(first.get(x.code)||{}).expectedPrice??null,expectedGapPct0856:(first.get(x.code)||{}).expectedGapPct??null}:{})}));
+  if(!picks.length){out.decisionReason=(ch.source==="recheck"||cands.some(x=>x.expectedGapPct!==null))?"no_expected_gap_down":"no_expected_prices";return out;}
   out.decisionReason="rsi14_prev<30+expected_gap<=-2%+deepest3";
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
   const amount=budget(env);
   out.budgetPerPick=amount;
-  for(const x of picks){
-    if(kstNow().hms>=ORDER_DEADLINE){
-      out.orders.push({signalId:signalId(date,x.code,"buy"),code:x.code,side:"buy",qty:0,vts:{ok:false,env:"vts",msg:"08:59:40 이후 — 동시호가 마감 전 접수 보장이 안 돼 주문 생략"}});
+  out.sizingRule="even_split_when_short";                              // 현금이 모자라면 남은 종목에 고르게(매수가능 ÷ 남은 종목 수)
+  _lastKisAt=Date.now();                                               // 바로 앞 시세 조회(다른 요청)와도 띄운다
+  out.orders=await preopenBuys(origin,env,date,picks,amount);
+  return out;
+}
+// 장전 매수 차례 — 깊은 갭 순서대로 한 종목씩(현금 확인 → 주문). split = 이 종목을 포함해 남은 종목 수.
+// buy · hms 는 시험용(기본 = sizedBuy · 지금 한국시각).
+export async function preopenBuys(origin,env,date,picks,amount,{buy=sizedBuy,hms=()=>kstNow().hms}={}){
+  const orders=[];
+  for(let i=0;i<picks.length;i++){
+    const x=picks[i];
+    if(hms()>=ORDER_DEADLINE){
+      orders.push({signalId:signalId(date,x.code,"buy"),code:x.code,side:"buy",qty:0,vts:{ok:false,env:"vts",msg:"08:59:40 이후 — 동시호가 마감 전 접수 보장이 안 돼 주문 생략"}});
       continue;
     }
-    out.orders.push(await sizedBuy(origin,env,date,x,Math.floor(amount/Math.max(1,+x.expectedPrice||0)),{deadline:ORDER_DEADLINE}));
+    orders.push(await buy(origin,env,date,x,Math.floor(amount/Math.max(1,+x.expectedPrice||0)),{deadline:ORDER_DEADLINE,split:picks.length-i}));
   }
-  return out;
+  return orders;
 }
 
 async function closeOrReconcile(origin,env,date,stage,picks){
@@ -368,11 +415,12 @@ export async function onRequestPost({request,env}){
   const origin=new URL(request.url).origin;
   try{
     if(stage==="quote"){
+      if(Array.isArray(b.codes))return json({ok:true,...await quoteCodes(origin,date,b.codes),finishedAt:new Date().toISOString()});   // 08:58 다시 보기
       const part=Math.floor(+b.part||0);
       if(!(part>=0&&part*PART_SIZE<MAX_QUOTES))return json({ok:false,error:"part 범위 오류"},400);
       return json({ok:true,...await quotePart(origin,date,part),finishedAt:new Date().toISOString()});
     }
-    if(stage==="preopen")return json({ok:true,...await preopen(origin,env,date,b.candidates),finishedAt:new Date().toISOString()});
+    if(stage==="preopen")return json({ok:true,...await preopen(origin,env,date,b.candidates,b.recheck),finishedAt:new Date().toISOString()});
     if(stage==="etf_buy")return json({ok:true,...await etfBuy(origin,env,date),finishedAt:new Date().toISOString()});
     if(stage==="etf_sell")return json({ok:true,...await etfSell(origin,env,date,String(b.buyDate||"")),finishedAt:new Date().toISOString()});
     if(stage==="etf_reconcile")return json({ok:true,...await etfReconcile(origin,env,date),finishedAt:new Date().toISOString()});

@@ -482,7 +482,7 @@ async function runMinute(controller,env){
 }
 
 // ── D-1 시초가 갭하락 과매도(opening_gapdown_v1) 연구용 모의체결 ──
-// 08:56 예상체결가 조회(40종목씩 순차) → 규칙 선택 + 장전 동시호가 VTS 매수 → 15:21 종가 동시호가 VTS 매도 → 15:40 체결 조회.
+// 08:56 예상체결가 조회(40종목씩 순차) → 08:58 갭 깊은 10종목 다시 조회 → 규칙 선택 + 장전 동시호가 VTS 매수 → 15:21 종가 동시호가 VTS 매도 → 15:40 체결 조회.
 // 매 단계 응답 원본을 별도 ledger(gapdown:날짜)에 먼저 쌓는다. 주문 호출은 재시도하지 않는다.
 // Workers 무료 요금제는 계정 전체 cron 5개가 한도라 이 Worker 는 cron 한 줄만 쓴다(wrangler.jsonc).
 // "5-31,40,56 0,6,23 * * *" 로 필요한 시각을 모두 덮고, 실제로 할 일은 한국시각으로 여기서 고른다.
@@ -506,6 +506,20 @@ export function scheduleRoute(ms){
   return null;
 }
 const GAPDOWN_PARTS=2;
+// ① 08:58 다시 보기(2026-10-19 사용자 선택 '가'): 08:56 예상가가 실제 시가보다 평균 5.4%p 깊었다(체결 12건) — 실제로는 갭하락이 아닌 종목을 샀다.
+// 08:56 전체 조회(1~2분 걸림)는 그대로 두고, 갭 깊은 n 종목만 08:58:00 뒤 다시 물어 그 값으로 고른다.
+// 08:58:45 가 지났으면(전체 조회가 늦은 날) 다시 묻지 않고 08:56 값으로 — 08:59:40 주문 마감을 지킨다.
+export const RECHECK={atHms:85800,lastHms:85845,n:10};
+export function recheckCodes(cands,rule,n=RECHECK.n){
+  const gapMax=+(rule||{}).gapMax,gapFloor=+(rule||{}).gapFloor;          // 기준값은 전날 밤 명단(rule)에서만 — 없으면 다시 보지 않는다(08:56 값으로)
+  if(!Number.isFinite(gapMax)||!Number.isFinite(gapFloor))return [];
+  return (Array.isArray(cands)?cands:[]).filter(c=>c&&c.expectedGapPct!=null&&Number.isFinite(+c.expectedGapPct)&&+c.expectedGapPct<=gapMax&&+c.expectedGapPct>gapFloor)
+    .sort((a,b)=>a.expectedGapPct-b.expectedGapPct||String(a.code).localeCompare(String(b.code))).slice(0,n).map(c=>String(c.code));
+}
+const kstHms=ms=>{const p=kstParts(ms);return p.hh*10000+p.mm*100+p.ss;};
+const secOf=h=>Math.floor(h/10000)*3600+Math.floor(h/100)%100*60+h%100;
+export function recheckWaitMs(ms){const h=kstHms(ms);return h>=RECHECK.atHms?0:(secOf(RECHECK.atHms)-secOf(h))*1000-ms%1000;}
+export function recheckOpen(ms){return kstHms(ms)<RECHECK.lastHms;}
 async function gapdownCall(env,body){
   const r=await fetch(baseUrl(env)+"/api/opening-gapdown",{
     method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},body:JSON.stringify(body)
@@ -606,7 +620,7 @@ export function krHolidayAction(stage,date){
   if(!kd.closed)return "run";
   return stage==="preopen"?"notice":"skip";
 }
-async function runGapdown(stage,controller,env){
+export async function runGapdown(stage,controller,env){
   if(!env.MONITOR_KEY||!env.SIGNAL_STORE)throw new Error("MONITOR_KEY/SIGNAL_STORE missing");
   const ms=Number(controller.scheduledTime)||Date.now();
   const date=kstParts(ms).date;
@@ -644,8 +658,21 @@ async function runGapdown(stage,controller,env){
       return;
     }
     const candidates=parts.flatMap(q=>Array.isArray(q.candidates)?q.candidates:[]);
+    let recheck=null;                                 // ① 08:58 다시 보기 — 위 RECHECK 설명
+    const codes=recheckCodes(candidates,(parts[0]&&parts[0].watchlist&&parts[0].watchlist.rule)||null);
+    if(codes.length){
+      const wait=recheckWaitMs(Date.now());
+      if(wait>0)await new Promise(r=>setTimeout(r,wait));
+      if(recheckOpen(Date.now())){
+        try{recheck=await gapdownCall(env,{stage:"quote",date,codes});}
+        catch(e){recheck={ok:false,error:String(e.message||e)};}
+        recheck.part="recheck";
+        try{await gapdownRecord(env,date,"quote",recheck,ms);}
+        catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"quote",part:"recheck",error:String(e.message||e)}));}
+      }
+    }
     let res;
-    try{res=await gapdownCall(env,{stage:"preopen",date,candidates});}
+    try{res=await gapdownCall(env,{stage:"preopen",date,candidates,...(recheck&&recheck.ok&&Array.isArray(recheck.candidates)?{recheck:recheck.candidates}:{})});}
     catch(e){res={ok:false,error:"전송 결과 불명 — 재시도하지 않음: "+String(e.message||e)};}
     try{await gapdownRecord(env,date,"preopen",res,ms);}
     catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"preopen",error:String(e.message||e)}));}

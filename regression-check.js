@@ -1575,6 +1575,28 @@ console.log('[27] 무매 분석 — 월별·사이클별');
   ok('빈 표 colspan이 열 수를 따라간다',
      /const nCol=4\+\(simple\?1:0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
   ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
+  /* 기간 = 첫 매수일 ~ 닫힌 날 (2026-10-14 사용자: '두 번째 사이클 시작은 6-22인데').
+     예전엔 매도로만 기간을 잡아 첫 '매도'일이 시작으로 찍혔다. 실제 장부(computeInf)로 사이클 번호를 매기고 실제 표 함수로 그린다.
+     사이클 사이의 출금·배당은 다음 번호를 달지만 매매가 아니라 기간을 앞당기면 안 된다. 안 닫힌 사이클은 끝 날짜가 없다. */
+  if(br){
+    const E={}; const $=id=>E[id]||(E[id]={innerHTML:''});
+    const ds=new Function(extractFn(idx,'function dshort(d)')+'\nreturn dshort;')();
+    const draw=new Function('$','wn','isSell','isBuy','dshort',br+'\nreturn renderInfBreak;')($,v=>'$'+(+v).toFixed(2),isSell,isBuy,ds);
+    __strat={settings:{ticker:'SOXL',div:20,target:20,principal:10000,compound:true},hist:[
+      {kind:'1회매수',date:'2026-05-20',price:10,qty:10},{kind:'쿼터매도',date:'2026-06-02',price:11,qty:2},
+      {kind:'지정가매도',date:'2026-06-18',price:12,qty:8},
+      {kind:'출금',date:'2026-06-19',amt:100},
+      {kind:'1회매수',date:'2026-06-22',price:10,qty:10},{kind:'쿼터매도',date:'2026-06-30',price:11,qty:3},
+      {kind:'지정가매도',date:'2026-09-21',price:12,qty:7},
+      {kind:'배당',date:'2026-09-22',amt:5},
+      {kind:'1회매수',date:'2026-09-24',price:10,qty:10},{kind:'쿼터매도',date:'2026-10-02',price:11,qty:2},
+      {kind:'1회매수',date:'2026-10-13',price:9,qty:5}]};
+    const ci=computeInf(); draw(ci);
+    const lab=[...(E.a_bycycle.innerHTML.match(/<td>(\d사이클 [^]*?)<\/td>/g)||[])].map(x=>x.replace(/<\/?td>|<[^>]+>/g,'').trim());
+    ok('사이클 기간 — 첫 매수일 ~ 닫힌 날 · 사이 출금·배당은 안 넣는다 · 진행중은 끝 날짜 없이',
+       JSON.stringify(lab)===JSON.stringify(['3사이클 26-09-24~ 진행중','2사이클 26-06-22~26-09-21','1사이클 26-05-20~26-06-18'])
+       && ci.rows[3].cycleSeq===2 && ci.rows[7].cycleSeq===3, JSON.stringify(lab));
+  }
 }
 
 
@@ -11289,7 +11311,9 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      /const ORDER_DEADLINE=85940;/.test(gd)&&/if\(stage==="close"\)return hms>=152000&&hms<152800;/.test(gd)
      &&/if\(!stageWindow\(stage,now\.hms\)\)/.test(gd));
   ok('D-1 선택 기준값은 전날 밤 명단(rule)에서만 읽는다 — JS 에 -2/-29 하드코딩 없음',
-     /gapdownPicks\(cands,wl\.rule\)/.test(gd)&&!/-2(\.0)?\b|-29/.test(gr.replace(/\/\/.*$/gm,'')));
+     /const ch=choosePicks\(cands,Array\.isArray\(recheck\)\?sanitizeCandidates\(recheck,wl\):\[\],wl\.rule\)/.test(gd)&&/picks:gapdownPicks\(f\.length\?f:cands,rule\)/.test(gd)
+     &&!/-2(\.0)?\b|-29/.test(gr.replace(/\/\/.*$/gm,''))
+     &&!/-2(\.0)?\b|-29/.test(ow.slice(ow.indexOf('export function recheckCodes('),ow.indexOf('\n}\n',ow.indexOf('export function recheckCodes('))).replace(/\/\/.*$/gm,'')));   // 08:58 다시 볼 종목도 명단 규칙으로만
   ok('KIS 예상체결가 조회는 GET 읽기전용(op=expected, FHKST01010200)',
      /if \(op === "expected"\)/.test(kis)&&/tr_id: "FHKST01010200"/.test(kis)
      &&kis.indexOf('op === "expected"')<kis.indexOf('export async function onRequestPost'));
@@ -11411,7 +11435,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/function authorized\(request,env\)/.test(tg3));
   }
   ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·추이 범례·GPT 대결 날짜별',
-     /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/nt\?\(lv\.final\?"매매없음":"매매 전"\):pct\(v\)/.test(scl2)
+     /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/nt\?\(lv\.final\?"매매없음":"아직 매수 없음"\):pct\(v\)/.test(scl2)
      &&/if\(tdy&&tdy\.noTrade\)head\+=/.test(scl2)
      &&/x\.claude\.entries\?/.test(scl2)&&/tradeDays=trades\)/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('📅 오늘 탭에서 \'전일 · 당일 결과\' 표 삭제(사용자 요청 2026-10-02)', !/전일 · 당일 결과 — 모든 전략/.test(scl2));
@@ -11426,7 +11450,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&!/op=order|method:\s*["']POST["']/.test(orApi)&&/fetch\("\/api\/claude-lab"/.test(scl2)
      &&/판정용 \(10\/1~\)/.test(scl2)&&/id="clVer">v\d+\.\d+\.\d+</.test(scl2));
   ok('D-1 v2: 통과 종목 수(시장 투매 강도) 기록 · 기준 5 · 연구 변형 3·5 · 화면 표시',
-     /const qualified=gapdownPicks\(cands,\{\.\.\.wl\.rule,picks:1e9\}\)\.length;/.test(gd)
+     /const qualified=gapdownPicks\(cands,\{\.\.\.rule,picks:1e9\}\)\.length;/.test(gd)&&/const ch=choosePicks\(cands,[^\n]*,wl\.rule\),picks=ch\.picks,qualified=ch\.qualified;/.test(gd)
      &&/const BREADTH_V2_MIN=5;/.test(gd)&&/v2Signal:qualified>=BREADTH_V2_MIN/.test(gd)
      &&/BREADTH_MIN = \[3, 5\]/.test(py)&&/qualified\.get\(r\["date"\], 0\) >= k/.test(py)
      &&/rsiPassed=sum\(1 for x in cands if x\["rsiPrev"\] < PARAMS\["rsiMax"\]\)/.test(py)
@@ -11550,16 +11574,17 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
   { // 확정 전 실시간 칸(2026-10-14 사용자 요청 '실시간으로 반영해') — 확정 값이 먼저, 없을 때만 점선 칸에 출처·시각·'확정 전'
     const lvNow=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0});
     const lvNt=f.dayCell('pending','2026-10-14','당일',null,{v:'no_trade',final:true,src:'vts',trades:0,note:'전날 15:21 매수 신호 없음'});
-    const lvWait=f.dayCell(null,'2026-10-14','당일',null,{v:'no_trade',final:false,src:'rule',trades:0,note:'아직 매수 없음 — BTC 쉼(추세 평균 아래)'});
+    const lvWait=f.dayCell(null,'2026-10-14','당일',null,{v:'no_trade',final:false,src:'rule',trades:0,note:'아직 매수 없음 — BTC·ETH 돌파 없음 · 10/15 09:00 전까지 돌파하면 매수'});
+    const lvDec=f.dayCell(null,'2026-10-14','전일',null,{v:'no_trade',final:true,decided:true,src:'rule',trades:0,note:'ETH 쉼(추세 평균 아래)'});   // 2026-10-15 08:33 '매매 전' 혼동 — 더 살 수 없는 날
     const lvDone=f.dayCell('pending','2026-10-13','전일',null,{v:-5.953344947735195,final:true,src:'rule',trades:1,wins:0,losses:1,note:'모의투자 매수 안 됨 — 규칙대로 계산'});
     const conf=f.dayCell(-5.95,'2026-10-13','전일',null,{v:-6,final:true,src:'rule',trades:1});
     const none=f.dayCell('pending','2026-10-13','전일',null,null);
     const pr=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:'pending',last:-1.2},{'2026-10-14':{v:1},'2026-10-15':{v:2}},'2026-10-15');
     const pr0=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:0.5,last:'pending'},null,'');
-    ok('오늘 탭 실시간 칸: 장중 +10.75%(2건 · 모의투자 체결 · ⏱ 09:41 실시간 · 확정 전 · 점선) / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중 매수 전 / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
+    ok('오늘 탭 실시간 칸: 장중 +10.75%(2건 · 모의투자 체결 · ⏱ 09:41 실시간 · 확정 전 · 점선) / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중은 아직 매수 없음(언제까지) · 더 살 수 없으면 매매없음(매수 조건 안 됨) / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
        /class='daily-result-box live'/.test(lvNow)&&/\+10\.75%/.test(lvNow)&&/기준전략 2건 · 승 2 · 패 0 · 모의투자 체결/.test(lvNow)&&/\+1% 달성 · ⏱ 09:41 실시간 · 확정 전/.test(lvNow)
        &&/>매매없음</.test(lvNt)&&/마감 · 밤 확정 전/.test(lvNt)&&/전날 15:21 매수 신호 없음/.test(lvNt)&&!/확정 대기/.test(lvNt)
-       &&/>매매 전</.test(lvWait)&&/아직 매수 없음/.test(lvWait)&&/-5\.95%/.test(lvDone)&&/기준전략 1건 · 승 0 · 패 1 · 시세로 계산/.test(lvDone)&&/>기준전략 0건<br>전날 15:21 매수 신호 없음</.test(lvNt)&&/목표까지 6\.95%p · 마감 · 밤 확정 전/.test(lvDone)
+       &&/>아직 매수 없음</.test(lvWait)&&/09:00 전까지 돌파하면 매수/.test(lvWait)&&!/매매 전/.test(lvWait+lvDec)&&/>매매없음</.test(lvDec)&&/매수 조건 안 됨 · 밤 확정 전/.test(lvDec)&&!/⏱/.test(lvDec)&&/-5\.95%/.test(lvDone)&&/기준전략 1건 · 승 0 · 패 1 · 시세로 계산/.test(lvDone)&&/>기준전략 0건<br>전날 15:21 매수 신호 없음</.test(lvNt)&&/목표까지 6\.95%p · 마감 · 밤 확정 전/.test(lvDone)
        &&/-5\.95%/.test(conf)&&/모의 장부 확정/.test(conf)&&!/live|확정 전/.test(conf)&&/확정 대기/.test(none)&&!/live/.test(none)
        &&pr.length===2&&pr[0].date==='2026-10-14'&&pr[0].v===-1.2&&pr[0].lv.v===1&&pr[1].date==='2026-10-15'&&pr[1].v===null&&pr[1].lv.v===2
        &&pr0[0].date==='2026-10-13'&&pr0[0].v===0.5&&pr0[1].v==='pending'&&pr0[1].lv===null,
@@ -12144,10 +12169,12 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   }
   { const og2=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8'),ks=fs.readFileSync(__d+'/functions/api/kis.js','utf8');
     const bb=ks.slice(ks.indexOf('if (op === "buyable") {'),ks.indexOf('if (op === "balance") {'));
-    ok('①② 매수 직전 계좌 현금 확인(모의 매수가능조회 · 읽기만 · 키/소유자만) → 살 수 있는 만큼만 · 0주면 주문 없음 · 재시도 없음',
+    ok('①② 매수 직전 계좌 현금 확인(모의 매수가능조회 · 읽기만 · 키/소유자만) → 살 수 있는 만큼만 · ① 현금 부족이면 남은 종목에 고르게 · 0주면 주문 없음 · 재시도 없음',
        /const g = await verifyOwner\(request, env\);\n\s*if \(!g\.ok\) return json\(\{ error: g\.msg \}, 401\);\n\s*if \(isReal\(env\)\) return json\(\{ error: "buyable 은 KIS 모의투자\(vts\)만 허용합니다\." \}, 400\);/.test(bb)
        &&/tr_id: isReal\(env\) \? "TTTC8908R" : "VTTC8908R"/.test(ks)&&!/order-cash|hashkey/.test(ks.slice(ks.indexOf('async function krBuyable('),ks.indexOf('function parseEmails(')))
-       &&(og2.match(/await sizedBuy\(origin,env,date,/g)||[]).length===2&&!/await vtsOrder\(origin,env,date,"buy"/.test(og2.replace('const rec=await vtsOrder(origin,env,date,"buy",x,s.qty,meta);',''))
+       &&(og2.match(/await sizedBuy\(origin,env,date,/g)||[]).length===1&&/export async function preopenBuys\(origin,env,date,picks,amount,\{buy=sizedBuy,/.test(og2)&&/out\.orders=await preopenBuys\(origin,env,date,picks,amount\);/.test(og2)
+       &&/orders\.push\(await buy\(origin,env,date,x,Math\.floor\(amount\/Math\.max\(1,\+x\.expectedPrice\|\|0\)\),\{deadline:ORDER_DEADLINE,split:picks\.length-i\}\)\);/.test(og2)
+       &&!/await vtsOrder\(origin,env,date,"buy"/.test(og2.replace('const rec=await vtsOrder(origin,env,date,"buy",x,s.qty,meta);',''))
        &&/op=buyable&env=vts&market=kr/.test(og2));
   }
   { const st=fs.readFileSync(__d+'/settings.html','utf8'),sc=fs.readFileSync(__d+'/settings-claude-push.js','utf8');
@@ -12361,6 +12388,62 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메
   ok('11개 페이지 모두 jk-ui 공용 UI와 같은 11개 메뉴 링크를 사용',
      pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.6" defer><\/script>/.test(s)
        &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
+}
+
+/* ════ 공모주 상세 — 상장 뒤에도 주간사·밴드·시장·경쟁률이 비지 않음 · 라벨/값 구분 ════ */
+console.log('\n[IPO DETAIL] 공모주 상세 정보 보충 · 표시');
+{
+  const f=fs.readFileSync(__d+'/functions/api/ipo.js','utf8'),h=fs.readFileSync(__d+'/ipo.html','utf8');
+  const grab=n=>{const i=f.indexOf('function '+n+'(');if(i<0)throw new Error('추출 실패: '+n);let d=0,j=f.indexOf('{',i);for(;j<f.length;j++){if(f[j]==='{')d++;else if(f[j]==='}'&&--d===0)break;}return f.slice(i,j+1);};
+  const mk=f.slice(f.indexOf('const MARKET'),f.indexOf(';',f.indexOf('const MARKET'))+1);
+  const applyDetail=new Function(mk+'\n'+grab('num')+'\n'+grab('applyDetail')+'\nreturn applyDetail;')();
+  // 멜콘(10/15 상장) — 모바일 목록에서 빠져 캘린더 값(공모가·날짜)만 남은 상태
+  const melcon=()=>({name:'멜콘',code:'179880',poPrice:12300,bandLo:null,bandHi:null,subStart:'2026-10-01',subEnd:'2026-10-02',
+    listDate:'2026-10-15',leadManager:'',instRate:null,subRate:null,status:'상장',market:''});
+  const det={ipoInfo:{ipoStatus:'상장',poStartDate:'2026-10-01',poEndDate:'2026-10-02',lcalDate:'2026-10-15'},
+    listedExamination:{marketType:'KOSDAQ'},registrationStatement:{hopePubStart:'10700',hopePubEnd:'12300'},
+    demandForecastingResult:{fixPubPrice:'12300',cmptnRate:'1136.84'},confirmedInfo:{fnlCmptRatio:'1741.48'},
+    joinManagers:[{orgType:'인수',orgNm:'신영증권'},{orgType:'대표',orgNm:'대신증권'}]};
+  const a=applyDetail(melcon(),det);
+  ok('상장 종목 빈 칸 보충 — 주간사(대표)·시장·밴드·기관/청약 경쟁률',
+     a.leadManager==='대신증권'&&a.market==='코스닥'&&a.bandLo===10700&&a.bandHi===12300
+     &&a.instRate===1136.84&&a.subRate===1741.48&&a.poPrice===12300,JSON.stringify(a));
+  const b=applyDetail({...melcon(),leadManager:'하나증권',market:'코스피',bandLo:1,instRate:5},det);
+  ok('이미 있는 값은 덮지 않음(캘린더·목록 값 우선)',b.leadManager==='하나증권'&&b.market==='코스피'&&b.bandLo===1&&b.instRate===5,JSON.stringify(b));
+  const c=applyDetail(melcon(),{...det,joinManagers:[{orgType:'대표',orgNm:'미래에셋증권'},{orgType:'대표',orgNm:'KB증권'},{orgType:'인수',orgNm:'신영증권'}]});
+  ok('공동 대표주관은 함께 표기(인수단 제외)',c.leadManager==='미래에셋증권·KB증권',c.leadManager);
+  ok('/api/ipo 가 날짜 있는 빈 칸 종목만 상세 조회(8개씩, 실패는 빈 칸 유지)',
+     /async function ipoDetail\(code\)/.test(f)&&/api\/domestic\/ipo\/A\$\{code\}\/detail\/info/.test(f)
+     &&/\(x\.subStart \|\| x\.listDate\) &&\s*\(!x\.leadManager/.test(f)&&/Promise\.allSettled\(need\.slice\(i, i \+ 8\)/.test(f));
+  ok('상세 카드 행은 라벨|값 양쪽 정렬 + 구분선 (.acct 밖에서도)',
+     /\.ipo-detail-card \.ar\{display:flex;justify-content:space-between[^}]*border-bottom:1px solid var\(--line\)/.test(h)
+     &&/\.ipo-detail-card \.ak\{color:var\(--dim\)/.test(h)&&/\.ipo-detail-card \.av\{font-weight:700;text-align:right/.test(h));
+}
+
+/* ════ 공모주 기록 — 주관사 한 곳이면 증권사 자동 선택, 두 곳 이상일 때만 묻기 ════ */
+console.log('\n[IPO BROKER] 기록 폼 증권사 자동 선택');
+{
+  const h=fs.readFileSync(__d+'/ipo.html','utf8');
+  const grab=n=>{const i=h.indexOf('function '+n+'(');if(i<0)throw new Error('추출 실패: '+n);let d=0,j=h.indexOf('{',i);for(;j<h.length;j++){if(h[j]==='{')d++;else if(h[j]==='}'&&--d===0)break;}return h.slice(i,j+1);};
+  const bl=h.slice(h.indexOf('const IPO_BROKERS'),h.indexOf(';',h.indexOf('const IPO_BROKERS'))+1);
+  const el={iprec_brokers:{innerHTML:''},iprec_brokerhint:{textContent:''}};
+  const env=new Function('$','ipoEsc',bl+'\nlet ipoRecSel=null;\n'+grab('ipoLeadPick')+'\n'+grab('ipoRenderBrokers')+
+    '\nreturn {pick:ipoLeadPick,render:s=>{ipoRecSel=s;ipoRenderBrokers();}};')(id=>el[id],x=>String(x));
+  const one=env.pick('대신증권'), two=env.pick('미래에셋증권, 삼성증권'), dot=env.pick('미래에셋증권·KB증권'), none=env.pick('');
+  ok('주관사 한 곳 → 자동 선택',one.broker==='대신증권'&&one.leads.length===1,JSON.stringify(one));
+  ok('주관사 두 곳(쉼표·가운뎃점) → 미선택, 후보 2곳',two.broker===''&&two.leads.join('|')==='미래에셋증권|삼성증권'
+     &&dot.broker===''&&dot.leads.join('|')==='미래에셋증권|KB증권'&&none.broker===''&&none.leads.length===0,JSON.stringify([two,dot,none]));
+  env.render({name:'X',...two});
+  const btns=el.iprec_brokers.innerHTML.split('</button>').filter(Boolean);
+  ok('두 곳이면 후보만 표시·안내, 합친 이름 버튼 없음',/주관사가 2곳/.test(el.iprec_brokerhint.textContent)
+     &&/ipo-broker cand/.test(btns[0])&&/미래에셋증권/.test(btns[0])&&/ipo-broker cand/.test(btns[1])&&/삼성증권/.test(btns[1])
+     &&(el.iprec_brokers.innerHTML.match(/ cand/g)||[]).length===2&&!/, 삼성/.test(el.iprec_brokers.innerHTML)&&!/ipo-broker on/.test(el.iprec_brokers.innerHTML),
+     el.iprec_brokerhint.textContent+' / '+btns.slice(0,3).join(''));
+  env.render({name:'Y',...env.pick('iM증권')});
+  ok('한 곳이면 안내 없이 선택(목록 밖 증권사도 맨 앞)',el.iprec_brokerhint.textContent===''&&/ipo-broker on/.test(el.iprec_brokers.innerHTML.split('</button>')[0])
+     &&/iM증권/.test(el.iprec_brokers.innerHTML.split('</button>')[0]),el.iprec_brokers.innerHTML.slice(0,200));
+  ok('여러 곳인데 고르지 않으면 저장 막기',/if\(!ipoRecSel\.broker && \(ipoRecSel\.leads\|\|\[\]\)\.length>=2\)\{ alert/.test(grab('ipoRecSave')));
+  ok('일정·검색·계산기 경로 모두 ipoLeadPick 사용',['ipoRecPick','ipoRecPickStock','ipoToRecord'].every(n=>/\.\.\.ipoLeadPick\(/.test(grab(n))));
 }
 
 Promise.all(PENDING).then(()=>{
