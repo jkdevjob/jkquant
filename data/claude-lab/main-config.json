@@ -47,6 +47,30 @@
         "rank": 1,
         "promotion": "7일 연속 1위 · 안정 점수 +0.499 vs 메인 +0.410"
       }
+    },
+    {
+      "tab": "soxl",
+      "version": "g_soxl_r2lt30_ibs0.6_ma100_d5",
+      "name": "RSI(2) < 30 · 종가 위치(IBS) ≤ 0.6 · 100일 평균 위 · 최대 5일",
+      "rule": "확정 종가 RSI(2) < 30 · 종가 위치(IBS) ≤ 0.6 · 100일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+      "params": {
+        "rsiMax": 30,
+        "rsiN": 2,
+        "ibsMax": 0.6,
+        "downDays": 0,
+        "ma": 100,
+        "maxHoldDays": 5,
+        "tabSize": 0.5
+      },
+      "effectiveFrom": "2026-10-21",
+      "promotedAt": "2026-10-19T16:39:58.086942+00:00",
+      "prevVersion": "soxl_rsi2_meanrev_v1",
+      "by": "auto:arena-7d-top1",
+      "basis": {
+        "labGeneratedAt": "2026-10-20T01:39:58.086955+09:00",
+        "rank": 1,
+        "promotion": "7일 연속 1위 · 순위 점수 +0.346 vs 메인 +0.035"
+      }
     }
   ],
   "source": "cloudflare-opening-scheduler-claude-config"
