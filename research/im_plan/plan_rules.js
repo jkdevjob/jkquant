@@ -9,7 +9,10 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
   return {assets:[R,GA].concat(extra?[extra.sym]:[]), warm:Math.max(p.ma,p.look+1,(p.look2||0)+1,p.rMA||0,extra?(p.dMA||200):0)+1,
     bandOf:s=>s===R?p.sb*p.tw:0.02,
     target(k,cur,st){ const s=rv[k]; let w=Math.min(1,(p.s0*p.s0)/(s*s));
-      const c=P.C[G][k], m=gm[k]; if(st.g===undefined) st.g=c>m; if(c>m*(1+(p.gbOn??p.gb))) st.g=true; else if(c<m*(1-(p.gbOff??p.gb))) st.g=false;   // 들어갈 때(gbOn)·나올 때(gbOff) 밴드를 따로 줄 수 있다
+      const c=P.C[G][k], m=gm[k]; if(st.g===undefined) st.g=c>m; if(p.offN||p.offHard){   // 시간 확인: 이평×(1−gbOff) 아래가 offN 일 연속일 때만 나감 · offHard 아래로 떨어지면 바로 나감
+        st.n=(c<m*(1-(p.gbOff??p.gb)))?(st.n||0)+1:0;
+        if(c>m*(1+(p.gbOn??p.gb))) st.g=true; else if((p.offN&&st.n>=p.offN)||(p.offHard&&c<m*(1-p.offHard))) st.g=false; }
+      else if(c>m*(1+(p.gbOn??p.gb))) st.g=true; else if(c<m*(1-(p.gbOff??p.gb))) st.g=false;   // 들어갈 때(gbOn)·나올 때(gbOff) 밴드를 따로 줄 수 있다
       if(p.full&&!st.g) w=0;                       // 변형: Guard OFF 면 TECL 도 끔
       if(rm&&P.C[R][k]<rm[k]) w=Math.min(w,p.rFloor??0);   // 변형: TECL 자체 추세
       const t={}; t[R]=p.tw*w; t[GA]=st.g?p.gw:0;

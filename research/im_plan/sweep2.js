@@ -18,7 +18,7 @@ function combine(rows,pl,ws){   // rows: [[d,eq,saved]] · pl: {d:NAV}
 (async()=>{ const {pg,close}=await open([{sym:'SOXL'},{sym:'SYNSOXL'}]);
   const runIM=(o)=>pg.evaluate(o=>{ const r=RUN(o); return r.eqs.map(x=>[x[0],x[1],x[2]]); },o);
   for(const [lab,TK,P,R,G,from,y0] of [['실제','SOXL',prep(['TECL','TQQQ']),'TECL','TQQQ','2011-01-01',2011],['합성','SYNSOXL',prep(['SYNTECL','SYNTQQQ']),'SYNTECL','SYNTQQQ','2000-01-01',2000]]){
-    const o0=mk(P,R,G,{}); const plOf=(s,e)=>{ const m={}; sim(P,Object.assign({cap:1e6,from:s,to:e},o0)).eq.forEach(([d,v])=>m[d]=v); return m; };
+    const o0=mk(P,R,G,JSON.parse(process.env.PLAN||'{}'));   /* PLAN='{…}' 로 플랜 변형 */ const plOf=(s,e)=>{ const m={}; sim(P,Object.assign({cap:1e6,from:s,to:e},o0)).eq.forEach(([d,v])=>m[d]=v); return m; };
     const plFull=plOf(from); const d0=Object.keys(plFull).sort()[0], last=Object.keys(plFull).sort().pop();
     const starts=[]; for(let y=y0;y<=2021;y++) for(let m=1;m<=12;m++){ const s=`${y}-${String(m).padStart(2,'0')}-01`, e=`${y+5}-${String(m).padStart(2,'0')}-01`; if(s<d0||e>last) continue; starts.push([s,e]); }
     const plW=starts.map(([s,e])=>plOf(s,e));

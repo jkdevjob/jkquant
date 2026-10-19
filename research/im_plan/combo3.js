@@ -30,7 +30,7 @@ function roll(eq,y0){ const ds=eq.map(x=>x[0]); const R=[]; for(let y=y0;y<=2021
   const irx={}; require('./data/IRX.json').series.forEach(x=>irx[x.date]=x.close); await pg.evaluate(x=>{window.__IRX=x;},irx);
   for(const [lab,TK,P,R,G,from,y0] of [['실제','SOXL',prep(['TECL','TQQQ']),'TECL','TQQQ','2011-01-01',2011],['합성','SYNSOXL',prep(['SYNTECL','SYNTQQQ']),'SYNTECL','SYNTQQQ','2000-01-01',2000]]){
     for(const cap of [10000,100000]){
-      const pl={}; sim(P,Object.assign({cap,from},mk(P,R,G,{}))).eq.forEach(([d,v])=>pl[d]=v);
+      const pl={}; sim(P,Object.assign({cap,from},mk(P,R,G,JSON.parse(process.env.PLAN||'{}')))).eq.forEach(([d,v])=>pl[d]=v);   // PLAN='{…}' 로 플랜 변형
       { const s=stats(Object.entries(pl).sort().map(([d,v])=>[d,v/cap]),1), Rr=roll(Object.entries(pl).sort().map(([d,v])=>[d,v/cap]),y0);
         console.log(`\n■ ${lab} ${cap/1e4}만$ · 플랜 단독 ${f(s.cagr)}/${f(s.mdd)} · 5y롤링 중앙 ${f(q(Rr.map(x=>x.cagr),.5))}/${f(q(Rr.map(x=>x.mdd),.5))} 최악MDD ${f(Math.max(...Rr.map(x=>x.mdd)))}`); }
       for(const k of pickIM){ const r=await pg.evaluate(o=>{ const r=RUN(o); return r.eqs.map(x=>[x[0],x[1]]).concat([[r.last+'~',r.final]]); },Object.assign({cap,tkr:TK},IMV[k]));
