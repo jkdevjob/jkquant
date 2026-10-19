@@ -12,7 +12,7 @@ function synth(base,lev,fee,out,startPx=100){
   return rows; }
 module.exports={synth};
 if(require.main===module){
-  const s=synth('SOX',3,0.0095,'SYNSOXL'); synth('XLK',3,0.0095+0.035,'SYNTECL'); synth('NDX',3,0.0095,'SYNTQQQ');   // TECL 은 실제와 맞추려 연 3.5%p 비용 추가(검증: 2010~ 실제 40.6 vs 합성 39.4)
+  const s=synth('SOX',3,0.0095,'SYNSOXL'); synth('XLK',3,0.0095+0.035,'SYNTECL'); synth('NDX',3,0.0095,'SYNTQQQ'); synth('NDX',2,0.0095,'SYNQLD');   // SYNQLD: plan2.js 의 Guard 슬리브 QLD 합성(2010~ 실제 31.2 vs 합성 29.6)   // TECL 은 실제와 맞추려 연 3.5%p 비용 추가(검증: 2010~ 실제 40.6 vs 합성 39.4)
   const real=JSON.parse(fs.readFileSync(path.join(D,'SOXL.json'))).series; const m={}; s.forEach(r=>m[r.date]=r.close);
   // 겹치는 구간 연복리 비교 (실제 SOXL 조정종가 = 총수익)
   for(const [a,b] of [['2010-03-11','2026-10-12'],['2010-03-11','2015-12-31'],['2016-01-04','2020-12-31'],['2021-01-04','2026-10-12']]){

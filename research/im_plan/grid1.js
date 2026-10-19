@@ -36,6 +36,7 @@ const V={
   bearTp:{sig:{bearTP:10,bearMA:150}}, aGTp:{autoTp:true,sig:{guard:{tp:10}}}, aGBig0:{autoTp:true,sig:{guard:{big:0}}},
   aGTpM200:{autoTp:true,sig:{guard:{tp:10,ma:200}}}, aGTpM250:{autoTp:true,sig:{guard:{tp:10,ma:250}}}, aGTpB3:{autoTp:true,sig:{guard:{tp:10,band:0.03}}}, aGTpB0:{autoTp:true,sig:{guard:{tp:10,band:0}}},
   aGTpS:{autoTp:true,sig:{guard:{tp:10,sym:'SYNTQQQ'}}}, gTpS:{sig:{guard:{tp:10,sym:'SYNTQQQ'}}},
+  m1rev40:{autoTp:true,m1:{revertAfter:40}}, m1rev60:{autoTp:true,m1:{revertAfter:60}}, m1rev90:{autoTp:true,m1:{revertAfter:90}}, m1rev120:{autoTp:true,m1:{revertAfter:120}}, m1rev180:{autoTp:true,m1:{revertAfter:180}},
   base:{}, yield:{cashYield:true},
   g200:{cashYield:true,sig:{gateMA:200}}, g150:{cashYield:true,sig:{gateMA:150}}, g100:{cashYield:true,sig:{gateMA:100}},
   bear40:{cashYield:true,sig:{bearDivs:40,bearMA:150}}, bear30:{cashYield:true,sig:{bearDivs:30,bearMA:150}},
