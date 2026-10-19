@@ -460,6 +460,10 @@ html.had-user #authgate .bootwait{display:block}
    250px = 좌우 여백 50 + 기간·평가·최종 약 170 + 글자 크기 여유 30. MDD~투입 칸은 그대로 옆으로 넘긴다. */
 .htable.narrow td:first-child .pcell{min-width:clamp(96px,calc(100vw - 250px),170px);overflow-wrap:anywhere;word-break:keep-all}
 .htable.narrow td:first-child .pcell .cw{white-space:normal}
+/* 국내 종목명은 첫 칸의 기존 최소 폭 안에서만 쓴다. 긴 이름이 표를 넓히지 않게 한다. */
+.paper-title{display:flex;align-items:baseline;gap:4px;width:clamp(96px,calc(100vw - 250px),170px);max-width:100%}
+.paper-title .slink{flex:0 0 auto;white-space:nowrap}
+.paper-ticker-name{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;font-weight:500;color:var(--faint)}
 .htable.narrow tr.paper-row-compact td{padding-top:1px;padding-bottom:1px}
 .htable.narrow tr.paper-row-compact .slink{padding-top:1px;padding-bottom:1px;line-height:17px}
 .htable.narrow tr.paper-row-compact .cw{line-height:1.12}
@@ -531,6 +535,7 @@ html.had-user #authgate .bootwait{display:block}
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
   import { initializeFirestore, doc, getDoc, setDoc, runTransaction, deleteField } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { createPaperStore, previewPaperDoc } from '/jk-paper-store.mjs?v=1.0.0';
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -547,7 +552,9 @@ html.had-user #authgate .bootwait{display:block}
   const db = initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
-  window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction, deleteField };
+  const paperStore=createPaperStore({doc,getDoc,runTransaction,deleteField});
+  window.JKPaperStore={previewPaperDoc};
+  window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc:paperStore.getDoc, setDoc, runTransaction:paperStore.runTransaction, deleteField };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 <link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
@@ -585,7 +592,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.39</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.41</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1692,7 +1699,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.39</b> · 2026-10-14</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.41</b> · 2026-10-16</div>
   </footer>
 </div>
 
@@ -7839,6 +7846,38 @@ function paperOpts(tab, st){
   }
   return bits;
 }
+function paperTickerName(sym){
+  const code=String(sym||'').trim().toUpperCase();
+  if(!isKrCode(code)) return '';
+  const name=tickerLabel(code);
+  return name==='국내 '+code?'':String(name||'').trim();
+}
+function paperTitle(r){
+  const sym=String(r.sym||'').trim().toUpperCase();
+  const link=`<b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${esc(r.label)} 분석으로 이동 — ${esc(r.name||'')}">${esc(r.label)}</b>`;
+  if(!isKrCode(sym)) return link;
+  const name=esc(paperTickerName(sym));
+  return `<div class="paper-title">${link}<span class="paper-ticker-name" data-symbol="${sym}" title="${name}">${name}</span></div>`;
+}
+/* 직접 코드로 입력한 옛 세션도 이름을 찾는다. 결과 표는 먼저 그리고 이름만 채운다. */
+async function paperLoadTickerNames(body){
+  const uid=curUid, els=[...body.querySelectorAll('.paper-ticker-name')];
+  const symbols=[...new Set(els.map(el=>el.dataset.symbol))];
+  await Promise.all(symbols.map(async sym=>{
+    if(!isKrCode(sym)) return;
+    if(!paperTickerName(sym)) try{
+      const r=await fetchT(`/api/search?q=${encodeURIComponent(sym)}&limit=1`,{headers:{'Accept':'application/json'}},6000);
+      if(r.ok){
+        const j=await r.json();
+        const item=(j.items||[]).find(x=>x.kr&&x.symbol===sym&&typeof x.name==='string'&&x.name.trim());
+        if(item&&curUid===uid) rememberTickerName(sym,item.name.trim());
+      }
+    }catch(e){/* 이름 조회 실패는 성과 표를 막지 않는다. 다음 진입 때 다시 조회한다. */}
+    if(curUid!==uid) return;
+    const name=paperTickerName(sym);
+    els.filter(el=>el.dataset.symbol===sym).forEach(el=>{ el.textContent=name; el.title=name; });
+  }));
+}
 function paperStat(tab, sess){
   if(tab==='plan')return paperStatPlan(sess);
   const h=sess.hist||[]; if(!h.length) return null;
@@ -8238,7 +8277,6 @@ async function openPaper(){
         ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${r.cur==='krw'?paperWon(outAmt,1):(paperUsd(outAmt)+' · '+paperWon(outAmt,r.wonRate))}</span>`
         : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
       /* 세션 이름은 툴팁으로 — 칸에는 종목과 주요 설정을 적는다 (이름은 설정과 어긋날 수 있다) */
-      const _nm=String(r.name||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');
       const _sortName=(String(r.label||'')+' '+String(r.sym||'')+' '+String(r.name||''))
         .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
       const _sortTotal=ok?(+r.total||0)*(+r.wonRate||1):'';
@@ -8263,7 +8301,7 @@ async function openPaper(){
       const _paperOptsRest=_paperOpts.slice(_paperSplitAt);
       const _paperOptTopText=_paperOptsTop.length?' · '+_paperOptsTop.join(' · '):'';
       const _paperOptRestText=_paperOptsRest.length?`<span class="cw paper-opt-more">${_paperOptsRest.join(' · ')}</span>`:'';
-      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell"><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>
+      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell">${paperTitle(r)}<span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${paperDualMoney(r,r.total,r.wonRate)}</td>
@@ -8288,6 +8326,7 @@ async function openPaper(){
     h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시). <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
+    void paperLoadTickerNames(body);
   }
 }
 /* 모의 세션 전체의 시작일을 한 번에 바꾼다.
@@ -10596,7 +10635,8 @@ async function _commitStateRemote(where){
           why:'Firebase 문서 한도(1MiB) — 10/2 이전 앱이 쓰던 옛 형식 사본(state)을 본 문서에서 옮겼다'}));
         for(const k of Object.keys(plan.archive)) fields[k]=window.fb.deleteField();
       }
-      _dbPlan={bytes:plan.bytes, parts:plan.parts, archivedBytes:plan.archivedBytes};
+      _dbPlan={bytes:plan.bytes, parts:plan.parts, archivedBytes:plan.archivedBytes,
+        splitNew:!d.paperHistoryV1&&plan.parts.some(p=>p.k==='paperHistoryV1')};
       // stateV2가 정본이다. 다른 탭/기기 기록은 위에서 자동 합친 뒤 즉시 저장한다.
       tx.set(ref,fields,{merge:true});
       return nr;
@@ -10614,6 +10654,7 @@ async function _commitStateRemote(where){
     stateCloudPending=false;lastPushedJSON=JSON.stringify(candidate);setSync('ok');
     const done=_dbPlan||{bytes:0,parts:[]};
     if(done.archivedBytes>0){ _dbForceArchive=false; _dbArchivedNote=`✓ 10/2 이전 앱이 남긴 옛 형식 사본(${Math.round(done.archivedBytes/1024)}KB)을 보관 문서로 옮겨 클라우드 문서를 ${Math.round(done.bytes/1024)}KB 로 줄였습니다 — 저장이 다시 됩니다.`; }
+    if(done.splitNew)_dbArchivedNote+=' ✓ 모의 자동이력을 별도 문서에 분할 저장했습니다. 전체 거래기록과 수동 입력을 보존했습니다.';
     dbSizeReport(done.bytes,null,done);
     return true;
   }catch(e){
@@ -10635,10 +10676,9 @@ async function _commitStateRemote(where){
   }
 }
 /* ── 원장 문서 크기 ──────────────────────────────────────────────────
-   모든 기록이 users/{uid} 문서 하나에 들어간다. Firestore 는 문서 하나를 1MiB 까지만 받는다 —
-   넘으면 저장이 통째로 거절되고, 예전엔 사용자 이름 옆 점 하나만 빨개졌다(이유는 안 보였다).
-   모의 세션 장부는 거래일마다 늘어난다(실측: 모의 12세션 · 21개월 = 494KiB, 한 VR 세션만 122KiB).
-   80% 를 넘으면 미리 알리고, 저장이 실패하면 크기 때문인지 아닌지를 적는다. */
+   Firestore 문서 한도는 1MiB. 큰 모의 자동이력은 jk-paper-store가 users/{uid}/paperHistory로
+   나누고 읽을 때 원본 그대로 합친다. 아래 수치는 합쳐 읽은 장부가 아니라 저장되는 기본 문서 크기다.
+   실거래·수동 입력은 기본 문서에 유지하며 어떤 거래도 용량 때문에 잘라내지 않는다. */
 const DB_DOC_LIMIT=1048576, DB_DOC_WARN=Math.round(DB_DOC_LIMIT*0.8);
 function dbStateBytes(json){
   try{ return (typeof TextEncoder!=='undefined')?new TextEncoder().encode(String(json||'')).length:String(json||'').length; }
@@ -10668,17 +10708,20 @@ const DB_LEGACY_KEYS=['state','updated','stateRev'];
 /* 저장 계획: 저장 뒤 문서(d + fields)의 크기 · 칸별 내역 · 옛 사본을 옮길지.
    옮기는 건 옛 사본이 있고 (저장 뒤 크기가 경고선(80%)을 넘거나 바로 전에 크기로 거절됐을 때) 뿐 — 작은 문서는 손대지 않는다. */
 function dbPlanWrite(path, d, fields, force, canArchive){
-  const after=Object.assign({}, d||{}, fields||{});
+  const logical=Object.assign({}, d||{}, fields||{});
+  const physical=x=>(typeof window!=='undefined'&&window.JKPaperStore)?window.JKPaperStore.previewPaperDoc(x):x;
+  let after=physical(logical);
   let parts=fsDocParts(after), bytes=fsDocBytes(path,parts), archive=null, archivedBytes=0;
   if(canArchive!==false && d && d.state!==undefined && (force || bytes>DB_DOC_WARN)){
     archive={};
-    for(const k of DB_LEGACY_KEYS) if(d[k]!==undefined){ archive[k]=d[k]; delete after[k]; }
+    for(const k of DB_LEGACY_KEYS) if(d[k]!==undefined){ archive[k]=d[k]; delete logical[k]; }
     archivedBytes=parts.filter(p=>DB_LEGACY_KEYS.includes(p.k)).reduce((a,p)=>a+p.bytes,0);
+    after=physical(logical); // 옛 사본을 옮긴 뒤 분할 기준 아래가 되면 실제 저장도 다시 작은 형식이다.
     parts=fsDocParts(after); bytes=fsDocBytes(path,parts);
   }
   return {bytes, parts, archive, archivedBytes};
 }
-const DB_FIELD_LABEL={stateV2:'운영·모의 기록', state:'옛 형식 사본(10/2 이전)', scalp:'단타', fiveYearPlanV2:'5년 플랜', fiveYearPlan:'5년 플랜(옛)',
+const DB_FIELD_LABEL={stateV2:'운영·모의 기록', paperHistoryV1:'모의 이력 분할 목록', state:'옛 형식 사본(10/2 이전)', scalp:'단타', fiveYearPlanV2:'5년 플랜', fiveYearPlan:'5년 플랜(옛)',
   backtestState:'백테스트', backtestTickers:'백테스트 종목', jobApplications:'구직 지원', jobScraps:'구직 스크랩', tickerNameMemo:'종목 이름', strategyDefaultOverrides:'관리자 기본값'};
 function dbPartsText(parts, n){ return (parts||[]).slice(0,n||4).filter(p=>p.bytes>=1024).map(p=>`${DB_FIELD_LABEL[p.k]||p.k} ${Math.round(p.bytes/1024)}KB`).join(' · '); }
 /* 저장 실패 이유 — 크기 · 사용량 한도 · 권한 · 그 밖. 예전엔 'exceed' 만 보여도 크기 탓으로 적었다
@@ -10697,12 +10740,12 @@ function dbSizeMsg(bytes, err, parts){
   const raw=String(err&&(err.message||err.code)||err||'').slice(0,140);
   if(err){
     const kind=dbErrKind(err);
-    if(kind==='size') return {level:'err', text:`⚠ Firebase 문서 한 개의 한도(1024KB)를 넘어 클라우드에 저장되지 않았습니다 — 문서 전체 ${kb}KB${pt?' = '+pt:''}. 한도는 운영·모의 기록만이 아니라 이 문서의 모든 칸을 합한 크기입니다.${_dbArchiveBlocked?' 옛 형식 사본을 보관 문서로 옮기려 했지만 Firestore 규칙이 하위 문서 쓰기를 막았습니다 — 규칙(users/{uid}/하위 문서 허용) 게시가 필요합니다.':''} 이 화면에서 바꾼 것은 새로고침하면 사라집니다 — 안 쓰는 모의 세션을 지우거나 모의 시작일을 늦춰 크기를 줄여 주세요.`};
+    if(kind==='size') return {level:'err', text:`⚠ Firebase 문서 한 개의 한도(1024KB)를 넘어 클라우드에 저장되지 않았습니다 — 문서 전체 ${kb}KB${pt?' = '+pt:''}. 한도는 운영·모의 기록만이 아니라 이 문서의 모든 칸을 합한 크기입니다.${_dbArchiveBlocked?' 옛 형식 사본을 보관 문서로 옮기려 했지만 Firestore 규칙이 하위 문서 쓰기를 막았습니다 — 규칙(users/{uid}/하위 문서 허용) 게시가 필요합니다.':''} 모의 자동이력은 분할 저장하도록 처리합니다. 실패가 계속되면 다른 항목의 크기·하위 문서 저장 권한을 확인해야 합니다. 저장 전 새로고침하면 이 화면의 변경이 사라질 수 있으니 설정의 JSON 내보내기로 먼저 보관해 주세요.`};
     if(kind==='quota') return {level:'err', text:`⚠ Firebase 사용량 한도(요금제의 하루·월 한도)에 걸려 저장되지 않았습니다 — 기록 크기 문제가 아닙니다(문서 ${kb}KB · 한도의 ${pct}%). 한도가 풀리면 다시 저장됩니다. [${raw}]`};
     if(kind==='perm') return {level:'err', text:`⚠ 클라우드 저장 권한이 거절됐습니다 — 승인 상태나 Firebase 규칙을 확인해 주세요. [${raw}]`};
     return {level:'err', text:`⚠ 클라우드 저장에 실패했습니다 — ${raw} (문서 ${kb}KB · 한도의 ${pct}%)`};
   }
-  if(bytes>DB_DOC_WARN) return {level:'warn', text:`⚠ 클라우드 문서가 ${kb}KB 로 Firebase 한도(1024KB)의 ${pct}%입니다${pt?' — '+pt:''}. 모의 세션 장부는 거래일마다 늘어납니다 — 안 쓰는 모의 세션을 지우거나 모의 시작일을 늦춰 두세요.`};
+  if(bytes>DB_DOC_WARN) return {level:'warn', text:`⚠ 클라우드 기본 문서가 ${kb}KB 로 Firebase 한도(1024KB)의 ${pct}%입니다${pt?' — '+pt:''}. 큰 모의 자동이력은 분할 저장합니다. 다른 항목이 계속 커지면 저장 구조 점검이 필요합니다. 기록을 삭제하거나 시작일을 바꿀 필요는 없습니다.`};
   return null;
 }
 function dbSizeReport(bytes, err, plan){
@@ -10768,7 +10811,7 @@ async function pullRemote(){
     const ref=window.fb.doc(window.fb.db,'users',curUid),snap=await window.fb.getDoc(ref);
     const d=snap.exists()?(snap.data()||{}):{};
     dbReadMs=Date.now()-dbReadStart;
-    try{ dbReadKB=Math.round(fsDocBytes('users/'+curUid, fsDocParts(d))/1024); dbReadTop=dbPartsText(fsDocParts(d),4); }catch(e){}
+    try{ const stored=snap.paperStorageData?snap.paperStorageData():d; dbReadKB=Math.round(fsDocBytes('users/'+curUid, fsDocParts(stored))/1024); dbReadTop=dbPartsText(fsDocParts(stored),4); }catch(e){}
     if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object')cacheStrategyDefaults(d.strategyDefaultOverrides);
     KR_NAME_MEMO=(d&&d.tickerNameMemo&&typeof d.tickerNameMemo==='object')?JSON.parse(JSON.stringify(d.tickerNameMemo)):{};
     const hasV2=d&&validState(d.stateV2),legacy=d&&validState(d.state)?d.state:null;

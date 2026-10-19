@@ -159,7 +159,7 @@ jobs:
       - name: 오늘 탭 실시간 마감장부 우선·무매매·날짜 경계 검사
         run: |
           node scripts/test_scalping_daily_results.mjs
-          node --test tests/scalping-push.test.mjs
+          node --test tests/scalping-push.test.mjs tests/scalping-telegram-dedup.test.mjs
 
       - name: 시초가 사후라벨·엔진 값 검사
         run: python scripts/test_opening_signal_labels.py
@@ -187,6 +187,9 @@ jobs:
           python scripts/tenbagger_claude/mutation_test.py
           node scripts/test_tenbagger_claude.cjs
           node --test tests/research-claude-tenbagger.test.mjs
+
+      - name: 연구 R11 헤드라인 · 분봉 수집 값 시험
+        run: python scripts/test_news_collect.py
 
       - name: D-1 갭하락 · D-3 BTC 급락 값 시험 + 변이 시험
         run: |
@@ -650,7 +653,9 @@ jobs:
         run: node scripts/check-no-browser-storage.cjs
 
       - name: 거래이력 보존 불변식 검사
-        run: node scripts/check-history-preservation.cjs
+        run: |
+          node scripts/check-history-preservation.cjs
+          node --test tests/paper-storage.test.mjs
 
       - name: 회귀 테스트 (엔진 차분 + UI 배선 + DOM 구조 + 모의 장부)
         run: node regression-check.js index.html backtest.html testdata

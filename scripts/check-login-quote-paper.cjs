@@ -476,6 +476,60 @@ await t('P10 폰 폭: 첫 칸 윗줄(줄바꿈 없음)은 설정 2개까지 — 
   const opts=['20분할','익절 자동','LOC 3줄','단리'], top=' · '+opts.slice(0,+m[1]).join(' · ');
   assert.equal('SOXL'+top,'SOXL · 20분할 · 익절 자동');
 });
+/* 국내 종목명은 계산 결과 캐시를 바꾸지 않고 화면에만 붙인다. */
+function paperNameContext(src,memo={}){
+  const C={KR_NAME_MEMO:{...memo},curUid:'u1',Set}; vm.createContext(C);
+  const defs=[src.match(/const KR_CODE_RE=[^\n]+/)[0],src.match(/const KR_ETF_NAME=\{[\s\S]*?\n\};/)[0],src.match(/const esc=[^\n]+/)[0],
+    ...['function isKrCode(t)','function tickerLabel(t)','function paperTickerName(sym)','function paperTitle(r)','async function paperLoadTickerNames(body)'].map(m=>fnOf(src,m))];
+  vm.runInContext(defs.join('\n'),C); return C;
+}
+await t('P17 국내 종목명: 전략 옆 작은 글씨·기존 칸 폭 안 말줄임 · 숫자/영문 코드·이름 escape·해외 제외 값 및 변이3종',async()=>{
+  const verify=src=>{
+    const C=paperNameContext(src,{'472150':'테스트 국내 ETF','0094M0':'긴 국내 <펀드> & "배당" 이름'});
+    const row=sym=>({tab:'dca',id:'p1',label:'거치(일시금)',name:'내 <세션> & "보관"',sym});
+    assert.equal(C.paperTickerName(' 0094m0 '),'긴 국내 <펀드> & "배당" 이름');
+    assert.equal(C.paperTickerName('122630'),'KODEX 레버리지','기존 이름 매핑도 사용');
+    assert.equal(C.paperTickerName('999999'),'','모르는 이름을 코드로 꾸미지 않음');
+    const a=C.paperTitle(row('472150')), b=C.paperTitle(row('0094M0')), us=C.paperTitle(row('SOXL'));
+    assert(a.includes('>거치(일시금)</b><span class="paper-ticker-name" data-symbol="472150" title="테스트 국내 ETF">테스트 국내 ETF</span>'));
+    assert(b.includes('긴 국내 &lt;펀드&gt; &amp; &quot;배당&quot; 이름</span>'),'이름 텍스트·툴팁 이스케이프');
+    assert(!b.includes('<펀드>')); assert(!us.includes('paper-ticker-name'),'해외 티커는 기존 전략 링크만');
+    assert(us.includes("gotoSess('dca','p1')"),'분석 이동 유지');
+    assert(us.includes('title="거치(일시금) 분석으로 이동 — 내 &lt;세션&gt; &amp; &quot;보관&quot;"'),'세션 이름은 안전한 툴팁에만 표시');
+    const title=src.match(/\.paper-title\{([^}]+)\}/)[1], name=src.match(/\.paper-ticker-name\{([^}]+)\}/)[1];
+    assert(title.includes('display:flex')&&title.includes('width:clamp(96px,calc(100vw - 250px),170px)')&&title.includes('max-width:100%'),'기존 첫 칸 폭으로 제한');
+    for(const css of ['flex:1 1 0','min-width:0','overflow:hidden','text-overflow:ellipsis','white-space:nowrap','font-size:9px'])assert(name.includes(css),css);
+    assert(/\.paper-title \.slink\{flex:0 0 auto;white-space:nowrap\}/.test(src),'전략명은 줄이지 않는다');
+    assert(fnOf(src,'async function openPaper()').includes('${paperTitle(r)}'),'실제 표 렌더 연결');
+  };
+  verify(html);
+  for(const [from,to] of [
+    ['if(!isKrCode(sym)) return link;','if(false) return link;'],
+    ['const name=esc(paperTickerName(sym));','const name=paperTickerName(sym);'],
+    ['gap:4px;width:clamp(96px,calc(100vw - 250px),170px);max-width:100%','gap:4px;width:auto;max-width:100%']
+  ]){ assert(html.includes(from),from); assert.throws(()=>verify(html.replace(from,to)),assert.AssertionError,'변이가 값 단언에 걸려야 함: '+from); }
+});
+await t('P18 이름 없는 국내 코드만 조회·중복 세션 한 번 · 정확한 코드 이름만 채움·실패 시 표 유지·로그아웃 응답 폐기',async()=>{
+  const C=paperNameContext(html,{'472150':'이미 아는 이름'}), saved=[], calls=[];
+  C.rememberTickerName=(sym,name)=>{saved.push([sym,name]);C.KR_NAME_MEMO[sym]=name;};
+  const el=sym=>({dataset:{symbol:sym},textContent:'',title:''});
+  const a=el('472150'),b=el('0094M0'),c=el('0094M0'),d=el('888888'),e=el('999999');
+  C.fetchT=async(url,opt,ms)=>{
+    calls.push(url); assert.equal(ms,6000);
+    if(url.includes('888888'))throw Error('offline');
+    return {ok:true,json:async()=>({items:[url.includes('999999')?{kr:true,symbol:'999998',name:'다른 코드'}:{kr:true,symbol:'0094M0',name:'조회한 국내 ETF'}]})};
+  };
+  await C.paperLoadTickerNames({querySelectorAll:()=>[a,b,c,d,e]});
+  assert.equal(calls.length,3,'이미 아는 이름 제외·중복 코드 한 번');
+  assert.deepEqual(saved,[['0094M0','조회한 국내 ETF']]);
+  assert.equal(a.textContent,'이미 아는 이름'); assert.equal(b.textContent,'조회한 국내 ETF'); assert.equal(c.title,b.textContent);
+  assert.equal(d.textContent,''); assert.equal(e.textContent,'','다른 종목 응답 무시');
+  const late=el('777777'); C.fetchT=async()=>{C.curUid='u2';return {ok:true,json:async()=>({items:[{kr:true,symbol:'777777',name:'이전 계정 응답'}]})};};
+  await C.paperLoadTickerNames({querySelectorAll:()=>[late]});
+  assert.equal(saved.length,1); assert.equal(late.textContent,'');
+  const op=fn('async function openPaper()');
+  assert(op.indexOf('body.innerHTML=h;')<op.indexOf('void paperLoadTickerNames(body);'),'표를 먼저 그리고 비동기 이름 조회');
+});
 /* ── 자산플랜 열기 (2026-10-07 사용자 화면: "자산플랜만 로그인 페이지가 다르고 오류가 나고 시세도 느리다") ── */
 await t('P11 자산플랜 8초: 로그인됐고 원장을 읽는 중이면 로그인 상자를 띄우지 않고 지금 단계 문구를 그대로 둔다 · 로그인 안 된 채 무응답이면 예전처럼 로그인 상자',async()=>{
   const tm=(plan.match(/setTimeout\(function\(\)\{ var h=document\.documentElement;[\s\S]*?\}, 8000\);/)||[''])[0]; assert(tm,'plan 8s timer');

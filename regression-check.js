@@ -1474,7 +1474,7 @@ console.log('[25] 모의 성과 → 분석 이동');
   /* 줄 전체를 누르게 했더니 숫자를 보려고 짚기만 해도 화면이 넘어갔다 —
      이제 '전략 이름'만 누른다. 줄에는 onclick 이 남아 있으면 안 된다. */
   ok('전략 이름을 누르면 이동',
-     /<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{r\.label\}<\/b>/.test(idx)
+     /<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{esc\(r\.label\)\}<\/b>/.test(idx)
      && /\.htable \.slink\{/.test(idx));
   ok('줄 전체는 더 이상 안 눌린다', !/<tr class="jump"/.test(idx) && !/\.htable tr\.jump\{/.test(idx));
   ok('눌리는 곳이 폰에서도 짚힌다', /\.htable \.slink\{[^}]*padding:4px 7px/.test(idx)
@@ -1500,9 +1500,9 @@ console.log('[25] 모의 성과 → 분석 이동');
   ok('여섯 탭 모두 분석 칩이 있다', chips===6, chips+'개');
   /* 툴팁에는 '어디로 가는지' 와 '어느 세션인지' 가 같이 있어야 한다 —
      칸에서 세션 이름을 뺐으므로(설정과 어긋날 수 있어서) 이름을 확인할 곳이 여기뿐이다 */
-  ok('누르는 곳 설명도 분석으로', /title="\$\{r\.label\} 분석으로 이동 — \$\{_nm\}"/.test(idx));
+  ok('누르는 곳 설명도 분석으로', /title="\$\{esc\(r\.label\)\} 분석으로 이동 — \$\{esc\(r\.name\|\|''\)\}"/.test(idx));
   ok('세션 이름은 툴팁에만 (칸에는 종목·설정)',
-     /const _nm=String\(r\.name\|\|''\)\.replace\(\/<\/g,'&lt;'\)/.test(idx)
+     /title="[^"\n]*분석으로 이동 — \$\{esc\(r\.name\|\|''\)\}"/.test(idx)
      && /<span class="cw">\$\{r\.sym\}\$\{_paperOptTopText\}<\/span>\$\{_paperOptRestText\}/.test(idx));
   ok('전략 이름을 누르라고 알려 준다', /<b style="color:var\(--vio\)">전략 이름<\/b>을 누르면/.test(idx));
 }
@@ -10066,9 +10066,10 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
 
   /* ② 서버 — 실코드 onRequest 를 가짜 Firestore(조건부 쓰기까지) · 시세 · 한투 로 돌린다.
      비동기라 자식 프로세스에서 돌리고 결과만 받는다. */
-  function __atHarness(){
+  async function __atHarness(){
     const fs=require('fs'); const IM=process.argv[2], AT=process.argv[3];
-    const body=fs.readFileSync(IM,'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(AT,'utf8').replace(/^import [^\n]*\n/m,'').replace(/^export /gm,'')+'\nreturn onRequest;';
+    const {hydratePaperDoc,packPaperDoc}=await import(require('url').pathToFileURL(require('path').resolve(require('path').dirname(AT),'../../jk-paper-store.mjs')).href);
+    const body=fs.readFileSync(IM,'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(AT,'utf8').replace(/^import [^\n]*\n/gm,'').replace(/^export /gm,'')+'\nreturn onRequest;';
     const W=v=>{ if(v===null||v===undefined) return {nullValue:null}; if(typeof v==='string') return {stringValue:v};
       if(typeof v==='boolean') return {booleanValue:v}; if(typeof v==='number') return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
       if(Array.isArray(v)) return {arrayValue:{values:v.map(W)}}; const f={}; for(const [k,x] of Object.entries(v)) f[k]=W(x); return {mapValue:{fields:f}}; };
@@ -10113,8 +10114,8 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
         throw new Error('예상 못한 호출 '+u); };
       const cryptoM={subtle:{importKey:async()=>({}),sign:async()=>new ArrayBuffer(8)}};
       const fastTimeout=(fn)=>{ Promise.resolve().then(fn); return 0; };
-      const onRequest=new Function('fetch','crypto','setTimeout','Date','Response','URL','URLSearchParams','TextEncoder','btoa','atob',body)
-        (fetchM,cryptoM,fastTimeout,FD,Response,URL,URLSearchParams,TextEncoder,btoa,atob);
+      const onRequest=new Function('fetch','crypto','setTimeout','Date','Response','URL','URLSearchParams','TextEncoder','btoa','atob','hydratePaperDoc',body)
+        (fetchM,cryptoM,fastTimeout,FD,Response,URL,URLSearchParams,TextEncoder,btoa,atob,hydratePaperDoc);
       return async(qs)=>{ const r=await onRequest({request:new Request('https://jkquant.pages.dev/api/autotrade?'+qs,{headers:{'x-autotrade-key':'K'}}),env}); return {status:r.status,j:await r.json()}; }; };
     const IN='2026-09-24T19:30:00Z', users={'users/U1':{state:{inf:{sessions}}}};
     const cnt=(log,t)=>log.filter(x=>x.t===t).length;
@@ -10147,6 +10148,14 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
         out.S7={orders:cnt(log,'order'),claim:r.j.claim||'',marked:r.j.marked}; }
       { const st=mkStore(Object.assign({'autotrade/U1':{lastDate:'2026-09-23'}},users)), log=[];            // S8 차지 전 다시 읽기 실패
         const r=await mkRun(st,log,IN,{name:'G',failGet:true})('dry=0'); out.S8={orders:cnt(log,'order'),claim:r.j.claim||''}; }
+      { // S9 실제 저장 계층의 분할 원본을 서버 주문 계산까지 냉시작으로 읽는다.
+        const big={stateV2:{inf:{sessions:sessions.map((s,i)=>i===1?{...s,hist:[{date:'2026-09-23',kind:'1회매수',price:100,qty:10,fee:1,sim:true,ts:1,note:'x'.repeat(700000)}]}:s)}},stateV2Rev:1};
+        const packed=await packPaperDoc(big),documents={'users/U1':packed.data};
+        for(const [id,data] of packed.parts)documents['users/U1/paperHistory/'+id]=data;
+        const before=await mkRun(mkStore({'users/U1':big}),[],IN,{name:'before'})('dry=1'),log=[];
+        const after=await mkRun(mkStore(documents),log,IN,{name:'after'})('dry=1');
+        out.S9={same:JSON.stringify(before.j.sessions)===JSON.stringify(after.j.sessions),parts:log.filter(x=>x.t==='fsget'&&x.p.includes('/paperHistory/')).length,orders:cnt(log,'order')};
+      }
       console.log(JSON.stringify(out));
     })().catch(e=>console.log(JSON.stringify({error:String(e&&e.stack||e)})));
   }
@@ -10157,7 +10166,7 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
     try{ H=JSON.parse((r.stdout||'').trim().split('\n').pop()||'{}'); }catch(e){ H={error:'출력 해석 실패: '+(r.stdout||'').slice(0,200)+(r.stderr||'').slice(0,300)}; }
     try{ fs.unlinkSync(tmp); }catch(e){} }
   const J=o=>JSON.stringify(o||H.error||{});
-  const {S1={},S2={},S3={},S4={},S5={},S6={},S7={},S8={}}=H;
+  const {S1={},S2={},S3={},S4={},S5={},S6={},S7={},S8={},S9={}}=H;
   ok('② 창 안 첫 실행 — 기본 하방3줄이라 모의 두 세션 4+4건을 VTS 로 · 실계좌 세션은 막힘 · 첫 주문 전에 오늘을 차지(문서가 없을 때만 만든다)',
      S1.orders===8 && S1.sessRes==='p1:4,p2:4' && S1.envs==='vts' && /실계좌 자동주문 차단/.test(S1.realSkip)
      && S1.claimFirst===true && S1.firstCond==='exists=false' && S1.claim==='오늘 주문 차지', J(S1));
@@ -10172,6 +10181,7 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
   ok('② 드라이런 — 주문 0 · 쓰기 0', S6.orders===0 && S6.patches===0 && S6.sent==='드라이런 — 주문 안 냄', J(S6));
   ok('② 차지하지 못하면 안 낸다 — 쓰기 실패(500) · 다시 읽기 실패(500) 둘 다 0건',
      S7.orders===0 && S7.claim==='실행 기록을 쓰지 못했습니다 (500)' && S7.marked===false && S8.orders===0 && S8.claim==='실행 기록을 읽지 못했습니다 (500)', J([S7,S8]));
+  ok('② 모의 자동이력 분할 전후 실제 서버 주문 계산이 같다 · 조각을 읽은 뒤 계산 · 드라이런 주문 0건',S9.same===true&&S9.parts>0&&S9.orders===0,J(S9));
 
   /* ③ 공개 로그 — 워크플로의 요약 스크립트를 그대로 떼어 표본 응답에 돌린다 */
   { const m=y.match(/node - resp\.json <<'NODE'[^\n]*\n([\s\S]*?)\n[ \t]*NODE\n/);
@@ -11158,7 +11168,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const nightly=fs.readFileSync(__d+'/scripts/nightly_scalping_research.py','utf8');
 
   ok('공통 Telegram API는 서버키 인증 + eventId 중복방지',
-     /x-monitor-key/.test(alertApi) && /eventId required/.test(alertApi) && /caches\.default/.test(alertApi));
+     /x-monitor-key/.test(alertApi) && /eventId required/.test(alertApi) && /signal-telegram/.test(alertApi) && /telegramReceipt\(env,signal,"claim"\)/.test(alertApi) && !/caches\.default/.test(alertApi));
   ok('공통 Telegram API는 매수/매도/장 종료 결과만 전송하고 주문 API 없음',
      /\["buy","sell","summary"\]\.includes\(stage\)/.test(alertApi) && /stage==="buy"/.test(alertApi) && !/op=order|opening-execute/.test(alertApi));
   ok('데이트레이딩 ③매수·④매도 상태변화 Telegram',
