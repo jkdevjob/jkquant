@@ -64,6 +64,39 @@ async function mobileList() {
 }
 
 const codeOf = (c) => String(c || "").replace(/^A/, "").toUpperCase();
+
+// 3) 종목별 상세(stock.naver.com/api/domestic/ipo/A{code}/detail/info)
+//    청약이 끝나거나 상장하면 모바일 목록에서 빠져 주간사·밴드·시장·경쟁률이 비었다(멜콘 10/15 상장).
+//    상세는 상장 뒤에도 남아 있으므로 빈 칸만 여기서 채운다.
+async function ipoDetail(code) {
+  const r = await fetch(`https://stock.naver.com/api/domestic/ipo/A${code}/detail/info`, {
+    headers: { "User-Agent": UA, "Accept": "application/json", "Referer": `https://stock.naver.com/ipo/A${code}` },
+    cf: { cacheTtl: 3600 },
+  });
+  if (!r.ok) throw new Error("detail HTTP " + r.status);
+  return r.json();
+}
+// 상세 응답 → 항목의 '빈 칸'만 채운다(캘린더·목록에서 온 값은 덮지 않는다)
+function applyDetail(it, d) {
+  if (!it || !d) return it;
+  const info = d.ipoInfo || {}, ex = d.listedExamination || {}, rs = d.registrationStatement || {};
+  const df = d.demandForecastingResult || {}, cf = d.confirmedInfo || {};
+  const mgrs = Array.isArray(d.joinManagers) ? d.joinManagers : [];
+  const lead = mgrs.filter((m) => m && m.orgType === "대표").map((m) => m.orgNm).filter(Boolean);
+  const lm = (lead.length ? lead : mgrs.slice(0, 1).map((m) => m && m.orgNm).filter(Boolean)).join("·");
+  if (!it.leadManager && lm) it.leadManager = lm;
+  if (!it.market && ex.marketType) it.market = MARKET[ex.marketType] || ex.marketType;
+  if (it.bandLo == null) it.bandLo = num(rs.hopePubStart);
+  if (it.bandHi == null) it.bandHi = num(rs.hopePubEnd);
+  if (it.poPrice == null) it.poPrice = num(df.fixPubPrice);
+  if (it.instRate == null) it.instRate = num(df.cmptnRate);
+  if (it.subRate == null) it.subRate = num(cf.fnlCmptRatio);
+  if (!it.subStart && info.poStartDate) it.subStart = info.poStartDate;
+  if (!it.subEnd && info.poEndDate) it.subEnd = info.poEndDate;
+  if (!it.listDate && info.lcalDate) it.listDate = info.lcalDate;
+  if (!it.status && info.ipoStatus) it.status = info.ipoStatus;
+  return it;
+}
 const TITLE_SUFFIX = /\s*(상장일|청약\s*시작일|청약\s*마감일|청약일|환불일|수요예측[^\s]*)\s*$/;
 
 export async function onRequestGet({ request }) {
@@ -134,6 +167,13 @@ export async function onRequestGet({ request }) {
       if (!it.listDate) it.listDate = ymd8(x.listedDueDate);
       if (!it.url) it.url = x.endUrl || "";
     }
+  }
+
+  // 3) 날짜가 있는데 주간사 등이 빈 종목만 상세로 보충(8개씩 동시, 최대 60개). 실패한 종목은 빈 칸 그대로.
+  const need = [...byCode.values()].filter((x) => x.name && (x.subStart || x.listDate) &&
+    (!x.leadManager || !x.market || x.bandLo == null || x.instRate == null)).slice(0, 60);
+  for (let i = 0; i < need.length; i += 8) {
+    await Promise.allSettled(need.slice(i, i + 8).map((it) => ipoDetail(it.code).then((d) => applyDetail(it, d))));
   }
 
   // 상태 보정: 목록에서 빠진(청약 끝난) 종목은 날짜로 상태를 적는다
