@@ -11311,7 +11311,9 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      /const ORDER_DEADLINE=85940;/.test(gd)&&/if\(stage==="close"\)return hms>=152000&&hms<152800;/.test(gd)
      &&/if\(!stageWindow\(stage,now\.hms\)\)/.test(gd));
   ok('D-1 선택 기준값은 전날 밤 명단(rule)에서만 읽는다 — JS 에 -2/-29 하드코딩 없음',
-     /gapdownPicks\(cands,wl\.rule\)/.test(gd)&&!/-2(\.0)?\b|-29/.test(gr.replace(/\/\/.*$/gm,'')));
+     /const ch=choosePicks\(cands,Array\.isArray\(recheck\)\?sanitizeCandidates\(recheck,wl\):\[\],wl\.rule\)/.test(gd)&&/picks:gapdownPicks\(f\.length\?f:cands,rule\)/.test(gd)
+     &&!/-2(\.0)?\b|-29/.test(gr.replace(/\/\/.*$/gm,''))
+     &&!/-2(\.0)?\b|-29/.test(ow.slice(ow.indexOf('export function recheckCodes('),ow.indexOf('\n}\n',ow.indexOf('export function recheckCodes('))).replace(/\/\/.*$/gm,'')));   // 08:58 다시 볼 종목도 명단 규칙으로만
   ok('KIS 예상체결가 조회는 GET 읽기전용(op=expected, FHKST01010200)',
      /if \(op === "expected"\)/.test(kis)&&/tr_id: "FHKST01010200"/.test(kis)
      &&kis.indexOf('op === "expected"')<kis.indexOf('export async function onRequestPost'));
@@ -11448,7 +11450,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&!/op=order|method:\s*["']POST["']/.test(orApi)&&/fetch\("\/api\/claude-lab"/.test(scl2)
      &&/판정용 \(10\/1~\)/.test(scl2)&&/id="clVer">v\d+\.\d+\.\d+</.test(scl2));
   ok('D-1 v2: 통과 종목 수(시장 투매 강도) 기록 · 기준 5 · 연구 변형 3·5 · 화면 표시',
-     /const qualified=gapdownPicks\(cands,\{\.\.\.wl\.rule,picks:1e9\}\)\.length;/.test(gd)
+     /const qualified=gapdownPicks\(cands,\{\.\.\.rule,picks:1e9\}\)\.length;/.test(gd)&&/const ch=choosePicks\(cands,[^\n]*,wl\.rule\),picks=ch\.picks,qualified=ch\.qualified;/.test(gd)
      &&/const BREADTH_V2_MIN=5;/.test(gd)&&/v2Signal:qualified>=BREADTH_V2_MIN/.test(gd)
      &&/BREADTH_MIN = \[3, 5\]/.test(py)&&/qualified\.get\(r\["date"\], 0\) >= k/.test(py)
      &&/rsiPassed=sum\(1 for x in cands if x\["rsiPrev"\] < PARAMS\["rsiMax"\]\)/.test(py)
