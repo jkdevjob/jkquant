@@ -1,26 +1,28 @@
 {
-  "updatedAt": "2026-10-19T09:16:40+09:00",
+  "updatedAt": "2026-10-19T10:50:16+09:00",
   "rangeDays": 180,
   "cutoffDate": "2026-04-22",
   "historyCount": 0,
   "sourceStatuses": {
     "잡코리아": {
       "ok": true,
-      "count": 480,
+      "count": 482,
       "failed_pages": 0,
       "mode": "직접"
     },
     "사람인": {
       "ok": true,
-      "count": 771,
-      "failed_pages": 0,
+      "count": 760,
+      "failed_pages": 1,
       "max_pages": 8,
-      "errors": [],
+      "errors": [
+        "대전 Java p1: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=1&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7ff82aef3e60>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))"
+      ],
       "mode": "직접"
     },
     "커리어": {
       "ok": true,
-      "count": 4,
+      "count": 3,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
@@ -29,7 +31,25 @@
     },
     "인크루트": {
       "ok": true,
-      "count": 4,
+      "count": 5,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "고용24": {
+      "ok": true,
+      "count": 1,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "점핏": {
+      "ok": true,
+      "count": 3,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
@@ -45,34 +65,7 @@
       "errors": [],
       "mode": "검색"
     },
-    "고용24": {
-      "ok": true,
-      "count": 0,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "알바몬": {
-      "ok": true,
-      "count": 8,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "점핏": {
-      "ok": true,
-      "count": 6,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "로켓펀치": {
+    "아이엠잡": {
       "ok": true,
       "count": 0,
       "successful_queries": 8,
@@ -90,18 +83,27 @@
       "errors": [],
       "mode": "검색"
     },
-    "알바천국": {
+    "로켓펀치": {
       "ok": true,
-      "count": 6,
+      "count": 1,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
       "errors": [],
       "mode": "검색"
     },
-    "아이엠잡": {
+    "알바몬": {
       "ok": true,
-      "count": 0,
+      "count": 5,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "알바천국": {
+      "ok": true,
+      "count": 1,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
@@ -109,8 +111,45 @@
       "mode": "검색"
     }
   },
-  "count": 492,
+  "count": 493,
   "jobs": [
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50193357",
+      "title": "공공기관 정보시스템 유지관리 업무 정규직 채용(세종시)",
+      "company": "㈜베가웍스",
+      "body": "오늘 뜬 따끈한 공고 스크랩 공공기관 정보시스템 유지관리 업무 정규직 채용(세종시) ㈜베가웍스 세종 솔루션·SI·CRM·ERP, 앱개발자, 시스템엔지니어, 소프트웨어개발자 즉시 지원 경력1년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50193357",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "세종"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "employmentTypes": [
+        "정규직"
+      ],
+      "career": "경력 1년↑",
+      "education": "대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-11-18",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-10-19",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-10-19",
+      "lastSeen": "2026-10-19",
+      "lastChecked": "2026-10-19"
+    },
     {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50181331",
       "title": "[항공우주/세종] 발사체 탑재장비 HW 개발",
@@ -3225,7 +3264,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50181949",
       "title": "건양대학교병원 바이오메디컬 인공지능",
       "company": "미래융합교육원",
-      "body": "건양대학교병원 바이오메디컬 인공지능 스크랩 ~ 10/31(토) 입사지원 대전 서구 경력무관 대졸↑ 교육생 Java , Python , 데이터분석가 , 데이터엔지니어 , 데이터라벨링 외 수정일 26/10/12",
+      "body": "신입 지원 가능 스크랩 건양대학교병원 바이오메디컬 인공지능 미래융합교육원 대전 서구 학원·어학원·교육원, DBA, 데이터사이언티스트, AI/ML엔지니어 즉시 지원 신입·경력 • 숙소 지원",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50181949",
       "source": "잡코리아",
       "sources": [
@@ -3241,7 +3280,7 @@
       "employmentTypes": [
         "인턴"
       ],
-      "career": "경력무관",
+      "career": "신입·경력",
       "education": "대졸↑",
       "salary": null,
       "shortPay": null,
@@ -3255,6 +3294,43 @@
       "closedAt": "",
       "closeReason": "",
       "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-19",
+      "lastChecked": "2026-10-19"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50128029",
+      "title": "[항공우주/대전] 위성,항공기 등 비행 SW 기술총괄, 책임급 이상",
+      "company": "항공우주",
+      "body": "탄탄한 중견기업 스크랩 [항공우주/대전] 위성,항공기 등 비행 SW 기술총괄, 책임급 이상 중소기업(300명이하) 대전 유성구 자동차·조선·철강·항공, 시스템엔지니어, 소프트웨어개발자, AI/ML엔지니어 즉시 지원 경력12년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50128029",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "경력 12년↑",
+      "education": "대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-10-25",
+      "deadlineSource": "지원마감일",
+      "deadlineCheckedAt": "2026-10-19",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-10-12",
       "lastSeen": "2026-10-19",
       "lastChecked": "2026-10-19"
     },
@@ -3706,43 +3782,6 @@
       "lastChecked": "2026-10-13"
     },
     {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50128029",
-      "title": "[항공우주/대전] 위성,항공기 등 비행 SW 기술총괄, 책임급 이상",
-      "company": "항공우주",
-      "body": "탄탄한 중견기업 스크랩 [항공우주/대전] 위성,항공기 등 비행 SW 기술총괄, 책임급 이상 중소기업(300명이하) 대전 유성구 자동차·조선·철강·항공, 시스템엔지니어, 소프트웨어개발자, AI/ML엔지니어 즉시 지원 경력12년↑",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50128029",
-      "source": "잡코리아",
-      "sources": [
-        "잡코리아"
-      ],
-      "locations": [
-        "대전"
-      ],
-      "categories": [
-        "java_ai"
-      ],
-      "employmentTypes": [
-        "정규직",
-        "인턴"
-      ],
-      "career": "경력 12년↑",
-      "education": "초대졸↑",
-      "salary": null,
-      "shortPay": null,
-      "postedDate": "",
-      "dateSource": "수집일",
-      "deadline": "2026-10-31",
-      "deadlineSource": "지원마감일",
-      "deadlineCheckedAt": "2026-10-17",
-      "status": "closed",
-      "missCount": 1,
-      "closedAt": "2026-10-17",
-      "closeReason": "상세공고가 아닌 페이지로 이동",
-      "firstSeen": "2026-10-12",
-      "lastSeen": "2026-10-12",
-      "lastChecked": "2026-10-17"
-    },
-    {
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55262880",
       "title": "[대전근무] Go 에이전트 개발자 채용(D-29)",
       "company": "(주)엑소스피어랩스",
@@ -4150,43 +4189,6 @@
       "lastChecked": "2026-10-11"
     },
     {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50133342",
-      "title": "공공정보시스템 구축 및 운영유지 PM",
-      "company": "시선소프트㈜",
-      "body": "스크랩 공공정보시스템 구축 및 운영유지 PM 시선소프트㈜ 대전 유성구 솔루션·SI·CRM·ERP, PL·PM·PO, 백엔드개발자, 프론트엔드개발자 즉시 지원 경력10년↑",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50133342",
-      "source": "잡코리아",
-      "sources": [
-        "잡코리아"
-      ],
-      "locations": [
-        "대전"
-      ],
-      "categories": [
-        "java_ai"
-      ],
-      "employmentTypes": [
-        "정규직",
-        "인턴"
-      ],
-      "career": "경력 10년↑",
-      "education": "대졸↑",
-      "salary": null,
-      "shortPay": null,
-      "postedDate": "",
-      "dateSource": "수집일",
-      "deadline": "2026-11-07",
-      "deadlineSource": "구조화데이터:validThrough",
-      "deadlineCheckedAt": "2026-10-19",
-      "status": "active",
-      "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
-      "firstSeen": "2026-10-09",
-      "lastSeen": "2026-10-19",
-      "lastChecked": "2026-10-19"
-    },
-    {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50135077",
       "title": "[포토샵] [단기] 인물 사진 보정 / 수정 작업",
       "company": "㈜헤브론코리아",
@@ -4305,6 +4307,43 @@
       "lastChecked": "2026-10-19"
     },
     {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50132253",
+      "title": "[ 상장기업 ] Vision AI Application Engineer",
+      "company": "상장기업",
+      "body": "스크랩 [ 상장기업 ] Vision AI Application Engineer 중견기업(300명이상) 세종 반도체·디스플레이·광학, 시스템엔지니어, AI/ML엔지니어, 필드엔지니어 즉시 지원 경력 • 기숙사 지원 , 주택자금대출",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50132253",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "세종"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "경력 5년↑",
+      "education": "대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-11-15",
+      "deadlineSource": "지원마감일",
+      "deadlineCheckedAt": "2026-10-19",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-10-09",
+      "lastSeen": "2026-10-19",
+      "lastChecked": "2026-10-19"
+    },
+    {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50132573",
       "title": "RICOH 복합기 유지보수 엔지니어 모집(정규직/대전)",
       "company": "퓨처웨어㈜",
@@ -4339,43 +4378,6 @@
       "closeReason": "",
       "firstSeen": "2026-10-09",
       "lastSeen": "2026-10-19",
-      "lastChecked": "2026-10-19"
-    },
-    {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50132253",
-      "title": "[ 상장기업 ] Vision AI Application Engineer",
-      "company": "상장기업",
-      "body": "스크랩 [ 상장기업 ] Vision AI Application Engineer 중견기업(300명이상) 세종 반도체·디스플레이·광학, 시스템엔지니어, AI/ML엔지니어, 필드엔지니어 즉시 지원 경력 • 기숙사 지원 , 주택자금대출",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50132253",
-      "source": "잡코리아",
-      "sources": [
-        "잡코리아"
-      ],
-      "locations": [
-        "세종"
-      ],
-      "categories": [
-        "java_ai"
-      ],
-      "employmentTypes": [
-        "정규직",
-        "인턴"
-      ],
-      "career": "경력 5년↑",
-      "education": "대졸↑",
-      "salary": null,
-      "shortPay": null,
-      "postedDate": "",
-      "dateSource": "수집일",
-      "deadline": "2026-11-15",
-      "deadlineSource": "지원마감일",
-      "deadlineCheckedAt": "2026-10-18",
-      "status": "closed",
-      "missCount": 1,
-      "closedAt": "2026-10-19",
-      "closeReason": "상세공고가 아닌 페이지로 이동",
-      "firstSeen": "2026-10-09",
-      "lastSeen": "2026-10-18",
       "lastChecked": "2026-10-19"
     },
     {
@@ -4488,6 +4490,44 @@
       "firstSeen": "2026-10-09",
       "lastSeen": "2026-10-09",
       "lastChecked": "2026-10-10"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50133342",
+      "title": "공공정보시스템 구축 및 운영유지 PM",
+      "company": "시선소프트㈜",
+      "body": "공공정보시스템 구축 및 운영유지 PM 스크랩 ~ 11/07(토) 입사지원 대전 유성구 경력 7~15년 대졸↑ 정규직 웹개발 , 백엔드/서버개발 , SI개발 , 프론트엔드 , 개발PM 외 등록일 26/10/08",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50133342",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아",
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "employmentTypes": [
+        "정규직"
+      ],
+      "career": "경력 7~15년",
+      "education": "대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-10-08",
+      "dateSource": "등록/수정일",
+      "deadline": "2026-11-07",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-10-19",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-10-09",
+      "lastSeen": "2026-10-19",
+      "lastChecked": "2026-10-19"
     },
     {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50124401",
