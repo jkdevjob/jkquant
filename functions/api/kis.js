@@ -147,6 +147,7 @@ async function readJson(url, init, tries = 3) {
     if (i) await sleep(400 * i);                 // 400ms → 800ms
     const r = await fetch(url, init);
     j = await r.json().catch(() => ({}));
+    if (TOKEN_BAD(j)) { await dropToken(bearerOf(init)); return j; }   // 거절된 토큰은 버린다(다음 호출이 새로 받음)
     if (!RATE_LIMITED(j)) return j;
   }
   return j;
@@ -157,41 +158,85 @@ async function readJson(url, init, tries = 3) {
 // 쓸 수 있어서 모듈 변수 캐시가 자주 비어 있다 — 그때마다 새로 발급하다 제한에 걸렸다.
 // 그래서 인스턴스 밖(엣지 캐시)에도 둔다. 캐시 키는 라우팅되지 않는 내부 호스트라
 // 바깥에서 이 URL 로 토큰을 꺼내갈 수는 없다.
-let _tok = { at: 0, token: null, env: null };
-const TOKKEY = (env) => "https://kis-token.internal/" + encodeURIComponent(base(env));
-const TOK_TTL = 6 * 60 * 60;                                   // KIS 토큰 수명은 24시간 — 여유있게 6시간만 쓴다
-
-async function getToken(env) {
-  const now = Date.now();
-  if (_tok.token && _tok.env === base(env) && now - _tok.at < TOK_TTL * 1000) return _tok.token;
-
-  const cache = (typeof caches !== "undefined" && caches.default) || null;
-  if (cache) {
-    try {
-      const hit = await cache.match(TOKKEY(env));
-      if (hit) {
-        const t = (await hit.text()).trim();
-        if (t) { _tok = { at: now, token: t, env: base(env) }; return t; }
-      }
-    } catch (e) { /* 캐시는 있으면 좋은 것 — 없으면 그냥 발급한다 */ }
+// 2026-10-20 한투 알림톡: "접근 토큰은 1일 1회 발급 원칙, 유효기간(24시간) 내 잦은 발급 시 이용 제한".
+// 예전엔 6시간만 쓰고 엣지 캐시가 데이터센터마다 따로라 하루에 여러 번 새로 받았다 → 이제
+//   ① 이 인스턴스 메모리 → ② 이 데이터센터 엣지 캐시 → ③ 정시 스케줄러 Worker 저장소(모의투자 토큰만 · 감시키)
+//   → ④ 그래도 없으면 새로 받고 ②③ 에 맡긴다. 만료 1시간 전까지 같은 토큰을 쓴다.
+// 실전 토큰은 ③ 에 맡기지 않는다(이 서버 밖으로 내보내지 않음). 한투가 토큰을 거절하면(만료·무효) 버리고 다음 호출에서 새로 받는다.
+let _toks = {};                                                 // 환경 주소|앱키 → { token, exp, k, mk } — 실전 · 모의를 따로 둔다
+const TOKKEY = (k) => "https://kis-token.internal/v2/" + k;
+const TOK_MARGIN_MS = 60 * 60 * 1000;                           // 만료 1시간 전부터는 새로 받는다
+const TOK_WORKER = "https://jkquant-opening-scheduler.mumae4.workers.dev";   // _claude_main.js WORKER 와 같은 주소(시험이 확인)
+const TOKEN_BAD = (j) => /EGW0012[123]/.test(JSON.stringify(j || {}));   // 유효하지 않은 · 만료된 토큰
+const tokFresh = (t, now) => !!(t && t.token && +t.exp - now > TOK_MARGIN_MS);
+const monitorKey = (env) => String(env.OPENING_MONITOR_KEY || env.AUTOTRADE_KEY || "").trim();
+const bearerOf = (init) => String((init && init.headers && init.headers.authorization) || "").replace(/^Bearer /, "");
+// 이름표 — 환경 주소 + 앱키의 해시 앞 16자리(앱키 자체는 밖으로 보내지 않는다 · 앱키를 바꾸면 새 이름표라 옛 토큰을 안 쓴다)
+export async function tokenId(env) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(base(env) + "|" + String(env.KIS_APPKEY || "")));
+  return [...new Uint8Array(d)].slice(0, 8).map(x => x.toString(16).padStart(2, "0")).join("");
+}
+async function central(mk, method, body, k) {
+  try {
+    const r = await fetch(TOK_WORKER + "/kis-token" + (method === "GET" ? "?k=" + k : ""), {
+      method, headers: { "x-monitor-key": mk, "content-type": "application/json" }, signal: AbortSignal.timeout(3000),
+      ...(method === "GET" ? {} : { body: JSON.stringify(body) }) });
+    const j = await r.json().catch(() => ({}));
+    return r.ok && j.ok ? j : null;
+  } catch (e) { return null; }                                  // 저장소가 안 되면 예전처럼 직접 받는다(호출을 막지 않음)
+}
+const edge = () => (typeof caches !== "undefined" && caches.default) || null;
+async function edgeRead(k) {
+  try { const hit = edge() && await edge().match(TOKKEY(k)); return hit ? JSON.parse(await hit.text()) : null; }
+  catch (e) { return null; }                                    // 캐시는 있으면 좋은 것 — 없으면 다음 단계로
+}
+async function edgePut(k, t, now) {
+  if (!edge()) return;
+  try {
+    const sec = Math.max(60, Math.floor((t.exp - TOK_MARGIN_MS - now) / 1000));
+    await edge().put(TOKKEY(k), new Response(JSON.stringify({ token: t.token, exp: t.exp }), {
+      headers: { "cache-control": "max-age=" + sec, "content-type": "application/json" } }));
+  } catch (e) { /* 저장 실패해도 동작은 한다 */ }
+}
+export async function getToken(env) {
+  const now = Date.now(), b = base(env), id = b + "|" + String(env.KIS_APPKEY || "");
+  if (tokFresh(_toks[id], now)) return _toks[id].token;
+  const k = await tokenId(env);
+  const mk = isReal(env) ? "" : monitorKey(env);                // 실전 토큰은 Worker 에 맡기지 않는다
+  const keep = (t) => { _toks[id] = { token: t.token, exp: +t.exp, k, mk }; return t.token; };
+  const e = await edgeRead(k);
+  if (tokFresh(e, now)) return keep(e);
+  if (mk) {
+    const c = await central(mk, "GET", null, k);
+    if (tokFresh(c, now)) { await edgePut(k, c, now); return keep(c); }
   }
-
-  const r = await fetch(base(env) + "/oauth2/tokenP", {
+  const r = await fetch(b + "/oauth2/tokenP", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ grant_type: "client_credentials", appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET }),
   });
   const j = await r.json().catch(() => ({}));
   if (!j.access_token) throw new Error("KIS 토큰 발급 실패: " + (j.error_description || j.msg1 || r.status));
-  _tok = { at: now, token: j.access_token, env: base(env) };
-  if (cache) {
-    try {
-      await cache.put(TOKKEY(env), new Response(j.access_token, {
-        headers: { "cache-control": "max-age=" + TOK_TTL, "content-type": "text/plain" } }));
-    } catch (e) { /* 저장 실패해도 동작은 한다 */ }
-  }
-  return j.access_token;
+  const life = Number(j.expires_in) > 0 ? Number(j.expires_in) * 1000 : 864e5;   // 보통 86400초(24시간)
+  // 한투가 알려주는 만료 시각(한국시간 "YYYY-MM-DD HH:MM:SS")이 있으면 그것을 쓴다 — 6시간 안 재요청엔 예전 토큰을 돌려주기 때문
+  const at = Date.parse(String(j.access_token_token_expired || "").replace(" ", "T") + "+09:00");
+  const t = { token: j.access_token, exp: Math.min(at > now ? at : now + life, now + 864e5) };
+  await edgePut(k, t, now);
+  if (mk) await central(mk, "POST", { k, token: t.token, exp: t.exp }, k);
+  return keep(t);
 }
+// 한투가 토큰을 거절하면(만료 · 무효) 그 토큰만 메모리 · 엣지 캐시 · Worker 저장소에서 지운다 — 다음 호출이 새로 받는다.
+// 거절된 그 호출을 다시 내지는 않는다(주문은 자동 재시도 금지). 그 사이 다른 곳이 새로 받은 토큰은 건드리지 않는다.
+export async function dropToken(token) {
+  if (!token) return;
+  for (const [id, t] of Object.entries(_toks)) {
+    if (t.token !== token) continue;
+    delete _toks[id];
+    try { const e = await edgeRead(t.k); if (e && e.token === token) await edge().delete(TOKKEY(t.k)); } catch (e) { /* 없으면 그만 */ }
+    if (t.mk) await central(t.mk, "POST", { k: t.k, drop: token }, t.k);
+  }
+}
+export function _resetTokenForTest() { _toks = {}; }
 
 async function hashkey(env, body) {
   const r = await fetch(base(env) + "/uapi/hashkey", {
@@ -870,6 +915,7 @@ export async function onRequestPost({ request, env }) {
         body: JSON.stringify(ordU),
       });
       const j = await r.json().catch(() => ({}));
+      if (TOKEN_BAD(j)) await dropToken(token);               // 토큰 거절 — 버리기만(주문은 다시 내지 않음)
       return { j, ok: String(j.rt_cd) === "0" };
     };
     const dressed = (dvsn, j, ok, extra) => {
@@ -886,7 +932,7 @@ export async function onRequestPost({ request, env }) {
          (그물이 끊기거나 응답이 없으면 이미 들어갔을 수 있으니 두 번 내면 이중 주문이다)
          지금은 한투가 답을 줘서 "안 받았다" 고 말한 경우다. 안 받은 주문은 없는 주문이니
          다른 주문구분으로 다시 내도 겹치지 않는다. 던져진 예외나 초당제한은 해당 없다. */
-      if (!ok && wantDvsn !== "00" && !RATE_LIMITED(j)) {
+      if (!ok && wantDvsn !== "00" && !RATE_LIMITED(j) && !TOKEN_BAD(j)) {   // 토큰 거절이면 다른 주문구분도 똑같이 거절된다
         const first = { code: wantDvsn, msg: j.msg1 || "주문 실패", rt: String(j.msg_cd || j.rt_cd || "") };
         ({ j, ok } = await send("00"));
         return dressed("00", j, ok, { fellBack: true, firstTry: first });
@@ -911,6 +957,7 @@ export async function onRequestPost({ request, env }) {
       body: JSON.stringify(ord),
     });
     const j = await r.json().catch(() => ({}));
+    if (TOKEN_BAD(j)) await dropToken(token);                 // 토큰 거절 — 버리기만(주문은 다시 내지 않음)
     const ok = String(j.rt_cd) === "0";
     // 주문은 절대 자동 재시도하지 않는다 — 응답이 유실된 경우 이중 주문이 될 수 있다.
     // 제한에 걸렸으면 사람이 보고 다시 누르게 한다.
