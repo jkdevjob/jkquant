@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {createPaperStore,packPaperDoc,hydratePaperDoc,previewPaperDoc,PAPER_HISTORY_FIELD} from '../jk-paper-store.mjs';
 
 const clone=x=>JSON.parse(JSON.stringify(x));
@@ -199,6 +200,58 @@ test('session reorder hydrates by identity, and an explicitly cleared history re
   assert.deepEqual((await createPaperStore(f.sdk).getDoc(f.ref)).data().stateV2,reversed.stateV2);
 });
 
+/* 2026-10-20: 실거래 한 건을 저장할 때마다 바뀌지 않은 모의 세션 수 MB 를 다시 복사·분할·해시했다(아이폰에서 '한참 가만히').
+   같은 글자면 같은 결과라 원문 글자로 기억해 다시 쓴다. 쓰는 내용은 그대로여야 하고, 바뀐 세션은 새로 계산해야 한다. */
+test('saving again reuses packing and verification of unchanged sessions (same bytes, far fewer hashes); a changed session is hashed afresh',async()=>{
+  const f=firestore({'users/u1':{stateV2:{inf:{sessions:[]}}}});await save(f,fixture());
+  const subtle=globalThis.crypto.subtle,real=subtle.digest;let n=0;
+  subtle.digest=function(...a){n++;return real.apply(this,a);};
+  try{
+    const cur=(await f.store.getDoc(f.ref)).data(),before=clone(Object.fromEntries(f.docs));
+    n=0;await save(f,cur);
+    const manifest=f.docs.get('users/u1')[PAPER_HISTORY_FIELD];
+    assert(n<=manifest.sessions.length,`unchanged sessions must not be re-split and re-hashed: ${n} digests for ${manifest.sessions.length} sessions`);
+    assert.deepEqual(manifest,before['users/u1'][PAPER_HISTORY_FIELD]);
+    for(const [k,v] of Object.entries(before))if(k!=='users/u1')assert.deepEqual(f.docs.get(k),v,k);
+    const next=(await f.store.getDoc(f.ref)).data();next.stateV2.inf.sessions[3].hist.push({sim:true,ts:777,price:1,qty:1});
+    await save(f,next);
+    const e=f.docs.get('users/u1')[PAPER_HISTORY_FIELD].sessions.find(x=>x.id==='p3');
+    assert.equal(e.hash,createHash('sha256').update(JSON.stringify(next.stateV2.inf.sessions[3])).digest('hex'),'changed session is packed from its new text');
+    assert.deepEqual((await createPaperStore(f.sdk).getDoc(f.ref)).data().stateV2,next.stateV2);
+  }finally{delete subtle.digest;if(subtle.digest!==real)subtle.digest=real;}
+});
+
+// 이미 검증한 원문은 이 계정의 조각이 캐시에 다 남아 있을 때만 다시 쓴다 — 밀려났으면 저장소에서 다시 읽고 검사한다
+async function evictedPartScenario(store){
+  const f=firestore({'users/u1':{stateV2:{inf:{sessions:[]}}}});if(store)f.store=store(f.sdk);
+  await save(f,fixture());await f.store.getDoc(f.ref);
+  // 조각은 내용 주소라 같은 글자면 하나로 합쳐진다 — 줄마다 번호를 달아 조각 260개가 서로 다르게 한다
+  const big={stateV2:{inf:{sessions:[{id:'big',paper:true,hist:Array.from({length:260},(_,i)=>({sim:true,note:String(i).padStart(6,'0')+'y'.repeat(60000)}))}]},vr:{sessions:[]}}};
+  const p=await packPaperDoc(big);assert(p.parts.size>256,'distinct parts: '+p.parts.size);
+  f.docs.set('users/u9',storedMap(p.data));for(const [id,v] of p.parts)f.docs.set('users/u9/paperHistory/'+id,v);
+  await f.store.getDoc(f.sdk.doc(f.db,'users','u9'));   // 다른 계정의 조각 260개가 캐시(256)를 밀어낸다
+  f.docs.delete('users/u1/paperHistory/'+f.docs.get('users/u1')[PAPER_HISTORY_FIELD].sessions[0].parts[0]);
+  return f.store.getDoc(f.ref);
+}
+test('verified reuse needs every part still in this account cache: after eviction a missing part blocks the read again',async()=>{
+  await assert.rejects(evictedPartScenario(),{code:'paper-history-unavailable'});
+});
+
+test('memo invariants reject an id-keyed pack memo and reuse without the cache check (2 mutations)',async()=>{
+  const source=readFileSync(new URL('../jk-paper-store.mjs',import.meta.url),'utf8');
+  const load=async(pairs)=>{let s=source;for(const [from,to] of pairs){assert(s.includes(from),'mutation target '+from);s=s.replace(from,to);}
+    return import('data:text/javascript;base64,'+Buffer.from(s).toString('base64'));};
+  { const m=await load([['let m=PACKED.get(original);','let m=PACKED.get(String(s.id));'],['m=memo(PACKED,original,','m=memo(PACKED,String(s.id),']]);
+    const f=firestore({'users/u1':{stateV2:{inf:{sessions:[]}}}});f.store=m.createPaperStore(f.sdk);
+    const d=fixture();await save(f,d);const next=clone(d);next.stateV2.inf.sessions[3].hist.push({sim:true,ts:777,price:1,qty:1});await save(f,next);
+    let detected=false;try{assert.deepEqual((await m.createPaperStore(f.sdk).getDoc(f.ref)).data().stateV2,next.stateV2);}catch{detected=true;}
+    assert(detected,'must reject mutation: id-keyed pack memo'); }
+  { const m=await load([["e.parts.every(id=>cache.has(path+'/'+id))?","true?"]]);
+    // 위 시험은 '거절되어야 한다'를 본다 — 고친 코드를 빼면 거절이 사라져 그 시험이 빨간불이 된다
+    const outcome=await evictedPartScenario(m.createPaperStore).then(()=>'read',()=>'blocked');
+    assert.equal(outcome,'read','mutation must change the outcome the eviction test checks: reuse without the cache check'); }
+});
+
 test('value invariants reject disabled splitting, lost rows, uncommitted parts and insertion-order signatures (4 mutations)',async()=>{
   const source=readFileSync(new URL('../jk-paper-store.mjs',import.meta.url),'utf8');
   const mutations=[
@@ -227,7 +280,7 @@ test('value invariants reject disabled splitting, lost rows, uncommitted parts a
 test('all current stateV2 consumers use the adapter, including server order calculations',()=>{
   const read=f=>readFileSync(new URL('../'+f,import.meta.url),'utf8');
   for(const f of ['index.html','admin.html','plan.html']){
-    assert.match(read(f),/createPaperStore/);assert.match(read(f),/jk-paper-store\.mjs\?v=1\.0\.0/);
+    assert.match(read(f),/createPaperStore/);assert.match(read(f),/jk-paper-store\.mjs\?v=1\.0\.1/);
   }
   const server=read('functions/api/autotrade.js');
   assert.match(server,/await hydratePaperDoc\(rawDoc/);
