@@ -14,10 +14,11 @@ const toMap=eq=>{ const m={}; eq.forEach(([d,v])=>{ if(!String(d).endsWith('~'))
   const runIM=(o)=>pg.evaluate(o=>{ const r=RUN(o); return r.eqs.map(x=>[x[0],x[1]]); },o);
   for(const [lab,TK,P,R,G,starts,winY0] of [['실제','SOXL',prep(['TECL','TQQQ']),'TECL','TQQQ',[['2011~(전체)','2011-01-01'],['2022-01~(화면과 같은 4.8년)','2022-01-03']],2011],['합성','SYNSOXL',prep(['SYNTECL','SYNTQQQ']),'SYNTECL','SYNTQQQ',[['2000~(닷컴·2008 포함)','2000-01-03']],2000]]){
     const planOf=(cap,from,to,p)=>toMap(sim(P,Object.assign({cap,from,to},mk(P,R,G,p||{}))).eq);
-    const cases=async(from,to)=>{ const pl0=planOf(20000,from,to), pl0b=planOf(30000,from,to), plg=planOf(20000,from,to,{gbOn:0.01,gbOff:0.03}), plgb=planOf(30000,from,to,{gbOn:0.01,gbOff:0.03});
+    const NP=JSON.parse(process.env.NEWPLAN||'{"gbOn":0.01,"gbOff":0.03,"sbDn":0,"sbUp":0.15}');   // 새 플랜(기본: Guard −3% + TECL 비대칭)
+    const cases=async(from,to)=>{ const pl0=planOf(20000,from,to), pl0b=planOf(30000,from,to), plg=planOf(20000,from,to,NP), plgb=planOf(30000,from,to,NP);
       const d0=Object.keys(pl0).sort()[0]; const im10=toMap(await runIM(Object.assign({cap:10000,tkr:TK,from:d0,to},IMO))), im30=toMap(await runIM(Object.assign({cap:30000,tkr:TK,from:d0,to},IMO)));
       const norm=m=>Object.keys(m).sort().map(d=>[d,m[d]]);
-      return { '무매 100% (3만)':norm(im30), '무매1만+플랜2만 따로':sum(im10,pl0), '무매1만+플랜2만 연1회':mixYear(im10,pl0,1/3), '플랜 100% (3만)':norm(pl0b), '무매1만+새플랜2만 따로':sum(im10,plg), '새플랜 100% (Guard −3%)':norm(plgb) }; };
+      return { '무매 100% (3만)':norm(im30), '무매1만+플랜2만 따로':sum(im10,pl0), '무매1만+플랜2만 연1회':mixYear(im10,pl0,1/3), '플랜 100% (3만)':norm(pl0b), '무매1만+새플랜2만 따로':sum(im10,plg), '무매1만+새플랜2만 연1회':mixYear(im10,plg,1/3), '새플랜 100%':norm(plgb) }; };
     for(const [nm,from] of starts){ const C=await cases(from); console.log(`\n■ ${lab} ${nm}`);
       for(const [k,eq] of Object.entries(C)){ const s=stats(eq,eq[0][1]); console.log(`  ${k.padEnd(22)} CAGR ${f(s.cagr)}% · MDD ${f(s.mdd)}% · 최종 ${f(eq[eq.length-1][1]/eq[0][1])}배`); } }
     // 5년 롤링(창마다 새로 시작)
