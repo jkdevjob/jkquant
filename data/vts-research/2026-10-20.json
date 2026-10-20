@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-20T14:22:18.522486+09:00",
+  "mode": "read-only-vts-execution-research",
+  "from": "2026-09-25",
+  "to": "2026-10-20",
+  "archiveDays": 18,
+  "strategies": [
+    {
+      "strategy": "opening",
+      "days": 18,
+      "reports": 18,
+      "internalTrades": 33,
+      "kisOrders": 51,
+      "completeMatches": 6,
+      "buyMatches": 8,
+      "sellMatches": 6,
+      "avgEntrySlippageCostPct": -0.20135329581366518,
+      "avgExitSlippageCostPct": 0.15126153964804176,
+      "avgRoundTripSlippageCostPct": 0.06339958398824397,
+      "avgInternalPnlPct": -0.8407906524883034,
+      "avgVtsGrossPnlPct": 0.004208870675679692,
+      "avgVtsNetPnlPct": -0.4512706961696123,
+      "avgBrokerCostRatePct": 0.45547956684528934,
+      "avgObservedExecutionDragPct": 0.5188791508335333,
+      "frictionGapVsInternal025Pct": 0.2688791508335333,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 6,
+      "totalBrokerEstimatedCostsWon": 51522.0,
+      "avgBrokerEstimatedCostsWon": 8587.0,
+      "avgEntryOrderLagSecApprox": 123.25,
+      "avgExitOrderLagSecApprox": 130.66666666666666,
+      "avgBrokerNotifyLagSec": 0.0,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    },
+    {
+      "strategy": "daytrading",
+      "days": 10,
+      "reports": 10,
+      "internalTrades": 24,
+      "kisOrders": 31,
+      "completeMatches": 0,
+      "buyMatches": 0,
+      "sellMatches": 0,
+      "avgEntrySlippageCostPct": null,
+      "avgExitSlippageCostPct": null,
+      "avgRoundTripSlippageCostPct": null,
+      "avgInternalPnlPct": null,
+      "avgVtsGrossPnlPct": null,
+      "avgVtsNetPnlPct": null,
+      "avgBrokerCostRatePct": null,
+      "avgObservedExecutionDragPct": null,
+      "frictionGapVsInternal025Pct": null,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 0,
+      "totalBrokerEstimatedCostsWon": 0,
+      "avgBrokerEstimatedCostsWon": null,
+      "avgEntryOrderLagSecApprox": null,
+      "avgExitOrderLagSecApprox": null,
+      "avgBrokerNotifyLagSec": null,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    }
+  ],
+  "latest": {
+    "date": "2026-10-20",
+    "reports": [
+      {
+        "strategy": "opening",
+        "internalTrades": 0,
+        "kisOrders": 3,
+        "matched": 0,
+        "matches": [],
+        "unmatched": [
+          {
+            "code": "009540",
+            "name": "HD한국조선해양",
+            "side": "매수",
+            "orderTime": "085813",
+            "orderQty": 4,
+            "fillQty": 4,
+            "fillPrice": 265000,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "329180",
+            "name": "HD현대중공업",
+            "side": "매수",
+            "orderTime": "085810",
+            "orderQty": 3,
+            "fillQty": 3,
+            "fillPrice": 339000,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          },
+          {
+            "code": "004800",
+            "name": "효성",
+            "side": "매수",
+            "orderTime": "085807",
+            "orderQty": 8,
+            "fillQty": 8,
+            "fillPrice": 123000,
+            "remainingQty": 0,
+            "rejectedQty": 0,
+            "canceled": false,
+            "orderType": "시장가"
+          }
+        ]
+      }
+    ]
+  }
+}
