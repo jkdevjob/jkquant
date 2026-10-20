@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "date": "2026-10-21",
+  "preparedAt": "2026-10-20T22:12:36.851Z",
+  "mainSha": "3ecc056ec443982ce479138b5656f2cbf6f655ed",
+  "dataSha": "89c88a93bcb4686208f0ea7e760c0884a6de34c7",
+  "previousReportCommit": "f4b9a81b61b0e4b3560d8ac98063593f3fcc4688",
+  "previousReportDate": "2026-10-20",
+  "decision": "채택 보류. 기존 운영전략·주문·계좌·장부·main·PR·배포 변경 없음.",
+  "sourceTimes": {
+    "shadowGeneratedAt": "2026-10-20T22:48:28.955351+09:00",
+    "nightlyGeneratedAt": "2026-10-21T00:37:39.971327+09:00",
+    "claudeGeneratedAt": "2026-10-21T03:45:17.255726+09:00",
+    "tenbaggerGeneratedAt": "2026-10-20T15:17:01.840925+00:00",
+    "shadowLatestSourceDates": {"opening":"2026-10-20","daytrading":"2026-10-20","crypto":"2026-10-17","soxl":"2026-10-19"}
+  },
+  "focusedReview": {
+    "registeredAt": "2026-10-20T22:09:17.360Z",
+    "hypothesis": "기존 시초가 entry_by_0920 제한이 같은 원본엔진·동시점 모집단·비용에서 baseline보다 손실을 줄이는지 조건 재탐색 없이 20일 자료로 계속 검증한다.",
+    "cost": "0.23%+편도2.5호가 fallback,09:30청산·일별가중 동일;실측슬리피지 표본 부족.",
+    "regime": "갭+2~+7%,무매매일 포함,동일 모집단·자본·빈도",
+    "oosRule": "20보관일/50기준거래/30후보거래,all 평균+0.1%p 및 last20+0.05%p 우위;결과 후 문턱 변경 금지.",
+    "previousRejected": ["R1","R3","R8","R9","R10"],
+    "execution": "원본 nightly_scalping_research.opening_report()의 실제 20일 자료에서 baseline/entry_by_0920 모두0건 확인. +1%별도그림자와 혼합하지 않음.",
+    "archiveDays": 21,
+    "baselineTrades": 45,
+    "candidateTrades": 13,
+    "baselineMeanTradePct": -0.5517419002217966,
+    "candidateMeanTradePct": -0.4808735625510133,
+    "edgePctPoint": 0.07086833767078327,
+    "requiredEdgePctPoint": 0.1,
+    "status": "collecting-no-new-eligible-trade",
+    "candidateSampleReady": false,
+    "newShadowProposal": null,
+    "holdReason": "보관일만 충족하고 기준/후보 거래수 및 all우위 문턱 미달.20일 양쪽 무매매는 효능 근거가 아님."
+  },
+  "baseline": {
+    "opening": {"latestDate":"2026-10-20","newTrades":0,"dailyNetPct":0,"trades":29,"recordDays":7,"avgDailyPct":-0.7846594210792187,"profitFactor":0.31911109601327253,"maxDrawdownPct":-5.407310304508983,"worstDayPct":-2.5497220257425637,"plus1Days":0,"plus5Weeks":0,"weekPct":0,"weekTargetGapPct":5},
+    "daytrading": {"latestDate":"2026-10-20","newTrades":[{"name":"삼성전기","pnlPct":1.75},{"name":"성호전자","pnlPct":-1.25},{"name":"대덕전자","pnlPct":1.75}],"dailyNetPct":0.75,"trades":34,"recordDays":13,"avgDailyPct":-0.3419913702644214,"profitFactor":0.5417014324474146,"maxDrawdownPct":-5.798457889936614,"worstDayPct":-1.25,"plus1Days":0,"plus5Weeks":0,"weekPct":0.4981250000000159,"weekTargetGapPct":4.501874999999984,"liveReconstructionExactMatches":"3/3"},
+    "crypto": {"fixedThrough":"2026-10-17","provisionalDate":"2026-10-20","provisionalNetPct":-0.64,"provisionalReason":"trade_closed 재구성이나 archive too_few_bars/API degraded","trades":11,"recordDays":11,"avgDailyPct":-0.04920799554030868,"profitFactor":0.7381722061973884,"maxDrawdownPct":-1.2402200190865686,"worstDayPct":-0.64,"plus1Days":0,"plus5Weeks":0,"weekPct":null},
+    "soxl": {"latestDate":"2026-10-19","newTrades":[{"symbol":"SOXL","pnlPct":-1.4}],"dailyNetPct":-1.4,"trades":6,"recordDays":13,"avgDailyPct":-0.6461538461538475,"profitFactor":0,"maxDrawdownPct":-8.11143069794148,"worstDayPct":-1.4000000000000121,"plus1Days":0,"plus5Weeks":0,"weekPct":-1.4,"weekTargetGapPct":6.4}
+  },
+  "shadow": {
+    "opening": {"version":"opening_gapdown_reclaim_v1","latestDate":"2026-10-20","dailyNetPct":-1.5757241349777384,"newTrades":2,"days":11,"trades":10,"avgDailyPct":-0.6856469818908258,"profitFactor":0.04689534814919477,"maxDrawdownPct":-7.318202935317586,"worstDayPct":-2.0264693123075346,"plus1Days":0,"plus5Weeks":0,"weekPct":-3.252961051722459,"weekTargetGapPct":8.25296105172246},
+    "daytrading": {"version":"day_rs_vwap_reclaim_v1","latestDate":"2026-10-20","dailyNetPct":-0.04509985587811475,"newTrades":3,"days":12,"trades":36,"avgDailyPct":-0.17024388574173918,"profitFactor":0.7220297102674337,"maxDrawdownPct":-4.374346601576318,"worstDayPct":-1.049999999999997,"plus1Days":2,"plus5Weeks":0,"weekPct":1.3049001441218866,"weekTargetGapPct":3.6950998558781134},
+    "crypto": {"version":"btc_flush_reclaim_v1","latestDate":"2026-10-17","days":17,"trades":0,"metricsValidated":false,"weekPct":null},
+    "soxl": {"version":"soxl_power_hour_v1","latestDate":"2026-10-19","dailyNetPct":0,"days":13,"trades":1,"avgDailyPct":0.10085921882393863,"profitFactor":999,"profitFactorValidated":false,"maxDrawdownPct":0,"worstObservedTradeDayPct":1.3111698447112021,"plus1Days":1,"plus5Weeks":0,"weekPct":0,"sourceRevision":{"date":"2026-10-13","previousPnlPct":1.5430381705989984,"currentPnlPct":1.3111698447112021}}
+  },
+  "lifecycle": {
+    "opening":{"active":10,"reserve":13,"leader":"stop_0.7","leaderSessions":"1/7","autoPromotionReady":false,"retired":0},
+    "daytrading":{"active":10,"reserve":13,"leader":"combo_slope15_e1400","leaderSessions":"2/7","autoPromotionReady":false,"retired":1},
+    "crypto":{"active":10,"reserve":13,"leader":"hold_30m","leaderSessions":"7/7","autoPromotionReady":false,"reason":"기존 표본·검증·위험·점수 승격조건 미충족","retired":1},
+    "soxl":{"active":10,"reserve":13,"leader":"stop_0.8_tp_1.6","leaderSessions":"1/7","autoPromotionReady":false,"retired":0},
+    "rule":"연구 후보 퇴출은 sampleReady 뒤 3개 서로 다른 연구세션의 위험/점수 실패. 메인 승격은 7연속1위와 기존 모든 문턱을 함께 통과할 때만 다음 세션부터."
+  },
+  "tenbagger": {
+    "initial":{"asOf":"2026-10-08","registeredAt":"2026-10-13T06:39:10.172275+00:00","strategyVersion":"1.0.0","rulesSha256":"5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465","sourceCommit":"677c523eb42c127eb68ee7d5b75b5ec316760b20","combinedSha256":"765972fe30f69a4853cc2d4c5381fdc99ca192a0003409f76076871dbde7ad84","engineSha256":"ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5"},
+    "current":{"asOf":"2026-10-19","generatedAt":"2026-10-20T15:17:01.840925+00:00","strategyVersion":"1.0.0","rulesSha256":"5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465","sourceCommit":"a8ac304319d2f907106dc46773393482b19b87fd","combinedSha256":"c379fbbbd0f199abddae4b7a319170c4f772d27a73cfe6cfa8a15dff980e30d9","engineSha256":"ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5","registrations":99,"uniqueStocks":94,"newRegistrations":18,"newUniqueStocks":17,"entered":35,"newEntries":16,"waiting":64,"closedHold1260":0,"closedStopTrail":4,"horizons":{"20":0,"60":0,"120":0,"252":0,"756":0,"1260":0},"firstTouches":{"2x":0,"5x":0,"10x":0},"sessionsRange":[0,3],"netMarkPctRange":[-18.629076838032045,3.4490887209836396],"maxMfePct":4.488778054862852,"worstMaePct":-18.73464373464373,"worstMddPct":-18.73464373464373,"revisionDates":0,"dataStatus":{"observing":81,"registered_waiting_next_session":18}},
+    "limitations":"가격조건 탐색가설. 등록 전 수익·사후 최대구간 제외. 재무시점 패널·시장대조·포트폴리오·실체결 없음."
+  },
+  "claudeResearch": {"generatedAt":"2026-10-21T03:45:17.255726+09:00","through":"2026-10-20","duel":{"gptTotalPct":-3.481717158012587,"claudeTotalPct":-9.479364822079294,"record":{"claude":8,"gpt":5,"draw":2},"missing":["GPT BTC 2026-10-18~20","미국 2026-10-20"]},"soxlMain":{"version":"g_soxl_r2lt30_ibs0.6_ma100_d5","effectiveFrom":"2026-10-21"},"openingPaper20":0,"accountThrough":"2026-10-19"},
+  "uiAndNotifications": {"pageVersion":"1.45.2","pushVersion":"2.8.1","ownerApiHttp":401,"previousMorning":{"date":"2026-10-20","push":{"eligible":2,"sent":2,"failed":0},"telegram":{"result":"sent","tries":1},"complete":true,"updatedAt":"2026-10-19T23:00:02.945Z"},"latestTradeReceipt":{"strategy":"daytrading","stage":"sell","at":"2026-10-20T01:48:33.946Z","pushSent":2,"pushFailed":0,"telegram":"sent"},"deviceDisplay":"unverified"},
+  "tests": {"unitPassed":40,"unitFailed":0,"files":["tests/gpt-morning-report.test.mjs","tests/scalping-live-results.test.mjs","tests/research-gpt.test.mjs"],"originalShadowParity":{"opening":true,"daytrading":true,"crypto":true,"soxl":true},"scope":"최신 main 모듈과 실제 data 원천의 읽기전용 값검증;인증화면·실기기·실체결·수익성 검증 아님"}
+}
