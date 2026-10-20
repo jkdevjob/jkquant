@@ -1,12 +1,12 @@
 {
   "schema": 3,
-  "generatedAt": "2026-10-19T13:46:58.755245+09:00",
+  "generatedAt": "2026-10-20T13:56:04.437716+09:00",
   "market": "KRW-BTC",
   "unitMinutes": 5,
   "source": "Upbit public minute candles",
   "from": "2025-09-30",
   "to": "2026-10-17",
-  "archiveDays": 385,
+  "archiveDays": 387,
   "validDays": 375,
   "invalidDays": [
     {
@@ -47,6 +47,14 @@
     },
     {
       "date": "2026-10-18",
+      "reason": "too_few_bars"
+    },
+    {
+      "date": "2026-10-19",
+      "reason": "too_few_bars"
+    },
+    {
+      "date": "2026-10-20",
       "reason": "too_few_bars"
     }
   ],
@@ -2597,7 +2605,53 @@
       }
     }
   ],
-  "currentSession": null,
+  "currentSession": {
+    "date": "2026-10-20",
+    "status": "trade_closed",
+    "trades": 1,
+    "lastBarKst": "08:55",
+    "trade": {
+      "date": "2026-10-20",
+      "strategyVersion": "btc_midnight_orb_v2",
+      "signalTimeKst": "00:20",
+      "entryTimeKst": "00:25",
+      "exitTimeKst": "00:50",
+      "openingHigh": 110643000.0,
+      "openingLow": 110434000.0,
+      "signalClose": 110849000.0,
+      "signalVwap": 110624202.66443641,
+      "volumeRatio": 1.5802155823112563,
+      "entryPrice": 110849000.0,
+      "exitPrice": 110294755.0,
+      "reason": "stop",
+      "grossPnlPct": -0.5000000000000004,
+      "frictionPct": 0.14,
+      "pnlPct": -0.6400000000000005,
+      "variant": "baseline",
+      "evidence": {
+        "source": "Upbit public 5m OHLCV",
+        "rangeBars": 1,
+        "openingHigh": 110643000.0,
+        "openingLow": 110434000.0,
+        "openingRangeBaseVolume": 1.19310067,
+        "signalClose": 110849000.0,
+        "previousClose": 110599000.0,
+        "freshBreakout": true,
+        "signalVwap": 110624202.66443641,
+        "closeAboveVwap": true,
+        "volumeRatio": 1.5802155823112563,
+        "requiredVolumeRatio": 1.2,
+        "entryCutoffKstMinute": 1315,
+        "entryRule": "next_5m_open",
+        "stopPct": 0.5,
+        "takeProfitPct": 1.0,
+        "maxHoldBars": 12,
+        "feeRoundTripPct": 0.1,
+        "slippageRoundTripPct": 0.04,
+        "sameBarConflictRule": "stop_first"
+      }
+    }
+  },
   "shadowDip24": {
     "strategyVersion": "btc_dip24_v1",
     "params": {
