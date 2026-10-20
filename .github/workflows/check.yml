@@ -30,6 +30,10 @@ jobs:
         run: node --test tests/approval-notification.test.mjs
       - name: 매일 연구 결과 웹알림 (요약 · 서버 인증 · 주제)
         run: node --test tests/research-notify.test.mjs tests/settings-notifications.test.mjs tests/gpt-common-notifications.test.mjs
+      - name: 한투 접근 토큰 하루 한 번 — 모의 토큰 중앙 보관 · 실전 토큰 밖으로 안 보냄 · 거절 시 그 토큰만 버림 (값·변이)
+        run: |
+          node --test tests/kis-token.test.mjs
+          python scripts/mutation_test_kis_token.py
 
       - name: 연구 GPT 허브·텐배거 전향 기록 값·변이 검사
         run: |

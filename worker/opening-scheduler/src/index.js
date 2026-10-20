@@ -154,6 +154,17 @@ export class OpeningSignalStore extends DurableObject {
   async fetch(request){
     const u=new URL(request.url);
     if(u.pathname.startsWith("/push/"))return this.push(u.pathname.slice(6),request);
+    if(u.pathname==="/kistoken"){                       // 한투 접근 토큰(모의투자) 보관 — 아래 kisTokenRecord 설명
+      const now=Date.now(),r=request.method==="GET"?null:kisTokenRecord(await request.json().catch(()=>null),now);   // 본문은 저장소 읽기 전에(읽기~쓰기 사이에 다른 요청이 끼지 않게)
+      if(request.method!=="GET"&&!r)return json({ok:false,error:"invalid token record"},400);
+      const all=(await this.ctx.storage.get("kisTokens"))||{};
+      for(const k of Object.keys(all))if(!(+all[k].exp>now))delete all[k];   // 만료된 것은 돌려주지 않고 다음 저장 때 지운다
+      if(!r){const t=all[u.searchParams.get("k")||""];return json(t?{ok:true,token:t.token,exp:t.exp}:{ok:true,token:null});}
+      if(r.drop!=null){if(all[r.k]&&all[r.k].token===r.drop)delete all[r.k];}   // 같은 토큰일 때만 지운다(다른 곳이 막 새로 받은 것은 그대로)
+      else all[r.k]={token:r.token,exp:r.exp,at:now};
+      await this.ctx.storage.put("kisTokens",all);
+      return json({ok:true});
+    }
     if(request.method==="GET"&&u.pathname==="/config"){
       const config=(await this.ctx.storage.get("strategyConfig"))||{schema:1,strategy:"opening",selectedVariant:"baseline",updatedAt:null,updatedBy:null};
       return json({ok:true,config});
@@ -505,6 +516,16 @@ export function scheduleRoute(ms){
   if(hm===1810)return "duel";                      // GPT·클로드 일일 대결은 Worker가 정시에 전송
   return null;
 }
+// 한투 접근 토큰 보관(2026-10-20 · 한투 알림톡 "1일 1회 발급 원칙, 잦은 발급 시 이용 제한"): Pages kis.js 가 모의투자 토큰을 맡기고 꺼내
+// 계좌 · 앱마다 하루 한 번만 받게 한다. 이름표 k = 앱키 해시 앞 16자리(앱키는 받지 않음) · 만료는 지금+25시간 안 · 실전 토큰은 오지 않는다.
+export function kisTokenRecord(b,now=Date.now()){
+  if(!b||!/^[0-9a-f]{16}$/.test(String(b.k||"")))return null;
+  if(b.drop!=null)return typeof b.drop==="string"&&b.drop.length>0&&b.drop.length<=4096?{k:b.k,drop:b.drop}:null;
+  const token=String(b.token||""),exp=+b.exp;
+  if(token.length<20||token.length>4096||/\s/.test(token))return null;
+  if(!(exp>now+60e3)||exp>now+25*36e5)return null;
+  return {k:b.k,token,exp};
+}
 const GAPDOWN_PARTS=2;
 // ① 08:58 다시 보기(2026-10-19 사용자 선택 '가'): 08:56 예상가가 실제 시가보다 평균 5.4%p 깊었다(체결 12건) — 실제로는 갭하락이 아닌 종목을 샀다.
 // 08:56 전체 조회(1~2분 걸림)는 그대로 두고, 갭 깊은 n 종목만 08:58:00 뒤 다시 물어 그 값으로 고른다.
@@ -823,6 +844,12 @@ export default {
       const date=u.searchParams.get("date")||kstParts().date;
       try{return json({ok:true,date,ledger:await readLedger(env,date,"claude")});}
       catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
+    // 한투 접근 토큰(모의투자만) — Pages kis.js 가 감시키로 맡기고 꺼낸다(위 kisTokenRecord)
+    if(u.pathname==="/kis-token"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName("__kis_token__")).fetch("https://opening-signal.internal/kistoken"+u.search,
+        {method:request.method==="POST"?"POST":"GET",headers:{"content-type":"application/json"},...(request.method==="POST"?{body:await request.text()}:{})});
     }
     // 단타(클로드) 메인 전략 승격 기록 — 쌓기만 한다(같은 id 는 무시). 내용 검사는 Pages /api/claude-promote 가 소유자 확인과 함께 한다.
     if(u.pathname==="/claude-config"){

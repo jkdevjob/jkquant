@@ -2567,7 +2567,7 @@ console.log('\n[43] 미국 주문구분 — 시험은 하되 평소 주문은 �
   ok('무엇으로 나갔는지 돌려준다', /ordDvsn: dvsn/.test(kisSrc));
   // 되던짐은 "한투가 안 받았다고 답한" 때만 — 예외나 초당제한이면 이미 접수됐을 수 있다
   ok('확실한 거절일 때만 지정가로 떨어진다',
-     /if \(!ok && wantDvsn !== "00" && !RATE_LIMITED\(j\)\)/.test(kisSrc));
+     /if \(!ok && wantDvsn !== "00" && !RATE_LIMITED\(j\) && !TOKEN_BAD\(j\)\)/.test(kisSrc));   // 토큰 거절이면 다른 구분도 똑같이 거절
   ok('떨어뜨린 사실을 기록에 남긴다', /fellBack: true, firstTry: first/.test(kisSrc));
   // 예외 경로에는 되던짐이 없어야 한다 — 응답을 못 받은 주문은 냈는지 모른다
   const usBlk=(kisSrc.split('// ── 미국 주식 주문 ──')[1]||'').split('const tr = side ===')[0];
@@ -10245,6 +10245,7 @@ console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 
         const u=new URL(String(url)), meth=(init.method||'GET').toUpperCase(), h=init.headers||{};
         const c={host:u.host,path:u.pathname,meth,tr:h.tr_id||'',q:Object.fromEntries(u.searchParams),slept:sleeps.length}; calls.push(c);
         if(u.pathname==='/oauth2/tokenP') return res({access_token:'TOK'});
+        if(u.pathname==='/kis-token') return res(meth==='GET'?{ok:true,token:null}:{ok:true});   // 토큰 저장소(모의만 · 하루 한 번 발급)
         if(u.pathname.endsWith('/trading/inquire-balance')){
           const rows=(scn.hold||[]).filter(x=>x.ex===c.q.OVRS_EXCG_CD).map(x=>({ovrs_pdno:x.code,ovrs_item_name:x.code,ovrs_cblc_qty:String(x.qty),pchs_avg_pric:'10',now_pric2:'11',evlu_pfls_rt:'1'}));
           return res({rt_cd:'0',output1:rows,output2:{frcr_pchs_amt1:'777.00',tot_evlu_pfls_amt:'55.00'}}); }
@@ -10264,8 +10265,9 @@ console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 
       { const H=mk({hold:[{ex:'AMEX',code:'SOXL',qty:5},{ex:'NASD',code:'TQQQ',qty:3}]}); const r=await H.get('op=balance&env=vts&market=us&code=SOXL');
         const ps=H.calls.find(c=>c.path.endsWith('/inquire-psamount'))||{};
         out.A={status:r.status,keys:Object.keys(r.j).sort().join(','),hold:(r.j.holdings||[]).map(h=>h.code+':'+h.qty).sort().join(','),buy:r.j.buyable,
-          hosts:[...new Set(H.calls.map(c=>c.host))].join(','),bal:H.calls.filter(c=>c.tr==='VTTS3012R').length,psTr:ps.tr||'',ps:ps.q||null,
-          orders:H.calls.filter(c=>c.path.includes('/trading/order')||(c.meth==='POST'&&c.path!=='/oauth2/tokenP')).length,
+          hosts:[...new Set(H.calls.filter(c=>c.path!=='/kis-token').map(c=>c.host))].join(','),bal:H.calls.filter(c=>c.tr==='VTTS3012R').length,psTr:ps.tr||'',ps:ps.q||null,
+          orders:H.calls.filter(c=>c.path.includes('/trading/order')||(c.meth==='POST'&&c.path!=='/oauth2/tokenP'&&c.path!=='/kis-token')).length,
+          tok:H.calls.filter(c=>c.path==='/kis-token').map(c=>c.meth+'@'+c.host).join(','),
           gaps:H.sleeps.filter(ms=>ms>=550).length,psAfterGap:ps.slept>=4}; }
       { const H=mk({}); await H.get('op=balance&env=real&market=us&code=SOXL');
         out.R={hosts:[...new Set(H.calls.map(c=>c.host))].join(','),trs:[...new Set(H.calls.map(c=>c.tr).filter(t=>/S30/.test(t)))].sort().join(',')}; }
@@ -10288,6 +10290,8 @@ console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 
      A.status===200 && A.bal===3 && A.psTr==='VTTS3007R' && JSON.stringify(A.ps)===JSON.stringify({CANO:'12345678',ACNT_PRDT_CD:'01',OVRS_EXCG_CD:'AMEX',OVRS_ORD_UNPR:'146.33',ITEM_CD:'SOXL'})
      && A.buy && A.buy.amt===100000 && A.buy.maxQty===683 && A.buy.price===146.33 && A.hold==='SOXL:5,TQQQ:3', J(A));
   ok('① 서버 — 읽기만: 모의 서버에만 · 주문 엔드포인트 0 · POST 0 (토큰 발급 빼고)', A.hosts==='openapivts.koreainvestment.com:29443' && A.orders===0, J(A));
+  ok('① 서버 — 모의 토큰은 정시 스케줄러 저장소에서 찾고(GET) 없을 때만 받아 맡긴다(POST) · 실전은 저장소에 안 간다(아래 실전 hosts)',
+     A.tok==='GET@jkquant-opening-scheduler.mumae4.workers.dev,POST@jkquant-opening-scheduler.mumae4.workers.dev', J(A));
   ok('① 서버 — 이름과 뜻이 다른 칸(cash = 외화매입금액 · evalTotal = 총평가손익) 없음', A.keys==='buyable,cur,holdings', A.keys);
   ok('① 서버 — 모의 초당 2건: 거래소 사이 · 시세 앞 · 주문가능 앞에 550ms (4번)', A.gaps===4 && A.psAfterGap===true, J(A));
   ok('① 서버 — 실전 세션은 실전 서버 · TTTS3007R/TTTS3012R', R.hosts==='openapi.koreainvestment.com:9443' && R.trs==='TTTS3007R,TTTS3012R', J(R));
