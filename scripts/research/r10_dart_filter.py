@@ -58,13 +58,16 @@ def window(d):
 
 def disclosures(corp, d):
     bgn, end = window(d)
-    out, page = [], 1
+    out, page, limited = [], 1, 0
     while True:
         j = get("list.json", dict(corp_code=corp, bgn_de=bgn, end_de=end, page_no=page, page_count=100))
         st = j.get("status")
         if st == "013":                                  # 조회된 자료 없음
             return out
-        if st == "020":                                  # 요청 제한 — 잠깐 쉬고 다시
+        if st == "020":                                  # 요청 제한 — 잠깐 쉬고 다시(5번까지, 하루 한도면 멈춤)
+            limited += 1
+            if limited > 5:
+                raise RuntimeError("OpenDART 요청 제한(020)이 계속됨 — 하루 한도일 수 있어 멈춤")
             time.sleep(30)
             continue
         if st != "000":
@@ -126,7 +129,7 @@ def main():
         bad = [x for x in ds if is_negative(x["report_nm"])]
         if bad:
             flagged.add((d, code)); why[f"{d} {code}"] = [x["report_nm"] for x in bad][:3]
-        time.sleep(0.12)
+        time.sleep(0.7)                                 # 분당 약 85건 — OpenDART 분당 요청 한도 안쪽(처음 쓰는 키가 막히지 않게)
     filt = series(sig, q, frozenset(flagged))
     pn = {(r["date"], r["code"]): float(r["pnl"]) for r in sig}
     fl = [pn[k] for k in flagged]; rest = [pn[k] for k in used - flagged]
