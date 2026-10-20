@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T10:09:06.135984+09:00",
+  "generatedAt": "2026-10-20T23:29:43.388848+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -83,6 +83,12 @@
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-19.csv",
       "rows": 2866,
       "lastDate": "2026-10-19",
+      "status": "provisional"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-20.csv",
+      "rows": 2867,
+      "lastDate": "2026-10-20",
       "status": "provisional"
     }
   ],
@@ -2272,9 +2278,9 @@
     }
   },
   "live": {
-    "trades": 25,
-    "days": 9,
-    "actualGapQualifiesRate": 40.0,
+    "trades": 28,
+    "days": 10,
+    "actualGapQualifiesRate": 35.714285714285715,
     "openVsExpectedPct": {
       "n": 19,
       "mean": 6.062913915973636
@@ -2292,8 +2298,8 @@
       "mean": 0.0
     },
     "realizedNetPct": {
-      "n": 14,
-      "mean": 0.38296199816721627
+      "n": 16,
+      "mean": -0.32846790263056824
     },
     "modelNet0tPct": {
       "n": 19,
@@ -3026,12 +3032,99 @@
       "realizedGrossPct": null,
       "realizedNetPct": null,
       "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-20",
+      "code": "004800",
+      "name": "효성",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 119000,
+      "expectedGapPct": -3.9548022598870025,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "expectedGapPct0856": -3.9548022598870025,
+      "openVsExpected0856Pct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 8,
+      "buyFill": 123000,
+      "sellQty": 0,
+      "sellFill": null,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": null,
+      "realizedNetPct": null,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-20",
+      "code": "329180",
+      "name": "HD현대중공업",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 332500,
+      "expectedGapPct": -3.76266280752533,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "expectedGapPct0856": -3.907380607814759,
+      "openVsExpected0856Pct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 3,
+      "buyFill": 339000,
+      "sellQty": 3,
+      "sellFill": 318000,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": -6.194690265486724,
+      "realizedNetPct": -6.424690265486724,
+      "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-20",
+      "code": "009540",
+      "name": "HD한국조선해양",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 263500,
+      "expectedGapPct": -2.946593001841624,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "expectedGapPct0856": -2.209944751381221,
+      "openVsExpected0856Pct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 4,
+      "buyFill": 265000,
+      "sellQty": 4,
+      "sellFill": 254500,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": -3.9622641509433953,
+      "realizedNetPct": -4.192264150943395,
+      "modelNet0tPct": null
     }
   ],
   "watchlist": {
-    "basedOn": "2026-10-19",
+    "basedOn": "2026-10-20",
     "basedOnStatus": "provisional_snapshot",
-    "size": 19
+    "size": 39
   },
   "finalDataThrough": "2026-10-16"
 }

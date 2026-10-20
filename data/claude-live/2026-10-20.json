@@ -1,0 +1,151 @@
+{
+  "ok": true,
+  "date": "2026-10-20",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-20",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-20T06:40:37.383Z",
+    "updatedAt": "2026-10-20T06:40:39.198Z",
+    "scans": [
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1792478428868,
+        "capturedAt": "2026-10-20T06:40:39.081Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1792478428868,
+        "capturedAt": "2026-10-20T06:40:37.267Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-20",
+        "capturedAt": "2026-10-20T06:40:39.081Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-20",
+          "currency": "KRW",
+          "trades": [],
+          "open": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "15:30 종가",
+              "entryPrice": 5880,
+              "qty": 106,
+              "pnlPct": 0,
+              "reason": "내일 09:00 시가 매도"
+            }
+          ],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "candidates": 1,
+          "entries": 1,
+          "strategyVersion": "etf_dip_overnight_v1",
+          "note": "15:21 예상 하락 -9.09% → 종가 매수"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-20",
+        "capturedAt": "2026-10-20T06:40:37.267Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-20",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "measure": [
+            {
+              "name": "효성",
+              "code": "004800",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 123000,
+              "qty": 8,
+              "notional": 984000,
+              "open": true,
+              "markPrice": 120200,
+              "pnlPct": -2.506422764227637,
+              "reason": "매도 미체결"
+            },
+            {
+              "name": "HD현대중공업",
+              "code": "329180",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 339000,
+              "qty": 3,
+              "notional": 1017000,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 318000,
+              "pnlPct": -6.424690265486724,
+              "pnlAmount": -65339.099999999984,
+              "reason": "종가 청산"
+            },
+            {
+              "name": "HD한국조선해양",
+              "code": "009540",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 265000,
+              "qty": 4,
+              "notional": 1060000,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 254500,
+              "pnlPct": -4.192264150943395,
+              "pnlAmount": -44437.99999999999,
+              "reason": "종가 청산"
+            }
+          ],
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "watched": 19,
+          "candidates": 4,
+          "entries": 0,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "note": "메인 매매일 아님(통과 4<7) — 측정용 모의매매는 전략 손익에 안 셈"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
