@@ -25,8 +25,10 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     const px={}; syms.forEach(s=>px[s]=C[s][k]);
     const todo=syms.filter(s=>{ const t=tgt[s]||0; return (t===0)!==(q[s]===0) || Math.abs(t-cur[s])>(o.bandOf?o.bandOf(s,t,cur[s]):band); });   // bandOf(종목, 목표, 현재) — 내릴 때·올릴 때 밴드를 따로 줄 수 있다
     // 매도 먼저
-    for(const s of todo){ const want=Math.floor(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n; cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; } }
-    for(const s of todo){ const want=Math.floor(tot*(tgt[s]||0)/px[s]); if(want>q[s]){ const n=Math.min(want-q[s],Math.floor(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; } } }
+    // o.frac: 소수 주 — 합성 자료처럼 1주 값이 원금보다 비쌀 때(2000년 합성 TQQQ 67,137$) 정수 주가 매매 자체를 막는 왜곡을 없앤다
+    const shares=x=>o.frac?x:Math.floor(x);
+    for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n; cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; } }
+    for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want>q[s]){ const n=Math.min(want-q[s],shares(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; } } }
     eq.push([d,cash+syms.reduce((a,s)=>a+q[s]*px[s],0)]); }
   if(tax&&yearPnl>0) eq[eq.length-1][1]-=Math.max(0,yearPnl-DED)*0.22;
   return {eq,turn}; }
