@@ -26,8 +26,8 @@ function fixture(){
   return {stateV2:{activeTab:'inf',inf:{active:'p0',sessions},vr:{sessions:[]},ma:{sessions:[]},ivs:{sessions:[]},dca:{sessions:[]},asap:{sessions:[{id:'real',paper:false,hist:[{sim:true,amt:999,note:'실계좌는 어떤 행도 옮기지 않는다'}]}]}},
     stateV2Rev:4,scalp:{log:[{price:112,qty:3}]},fiveYearPlanV2:{alphaLedger:{events:[{id:'cash',amount:123}]}}};
 }
-function firestore(initial={}){
-  const docs=new Map(Object.entries(initial).map(([k,v])=>[k,clone(v)])),reads=[],commits=[];
+function firestore(initial={},opt={}){
+  const docs=new Map(Object.entries(initial).map(([k,v])=>[k,clone(v)])),reads=[],commits=[],uploads=[];
   let fail=null,retry=null;
   const db={};
   const doc=(db,...parts)=>({firestore:db,path:parts.join('/')});
@@ -53,7 +53,10 @@ function firestore(initial={}){
     commits.push(result.writes);return result.out;
   };
   const sdk={doc,getDoc,runTransaction,deleteField:()=>DEL};
-  return {docs,reads,commits,db,sdk,ref:doc(db,'users','u1'),store:createPaperStore(sdk),setFailure:e=>{fail=e;},retryOnce:f=>{retry=f;}};
+  // A plain write outside any transaction (the store uploads big re-applies' parts this way).
+  if(opt.setDoc)sdk.setDoc=async(ref,data)=>{if(opt.uploadFail&&opt.uploadFail(uploads.length))throw opt.uploadFail(uploads.length);
+    assert(bytes(data)<1048576,ref.path+' exceeds Firestore document limit');uploads.push(ref.path);docs.set(ref.path,clone(data));};
+  return {docs,reads,commits,uploads,db,sdk,ref:doc(db,'users','u1'),store:createPaperStore(sdk),setFailure:e=>{fail=e;},retryOnce:f=>{retry=f;}};
 }
 async function save(f,data){
   return f.store.runTransaction(f.db,async tx=>{
@@ -277,10 +280,60 @@ test('value invariants reject disabled splitting, lost rows, uncommitted parts a
   }
 });
 
+/* 10년 모의 · 여러 세션 '전체 적용'은 한 번의 저장(8MiB · 450건)을 넘을 수 있다 (2026-10-21).
+   조각은 내용 주소라 바뀌지 않고, 부모 문서가 가리키기 전엔 아무도 읽지 않는다 — 먼저 올리고 부모만 원자 저장한다. */
+const big=(sessions,rows)=>({stateV2:{activeTab:'inf',inf:{active:'p0',sessions:Array.from({length:sessions},(_,i)=>({id:'p'+i,paper:true,name:'모의 '+i,
+  settings:{ticker:'SOXL',div:20,simLast:'2026-10-20'},
+  hist:[{ts:0,date:'2016-10-21',kind:'출금',amt:100+i,qty:0},
+    ...Array.from({length:rows},(_,j)=>({ts:j+1,date:'2016-10-21',kind:j%3?'1회매수':'지정가매도',price:10+(i*rows+j)%997/7,qty:1+j%40,sim:true,note:'10년 모의 자동이력 '+'x'.repeat(60)}))]}))},
+  vr:{sessions:[]},ma:{sessions:[]},ivs:{sessions:[]},dca:{sessions:[]},asap:{sessions:[]}},stateV2Rev:1});
+const commitBytes=w=>w.reduce((n,x)=>n+Buffer.byteLength(JSON.stringify(x.data)),0);
+test('a re-apply larger than one commit uploads its parts first, commits only the parent, and reads back exactly',async()=>{
+  const f=firestore({'users/u1':{stateV2:{inf:{sessions:[]}},stateV2Rev:1}},{setDoc:true}),d=big(40,1300);
+  assert(Buffer.byteLength(JSON.stringify(d))>8.5*1024*1024,'fixture is larger than one commit');
+  assert.equal(await save(f,d),'saved');
+  assert(f.uploads.length>140,'parts went up before the commit: '+f.uploads.length);
+  const last=f.commits.at(-1);
+  assert(last.length<=3&&commitBytes(last)<1024*1024,'the commit holds the parent, not the uploaded parts: '+last.length+' writes');
+  const committed=new Set(f.commits.flat().map(w=>w.ref.path));
+  assert(f.uploads.every(p=>!committed.has(p)),'no uploaded part is written twice');
+  assert.deepEqual((await createPaperStore(f.sdk).getDoc(f.ref)).data().stateV2,d.stateV2);
+  // the next ordinary save (the app does not read the ledger back in between) knows those parts exist:
+  // it reads none of them back inside its transaction, uploads nothing and commits little
+  const next=clone(d),n0=f.uploads.length,r0=f.reads.length;
+  next.stateV2.inf.sessions[3].hist.push({ts:99999,date:'2026-10-21',kind:'1회매수',price:20,qty:3,sim:true});
+  await save(f,next);
+  assert.equal(f.reads.slice(r0).filter(p=>p.includes('/paperHistory/')).length,0,'uploaded parts are remembered, not downloaded again');
+  assert.equal(f.uploads.length,n0,'an ordinary save after the re-apply uploads nothing');
+  assert(f.commits.at(-1).length<=4,'only the changed part(s) and the parent: '+f.commits.at(-1).length);
+  assert.deepEqual((await createPaperStore(f.sdk).getDoc(f.ref)).data().stateV2,next.stateV2);
+});
+test('more uploaded parts than the part cache holds are still not committed again',async()=>{
+  const f=firestore({'users/u1':{stateV2:{inf:{sessions:[]}},stateV2Rev:1}},{setDoc:true}),d=big(60,1900);
+  assert.equal(await save(f,d),'saved');
+  assert(f.uploads.length>256,'beyond the part cache: '+f.uploads.length);
+  const committed=new Set(f.commits.flat().map(w=>w.ref.path));
+  assert(f.uploads.every(p=>!committed.has(p)),'parts evicted from the cache are not re-sent in the commit');
+  assert(f.commits.at(-1).length<=3);
+  assert.deepEqual((await createPaperStore(f.sdk).getDoc(f.ref)).data().stateV2,d.stateV2);
+});
+test('without a plain write the oversized commit is refused as before, and an upload failure leaves the old ledger',async()=>{
+  const original={stateV2:{inf:{sessions:[{id:'old',paper:true,hist:[{ts:1,date:'2026-01-02',kind:'1회매수',price:5,qty:2,sim:true}]}]}},stateV2Rev:1};
+  const plain=firestore({'users/u1':original});
+  await assert.rejects(save(plain,big(40,1300)),e=>e.code==='paper-history-unavailable'&&/너무 큽니다/.test(e.message));
+  assert.equal(plain.docs.size,1);assert.deepEqual(plain.docs.get('users/u1'),original);
+  const broken=firestore({'users/u1':original},{setDoc:true,uploadFail:n=>n===37?Object.assign(new Error('network'),{code:'unavailable'}):null});
+  await assert.rejects(save(broken,big(40,1300)),{code:'unavailable'});
+  assert.equal(broken.commits.length,0,'nothing committed');
+  assert.deepEqual(broken.docs.get('users/u1'),original,'parent unchanged');
+  assert.deepEqual((await createPaperStore(broken.sdk).getDoc(broken.ref)).data().stateV2,original.stateV2,'readers still see the old ledger');
+});
+
 test('all current stateV2 consumers use the adapter, including server order calculations',()=>{
   const read=f=>readFileSync(new URL('../'+f,import.meta.url),'utf8');
   for(const f of ['index.html','admin.html','plan.html']){
-    assert.match(read(f),/createPaperStore/);assert.match(read(f),/jk-paper-store\.mjs\?v=1\.0\.1/);
+    assert.match(read(f),/createPaperStore/);assert.match(read(f),/jk-paper-store\.mjs\?v=1\.0\.2/);
+    assert.match(read(f),/createPaperStore\(\{[^}]*\bsetDoc\b[^}]*\}\)/,f+' passes setDoc — big re-applies upload parts before the commit');
   }
   const server=read('functions/api/autotrade.js');
   assert.match(server,/await hydratePaperDoc\(rawDoc/);

@@ -5,6 +5,7 @@
 export const PAPER_HISTORY_FIELD='paperHistoryV1';
 export const PAPER_SPLIT_AT=600*1024;
 const PART_CHARS=60000;
+const COMMIT_BYTES=8*1024*1024,COMMIT_WRITES=450,UPLOAD_LANES=4;
 const SESSION_REF='_jkPaperHistoryRef';
 const BOXES=['inf','vr','ma','ivs','dca','asap'];
 const copy=x=>JSON.parse(JSON.stringify(x));
@@ -169,7 +170,27 @@ export function createPaperStore(sdk){
     return new Proxy(snap,{get(target,key){if(key==='data')return ()=>data;if(key==='paperStorageData')return ()=>raw;const v=Reflect.get(target,key,target);return typeof v==='function'?v.bind(target):v;}});
   }
   const getDoc=ref=>read(ref,sdk.getDoc);
+  /* One commit is capped (8 MiB, 500 writes). A full re-apply of many long paper
+     sessions can need more. Parts are immutable, content-addressed and unreferenced
+     until the parent lands, so with sdk.setDoc they are uploaded first, outside the
+     transaction (a few at a time), and the transaction is run again: it then writes
+     the parent plus whatever is still missing. A failed upload leaves only an
+     unreferenced part; the parent, and so every reader, still sees the old ledger. */
+  async function upload(parts,uploaded){
+    const list=[...parts];let at=0;
+    const worker=async()=>{while(at<list.length){const [key,w]=list[at++];await sdk.setDoc(w.ref,w.data);uploaded.add(key);remember(key,w.data);}};
+    await Promise.all(Array.from({length:Math.min(UPLOAD_LANES,list.length)},worker));
+  }
   async function runTransaction(db,callback,options){
+    const uploaded=new Set();
+    for(let pass=0;;pass++){
+      const big={parts:null};
+      try{return await attempt(db,callback,options,uploaded,pass===0&&typeof sdk.setDoc==='function'?big:null);}
+      catch(e){if(!big.parts||e!==big.signal)throw e;}
+      await upload(big.parts,uploaded);
+    }
+  }
+  function attempt(db,callback,options,uploaded,big){
     return sdk.runTransaction(db,async tx=>{
       const writes=[],rawDocs=new Map();
       const get=async ref=>{const snap=await read(ref,r=>tx.get(r));if(userPath(ref.path))rawDocs.set(ref.path,snap.paperStorageData?snap.paperStorageData():snap.data()||{});return snap;};
@@ -187,13 +208,17 @@ export function createPaperStore(sdk){
         data[PAPER_HISTORY_FIELD]=packed.data[PAPER_HISTORY_FIELD]||sdk.deleteField();
         for(const [id,p] of packed.parts){
           const key=w.ref.path+'/'+id;
-          if(!cache.has(key)&&!newParts.has(key))newParts.set(key,{ref:partRef(w.ref,id),data:p});
+          if(!cache.has(key)&&!uploaded.has(key)&&!newParts.has(key))newParts.set(key,{ref:partRef(w.ref,id),data:p});
         }
         ready.push({...w,data});
       }
       // The Firebase request limit applies to the whole atomic commit as well.
       const bytes=[...newParts.values(),...ready].reduce((n,w)=>n+new TextEncoder().encode(JSON.stringify(w.data)).length,0);
-      if(bytes>8*1024*1024||newParts.size+ready.length>450)throw failure('한 번에 저장할 모의 기록이 너무 큽니다. 기록을 지우지 말고 세션별로 나누어 계산해 주세요.');
+      if(bytes>COMMIT_BYTES||newParts.size+ready.length>COMMIT_WRITES){
+        // Abort this attempt without writing; the parts go up first (see upload).
+        if(big&&newParts.size){big.parts=newParts;big.signal=Object.assign(new Error('paper parts upload first'),{code:'paper-upload-first'});throw big.signal;}
+        throw failure('한 번에 저장할 모의 기록이 너무 큽니다. 기록을 지우지 말고 세션별로 나누어 계산해 주세요.');
+      }
       for(const w of newParts.values())tx.set(w.ref,w.data);
       for(const w of ready)tx.set(w.ref,w.data,w.opt);
       // Cache only reads or acknowledged commits, never uncommitted new parts.

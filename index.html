@@ -536,7 +536,7 @@ html.had-user #authgate .bootwait{display:block}
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
   import { initializeFirestore, doc, getDoc, setDoc, runTransaction, deleteField } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-  import { createPaperStore, previewPaperDoc } from '/jk-paper-store.mjs?v=1.0.1';
+  import { createPaperStore, previewPaperDoc } from '/jk-paper-store.mjs?v=1.0.2';
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -553,7 +553,7 @@ html.had-user #authgate .bootwait{display:block}
   const db = initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
-  const paperStore=createPaperStore({doc,getDoc,runTransaction,deleteField});
+  const paperStore=createPaperStore({doc,getDoc,setDoc,runTransaction,deleteField});
   window.JKPaperStore={previewPaperDoc};
   window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc:paperStore.getDoc, setDoc, runTransaction:paperStore.runTransaction, deleteField };
   window.dispatchEvent(new Event('fb-ready'));
@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.43</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.111.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1700,7 +1700,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.43</b> · 2026-10-20</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.111.0</b> · 2026-10-21</div>
   </footer>
 </div>
 
@@ -1890,7 +1890,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="note" style="margin-top:12px;line-height:1.7">
       <div><b>전체 적용</b>은 모의 세션의 시작일·금액을 한 번에 맞추고, 기존 모의 기록을 새 시작일부터 다시 계산합니다. <b>실계좌는 변경하지 않습니다.</b></div>
       <div style="margin-top:3px"><b>원금</b> → 무매·이평·섀넌·VR·거치 &nbsp;·&nbsp; <b>1회 적립액</b> → 적립식 · ASAP base×1 / mid×2 / deep×3</div>
-      <div style="margin-top:3px"><b>입력값은 원화 그대로 저장</b> · 미국 종목은 계산 내부에서만 시작일 환율 사용 · <b>성과 목록은 현재 USD/KRW</b>로 원화 표시 · 시작일은 최대 <b>5년 전</b></div>
+      <div style="margin-top:3px"><b>입력값은 원화 그대로 저장</b> · 미국 종목은 계산 내부에서만 시작일 환율 사용 · <b>성과 목록은 현재 USD/KRW</b>로 원화 표시 · 시작일은 최대 <b>10년 전</b></div>
     </div>
   </div>
   <div id="paper_body"></div>
@@ -2547,6 +2547,13 @@ function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return f
    평소 화면은 빈 값이라 현재까지 확정된 봉 전체를 보지만, infSimForward 가 과거를 하루씩 재생할 때는
    그 재생일을 넣어 미래 봉을 M1 판정에 섞지 않는다. */
 let _infReplayAsOf='';
+/* 모의 재생(infSimForward) 중에만 켜는 '이어 계산'. 재생은 하루씩 기록을 덧붙이며 computeInf 를 부르는데, 예전엔 매번
+   첫 줄부터 다시 세서 전 구간 재생이 기록 줄 수의 제곱으로 느려졌다 — SOXL 무매 세션 하나에 5년 0.9초 · 10년 3.5초 ·
+   익절 자동이면 5년 5초 · 10년 26초(서버 Node 실측, 2026-10-21 · 아이폰은 그 2~3배). 이어 계산 뒤 0.04~0.14초 · 기록 동일.
+   재생 중엔 기록이 뒤에 붙기만 하므로, 다음 줄과 날짜가 다른(그날이 끝난) 마지막 자리의 장부 상태를 기억해 두고
+   그 뒤 줄만 다시 센다. 마지막 날은 기억하지 않는다 — 같은 날 줄이 더 붙으면 그날 사이클 종료 판정(imDayOpenAfter)이 바뀐다.
+   같은 기록 배열 · 같은 설정 · 기억한 자리의 줄이 같은 객체일 때만 쓰고, 재생이 끝나면 지운다(평소 화면 계산엔 안 쓴다). */
+let _infResume=null;
 
 /* 누적 계산: 평단/보유/잔금/T/실현손익 */
 function computeInf(){
@@ -2586,7 +2593,14 @@ function computeInf(){
   const tpAt=(d)=>(_auto&&_ab&&d)?imAutoTPByMode(_ab,d,_mode):null;
   let cycStart='', cycTp=null;   // 이번 사이클 첫 매수일 · 그날 판정 (익절 자동일 때만 쓴다)
   let day=null, daySold=false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 판정한다 (제14차 D15)
-  const rows=hist.map((h,hi)=>{
+  const R=(typeof _infResume!=='undefined')?_infResume:null, stKey=R?JSON.stringify(st,(k,v)=>k==='simLast'?undefined:v):'';   // 재생은 날마다 simLast 만 바꾼다 — 장부 계산엔 안 쓰는 칸
+  let rows=[], k0=0;
+  if(R && R.hist===hist && R.stKey===stKey && R.k>0 && R.k<hist.length && hist[R.k-1]===R.last && hist[0]===R.first && hist[R.k].date!==hist[R.k-1].date){
+    ({avg,qty,inv,realized,T,totbuy,totsell,cycleSeq,withdrawn,saved,divTotal,revState,revFrom,cycStart,cycTp,day,daySold}=R.s);
+    for(let i=0;i<R.nFlows;i++) flows.push(R.flowArr[i]);
+    rows=R.rows.slice(0,R.k); k0=R.k;
+  }
+  const step=(h,hi)=>{
     if(h.date!==day){ day=h.date; daySold=false; }
     if(_auto&&cycStart&&cycTp&&cycTp.tp===20)cycTp=imAutoTPM1(_ab,cycStart,h.date,cycTp);
     const flat0=!(qty>1e-9) && T===0;   // 이 줄 전에 사이클이 비어 있었나 — 여기서 사면 새 사이클 첫 매수다
@@ -2669,7 +2683,14 @@ function computeInf(){
     const row={...h,profit,avgAfter:avg,qtyAfter:qty,Tafter:T,balAfter,pctAfter,starAfter,cycleEnd,cycleSeq,revState};
     if(cycleEnd)cycleSeq++;
     return row;
-  });
+  };
+  for(let hi=k0;hi<hist.length;hi++){
+    rows.push(step(hist[hi],hi));
+    if(R && hi+1<hist.length && hist[hi+1].date!==hist[hi].date){   // 그날이 끝난 자리 — 재생 중이면 여기까지의 장부를 기억한다
+      R.hist=hist; R.stKey=stKey; R.k=hi+1; R.first=hist[0]; R.last=hist[hi]; R.rows=rows; R.flowArr=flows; R.nFlows=flows.length;
+      R.s={avg,qty,inv,realized,T,totbuy,totsell,cycleSeq,withdrawn,saved,divTotal,revState,revFrom,cycStart,cycTp,day,daySold};
+    }
+  }
   revEnter();   // 기록이 하나도 없거나 설정만 바뀐 경우도 같은 자리에서 판정
   /* 리버스 표시 여부 = 상태머신이 NORMAL 이 아닌가. 소진 기준(라오어 공지)은
      '1회 매수가 불가능해지는 시점' = 잔금 < 잔금/(분할−T) ⟺ T > 분할−1 이고,
@@ -4153,6 +4174,7 @@ function infSimForward(startFrom){
 
   const _prevReplayAsOf=_infReplayAsOf;
   _infSimBusy=true;
+  _infResume={};   // 이어 계산 켬 — 이 재생 동안 기록은 뒤에 붙기만 한다
   let nBuy=0,nSell=0,seq=0,nCyc0=computeInf().cycleSeq;
   const closeAt=i=>(O[i]&&O[i].close>0)?O[i].close:0;
   const put=(kind,date,price,qty)=>{ if(!(qty>=1)||!(price>0)) return false;
@@ -4261,8 +4283,9 @@ function infSimForward(startFrom){
         else if(extra>0) put('1회매수',d,cl,extra); }   // 본 주문 없이 추가 줄만(드묾) — 1회로 센다 (백테와 같은 규약)
       st.simLast=d;
     }
+    _infResume=null;   // 정렬하면 줄 순서가 바뀐다 — 그 전에 끈다
     sortHist(sess.hist); save();
-  } finally { _infReplayAsOf=_prevReplayAsOf; _infSimBusy=false; }
+  } finally { _infResume=null; _infReplayAsOf=_prevReplayAsOf; _infSimBusy=false; }
   const c=computeInf();
   return {nBuy,nSell,nDiv,upto:first[first.length-1].date,
           cyc:c.cycleSeq-nCyc0, T:c.T, qty:c.qty, avg:c.avg, bal:c.bal};
@@ -8348,9 +8371,11 @@ function paperSessions(){
     box.sessions.forEach(x=>{ if(x.paper) out.push([tab,x]); }); });
   return out;
 }
-/* 시작일 하한 — 3년. 그 앞은 시세를 받아 하루씩 되짚느라 오래 걸리고,
-   레버리지 ETF는 상장 자체가 얼마 안 된 게 많아 구간이 반쯤 비기도 한다. */
-const PAPER_MAX_YEARS=5;
+/* 시작일 하한 — 10년 (2026-10-21 · 5년에서 넓힘). 예전엔 무매 재생이 하루마다 장부를 첫 줄부터 다시 세서
+   기간의 제곱으로 느려져(익절 자동 10년 26초) 짧게 막아 두었다 — 이어 계산(_infResume)으로 10년 0.14초가 됐다.
+   시세는 상장일부터(range=max) 받지만, 상장이 늦은 종목은 그 앞 구간이 비어 상장일부터 시작한다.
+   한 번에 '전체 적용'하면 모의 기록 전체를 다시 저장한다 — 저장 한도(8MiB)를 넘으면 jk-paper-store 가 조각을 먼저 올린다. */
+const PAPER_MAX_YEARS=10;
 function paperMinDate(){ const d=new Date(); d.setFullYear(d.getFullYear()-PAPER_MAX_YEARS);
   return d.toISOString().slice(0,10); }
 /* 전략마다 '금액'의 뜻이 다르다. 원금(한 번에 넣는 총액)과 같은 뜻인 칸에만 넣는다.
