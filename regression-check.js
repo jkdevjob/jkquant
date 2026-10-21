@@ -1985,20 +1985,22 @@ console.log('[36] 분석 머리 — 여섯 탭 모두 달러·원화 병기 손�
   ok('적립·ASAP 분석도 회색 중복 원화를 다시 쓰지 않는다',generic&&!generic.includes("pre+'_pnl_krw'"));
 }
 
-console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
+console.log('[37] 모의 성과 표 — TR · MDD · MAR · 평가 순 · 투입 · 기간은 맨 오른쪽');
 {
   const op=extractFn(idx,'async function openPaper()');
-  // 수익 한 칸이 최종·현재·인출 셋으로 갈렸다 (v3.53)
+  // 수익 한 칸이 최종·현재·인출 셋으로 갈렸다 (v3.53) · 10-21 사용자: 기간은 맨 뒤 · TR(토탈리턴 = 옛 '최종' · 단리 인출 포함) · MDD · MAR · 평가 순
   const head=(op.match(/<thead><tr>[\s\S]*?전략 · 세션[\s\S]*?<\/tr><\/thead>/)||[''])[0];
-  ok('머리글 순서',
-     /전략 · 세션[\s\S]*기간[\s\S]*평가[\s\S]*최종[\s\S]*현재[\s\S]*인출[\s\S]*연[\s\S]*투입/.test(head),
-     head.slice(0,90));
-  ok('투입이 마지막 머리글', head.lastIndexOf('투입') > head.lastIndexOf('연'));
-  // 시세를 못 받은 줄은 평가~연 일곱 칸(평가·최종·MDD·MAR·현재·인출·연)을 colspan 으로 덮는다
-  const iSpan=op.indexOf('colspan="7"'), iInflow=op.indexOf('${paperInflowText(r)}');
-  ok('투입 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan);
-  ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{paperInflowText\(r\)\}/g)||[]).length===1);
-  ok('각주 설명도 표 순서와 같다', idx.indexOf('평가 = 보유 평가금') < idx.indexOf('투입 = 밖에서 넣은 돈'));
+  const labels=[...head.matchAll(/>([^<>`]+)<\/th>/g)].map(m=>m[1]).join('|');
+  ok('머리글 순서 — 전략 · 세션 | TR | MDD | MAR | 평가 | 현재 | 인출 | 연 | 투입 | 기간',
+     labels==='전략 · 세션|TR|MDD|MAR|평가|현재|인출|연|투입|기간', labels);
+  // 시세를 못 받은 줄은 TR~연 일곱 칸(TR·MDD·MAR·평가·현재·인출·연)을 colspan 으로 덮는다 — 그 뒤 투입 · 기간
+  const iSpan=op.indexOf('colspan="7"'), iInflow=op.indexOf('${paperInflowText(r)}'), iPer=op.indexOf('${r.nTrade}거래');
+  ok('투입 · 기간 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan && iPer>iInflow, `${iSpan} ${iInflow} ${iPer}`);
+  ok('투입 · 기간 칸이 한 번씩만 그려진다', (op.match(/\$\{paperInflowText\(r\)\}/g)||[]).length===1 && (op.match(/\$\{r\.nTrade\}거래/g)||[]).length===1);
+  { const foot=(op.match(/<b style="color:var\(--vio\)">전략 이름<\/b>[^`]*/)||[''])[0];
+    const at=['<b>TR</b>(토탈리턴) = 평가 ÷ 투입','<b>MDD</b> = 하루하루','<b>MAR</b> = CAGR','평가 = 보유 평가금','투입 = 밖에서 넣은 돈','기간 = 모의 시작일부터'].map(x=>foot.indexOf(x));
+    ok('각주 설명도 표 순서와 같다(TR · MDD · MAR · 평가 · 투입 · 기간)', at.every((x,i)=>x>=0&&(i===0||x>at[i-1])), at.join(',')); }
+  // 실제 표를 그려 칸 값을 읽는 시험은 끝(비동기 PENDING)에 있다 — [37-값]
 }
 
 console.log('[38] 세션 이동 — 보던 자리도 지킨다');
@@ -2930,11 +2932,11 @@ console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
 
   // 표에 세 칸이 사용자가 말한 순서로 있어야 한다
   const head=(idx.match(/<thead><tr>[\s\S]{0,1800}?전략 · 세션[\s\S]{0,1800}?<\/tr><\/thead>/)||[''])[0];
-  ok('최종·현재·인출 순으로 놓았다',
-     head.indexOf('>최종<')>0 && head.indexOf('>현재<')>head.indexOf('>최종<')
+  ok('TR(토탈리턴 · 옛 최종)·현재·인출 순으로 놓았다',
+     head.indexOf('>TR<')>0 && head.indexOf('>현재<')>head.indexOf('>TR<')
      && head.indexOf('>인출<')>head.indexOf('>현재<'));
   ok('각 칸이 무엇인지 적어 뒀다',
-     /title="평가금 \+ 잔금 \+ 나간 돈 ÷ 원금/.test(idx)
+     /title="TR\(토탈리턴\) = 평가금 \+ 잔금 \+ 나간 돈 ÷ 원금/.test(idx)
      && /title="평가금 \+ 잔금 ÷ 원금/.test(idx)
      && /title="매도해서 계좌 밖으로 뺀 돈/.test(idx));
   // 나간 돈이 없으면 현재는 최종과 같은 값이다 — 굵게 두 번 띄우면 잡음
@@ -4007,12 +4009,12 @@ console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
   ok('시세가 있는 끝까지 본다', /const D=days\.filter\(d=>d&&d\.date>=from&&d\.close>0\);/.test(md));
   ok('paperRaw 가 k 와 주식 수를 돌려준다',
      /k: total - qty\*price - qty1\*price1/.test(idx) && /return \{inflow, total, price, sym, qty, qty1, price1, out:_out,/.test(idx));
-  // 열 자리 — '최종' 바로 오른쪽
+  // 열 자리 — TR(토탈리턴 · 옛 '최종')과 현재 사이 (10-21 순서 TR · MDD · MAR · 평가)
   { const op=(()=>{ try{ return extractFn(idx,'async function openPaper()'); }catch(e){ return ''; } })();
-    const iF=op.indexOf('>최종</th>'), iM=op.indexOf('>MDD</th>'), iN=op.indexOf('>현재</th>');
-    ok('머리글이 최종과 현재 사이에 있다', iF>0 && iM>iF && iN>iM, `최종${iF} MDD${iM} 현재${iN}`);
+    const iF=op.indexOf('>TR</th>'), iM=op.indexOf('>MDD</th>'), iN=op.indexOf('>현재</th>');
+    ok('머리글이 TR 바로 뒤 · 현재 앞에 있다', iF>0 && iM>iF && iN>iM, `TR${iF} MDD${iM} 현재${iN}`);
     const vF=op.indexOf('${r.ret.toFixed(1)}%'), vM=op.indexOf('r.mdd.pct.toFixed(1)'), vN=op.indexOf('${r.retNow.toFixed(1)}%');
-    ok('값도 같은 자리에 있다', vF>0 && vM>vF && vN>vM, `최종${vF} MDD${vM} 현재${vN}`);
+    ok('값도 같은 자리에 있다', vF>0 && vM>vF && vN>vM, `TR${vF} MDD${vM} 현재${vN}`);
     ok('못 잰 세션은 0%가 아니라 비운다', /r\.mdd\?'−'\+r\.mdd\.pct\.toFixed\(1\)\+'%':'—'/.test(op)); }
 
   /* 값으로 확인 — 실코드를 떼어 와 이웃(paperRaw·종가)만 가짜로 물린다 */
@@ -12453,6 +12455,41 @@ console.log('\n[IPO BROKER] 기록 폼 증권사 자동 선택');
      &&/iM증권/.test(el.iprec_brokers.innerHTML.split('</button>')[0]),el.iprec_brokers.innerHTML.slice(0,200));
   ok('여러 곳인데 고르지 않으면 저장 막기',/if\(!ipoRecSel\.broker && \(ipoRecSel\.leads\|\|\[\]\)\.length>=2\)\{ alert/.test(grab('ipoRecSave')));
   ok('일정·검색·계산기 경로 모두 ipoLeadPick 사용',['ipoRecPick','ipoRecPickStock','ipoToRecord'].every(n=>/\.\.\.ipoLeadPick\(/.test(grab(n))));
+}
+
+/* [37-값] 모의 성과 표를 실제 openPaper 로 그려 칸을 읽는다 (2026-10-21 사용자: '기간은 맨 뒤로 · 그 자리에 토탈리턴 · 단리면 출금 포함' → 'tr mdd mar 평가 순으로')
+   단리 줄은 사용자 화면 값 그대로 — 평가 95,457.13$ 안에 단리 인출 34,429.80$ · 원금 69,222$ →
+   TR +37.9% = 현재 −11.8% + 인출 +49.7%. 둘째 칸이 인출을 뺀 '현재'면 −11.8% 로 보여 틀린다. */
+console.log('\n[37-값] 모의 성과 표 — TR(단리 인출 포함) · MDD · MAR · 평가 · … · 끝 칸 기간');
+{ const op=extractFn(idx,'async function openPaper()');
+  PENDING.push((async()=>{
+    const body={innerHTML:''}, modal={classList:{add(){},contains:()=>true}}, base=69222;
+    // paperStat 과 같은 식 — 토탈 = (평가금+잔금+나간 돈)/원금−1 · 현재 = (…−나간 돈)/원금−1 · 인출 = 나간 돈/원금
+    const row=(name,total,out,simple,extra)=>Object.assign({tab:'inf',label:'무한매수법',name,sym:'SOXL',opts:['20분할','익절 자동','LOC 3줄'].concat(simple?['단리']:[]),
+      cur:'usd',inflow:base,inflowWon:1e8,total,price:30,yrs:0.8,spanDays:292,nTrade:299,cagr:50,mdd:{pct:40,nDay:200},out:{simple,saved:out,withdrawn:0},
+      ret:(total/base-1)*100,retNow:((total-out)/base-1)*100,retOut:out/base*100},extra||{});
+    const rows=[row('복리',100177.88,0,false),row('단리',95457.13,34429.80,true),row('대기',0,0,false,{price:0,pending:true})];
+    const F=new Function('$','paperEnsureCommonWon','paperRepairLegacyStarts','paperRepairCommonStarts','syncPaperStart','paperViewCacheRead','paperViewCacheLast',
+      'paperViewCacheFresh','paperWonRate','paperTitle','paperKrwRet','paperDualMoney','paperInflowText','paperUsd','paperWon','paperFxLine','paperLoadTickerNames','liveFX',
+      'let paperStaleNote=false, paperNote="";\n'+op+'\nreturn openPaper;')(
+      id=>({paper_body:body,paperModal:modal})[id],async()=>{},async()=>0,async()=>0,()=>{},()=>({rows}),()=>null,()=>true,()=>1324,
+      r=>'<b>'+r.name+'</b>',()=>20,(r,v)=>'$'+(+v).toFixed(2),r=>'투입 '+r.inflow,v=>(+v).toFixed(2)+'$',v=>Math.round(v)+'원',()=>'',()=>{},1324);
+    await F(false,true);
+    const txt=x=>x.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    const heads=[...body.innerHTML.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map(m=>txt(m[1]));
+    const trs=(body.innerHTML.split('<tbody id="paper_tbody">')[1]||'').split('</tr>').filter(x=>x.includes('<tr'));
+    const cells=trs.map(tr=>[...tr.matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)].map(m=>({span:+((m[1].match(/colspan="(\d+)"/)||[])[1]||1),t:txt(m[2])})));
+    const width=cells.map(c=>c.reduce((a,x)=>a+x.span,0));
+    ok('[37-값] 그린 표 머리글 — TR · MDD · MAR · 평가 순 · 기간이 맨 끝', heads.join('|')==='전략 · 세션|TR|MDD|MAR|평가|현재|인출|연|투입|기간', heads.join('|'));
+    ok('[37-값] 줄마다 칸 수가 머리글과 같다(시세 대기 줄 포함 10칸)', trs.length===3 && width.every(w=>w===heads.length), width.join(','));
+    const [A,B,P]=cells;
+    ok('[37-값] 복리 둘째 칸 = TR +44.7% · 셋째 MDD −40.0% · 넷째 MAR 1.25(연 50 ÷ 40)', A&&A[1].t.startsWith('+44.7%')&&A[2].t==='−40.0%'&&A[3].t==='1.25', A&&[A[1].t,A[2].t,A[3].t].join(' / '));
+    ok('[37-값] 단리 둘째 칸 = 인출 포함 TR +37.9% (= 현재 −11.8% + 인출 +49.7%)',
+       B&&B[1].t.startsWith('+37.9%') && B[5].t==='-11.8%' && B[6].t==='+49.7%' && near(+B[5].t.replace('%','')+ +B[6].t.replace('%',''),37.9,0.11), B&&[B[1].t,B[5].t,B[6].t].join(' / '));
+    ok('[37-값] 다섯째 칸은 평가, 끝에서 둘째는 투입, 끝 칸은 기간(0.8년 · 299거래)',
+       [A,B,P].every(c=>c&&c[c.length-1].t==='0.8년 299거래' && c[c.length-2].t==='투입 69222') && A[4].t==='$100177.88' && B[4].t==='$95457.13',
+       [A,B,P].map(c=>c&&c.map(x=>x.t).join(' ¦ ')).join(' ‖ '));
+  })());
 }
 
 Promise.all(PENDING).then(()=>{

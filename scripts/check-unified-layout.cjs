@@ -16,9 +16,10 @@ verify();
 assert(ui.includes("classList.contains('paperpage'))?'모의투자':HEADER_LABELS[routeKey()]"),'모의투자는 운영과 별도 헤더 타이틀');
 const paperHtml=fs.readFileSync('index.html','utf8');
 assert(paperHtml.includes("if(typeof window!=='undefined'&&window.JKUnifiedUI)window.JKUnifiedUI.normalizeHeader()"),'모의/운영 SPA 왕복 시 헤더 다시 설정');
-const displayRow=paperHtml.slice(paperHtml.indexOf('h+=`<tr class="${_paperCompact'),paperHtml.indexOf('/* MDD는 종가 이력이'));
+// 한 줄의 값 칸 전체(TR · MDD · MAR · 평가 · … · 투입 앞) — 10-21 순서가 TR · MDD · MAR · 평가 로 바뀌어 평가가 MDD 뒤로 갔다
+const displayRow=paperHtml.slice(paperHtml.indexOf('h+=`<tr class="${_paperCompact'),paperHtml.indexOf('${paperInflowText(r)}'));
 assert(displayRow.includes('<td>${paperDualMoney(r,r.total,r.wonRate)}</td>'),'평가 칸에는 금액만');
-assert(displayRow.includes('Number.isFinite(_krwFinalRet)')&&displayRow.includes('원화 ${_krwFinalRet>=0'),'최종 칸에 원화 수익률');
+assert(displayRow.includes('Number.isFinite(_krwFinalRet)')&&displayRow.includes('원화 ${_krwFinalRet>=0'),'TR(옛 최종) 칸에 원화 수익률');
 assert(!displayRow.includes('원화 수익률 ${paperKrwRet'),'원화 수익률을 평가 칸에 중복 출력하지 않음');
 assert(ui.includes("newHeader.className='jk-site-header'"),'자산플랜/백테 정식 header 셸');
 assert(ui.includes("document.body.insertBefore(newHeader,host)"),'기존 헤더 DOM 보존하며 이동');
