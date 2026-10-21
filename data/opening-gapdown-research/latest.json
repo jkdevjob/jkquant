@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-21T09:44:23.740756+09:00",
+  "generatedAt": "2026-10-21T23:39:53.450517+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -83,6 +83,12 @@
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-20.csv",
       "rows": 2867,
       "lastDate": "2026-10-20",
+      "status": "provisional"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-21.csv",
+      "rows": 2867,
+      "lastDate": "2026-10-21",
       "status": "provisional"
     }
   ],
@@ -2272,9 +2278,9 @@
     }
   },
   "live": {
-    "trades": 28,
-    "days": 10,
-    "actualGapQualifiesRate": 46.42857142857143,
+    "trades": 29,
+    "days": 11,
+    "actualGapQualifiesRate": 44.827586206896555,
     "openVsExpectedPct": {
       "n": 22,
       "mean": 5.954442635659564
@@ -2292,8 +2298,8 @@
       "mean": 0.0
     },
     "realizedNetPct": {
-      "n": 16,
-      "mean": -0.32846790263056824
+      "n": 17,
+      "mean": -0.29497228401613784
     },
     "modelNet0tPct": {
       "n": 22,
@@ -3113,12 +3119,41 @@
       "realizedGrossPct": -3.9622641509433953,
       "realizedNetPct": -4.192264150943395,
       "modelNet0tPct": null
+    },
+    {
+      "date": "2026-10-21",
+      "code": "329180",
+      "name": "HD현대중공업",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 310500,
+      "expectedGapPct": -2.358490566037741,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "expectedGapPct0856": -2.6729559748427723,
+      "openVsExpected0856Pct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 5,
+      "buyFill": 318500,
+      "sellQty": 5,
+      "sellFill": 320000,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": 0.47095761381474865,
+      "realizedNetPct": 0.24095761381474864,
+      "modelNet0tPct": null
     }
   ],
   "watchlist": {
-    "basedOn": "2026-10-20",
+    "basedOn": "2026-10-21",
     "basedOnStatus": "provisional_snapshot",
-    "size": 41
+    "size": 30
   },
   "finalDataThrough": "2026-10-19"
 }

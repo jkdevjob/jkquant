@@ -1,0 +1,130 @@
+{
+  "ok": true,
+  "date": "2026-10-21",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-21",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-21T06:40:35.848Z",
+    "updatedAt": "2026-10-21T06:40:37.118Z",
+    "scans": [
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1792564828868,
+        "capturedAt": "2026-10-21T06:40:37.020Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1792564828868,
+        "capturedAt": "2026-10-21T06:40:35.748Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-21",
+        "capturedAt": "2026-10-21T06:40:37.020Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-21",
+          "currency": "KRW",
+          "trades": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "2026-10-20 15:30 종가",
+              "entryPrice": 5880,
+              "exitTime": "09:00 시가",
+              "exitPrice": 6065,
+              "qty": 106,
+              "notional": 623280,
+              "pnlPct": 3.016258503401356,
+              "pnlAmount": 18799.73599999997,
+              "reason": "다음 날 시가 청산"
+            }
+          ],
+          "open": [],
+          "watched": 1,
+          "exits": 1,
+          "wins": 1,
+          "losses": 0,
+          "winRate": 100,
+          "realizedAmount": 18799.73599999997,
+          "realizedPct": 3.0162585034013563,
+          "status": "closed",
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "etf_dip_overnight_v1",
+          "note": "15:21 예상 하락 2.55% (기준 −3% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-21",
+        "capturedAt": "2026-10-21T06:40:35.748Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-21",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "measure": [
+            {
+              "name": "HD현대중공업",
+              "code": "329180",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 318500,
+              "qty": 5,
+              "notional": 1592500,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 320000,
+              "pnlPct": 0.24095761381474864,
+              "pnlAmount": 3837.2499999998718,
+              "reason": "종가 청산"
+            }
+          ],
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "watched": 41,
+          "candidates": 1,
+          "entries": 0,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "note": "메인 매매일 아님(통과 1<7) — 측정용 모의매매는 전략 손익에 안 셈"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
