@@ -1,11 +1,10 @@
-// 무매 두 벌 5:5 — SOXL 20분할 익절 자동 + 50분할 익절 자동 (2026-10-21 사용자 질문 "무매 20/자동익절 · 무매 50/자동익절 · 둘을 50:50 으로 한다면?")
+// 무매 두 벌 5:5 — SOXL 20분할 익절 자동 + N분할 익절 자동(기본 40) (2026-10-21 사용자 질문 "무매 20/자동익절 · 무매 40/자동익절 · 둘을 50:50 으로 한다면?")
 // 앱 규칙 그대로: backtest.html runIM · 복리 · 리버스 OFF · 큰수 20 · LOC 3줄 · 수수료·슬리피지·양도세 · 잔금 이자 없음.
-// 앱 분할 선택은 10~40 이지만 엔진 별% 식(base − base×0.1×20/분할×T)은 분할 수에 일반이라 50 도 같은 엔진으로 돈다. 참고로 40분할도 같이 본다.
 // 5:5 = 원금 반씩 두 계좌를 따로 굴려 더한다(안 옮김). '연 1회 맞춤'은 매년 첫 거래일에 5:5 로 되돌린 곡선(옮긴 금액 0.25% 비용 · 근사).
 // 자료: 실제 SOXL 2010-04~ · 합성 SYNSOXL_S 1995-06~(병합·분할 반영) · 1만$ · 10만$ · 5년 롤링(분기마다 새로 시작) · 위기 구간 · 두 계좌 일간 상관.
-// 사용: node split2050.js [out.json]
+// 사용: node split20x.js [out.json] [N=40]
 const fs=require('fs'); const {open}=require('./imh');
-const OUT=process.argv[2]||'split2050_out.json';
+const OUT=process.argv[2]||'split20x_out.json', N=+(process.argv[3]||40), A='20분할 100%', B=N+'분할 100%', X='20+'+N+' 따로', Y='20+'+N+' 연1회';
 const q=(a,p)=>{ const b=a.filter(Number.isFinite).sort((x,y)=>x-y); return b.length?b[Math.floor(p*(b.length-1))]:NaN; };
 function met(eq){ const n=eq.length; if(n<3) return null; const v0=eq[0][1], v1=eq[n-1][1], yrs=(Date.parse(eq[n-1][0])-Date.parse(eq[0][0]))/(365.25*864e5);
   let pk=v0,m=0; for(const [,v] of eq){ if(v>pk) pk=v; else m=Math.max(m,(pk-v)/pk); }
@@ -29,24 +28,26 @@ const CR={real:[['2018-10-01','2018-12-24','2018 4분기'],['2020-02-19','2020-0
       {cap,tkr:syn?'SYNSOXL_S':'SOXL',autoTp:true,divs,from,to});
     const m={}; r.eq.forEach(([d,v])=>{ if(!String(d).endsWith('~')) m[d]=v; }); const ks=Object.keys(m).sort(); if(ks.length) m[ks[ks.length-1]]=r.final; m.__cyc=r.cycles; return m; };
   const clean=m=>{ const o={...m}; delete o.__cyc; return o; };
-  const res={meta:{made:new Date().toISOString(),note:'SOXL 익절 자동 · 복리 · 리버스 OFF · 큰수 20 · LOC 3줄 · 수수료·세금 · 잔금 이자 없음 · 5:5 = 반씩 따로(안 옮김) / 연 1회 맞춤(근사)'}};
+  const res={meta:{made:new Date().toISOString(),N,note:'SOXL 익절 자동 · 복리 · 리버스 OFF · 큰수 20 · LOC 3줄 · 수수료·세금 · 잔금 이자 없음 · 5:5 = 반씩 따로(안 옮김) / 연 1회 맞춤(근사)'}};
   for(const [lab,syn,from] of [['real',false,'2010-04-01'],['syn',true,'1995-06-01']]){ res[lab]={};
     const days=await pg.evaluate(tk=>Object.keys(M[tk]).sort(),syn?'SYNSOXL_S':'SOXL'); const last=days[days.length-1];
     for(const cap of [10000,100000]){ const R={full:{},crisis:{},roll:{},cycles:{}}; res[lab][cap]=R; console.error(`[${lab} ${cap/1e4}만$]`);
       const full={}, half={};
-      for(const dv of [20,40,50]){ const f=await im(cap,dv,from,'2099-12-31',syn), h=await im(cap/2,dv,from,'2099-12-31',syn); R.cycles[dv]=f.__cyc; full[dv]=clean(f); half[dv]=clean(h); }
-      const C={'20분할 100%':full[20],'50분할 100%':full[50],'40분할 100%':full[40],'20+50 따로':mixNone(half[20],half[50]),'20+50 연1회':mixYear(half[20],half[50]),'20+40 따로':mixNone(half[20],half[40])};
+      for(const dv of [20,N]){ const f=await im(cap,dv,from,'2099-12-31',syn), h=await im(cap/2,dv,from,'2099-12-31',syn); R.cycles[dv]=f.__cyc; full[dv]=clean(f); half[dv]=clean(h); }
+      const C={[A]:full[20],[B]:full[N],[X]:mixNone(half[20],half[N]),[Y]:mixYear(half[20],half[N])};
       for(const [k,m] of Object.entries(C)){ R.full[k]=met(series(m)); R.crisis[k]={}; for(const [s,e,n] of CR[lab]) R.crisis[k][n]=crisis(m,s,e);
         console.error('  '+k.padEnd(12), R.full[k].cagr.toFixed(1)+'/'+R.full[k].mdd.toFixed(1)); }
-      R.corr2050=corr(full[20],full[50]); R.corr2040=corr(full[20],full[40]);
+      R.corr=corr(full[20],full[N]);
+      // 연도별 수익(따로 굴린 5:5 · 각 단독)
+      R.year={}; for(const [k,m] of Object.entries(C)){ const ds=Object.keys(m).sort(), yr={}; for(const y of [...new Set(ds.map(d=>d.slice(0,4)))]){ const prev=ds.filter(d=>d<y+'-01-01'), inY=ds.filter(d=>d.slice(0,4)===y); const v0=prev.length?m[prev[prev.length-1]]:m[inY[0]]; yr[y]=(m[inY[inY.length-1]]/v0-1)*100; } R.year[k]=yr; }
       // 5년 롤링 — 분기마다 새로 시작(각 계좌 새 원금)
       const W={}; for(const k of Object.keys(C)) W[k]=[];
       for(let y=+from.slice(0,4);y<=2021;y++) for(const mo of ['01','04','07','10']){ const s=`${y}-${mo}-01`, e=`${y+5}-${mo}-01`; if(s<from||e>last) continue;
-        const f={}, h={}; for(const dv of [20,40,50]){ f[dv]=clean(await im(cap,dv,s,e,syn)); h[dv]=clean(await im(cap/2,dv,s,e,syn)); }
-        const c={'20분할 100%':f[20],'50분할 100%':f[50],'40분할 100%':f[40],'20+50 따로':mixNone(h[20],h[50]),'20+50 연1회':mixYear(h[20],h[50]),'20+40 따로':mixNone(h[20],h[40])};
+        const f={}, h={}; for(const dv of [20,N]){ f[dv]=clean(await im(cap,dv,s,e,syn)); h[dv]=clean(await im(cap/2,dv,s,e,syn)); }
+        const c={[A]:f[20],[B]:f[N],[X]:mixNone(h[20],h[N]),[Y]:mixYear(h[20],h[N])};
         for(const [k,m] of Object.entries(c)){ const x=met(series(m)); if(x) W[k].push({s,...x}); } }
       for(const [k,a] of Object.entries(W)) R.roll[k]={n:a.length,cMed:q(a.map(x=>x.cagr),.5),c10:q(a.map(x=>x.cagr),.1),cMin:Math.min(...a.map(x=>x.cagr)),
         mMed:q(a.map(x=>x.mdd),.5),mMax:Math.max(...a.map(x=>x.mdd)),bust:a.filter(x=>x.mult<0.2).length/a.length*100,
-        win20:k==='20분할 100%'?null:a.filter((x,i)=>x.cagr>W['20분할 100%'][i].cagr).length/a.length*100};
+        win20:k===A?null:a.filter((x,i)=>x.cagr>W[A][i].cagr).length/a.length*100, winMdd20:k===A?null:a.filter((x,i)=>x.mdd<W[A][i].mdd).length/a.length*100};
       fs.writeFileSync(OUT,JSON.stringify(res)); } }
   await close(); fs.writeFileSync(OUT,JSON.stringify(res)); console.error('done'); })().catch(e=>{console.error(e);process.exit(1);});
