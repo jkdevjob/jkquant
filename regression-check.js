@@ -126,6 +126,7 @@ const idxParts=[
 ];
 let __strat=null; global.curStrat=()=>__strat;
 global._infReplayAsOf=''; // extracted replay functions share the application's replay clock
+global._infResume=null;   // 모의 재생 중 '이어 계산' 기억(infSimForward 가 켜고 끈다) — 떼어 온 장부·재생기가 같이 본다
 /* 무매 사이클 종료 판정 (제14차 D15) — 따로 떼어 도는 하네스(백테 엔진 사본 · 운영 주문표 · 플랜)가 전역에서 찾는다.
    백테 사본은 backtest.html 에서, 장부용 하루 판정은 index.html 에서. 네 파일 글자가 같은지는 [127] 이 본다. */
 if(optFn(bt,'function imCycleEnds(soldToday, qtyAtDayEnd)')) global.imCycleEnds=new Function(extractFn(bt,'function imCycleEnds(soldToday, qtyAtDayEnd)')+'\nreturn imCycleEnds;')();
@@ -1760,8 +1761,11 @@ console.log('[30] 모의 시작일 일괄 변경');
        /const prevTab=S\.activeTab/.test(pf) && /S\.activeTab=prevTab;/.test(pf));
   }
 
-  /* 사용자가 5년 비교를 직접 할 수 있도록 모의 시작일 하한을 5년으로 넓힌다. */
-  ok('5년 하한이 있다', /const PAPER_MAX_YEARS=5;/.test(idx) && /function paperMinDate\(\)/.test(idx));
+  /* 모의 시작일 하한 — 5년(사용자 5년 비교) → 10년(2026-10-21 · 재생 이어 계산으로 10년 재생이 0.1초대). 값으로 본다. */
+  { const yrs=+((idx.match(/const PAPER_MAX_YEARS=(\d+);/)||[])[1]);
+    const md=new Function(`const PAPER_MAX_YEARS=${yrs};`+extractFn(idx,'function paperMinDate()')+'\nreturn paperMinDate;')()();
+    const e=new Date(); e.setFullYear(e.getFullYear()-10);
+    ok('10년 하한이 있다 — paperMinDate 가 오늘보다 정확히 10년 앞', yrs===10 && md===e.toISOString().slice(0,10), `PAPER_MAX_YEARS=${yrs} · ${md}`); }
   ok('칸에 min·max를 건다', /el\.min=min; el\.max=today;/.test(idx));
   // min 속성만으로는 못 막는다 — 키보드로 친 날짜는 그대로 들어온다
   ok('코드에서도 막는다', /if\(ns<min\)\{ alert\(`시작일은 최대 \$\{PAPER_MAX_YEARS\}년 전까지입니다/.test(ap)
@@ -10698,8 +10702,9 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
 console.log('\n[136] 모의성과 5년 비교 + LOC 줄수 표시');
 {
   const po=extractFn(idx,'function paperOpts(tab, st)');
-  ok('A 모의 시작일을 최대 5년 전까지 허용',
-     /const PAPER_MAX_YEARS=5;/.test(idx) && /시작일은 최대 <b>5년 전<\/b>/.test(idx));
+  { const yrs=+((idx.match(/const PAPER_MAX_YEARS=(\d+);/)||[])[1]);
+    ok('A 모의 시작일 안내 문구가 실제 하한과 같다 (10년)',
+       yrs===10 && idx.includes(`시작일은 최대 <b>${yrs}년 전</b>`)); }
   ok('B 무매 모의성과 세션 설명에 LOC 줄 수가 표시',
      /const locRows=imRowsOf\(S0\)/.test(po) && /LOC \$\{locRows\}줄/.test(po) && /'LOC 끔'/.test(po));
   ok('C 기본 3줄 자체는 바꾸지 않는다 — 연구결과가 원금에 따라 달라 운영 기본을 자동변경하지 않음',
