@@ -68,6 +68,8 @@ const SETUP=`(()=>{
       __H.guardOff=off; }
     __H.exits=0; __H.savedYield=!!o.savedYield;
     if(sig.budget){ const v=volOf(sig.bN||60); __H.budget=(d)=>{ const k=P(idx[d]); const x=v[k]; if(!(x>0)) return 1; return Math.max(sig.bMin||0,Math.min(1,Math.pow(sig.bT/x,sig.bPow||2))); }; }
+    // 외부 국면(regime.js): o.regime.st[날짜]=false 면 그날 '꺼짐'(전일까지 자료로 정한 값) — gate: 새 사이클 안 시작 · exit: 그날 시가에 전량 매도
+    if(o.regime){ const R=o.regime.st; if(o.regime.gate!==false) __H.gate=(d)=>R[d]!==false; if(o.regime.exit) __H.exit=(d)=>R[d]===false; }
     if(sig.exitMA){ const m=maOf(sig.exitMA); const lo=1-(sig.exitBand||0), hi=1+(sig.enterBand||0); let on=true;
       const st={}; for(let k=1;k<closes.length;k++){ const kk=k-1; if(m[kk]>0){ if(on&&closes[kk]<m[kk]*lo) on=false; else if(!on&&closes[kk]>m[kk]*hi) on=true; } st[all[k]]=on; }
       __H.exit=(d)=>st[d]===false; __H.gate=(d)=>st[d]!==false; }
