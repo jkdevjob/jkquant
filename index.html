@@ -338,6 +338,7 @@ html.had-user #authgate .bootwait{display:block}
 .switch input:checked+.sl2:before{transform:translateX(18px)}
 #sh_tman{width:100%;margin:6px 0 10px;padding:11px 13px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--ink);font-size:15px}
 .sheetbtns{display:grid;grid-template-columns:1fr 1.6fr;gap:10px;margin-top:8px}
+.bigbtn:disabled{opacity:.6;cursor:progress}
 .backbtn{background:var(--panel2);color:var(--dim);border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800;cursor:pointer}
 
 /* ════════ VR 5.0 콕핏 전용 ════════ */
@@ -454,10 +455,10 @@ html.had-user #authgate .bootwait{display:block}
 .cyctbl .cmin{color:var(--vio)}.cyctbl .cmax{color:var(--gold)}.cyctbl .cneg{color:var(--sell)}
 .cw{color:var(--faint);font-size:10px;display:block;font-weight:500;white-space:nowrap;line-height:1.25}
 .paper-opt-more{white-space:normal;margin-top:1px}
-/* 모의 성과 첫 칸(전략·세션)은 폭을 정해 두고 그 안에서 줄을 바꾼다 — 기간·평가·최종이 폰에서 가로 스크롤 없이 보이게
-   (2026-10-07 사용자 요청). 칸이 10개라 표는 어차피 화면보다 넓고, 넘칠 때 각 칸 폭은 '최소 폭'으로 정해진다.
-   그래서 첫 칸 최소 폭을 '화면 폭 − 250px'(96~170px)로 고정하고 긴 이름·설정·금액은 그 안에서 접는다.
-   250px = 좌우 여백 50 + 기간·평가·최종 약 170 + 글자 크기 여유 30. MDD~투입 칸은 그대로 옆으로 넘긴다. */
+/* 모의 성과 첫 칸(전략·세션)은 폭을 정해 두고 그 안에서 줄을 바꾼다 — TR·MDD·MAR 이 폰에서 가로 스크롤 없이 보이게
+   (2026-10-07 사용자 요청 · 10-21 순서 TR·MDD·MAR·평가 … 기간은 맨 뒤). 칸이 10개라 표는 어차피 화면보다 넓고,
+   넘칠 때 각 칸 폭은 '최소 폭'으로 정해진다. 그래서 첫 칸 최소 폭을 '화면 폭 − 250px'(96~170px)로 고정하고 긴 이름·설정·금액은 그 안에서 접는다.
+   250px = 좌우 여백 50 + TR·MDD·MAR 약 150(옛 기간·평가·최종 170 안) + 글자 크기 여유 30. 평가~기간 칸은 옆으로 넘긴다. */
 .htable.narrow td:first-child .pcell{min-width:clamp(96px,calc(100vw - 250px),170px);overflow-wrap:anywhere;word-break:keep-all}
 .htable.narrow td:first-child .pcell .cw{white-space:normal}
 /* 국내 종목명은 첫 칸의 기존 최소 폭 안에서만 쓴다. 긴 이름이 표를 넓히지 않게 한다. */
@@ -535,7 +536,7 @@ html.had-user #authgate .bootwait{display:block}
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
   import { initializeFirestore, doc, getDoc, setDoc, runTransaction, deleteField } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
-  import { createPaperStore, previewPaperDoc } from '/jk-paper-store.mjs?v=1.0.0';
+  import { createPaperStore, previewPaperDoc } from '/jk-paper-store.mjs?v=1.0.2';
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -552,7 +553,7 @@ html.had-user #authgate .bootwait{display:block}
   const db = initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
-  const paperStore=createPaperStore({doc,getDoc,runTransaction,deleteField});
+  const paperStore=createPaperStore({doc,getDoc,setDoc,runTransaction,deleteField});
   window.JKPaperStore={previewPaperDoc};
   window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc:paperStore.getDoc, setDoc, runTransaction:paperStore.runTransaction, deleteField };
   window.dispatchEvent(new Event('fb-ready'));
@@ -592,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.42</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.111.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1699,7 +1700,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.42</b> · 2026-10-19</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.111.1</b> · 2026-10-21</div>
   </footer>
 </div>
 
@@ -1889,7 +1890,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="note" style="margin-top:12px;line-height:1.7">
       <div><b>전체 적용</b>은 모의 세션의 시작일·금액을 한 번에 맞추고, 기존 모의 기록을 새 시작일부터 다시 계산합니다. <b>실계좌는 변경하지 않습니다.</b></div>
       <div style="margin-top:3px"><b>원금</b> → 무매·이평·섀넌·VR·거치 &nbsp;·&nbsp; <b>1회 적립액</b> → 적립식 · ASAP base×1 / mid×2 / deep×3</div>
-      <div style="margin-top:3px"><b>입력값은 원화 그대로 저장</b> · 미국 종목은 계산 내부에서만 시작일 환율 사용 · <b>성과 목록은 현재 USD/KRW</b>로 원화 표시 · 시작일은 최대 <b>5년 전</b></div>
+      <div style="margin-top:3px"><b>입력값은 원화 그대로 저장</b> · 미국 종목은 계산 내부에서만 시작일 환율 사용 · <b>성과 목록은 현재 USD/KRW</b>로 원화 표시 · 시작일은 최대 <b>10년 전</b></div>
     </div>
   </div>
   <div id="paper_body"></div>
@@ -2546,6 +2547,13 @@ function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return f
    평소 화면은 빈 값이라 현재까지 확정된 봉 전체를 보지만, infSimForward 가 과거를 하루씩 재생할 때는
    그 재생일을 넣어 미래 봉을 M1 판정에 섞지 않는다. */
 let _infReplayAsOf='';
+/* 모의 재생(infSimForward) 중에만 켜는 '이어 계산'. 재생은 하루씩 기록을 덧붙이며 computeInf 를 부르는데, 예전엔 매번
+   첫 줄부터 다시 세서 전 구간 재생이 기록 줄 수의 제곱으로 느려졌다 — SOXL 무매 세션 하나에 5년 0.9초 · 10년 3.5초 ·
+   익절 자동이면 5년 5초 · 10년 26초(서버 Node 실측, 2026-10-21 · 아이폰은 그 2~3배). 이어 계산 뒤 0.04~0.14초 · 기록 동일.
+   재생 중엔 기록이 뒤에 붙기만 하므로, 다음 줄과 날짜가 다른(그날이 끝난) 마지막 자리의 장부 상태를 기억해 두고
+   그 뒤 줄만 다시 센다. 마지막 날은 기억하지 않는다 — 같은 날 줄이 더 붙으면 그날 사이클 종료 판정(imDayOpenAfter)이 바뀐다.
+   같은 기록 배열 · 같은 설정 · 기억한 자리의 줄이 같은 객체일 때만 쓰고, 재생이 끝나면 지운다(평소 화면 계산엔 안 쓴다). */
+let _infResume=null;
 
 /* 누적 계산: 평단/보유/잔금/T/실현손익 */
 function computeInf(){
@@ -2585,7 +2593,14 @@ function computeInf(){
   const tpAt=(d)=>(_auto&&_ab&&d)?imAutoTPByMode(_ab,d,_mode):null;
   let cycStart='', cycTp=null;   // 이번 사이클 첫 매수일 · 그날 판정 (익절 자동일 때만 쓴다)
   let day=null, daySold=false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 판정한다 (제14차 D15)
-  const rows=hist.map((h,hi)=>{
+  const R=(typeof _infResume!=='undefined')?_infResume:null, stKey=R?JSON.stringify(st,(k,v)=>k==='simLast'?undefined:v):'';   // 재생은 날마다 simLast 만 바꾼다 — 장부 계산엔 안 쓰는 칸
+  let rows=[], k0=0;
+  if(R && R.hist===hist && R.stKey===stKey && R.k>0 && R.k<hist.length && hist[R.k-1]===R.last && hist[0]===R.first && hist[R.k].date!==hist[R.k-1].date){
+    ({avg,qty,inv,realized,T,totbuy,totsell,cycleSeq,withdrawn,saved,divTotal,revState,revFrom,cycStart,cycTp,day,daySold}=R.s);
+    for(let i=0;i<R.nFlows;i++) flows.push(R.flowArr[i]);
+    rows=R.rows.slice(0,R.k); k0=R.k;
+  }
+  const step=(h,hi)=>{
     if(h.date!==day){ day=h.date; daySold=false; }
     if(_auto&&cycStart&&cycTp&&cycTp.tp===20)cycTp=imAutoTPM1(_ab,cycStart,h.date,cycTp);
     const flat0=!(qty>1e-9) && T===0;   // 이 줄 전에 사이클이 비어 있었나 — 여기서 사면 새 사이클 첫 매수다
@@ -2668,7 +2683,14 @@ function computeInf(){
     const row={...h,profit,avgAfter:avg,qtyAfter:qty,Tafter:T,balAfter,pctAfter,starAfter,cycleEnd,cycleSeq,revState};
     if(cycleEnd)cycleSeq++;
     return row;
-  });
+  };
+  for(let hi=k0;hi<hist.length;hi++){
+    rows.push(step(hist[hi],hi));
+    if(R && hi+1<hist.length && hist[hi+1].date!==hist[hi].date){   // 그날이 끝난 자리 — 재생 중이면 여기까지의 장부를 기억한다
+      R.hist=hist; R.stKey=stKey; R.k=hi+1; R.first=hist[0]; R.last=hist[hi]; R.rows=rows; R.flowArr=flows; R.nFlows=flows.length;
+      R.s={avg,qty,inv,realized,T,totbuy,totsell,cycleSeq,withdrawn,saved,divTotal,revState,revFrom,cycStart,cycTp,day,daySold};
+    }
+  }
   revEnter();   // 기록이 하나도 없거나 설정만 바뀐 경우도 같은 자리에서 판정
   /* 리버스 표시 여부 = 상태머신이 NORMAL 이 아닌가. 소진 기준(라오어 공지)은
      '1회 매수가 불가능해지는 시점' = 잔금 < 잔금/(분할−T) ⟺ T > 분할−1 이고,
@@ -4152,6 +4174,7 @@ function infSimForward(startFrom){
 
   const _prevReplayAsOf=_infReplayAsOf;
   _infSimBusy=true;
+  _infResume={};   // 이어 계산 켬 — 이 재생 동안 기록은 뒤에 붙기만 한다
   let nBuy=0,nSell=0,seq=0,nCyc0=computeInf().cycleSeq;
   const closeAt=i=>(O[i]&&O[i].close>0)?O[i].close:0;
   const put=(kind,date,price,qty)=>{ if(!(qty>=1)||!(price>0)) return false;
@@ -4260,8 +4283,9 @@ function infSimForward(startFrom){
         else if(extra>0) put('1회매수',d,cl,extra); }   // 본 주문 없이 추가 줄만(드묾) — 1회로 센다 (백테와 같은 규약)
       st.simLast=d;
     }
+    _infResume=null;   // 정렬하면 줄 순서가 바뀐다 — 그 전에 끈다
     sortHist(sess.hist); save();
-  } finally { _infReplayAsOf=_prevReplayAsOf; _infSimBusy=false; }
+  } finally { _infResume=null; _infReplayAsOf=_prevReplayAsOf; _infSimBusy=false; }
   const c=computeInf();
   return {nBuy,nSell,nDiv,upto:first[first.length-1].date,
           cyc:c.cycleSeq-nCyc0, T:c.T, qty:c.qty, avg:c.avg, bal:c.bal};
@@ -7907,7 +7931,7 @@ function paperStat(tab, sess){
   const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));   // 연환산 분모용 하한
   const nTrade=tradeCount(h);
   /* 수익률을 셋으로 쪼갠다. 정확히 더해진다 —
-       최종 = (평가금+잔금+나간 돈) ÷ 원금 − 1
+       최종 = (평가금+잔금+나간 돈) ÷ 원금 − 1     목록 머리글 'TR'(토탈리턴 · 10-21 이름 바꿈 · 단리 인출 포함)
        현재 = (평가금+잔금)        ÷ 원금 − 1     계좌에 지금 남아 있는 것
        인출 =  나간 돈             ÷ 원금         매도해서 계좌 밖으로 뺀 것
      현재 + 인출 = 최종. 단리 세션은 초과익이 계좌 밖으로 빠지므로 이 셋이 크게 갈린다. */
@@ -8076,7 +8100,7 @@ function paperFxLine(rows){
   const same=(hi/lo-1)<0.005, base=(lo+hi)/2, chg=(now/base-1)*100;
   const head=same ? `시작일 환율 ${won(base)}원 → 지금 ${won(now)}원 (${chg>=0?'+':'−'}${Math.abs(chg).toFixed(1)}%)`
                   : `시작일 환율 ${won(lo)}~${won(hi)}원(세션마다 다름) → 지금 ${won(now)}원`;
-  return `<p class="note" id="paper_fx_line" style="margin:2px 0 6px">💱 ${head} · <b>달러 종목 금액은 달러 + 원화</b>로 함께 표시합니다. 평가·인출 원화는 지금 환율, 투입 원화는 입력한 원화 원본입니다. <b>최종의 첫 줄·현재·연(%)</b>은 달러 기준, <b>최종의 둘째 줄(원화)</b>은 현재 환율을 반영한 원화 기준 수익률입니다.</p>`;
+  return `<p class="note" id="paper_fx_line" style="margin:2px 0 6px">💱 ${head} · <b>달러 종목 금액은 달러 + 원화</b>로 함께 표시합니다. 평가·인출 원화는 지금 환율, 투입 원화는 입력한 원화 원본입니다. <b>TR의 첫 줄·현재·연(%)</b>은 달러 기준, <b>TR의 둘째 줄(원화)</b>은 현재 환율을 반영한 원화 기준 수익률입니다.</p>`;
 }
 function paperWonRate(r){
   if(!r||r.cur==='krw') return 1;
@@ -8259,16 +8283,18 @@ async function openPaper(){
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
     let h=`<div class="htable-wrap"><table class="htable narrow"><thead><tr>`
+      /* 칸 순서 TR · MDD · MAR · 평가 — 폰에서 스크롤 없이 보이는 자리에 수익률과 위험을 둔다. 기간은 맨 뒤(2026-10-21 사용자 요청).
+         TR(토탈리턴) = (평가금 + 잔금 + 나간 돈) ÷ 원금 − 1 — 단리 인출·출금까지 넣는다(예전 이름 '최종', 값은 그대로). */
       + `<th style="cursor:pointer" onclick="paperSortTable('name',this)">전략 · 세션</th>`
-      + `<th style="cursor:pointer" onclick="paperSortTable('days',this)">기간</th>`
-      + `<th style="cursor:pointer" onclick="paperSortTable('total',this)">평가</th>`
-      + `<th style="cursor:pointer" onclick="paperSortTable('ret',this)" title="평가금 + 잔금 + 나간 돈 ÷ 원금. 현재 + 인출 과 정확히 같습니다">최종</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('ret',this)" title="TR(토탈리턴) = 평가금 + 잔금 + 나간 돈 ÷ 원금 − 1 — 단리 인출·출금까지 넣은 전체 수익률. 현재 + 인출 과 정확히 같습니다">TR</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('mdd',this)" title="최대 낙폭 — 하루하루 '총자산 ÷ 그때까지 넣은 돈'을 재서 고점 대비 가장 깊이 빠진 폭. 적립금이 상승처럼 잡히지 않도록 투입으로 나눠 잽니다">MDD</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('mar',this)" title="MAR = CAGR ÷ |MDD| — 전체 모의기간의 연복리 수익률을 최대 낙폭 절대값으로 나눈 값">MAR</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('total',this)">평가</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('now',this)" title="평가금 + 잔금 ÷ 원금 — 계좌에 지금 남아 있는 것만">현재</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('out',this)" title="매도해서 계좌 밖으로 뺀 돈(단리 적립·출금) ÷ 원금">인출</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('cagr',this)">연</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('inflow',this)">투입</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('days',this)">기간</th>`
       + `</tr></thead><tbody id="paper_tbody">`;
     rows.forEach(r=>{ const up=r.ret>=0, ok=r.price>0;
       const days=r.spanDays||Math.round(r.yrs*365.25);
@@ -8309,15 +8335,14 @@ async function openPaper(){
       const _paperOptsRest=_paperOpts.slice(_paperSplitAt);
       const _paperOptTopText=_paperOptsTop.length?' · '+_paperOptsTop.join(' · '):'';
       const _paperOptRestText=_paperOptsRest.length?`<span class="cw paper-opt-more">${_paperOptsRest.join(' · ')}</span>`:'';
-      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell">${paperTitle(r)}<span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>
-        <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
+      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell">${paperTitle(r)}<span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>`
         + (ok
-          ? `<td>${paperDualMoney(r,r.total,r.wonRate)}</td>
-             <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%${Number.isFinite(_krwFinalRet)?`<span class="cw" style="color:${_krwFinalRet>=0?'var(--buy)':'var(--sell)'}" title="원화 최종 수익률 = 현재 환율로 환산한 총평가액 ÷ 투입 원화 - 1">원화 ${_krwFinalRet>=0?'+':''}${_krwFinalRet.toFixed(1)}%</span>`:''}</td>`
+          ? `<td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%${Number.isFinite(_krwFinalRet)?`<span class="cw" style="color:${_krwFinalRet>=0?'var(--buy)':'var(--sell)'}" title="원화 TR = 현재 환율로 환산한 총평가액(인출 포함) ÷ 투입 원화 - 1">원화 ${_krwFinalRet>=0?'+':''}${_krwFinalRet.toFixed(1)}%</span>`:''}</td>`
              /* MDD는 종가 이력이 있어야 잰다 — 못 재면 0%처럼 보이지 않게 비운다 */
              + `<td style="color:${r.mdd?'var(--sell)':'var(--faint)'}" title="${r.mdd?r.mdd.nDay+'거래일을 하루하루 재봤습니다':'종가 이력이 모자라 못 쟀습니다'}">${r.mdd?'−'+r.mdd.pct.toFixed(1)+'%':'—'}</td>`
              + `<td style="color:${Number.isFinite(_mar)?(_mar>=0?'var(--buy)':'var(--sell)'):'var(--faint)'}" title="${Number.isFinite(_mar)?('CAGR '+r.cagr.toFixed(1)+'% ÷ MDD '+r.mdd.pct.toFixed(1)+'%'):'45일 미만이거나 MDD가 0/미계산이라 MAR을 표시하지 않습니다'}">${Number.isFinite(_mar)?_mar.toFixed(2):'—'}</td>`
-             /* 나간 돈이 없으면 현재는 최종과 같은 값이고 인출은 0이다 —
+             + `<td>${paperDualMoney(r,r.total,r.wonRate)}</td>`
+             /* 나간 돈이 없으면 현재는 TR 과 같은 값이고 인출은 0이다 —
                 같은 숫자를 굵게 두 번 띄우면 잡음이라 흐리게 두고 인출은 비운다 */
              + `<td style="color:${outAmt>0?(r.retNow>=0?'var(--buy)':'var(--sell)'):'var(--faint)'}">${r.retNow>=0?'+':''}${r.retNow.toFixed(1)}%</td>`
              + `<td style="color:${outAmt>0?'var(--gold)':'var(--faint)'}">${outAmt>0?'+'+r.retOut.toFixed(1)+'%':'—'}</td>`
@@ -8325,13 +8350,14 @@ async function openPaper(){
           : (r.pending
             ? `<td colspan="7" style="color:var(--faint)">계산 중 — ${r.sym} 시세를 받는 대로 채웁니다</td>`
             : `<td colspan="7" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`))
-        // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
-        + `<td style="color:var(--dim)">${paperInflowText(r)}</td></tr>`; });
+        // 투입·기간은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과·위험(TR·MDD·MAR·평가)이다
+        + `<td style="color:var(--dim)">${paperInflowText(r)}</td>`
+        + `<td>${per}<span class="cw">${r.nTrade}거래</span></td></tr>`; });
     h+=`</tbody></table></div>`;
     h=paperFxLine(rows)+h;
     if(paperStaleNote) h=`<p class="note" id="paper_stale_note" style="color:var(--vio)">🔄 지난번 계산 결과입니다 — 오늘 기준으로 다시 계산하는 중… (끝나면 자동으로 바뀝니다)</p>`+h;
     if(!cur && rows.some(r=>!(r.price>0)&&!r.pending)) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 새로고침하면 다시 받습니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시). <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
+    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · <b>TR</b>(토탈리턴) = 평가 ÷ 투입 − 1(단리 인출·출금 포함 · 현재 + 인출) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다) · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · 기간 = 모의 시작일부터. <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
     void paperLoadTickerNames(body);
@@ -8347,9 +8373,11 @@ function paperSessions(){
     box.sessions.forEach(x=>{ if(x.paper) out.push([tab,x]); }); });
   return out;
 }
-/* 시작일 하한 — 3년. 그 앞은 시세를 받아 하루씩 되짚느라 오래 걸리고,
-   레버리지 ETF는 상장 자체가 얼마 안 된 게 많아 구간이 반쯤 비기도 한다. */
-const PAPER_MAX_YEARS=5;
+/* 시작일 하한 — 10년 (2026-10-21 · 5년에서 넓힘). 예전엔 무매 재생이 하루마다 장부를 첫 줄부터 다시 세서
+   기간의 제곱으로 느려져(익절 자동 10년 26초) 짧게 막아 두었다 — 이어 계산(_infResume)으로 10년 0.14초가 됐다.
+   시세는 상장일부터(range=max) 받지만, 상장이 늦은 종목은 그 앞 구간이 비어 상장일부터 시작한다.
+   한 번에 '전체 적용'하면 모의 기록 전체를 다시 저장한다 — 저장 한도(8MiB)를 넘으면 jk-paper-store 가 조각을 먼저 올린다. */
+const PAPER_MAX_YEARS=10;
 function paperMinDate(){ const d=new Date(); d.setFullYear(d.getFullYear()-PAPER_MAX_YEARS);
   return d.toISOString().slice(0,10); }
 /* 전략마다 '금액'의 뜻이 다르다. 원금(한 번에 넣는 총액)과 같은 뜻인 칸에만 넣는다.
@@ -9529,7 +9557,7 @@ function sheetSelInf(kind){
           <label class="switch"><input type="checkbox" id="sh_tman_on" onchange="sheetToggleTman()"><span class="sl2"></span></label></div>
         <div id="sh_tman_wrap" style="display:none"><input id="sh_tman" type="number" step="0.01" inputmode="decimal" placeholder="예: 1.25" oninput="sheetTprev()"></div>
       </div>`;
-  f+=`<div class="sheetbtns"><button class="backbtn" onclick="sheetBackInf()">뒤로</button><button class="bigbtn" onclick="sheetSaveInf()">기록하기</button></div>`;
+  f+=`<div class="sheetbtns"><button class="backbtn" onclick="sheetBackInf()">뒤로</button><button class="bigbtn" id="sh_save" onclick="sheetSaveInf()">기록하기</button></div>`;
   $('sheet_form').innerHTML=f;
   $('sheet_form').style.display='block';
   // 자동 채움 — 값은 그대로 고칠 수 있다
@@ -9600,7 +9628,18 @@ function sheetPickInf(kind,price,qty){
   if(qty>0&&$('sh_qty'))$('sh_qty').value=qty;
   sheetTprev();
 }
+/* 기록하기 — DB 저장 확인까지 몇 초 걸릴 수 있다(원장이 크면 아이폰에서 특히). 그동안 버튼이 그대로라
+   '한참 가만히 있다가 저장'으로 보였고(2026-10-20 사용자), 다시 누르면 같은 거래가 한 번 더 들어갔다.
+   누른 즉시 버튼을 '저장 중'으로 바꾸고 막는다. 몇 초가 넘으면 초를 같이 적는다. */
+let _shSaving=false;
+function sheetBusy(id){
+  const b=$(id), t0=Date.now(), label=b?b.textContent:'';
+  if(b){ b.disabled=true; b.textContent='저장 중…'; }
+  const tick=setInterval(()=>{ const s=Math.round((Date.now()-t0)/1000); if(b&&s>=3) b.textContent=`저장 중… ${s}초`; },1000);
+  return ()=>{ clearInterval(tick); if(b){ b.disabled=false; b.textContent=label; } };
+}
 async function sheetSaveInf(){
+  if(_shSaving) return;   // 저장을 기다리는 중 — 또 눌러도 같은 거래를 다시 넣지 않는다
   if(!shKind){alert('거래 종류를 선택하세요');return}
   const date=$('sh_date').value;
   const tmanOn=$('sh_tman_on')&&$('sh_tman_on').checked;
@@ -9631,9 +9670,17 @@ async function sheetSaveInf(){
   hh.push(rec); sortHist(hh);
   /* 거래 원장은 Firebase DB가 정본이다. DB 저장 성공을 확인한 뒤에만 입력창을 닫는다. */
   saveLocal(); // 거래이력 제외 설정 캐시
-  const dbOk=await pushRemoteNow();
-  if(!dbOk){ alert('DB 저장에 실패했습니다. 입력값은 화면에 유지됩니다. 새로고침하지 말고 다시 기록해 주세요.'); refreshInf(); return; }
-  refreshInf(); closeSheet();
+  _shSaving=true; const idle=sheetBusy('sh_save');
+  const dbOk=await pushRemoteNow().catch(e=>{ console.error('sheet save',e); return false; });
+  _shSaving=false; idle();
+  if(!dbOk){
+    /* 저장 안 된 거래는 화면 장부에서도 뺀다 — 입력값은 그대로 두니 다시 누르면 한 건만 들어간다.
+       예전엔 남겨 둔 채 '다시 기록'을 안내해, 다시 누르면 같은 거래가 두 건이 됐다. */
+    const i=hh.indexOf(rec); if(i>=0) hh.splice(i,1);
+    alert('DB 저장에 실패해 기록하지 않았습니다. 입력값은 그대로 있으니 다시 기록하기를 눌러 주세요.'); refreshInf(); return;
+  }
+  // 창부터 닫고 다시 그린다 — 다시 그리기(이력·분석·차트)를 기다리느라 창이 늦게 닫히지 않게
+  closeSheet(); requestAnimationFrame(()=>setTimeout(refreshInf,0));
 }
 
 /* ── VR 시트 ── */
@@ -10615,14 +10662,15 @@ async function _commitStateRemote(where){
   if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return false;}
   _staleStateGuard(where);
   const ref=window.fb.doc(window.fb.db,'users',curUid);
-  let candidate=JSON.parse(JSON.stringify(S)),writeUpdated=Date.now(),mergedRemote=false;
-  candidate._updated=Math.max(+candidate._updated||0,writeUpdated);
-  const _subJSON=JSON.stringify(candidate), submitted=JSON.parse(_subJSON);
+  /* 원장 전체를 문자열로 바꾸는 일은 한 번만 하고 그 문자열에서 꺼내 쓴다 — 모의 자동이력이 수 MB 라 한 번에 수십 ms 씩 든다(2026-10-20).
+     예전엔 S 복사 → 다시 문자열 → 객체, 트랜잭션 안에서 또 문자열 → 객체, 끝나고 두 번 더 문자열로 만들었다. 저장 내용은 같다. */
+  let candidate=null,writeUpdated=Date.now(),mergedRemote=false;
+  const _subJSON=JSON.stringify(Object.assign({},S,{_updated:Math.max(+S._updated||0,writeUpdated)})), submitted=JSON.parse(_subJSON);
   _dbPlan=null;
   try{
     const nextRev=await window.fb.runTransaction(window.fb.db,async tx=>{
       // Firestore may retry: never merge a previous attempt into the next one.
-      candidate=JSON.parse(JSON.stringify(submitted));mergedRemote=false;
+      candidate=JSON.parse(_subJSON);mergedRemote=false;
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{};
       const remote=validState(d.stateV2)?d.stateV2:d.state,rev=+d.stateV2Rev||0;
       const remoteSig=remote&&validState(remote)?_historySignature(remote):'';
@@ -10658,8 +10706,9 @@ async function _commitStateRemote(where){
       }
       S=next;ensureBoxes();try{refreshAll();}catch(e){console.warn('db rebase refresh',e);}
     }
-    stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(candidate);stateDbBase=JSON.parse(JSON.stringify(candidate));
-    stateCloudPending=false;lastPushedJSON=JSON.stringify(candidate);setSync('ok');
+    const _doneJSON=JSON.stringify(candidate);
+    stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(candidate);stateDbBase=JSON.parse(_doneJSON);
+    stateCloudPending=false;lastPushedJSON=_doneJSON;setSync('ok');
     const done=_dbPlan||{bytes:0,parts:[]};
     if(done.archivedBytes>0){ _dbForceArchive=false; _dbArchivedNote=`✓ 10/2 이전 앱이 남긴 옛 형식 사본(${Math.round(done.archivedBytes/1024)}KB)을 보관 문서로 옮겨 클라우드 문서를 ${Math.round(done.bytes/1024)}KB 로 줄였습니다 — 저장이 다시 됩니다.`; }
     if(done.splitNew)_dbArchivedNote+=' ✓ 모의 자동이력을 별도 문서에 분할 저장했습니다. 전체 거래기록과 수동 입력을 보존했습니다.';

@@ -5,6 +5,7 @@
 export const PAPER_HISTORY_FIELD='paperHistoryV1';
 export const PAPER_SPLIT_AT=600*1024;
 const PART_CHARS=60000;
+const COMMIT_BYTES=8*1024*1024,COMMIT_WRITES=450,UPLOAD_LANES=4;
 const SESSION_REF='_jkPaperHistoryRef';
 const BOXES=['inf','vr','ma','ivs','dca','asap'];
 const copy=x=>JSON.parse(JSON.stringify(x));
@@ -15,6 +16,13 @@ const hashPattern=/^[a-f0-9]{64}$/;
 // binds values and array order, while remaining independent of map key order.
 const stableJson=value=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)
   ?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
+/* Saving one real trade used to re-copy, re-split and re-hash every unchanged
+   paper session (several MB) on each save. Packing is a pure function of the
+   session's JSON text, so its result is remembered by that exact text (PACKED);
+   a changed session has different text and is packed again. Which parts are
+   written is still decided by the store's own per-account read cache. */
+const MEMO_MAX=64,PACKED=new Map();
+const memo=(map,key,value)=>{map.delete(key);map.set(key,value);while(map.size>MEMO_MAX)map.delete(map.keys().next().value);return value;};
 function failure(message){return Object.assign(new Error(message),{code:'paper-history-unavailable'});}
 async function sha(s){
   const digest=await globalThis.crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
@@ -42,12 +50,19 @@ function selected(d){
   const out=[];
   for(const box of BOXES)for(const [index,s] of (d.stateV2[box]?.sessions||[]).entries()){
     if(s?.paper===true&&Array.isArray(s.hist)&&s.hist.some(generated)){
-      const original=JSON.stringify(s),stub=copy(s);
-      stub.hist=stub.hist.filter(h=>!generated(h));
-      stub[SESSION_REF]='0'.repeat(64);
-      // Older app versions can safely replay this regenerable paper cache.
-      if(stub.settings){delete stub.settings.simSig;delete stub.settings.simLast;}
-      out.push({box,index,id:String(s.id||''),original,stub,texts:partsOf(original)});
+      const original=JSON.stringify(s);
+      let m=PACKED.get(original);
+      if(m)memo(PACKED,original,m);
+      else{
+        const stub=JSON.parse(original);   // = copy(s)
+        stub.hist=stub.hist.filter(h=>!generated(h));
+        stub[SESSION_REF]='0'.repeat(64);
+        // Older app versions can safely replay this regenerable paper cache.
+        if(stub.settings){delete stub.settings.simSig;delete stub.settings.simLast;}
+        m=memo(PACKED,original,{stub:JSON.stringify(stub),texts:partsOf(original)});
+      }
+      // Callers change the stub (SESSION_REF), so every call gets its own copy.
+      out.push({box,index,id:String(s.id||''),original,stub:JSON.parse(m.stub),texts:m.texts,memo:m});
     }
   }
   return out;
@@ -68,11 +83,13 @@ export async function packPaperDoc(d){
   if(!rows.length){delete out[PAPER_HISTORY_FIELD];return {data:out,parts};}
   const sessions=[];
   for(const r of rows){
-    const ids=[];
-    for(const text of r.texts){const id=await sha(text);ids.push(id);parts.set(id,{version:1,text});}
-    const hash=await sha(r.original);r.stub[SESSION_REF]=hash;
+    const m=r.memo;
+    if(!m.ids){const ids=[];for(const text of r.texts)ids.push(await sha(text));m.hash=await sha(r.original);m.ids=ids;}
+    r.texts.forEach((text,i)=>parts.set(m.ids[i],{version:1,text}));
+    const hash=m.hash;r.stub[SESSION_REF]=hash;
+    if(!m.stubHash)m.stubHash=await sha(stableJson(r.stub));
     out.stateV2[r.box].sessions[r.index]=r.stub;
-    sessions.push({box:r.box,index:r.index,id:r.id,hash,stubHash:await sha(stableJson(r.stub)),chars:r.original.length,parts:ids});
+    sessions.push({box:r.box,index:r.index,id:r.id,hash,stubHash:m.stubHash,chars:r.original.length,parts:[...m.ids]});
   }
   out[PAPER_HISTORY_FIELD]={version:1,sessions};return {data:out,parts};
 }
@@ -106,13 +123,21 @@ export async function hydratePaperDoc(d,readPart,options={}){
     if(!wanted(e.box,s))return;
     if(s.hist?.some(generated)){delete s[SESSION_REF];return;}
     if(await sha(stableJson(s))!==e.stubHash)throw failure('모의 설정과 저장 기록의 판이 다릅니다. 다른 열린 창을 새로고침해 주세요. 기록은 삭제하지 않았습니다.');
-    const texts=await Promise.all(e.parts.map(async id=>{
-      const p=await getPart(id);
-      if(!p||p.version!==1||typeof p.text!=='string'||await sha(p.text)!==id)throw failure('모의 기록 일부를 읽지 못했습니다. 전체 기록을 불러올 때까지 저장을 중단합니다.');
-      return p.text;
-    }));
-    const text=texts.join('');
-    if(text.length!==e.chars||await sha(text)!==e.hash)throw failure('모의 기록 검증에 실패했습니다. 기존 기록은 보존됩니다.');
+    // The store passes text it already verified from the same cached parts of the
+    // same account (options.verified); every other read verifies every part again.
+    const known=options.verified?.get(e);
+    let text;
+    if(typeof known==='string'&&known.length===e.chars)text=known;
+    else{
+      const texts=await Promise.all(e.parts.map(async id=>{
+        const p=await getPart(id);
+        if(!p||p.version!==1||typeof p.text!=='string'||await sha(p.text)!==id)throw failure('모의 기록 일부를 읽지 못했습니다. 전체 기록을 불러올 때까지 저장을 중단합니다.');
+        return p.text;
+      }));
+      text=texts.join('');
+      if(text.length!==e.chars||await sha(text)!==e.hash)throw failure('모의 기록 검증에 실패했습니다. 기존 기록은 보존됩니다.');
+      options.verified?.set(e,text);
+    }
     const original=JSON.parse(text);
     if(original.paper!==true||String(original.id||'')!==e.id||!Array.isArray(original.hist))throw failure('모의 세션 원본을 확인할 수 없습니다.');
     out.stateV2[e.box].sessions[index]=original;
@@ -123,9 +148,15 @@ export async function hydratePaperDoc(d,readPart,options={}){
 /* Firebase adapter. Buffer writes until all reads and hashes finish, keeping
    parent + new parts atomic in the application's existing transaction. */
 export function createPaperStore(sdk){
-  const cache=new Map(),MAX_CACHE=256;
+  const cache=new Map(),MAX_CACHE=256,verified=new Map();
   const remember=(key,value)=>{cache.set(key,value);while(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);};
   const partRef=(ref,id)=>sdk.doc(ref.firestore,...ref.path.split('/'),'paperHistory',id);
+  /* A session text verified earlier for this account is reused only while every
+     one of its parts is still in this account's part cache — exactly the case in
+     which the full check would read the same cached parts and pass again. */
+  const verifiedFor=path=>{const key=e=>path+'|'+e.hash+'|'+e.parts.join(',');return {
+    get:e=>{const t=verified.get(key(e));return t!==undefined&&e.parts.every(id=>cache.has(path+'/'+id))?memo(verified,key(e),t):undefined;},
+    set:(e,text)=>{memo(verified,key(e),text);}};};
   async function read(ref,get){
     const snap=await get(ref);
     if(!userPath(ref.path)||!snap.exists())return snap;
@@ -135,11 +166,31 @@ export function createPaperStore(sdk){
       const p=await get(partRef(ref,id));
       if(!p.exists())throw failure('모의 기록 일부가 아직 도착하지 않았습니다. 연결을 확인한 뒤 다시 불러와 주세요.');
       const value=p.data();remember(key,value);return value;
-    });
+    },{verified:verifiedFor(ref.path)});
     return new Proxy(snap,{get(target,key){if(key==='data')return ()=>data;if(key==='paperStorageData')return ()=>raw;const v=Reflect.get(target,key,target);return typeof v==='function'?v.bind(target):v;}});
   }
   const getDoc=ref=>read(ref,sdk.getDoc);
+  /* One commit is capped (8 MiB, 500 writes). A full re-apply of many long paper
+     sessions can need more. Parts are immutable, content-addressed and unreferenced
+     until the parent lands, so with sdk.setDoc they are uploaded first, outside the
+     transaction (a few at a time), and the transaction is run again: it then writes
+     the parent plus whatever is still missing. A failed upload leaves only an
+     unreferenced part; the parent, and so every reader, still sees the old ledger. */
+  async function upload(parts,uploaded){
+    const list=[...parts];let at=0;
+    const worker=async()=>{while(at<list.length){const [key,w]=list[at++];await sdk.setDoc(w.ref,w.data);uploaded.add(key);remember(key,w.data);}};
+    await Promise.all(Array.from({length:Math.min(UPLOAD_LANES,list.length)},worker));
+  }
   async function runTransaction(db,callback,options){
+    const uploaded=new Set();
+    for(let pass=0;;pass++){
+      const big={parts:null};
+      try{return await attempt(db,callback,options,uploaded,pass===0&&typeof sdk.setDoc==='function'?big:null);}
+      catch(e){if(!big.parts||e!==big.signal)throw e;}
+      await upload(big.parts,uploaded);
+    }
+  }
+  function attempt(db,callback,options,uploaded,big){
     return sdk.runTransaction(db,async tx=>{
       const writes=[],rawDocs=new Map();
       const get=async ref=>{const snap=await read(ref,r=>tx.get(r));if(userPath(ref.path))rawDocs.set(ref.path,snap.paperStorageData?snap.paperStorageData():snap.data()||{});return snap;};
@@ -157,13 +208,17 @@ export function createPaperStore(sdk){
         data[PAPER_HISTORY_FIELD]=packed.data[PAPER_HISTORY_FIELD]||sdk.deleteField();
         for(const [id,p] of packed.parts){
           const key=w.ref.path+'/'+id;
-          if(!cache.has(key)&&!newParts.has(key))newParts.set(key,{ref:partRef(w.ref,id),data:p});
+          if(!cache.has(key)&&!uploaded.has(key)&&!newParts.has(key))newParts.set(key,{ref:partRef(w.ref,id),data:p});
         }
         ready.push({...w,data});
       }
       // The Firebase request limit applies to the whole atomic commit as well.
       const bytes=[...newParts.values(),...ready].reduce((n,w)=>n+new TextEncoder().encode(JSON.stringify(w.data)).length,0);
-      if(bytes>8*1024*1024||newParts.size+ready.length>450)throw failure('한 번에 저장할 모의 기록이 너무 큽니다. 기록을 지우지 말고 세션별로 나누어 계산해 주세요.');
+      if(bytes>COMMIT_BYTES||newParts.size+ready.length>COMMIT_WRITES){
+        // Abort this attempt without writing; the parts go up first (see upload).
+        if(big&&newParts.size){big.parts=newParts;big.signal=Object.assign(new Error('paper parts upload first'),{code:'paper-upload-first'});throw big.signal;}
+        throw failure('한 번에 저장할 모의 기록이 너무 큽니다. 기록을 지우지 말고 세션별로 나누어 계산해 주세요.');
+      }
       for(const w of newParts.values())tx.set(w.ref,w.data);
       for(const w of ready)tx.set(w.ref,w.data,w.opt);
       // Cache only reads or acknowledged commits, never uncommitted new parts.

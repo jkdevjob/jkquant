@@ -664,5 +664,8 @@ jobs:
       - name: 회귀 테스트 (엔진 차분 + UI 배선 + DOM 구조 + 모의 장부)
         run: node regression-check.js index.html backtest.html testdata
 
+      - name: 모의 재생 이어 계산 검사 (기억 켬/끔 장부 일치 · 무작위 덧붙이기 · 경계)
+        run: node scripts/check-paper-replay.cjs index.html testdata
+
       - name: MA150 하향 기준 및 시간대 경계 검증
         run: node scripts/check-ma150-cutover.cjs

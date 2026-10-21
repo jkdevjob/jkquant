@@ -167,4 +167,50 @@ ok('IPO 명시적 삭제는 stale remote 때문에 부활하지 않음',(()=>{
   return m.map(x=>x.id).sort().join(',')==='a,c';
 })());
 
-console.log('ALL HISTORY PRESERVATION CHECKS PASS');
+/* ── 무매 기록하기 (2026-10-20 사용자: '기록하기 누르면 한참 가만히 있다가 저장') ──
+   DB 확인까지 기다리는 동안 버튼이 그대로라 또 누르게 되고, 그러면 같은 거래가 두 번 들어갔다.
+   실패하면 화면 장부에 남긴 채 '다시 기록'을 안내해 다시 누르면 두 건이 됐다. 실제 함수를 값으로 굴린다. */
+const sheetCase=()=>{
+  const el={sh_save:{textContent:'기록하기',disabled:false},sh_date:{value:'2026-10-20'},sh_price:{value:'97.55'},sh_qty:{value:'6'},sh_tman_on:{checked:false}};
+  const log=[],hist=[];let resolve=null,pushes=0;
+  const ctx=vm.createContext({console:{...console,error:()=>log.push('logged')},JSON,Date,Math,String,
+    $:id=>el[id],shKind:'1회매수',curStrat:()=>({hist}),isCx:()=>false,unComma:v=>String(v).replace(/,/g,''),
+    sortHist:a=>a,saveLocal:()=>{},alert:()=>log.push('alert'),refreshInf:()=>log.push('refresh'),closeSheet:()=>log.push('close'),
+    requestAnimationFrame:f=>{log.push('frame');f();},setTimeout:f=>{f();return 0;},setInterval:()=>1,clearInterval:()=>{},
+    pushRemoteNow:()=>{pushes++;return new Promise(r=>{resolve=r;});},computeInf:()=>({bal:1e9}),wn:String,confirm:()=>true});
+  vm.runInContext('let _shSaving=false;\n'+fn(idx,'function sheetBusy(id)')+'\n'+fn(idx,'async function sheetSaveInf()'),ctx);
+  return {ctx,el,log,hist,done:v=>resolve(v),pushes:()=>pushes};
+};
+(async()=>{
+  { const t=sheetCase(), a=t.ctx.sheetSaveInf(), b=t.ctx.sheetSaveInf();
+    ok('무매 기록하기: 누르자마자 저장 중 표시 · 저장을 기다리는 중 또 눌러도 한 건 · DB 요청도 한 번',
+      t.hist.length===1 && t.pushes()===1 && t.el.sh_save.disabled===true && /저장 중/.test(t.el.sh_save.textContent));
+    t.done(true); await a; await b;
+    ok('무매 기록하기: DB 성공이면 창부터 닫고 그다음 화면을 다시 그린다 · 버튼은 원래대로',
+      JSON.stringify(t.log)==='["close","frame","refresh"]' && t.el.sh_save.disabled===false && t.el.sh_save.textContent==='기록하기'); }
+  { const t=sheetCase(), a=t.ctx.sheetSaveInf(); t.done(false); await a;
+    const failed=t.hist.length===0 && t.log.includes('alert') && !t.log.includes('close') && t.el.sh_save.disabled===false;
+    const b=t.ctx.sheetSaveInf(); t.done(true); await b;
+    ok('무매 기록하기: DB 저장 실패면 화면 장부에서도 빼고 창은 남긴다 — 다시 누르면 정확히 한 건',failed && t.hist.length===1 && t.pushes()===2); }
+  { const t=sheetCase(); t.ctx.pushRemoteNow=()=>Promise.reject(new Error('network'));
+    await t.ctx.sheetSaveInf();
+    ok('무매 기록하기: 저장 중 오류도 실패와 같다 — 기록 빼고 버튼 풀림',t.hist.length===0 && t.el.sh_save.disabled===false && t.log.includes('alert')); }
+  /* 운영 저장은 원장 전체를 문자열로 한 번만 바꾸고 거기서 꺼내 쓴다(2026-10-20 — 수 MB 라 왕복 복사가 저장 시간을 늘렸다).
+     저장되는 원장 · 다음 비교 기준(stateDbBase) · 마지막 저장본(lastPushedJSON)이 예전과 같은 값이어야 한다. */
+  { const names=['_historySignature','_stateHistoryMap','validState','dbPlanWrite','fsDocParts','fsDocBytes','fsValueBytes','utf8Len','_staleStateGuard'];
+    const docs=new Map(),C=vm.createContext({console,JSON,Date,Math,Map,Set,Object,Array,String,
+      setSync:()=>{},dbSizeReport:()=>{},dbErrKind:()=>'other',dbErrBytes:()=>0,ensureBoxes:()=>{},refreshAll:()=>{},
+      window:{fb:{db:{},doc:(db,...p)=>({path:p.join('/')}),deleteField:()=>null,
+        runTransaction:async(db,f)=>{const w=[];const out=await f({get:async r=>({exists:()=>docs.has(r.path),data:()=>JSON.parse(JSON.stringify(docs.get(r.path)))}),set:(r,d)=>w.push([r.path,d])});
+          for(const [k,d] of w)docs.set(k,JSON.parse(JSON.stringify({...(docs.get(k)||{}),...d})));return out;}}}});
+    vm.runInContext(idxFns+'\n'+names.map(n=>fn(idx,'function '+n+'(')).join('\n')+'\n'+fn(idx,'async function _commitStateRemote(where)')
+      +"\nconst DB_DOC_LIMIT=1048576, DB_DOC_WARN=Math.round(DB_DOC_LIMIT*0.8), DB_LEGACY_KEYS=['state','updated','stateRev'];"
+      +"\nvar S="+JSON.stringify({activeTab:'inf',_updated:5,inf:{active:'i1',sessions:[{id:'i1',hist:[r1,r2]}]},vr:{sessions:[{id:'v',hist:[]}]},ma:{sessions:[]},ivs:{sessions:[]},dca:{sessions:[]},asap:{sessions:[]},plan:{sessions:[]}})+";"
+      +"\nvar curUid='u1',stateCloudHydrated=true,stateCloudRev=0,stateCloudHistorySig='',stateDbBase=null,stateCloudPending=true,lastPushedJSON='',_dbPlan=null,_dbForceArchive=false,_dbArchiveBlocked=false,_dbArchivedNote='';",C);
+    const before=JSON.stringify(C.S),t0=Date.now(),okSave=await C._commitStateRemote('t');
+    const stored=docs.get('users/u1').stateV2;
+    ok('운영 저장: 원장 문자열을 한 번만 만들어도 저장 원장 = 기준본 = 마지막 저장본 · 화면 원장은 그대로 · 저장 시각 갱신',
+      okSave===true && C.lastPushedJSON===JSON.stringify(stored) && JSON.stringify(C.stateDbBase)===JSON.stringify(stored)
+      && JSON.stringify(C.S)===before && stored._updated>=t0 && JSON.stringify({...stored,_updated:5})===before && docs.get('users/u1').stateV2Rev===1); }
+  console.log('ALL HISTORY PRESERVATION CHECKS PASS');
+})().catch(e=>{console.error(e);process.exit(1);});
