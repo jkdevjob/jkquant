@@ -1060,7 +1060,7 @@ console.log('[19] 출금 · 복리/단리');
   /* 모의 성과표 — 단리는 익절금이 계좌 밖으로 빠져 있다. 평가금엔 더해 놨어도
      '얼마가 나갔는지'를 안 보이면 잔금이 왜 안 늘었는지 알 수 없다. */
   ok('성과표가 단리 인출액을 낸다', /_out=\{saved:\(c\.saved\|\|0\)\+_dv\.divCash, withdrawn:c\.withdrawn\|\|0, simple:!!c\.simple\}/.test(idx)
-     && /nTrade, price, out:_out, mdd\}/.test(idx));
+     && /nTrade, price, out:_out, mdd,/.test(idx));
   ok('성과표에 인출 태그를 그린다', /O\.simple\?'단리 인출':'출금'/.test(idx));
   /* 익절 조절 숨김 — SOXL 열위·MDD 악화 구간 때문. UI만 감추고 코드는 남긴다.
      감추기만 하면 켜져 있던 세션을 끌 방법이 없으므로 저장분도 꺼야 한다. */
@@ -1985,22 +1985,60 @@ console.log('[36] 분석 머리 — 여섯 탭 모두 달러·원화 병기 손�
   ok('적립·ASAP 분석도 회색 중복 원화를 다시 쓰지 않는다',generic&&!generic.includes("pre+'_pnl_krw'"));
 }
 
-console.log('[37] 모의 성과 표 — TR · MDD · MAR · 평가 순 · 투입 · 기간은 맨 오른쪽');
+console.log('[37] 모의 성과 표 — 세후 TR · TR · MDD · MAR · 평가 순 · 투입 · 기간은 맨 오른쪽');
 {
   const op=extractFn(idx,'async function openPaper()');
   // 수익 한 칸이 최종·현재·인출 셋으로 갈렸다 (v3.53) · 10-21 사용자: 기간은 맨 뒤 · TR(토탈리턴 = 옛 '최종' · 단리 인출 포함) · MDD · MAR · 평가 순
   const head=(op.match(/<thead><tr>[\s\S]*?전략 · 세션[\s\S]*?<\/tr><\/thead>/)||[''])[0];
   const labels=[...head.matchAll(/>([^<>`]+)<\/th>/g)].map(m=>m[1]).join('|');
-  ok('머리글 순서 — 전략 · 세션 | TR | MDD | MAR | 평가 | 현재 | 인출 | 연 | 투입 | 기간',
-     labels==='전략 · 세션|TR|MDD|MAR|평가|현재|인출|연|투입|기간', labels);
-  // 시세를 못 받은 줄은 TR~연 일곱 칸(TR·MDD·MAR·평가·현재·인출·연)을 colspan 으로 덮는다 — 그 뒤 투입 · 기간
-  const iSpan=op.indexOf('colspan="7"'), iInflow=op.indexOf('${paperInflowText(r)}'), iPer=op.indexOf('${r.nTrade}거래');
+  ok('머리글 순서 — 전략 · 세션 | 세후 TR | TR | MDD | MAR | 평가 | 현재 | 인출 | 연 | 투입 | 기간 (10-21 세후 TR 맨 앞)',
+     labels==='전략 · 세션|세후 TR|TR|MDD|MAR|평가|현재|인출|연|투입|기간', labels);
+  // 시세를 못 받은 줄은 세후 TR~연 여덟 칸(세후 TR·TR·MDD·MAR·평가·현재·인출·연)을 colspan 으로 덮는다 — 그 뒤 투입 · 기간
+  const iSpan=op.indexOf('colspan="8"'), iInflow=op.indexOf('${paperInflowText(r)}'), iPer=op.indexOf('${r.nTrade}거래');
   ok('투입 · 기간 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan && iPer>iInflow, `${iSpan} ${iInflow} ${iPer}`);
   ok('투입 · 기간 칸이 한 번씩만 그려진다', (op.match(/\$\{paperInflowText\(r\)\}/g)||[]).length===1 && (op.match(/\$\{r\.nTrade\}거래/g)||[]).length===1);
   { const foot=(op.match(/<b style="color:var\(--vio\)">전략 이름<\/b>[^`]*/)||[''])[0];
-    const at=['<b>TR</b>(토탈리턴) = 평가 ÷ 투입','<b>MDD</b> = 하루하루','<b>MAR</b> = CAGR','평가 = 보유 평가금','투입 = 밖에서 넣은 돈','기간 = 모의 시작일부터'].map(x=>foot.indexOf(x));
-    ok('각주 설명도 표 순서와 같다(TR · MDD · MAR · 평가 · 투입 · 기간)', at.every((x,i)=>x>=0&&(i===0||x>at[i-1])), at.join(',')); }
+    const at=['<b>세후 TR</b> = 지금 다 팔고','<b>TR</b>(토탈리턴) = 평가 ÷ 투입','<b>MDD</b> = 하루하루','<b>MAR</b> = CAGR','평가 = 보유 평가금','투입 = 밖에서 넣은 돈','기간 = 모의 시작일부터'].map(x=>foot.indexOf(x));
+    ok('각주 설명도 표 순서와 같다(세후 TR · TR · MDD · MAR · 평가 · 투입 · 기간)', at.every((x,i)=>x>=0&&(i===0||x>at[i-1])), at.join(',')); }
   // 실제 표를 그려 칸 값을 읽는 시험은 끝(비동기 PENDING)에 있다 — [37-값]
+}
+
+/* ════ [37-세후] 세후 TR — 백테와 같은 세금 규약 · 해마다 낸 세금만큼 덜 굴림 · 다 판다고 보고 마지막 세금 ════ (2026-10-21 사용자: '세후 TR 맨 앞에 추가해')
+   모의 장부는 양도세를 안 넣는다. 세후 TR 은 장부를 건드리지 않고 그 장부가 정한 날마다의 총자산·실현손익·원가로 결과를 근사한다.
+   기댓값은 여기서 손으로 센다(실코드를 다시 부르지 않는다) — 미국 22% · 연 250만원 공제 · 원화 환산 1,350원. */
+console.log('[37-세후] 세후 TR — 세금 규약 대조 · 값');
+{
+  const pick=src=>{ try{ return [(src.match(/const COST_FEE=[^\n]*/)||[''])[0], (src.match(/const isKRW=[^\n]*/)||[''])[0],
+    (src.match(/const KR_STOCK_ETF=new Set\(\[[\s\S]*?\]\);/)||[''])[0], (src.match(/const krCode=[^\n]*/)||[''])[0], (src.match(/const krTaxRate=[^\n]*/)||[''])[0],
+    extractFn(src,'function costOf(t)'), extractFn(src,'function capGainTax(pnl, t)')].join('\n'); }catch(e){ return 'ERR '+e.message; } };
+  ok('세금 규약이 백테와 글자 그대로 같다(상수 · 국내 판정 · costOf · capGainTax)', pick(idx)===pick(bt) && pick(idx).length>700, pick(idx).slice(0,80));
+  const F=new Function(pick(idx)+'\n'+extractFn(idx,'function paperAfterTaxAcc(sym, opt)')+'\nreturn {paperAfterTaxAcc};')();
+  const tax=g=>Math.max(0,g*1350-2500000)*0.22/1350;
+  const run=(opt,rows)=>{ const A=F.paperAfterTaxAcc('SOXL',opt); rows.forEach(([d,E,inf,x])=>A.step(d,E,inf,x)); return A.done(); };
+  const z={realized:0,turnover:0,held:0,cost:0}, X=o=>Object.assign({},z,o);
+  { const r=run({},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-30',20000,10000,X({held:20000,cost:10000})]]);
+    ok('S1 보유만 1만→2만$ — 다 판다고 보고 평가익 1만$ 에 세금 → +'+((20000-tax(10000))/100-100).toFixed(2)+'%', near(r.tr,(20000-tax(10000))/10000*100-100,1e-9), r&&r.tr.toFixed(4)); }
+  { // S2 2024 실현 1만$ → 연말 세금 T1 → 그만큼 덜 굴려 2025 두 배도 덜 는다
+    const T1=tax(10000), k=1-T1/20000, fin=k*40000-tax(k*20000);
+    const r=run({},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-31',20000,10000,X({realized:10000})],['2025-12-31',40000,10000,X({realized:10000,held:40000,cost:20000})]]);
+    ok('S2 해마다 낸 세금만큼 덜 굴린다 — 세후 '+(fin/100-100).toFixed(2)+'% (세금을 끝에 한 번만 빼면 '+((40000-T1-tax(20000))/100-100).toFixed(2)+'%)', near(r.tr,fin/10000*100-100,1e-9), r&&r.tr.toFixed(4));
+    // S3 단리 — 이익은 계좌 밖에 있어 세금도 거기서 낸다(굴릴 원금은 그대로)
+    const r3=run({simple:true},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-31',20000,10000,X({realized:10000})],['2025-12-31',40000,10000,X({realized:10000,held:40000,cost:20000})]]);
+    ok('S3 단리 — 세금은 빼 둔 돈에서 · 세후 '+((40000-T1-tax(20000))/100-100).toFixed(2)+'%', near(r3.tr,(40000-T1-tax(20000))/10000*100-100,1e-9), r3&&r3.tr.toFixed(4)); }
+  { // S4 수수료 없는 장부(무매) — 첫날 첫 매수 1만$ 의 0.25% · 팔 때 0.25%
+    const k=1-25/10000, liq=k*0.0025*10000, fin=k*10000-liq;
+    const r=run({addFee:true},[['2024-01-02',10000,10000,X({turnover:10000,held:10000,cost:10000})],['2024-06-28',10000,10000,X({turnover:10000,held:10000,cost:10000})]]);
+    ok('S4 수수료 없는 장부 — 첫 매수·다 팔 때 0.25% · 세후 '+(fin/100-100).toFixed(3)+'%', near(r.tr,fin/10000*100-100,1e-9) && near(r.fee,25+liq,1e-9), r&&(r.tr.toFixed(4)+' · 수수료 '+r.fee)); }
+  { // S5 적립 — 새로 넣은 돈은 예전에 낸 세금의 몫을 안 진다(단위로 산다)
+    const T1=tax(10000);
+    const r=run({},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-31',20000,10000,X({realized:10000})],['2025-01-02',30000,20000,X({realized:10000})],['2025-12-31',30000,20000,X({realized:10000})]]);
+    ok('S5 적립 1만$ 추가 — 세후 총자산 3만 − 2024 세금 = '+(30000-T1).toFixed(2)+'$', near(r.final,30000-T1,1e-6) && near(r.tr,(30000-T1)/20000*100-100,1e-9), r&&r.final.toFixed(4)); }
+  // 배선 — 날마다 걷는 자리(paperMdd)에서 같이 세고, 목록 줄(paperStat · 플랜)이 atr 로 받는다
+  const md=extractFn(idx,'function paperMdd(tab, sess, R, hist)'), ps=extractFn(idx,'function paperStat(tab, sess)'), pp=extractFn(idx,'function paperStatPlan(sess)');
+  ok('배선 — paperMdd 가 날마다 AT.step · 지금 시세로 마지막 한 번 · afterTax 를 돌려준다 · paperStat·플랜이 atr 로',
+     /AT\.step\(row\.date, tot, cur\.inflow,/.test(md) && /AT\.step\(D\[D\.length-1\]\.date, R\.total, R\.inflow,/.test(md) && /afterTax:AT\.done\(\)/.test(md)
+     && /atr:\(mdd&&mdd\.afterTax\)\?mdd\.afterTax\.tr:null/.test(ps) && /const _at=planAfterTax\(R\);/.test(pp) && /atr:_at\?_at\.tr:null/.test(pp));
+  ok('수수료 없는 장부만 수수료를 더한다 — 무매 · 적립 · ASAP', /const PAPER_NOFEE_TABS=new Set\(\['inf','dca','asap'\]\);/.test(idx));
 }
 
 console.log('[38] 세션 이동 — 보던 자리도 지킨다');
@@ -2122,7 +2160,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /onclick="refreshPaperViewButton\(\)"/.test(idx)
      && /const repaired=await paperRepairCommonStarts\(\)/.test(rvFast));
   ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
-     /const PAPER_VIEW_CACHE_VER=1;/.test(idx)
+     /const PAPER_VIEW_CACHE_VER=2;/.test(idx)
      && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
      && /x\.day===paperKstDate\(\)/.test(extractFn(idx,'function paperViewCacheFresh(x)'))
      && /if\(!force&&paperViewCacheFresh\(current\)\)return/.test(rvFast));
@@ -2944,7 +2982,7 @@ console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
      /outAmt>0\?\(r\.retNow>=0\?'var\(--buy\)':'var\(--sell\)'\):'var\(--faint\)'/.test(idx)
      && /\$\{outAmt>0\?'\+'\+r\.retOut\.toFixed\(1\)\+'%':'—'\}/.test(idx));
   // 시세를 못 받은 줄은 평가~연 일곱 칸을 덮어야 한다
-  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="7" style="color:var\(--gold\)">시세 대기/.test(idx));
+  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="8" style="color:var\(--gold\)">시세 대기/.test(idx));
 }
 
 /* ════ 55. 단리 현금 흐름 — 출금·입금·합계와 월 수입 ════
@@ -3061,7 +3099,7 @@ console.log('\n[57] 분배금 현금 수령 — 월 수입으로 읽는다');
   ok('현금 수령분을 날짜째로 남긴다',
      /else divFlows\.push\(\{date:d\.date, out:cash, in:0\}\);/.test(cd) && /pos\.flows=divFlows;/.test(cd));
   // 재투자는 계좌 안에 남으므로 나간 돈이 아니다
-  ok('재투자는 흐름에 넣지 않는다', /if\(reinv\)\{[^}]*divShares\+=cash\/rp; \}\s*\n\s*else divFlows\.push/.test(cd));
+  ok('재투자는 흐름에 넣지 않는다', /if\(reinv\)\{[^}]*divShares\+=cash\/rp; divInv\+=cash; \} \}[^\n]*\n\s*else divFlows\.push/.test(cd));
 
   /* 카드는 이제 분석탭에 있다 — 무매가 요약·월별표를 분석탭에 두는 것과 같은 자리.
      '현재' 탭에 따로 그리던 옛 카드는 지웠다(같은 표를 두 군데서 그리면 또 어긋난다). */
@@ -3200,7 +3238,7 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   /* VR — 인출이 본질인 전략. 실현손익을 아예 안 재고 있었고 인출도 화면에 없었다. */
   const cv=(()=>{ try{ return extractFn(idx,'function computeVr()'); }catch(e){ return ''; } })();
   // 수수료는 필요경비라 실현손익에서 뺀다 (무매·백테와 같은 규약)
-  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*q-fee; cost-=av\*q;/.test(cv) && /\brealized,fees,flows,/.test(cv));
+  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*q-fee; cost-=av\*q;/.test(cv) && /\brealized,cost,fees,flows,/.test(cv));
   /* 기록에 적힌 수수료를 그대로 되살려야 재생기 안 장부와 화면 장부가 같아진다.
      실계좌 기록엔 fee 칸이 없어 0 — 예전과 글자 그대로 같다. */
   ok('VR이 기록의 수수료로 Pool 을 복원한다',
@@ -4002,7 +4040,7 @@ console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
   ok('단위가치로 잰다', /const uv=tot\/cur\.inflow;/.test(md));
   ok('거래 없는 날은 주가만 갈아끼운다',
      /if\(grew \|\| !cur\)\{ sess\.hist=h\.slice\(0,idx\); cur=paperRaw\(tab, sess\); \}/.test(md)
-     && /const tot=cur\.qty\*row\.close \+ \(cur\.qty1\|\|0\)\*p1 \+ cur\.k;/.test(md));
+     && /const held=cur\.qty\*row\.close \+ \(cur\.qty1\|\|0\)\*p1, tot=held \+ cur\.k;/.test(md));
   ok('빌려 쓴 기록은 반드시 되돌린다', /\} finally \{ sess\.hist=real; \}/.test(md));
   /* 거래가 몇 달 전에 멈췄어도 들고 있는 동안 주가는 움직인다 —
      마지막 거래일에서 끊으면 그 사이 낙폭을 통째로 놓친다. */
@@ -4026,8 +4064,9 @@ console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
       const g={ PAPER_DAYS:{t:()=>days},
                 paperRaw:(tab,sess)=>{ calls++; return rawFn(sess.hist); },
                 ivsQuote1:null, console:{error(){}} };
-      const fn=new Function('PAPER_DAYS','paperRaw','ivsQuote1','console','return ('+md.replace(/^function \w+\(/,'function (')+')')
-                 (g.PAPER_DAYS,g.paperRaw,g.ivsQuote1,g.console);
+      // 세후 TR 은 같은 걸음에서 센다 — 여기선 MDD 만 보므로 빈 셈틀을 물린다(세후 값은 [37-세후])
+      const fn=new Function('PAPER_DAYS','paperRaw','ivsQuote1','console','paperAfterTaxAcc','PAPER_NOFEE_TABS','return ('+md.replace(/^function \w+\(/,'function (')+')')
+                 (g.PAPER_DAYS,g.paperRaw,g.ivsQuote1,g.console,()=>({step(){},done(){return null;}}),new Set());
       const sess={hist:hist, simStart:hist[0].date};
       const R=rawFn(hist);
       const out=fn('t', sess, R, hist);
@@ -12468,7 +12507,8 @@ console.log('\n[37-값] 모의 성과 표 — TR(단리 인출 포함) · MDD ·
     const row=(name,total,out,simple,extra)=>Object.assign({tab:'inf',label:'무한매수법',name,sym:'SOXL',opts:['20분할','익절 자동','LOC 3줄'].concat(simple?['단리']:[]),
       cur:'usd',inflow:base,inflowWon:1e8,total,price:30,yrs:0.8,spanDays:292,nTrade:299,cagr:50,mdd:{pct:40,nDay:200},out:{simple,saved:out,withdrawn:0},
       ret:(total/base-1)*100,retNow:((total-out)/base-1)*100,retOut:out/base*100},extra||{});
-    const rows=[row('복리',100177.88,0,false),row('단리',95457.13,34429.80,true),row('대기',0,0,false,{price:0,pending:true})];
+    // 세후 TR 은 paperStat 이 센 값(atr · 세금 · 수수료)을 받아 그린다 — 여기선 그리는 자리만 본다(계산은 [37-세후])
+    const rows=[row('복리',100177.88,0,false,{atr:30.2,atrTax:20000,atrFee:1000}),row('단리',95457.13,34429.80,true,{atr:null}),row('대기',0,0,false,{price:0,pending:true})];
     const F=new Function('$','paperEnsureCommonWon','paperRepairLegacyStarts','paperRepairCommonStarts','syncPaperStart','paperViewCacheRead','paperViewCacheLast',
       'paperViewCacheFresh','paperWonRate','paperTitle','paperKrwRet','paperDualMoney','paperInflowText','paperUsd','paperWon','paperFxLine','paperLoadTickerNames','liveFX',
       'let paperStaleNote=false, paperNote="";\n'+op+'\nreturn openPaper;')(
@@ -12480,14 +12520,15 @@ console.log('\n[37-값] 모의 성과 표 — TR(단리 인출 포함) · MDD ·
     const trs=(body.innerHTML.split('<tbody id="paper_tbody">')[1]||'').split('</tr>').filter(x=>x.includes('<tr'));
     const cells=trs.map(tr=>[...tr.matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)].map(m=>({span:+((m[1].match(/colspan="(\d+)"/)||[])[1]||1),t:txt(m[2])})));
     const width=cells.map(c=>c.reduce((a,x)=>a+x.span,0));
-    ok('[37-값] 그린 표 머리글 — TR · MDD · MAR · 평가 순 · 기간이 맨 끝', heads.join('|')==='전략 · 세션|TR|MDD|MAR|평가|현재|인출|연|투입|기간', heads.join('|'));
-    ok('[37-값] 줄마다 칸 수가 머리글과 같다(시세 대기 줄 포함 10칸)', trs.length===3 && width.every(w=>w===heads.length), width.join(','));
+    ok('[37-값] 그린 표 머리글 — 세후 TR · TR · MDD · MAR · 평가 순 · 기간이 맨 끝', heads.join('|')==='전략 · 세션|세후 TR|TR|MDD|MAR|평가|현재|인출|연|투입|기간', heads.join('|'));
+    ok('[37-값] 줄마다 칸 수가 머리글과 같다(시세 대기 줄 포함 11칸)', trs.length===3 && width.every(w=>w===heads.length), width.join(','));
     const [A,B,P]=cells;
-    ok('[37-값] 복리 둘째 칸 = TR +44.7% · 셋째 MDD −40.0% · 넷째 MAR 1.25(연 50 ÷ 40)', A&&A[1].t.startsWith('+44.7%')&&A[2].t==='−40.0%'&&A[3].t==='1.25', A&&[A[1].t,A[2].t,A[3].t].join(' / '));
-    ok('[37-값] 단리 둘째 칸 = 인출 포함 TR +37.9% (= 현재 −11.8% + 인출 +49.7%)',
-       B&&B[1].t.startsWith('+37.9%') && B[5].t==='-11.8%' && B[6].t==='+49.7%' && near(+B[5].t.replace('%','')+ +B[6].t.replace('%',''),37.9,0.11), B&&[B[1].t,B[5].t,B[6].t].join(' / '));
-    ok('[37-값] 다섯째 칸은 평가, 끝에서 둘째는 투입, 끝 칸은 기간(0.8년 · 299거래)',
-       [A,B,P].every(c=>c&&c[c.length-1].t==='0.8년 299거래' && c[c.length-2].t==='투입 69222') && A[4].t==='$100177.88' && B[4].t==='$95457.13',
+    ok('[37-값] 둘째 칸 = 세후 TR +30.2% · 낸 세금·수수료 2.1만$ → 원화 2,780만원(지금 환율) · 못 잰 줄은 —', A&&A[1].t==='+30.2% 세금 2,780만원' && B&&B[1].t==='—', A&&B&&(A[1].t+' / '+B[1].t));
+    ok('[37-값] 복리 셋째 칸 = TR +44.7% · 넷째 MDD −40.0% · 다섯째 MAR 1.25(연 50 ÷ 40)', A&&A[2].t.startsWith('+44.7%')&&A[3].t==='−40.0%'&&A[4].t==='1.25', A&&[A[2].t,A[3].t,A[4].t].join(' / '));
+    ok('[37-값] 단리 셋째 칸 = 인출 포함 TR +37.9% (= 현재 −11.8% + 인출 +49.7%)',
+       B&&B[2].t.startsWith('+37.9%') && B[6].t==='-11.8%' && B[7].t==='+49.7%' && near(+B[6].t.replace('%','')+ +B[7].t.replace('%',''),37.9,0.11), B&&[B[2].t,B[6].t,B[7].t].join(' / '));
+    ok('[37-값] 여섯째 칸은 평가, 끝에서 둘째는 투입, 끝 칸은 기간(0.8년 · 299거래)',
+       [A,B,P].every(c=>c&&c[c.length-1].t==='0.8년 299거래' && c[c.length-2].t==='투입 69222') && A[5].t==='$100177.88' && B[5].t==='$95457.13',
        [A,B,P].map(c=>c&&c.map(x=>x.t).join(' ¦ ')).join(' ‖ '));
   })());
 }

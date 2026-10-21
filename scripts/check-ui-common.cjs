@@ -66,13 +66,13 @@ t('U3 모든 페이지(11개)가 같은 파일을 한 번씩 읽는다 — 공�
   const htmls=fs.readdirSync(ROOT).filter(f=>/\.html$/.test(f)).sort();
   assert.deepEqual(htmls,[...PAGES].sort(),'페이지가 늘면 여기에도 넣는다: '+htmls.join(','));
 });
-t('U4 모의 성과 첫 칸 — 폭을 정해 두고 줄바꿈 · 폰 폭 340~414px 에서 TR·MDD·MAR 이 한 화면에(10-21 기간은 맨 뒤)',()=>{
+t('U4 모의 성과 첫 칸 — 폭을 정해 두고 줄바꿈 · 폰 폭 340~414px 에서 세후 TR·TR·MDD 가 한 화면에(10-21 기간은 맨 뒤)',()=>{
   const op=fnOf(html,'async function openPaper()');
   assert(/<td><div class="pcell">\$\{paperTitle\(r\)\}[^`]*\$\{outTag\}<\/div><\/td>/.test(op),'첫 칸을 pcell 로 감싼다');
   const css=(html.match(/\.htable\.narrow td:first-child \.pcell\{[^}]*\}/)||[''])[0];
   assert(/min-width:clamp\(96px,calc\(100vw - 250px\),170px\)/.test(css) && /overflow-wrap:anywhere/.test(css),css);
   assert(/\.htable\.narrow td:first-child \.pcell \.cw\{white-space:normal\}/.test(html),'설정 줄도 접힌다');
-  // 폭 계산 — 첫 칸(최소 폭+여백 8) + TR·MDD·MAR(약 150px · 옛 기간·평가·최종 실측 170px 안) 이 표 칸(화면−50) 안에 든다
+  // 폭 계산 — 첫 칸(최소 폭+여백 8) + 세후 TR·TR·MDD(약 165px · 옛 기간·평가·최종 실측 170px 안) 이 표 칸(화면−50) 안에 든다
   const first=vw=>Math.min(170,Math.max(96,vw-250))+8;
   for(const vw of [340,360,375,390,414,430]) assert(first(vw)+170<=vw-50,`폭 ${vw}px: ${first(vw)}+170 > ${vw-50}`);
 });

@@ -222,7 +222,7 @@ await t('P2 첫 화면: 저장 결과의 서명이 안 맞으면 지난 결과�
   const sum=new Function('PAPER_TABS','S','paperStat',fn('function paperSummary()')+'\nreturn paperSummary;')(
     [['inf','무매'],['vr','VR']],{inf:{sessions:[{paper:true,id:'a'}]},vr:{sessions:[{paper:true,id:'b'}]}},(tab)=>({tab,price:tab==='inf'?0:12}));
   const rows=sum(); assert.equal(rows[0].pending,true); assert.equal(rows[1].pending,undefined);
-  assert(/r\.pending\s*\n?\s*\? `<td colspan="7" style="color:var\(--faint\)">계산 중/.test(op),'아직 계산 전 줄은 실패로 안 보인다');
+  assert(/r\.pending\s*\n?\s*\? `<td colspan="8" style="color:var\(--faint\)">계산 중/.test(op),'아직 계산 전 줄은 실패로 안 보인다');
 });
 await t('P2 VR 모의 평가는 그 세션 종목 시세만 쓴다 — 없으면 평단 대체(가짜 0% 손익) 대신 0(시세 대기)',async()=>{
   const pr=fn('function paperRaw(tab, sess)');
@@ -233,8 +233,8 @@ await t('P2 VR 모의 평가는 그 세션 종목 시세만 쓴다 — 없으면
 await t('P2 MDD 는 탭에 담긴 시세가 그 세션 종목일 때만 잰다',async()=>{
   const md=fn('function paperMdd(tab, sess, R, hist)');
   const days=[1,2,3,4,5].map(i=>({date:'2026-01-0'+i,close:10+i}));
-  const run=(have)=>new Function('PAPER_DAYS','PAPER_CACHESYM','paperRaw','ivsQuote1','console',md+'\nreturn paperMdd;')(
-    {vr:()=>days},{vr:()=>have},()=>({inflow:100,qty:1,k:0,price:0}),undefined,{error(){}})('vr',{settings:{ticker:'SOXL'},hist:[{date:'2026-01-01'}]},{qty1:0},[{date:'2026-01-01'}]);
+  const run=(have)=>new Function('PAPER_DAYS','PAPER_CACHESYM','paperRaw','ivsQuote1','console','paperAfterTaxAcc','PAPER_NOFEE_TABS',md+'\nreturn paperMdd;')(
+    {vr:()=>days},{vr:()=>have},()=>({inflow:100,qty:1,k:0,price:0}),undefined,{error(){}},()=>({step(){},done(){return null;}}),new Set())('vr',{settings:{ticker:'SOXL'},hist:[{date:'2026-01-01'}]},{qty1:0},[{date:'2026-01-01'}]);
   assert.equal(run('TQQQ'),null,'남의 종목'); assert(run('SOXL')&&run('SOXL').nDay>=3,'제 종목');
 });
 
