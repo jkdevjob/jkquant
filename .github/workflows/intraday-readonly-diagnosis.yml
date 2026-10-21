@@ -8,7 +8,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 4
     steps:
       - name: Capture one scheduled execution (read only)
         env:
@@ -16,17 +16,24 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         shell: bash
         run: |
-          timeout 85s npx --yes wrangler@4 tail jkquant-global-intraday-scheduler --format json > /tmp/intraday-tail.jsonl 2>/tmp/intraday-tail.stderr || true
+          timeout 145s npx --yes wrangler@4 tail jkquant-global-intraday-scheduler --format json > /tmp/intraday-tail.jsonl 2>/tmp/intraday-tail.stderr || true
           python - <<'PY'
-          import json
+          import json, os, urllib.request
+          req=urllib.request.Request('https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']+'/workers/scripts/jkquant-global-intraday-scheduler/schedules',headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN']})
+          try:
+              j=json.load(urllib.request.urlopen(req,timeout=15));print('SCHEDULES',json.dumps(j.get('result'),ensure_ascii=False))
+          except Exception as e:print('SCHEDULE_READ',type(e).__name__)
           from pathlib import Path
           p=Path('/tmp/intraday-tail.jsonl')
-          for line in p.read_text().splitlines():
-              try:
-                  j=json.loads(line)
-              except Exception:
-                  continue
+          raw=p.read_text();decoder=json.JSONDecoder();offset=0
+          while offset<len(raw):
+              at=raw.find('{',offset)
+              if at<0:break
+              try:j,n=decoder.raw_decode(raw[at:])
+              except ValueError:offset=at+1;continue
+              offset=at+n
               print(json.dumps({k:j.get(k) for k in ['outcome','exceptions','logs','event','eventTimestamp']},ensure_ascii=False))
+          print('TAIL_BYTES',len(raw))
           err=Path('/tmp/intraday-tail.stderr').read_text()
           for line in err.splitlines():
               if any(x in line.lower() for x in ['error','failed','connected','listening']):print(line[:300])
