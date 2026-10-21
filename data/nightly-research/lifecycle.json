@@ -127,22 +127,22 @@
       "poorStreaks": {
         "hold_to_next_open": 0,
         "today_combo_v1": 0,
-        "pb_max_0.5": 1,
-        "amount_1.5": 1,
+        "pb_max_0.5": 0,
+        "amount_1.5": 2,
         "entry_by_0915": 0,
         "entry_by_0920": 0,
         "gap_3_6": 0,
-        "vol_1.5": 0,
+        "vol_1.5": 1,
         "stop_0.7": 0,
         "tp_1.0": 0
       },
-      "lastEvidenceDate": "2026-10-20",
+      "lastEvidenceDate": "2026-10-21",
       "leader": {
-        "name": "stop_0.7",
+        "name": "entry_by_0920",
         "consecutiveResearchSessions": 1,
         "requiredResearchSessions": 7,
         "dates": [
-          "2026-10-20"
+          "2026-10-21"
         ]
       },
       "autoPromotionCandidate": null,
@@ -293,19 +293,20 @@
         "max_trades_1": 0,
         "combo_slope15_e1400": 0
       },
-      "lastEvidenceDate": "2026-10-20",
+      "lastEvidenceDate": "2026-10-21",
       "leader": {
         "name": "combo_slope15_e1400",
-        "consecutiveResearchSessions": 2,
+        "consecutiveResearchSessions": 3,
         "requiredResearchSessions": 7,
         "dates": [
           "2026-10-19",
-          "2026-10-20"
+          "2026-10-20",
+          "2026-10-21"
         ]
       },
       "autoPromotionCandidate": null,
       "autoPromotionReady": false,
-      "autoPromotionReason": "1위 유지 2/7 연구세션",
+      "autoPromotionReason": "1위 유지 3/7 연구세션",
       "recentChanges": [
         {
           "date": "2026-10-19",
@@ -336,13 +337,12 @@
         "stop_0.3_tp_0.6",
         "stop_0.7_tp_1.4",
         "hold_30m",
-        "hold_120m",
         "entry_by_1800",
-        "stop_0.6_tp_1.2"
+        "stop_0.6_tp_1.2",
+        "vol_1.3"
       ],
       "reserveCandidates": [
         "range_10m",
-        "vol_1.3",
         "stop_0.4_tp_0.8",
         "hold_90m",
         "entry_by_2000",
@@ -449,6 +449,11 @@
           "name": "no_vwap",
           "retiredAt": "2026-10-03",
           "reason": "위험조건 반복 실패"
+        },
+        {
+          "name": "hold_120m",
+          "retiredAt": "2026-10-20",
+          "reason": "위험조건 반복 실패"
         }
       ],
       "poorStreaks": {
@@ -460,28 +465,22 @@
         "stop_0.3_tp_0.6": 0,
         "stop_0.7_tp_1.4": 0,
         "hold_30m": 0,
-        "hold_120m": 2,
+        "hold_120m": 0,
         "entry_by_1800": 0,
         "stop_0.6_tp_1.2": 0
       },
-      "lastEvidenceDate": "2026-10-17",
+      "lastEvidenceDate": "2026-10-20",
       "leader": {
-        "name": "hold_30m",
-        "consecutiveResearchSessions": 7,
+        "name": "stop_0.3_tp_0.6",
+        "consecutiveResearchSessions": 1,
         "requiredResearchSessions": 7,
         "dates": [
-          "2026-10-11",
-          "2026-10-12",
-          "2026-10-13",
-          "2026-10-14",
-          "2026-10-15",
-          "2026-10-16",
-          "2026-10-17"
+          "2026-10-20"
         ]
       },
       "autoPromotionCandidate": null,
       "autoPromotionReady": false,
-      "autoPromotionReason": "1위 유지 충족, 기존 표본·검증·위험·점수 승격조건 미충족",
+      "autoPromotionReason": "1위 유지 1/7 연구세션",
       "recentChanges": [
         {
           "date": "2026-10-03",
@@ -494,6 +493,18 @@
           "type": "activated",
           "name": "stop_0.6_tp_1.2",
           "reason": "no_vwap 퇴출 후 경쟁군 10개 유지"
+        },
+        {
+          "date": "2026-10-20",
+          "type": "retired",
+          "name": "hold_120m",
+          "reason": "위험조건 반복 실패"
+        },
+        {
+          "date": "2026-10-20",
+          "type": "activated",
+          "name": "vol_1.3",
+          "reason": "hold_120m 퇴출 후 경쟁군 10개 유지"
         }
       ],
       "retirementRule": "sampleReady 이후 위험 실패 또는 점수<40·검증우위<0 상태가 3개 서로 다른 연구세션 연속",
@@ -634,22 +645,23 @@
         "hold_120m": 0,
         "entry_by_1030": 0
       },
-      "lastEvidenceDate": "2026-10-19",
+      "lastEvidenceDate": "2026-10-20",
       "leader": {
         "name": "stop_0.8_tp_1.6",
-        "consecutiveResearchSessions": 1,
+        "consecutiveResearchSessions": 2,
         "requiredResearchSessions": 7,
         "dates": [
-          "2026-10-19"
+          "2026-10-19",
+          "2026-10-20"
         ]
       },
       "autoPromotionCandidate": null,
       "autoPromotionReady": false,
-      "autoPromotionReason": "1위 유지 1/7 연구세션",
+      "autoPromotionReason": "1위 유지 2/7 연구세션",
       "recentChanges": [],
       "retirementRule": "sampleReady 이후 위험 실패 또는 점수<40·검증우위<0 상태가 3개 서로 다른 연구세션 연속",
       "replacementRule": "퇴출 즉시 정적+자동생성 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지"
     }
   },
-  "updatedAt": "2026-10-21T00:37:39.971327+09:00"
+  "updatedAt": "2026-10-22T00:05:05.598498+09:00"
 }
