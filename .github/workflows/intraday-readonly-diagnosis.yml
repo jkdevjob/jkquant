@@ -1,0 +1,33 @@
+name: Intraday read-only diagnosis
+on:
+  push:
+    branches: [fix/intraday-session-close-20261022]
+    paths: [.github/workflows/intraday-readonly-diagnosis.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Capture one scheduled execution (read only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          timeout 85s npx --yes wrangler@4 tail jkquant-global-intraday-scheduler --format json > /tmp/intraday-tail.jsonl 2>/tmp/intraday-tail.stderr || true
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('/tmp/intraday-tail.jsonl')
+          for line in p.read_text().splitlines():
+              try:
+                  j=json.loads(line)
+              except Exception:
+                  continue
+              print(json.dumps({k:j.get(k) for k in ['outcome','exceptions','logs','event','eventTimestamp']},ensure_ascii=False))
+          err=Path('/tmp/intraday-tail.stderr').read_text()
+          for line in err.splitlines():
+              if any(x in line.lower() for x in ['error','failed','connected','listening']):print(line[:300])
+          PY
