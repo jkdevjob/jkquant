@@ -588,17 +588,29 @@ def main():
     (OUT / f"{labels[-1]}.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # 그림자 포함 모든 매매를 전략 ID로 누적해 영구 조회한다.
+    variant_history=OUT/"variant-trades.csv"
+    archived={}
+    if variant_history.exists():
+        with variant_history.open("r",encoding="utf-8",newline="") as old:
+            for row in csv.DictReader(old):
+                key=tuple(str(row.get(k) or "") for k in ("variant","date","code","entryTime"))
+                archived[key]=row
     with (OUT / "variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
         columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source"]
         w=csv.DictWriter(f,fieldnames=columns);w.writeheader()
         for variant,trs in sorted(trade_map.items()):
             for t in trs:
-                w.writerow({k:v for k,v in {
+                row={k:v for k,v in {
                     "variant":variant,"date":t.get("date"),"code":"SOXL","name":"SOXL",
                     "strategyVersion":t.get("strategyVersion"),"signalTime":t.get("signalTimeEt"),
                     "entryTime":t.get("entryTimeEt"),"entryPrice":t.get("entryPrice"),
                     "exitTime":t.get("exitTimeEt"),"exitPrice":t.get("exitPrice"),
-                    "reason":t.get("reason"),"pnl":t.get("pnlPct"),"source":"research-reconstructed"}.items() if k in columns})
+                    "reason":t.get("reason"),"pnl":t.get("pnlPct"),"source":"research-reconstructed"}.items() if k in columns}
+                key=tuple(str(row.get(k) or "") for k in ("variant","date","code","entryTime"))
+                archived.setdefault(key,row)
+
+        for key in sorted(archived):
+            w.writerow({k:archived[key].get(k) for k in columns})
 
     with (OUT / "baseline-trades.csv").open("w", encoding="utf-8", newline="") as f:
         cols = [
