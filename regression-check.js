@@ -11603,11 +11603,11 @@ console.log('\n[CLAUDE HEADER] 머리말 통일');
 console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8');
-  ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 4전략 누적 상태: 표본·승률·거래당·필요승률·엣지·검증상태)',
+  ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 기준전략 누적 상태(⑤ 포함 5전략): 표본·승률·거래당·필요승률·엣지·검증상태)',
      /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익<\/span>/.test(ch)
      &&/var pr=dayPair\(r,lt\.days,\(LIVE&&!LIVE\.error&&LIVE\.today\)\|\|""\);/.test(ch)
      &&/resultCell\(pr\[0\]\.v,pr\[0\]\.date,"전일",cl,pr\[0\]\.lv\)\+resultCell\(pr\[1\]\.v,pr\[1\]\.date,"당일",cl,pr\[1\]\.lv\)/.test(ch)
-     &&/📊 4전략 누적 상태/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
+     &&/📊 기준전략 누적 상태/.test(ch)&&/\["close30","⑤ 종가 30분","종가 30분",/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
      &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
   // 값 시험 — 화면 함수를 그대로 떼어 실행
   const grab=n=>{const i=ch.indexOf('function '+n+'(');let d=0,j=ch.indexOf('{',i);for(;j<ch.length;j++){if(ch[j]==='{')d++;else if(ch[j]==='}'&&--d===0)break;}return ch.slice(i,j+1);};
@@ -12221,10 +12221,10 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   }
   { const og2=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8'),ks=fs.readFileSync(__d+'/functions/api/kis.js','utf8');
     const bb=ks.slice(ks.indexOf('if (op === "buyable") {'),ks.indexOf('if (op === "balance") {'));
-    ok('①② 매수 직전 계좌 현금 확인(모의 매수가능조회 · 읽기만 · 키/소유자만) → 살 수 있는 만큼만 · ① 현금 부족이면 남은 종목에 고르게 · 0주면 주문 없음 · 재시도 없음',
+    ok('①②⑤ 매수 직전 계좌 현금 확인(모의 매수가능조회 · 읽기만 · 키/소유자만) → 살 수 있는 만큼만 · ① 현금 부족이면 남은 종목에 고르게 · 0주면 주문 없음 · 재시도 없음',
        /const g = await verifyOwner\(request, env\);\n\s*if \(!g\.ok\) return json\(\{ error: g\.msg \}, 401\);\n\s*if \(isReal\(env\)\) return json\(\{ error: "buyable 은 KIS 모의투자\(vts\)만 허용합니다\." \}, 400\);/.test(bb)
        &&/tr_id: isReal\(env\) \? "TTTC8908R" : "VTTC8908R"/.test(ks)&&!/order-cash|hashkey/.test(ks.slice(ks.indexOf('async function krBuyable('),ks.indexOf('function parseEmails(')))
-       &&(og2.match(/await sizedBuy\(origin,env,date,/g)||[]).length===1&&/export async function preopenBuys\(origin,env,date,picks,amount,\{buy=sizedBuy,/.test(og2)&&/out\.orders=await preopenBuys\(origin,env,date,picks,amount\);/.test(og2)
+       &&(og2.match(/await sizedBuy\(origin,env,date,/g)||[]).length===2&&/out\.order=await sizedBuy\(origin,env,date,\{code:C30_RULE\.code,name:C30_RULE\.name\},qty,/.test(og2)&&/export async function preopenBuys\(origin,env,date,picks,amount,\{buy=sizedBuy,/.test(og2)&&/out\.orders=await preopenBuys\(origin,env,date,picks,amount\);/.test(og2)
        &&/orders\.push\(await buy\(origin,env,date,x,Math\.floor\(amount\/Math\.max\(1,\+x\.expectedPrice\|\|0\)\),\{deadline:ORDER_DEADLINE,split:picks\.length-i\}\)\);/.test(og2)
        &&!/await vtsOrder\(origin,env,date,"buy"/.test(og2.replace('const rec=await vtsOrder(origin,env,date,"buy",x,s.qty,meta);',''))
        &&/op=buyable&env=vts&market=kr/.test(og2));
