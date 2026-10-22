@@ -16,7 +16,7 @@
 // 주문은 절대 자동 재시도하지 않는다.
 import { GAPDOWN_VERSION, expectedGapPct, gapdownPicks, watchlistUsable } from "./_gapdown.js";
 import { krxDay } from "./_krx_calendar.js";
-import { loadMainEvents, mainFor } from "./_claude_main.js";
+import { VTS_OFF, claudeVtsOn, loadMainEvents, mainFor } from "./_claude_main.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WATCH_URL="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/opening-gapdown-research/watchlist.json";
@@ -292,6 +292,7 @@ async function preopen(origin,env,date,rows,recheck){
   if(!picks.length){out.decisionReason=(ch.source==="recheck"||cands.some(x=>x.expectedGapPct!==null))?"no_expected_gap_down":"no_expected_prices";return out;}
   out.decisionReason="rsi14_prev<30+expected_gap<=-2%+deepest3";
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
+  if(!claudeVtsOn(env,"opening")){out.ordersSkipped=VTS_OFF;return out;}       // 모의투자 꺼짐 — 신호 · 장부만(2026-10-22 사용자)
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
   const amount=budget(env);
   out.budgetPerPick=amount;
@@ -382,6 +383,7 @@ async function etfBuy(origin,env,date){
   Object.assign(out,etfBuyPlan(R,q));
   if(!out.signal)return out;
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
+  if(!claudeVtsOn(env,"daytrading")){out.ordersSkipped=VTS_OFF;return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
   const qty=Math.floor(budget(env)*ETF_RULE.budgetMultiple/Math.max(1,+q.expectedPrice||0));
   out.order=await sizedBuy(origin,env,date,{code:ETF_RULE.code,name:ETF_RULE.name},qty,
@@ -464,6 +466,7 @@ async function c30Buy(origin,env,date){
   Object.assign(out,c30BuyPlan(R,q));
   if(!out.signal)return out;
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
+  if(!claudeVtsOn(env,"close30")){out.ordersSkipped=VTS_OFF;return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
   const qty=Math.floor(budget(env)*C30_RULE.budgetMultiple/Math.max(1,+q.price||0));
   out.order=await sizedBuy(origin,env,date,{code:C30_RULE.code,name:C30_RULE.name},qty,
