@@ -59,6 +59,9 @@ export function openingDay(date, ledger, krOpen, marks = {}, main = null) {
   const accepted = (pre.orders || []).filter(o => o.side === "buy" && o.vts && o.vts.ok).length;
   if (accepted && !(rec.positions || []).length) r.warn = "매수 접수 " + accepted + "건인데 15:40 체결조회 기록 없음 — 점검";
   const mine = rows.filter(x => keep.has(String(x.code))), extra = rows.filter(x => !keep.has(String(x.code)));
+  const skipped = (pre.orders || []).filter(o => o.side === "buy" && keep.has(String(o.code)) && !(o.vts && o.vts.ok));
+  if (v2 && !mine.length && skipped.length)                                 // 2026-10-22: 매수가능 0원으로 메인 3종목을 모두 못 샀다 — '매매 없음'과 구별
+    r.warn = r.warn || "메인 매매일인데 모의투자 매수 " + skipped.length + "건 모두 안 됨 — " + String((skipped[0].vts || {}).msg || "").replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + " (그날 결과는 밤 계산이 규칙대로 기록)";
   const done = mine.filter(x => !x.open), open = mine.filter(x => x.open);
   if (v2) { r.trades = done; r.open = open; if (extra.length) r.measure = extra; }   // 메인이 고른 종목만 손익, 나머지 주문은 측정용
   else r.measure = rows;                                                    // 매매일이 아니면 측정용 — 전략 손익에 넣지 않는다

@@ -251,21 +251,41 @@ const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
 export function addDays(d,n){return new Date(Date.parse(d+"T00:00:00Z")+n*864e5).toISOString().slice(0,10);}
 export function prevKrDay(d){let x=d;for(let i=0;i<15;i++){x=addDays(x,-1);if(!krxDay(x).closed)return x;}return null;}
 function wl(xs){return {wins:xs.filter(x=>x>0).length,losses:xs.filter(x=>x<=0).length};}
+// ① 규칙 칸 — 메인 매매일인데 모의투자 체결이 하나도 없는 날(계좌 현금 부족 · 주문 거절).
+// 2026-10-22: 매수가능 0원이라 메인 3종목을 모두 못 샀는데 칸이 '매매없음'으로 보였다. 밤 계산은 그날을 규칙(연구 signals 의 pnl)으로 매매일로 센다 →
+// 같은 식으로: 메인이 고른 종목(깊은 갭 topK · gapMax 이하)의 그날 시가 → 종가(장 마감 전이면 지금 가격) − (0.23% + 1.5틱 × 2), 종목 평균.
+// bars: {종목코드: {open, close}} · final: 그날 종가가 확정됐는지. 메인 매매일이 아니거나 가격이 하나라도 없으면 null.
+const KR_TICK=[[2000,1],[5000,5],[20000,10],[50000,50],[200000,100],[500000,500]];
+export function krTick(p){for(const [u,t] of KR_TICK)if(p<u)return t;return 1000;}
+export function d1CostPct(p){return 0.23+2*1.5*krTick(p)/p*100;}
+export function openingRuleCell(pre,P,bars,final){
+  const b=pre&&pre.breadth;
+  if(!b||b.qualified==null||!openingCounts(P,b.qualified))return null;
+  const keep=openingPick(P,pre.picks||[]);
+  if(!keep.length)return null;
+  const v=[];
+  for(const c of keep){const x=(bars||{})[c]||{};if(!(+x.open>0&&+x.close>0))return null;v.push(pct(+x.close,+x.open)-d1CostPct(+x.open));}
+  const failed=(pre.orders||[]).filter(o=>o&&o.side==="buy"&&keep.includes(String(o.code))&&!(o.vts&&o.vts.ok));
+  const why=failed.length?String((failed[0].vts||{}).msg||"").replace(/^매수 생략 — /,"").replace(/ · 계획.*$/,""):"";
+  return {v:avg(v),final:!!final,src:"rule",trades:v.length,...wl(v),
+    note:"모의투자 매수 안 됨"+(failed.length?"("+failed.length+"종목"+(why?" · "+why:"")+")":"")+" — 규칙대로 계산"};
+}
 // ① 마감 장부(15:40 체결 조회 뒤 Worker 가 한 번 저장) → 칸. 메인이 고른 종목만(측정용 제외) · 종목 균등(밤 계산 칸과 같은 평균).
-export function openingClosedCell(c){
+// rule: 위 규칙 칸 — 체결이 하나도 없는 날에만 쓴다(체결이 있으면 모의투자 체결로).
+export function openingClosedCell(c,rule=null){
   if(!c)return null;
   if(c.status==="holiday")return {v:"holiday",final:true,src:"vts"};
   const t=(c.trades||[]).filter(x=>x.pnlPct!=null),o=(c.open||[]).filter(x=>x.pnlPct!=null),all=t.concat(o).map(x=>x.pnlPct);
-  if(!all.length)return {v:"no_trade",final:true,src:"vts",trades:0,note:c.note||""};
+  if(!all.length)return rule||{v:"no_trade",final:true,src:"vts",trades:0,note:c.note||""};
   return {v:avg(all),final:!o.length,src:"vts",trades:all.length,...wl(all),note:o.length?"매도 미체결 "+o.length+"건 — 시세로 평가":""};
 }
 // ① 오늘: 마감 장부가 있으면 그것, 없으면 08:56 판단 뒤의 오늘 요약(장중 체결가 · 현재가)
-export function openingTodayCell(t,closed,holiday){
+export function openingTodayCell(t,closed,holiday,rule=null){
   if(holiday)return {v:"holiday",final:true,src:"vts"};
-  const c=openingClosedCell(closed);if(c)return c;
+  const c=openingClosedCell(closed,rule);if(c)return c;
   const q=t&&t.today;
   if(!t||!t.decision||!q)return null;                                    // 08:56 판단 전
-  if(q.noTrade)return {v:"no_trade",final:true,src:"vts",trades:0,note:q.why||""};
+  if(q.noTrade)return rule||{v:"no_trade",final:true,src:"vts",trades:0,note:q.why||""};
   return {v:q.tabPct,final:false,src:"vts",trades:q.trades,wins:q.wins,losses:q.losses};   // 매매 근거는 ① 탭에(칸은 짧게)
 }
 // ② 칸 d = 매수일(d 의 직전 거래일) 종가에 사서 d 아침 시가에 판 결과 — 밤 계산 ETF 칸과 같은 식(claude_lab etf_variant):
@@ -424,7 +444,19 @@ export async function onRequestGet({request,env}){
     const etfCell=d=>{if(krxDay(d).closed)return etfDayCell(null,null,null,true);const bd=prevKrDay(d),b=ledAt(bd);
       return b?etfDayCell(stages(b),stages(ledAt(d)),{buyClose:etfBar(bd).close,sellOpen:etfBar(d).open},false):null;};
     const sxc=soxlDayCell(nx,us,+((mainOf("soxl",now.date).params||{}).tabSize));
-    const days={opening:{[Y]:krxDay(Y).closed?{v:"holiday",final:true,src:"vts"}:openingClosedCell(c1y),[now.date]:openingTodayCell(out.tabs.opening,c1,krxDay(now.date).closed)},
+    // ① 규칙 칸 재료 — 그날 메인 종목의 시가 · 종가(오늘 종목은 위에서 받은 시세 · 어제 종목은 체결이 없을 때만 더 받는다)
+    const ruleOf=async(d,led,closedRec)=>{
+      const pre=led&&stages(led).preopen;
+      if(!pre||!(pre.picks||[]).length||(closedRec&&((closedRec.trades||[]).length||(closedRec.open||[]).length)))return null;
+      const P=mainOf("opening",d).params,bars={};
+      for(const c of openingPick(P,pre.picks)){
+        const i=codes.indexOf(c),q=d===now.date&&i>=0?qs[i]:await quote(origin,c);
+        const b=((q&&q.ohlc)||[]).find(x=>x.date===d);if(b)bars[c]=b;
+      }
+      return openingRuleCell(pre,P,bars,d<now.date||now.hm>=1600);
+    };
+    const [r1,r1y]=await Promise.all([ruleOf(now.date,lt,c1),krxDay(Y).closed?null:ruleOf(Y,ledAt(Y),c1y)]);
+    const days={opening:{[Y]:krxDay(Y).closed?{v:"holiday",final:true,src:"vts"}:openingClosedCell(c1y,r1y),[now.date]:openingTodayCell(out.tabs.opening,c1,krxDay(now.date).closed,r1)},
       daytrading:{[Y]:etfCell(Y),[now.date]:etfCell(now.date)},
       close30:{[Y]:krxDay(Y).closed?{v:"holiday",final:true,src:"vts"}:(ledAt(Y)?close30DayCell(stages(ledAt(Y)),{close:etfBar(Y).close},false):null),
         [now.date]:close30DayCell(st,{close:now.hm>=1600?etfBar(now.date).close:0,now:prices["233740"]},krxDay(now.date).closed)},

@@ -1017,6 +1017,37 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
     assert.ok(Array.isArray(j.tabs.opening.rows) && j.tabs.opening.rows.length === 2);   // 기존 응답(알림이 읽는 rows)은 그대로
   } finally { globalThis.fetch = oldFetch; Date.now = oldNow; }
 });
+// ── ① 메인 매매일인데 모의투자 체결이 하나도 없는 날(2026-10-22 매수가능 0원) — '매매없음'이 아니라 규칙대로 계산 ──
+t("① 규칙 칸: 메인 매매일 · 체결 0건(현금 부족)이면 그날 시가 → 종가로 계산(밤 계산 signals pnl 과 같은 식) · 체결이 있으면 모의투자 체결 그대로", () => {
+  const M = { minQ: 7, topK: 3, gapMax: -3 };
+  const skip = msg => ({ ok: false, env: "vts", msg });
+  const pre = { breadth: { qualified: 9 }, picks: [{ code: "073240", expectedGapPct: -4.74 }, { code: "064350", expectedGapPct: -3.72 }, { code: "329180", expectedGapPct: -3.44 }],
+    orders: ["073240", "064350", "329180"].map(code => ({ code, side: "buy", qty: 0, vts: skip("매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 382주") })) };
+  const bars = { "073240": { open: 5460, close: 5330 }, "064350": { open: 86000, close: 84800 }, "329180": { open: 310500, close: 305500 } };
+  assert.deepEqual([LV.krTick(1999), LV.krTick(2000), LV.krTick(5460), LV.krTick(86000), LV.krTick(310500), LV.krTick(600000)], [1, 5, 10, 100, 500, 1000]);
+  near(LV.d1CostPct(5460), 0.23 + 3 * 10 / 5460 * 100);
+  const want = [[5330, 5460, 10], [84800, 86000, 100], [305500, 310500, 500]].map(([c, o, k]) => (c / o - 1) * 100 - (0.23 + 3 * k / o * 100)).reduce((a, x) => a + x, 0) / 3;
+  const r = LV.openingRuleCell(pre, M, bars, true);
+  near(r.v, want); assert.ok(Math.abs(r.v - -2.486) < 0.01, String(r.v));                           // 10/22 실제 시가 · 종가로 약 −2.49%
+  assert.deepEqual([r.final, r.src, r.trades, r.wins, r.losses], [true, "rule", 3, 0, 3]);
+  assert.equal(r.note, "모의투자 매수 안 됨(3종목 · 매수가능 0주(계좌 현금 부족)) — 규칙대로 계산");
+  assert.equal(LV.openingRuleCell({ ...pre, breadth: { qualified: 6 } }, M, bars, true), null);   // 메인 매매일 아님(6<7) — 측정용
+  assert.equal(LV.openingRuleCell(pre, M, { "073240": bars["073240"] }, true), null);               // 가격이 모자라면 계산하지 않는다
+  const shallow = LV.openingRuleCell({ ...pre, picks: [...pre.picks.slice(0, 2), { code: "329180", expectedGapPct: -2.5 }] }, M, bars, false);
+  assert.deepEqual([shallow.trades, shallow.final], [2, false]);                                  // 메인 gapMax(−3%) 밖 종목은 빼고 · 장 마감 전이면 확정 전
+  const none = { status: "closed", trades: [], open: [], note: "메인 매매일(통과 9종목)" };
+  assert.equal(LV.openingClosedCell(none, r), r);                                                  // 마감 장부에 체결이 없으면 규칙 칸
+  assert.equal(LV.openingClosedCell(none).v, "no_trade");
+  const filled = { status: "closed", trades: [{ pnlPct: 1.5 }], open: [] };
+  assert.deepEqual([LV.openingClosedCell(filled, r).v, LV.openingClosedCell(filled, r).src], [1.5, "vts"]);   // 체결이 있으면 모의투자 체결 그대로
+  const tt = { decision: { breadth: { qualified: 9 } }, today: { noTrade: true, why: "주문 실패 3건" } };
+  assert.equal(LV.openingTodayCell(tt, null, false, { ...r, final: false }).src, "rule");           // 장중(마감 장부 전)에도
+  assert.equal(LV.openingTodayCell(tt, null, false).v, "no_trade");
+  const L = (...st) => ({ events: st.map(([stage, payload]) => ({ stage, payload })) });
+  const day = DAY.openingDay("2026-10-22", L(["preopen", pre], ["reconcile", { positions: [] }]), true, {}, { version: "g_open_q7_k3_gap3", params: M });
+  assert.deepEqual([day.trades.length, day.entries], [0, 0]);                                     // 체결이 없으니 장부 진입은 0(규칙 결과는 밤 계산이 기록)
+  assert.match(day.warn, /^메인 매매일인데 모의투자 매수 3건 모두 안 됨 — 매수가능 0주\(계좌 현금 부족\)/);   // 마감 장부에도 이유를 남긴다
+});
 // ── ⑤ 종가 30분(close30) — 사용자 요청(2026-10-22) "종가 전략도 탭에 추가하고 다른 전략이랑 동일하게 적용해 알림" ──
 t("⑤ 판단 · 규칙 · 시간창 · 체결 구분: 15:00 등락률이 기준 '미만'일 때만 · ② 와 같은 종목이라 접수 시각으로 나눠 센다", () => {
   assert.deepEqual([F.c30SofarPct({ price: 9800, chgRate: -0.81 }), F.c30SofarPct({ price: 9800, chgRate: "" }), F.c30SofarPct({ price: 0, chgRate: -1 }), F.c30SofarPct({ price: 9800 })],
