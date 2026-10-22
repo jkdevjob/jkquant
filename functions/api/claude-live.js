@@ -6,7 +6,7 @@
 // 확정 결과는 밤 workflow 의 모의투자 장부(claude-paper)가 따로 남긴다. 이 응답은 화면 표시용이다.
 
 import { claudeAuthorized } from "./_claude_auth.js";
-import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts, openingPick } from "./_claude_main.js";
+import { MAIN_DEFAULT, VTS_OFF, coinDaysNeeded, loadMainEvents, mainFor, openingCounts, openingPick } from "./_claude_main.js";
 import { krxDay } from "./_krx_calendar.js";
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WORKER="https://jkquant-opening-scheduler.mumae4.workers.dev";
@@ -62,7 +62,7 @@ export function etfRuleCost(p){p=+p;return 0.03+2*(p>=2000?5:1)/p*100;}
 export const barOn=(q,d)=>((q&&q.ohlc)||[]).find(x=>x.date===d)||null;
 // 모의투자 측정용 한 줄 — 정산에는 쓰지 않는다
 export function vtsNote(o,fill,skipped=""){
-  if(!o||!o.vts)return skipped?"모의계좌 주문 안 함("+skipped+") — 시세로 정산":"";
+  if(!o||!o.vts)return skipped===VTS_OFF?"모의투자 꺼짐 — 신호대로 정산":skipped?"모의계좌 주문 안 함("+skipped+") — 시세로 정산":"";   // 꺼둔 것은 실패가 아니다(알림 · 요약에 안 적음)
   if(!o.vts.ok)return "모의계좌 주문 안 됨("+String(o.vts.msg||"").replace(/^매수 생략 — /,"").replace(/ · 계획.*$/,"")+") — 시세로 정산";
   return fill&&fill.qty>0?"모의계좌 체결 "+fill.qty+"주 · "+Math.round(+fill.avgPrice).toLocaleString("en-US")+"원":"모의계좌 주문 접수";
 }

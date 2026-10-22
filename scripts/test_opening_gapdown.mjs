@@ -715,6 +715,7 @@ t("① 08:58 다시 보기(2026-10-19 사용자 선택 '가') — 08:56 전체 �
     u = String(u);
     if (u.startsWith(WLURL)) return new Response(JSON.stringify(wlj));
     if (u.includes("/api/kis?op=expected")) { const code = u.split("code=")[1]; kis.push(code); return new Response(JSON.stringify({ code, expectedPrice: code === "000001" ? 9400 : 9800, basePrice: 10000 })); }
+    if (u.includes("/api/kis?op=buyable") || u.includes("/api/kis?op=order")) { kis.push("ORDER-PATH"); return new Response(JSON.stringify({ qty: 5, cash: 50000, ok: true, orderNo: "X" })); }   // 꺼져 있으면 오면 안 된다
     throw new Error("unexpected " + u);
   };
   Date.now = () => kst("08:58:10");
@@ -731,6 +732,11 @@ t("① 08:58 다시 보기(2026-10-19 사용자 선택 '가') — 08:56 전체 �
     near(pre.picks[0].expectedGapPct, -6); near(pre.picks[0].expectedGapPct0856, -15);
     assert.deepEqual([pre.breadth.qualified, pre.recheck], [3, { asked: 3, priced: 3, used: true }]);
     assert.equal(pre.ordersSkipped, "SCALPING_VTS_AUTO=0");
+    const postE = (body, e) => F.onRequestPost({ request: new Request("https://p.test/api/opening-gapdown", { method: "POST", headers: { "x-monitor-key": "k" }, body: JSON.stringify(body) }), env: e }).then(r => r.json());
+    let tick = kst("08:58:10"); Date.now = () => (tick += 20);                    // 흐르는 시계 — 주문 경로로 새도 간격 대기가 끝나게(멈춘 시계면 무한 대기)
+    kis.length = 0; F._resetPacingForTest();                                       // 앞 시험(실제 시각)의 주문 간격 기록이 가짜 시각과 섞이지 않게
+    const off1 = await postE({ stage: "preopen", date: "2026-10-20", candidates: [px("000001", 8500), px("000002", 8600), px("000003", 8700)] }, { OPENING_MONITOR_KEY: "k", AUTOTRADE_KEY: "ak" });
+    assert.deepEqual([off1.picks.length, off1.ordersSkipped, off1.orders, kis.includes("ORDER-PATH")], [3, "모의투자 꺼짐(설정)", [], false]);   // 모의투자 꺼짐(기본) — 고른 종목 · 신호는 남기고 매수가능 조회 · 주문은 없다
     const pre0 = await post({ stage: "preopen", date: "2026-10-20", candidates: [px("000001", 8500), px("000002", 8600), px("000003", 8700)] });
     assert.deepEqual([pre0.picks.map(x => x.code), pre0.recheck, "expectedGapPct0856" in pre0.picks[0]], [["000001", "000002", "000003"], null, false]);
   } finally { globalThis.fetch = oldFetch; Date.now = oldNow; }
@@ -1264,16 +1270,28 @@ t("⑤ Pages 주문 단계 끝까지(가짜 KIS): 15:00 −0.8% → 매수가능
     u = String(u);
     if (u.endsWith("/claude-config")) return new Response(JSON.stringify({ ok: true, events: [] }));
     if (u.includes("/api/kis?op=price")) { kis.push("price"); return new Response(JSON.stringify({ code: "233740", price: 9800, chgRate: chg, open: 9900 })); }
+    if (u.includes("/api/kis?op=expected")) { kis.push("expected"); return new Response(JSON.stringify({ code: "233740", expectedPrice: 9400, basePrice: 9800, phase: "121" })); }
     if (u.includes("/api/kis?op=buyable")) { kis.push("buyable"); return new Response(JSON.stringify({ qty: 500, cash: 4900000 })); }
     if (u.includes("/api/kis?op=orders")) { kis.push("orders"); return new Response(JSON.stringify({ orders: fills })); }
     if (u.includes("/api/kis?op=order&internal=1")) { const b = JSON.parse(init.body); orders.push(b); return new Response(JSON.stringify({ ok: true, orderNo: "N" + orders.length })); }
     throw new Error("unexpected fetch " + u);
   };
-  const env = { OPENING_MONITOR_KEY: "k", AUTOTRADE_KEY: "ak" };
+  const env = { OPENING_MONITOR_KEY: "k", AUTOTRADE_KEY: "ak", CLAUDE_VTS: "opening,daytrading,close30" };   // 모의투자 켠 경우(설정)
   const post = (body, e = env) => F.onRequestPost({ request: new Request("https://p.test/api/opening-gapdown", { method: "POST", headers: { "x-monitor-key": "k" }, body: JSON.stringify(body) }), env: e })
     .then(async r => ({ status: r.status, j: await r.json() }));
   try {
     F._resetPacingForTest();
+    // 모의투자 꺼짐(기본 · 2026-10-22 사용자 "우선은 모의 투자 off로 해놓고") — 판단 · 신호는 그대로, 매수가능 조회 · 주문은 없다
+    const offEnv = { OPENING_MONITOR_KEY: "k", AUTOTRADE_KEY: "ak" };
+    Date.now = () => kst("15:00:05");
+    const off5 = await post({ stage: "c30_buy", date: "2026-10-23" }, offEnv);
+    assert.deepEqual([off5.status, off5.j.signal, off5.j.ordersSkipped, off5.j.order, orders.length, kis], [200, true, "모의투자 꺼짐(설정)", null, 0, ["price"]]);
+    Date.now = () => kst("15:21:00"); kis.length = 0;
+    const off2 = await post({ stage: "etf_buy", date: "2026-10-23" }, offEnv);
+    assert.deepEqual([off2.status, off2.j.signal, off2.j.ordersSkipped, off2.j.order, orders.length, kis], [200, true, "모의투자 꺼짐(설정)", null, 0, ["expected"]]);
+    const on2 = await post({ stage: "etf_buy", date: "2026-10-23" }, { ...offEnv, CLAUDE_VTS: "daytrading" });   // ② 만 켜면 ② 만 주문
+    assert.deepEqual([on2.j.ordersSkipped, (on2.j.order || {}).signalId, orders.length], [undefined, "etf_dip:2026-10-23:233740:buy", 1]);
+    kis.length = 0; orders.length = 0; F._resetPacingForTest();
     Date.now = () => kst("15:00:05");
     const b = await post({ stage: "c30_buy", date: "2026-10-23" });
     assert.equal(b.status, 200, JSON.stringify(b.j));
@@ -1343,6 +1361,31 @@ t("⑤ Worker: 15:00 경로 · 15:21 매도는 ② 매수 판단보다 먼저 ·
   const e = W.claudeConfigEvent({ tab: "close30", version: "close30_dip_th1", params: { th: -1 }, effectiveFrom: "2026-10-24", promotedAt: "2026-10-23T19:00" });
   assert.equal((e || {}).payload && e.payload.tab, "close30");
   assert.equal(W.claudeConfigEvent({ tab: "closebet", version: "x", params: {}, effectiveFrom: "2026-10-24", promotedAt: "t" }), null);
+});
+t("모의투자 켜기 · 끄기(2026-10-22 사용자 \"우선은 모의 투자 off로 해놓고\"): 기본 꺼짐 · 탭별로 켬 · 꺼둔 것은 실패로 적지 않는다(알림 · 요약 · 장부 경고 없음)", () => {
+  assert.deepEqual([MAIN.claudeVtsOn({}, "opening"), MAIN.claudeVtsOn(null, "opening"), MAIN.claudeVtsOn({ CLAUDE_VTS: "opening, close30" }, "close30"),
+    MAIN.claudeVtsOn({ CLAUDE_VTS: "opening" }, "daytrading"), MAIN.claudeVtsOn({ CLAUDE_VTS: "openingx" }, "opening")], [false, false, true, false, false]);
+  assert.equal(MAIN.VTS_OFF, "모의투자 꺼짐(설정)");
+  assert.equal(LV.vtsNote(undefined, null, MAIN.VTS_OFF), "모의투자 꺼짐 — 신호대로 정산");
+  assert.equal(LV.vtsNote(undefined, null, "SCALPING_VTS_AUTO=0"), "모의계좌 주문 안 함(SCALPING_VTS_AUTO=0) — 시세로 정산");   // 긴급 중지는 그대로 알린다
+  const st = { preopen: { picks: [{ code: "000010", name: "A", expectedPrice: 1000, expectedGapPct: -5 }], orders: [], ordersSkipped: MAIN.VTS_OFF, breadth: { qualified: 9 } } };
+  const rows = LV.openingRows(st, { "000010": 1040 }, { "000010": { open: 1005, close: 1045 } }, 1100);
+  assert.deepEqual([rows[0].status, rows[0].vts], ["보유중", "모의투자 꺼짐 — 신호대로 정산"]); near(rows[0].pnlPct, (1040 / 1005 - 1) * 100 - LV.d1CostPct(1005));
+  const sm = LV.todaySummary("opening", { rows, decision: { breadth: { qualified: 9 } } }, 1100);
+  assert.deepEqual([sm.trades, /모의계좌/.test(sm.why)], [1, false]);
+  const M = { params: { minQ: 5, topK: 3, gapMax: null } };
+  const ev = PU.pushEvents({ today: "2026-10-07", tabs: { opening: { main: M, decision: { breadth: { qualified: 9 } }, rows: rows.map(r => ({ ...r, expectedGapPct: -5 })) } } }, Date.parse("2026-10-07T11:00:00+09:00"), {});
+  assert.deepEqual(ev.map(e => e.body), ["A (갭 -5.00%) — 09:00 시가 → 15:30 종가 매도"]);   // 꺼둔 날은 '모의계좌 주문 안 됨'을 붙이지 않는다
+  const L = (...x) => ({ events: x.map(([stage, payload]) => ({ stage, payload })) });
+  const d1 = DAY.openingDay("2026-10-07", L(["preopen", { ...st.preopen, watchlist: { size: 5 } }]), true, {}, null, { "000010": { open: 1005, close: 1045 } });
+  assert.deepEqual([d1.trades.length, d1.warn, (d1.trades[0] || {}).vts && d1.trades[0].vts.msg, d1.settled], [1, undefined, MAIN.VTS_OFF, true]);
+  const e2 = DAY.etfDay("2026-10-07", L(["etf_buy", { signal: true, dropPct: -4, ordersSkipped: MAIN.VTS_OFF, quote: { expectedPrice: 7900 } }]),
+    L(["etf_buy", { signal: true, dropPct: -3.5, ordersSkipped: MAIN.VTS_OFF }]), "2026-10-06", true, { "2026-10-06": { close: 8000 }, "2026-10-07": { open: 8100, close: 7880 } });
+  assert.deepEqual([e2.exits, e2.open.length, e2.warn], [1, 1, undefined]);
+  const c5 = DAY.close30Day("2026-10-07", L(["c30_buy", { signal: true, sofarPct: -0.5, rule: { th: 0 }, quote: { price: 9800 }, ordersSkipped: MAIN.VTS_OFF }]), true, { "2026-10-07": { close: 9850 } });
+  assert.deepEqual([c5.exits, c5.warn, c5.settled], [1, undefined, true]);
+  const c5x = DAY.close30Day("2026-10-07", L(["c30_buy", { signal: true, sofarPct: -0.5, rule: { th: 0 }, quote: { price: 9800 }, order: { vts: { ok: false, msg: "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 600주" } } }]), true, { "2026-10-07": { close: 9850 } });
+  assert.match(c5x.warn || "", /^모의계좌 주문 안 됨\(매수가능 0주/);                                  // 켜 둔 날의 거절은 그대로 경고
 });
 t("15:40 마감 장부(closeDay — Worker op=close 경로): ①②⑤ 주문한 건을 /api/quote 그날 일봉(공식 시가 · 종가)으로 정산 · 모의투자 체결 0건이어도(2026-10-22 사용자)", async () => {
   await Promise.all(pending.slice());                                         // 전역 fetch 를 바꾸므로 앞 시험이 다 끝난 뒤에

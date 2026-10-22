@@ -6,7 +6,7 @@
 //  모의투자 체결 · 거절은 줄마다 vts 로 측정용으로만 남긴다.
 // 모든 함수는 마감 시점까지 들어온 자료만 받는다(미래 자료 없음). 순손익 = 비용(수수료·세금·미끄러짐) 뺀 값.
 import { coinHoldToday, coinBreakoutDay, c30CostPct, d1CostPct, etfRuleCost, SETTLE_BASIS } from "./claude-live.js";
-import { MAIN_DEFAULT, mainFor, openingCounts, openingPick } from "./_claude_main.js";
+import { MAIN_DEFAULT, VTS_OFF, mainFor, openingCounts, openingPick } from "./_claude_main.js";
 
 export const COST = { kr: 0.23, etf: 0.13, coin: 0.14, us: 0.20 };          // 왕복 %, 연구·실시간과 같은 값
 export const PAPER_CAPITAL = { coin: 10000000, soxl: 10000 };                // 주문 없는 칸의 모의 자금(원 · 달러)
@@ -70,7 +70,7 @@ export function openingDay(date, ledger, krOpen, marks = {}, main = null, bars =
   const done = mine.filter(x => !x.open), open = mine.filter(x => x.open);
   if (v2) { r.trades = done; r.open = open; if (extra.length) r.measure = extra; }   // 메인이 고른 종목만 손익, 나머지 주문은 측정용
   else r.measure = rows;                                                    // 매매일이 아니면 측정용 — 전략 손익에 안 셈
-  const nv = mine.filter(x => !x.vts.ok);
+  const nv = mine.filter(x => !x.vts.ok && x.vts.msg !== VTS_OFF);            // 모의투자를 꺼둔 날은 경고가 아니다
   if (v2 && nv.length) r.warn = "모의계좌 주문 안 됨 " + nv.length + "건(" + nv[0].vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 주문한 종목의 시가 · 종가로";
   if (v2 && open.length) r.warn = (r.warn ? r.warn + " · " : "") + "시세 없는 종목 " + open.length + "건 — 점검";
   const tv = done.map(x => x.pnlPct);
@@ -112,7 +112,7 @@ export function etfDay(date, ledger, prevLedger, prevDate, krOpen, bars = {}) {
     r.open.push({ name: N, code: "233740", entryTime: "15:30 종가", entryPrice: bc || +((buy.quote || {}).expectedPrice) || null, qty, pnlPct: 0, reason: "내일 09:00 시가 매도",
       vts: vtsOf(buy.order, ((st.etf_reconcile || {}).fills || {}).closeBuy, buy.ordersSkipped), signal: etfSignal(buy) });
   }
-  const nv = [...r.trades, ...r.open].filter(x => !x.vts.ok);
+  const nv = [...r.trades, ...r.open].filter(x => !x.vts.ok && x.vts.msg !== VTS_OFF);
   if (nv.length) r.warn = "모의계좌 주문 안 됨 " + nv.length + "건(" + nv[0].vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 주문한 건의 종가 · 시가로";
   if (!settled) r.warn = (r.warn ? r.warn + " · " : "") + "시세 없음 — 점검";
   return Object.assign(finish(r), {
@@ -148,7 +148,7 @@ export function close30Day(date, ledger, krOpen, bars = {}) {
       settled = false;
       r.open.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: p15 || null, qty, pnlPct: null, reason: "시세 없음 — 점검", vts, signal });
     }
-    if (!vts.ok) r.warn = "모의계좌 주문 안 됨(" + vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 15:00 가격 · 종가로";
+    if (!vts.ok && vts.msg !== VTS_OFF) r.warn = "모의계좌 주문 안 됨(" + vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 15:00 가격 · 종가로";
   }
   const th = String((buy && buy.rule && buy.rule.th) ?? 0).replace("-", "−");
   return Object.assign(finish(r), {
