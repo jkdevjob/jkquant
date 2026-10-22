@@ -29,12 +29,14 @@ function tradeHistoryTime(value,timezone){
 function tradeHistoryRow(x){
   const e=esc,role=({main:'메인',shadow:'그림자',research:'연구'})[x.role]||'연구';
   const price=v=>histPrice(x.strategy==='soxl'?'soxl':'opening',v);
-  const fields={strategyVersion:x.strategyVersion||'원본 미기록',strategyParams:x.strategyParams||'원본 미기록',recordedAt:x.recordedAt,evidence:x.evidence,events:x.events};
+  const fields={strategyVersion:x.strategyVersion||'원본 미기록',strategyParams:x.strategyParams||'원본 미기록',recordedAt:x.recordedAt,evidence:x.evidence,events:x.events,broker:x.broker};
+  const brokerLabels={accepted:'접수 · 체결 미확인',rejected:'주문 거절',not_submitted:'주문 안 함',unverified:'결과 미확인',unrecorded:'결과 원본 없음'};
+  const broker=x.broker?'매수 '+e(brokerLabels[x.broker.buy]||x.broker.buy)+'<br>매도 '+e(brokerLabels[x.broker.sell]||x.broker.sell)+'<div class="sub">한투 체결정산 미확인 · 조건·근거에서 주문별 사유 조회</div>':'<span class="sub">연구용 모의기록</span>';
   return '<tr><td>'+e(x.date)+'</td><td>'+e(TRADE_HISTORY_LABELS[x.strategy]||x.strategy)+'<div class="sub">'+e(role+' · '+x.variant)+'</div></td>'+
     '<td><b>'+e(x.name||x.code)+'</b><div class="sub">'+e(x.code)+'</div></td><td>'+e(TRADE_STATE_LABELS[x.status]||x.status)+'</td>'+
     '<td>'+e(tradeHistoryTime(x.signalTime,x.timezone))+'</td><td>'+e(tradeHistoryTime(x.entryTime,x.timezone))+'<div class="sub">'+e(price(x.entryPrice))+'</div></td>'+
     '<td>'+e(tradeHistoryTime(x.exitTime,x.timezone))+'<div class="sub">'+e(price(x.exitPrice))+'</div></td><td>'+e(histPct(x.pnl))+
-    (x.unrealizedPnl==null?'':'<div class="sub">평가 '+e(histPct(x.unrealizedPnl))+'</div>')+'</td>'+
+    (x.unrealizedPnl==null?'':'<div class="sub">평가 '+e(histPct(x.unrealizedPnl))+'</div>')+'</td><td>'+broker+'</td>'+
     '<td>'+e(TRADE_ORIGIN_LABELS[x.recordOrigin]||x.recordOrigin)+'<div class="sub">'+e(x.timezone)+'</div><details><summary>조건·근거</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:360px">'+e(JSON.stringify(fields,null,2))+'</pre></details></td></tr>';
 }
 async function loadTradeHistory(page=1,exportCsv=false){
@@ -60,7 +62,7 @@ async function loadTradeHistory(page=1,exportCsv=false){
       (j.variants||[]).map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('');
     document.getElementById('trades_variant').value=selected;
     msg.textContent='조회 '+j.total+'건 · 청산 '+j.summary.closed+' · 보유 '+j.summary.open+' · 신호/확인 필요 '+j.summary.unverified+(j.sourceWarnings.length?' · 일부 원본 조회 실패: '+j.sourceWarnings.join(' / '):'');
-    body.innerHTML=j.trades.length?'<div class="htable-wrap"><table class="htable"><thead><tr><th>기준일</th><th>전략·변형</th><th>종목</th><th>상태</th><th>신호</th><th>매수</th><th>매도</th><th>개별 순손익</th><th>출처·조건</th></tr></thead><tbody>'+j.trades.map(tradeHistoryRow).join('')+'</tbody></table></div>':'<p class="sub">'+(j.sourceWarnings.length?'원본 조회 오류를 확인해 주세요.':'선택 조건으로 저장된 기록이 없습니다.')+'</p>';
+    body.innerHTML=j.trades.length?'<div class="htable-wrap"><table class="htable"><thead><tr><th>기준일</th><th>전략·변형</th><th>종목</th><th>상태</th><th>신호</th><th>매수</th><th>매도</th><th>전략 모의손익</th><th>한투 주문 / 정산</th><th>출처·조건</th></tr></thead><tbody>'+j.trades.map(tradeHistoryRow).join('')+'</tbody></table></div>':'<p class="sub">'+(j.sourceWarnings.length?'원본 조회 오류를 확인해 주세요.':'선택 조건으로 저장된 기록이 없습니다.')+'</p>';
     pager.innerHTML=(page>1?'<button class="ghostbtn sm" onclick="loadTradeHistory('+(page-1)+')">← 이전</button>':'')+'<span class="sub">'+(j.pages?page+' / '+j.pages:'0건')+'</span>'+(page<j.pages?'<button class="ghostbtn sm" onclick="loadTradeHistory('+(page+1)+')">다음 →</button>':'');
   }catch(error){if(current()){msg.textContent=error.name==='AbortError'?'조회 시간이 초과됐습니다. 다시 조회해 주세요.':String(error.message||error);if(!exportCsv){body.innerHTML='';pager.innerHTML='';}}}
   finally{clearTimeout(timer);if(TRADE_HISTORY_CONTROLLER===controller)TRADE_HISTORY_CONTROLLER=null;}

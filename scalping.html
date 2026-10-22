@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.46.1</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.47.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -778,7 +778,7 @@ canvas{display:block;width:100%;height:auto}
 
 </div>
 
-<script src="/trade-history-ui.js?v=1.46.0"></script>
+<script src="/trade-history-ui.js?v=1.47.0"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1733,7 +1733,7 @@ function dailyLiveResultCell(x,top){
   return '<div class="daily-result-box">'+top+'<div class="daily-result-meta">장중 원본 · '+esc(s.label)+(x.open?' · 보유 평가손익':'')+'</div>'+
     '<div class="daily-result-ret '+cls+'">'+esc(result)+'</div>'+
     '<div class="daily-result-meta">선정 '+Number(x.trades||0)+' · 진입대기 '+Number(x.pendingTrades||0)+' · 보유 '+Number(x.open||0)+' · 청산 '+Number(x.closed||0)+'</div>'+
-    (x.realizedReturnPct!=null?'<div class="daily-result-meta">실현 계좌손익 '+dailyResultPct(x.realizedReturnPct)+(x.slots?' · '+Number(x.slots)+'슬롯':'')+'</div>':'')+
+    (x.realizedReturnPct!=null?'<div class="daily-result-meta">'+(x.pnlBasis==='strategy-paper'?'전략 모의손익 ':'실현 계좌손익 ')+dailyResultPct(x.realizedReturnPct)+(x.slots?' · '+Number(x.slots)+'슬롯':'')+(x.pnlBasis==='strategy-paper'?' · 한투 체결정산과 별도':'')+'</div>':'')+
     '<div class="daily-result-meta">'+esc(s.detail)+'</div>'+
     (x.sourceWarning?'<div class="warn">'+esc(x.sourceWarning)+'</div>':'')+
     (x.stale?'<div class="warn">서버 갱신 지연 · 아래 원본 시각 기준의 이전 값입니다.</div>':'')+

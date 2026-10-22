@@ -37,7 +37,7 @@ assert.equal(delayedExit.exitTime,930);
 assert.equal(delayedExit.evidence.finalExitPriceProxyHm,929);
 assert.equal(delayedExit.evidence.finalExitPriceUnconfirmed,true);
 const workerSource=fs.readFileSync(new URL('../worker/opening-scheduler/src/index.js',import.meta.url),'utf8');
-const exitFn=workerSource.slice(workerSource.indexOf('export function openingUnmatchedExits('),workerSource.indexOf('async function forceOpeningSessionClose('));
+const exitFn=workerSource.slice(workerSource.indexOf('export function openingUnmatchedExits('),workerSource.search(/\n(?:export )?async function forceOpeningSessionClose\(/));
 assert(exitFn.includes('openingUnmatchedExits('),'worker closing fallback exists');
 const unmatched=new Function(exitFn.replace('export function','function')+';return openingUnmatchedExits;')();
 const orderEvent=(stage,code,variant='baseline',hm=905)=>({stage,variant,code,name:code,signal:{code,name:code,entryTime:hm}});

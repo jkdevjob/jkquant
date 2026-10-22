@@ -117,6 +117,7 @@ function summarizeOpeningLedger(ledger,now=Date.now()){
     const p=positions.get(id);if(p)Object.assign(p,{status:s.finalExitUnverified?'unverified':'closed',exitTime:s.exitTime,pnl:numeric(s.pnl)});
   }
   const row=baseRow(clock),a=[...positions.values()],closed=a.filter(x=>x.status==='closed');
+  row.pnlBasis='strategy-paper';
   row.updatedAt=latest.capturedAt||ledger.updatedAt||null;row.mainVariant=variant;row.positions=a;row.trades=a.length;
   row.unverified=a.filter(x=>x.status==='unverified').length;
   row.open=a.filter(x=>x.status==='open').length;row.closed=closed.length;
