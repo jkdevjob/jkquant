@@ -131,6 +131,8 @@ jobs:
             echo "::warning::승격 기록 읽기 실패 HTTP $STATUS — 지난 사본(있으면)으로 계산"
           fi
 
+      # ①②⑤ 주문 정산(2026-10-22~): claude_lab 이 Worker 마감 장부가 확정 전 · 옛 형식인 날만 Pages op=close(같은 계산 · 읽기만)를 불러
+      # 확정된 것을 data/claude-settle/{날짜}.json 에 한 번 저장하고, 그 값으로 장부 · 계좌 · 오늘 탭을 확정한다.
       - name: 단타(클로드) 탭별 전략 + 전략 경쟁(자동 퇴출·신규 투입·7일 1위 자동 승격) + GPT 비교
         env:
           JKQ_DATA: data
@@ -139,13 +141,13 @@ jobs:
 
       - name: 저장
         run: |
-          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab data/claude-paper data/claude-live)" ]; then
+          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab data/claude-paper data/claude-live data/claude-settle)" ]; then
             echo "변경 없음"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab $(ls -d data/claude-paper data/claude-live 2>/dev/null)
+          git add data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab $(ls -d data/claude-paper data/claude-live data/claude-settle 2>/dev/null)
           git commit -m "data: opening gap-down research $(TZ=Asia/Seoul date '+%F %H:%M') [skip ci]"
           bash .app/scripts/push-scalping-data.sh
 

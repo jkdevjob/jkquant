@@ -1,7 +1,11 @@
 // 단타(클로드) 전략별 '하루 마감 장부' — 웹 오늘 모의매매 이력과 Telegram 결과가 같은 원본을 쓴다.
-// 원본: ①②⑤ = Worker gapdown ledger(KIS 모의투자 주문·체결), ③ = 업비트 60분봉(끝난 봉만), ④ = 밤 판단(nextSignal) + 마감 시세.
+// 원본: ①②⑤ = Worker gapdown ledger(전략이 낸 주문 · 판단) + 그날 공식 시가 · 종가(bars), ③ = 업비트 60분봉(끝난 봉만), ④ = 밤 판단(nextSignal) + 마감 시세.
+// ①②⑤ 정산(2026-10-22 사용자 "모의계좌로 판단하지 말고 그냥 모의계좌에 주문한 건으로 정산해야지 · 지금은 모의계좌가 안 되니까"):
+//  모의투자 체결 여부와 상관없이 '주문한 건'(그날 메인이 고른 종목 · 신호)을 공식 시가 · 종가로 정산한다. 비용은 밤 계산과 같은 식.
+//  장부에 basis="orders" · dayPct(그날 칸 값 = 종목 균등 평균) · settled(시세가 다 있었는지)를 남긴다 — 화면 · 밤 계산이 이 값을 그대로 쓴다.
+//  모의투자 체결 · 거절은 줄마다 vts 로 측정용으로만 남긴다.
 // 모든 함수는 마감 시점까지 들어온 자료만 받는다(미래 자료 없음). 순손익 = 비용(수수료·세금·미끄러짐) 뺀 값.
-import { coinHoldToday, coinBreakoutDay, c30CostPct } from "./claude-live.js";
+import { coinHoldToday, coinBreakoutDay, c30CostPct, d1CostPct, etfRuleCost, SETTLE_BASIS } from "./claude-live.js";
 import { MAIN_DEFAULT, mainFor, openingCounts, openingPick } from "./_claude_main.js";
 
 export const COST = { kr: 0.23, etf: 0.13, coin: 0.14, us: 0.20 };          // 왕복 %, 연구·실시간과 같은 값
@@ -25,6 +29,11 @@ function finish(r) {
   delete r.realizedBase;
   return r;
 }
+// 신호 낸 조건 — 정산 줄마다 판단 시각 · 판단 가격 · 기준을 같이 남긴다(2026-10-22 사용자 "너가 모의투자 신호 보낸 조건으로 이력 남기고 정산").
+// 시각은 그 단계 판단이 끝난 시각(finishedAt, 한국시각 HH:MM:SS).
+export const kstClock = iso => { const t = Date.parse(iso || ""); return Number.isFinite(t) ? new Date(t + 9 * 36e5).toISOString().slice(11, 19) : null; };
+const etfSignal = s => ({ at: kstClock(s.finishedAt), expectedPrice: (s.quote || {}).expectedPrice ?? null, basePrice: (s.quote || {}).basePrice ?? null,
+  dropPct: s.dropPct ?? null, th: (s.rule || {}).dropMaxPct ?? null, version: s.strategyVersion || null, reason: s.decisionReason || "" });
 function stagesOf(ledger) {
   const m = {};
   for (const e of (ledger && Array.isArray(ledger.events) ? ledger.events : [])) if (e && e.stage) m[e.stage] = e.payload || {};
@@ -33,91 +42,121 @@ function stagesOf(ledger) {
 
 // ① 08:59 동시호가 매수 → 15:30 종가 동시호가 매도. 15:40 체결조회(reconcile)까지 끝난 장부만 받는다.
 // main: 그날 ① 메인(_claude_main.mainFor) — 매매일 기준(통과 종목 수)과 장부에 넣을 종목(깊은 갭 topK · gapMax 이하). 없으면 기본 메인.
-export function openingDay(date, ledger, krOpen, marks = {}, main = null) {
-  const r = { strategy: "opening", name: NAMES.opening, date, currency: "KRW", trades: [], open: [], measure: [] };
+export function openingDay(date, ledger, krOpen, marks = {}, main = null, bars = {}) {
+  const r = { strategy: "opening", name: NAMES.opening, date, currency: "KRW", basis: SETTLE_BASIS, trades: [], open: [], measure: [] };
   if (!krOpen) return Object.assign(r, { status: "holiday", note: "국내 휴장" });
   const st = stagesOf(ledger), pre = st.preopen, rec = st.reconcile || {};
-  if (!pre) return Object.assign(finish(r), { status: "closed", watched: 0, candidates: 0, entries: 0, note: "08:56 판단 기록 없음 — 점검" });
+  if (!pre) return Object.assign(finish(r), { status: "closed", settled: false, dayPct: null, watched: 0, candidates: 0, entries: 0, note: "08:56 판단 기록 없음 — 점검" });
   const M = main || mainFor([], "opening"), P = M.params, isDef = M.version === MAIN_DEFAULT.opening.version, lab = isDef ? "v2 매매일" : "메인 매매일";
   const b = pre.breadth || {}, v2 = b.qualified == null ? !!b.v2Signal : openingCounts(P, b.qualified);
-  const src = (pre.picks || []).length ? pre.picks : (pre.orders || []).filter(o => o.side === "buy").map(o => ({ code: o.code, expectedGapPct: o.expectedGapPct }));
+  const src = (pre.picks || []).length ? pre.picks : (pre.orders || []).filter(o => o.side === "buy").map(o => ({ code: o.code, name: o.name, expectedGapPct: o.expectedGapPct }));
   const keep = new Set(openingPick(P, src));                                // 메인이 장부에 넣는 종목(깊은 갭 topK · gapMax 이하)
-  const pos = Object.fromEntries((rec.positions || []).map(p => [p.code, p]));
+  const pos = Object.fromEntries((rec.positions || []).map(p => [String(p.code), p]));
+  const ord = Object.fromEntries((pre.orders || []).filter(o => o.side === "buy").map(o => [String(o.code), o]));
   const rows = [];
-  for (const o of (pre.orders || []).filter(o => o.side === "buy" && o.vts && o.vts.ok)) {
-    const p = pos[o.code] || {}, buy = p.buy || {}, sell = p.sell || {};
-    if (!(buy.qty > 0)) continue;                                          // 체결 안 된 주문은 매매가 아니다
-    const base = { name: o.name || o.code, code: o.code, entryTime: "09:00 시가(동시호가)", entryPrice: buy.avgPrice, qty: buy.qty, notional: buy.qty * buy.avgPrice };
-    if (sell.qty > 0) {
-      const net = pct(sell.avgPrice, buy.avgPrice) - COST.kr;
-      rows.push(Object.assign(base, { exitTime: "15:30 종가(동시호가)", exitPrice: sell.avgPrice, pnlPct: net, pnlAmount: (base.notional * net) / 100, reason: "종가 청산" }));
-    } else {
-      const m = marks[o.code] || null;
-      rows.push(Object.assign(base, { open: true, markPrice: m, pnlPct: m ? pct(m, buy.avgPrice) - COST.kr : null, reason: "매도 미체결" }));
-    }
+  for (const p of src) {                                                    // 주문한 종목 = 그날 고른 종목(모의투자 체결과 상관없이)
+    const code = String(p.code), bar = (bars || {})[code] || {}, o = ord[code] || {}, ps = pos[code] || {}, pb = ps.buy || {}, pv = ps.sell || {};
+    const qty = +((o.sizing || {}).planned) || +o.qty || 0;                 // 주문한 수량(계좌 현금에 맞추기 전 계획)
+    const vts = { ok: !!(o.vts && o.vts.ok), msg: String(o.vts ? o.vts.msg || "" : pre.ordersSkipped || "주문 기록 없음"), buyQty: +pb.qty || 0, buyAvg: pb.avgPrice ?? null, sellQty: +pv.qty || 0, sellAvg: pv.avgPrice ?? null };
+    const signal = { at: kstClock(pre.finishedAt), expectedPrice: p.expectedPrice ?? null, basePrice: p.basePrice ?? null, expectedGapPct: p.expectedGapPct ?? null,
+      rsi14Prev: p.rsi14Prev ?? null, qualified: b.qualified ?? null, recheck: !!(pre.recheck && pre.recheck.used), reason: pre.decisionReason || "" };
+    const base = { name: p.name || o.name || code, code, entryTime: "09:00 시가(동시호가)", qty, vts, signal };
+    if (+bar.open > 0 && +bar.close > 0) {
+      const net = pct(+bar.close, +bar.open) - d1CostPct(+bar.open), notional = qty * +bar.open;
+      rows.push(Object.assign(base, { entryPrice: +bar.open, exitTime: "15:30 종가(동시호가)", exitPrice: +bar.close, notional, pnlPct: net, pnlAmount: (notional * net) / 100, reason: "종가 청산" }));
+    } else rows.push(Object.assign(base, { open: true, entryPrice: +bar.open || +p.expectedPrice || null, markPrice: (marks || {})[code] || null, pnlPct: null, reason: "시세 없음 — 점검" }));
   }
-  const accepted = (pre.orders || []).filter(o => o.side === "buy" && o.vts && o.vts.ok).length;
-  if (accepted && !(rec.positions || []).length) r.warn = "매수 접수 " + accepted + "건인데 15:40 체결조회 기록 없음 — 점검";
   const mine = rows.filter(x => keep.has(String(x.code))), extra = rows.filter(x => !keep.has(String(x.code)));
   const done = mine.filter(x => !x.open), open = mine.filter(x => x.open);
   if (v2) { r.trades = done; r.open = open; if (extra.length) r.measure = extra; }   // 메인이 고른 종목만 손익, 나머지 주문은 측정용
-  else r.measure = rows;                                                    // 매매일이 아니면 측정용 — 전략 손익에 넣지 않는다
+  else r.measure = rows;                                                    // 매매일이 아니면 측정용 — 전략 손익에 안 셈
+  const nv = mine.filter(x => !x.vts.ok);
+  if (v2 && nv.length) r.warn = "모의계좌 주문 안 됨 " + nv.length + "건(" + nv[0].vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 주문한 종목의 시가 · 종가로";
+  if (v2 && open.length) r.warn = (r.warn ? r.warn + " · " : "") + "시세 없는 종목 " + open.length + "건 — 점검";
+  const tv = done.map(x => x.pnlPct);
   return Object.assign(finish(r), {
-    status: "closed", watched: (pre.watchlist || {}).size || 0, candidates: b.qualified || 0, entries: v2 ? mine.length : 0,
+    status: "closed", settled: !(v2 && open.length), dayPct: v2 && tv.length && !open.length ? tv.reduce((a, x) => a + x, 0) / tv.length : null,
+    watched: (pre.watchlist || {}).size || 0, candidates: b.qualified || 0, entries: v2 ? mine.length : 0,
     strategyVersion: M.version, params: P,
     note: v2 ? lab + "(통과 " + b.qualified + "종목)" + (extra.length ? " · 장부 " + mine.length + "종목(메인 깊은 " + P.topK + (P.gapMax != null ? " · 갭 " + P.gapMax + "% 이하" : "") + ")" : "")
-      : rows.length ? lab + " 아님(통과 " + (b.qualified || 0) + "<" + P.minQ + ") — 측정용 모의매매는 전략 손익에 안 셈"
+      : rows.length ? lab + " 아님(통과 " + (b.qualified || 0) + "<" + P.minQ + ") — 측정용 주문은 전략 손익에 안 셈"
       : "매매 없음 — " + (pre.decisionReason || "조건 맞는 종목 없음")
   });
 }
 
-// ② 전날 15:20 종가 매수분을 오늘 09:00 시가 매도(실현) + 오늘 15:20 종가 매수(미청산, 내일 아침 매도)
-export function etfDay(date, ledger, prevLedger, prevDate, krOpen) {
-  const r = { strategy: "daytrading", name: NAMES.daytrading, date, currency: "KRW", trades: [], open: [], watched: 1 };
+// ② 전날 15:21 신호(종가 매수 주문) → 오늘 09:00 시가 매도(실현) + 오늘 15:21 신호면 종가 매수(미청산, 내일 아침 매도).
+// 주문한 건을 공식 종가 → 다음 날 시가로 정산(bars: {날짜: 233740 일봉}). 비용은 밤 계산 etf_variant 와 같은 식(0.03% + 2틱).
+export function etfDay(date, ledger, prevLedger, prevDate, krOpen, bars = {}) {
+  const N = "KODEX 코스닥150레버리지";
+  const r = { strategy: "daytrading", name: NAMES.daytrading, date, currency: "KRW", basis: SETTLE_BASIS, trades: [], open: [], watched: 1 };
   if (!krOpen) return Object.assign(r, { status: "holiday", note: "국내 휴장" });
-  const st = stagesOf(ledger), pst = stagesOf(prevLedger);
-  const sold = ((st.etf_reconcile || {}).fills || {}).openSell || {}, bought = ((pst.etf_reconcile || {}).fills || {}).closeBuy || {};
-  if (sold.qty > 0 && bought.qty > 0) {
-    const net = pct(sold.avgPrice, bought.avgPrice) - COST.etf, notional = sold.qty * bought.avgPrice;
-    r.trades.push({ name: "KODEX 코스닥150레버리지", code: "233740", entryTime: prevDate + " 15:30 종가", entryPrice: bought.avgPrice, exitTime: "09:00 시가",
-      exitPrice: sold.avgPrice, qty: sold.qty, notional, pnlPct: net, pnlAmount: (notional * net) / 100, reason: "다음 날 시가 청산" });
+  const st = stagesOf(ledger), pst = stagesOf(prevLedger), bar = d => (bars || {})[d] || {};
+  const pb = pst.etf_buy || null, buy = st.etf_buy || null;
+  const vtsOf = (o, f, skipped) => ({ ok: !!(o && o.vts && o.vts.ok), msg: String(o && o.vts ? o.vts.msg || "" : skipped || "주문 기록 없음"), qty: +(f || {}).qty || 0, avg: (f || {}).avgPrice ?? null });
+  let settled = true, dayPct = null;
+  if (pb && pb.signal) {                                                    // 전날 주문한 건 — 오늘 시가 매도
+    const bc = +bar(prevDate).close, so = +bar(date).open, o = pb.order || {}, qty = +((o.sizing || {}).planned) || +o.qty || 0;
+    const vts = vtsOf(pb.order, ((pst.etf_reconcile || {}).fills || {}).closeBuy, pb.ordersSkipped);
+    if (bc > 0 && so > 0) {
+      const net = pct(so, bc) - etfRuleCost(bc), notional = qty * bc;
+      r.trades.push({ name: N, code: "233740", entryTime: prevDate + " 15:30 종가", entryPrice: bc, exitTime: "09:00 시가", exitPrice: so, qty, notional,
+        pnlPct: net, pnlAmount: (notional * net) / 100, reason: "다음 날 시가 청산", vts, signal: etfSignal(pb) });
+      dayPct = net;
+    } else {
+      settled = false;
+      r.open.push({ name: N, code: "233740", entryTime: prevDate + " 15:30 종가", entryPrice: bc || null, qty, pnlPct: null, reason: "시세 없음 — 점검", vts, signal: etfSignal(pb) });
+    }
   }
-  const buy = st.etf_buy || null, nb = ((st.etf_reconcile || {}).fills || {}).closeBuy || {};
-  if (nb.qty > 0) r.open.push({ name: "KODEX 코스닥150레버리지", code: "233740", entryTime: "15:30 종가", entryPrice: nb.avgPrice, qty: nb.qty, pnlPct: 0, reason: "내일 09:00 시가 매도" });
+  if (buy && buy.signal) {                                                  // 오늘 주문한 건 — 내일 시가 매도
+    const bc = +bar(date).close, o = buy.order || {}, qty = +((o.sizing || {}).planned) || +o.qty || 0;
+    r.open.push({ name: N, code: "233740", entryTime: "15:30 종가", entryPrice: bc || +((buy.quote || {}).expectedPrice) || null, qty, pnlPct: 0, reason: "내일 09:00 시가 매도",
+      vts: vtsOf(buy.order, ((st.etf_reconcile || {}).fills || {}).closeBuy, buy.ordersSkipped), signal: etfSignal(buy) });
+  }
+  const nv = [...r.trades, ...r.open].filter(x => !x.vts.ok);
+  if (nv.length) r.warn = "모의계좌 주문 안 됨 " + nv.length + "건(" + nv[0].vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 주문한 건의 종가 · 시가로";
+  if (!settled) r.warn = (r.warn ? r.warn + " · " : "") + "시세 없음 — 점검";
   return Object.assign(finish(r), {
-    status: "closed", candidates: buy && buy.signal ? 1 : 0, entries: nb.qty > 0 ? 1 : 0,
+    status: "closed", settled, dayPct, candidates: buy && buy.signal ? 1 : 0, entries: buy && buy.signal ? 1 : 0,
     strategyVersion: buy && buy.strategyVersion || MAIN_DEFAULT.daytrading.version,
+    params: buy && buy.rule ? { code: "233740", th: buy.rule.dropMaxPct } : Object.assign({}, MAIN_DEFAULT.daytrading.params),
     note: buy ? (buy.signal ? "15:21 예상 하락 " + (+buy.dropPct).toFixed(2) + "% → 종가 매수" : "15:21 예상 하락 " + (buy.dropPct == null ? "—" : (+buy.dropPct).toFixed(2) + "%") + " (기준 " + String((buy.rule && buy.rule.dropMaxPct) ?? -3).replace("-", "−") + "% 이하 아님) → 매수 없음")
       : "15:21 판단 기록 없음 — 점검"
   });
 }
 
-// ⑤ 15:00 시장가 매수 → 15:30 종가 동시호가 매도(당일 청산). 15:40 체결조회(c30_reconcile)까지 끝난 장부만 받는다.
-// 비용은 실시간 화면 · 밤 계산과 같은 식(c30CostPct). mark: 매도가 안 된 수량이 있으면 지금 가격(미청산 평가).
-export function close30Day(date, ledger, krOpen, mark = null) {
-  const r = { strategy: "close30", name: NAMES.close30, date, currency: "KRW", trades: [], open: [], watched: 1 };
+// ⑤ 15:00 매수 → 15:30 종가 동시호가 매도(당일 청산). 주문한 건(15:00 신호)을 15:00 판단 가격 → 그날 공식 종가로 정산(bars: {날짜: 233740 일봉}).
+// 비용은 실시간 화면 · 밤 계산과 같은 식(c30CostPct). 모의투자 체결은 측정용(vts).
+export function close30Day(date, ledger, krOpen, bars = {}) {
+  const r = { strategy: "close30", name: NAMES.close30, date, currency: "KRW", basis: SETTLE_BASIS, trades: [], open: [], watched: 1 };
   if (!krOpen) return Object.assign(r, { status: "holiday", note: "국내 휴장" });
-  const st = stagesOf(ledger), buy = st.c30_buy || null, f = (st.c30_reconcile || {}).fills || {}, b = f.buy || {}, s = f.sell || {};
-  const N = "KODEX 코스닥150레버리지", cost = c30CostPct(b.avgPrice);
-  if (b.qty > 0) {
-    const sold = Math.min(b.qty, s.qty || 0);
-    if (sold > 0) {
-      const net = pct(s.avgPrice, b.avgPrice) - cost, notional = sold * b.avgPrice;
-      r.trades.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: b.avgPrice, exitTime: "15:30 종가(동시호가)", exitPrice: s.avgPrice, qty: sold,
-        notional, pnlPct: net, pnlAmount: (notional * net) / 100, reason: "종가 청산" });
+  const st = stagesOf(ledger), buy = st.c30_buy || null, f = (st.c30_reconcile || {}).fills || {};
+  const N = "KODEX 코스닥150레버리지";
+  let settled = !!buy, dayPct = null;
+  if (buy && buy.signal) {
+    const p15 = +((buy.quote || {}).price) || 0, close = +((bars || {})[date] || {}).close || 0, o = buy.order || {};
+    const qty = +((o.sizing || {}).planned) || +o.qty || 0;
+    const vts = { ok: !!(o.vts && o.vts.ok), msg: String(o.vts ? o.vts.msg || "" : buy.ordersSkipped || "주문 기록 없음"), buyQty: +(f.buy || {}).qty || 0, buyAvg: (f.buy || {}).avgPrice ?? null,
+      sellQty: +(f.sell || {}).qty || 0, sellAvg: (f.sell || {}).avgPrice ?? null };
+    const signal = { at: kstClock(buy.finishedAt), price: (buy.quote || {}).price ?? null, sofarPct: buy.sofarPct ?? null, th: (buy.rule || {}).th ?? null,
+      version: buy.strategyVersion || null, reason: buy.decisionReason || "" };
+    if (p15 > 0 && close > 0) {
+      const net = pct(close, p15) - c30CostPct(p15), notional = qty * p15;
+      r.trades.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: p15, exitTime: "15:30 종가(동시호가)", exitPrice: close, qty, notional,
+        pnlPct: net, pnlAmount: (notional * net) / 100, reason: "종가 청산", vts, signal });
+      dayPct = net;
+    } else {
+      settled = false;
+      r.open.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: p15 || null, qty, pnlPct: null, reason: "시세 없음 — 점검", vts, signal });
     }
-    if (b.qty > sold) r.open.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: b.avgPrice, qty: b.qty - sold, markPrice: mark,
-      pnlPct: mark ? pct(mark, b.avgPrice) - cost : null, reason: sold > 0 ? "일부 매도 미체결" : "매도 미체결" });
+    if (!vts.ok) r.warn = "모의계좌 주문 안 됨(" + vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 15:00 가격 · 종가로";
   }
-  const ordered = !!(buy && buy.order && buy.order.vts && buy.order.vts.ok);
-  if (ordered && !st.c30_reconcile) r.warn = "15:00 매수 접수됐는데 15:40 체결조회 기록 없음 — 점검";
   const th = String((buy && buy.rule && buy.rule.th) ?? 0).replace("-", "−");
   return Object.assign(finish(r), {
-    status: "closed", candidates: buy && buy.signal ? 1 : 0, entries: b.qty > 0 ? 1 : 0,
+    status: "closed", settled, dayPct, candidates: buy && buy.signal ? 1 : 0, entries: buy && buy.signal ? 1 : 0,
     strategyVersion: (buy && buy.strategyVersion) || MAIN_DEFAULT.close30.version,
     params: buy && buy.rule ? { code: "233740", th: buy.rule.th } : Object.assign({}, MAIN_DEFAULT.close30.params),
     note: !buy ? "15:00 판단 기록 없음 — 점검"
-      : buy.signal ? "15:00 전일 대비 " + P(buy.sofarPct) + " → 매수" + (b.qty > 0 ? "" : " — 체결 없음(" + (buy.ordersSkipped || (buy.order && buy.order.vts && buy.order.vts.msg) || "주문 기록 없음") + ")")
+      : buy.signal ? "15:00 전일 대비 " + P(buy.sofarPct) + " → 매수"
       : "15:00 전일 대비 " + (buy.sofarPct == null ? "—" : P(buy.sofarPct)) + " (기준 " + th + "% 미만 아님) → 매수 없음"
   });
 }
