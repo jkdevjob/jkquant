@@ -41,7 +41,8 @@ CRYPTO = dict(version="crypto_trend20_v2", markets=["KRW-BTC", "KRW-ETH"], ma=20
               costRoundTripPct=0.14, stopSlipPct=0.1,
               note="업비트 BTC·ETH 일봉(09시 기준) 각각: 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 두 코인 반반, 자금 60%.")
 ACCOUNT = dict(krWeight=0.3, cryptoWeight=0.3, usWeight=0.4, cryptoSize=1.0, usSize=1.0,
-               note="같은 원금: 국내 30%(① D-1 v2 + ② ETF 야간, 같은 날이면 반반) + 코인 30%(BTC·ETH 고가 돌파 하루 단타, 칸 안 전액) + 미국 40%(SOXL 과매도 반등 ≤5일, 칸 안 전액).")
+               note="같은 원금: 국내 30%(① D-1 v2 + ② ETF 야간 + ⑤ 종가 30분, 같은 날 여럿이면 똑같이 나눔) + 코인 30%(BTC·ETH 고가 돌파 하루 단타, 칸 안 전액) + 미국 40%(SOXL 과매도 반등 ≤5일, 칸 안 전액).")
+KR_KEYS = ("opening_d1v2", "daytrading_etf", "close30_etf")      # 국내 칸을 나눠 쓰는 장부 키
 US = dict(version="tqqq_trend200_v1", trade="TQQQ", signal="QQQ", ma=200, stopPct=10.0, size=1.0, tabSize=0.5,
           costRoundTripPct=0.20, stopSlipPct=0.1,
           note="QQQ 종가 > 200일 평균이면 TQQQ 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −10% 닿으면 손절. 탭 표시는 자금 50%. SOXL 은 변동성이 너무 커 TQQQ 로 바꿨다(SOXL 안은 참고로 같이 계산).")
@@ -435,11 +436,12 @@ def basket(per, cal):
     return out
 
 
-def combine_same_capital(a, b):
-    """같은 원금: 같은 날 둘 다면 반씩."""
+def combine_same_capital(*series):
+    """같은 원금(국내 칸): 그날 매매한 전략끼리 똑같이 나눈다(둘이면 반씩, 셋이면 3분의 1씩)."""
     out = {}
-    for d in set(a) | set(b):
-        out[d] = (a[d] + b[d]) / 2 if d in a and d in b else a.get(d, b.get(d))
+    for d in set().union(*[set(s) for s in series]):
+        v = [s[d] for s in series if d in s]
+        out[d] = sum(v) / len(v)
     return out
 
 
@@ -530,6 +532,10 @@ def daily_board(report, d1, krx_cal, crypto_full, cal_c, now=None):
         plan=f"15:21 예상 종가 {md['params']['th']:g}% 이하면 종가 매수 → 다음 날 시가 매도".replace("-", "−"))
     g, gv, _ = gpt_daily("daytrading")
     add("데이트레이딩", "gpt", "데이트레이딩", ", ".join(gv), lambda d, g=g: kr_cell(g, d, today, hm, wait_close=True))
+    m5 = main_for("close30")
+    c5 = CAL.get("close30") or []
+    add("종가 30분", "claude", m5["name"], m5["version"], lambda d: kr_cell(C30_PW, d, today, hm, c5[-1] if c5 else "0000-00-00", wait_close=True),   # 자료 없으면 모두 확정 대기
+        plan=f"15:00 에 전일 종가보다 {'' if m5['params']['th'] == 0 else format(abs(m5['params']['th']), 'g') + '% 넘게 '}내려 있으면 15:00 매수 → 15:30 종가 매도")
     c = tabs.get("crypto") or {}
     nx = c.get("nextSignals") or {}
     cs = {d: v * mc["params"]["tabSize"] for d, v in crypto_full.items()}
@@ -575,7 +581,7 @@ DECISIONS = {}
 ROWS = {}
 PAPER = DATA / "claude-paper"
 PAPER_START = "2026-10-01"          # 모의투자 장부 시작일 = 판정용 표본 시작일
-START = {"us_soxl": "2026-10-02", "coin_bo_btc": "2026-10-02", "coin_bo_eth": "2026-10-02", "account": "2026-10-02"}   # 전략을 채택한 날부터만 장부에 쓴다(그 전 날짜를 재구성해 채우지 않는다)
+START = {"us_soxl": "2026-10-02", "coin_bo_btc": "2026-10-02", "coin_bo_eth": "2026-10-02", "account": "2026-10-02", "close30_etf": "2026-10-23"}   # 전략을 채택한 날부터만 장부에 쓴다(그 전 날짜를 재구성해 채우지 않는다)
 
 
 def write_once(path, obj):
@@ -590,13 +596,14 @@ def write_once(path, obj):
 CAL = {}                            # 시장별 확정 달력: etf(233740 일봉 날짜) · coin(끝난 업비트 하루) · us(SOXL 세션)
 
 
-def kr_settled_through(d1_final, etf_to, kr_days, start):
-    """국내 ①② 가 둘 다 확정된 마지막 '달력' 날짜. ① = 확정 일봉 또는 VTS 원본이 '매매 없음'으로 끝낸 날, ② = ETF 일봉 확정일.
-    첫 미확정 거래일 전날까지(주말 포함). 전부 확정이면 마지막 거래일."""
+def kr_settled_through(d1_final, etf_to, kr_days, start, c30_to=None):
+    """국내 ①②⑤ 가 모두 확정된 마지막 '달력' 날짜. ① = 확정 일봉 또는 VTS 원본이 '매매 없음'으로 끝낸 날, ② = ETF 일봉 확정일,
+    ⑤ = 15:00 가격 · 종가가 다 있는 날(채택일 전은 상관없음 · 자료가 아예 없으면 기다리지 않는다). 첫 미확정 거래일 전날까지(주말 포함)."""
     days = [d for d in kr_days if d >= start]
     for d in days:
         ok1 = d <= d1_final or d1_live_status(d) == "no_trade"
-        if not (ok1 and d <= etf_to):
+        ok5 = c30_to is None or d < START["close30_etf"] or d <= c30_to
+        if not (ok1 and d <= etf_to and ok5):
             return (date.fromisoformat(d) - timedelta(days=1)).isoformat()
     return days[-1] if days else (date.fromisoformat(start) - timedelta(days=1)).isoformat()
 
@@ -640,10 +647,16 @@ def paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c, start=None):
                                        source="paper-us-daily", recordedAt=now,
                                        pnlPct=r.get("pnlPct") or 0.0))
                       for r in DECISIONS.get("SOXL", []) if r["date"] >= st("us_soxl")]
-    kr = combine_same_capital({d: v for d, v in d1.items() if d <= final_kr}, {d: v for d, v in etf.items() if d <= etf_to})
+    c30_cal = CAL.get("close30") or []
+    c30_to = c30_cal[-1] if c30_cal else ""
+    out["close30_etf"] = [(d, dict(date=d, **mk("close30", d), action="trade" if d in C30_PW else "no_trade", pnlPct=C30_PW.get(d, 0.0),
+                                   source="kis-vts+yahoo-hourly+daily-bars", recordedAt=now))
+                          for d in c30_cal if st("close30_etf") <= d <= c30_to]
+    kr = combine_same_capital({d: v for d, v in d1.items() if d <= final_kr}, {d: v for d, v in etf.items() if d <= etf_to},
+                              {d: v for d, v in C30_PW.items() if st("close30_etf") <= d <= c30_to})   # ⑤ 는 채택일부터만 계좌에
     acct = account_daily(kr, crypto_full, us_to_kst(us_full), cal_c)
     # 계좌는 세 시장이 다 확정된 날까지만 — 각 시장의 '달력' 끝(매매한 마지막 날이 아니라)으로 잰다
-    ends = [kr_settled_through(final_kr, etf_to, kr_days, st("account")),
+    ends = [kr_settled_through(final_kr, etf_to, kr_days, st("account"), c30_to or None),
             (CAL.get("coin") or [""])[-1],
             (date.fromisoformat(CAL["us"][-1]) + timedelta(days=1)).isoformat() if CAL.get("us") else ""]
     last_all = min(ends) if all(ends) else ""
@@ -665,7 +678,7 @@ def week_recon(report, d1, krx_cal, crypto_full, us_full, cal_c, today):
     return w
 
 
-EXPECT = {"opening_d1v2": ("opening", 250), "daytrading_etf": ("daytrading", 250), "account": (None, 365)}
+EXPECT = {"opening_d1v2": ("opening", 250), "daytrading_etf": ("daytrading", 250), "close30_etf": ("close30", 250), "account": (None, 365)}
 
 
 def write_paper(report, d1, krx_cal, crypto_full, us_full, cal_c):
@@ -707,7 +720,7 @@ def write_paper(report, d1, krx_cal, crypto_full, us_full, cal_c):
 
 def expectation(report, key):
     """설계 표본에서 기대하는 매매일 평균 손익과 표준편차(판정 비교용)."""
-    tab = {"opening_d1v2": "opening", "daytrading_etf": "daytrading"}.get(key)
+    tab = {"opening_d1v2": "opening", "daytrading_etf": "daytrading", "close30_etf": "close30"}.get(key)
     src = None
     if tab:
         src = ((report.get("tabs") or {}).get(tab) or {}).get("claude", {}).get("design")
@@ -816,13 +829,92 @@ def etf_variant(code, th):
     return {t["sellDate"]: t["pnl"] for t in tr}, cal
 
 
+# ── ⑤ 종가 30분(close30) — 15:00 판단 → 15:30 종가 청산 ────────────────────────────────────────
+# 사용자 요청(2026-10-22): "종가 전략도 탭에 추가하고 다른 전략이랑 동일하게 적용해 알림. 매일 연구 개선 등등" — 연구 R14(10/22).
+# 자료: Yahoo 60분봉(국내 분봉은 15:00 에서 끝난다 — 14시 봉 종가 = 15:00 가격) + FinanceDataReader 일봉(종가 = 15:30 종가 동시호가).
+# 판단은 15:00 가격과 전일 종가만 쓴다(미래 정보 없음). 비용: 수수료 0.015%×2 + 15:00 매수 반 호가(종가 동시호가 매도는 호가 비용 0).
+# 메인(close30_dip_v1)은 R14 에서 결과를 보고 찾은 규칙(사후 발견)이다 — '실험'으로 표시하고 앞으로 쌓아 확인한다.
+KR_HOURLY = OUT / "kr-hourly"
+KR_HOURLY_CACHE = {}
+YAHOO_CHART = "https://query1.finance.yahoo.com/v8/finance/chart/{code}.KS?interval=60m&range={rg}"
+
+
+def fetch_kr_hourly(code, now=None, fetch=None):
+    """국내 ETF 60분봉 → {날짜: {시(9~14): 종가}}. 끝난 봉만 캐시(data/claude-lab/kr-hourly/{code}.json)에 붙인다(지난 날짜는 바꾸지 않음).
+    받기 실패면 캐시만 쓴다(계산을 막지 않음). fetch(url) → Yahoo chart JSON (시험용)."""
+    if code in KR_HOURLY_CACHE:
+        return KR_HOURLY_CACHE[code]
+    now = (now or datetime.now(KST)).replace(tzinfo=None)
+    path = KR_HOURLY / f"{code}.json"
+    H = {d: dict(v) for d, v in (read_json(path) or {}).items()}
+    if fetch is None:
+        def fetch(u):
+            with urllib.request.urlopen(urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json"}), timeout=40) as r:
+                return json.load(r)
+    try:
+        j = fetch(YAHOO_CHART.format(code=code, rg="1mo" if H else "730d"))["chart"]["result"][0]
+        q, new = j["indicators"]["quote"][0], {}
+        for i, t in enumerate(j.get("timestamp") or []):
+            k = datetime.fromtimestamp(t, timezone.utc).astimezone(KST).replace(tzinfo=None)
+            c = q["close"][i]
+            if c is None or k.minute or not (9 <= k.hour <= 14) or k + timedelta(hours=1) > now:   # 정시 봉 · 끝난 봉만
+                continue
+            d = k.strftime("%Y-%m-%d")
+            if d in H and str(k.hour) in H[d]:
+                continue                                                 # 이미 받은 봉은 그대로
+            new.setdefault(d, {})[str(k.hour)] = float(c)
+        if new:
+            for d, v in new.items():
+                H.setdefault(d, {}).update(v)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({d: H[d] for d in sorted(H)}, separators=(",", ":")), encoding="utf-8")
+    except Exception as e:  # noqa: BLE001
+        print(json.dumps(dict(type="kr_hourly_fetch_failed", code=code, error=str(e)[:200]), ensure_ascii=False))
+    KR_HOURLY_CACHE[code] = H
+    return H
+
+
+def close30_trades(code, th):
+    """⑤ 매매 목록 — 15:00 가격이 전일 종가보다 th% 미만으로 내린 날 15:00 매수 → 15:30 종가 매도. 달력 = 15:00 가격과 종가가 모두 있는 날."""
+    H = fetch_kr_hourly(code)
+    b = etf_bars(code)
+    out, cal = [], []
+    for i in range(1, len(b)):
+        d, prev, close = b[i][0], b[i - 1][2], b[i][2]
+        h = H.get(d) or {}
+        if sorted(int(k) for k in h) != [9, 10, 11, 12, 13, 14] or not (prev > 0 and close > 0 and h["14"] > 0):
+            continue                                                     # 6시간 정상 장 · 끝난 봉이 다 있는 날만(수능 · 늦은 개장 제외)
+        p15 = float(h["14"])
+        sofar = (p15 / prev - 1) * 100
+        if abs(sofar) > 35:                                              # 자료 오류(액면분할 등)는 달력에서 뺀다
+            continue
+        cal.append(d)
+        if sofar < th:
+            tick = 5 if p15 >= 2000 else 1
+            out.append(dict(date=d, buyPrice=p15, sellPrice=close, sofarPct=sofar, pnl=(close / p15 - 1) * 100 - (0.03 + tick / 2 / p15 * 100)))
+    return out, cal
+
+
+C30_CACHE = {}
+
+
+def close30_series(p):
+    key = (p["code"], float(p["th"]))
+    if key not in C30_CACHE:
+        tr, cal = close30_trades(p["code"], float(p["th"]))
+        C30_CACHE[key] = ({t["date"]: t["pnl"] for t in tr}, cal)
+    return C30_CACHE[key]
+
+
 # ── 메인 전략 · 그림자 후보 ─────────────────────────────────────────────────────────────
 # 탭마다 메인(실제로 모의매매·장부·텔레그램에 쓰는 규칙) 하나 + 그림자 10개 이상. 모두 같은 함수·같은 비용으로 계산해 순위를 매긴다.
 # 메인 교체 = 사용자가 화면의 승격 버튼을 누른 기록(Worker claude-config, 덮어쓰지 않고 쌓기만). 다음 날부터 적용 —
 # 이 밤 계산 · 실시간 화면 · 하루 마감 장부 · ② VTS 주문이 모두 같은 기록을 읽는다. 지난 장부는 그때 규칙 그대로 둔다.
 TABS4 = ("opening", "daytrading", "crypto", "soxl")
+TABS_ALL = TABS4 + ("close30",)                                   # ⑤ 종가 30분(2026-10-22) — 경쟁 · 이력 · 승격 기록은 이 목록
 D1_DEFAULT = dict(minQ=5, topK=3, gapMax=None)
 ETF_DEFAULT = dict(code="233740", th=-3.0)
+C30_DEFAULT = dict(code="233740", th=0.0)
 COIN_KEYS = ("ma", "stopPct", "level", "k", "hiN", "lastEntryHour", "tabSize", "markets")
 SOXL_KEYS = ("rsiMax", "rsiN", "ibsMax", "downDays", "ma", "maxHoldDays", "tabSize")
 MAIN_DEFAULT = {
@@ -834,8 +926,11 @@ MAIN_DEFAULT = {
                    rule=COIN_BO["note"]),
     "soxl": dict(version="soxl_rsi2_meanrev_v1", name="④ SOXL 단기 과매도 반등 (최대 5일)", params={k: dict(SOXL_MR, rsiN=2)[k] for k in SOXL_KEYS},
                  rule=SOXL_MR["note"]),
+    "close30": dict(version="close30_dip_v1", name="⑤ 코스닥150 레버리지 장 마감 30분 반등 (실험)", params=dict(C30_DEFAULT),
+                    rule="KODEX 코스닥150레버리지가 15:00 에 전일 종가보다 내려 있으면 15:00 매수 → 15:30 종가 매도(당일 청산). "
+                         "R14(10/22) 사후 발견이라 실험 — 앞으로 쌓아 확인"),
 }
-_PARAM_KEYS = {"opening": tuple(D1_DEFAULT), "daytrading": tuple(ETF_DEFAULT), "crypto": COIN_KEYS, "soxl": SOXL_KEYS}
+_PARAM_KEYS = {"opening": tuple(D1_DEFAULT), "daytrading": tuple(ETF_DEFAULT), "crypto": COIN_KEYS, "soxl": SOXL_KEYS, "close30": tuple(C30_DEFAULT)}
 
 # (버전, 이름, 규칙 설명, 기본값에서 바꾸는 값, 승격 가능 여부 · 불가 사유)
 _OPEN_ONLY = "주문 경로가 같은 규칙만 승격 가능"
@@ -895,6 +990,18 @@ CATALOG = {
         ("soxl_rsi3_th20", "RSI(3) < 20", "RSI 기간 3일", dict(rsiN=3), None),
         ("soxl_rsi2_th25_max3", "RSI(2) < 25 · 최대 3일", "조금 얕은 과매도 + 3거래일 한도", dict(rsiMax=25.0, maxHoldDays=3), None),
     ],
+    "close30": [
+        ("close30_dip_th05", "15:00 까지 −0.5% 미만", "15:00 에 전일 종가보다 0.5% 넘게 내린 날만", dict(th=-0.5), None),
+        ("close30_dip_th1", "15:00 까지 −1% 미만", "15:00 에 1% 넘게 내린 날만", dict(th=-1.0), None),
+        ("close30_dip_th15", "15:00 까지 −1.5% 미만", "15:00 에 1.5% 넘게 내린 날만", dict(th=-1.5), None),
+        ("close30_dip_th2", "15:00 까지 −2% 미만", "15:00 에 2% 넘게 내린 날만", dict(th=-2.0), None),
+        ("close30_dip_th3", "15:00 까지 −3% 미만", "15:00 에 3% 넘게 내린 날만", dict(th=-3.0), None),
+        ("close30_dip_th4", "15:00 까지 −4% 미만", "15:00 에 4% 넘게 내린 날만", dict(th=-4.0), None),
+        ("close30_k200_dip", "코스피200 레버리지 · 내린 날", "KODEX 레버리지(122630) 15:00 에 내린 날", dict(code="122630"),
+         "다른 종목(122630) — 매수 · 매도 주문 경로가 233740 전용이라 승격하려면 주문 경로 작업이 먼저"),
+        ("close30_kq150_dip", "코스닥150 (1배) · 내린 날", "KODEX 코스닥150(229200) 15:00 에 내린 날", dict(code="229200"),
+         "다른 종목(229200) — 매수 · 매도 주문 경로가 233740 전용이라 승격하려면 주문 경로 작업이 먼저"),
+    ],
 }
 MAIN_EVENTS = []          # 승격 기록(효력일 순) — main() 이 data/claude-lab/main-config.json 사본에서 읽는다
 
@@ -929,6 +1036,10 @@ def _valid_params(tab, p):
         if out["rsiMax"] >= 100 and out["ibsMax"] >= 1 and not out["downDays"]:
             raise ValueError("④ 진입 조건 없음")
         return out
+    if tab == "close30":
+        if str(p["code"]) != "233740":
+            raise ValueError("⑤ 233740 전용")
+        return dict(code="233740", th=num(p["th"], -10, 0))
     raise ValueError("탭 오류")
 
 
@@ -938,7 +1049,7 @@ def load_main_events(path=None):
     out = []
     for e in j.get("events") or []:
         e = (e or {}).get("payload") or e or {}
-        if e.get("tab") in TABS4 and e.get("version") and re.match(r"^\d{4}-\d{2}-\d{2}$", str(e.get("effectiveFrom") or "")):
+        if e.get("tab") in TABS_ALL and e.get("version") and re.match(r"^\d{4}-\d{2}-\d{2}$", str(e.get("effectiveFrom") or "")):
             try:
                 params = _valid_params(e["tab"], dict(MAIN_DEFAULT[e["tab"]]["params"], **_clean_params(e["tab"], e.get("params"))))
             except (ValueError, KeyError, TypeError):
@@ -1109,10 +1220,11 @@ GRID = {
                    markets=[["KRW-BTC", "KRW-ETH"], ["KRW-BTC"], ["KRW-ETH"]]),
     "soxl": dict(rsiMax=[5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 100.0], rsiN=[2, 3, 4], ibsMax=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 1.0],
                  downDays=[0, 1, 2, 3], ma=[0, 50, 100, 150, 200], maxHoldDays=[1, 2, 3, 4, 5]),
+    "close30": dict(th=[round(-0.25 * i, 2) for i in range(17)]),
 }
 # 이웃 중앙값(안정 점수)에 쓰는 숫자 변수 — 종목 묶음 · 기준선 방식처럼 성격이 다른 변수는 '이웃'이 아니다
 PLATEAU_KEYS = {"opening": ("minQ", "topK", "gapMax"), "daytrading": ("th",), "crypto": ("ma", "stopPct", "k", "hiN", "lastEntryHour"),
-                "soxl": ("rsiMax", "rsiN", "ibsMax", "downDays", "ma", "maxHoldDays")}
+                "soxl": ("rsiMax", "rsiN", "ibsMax", "downDays", "ma", "maxHoldDays"), "close30": ("th",)}
 # 새 구조 — 상위 전략에 지금까지 없던 조건(데이터로 확인한 것만)을 켠다. 10/5 확인: ③ 최근 N일 고가 돌파는 MDD −23.6% → −12~17%,
 # ④ 종가 위치(IBS)·연속 하락 조건은 매매일당 성적↑. ①(RSI 깊이 · 시장)과 ②(IBS · 이틀 낙폭 · 평균 위/아래)는 전체 기간 성적이 나빠져 넣지 않았다.
 STRUCT = {
@@ -1145,6 +1257,8 @@ def gen_version(tab, p):
         return f"g_open_q{p['minQ']}_k{p['topK']}" + (f"_gap{abs(p['gapMax']):g}" if p.get("gapMax") is not None else "")
     if tab == "daytrading":
         return f"g_etf_th{abs(p['th']):g}"
+    if tab == "close30":
+        return f"g_c30_th{abs(p['th']):g}"
     if tab == "crypto":
         mk = "both" if len(p["markets"]) == 2 else p["markets"][0].split("-")[1].lower()
         lv = ("hi" + (str(p["hiN"]) if (p.get("hiN") or 1) > 1 else "")) if p["level"] == "prevhigh" else f"vb{p['k']:g}"
@@ -1163,6 +1277,10 @@ def describe(tab, p):
     if tab == "daytrading":
         return (f"{p['th']:g}% 이하 마감".replace("-", "−"),
                 f"KODEX 코스닥150레버리지가 {p['th']:g}% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도".replace("-", "−"))
+    if tab == "close30":
+        down = "" if p["th"] == 0 else f"{abs(p['th']):g}% 넘게 "
+        return (f"15:00 까지 {down}내린 날",
+                f"KODEX 코스닥150레버리지가 15:00 에 전일 종가보다 {down}내려 있으면 15:00 매수 → 15:30 종가 매도")
     if tab == "crypto":
         hn = p.get("hiN") or 1
         lv = ("어제 고가" if hn == 1 else f"최근 {hn}일 고가") if p["level"] == "prevhigh" else f"시가+{p['k']:g}×어제 폭"
@@ -1236,6 +1354,9 @@ def arena_eval(tab, entry, ctx):
         per = 250
     elif tab == "daytrading":
         dv, cal, per = etf_series(p), ctx["kr_cal"], 250
+    elif tab == "close30":
+        dv, cal = close30_series(p)
+        per = 250
     elif tab == "crypto":
         r = coin_series(p, ctx["coin"])
         dv, cal, per = r[0], r[4], 365
@@ -1470,7 +1591,7 @@ class _Evaluator:
         return out
 
 
-def arena(ctx, today=None, state=None, tabs=TABS4):
+def arena(ctx, today=None, state=None, tabs=TABS_ALL):
     """경쟁군 갱신 → 순위 → 1위 기록 → 7일 1위 자동 승격 → 퇴출 · 신규 투입(후보 생성 · 평가 · 선발). 결과(화면용)와 새 상태."""
     import random
     today = today or datetime.now(KST).strftime("%Y-%m-%d")
@@ -1487,6 +1608,12 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
     for tab in tabs:
         st = tabs_state.setdefault(tab, {})
         cur = main_for(tab)
+        if (ctx.get("skip") or {}).get(tab):                      # 자료를 못 받은 밤 — 순위 · 퇴출 · 승격을 쉰다(자료 없음으로 퇴출하지 않게)
+            log.append(dict(date=today, at=now, tab=tab, kind="note", version="", name="", reason="오늘 경쟁 계산 쉼 — " + ctx["skip"][tab]))
+            out[tab] = dict(main=cur["version"], mainName=cur["name"], effectiveFrom=cur.get("effectiveFrom"), rows=[], errors=[], top=None,
+                            status=dict(code="skipped", text="오늘 경쟁 계산 쉼 — " + ctx["skip"][tab]), added=[], retiredToday=[], poolSize=len(st.get("pool") or []),
+                            triedCount=len(st.get("tried") or []), rule=ARENA_RULE, gen={}, log=[x for x in log if x["tab"] == tab][-30:])
+            continue
         if "pool" not in st:                                      # 처음: 기본 목록(주문 경로로 실행 가능한 것만)
             st["pool"] = [dict(version=c["version"], name=c["name"], rule=c["rule"], params=c["params"], source="seed", addedAt=today)
                           for c in catalog(tab) if c["promotable"]]
@@ -1725,7 +1852,7 @@ def attach_promotions(report):
 HISTORY = OUT / "history"
 HISTORY_START = "2026-10-22"
 HIST_FIELDS = ["d", "in", "ip", "out", "op", "sym", "nm", "pnl", "why"]
-LIVE_KEY = {"opening": "opening", "daytrading": "daytrading", "crypto": "crypto", "soxl": "soxl"}
+LIVE_KEY = {"opening": "opening", "daytrading": "daytrading", "crypto": "crypto", "soxl": "soxl", "close30": "close30"}
 ETF_NAME = {"233740": "KODEX 코스닥150레버리지", "122630": "KODEX 레버리지", "229200": "KODEX 코스닥150", "069500": "KODEX 200"}
 VERSION_RE = re.compile(r"^[A-Za-z0-9_.+:-]{1,80}$")
 
@@ -1770,6 +1897,12 @@ def strategy_trades(tab, params, ctx):
         for t in tr:
             rows.append([t["sellDate"], t["buyDate"] + " 15:30", _px(t["buyPrice"]), t["sellDate"] + " 09:00", _px(t["sellPrice"]), p["code"],
                          ETF_NAME.get(p["code"], p["code"]), _r(t["pnl"]), f"다음 날 시가 청산 · 그날 {float(t.get('dropPct') or 0):.2f}%"])
+    elif tab == "close30":
+        tr, cal = close30_trades(p["code"], float(p["th"]))
+        dv = {t["date"]: t["pnl"] for t in tr}
+        for t in tr:
+            rows.append([t["date"], t["date"] + " 15:00", _px(t["buyPrice"]), t["date"] + " 15:30", _px(t["sellPrice"]), p["code"],
+                         ETF_NAME.get(p["code"], p["code"]), _r(t["pnl"]), f"종가 청산 · 15:00 까지 {t['sofarPct']:+.2f}%"])
     elif tab == "crypto":
         dv, _, decs, _, cal = coin_series(p, ctx["coin"])
         for m, dec in decs.items():
@@ -1876,11 +2009,15 @@ def history_entry(tab, info, ctx, old, now, live=None):
                              settledThrough=upto, forwardDays=len(fwd), liveDays=len(lv)))
 
 
-def write_history(arena_out, astate, ctx, now=None, tabs=TABS4):
+def write_history(arena_out, astate, ctx, now=None, tabs=TABS_ALL):
     """경쟁군(메인 + 그림자)은 밤마다, 퇴출 전략은 처음 한 번(파일이 없거나 아직 '퇴출' 표시 전일 때) 이력 파일을 쓴다 → 목록(index.json)."""
     now = now or datetime.now(KST).isoformat(timespec="minutes")
     index, wrote, errors = {}, 0, []
+    old_index = ((read_json(HISTORY / "index.json") or {}).get("tabs") or {})
     for tab in tabs:
+        if (ctx.get("skip") or {}).get(tab):                      # 자료 없는 밤 — 지난 이력 파일 · 목록을 그대로 둔다(빈 계산으로 덮지 않게)
+            index[tab] = old_index.get(tab) or []
+            continue
         z, st = (arena_out or {}).get(tab) or {}, ((astate or {}).get("tabs") or {}).get(tab) or {}
         live = live_closes(tab)
         items = []
@@ -1940,9 +2077,13 @@ def week_summary(summary, today):
         return out
 
     traded = lambda r: r.get("action") not in ("no_trade", "flat")
-    both = {r["kst"] for r in rows("opening_d1v2") if traded(r)} & {r["kst"] for r in rows("daytrading_etf") if traded(r)}
-    weight = {"opening_d1v2": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),
-              "daytrading_etf": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),
+    kr_n = {}                                                     # 국내 칸을 그날 매매한 전략 수로 나눈다(계좌 계산과 같은 규칙)
+    for k in KR_KEYS:
+        for r in rows(k):
+            if traded(r):
+                kr_n[r["kst"]] = kr_n.get(r["kst"], 0) + 1
+    krw = lambda d: a["krWeight"] / max(1, kr_n.get(d, 1))
+    weight = {"opening_d1v2": krw, "daytrading_etf": krw, "close30_etf": krw,
               "coin_bo_btc": lambda d: a["cryptoWeight"] * a["cryptoSize"] * 0.5,
               "coin_bo_eth": lambda d: a["cryptoWeight"] * a["cryptoSize"] * 0.5,
               "us_soxl": lambda d: a["usWeight"] * a["usSize"]}
@@ -2240,7 +2381,7 @@ def review_entry(report, day=None):
     led = read_json(DATA / "opening-gapdown-live" / f"{today}.json") or {}
     ev = {e.get("stage"): e.get("payload") or {} for e in ((led.get("ledger") or {}).get("events") or []) if e}
     issues = []
-    for st_name in ("preopen", "close", "etf_buy", "etf_sell"):
+    for st_name in ("preopen", "close", "etf_buy", "etf_sell", "c30_buy", "c30_sell"):
         for o in (ev.get(st_name) or {}).get("orders") or ([(ev.get(st_name) or {}).get("order")] if (ev.get(st_name) or {}).get("order") else []):
             if o and not ((o.get("vts") or {}).get("ok")):
                 issues.append(f"{st_name} 주문 실패: {o.get('code')} {(o.get('vts') or {}).get('msg', '')}")
@@ -2292,6 +2433,8 @@ def account_daily(kr, crypto_full, us_k, cal):
 
 
 def gpt_daily(tab):
+    if tab not in GPT_FILES:                       # ⑤ 종가 30분 — 같은 기준의 GPT 기록이 없다(비교 없음)
+        return {}, [], 0
     path, col = GPT_FILES[tab]
     rows = read_csv(DATA / path)
     by, ver = {}, set()
@@ -2327,16 +2470,17 @@ def tab_report(tab, name, version, rule, mine, cal, per_year, extra=None):
 
 
 ETF_PW = {}                # ② 날짜별 그날 메인 값(장부·계좌·전일당일용) — main() 이 채운다
+C30_PW = {}                # ⑤ 같은 뜻 — main() 이 채운다
 
 
 def main():
-    global ETF_PW
+    global ETF_PW, C30_PW
     OUT.mkdir(parents=True, exist_ok=True)
     MAIN_EVENTS[:] = load_main_events()
     report = dict(schema=1, generatedAt=datetime.now(KST).isoformat(), designEnd=DESIGN_END, gate=GATE, tabs={},
                   note="모든 수익률은 각 전략 자체 기록의 순수익(수수료·슬리피지 포함). 매매 없는 날 0%. 클로드 ③④ 는 주문 없는 연구 그림자.")
     today = datetime.now(KST).strftime("%Y-%m-%d")
-    report["main"] = {t: dict(current=main_for(t), today=main_for(t, today), history=[e for e in MAIN_EVENTS if e["tab"] == t]) for t in TABS4}
+    report["main"] = {t: dict(current=main_for(t), today=main_for(t, today), history=[e for e in MAIN_EVENTS if e["tab"] == t]) for t in TABS_ALL}
     # 탭 카드(설계·판정 지표)는 지금 메인 규칙으로 전체 기간, 장부·계좌·전일당일은 날짜마다 그날 메인(piecewise)
     m1 = main_for("opening")
     d1_cur, krx_cal = d1_series(m1["params"])
@@ -2346,6 +2490,17 @@ def main():
     ETF_PW = piecewise("daytrading", etf_series)
     report["tabs"]["daytrading"] = tab_report("daytrading", m2["name"], m2["version"], m2["rule"], etf_series(m2["params"]), krx_cal, 250,
                                               extra=dict(params=m2["params"]))
+    try:                                           # ⑤ 종가 30분 — 60분봉을 못 받아도 다른 탭 계산은 계속
+        m5 = main_for("close30")
+        C30_PW = piecewise("close30", lambda p: close30_series(p)[0])
+        dv5, cal5 = close30_series(m5["params"])
+        CAL["close30"] = sorted(set().union(*[set(close30_series(v["params"])[1]) for v in [main_for("close30", "0000-00-00")] + [e for e in MAIN_EVENTS if e["tab"] == "close30"]]))
+        report["tabs"]["close30"] = tab_report("close30", m5["name"], m5["version"], m5["rule"], dv5, cal5, 250,
+                                               extra=dict(params=m5["params"], dataFrom=cal5[0] if cal5 else None, dataTo=cal5[-1] if cal5 else None,
+                                                          experimental=True, note="R14(10/22) 사후 발견 — 실험. 자료는 Yahoo 60분봉(약 2년)이라 과거 계산 기간이 짧다."))
+    except Exception as e:  # noqa: BLE001
+        C30_PW = {}
+        report["tabs"]["close30"] = dict(error=str(e))
     crypto_full = {}
     try:
         m3 = main_for("crypto")
@@ -2397,7 +2552,7 @@ def main():
     except Exception as e:  # noqa: BLE001
         report["retired"] = dict(error=str(e))
     if crypto_full:
-        kr = combine_same_capital(d1, ETF_PW)
+        kr = combine_same_capital(d1, ETF_PW, C30_PW)
         us_k = us_to_kst(us_full)
         acct = account_daily(kr, crypto_full, us_k, cal_c)
         acal = [d for d in cal_c if d >= min(kr)] if kr else cal_c
@@ -2413,9 +2568,10 @@ def main():
     report["daily"] = daily_board(report, d1, krx_cal, crypto_full, locals().get("cal_c") or [])
     try:
         kr_cal = sorted(set(CAL.get("etf") or []) | set(krx_cal))
-        acct_s = account_daily(combine_same_capital(d1, ETF_PW), crypto_full, us_to_kst(locals().get("us_full") or {}), locals().get("cal_c") or [])
+        acct_s = account_daily(combine_same_capital(d1, ETF_PW, C30_PW), crypto_full, us_to_kst(locals().get("us_full") or {}), locals().get("cal_c") or [])
         report["curves"] = recent_curves({"opening_d1v2": (d1, [d for d in kr_cal if d <= max(krx_cal or [""])]),
                                           "daytrading_etf": (ETF_PW, kr_cal),
+                                          "close30_etf": (C30_PW, CAL.get("close30") or []),
                                           "coin_bo": (crypto_full, locals().get("cal_c") or []),
                                           "us_soxl": (locals().get("us_full") or {}, CAL.get("us") or []),
                                           "account": (acct_s, [d for d in (locals().get("cal_c") or []) if acct_s and d <= max(acct_s)])},
@@ -2428,7 +2584,8 @@ def main():
         report["paper"] = dict(error=str(e))
     try:
         ctx = dict(coin={m: ROWS[m] for m in ROWS if str(m).startswith("KRW-")}, soxl=ROWS.get("SOXL") or [],
-                   kr_cal=[d for d in krx_cal if d >= "2018-04-01"])
+                   kr_cal=[d for d in krx_cal if d >= "2018-04-01"],
+                   skip={} if CAL.get("close30") else {"close30": "60분봉 자료 없음(받기 실패)"})
         report["arena"], astate = arena(ctx)
         ARENA_PATH.write_text(json.dumps(finite(astate), ensure_ascii=False, indent=1, default=str, allow_nan=False), encoding="utf-8")
         report["ranking"] = report["arena"]
@@ -2437,7 +2594,7 @@ def main():
             report["history"] = write_history(report["arena"], astate, ctx)
         except Exception as e:  # noqa: BLE001
             report["history"] = dict(error=str(e))
-        report["main"] = {t: dict(current=main_for(t), today=main_for(t, today), history=[e for e in MAIN_EVENTS if e["tab"] == t]) for t in TABS4}
+        report["main"] = {t: dict(current=main_for(t), today=main_for(t, today), history=[e for e in MAIN_EVENTS if e["tab"] == t]) for t in TABS_ALL}
     except Exception as e:  # noqa: BLE001
         report["shadows"] = dict(error=str(e))
     try:

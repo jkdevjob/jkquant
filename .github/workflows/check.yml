@@ -359,7 +359,7 @@ jobs:
           let fail=0;
           // 무료 요금제 계정당 cron 5개 한도 — 이 Worker 는 한 줄만 쓰고 시각은 scheduleRoute 가 한국시각으로 고른다.
           // 15·20·21시(UTC) = 단타(클로드) 하루 마감 알림(코인 00:05 KST · SOXL 뉴욕 16:05) — 시초가 경로 수는 회귀가 한 주 재생으로 센다
-          if(!w.triggers||!Array.isArray(w.triggers.crons)||w.triggers.crons.length!==1||w.triggers.crons[0]!=='5-31,40,56 0,6,9,15,20,21,23 * * *'){
+          if(!w.triggers||!Array.isArray(w.triggers.crons)||w.triggers.crons.length!==1||w.triggers.crons[0]!=='0,5-31,40,56 0,6,9,15,20,21,23 * * *'){
             console.error('✗ opening scheduler cron 은 정시 알림/대결 슬롯을 포함한 한 줄이어야 합니다.'); fail++;
           }
           if(!c.includes('if(hm===1810)return "duel"')||!c.includes('/api/scalping-duel')){

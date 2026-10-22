@@ -1,14 +1,15 @@
 // 단타(클로드) 전략별 '하루 마감 장부' — 웹 오늘 모의매매 이력과 Telegram 결과가 같은 원본을 쓴다.
-// 원본: ①② = Worker gapdown ledger(KIS 모의투자 주문·체결), ③ = 업비트 60분봉(끝난 봉만), ④ = 밤 판단(nextSignal) + 마감 시세.
+// 원본: ①②⑤ = Worker gapdown ledger(KIS 모의투자 주문·체결), ③ = 업비트 60분봉(끝난 봉만), ④ = 밤 판단(nextSignal) + 마감 시세.
 // 모든 함수는 마감 시점까지 들어온 자료만 받는다(미래 자료 없음). 순손익 = 비용(수수료·세금·미끄러짐) 뺀 값.
-import { coinHoldToday, coinBreakoutDay } from "./claude-live.js";
+import { coinHoldToday, coinBreakoutDay, c30CostPct } from "./claude-live.js";
 import { MAIN_DEFAULT, mainFor, openingCounts, openingPick } from "./_claude_main.js";
 
 export const COST = { kr: 0.23, etf: 0.13, coin: 0.14, us: 0.20 };          // 왕복 %, 연구·실시간과 같은 값
 export const PAPER_CAPITAL = { coin: 10000000, soxl: 10000 };                // 주문 없는 칸의 모의 자금(원 · 달러)
 export const NAMES = {
   opening: "① 시초가 · D-1 갭하락 과매도", daytrading: "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
-  crypto: "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타", soxl: "④ SOXL · 단기 과매도 반등(최대 5일)", overview: "📅 전일·당일 요약"
+  crypto: "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타", soxl: "④ SOXL · 단기 과매도 반등(최대 5일)",
+  close30: "⑤ 종가 30분 · 코스닥150 레버리지 장 마감 30분 반등(실험)", overview: "📅 전일·당일 요약"
 };
 const pct = (a, b) => (a > 0 && b > 0 ? (a / b - 1) * 100 : null);
 
@@ -88,6 +89,36 @@ export function etfDay(date, ledger, prevLedger, prevDate, krOpen) {
     strategyVersion: buy && buy.strategyVersion || MAIN_DEFAULT.daytrading.version,
     note: buy ? (buy.signal ? "15:21 예상 하락 " + (+buy.dropPct).toFixed(2) + "% → 종가 매수" : "15:21 예상 하락 " + (buy.dropPct == null ? "—" : (+buy.dropPct).toFixed(2) + "%") + " (기준 " + String((buy.rule && buy.rule.dropMaxPct) ?? -3).replace("-", "−") + "% 이하 아님) → 매수 없음")
       : "15:21 판단 기록 없음 — 점검"
+  });
+}
+
+// ⑤ 15:00 시장가 매수 → 15:30 종가 동시호가 매도(당일 청산). 15:40 체결조회(c30_reconcile)까지 끝난 장부만 받는다.
+// 비용은 실시간 화면 · 밤 계산과 같은 식(c30CostPct). mark: 매도가 안 된 수량이 있으면 지금 가격(미청산 평가).
+export function close30Day(date, ledger, krOpen, mark = null) {
+  const r = { strategy: "close30", name: NAMES.close30, date, currency: "KRW", trades: [], open: [], watched: 1 };
+  if (!krOpen) return Object.assign(r, { status: "holiday", note: "국내 휴장" });
+  const st = stagesOf(ledger), buy = st.c30_buy || null, f = (st.c30_reconcile || {}).fills || {}, b = f.buy || {}, s = f.sell || {};
+  const N = "KODEX 코스닥150레버리지", cost = c30CostPct(b.avgPrice);
+  if (b.qty > 0) {
+    const sold = Math.min(b.qty, s.qty || 0);
+    if (sold > 0) {
+      const net = pct(s.avgPrice, b.avgPrice) - cost, notional = sold * b.avgPrice;
+      r.trades.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: b.avgPrice, exitTime: "15:30 종가(동시호가)", exitPrice: s.avgPrice, qty: sold,
+        notional, pnlPct: net, pnlAmount: (notional * net) / 100, reason: "종가 청산" });
+    }
+    if (b.qty > sold) r.open.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: b.avgPrice, qty: b.qty - sold, markPrice: mark,
+      pnlPct: mark ? pct(mark, b.avgPrice) - cost : null, reason: sold > 0 ? "일부 매도 미체결" : "매도 미체결" });
+  }
+  const ordered = !!(buy && buy.order && buy.order.vts && buy.order.vts.ok);
+  if (ordered && !st.c30_reconcile) r.warn = "15:00 매수 접수됐는데 15:40 체결조회 기록 없음 — 점검";
+  const th = String((buy && buy.rule && buy.rule.th) ?? 0).replace("-", "−");
+  return Object.assign(finish(r), {
+    status: "closed", candidates: buy && buy.signal ? 1 : 0, entries: b.qty > 0 ? 1 : 0,
+    strategyVersion: (buy && buy.strategyVersion) || MAIN_DEFAULT.close30.version,
+    params: buy && buy.rule ? { code: "233740", th: buy.rule.th } : Object.assign({}, MAIN_DEFAULT.close30.params),
+    note: !buy ? "15:00 판단 기록 없음 — 점검"
+      : buy.signal ? "15:00 전일 대비 " + P(buy.sofarPct) + " → 매수" + (b.qty > 0 ? "" : " — 체결 없음(" + (buy.ordersSkipped || (buy.order && buy.order.vts && buy.order.vts.msg) || "주문 기록 없음") + ")")
+      : "15:00 전일 대비 " + (buy.sofarPct == null ? "—" : P(buy.sofarPct)) + " (기준 " + th + "% 미만 아님) → 매수 없음"
   });
 }
 

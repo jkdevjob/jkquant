@@ -14,6 +14,7 @@ MUT = [
     ("dots allowed", ' || version.includes(".."))', ")"),
     ("no encode", 'return { path: tab + "/" + encodeURIComponent(version) + ".json" };', 'return { path: tab + "/" + version + ".json" };'),
     ("no auth", '  if (!(await claudeAuthorized(request, env))) return json({ ok: false, error: "unauthorized" }, 401);\n', ""),
+    ("close30 tab missing", 'export const HIST_TABS = ["opening", "daytrading", "crypto", "soxl", "close30"];', 'export const HIST_TABS = ["opening", "daytrading", "crypto", "soxl"];'),
     ("404 as error", '    if (r.status === 404) return json({ ok: false, error: "아직 기록 없음 — 밤 계산 뒤 생깁니다" }, 404);\n', ""),
 ]
 for label, before, after in MUT:

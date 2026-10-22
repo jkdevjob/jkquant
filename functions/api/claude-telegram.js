@@ -6,14 +6,14 @@
 //  예외 하나: 매일 08:00 연구 리포트(op=report, 머리말 [클로드 연구 리포트]) — 사용자 요청(2026-10-14). Worker /push-report 가 하루 한 번 부른다.
 //  하루 마감 장부 계산(op=close)은 그대로 — Worker 가 Durable Object 에 한 번만 저장하고 밤 계산 · 대결 비교가 그 장부를 읽는다.
 import { ledger, quote } from "./claude-live.js";
-import { openingDay, etfDay, coinDay, soxlDay } from "./_claude_day.js";
+import { openingDay, etfDay, coinDay, soxlDay, close30Day } from "./_claude_day.js";
 import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts } from "./_claude_main.js";
 import { REPORT_HEAD } from "./_claude_push.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const KINDS=["preopen","etfbuy","weekly","duel","promote"];
-export const ALERT_HEAD=/^\[클로드 연구 (시초가|데이트레이딩|비트코인|SOXL|텐배거)\] /;   // 텐배거 = 전향 시험 매수·매도(GitHub Actions 가 부른다)
+export const ALERT_HEAD=/^\[클로드 연구 (시초가|데이트레이딩|비트코인|SOXL|종가30분|텐배거)\] /;   // 텐배거 = 전향 시험 매수·매도(GitHub Actions 가 부른다)
 const SX_ACT={enter:"시가 매수",hold:"보유",exit:"시가 매도",flat:"쉼"};
 const SX_NEXT={buy:"시가 매수 (과매도 신호)",sell:"시가 매도"};
 const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL"};
@@ -98,7 +98,7 @@ export function mondayOf(date){
 }
 
 // ── 전략별 하루 마감(op=close) · 발송(op=send) — Worker 가 마감 장부를 Durable Object 에 한 번만 저장한 뒤 그 장부로 보낸다 ──
-const DAY_STRATEGIES=["opening","daytrading","crypto","soxl","overview"];
+const DAY_STRATEGIES=["opening","daytrading","crypto","soxl","close30","overview"];
 async function krOpenOn(origin,date){
   const q=await quote(origin,"233740");
   const o=(q&&q.ohlc)||[];
@@ -121,6 +121,14 @@ async function closeDay0(origin,env,strategy,date,events){
     const l=await ledger(env,date);let prev=null,pd=null;
     for(let k=1;k<=5&&!prev;k++){const d=new Date(Date.parse(date+"T12:00:00+09:00")-k*864e5).toISOString().slice(0,10);const x=await ledger(env,d);if(x&&(x.events||[]).length){prev=x;pd=d;}}
     return etfDay(date,l,prev,pd,await krOpenOn(origin,date));
+  }
+  if(strategy==="close30"){                                   // ⑤ 오늘 15:00 매수 → 15:30 종가 매도(15:40 체결 조회 뒤)
+    const l=await ledger(env,date);
+    const st=Object.fromEntries(((l&&l.events)||[]).map(e=>[e.stage,e.payload||{}]));
+    const f=((st.c30_reconcile||{}).fills)||{};
+    let mark=null;
+    if(((f.buy||{}).qty||0)>((f.sell||{}).qty||0)){const q=await quote(origin,"233740");mark=q?q.price:null;}
+    return close30Day(date,l,await krOpenOn(origin,date),mark);
   }
   if(strategy==="crypto"){
     const end=Date.parse(date+"T00:00:00+09:00")+864e5,to=new Date(end).toISOString().replace(".000Z","Z");   // 마감(00:00) 전 자료만

@@ -94,6 +94,25 @@ export function etfRows(todaySt,prevSt,prevDate,nowPrice){
   }
   return rows;
 }
+// ⑤ 종가 30분: 오늘 15:00 판단 · 매수 → 15:30 종가 동시호가 매도(당일 청산). 비용은 밤 계산 close30_trades 와 같은 식 —
+// 수수료 0.015%×2 + 15:00 매수 반 호가(종가 동시호가 매도는 호가 비용 없음). 모의투자 체결가에도 같은 값을 뺀다(② 와 같은 보수적 처리).
+export function c30CostPct(px){px=+px;return px>0?0.03+((px>=2000?5:1)/2)/px*100:0.03;}
+const C30_NAME="KODEX 코스닥150레버리지";
+const sgn=v=>v==null||!isFinite(v)?"—":(v>=0?"+":"")+(+v).toFixed(2)+"%";
+export function close30Rows(st,nowPrice){
+  const buy=st.c30_buy;
+  if(!buy)return [];
+  if(buy.decisionReason==="krx_holiday")return [{code:"233740",name:C30_NAME,status:"매매 없음",note:"국내 휴장일"}];
+  const th=String((buy.rule&&buy.rule.th)??0).replace("-","−");
+  if(!buy.signal)return [{code:"233740",name:C30_NAME,status:"매매 없음",sofarPct:buy.sofarPct,
+    note:buy.decisionReason==="price_missing"||String(buy.decisionReason||"").startsWith("quote_failed")?"15:00 가격을 못 받음 — "+String(buy.decisionReason||""):"15:00 전일 대비 "+sgn(buy.sofarPct)+" (기준 "+th+"% 미만 아님)"}];
+  const f=(st.c30_reconcile||{}).fills||{},b=f.buy||{},s=f.sell||{},o=buy.order,ok=!!(o&&o.vts&&o.vts.ok),so=(st.c30_sell||{}).order;
+  const bp=b.qty>0?b.avgPrice:((buy.quote||{}).price||null),sp=s.qty>0?s.avgPrice:null,ref=sp||nowPrice;
+  const status=!ok?"주문 실패":sp?"청산":so&&so.vts&&!so.vts.ok?"매도 실패":so&&so.vts&&so.vts.ok?"매도 접수":"보유중";
+  return [{code:"233740",name:C30_NAME,buyTime:"오늘 15:00",buyPrice:bp,buyPriceKind:b.qty>0?"체결":"현재가",sellTime:"오늘 15:30 종가",sellPrice:sp,nowPrice,status,
+    pnlPct:ok&&bp&&ref?pct(ref,bp)-c30CostPct(bp):null,realized:!!sp,sofarPct:buy.sofarPct,
+    note:!ok?String((o&&o.vts&&o.vts.msg)||buy.ordersSkipped||""):status==="매도 실패"?String(so.vts.msg||""):""}];
+}
 // ③ 코인 하루 단타: 어제 확정 종가 > 20일 평균(어제 포함)인 날, 오늘 60분봉 고가가 어제 고가를 넘는 첫 봉에서 매수 → 다음 날 09:00 매도.
 // 추세 판단 = 어제까지 확정된 20개 종가의 평균 < 어제 종가. candles: 업비트 일봉 최신순(0 = 진행 중인 오늘). claude_lab.coin_breakout 과 같은 규칙.
 // p: 그날 ③ 메인 변수(ma · level prevhigh=최근 hiN일 고가(1=어제 고가) / vb=오늘 시가+k×어제 폭). 두 번째 인자가 숫자면 옛 호출(ma 만).
@@ -136,7 +155,8 @@ export function barsOfDay(hourly,day,nowMs=Date.now()){
     .sort((a,b)=>String(a.candle_date_time_kst).localeCompare(String(b.candle_date_time_kst)));
 }
 // 탭별 오늘 요약 — 칸 수익률(칸 자금 기준) · 개별 매매 합계 · 거래 수 · 계좌 기여 · 오늘 왜 매매했는지/안 했는지 한 줄
-export const ACCOUNT_WEIGHT={opening:0.3,daytrading:0.3,crypto:0.3,soxl:0.4};
+export const ACCOUNT_WEIGHT={opening:0.3,daytrading:0.3,crypto:0.3,soxl:0.4,close30:0.3};
+export const KR_TABS=["opening","daytrading","close30"];          // 국내 칸(30%)을 나눠 쓰는 탭
 const GAP_REASON={krx_holiday:"국내 휴장일 — 시세 조회·주문 없음",no_expected_gap_down:"명단 종목 중 예상 갭 −2%~−29% 인 종목 없음",no_expected_prices:"08:56 예상체결가를 못 받음(점검)",
   watchlist_stale:"명단이 오래됨 — 밤 계산 점검",watchlist_invalid:"명단 파일 오류 — 점검",watchlist_not_before_today:"명단 기준일 오류 — 점검",watchlist_rule_missing:"명단 규칙 없음 — 점검"};
 export function todaySummary(tab,t,hm){
@@ -170,6 +190,11 @@ export function todaySummary(tab,t,hm){
     const held=rows.find(r=>String(r.sellTime||"").includes("오늘"));
     why=(held?"전날 종가 매수분 오늘 시가 매도("+held.status+") · ":"")+
       (today?"오늘 종가 매수("+today.status+")":none?"오늘 매수 없음 — "+none.note:hm<1521?"15:21 판단 전":"오늘 판단 기록 없음");
+  }else if(tab==="close30"){
+    const r=rows[0];
+    trades=rows.filter(r=>r.buyPrice!=null&&r.status!=="주문 실패").length;tabPct=trades?sum:0;
+    why=!r?(hm<1500?"15:00 판단 전":"오늘 판단 기록 없음(휴장일이 아니면 점검)"):r.status==="매매 없음"?"오늘 매수 없음 — "+(r.note||""):
+      "15:00 전일 대비 "+sgn(r.sofarPct)+" → 매수("+r.status+")"+(r.status==="주문 실패"&&r.note?" — "+r.note:"");
   }else if(tab==="crypto"){
     trades=rows.filter(r=>r.hold).length;tabPct=t.basketPct==null?0:t.basketPct;
     why=rows.map(r=>r.name+" "+(r.status||"")).join(" · ")||"시세 없음";
@@ -182,10 +207,10 @@ export function todaySummary(tab,t,hm){
   return {tabPct,sumPct:sum,trades,accountPct:tabPct*w,weight:w,noTrade:trades===0,why,
     wins:done.filter(r=>r.pnlPct>0).length,losses:done.filter(r=>r.pnlPct<=0).length};
 }
-// 국내 칸(30%)은 ①②가 같은 날 둘 다 매매하면 반씩 쓴다(백테 combine_same_capital 과 같은 규칙)
+// 국내 칸(30%)은 ①②⑤ 중 그날 매매한 탭끼리 똑같이 나눠 쓴다(둘이면 반씩 · 셋이면 3분의 1씩 — 백테 combine_same_capital 과 같은 규칙)
 export function applyKrSplit(tabs){
-  const o=tabs.opening&&tabs.opening.today,d=tabs.daytrading&&tabs.daytrading.today;
-  if(o&&d&&!o.noTrade&&!d.noTrade)for(const q of [o,d]){q.weight=ACCOUNT_WEIGHT.opening/2;q.accountPct=q.tabPct*q.weight;q.krShared=true;}
+  const q=KR_TABS.map(k=>tabs[k]&&tabs[k].today).filter(x=>x&&!x.noTrade);
+  if(q.length>1)for(const x of q){x.weight=ACCOUNT_WEIGHT.opening/q.length;x.accountPct=x.tabPct*x.weight;x.krShared=true;}
   return tabs;
 }
 // ④ 지금 상태: 밤 판단(nx.basedOn 종가)보다 뒤 세션이면 그 세션 시가에 할 일이 실행된 것으로 본다(모의).
@@ -259,6 +284,23 @@ export function etfDayCell(buySt,sellSt,bars,holiday){
   if(!(+((bars||{}).buyClose)>0))notes.push("매수일 종가 대신 "+(bf.qty>0?"체결가":"15:21 예상가"));
   return {v,final:true,src:"rule",trades:1,...wl([v]),note:notes.join(" · ")};
 }
+// ⑤ 칸 d = d 15:00 매수 → d 15:30 종가 매도 — 밤 계산 close30 칸과 같은 식: (종가 ÷ 15:00 가격 − 1) − (0.03% + 반 호가).
+// 15:00 가격 = 그날 15:00 판단 때 받은 가격(c30_buy.quote.price) · 종가 = 15:40 체결 조회의 종가 동시호가 매도 체결가 또는 그날 일봉 종가(close).
+// 종가 전이면 지금 가격(now)으로 평가하고 '확정 전'. 매수 신호가 났는데 모의투자 매수가 안 됐어도(현금 부족 등) 규칙 결과를 보이고 그 사실을 적는다.
+export function close30DayCell(st,px,holiday){
+  if(holiday)return {v:"holiday",final:true,src:"vts"};
+  const b=st&&st.c30_buy;
+  if(!b)return null;                                                     // 15:00 판단 전 · 기록 없음
+  if(b.decisionReason==="krx_holiday")return {v:"holiday",final:true,src:"vts"};
+  if(!b.signal)return {v:"no_trade",final:true,src:"vts",trades:0,note:"15:00 매수 신호 없음"};
+  const f=(st.c30_reconcile||{}).fills||{},sf=f.sell||{},bf=f.buy||{};
+  const p15=+((b.quote||{}).price)||0,close=sf.qty>0?+sf.avgPrice:+((px||{}).close)||0,now=+((px||{}).now)||0,ref=close||now;
+  if(!(p15>0&&ref>0))return null;
+  const v=pct(ref,p15)-c30CostPct(p15),notes=[];
+  if(st.c30_reconcile&&!(bf.qty>0))notes.push("모의투자 매수 안 됨 — 규칙대로 계산");
+  if(!close)notes.push("15:30 종가 전 — 지금 가격으로 평가");
+  return {v,final:!!close,src:"rule",trades:1,...wl([v]),note:notes.join(" · ")};
+}
 // ③ 칸 ud = 업비트 하루 ud(ud 09:00 ~ 다음 날 09:00, 매수한 날) — 밤 계산 코인 칸과 같은 정의(코인 평균 × 칸 자금 비율).
 // 끝난 하루는 마지막 봉 종가(다음 날 09:00)로, 진행 중이면 지금 봉 종가(현재가)로 평가. coins: [{market, daily(최신순), hourly(최신순)}]
 export function coinDayCell(ud,coins,P,nowMs=Date.now()){
@@ -325,6 +367,9 @@ export async function onRequestGet({request,env}){
     const m2=mainOf("daytrading",now.date);
     out.tabs.daytrading={rows:etfRows(st,pst,prev&&prev.date,prices["233740"]),ledgerFound:!!lt,main:m2,
       note:"전날 "+String(m2.params.th).replace("-","−")+"% 이하 마감이면 15:21 종가 매수 → 다음 거래일 08:59 시가 매도."};
+    const m5=mainOf("close30",now.date),th5=+m5.params.th;
+    out.tabs.close30={rows:close30Rows(st,prices["233740"]),ledgerFound:!!lt,main:m5,
+      note:"15:00 에 KODEX 코스닥150레버리지가 전일 종가보다 "+(th5?String(Math.abs(th5))+"% 넘게 ":"")+"내려 있으면 15:00 시장가 매수 → 15:21 종가 동시호가 매도(15:30 종가 체결) → 15:40 체결 조회. 하룻밤 보유 없음. 실험 전략(R14 사후 발견)."};
     // ③
     let ticks={};
     try{const r=await fetch("https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",{headers:{Accept:"application/json"}});for(const t of await r.json())ticks[t.market]=t;}catch(e){}
@@ -365,9 +410,10 @@ export async function onRequestGet({request,env}){
     const claudeL={},claudeLedger=d=>claudeL[d]||(claudeL[d]=ledger(env,d,"/claude"));
     const closedOf=async(k,days)=>{for(const i of days){const d=kstToday(Date.now()-i*864e5).date;const l=await claudeLedger(d);
       const e=((l&&l.events)||[]).find(x=>x&&x.id==="close:"+k);if(e)return e.payload;}return null;};
-    const [c1,c2,c3,c4,c1y]=await Promise.all([closedOf("opening",[0]),closedOf("daytrading",[0]),closedOf("crypto",[1,2]),closedOf("soxl",[0,1,2,3,4]),closedOf("opening",[1])]);
+    const [c1,c2,c3,c4,c1y,c5]=await Promise.all([closedOf("opening",[0]),closedOf("daytrading",[0]),closedOf("crypto",[1,2]),closedOf("soxl",[0,1,2,3,4]),closedOf("opening",[1]),closedOf("close30",[0])]);
     if(out.tabs.opening)out.tabs.opening.closed=c1;
     if(out.tabs.daytrading)out.tabs.daytrading.closed=c2;
+    if(out.tabs.close30)out.tabs.close30.closed=c5;
     if(out.tabs.crypto)out.tabs.crypto.closed=c3;
     if(out.tabs.soxl)out.tabs.soxl.closed=c4;
     for(const k of Object.keys(ACCOUNT_WEIGHT))if(out.tabs[k])out.tabs[k].today=todaySummary(k,out.tabs[k],now.hm);
@@ -380,6 +426,8 @@ export async function onRequestGet({request,env}){
     const sxc=soxlDayCell(nx,us,+((mainOf("soxl",now.date).params||{}).tabSize));
     const days={opening:{[Y]:krxDay(Y).closed?{v:"holiday",final:true,src:"vts"}:openingClosedCell(c1y),[now.date]:openingTodayCell(out.tabs.opening,c1,krxDay(now.date).closed)},
       daytrading:{[Y]:etfCell(Y),[now.date]:etfCell(now.date)},
+      close30:{[Y]:krxDay(Y).closed?{v:"holiday",final:true,src:"vts"}:(ledAt(Y)?close30DayCell(stages(ledAt(Y)),{close:etfBar(Y).close},false):null),
+        [now.date]:close30DayCell(st,{close:now.hm>=1600?etfBar(now.date).close:0,now:prices["233740"]},krxDay(now.date).closed)},
       crypto:{[Y]:coinDayCell(Y,coinRaw,mainOf("crypto",Y).params),[now.date]:coinDayCell(now.date,coinRaw,mainOf("crypto",now.date).params)},
       soxl:sxc&&(sxc.date===Y||sxc.date===now.date)?{[sxc.date]:sxc.cell}:{}};
     for(const k of Object.keys(days))if(out.tabs[k])out.tabs[k].days=days[k];
