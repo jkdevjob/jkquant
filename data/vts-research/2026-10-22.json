@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-22T14:25:21.183648+09:00",
+  "mode": "read-only-vts-execution-research",
+  "from": "2026-09-25",
+  "to": "2026-10-22",
+  "archiveDays": 20,
+  "strategies": [
+    {
+      "strategy": "opening",
+      "days": 20,
+      "reports": 20,
+      "internalTrades": 55,
+      "kisOrders": 64,
+      "completeMatches": 7,
+      "buyMatches": 12,
+      "sellMatches": 7,
+      "avgEntrySlippageCostPct": -0.026488106358682484,
+      "avgExitSlippageCostPct": 0.03628206666377468,
+      "avgRoundTripSlippageCostPct": -0.03902818104462342,
+      "avgInternalPnlPct": -0.6035893706170187,
+      "avgVtsGrossPnlPct": 0.31712995894338514,
+      "avgVtsNetPnlPct": -0.13955699802542557,
+      "avgBrokerCostRatePct": 0.4566869569688085,
+      "avgObservedExecutionDragPct": 0.4176587759241851,
+      "frictionGapVsInternal025Pct": 0.1676587759241851,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 7,
+      "totalBrokerEstimatedCostsWon": 56384.0,
+      "avgBrokerEstimatedCostsWon": 8054.857142857143,
+      "avgEntryOrderLagSecApprox": 124.41666666666667,
+      "avgExitOrderLagSecApprox": 132.28571428571428,
+      "avgBrokerNotifyLagSec": 0.0,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    },
+    {
+      "strategy": "daytrading",
+      "days": 12,
+      "reports": 12,
+      "internalTrades": 30,
+      "kisOrders": 47,
+      "completeMatches": 0,
+      "buyMatches": 0,
+      "sellMatches": 0,
+      "avgEntrySlippageCostPct": null,
+      "avgExitSlippageCostPct": null,
+      "avgRoundTripSlippageCostPct": null,
+      "avgInternalPnlPct": null,
+      "avgVtsGrossPnlPct": null,
+      "avgVtsNetPnlPct": null,
+      "avgBrokerCostRatePct": null,
+      "avgObservedExecutionDragPct": null,
+      "frictionGapVsInternal025Pct": null,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 0,
+      "totalBrokerEstimatedCostsWon": 0,
+      "avgBrokerEstimatedCostsWon": null,
+      "avgEntryOrderLagSecApprox": null,
+      "avgExitOrderLagSecApprox": null,
+      "avgBrokerNotifyLagSec": null,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    }
+  ],
+  "latest": {
+    "date": "2026-10-22",
+    "reports": [
+      {
+        "strategy": "opening",
+        "internalTrades": 1,
+        "kisOrders": 0,
+        "matched": 0,
+        "matches": [
+          {
+            "code": "028050",
+            "name": "삼성E&A",
+            "internalEntryTime": 912,
+            "internalEntryPrice": 55400,
+            "internalExitTime": 922,
+            "internalExitPrice": 56400,
+            "internalReason": "익절",
+            "internalPnl": 0.6725270758122779,
+            "vtsBuy": null,
+            "vtsSell": null,
+            "entryOrderLagSecApprox": null,
+            "exitOrderLagSecApprox": null,
+            "entryBrokerNotifyLagSec": null,
+            "exitBrokerNotifyLagSec": null,
+            "entrySlippageCostPct": null,
+            "exitSlippageCostPct": null,
+            "vtsGrossPnlPct": null,
+            "vtsNetPnlPct": null,
+            "vtsBrokerEstimatedCosts": 0,
+            "vtsBrokerCostRatePct": null,
+            "observedExecutionDragPct": null,
+            "matched": false
+          }
+        ],
+        "unmatched": []
+      }
+    ]
+  }
+}
