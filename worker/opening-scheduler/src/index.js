@@ -345,7 +345,7 @@ export function openingUnmatchedExits(ledger,mainVariant){
 }
 async function forceOpeningSessionClose(env,date,mainVariant,target){
   if(target!==930)return {count:0};
-  const ledger=await readLedger(env,date,"opening");
+  const ledger=await readLedger(env,date);
   const missing=openingUnmatchedExits(ledger,mainVariant);
   if(!missing.length)return {count:0};
   const now=Date.now();
@@ -353,7 +353,7 @@ async function forceOpeningSessionClose(env,date,mainVariant,target){
   await appendLedger(env,{scanId:(ledger.scans||[]).at(-1)?.id||date+":opening:final-exit-check",date,mainVariant,
     scheduledTime:now,capturedAt:new Date(now).toISOString(),targetHm:930,
     partial:false,okShards:0,quoteErrors:0,events:missing.map(x=>
-      liveEvent(date,930,"sell",mainVariant,x,{channel:"telegram",sent:false,reason:"final_exit_unverified"},null))},"opening");
+      liveEvent(date,930,"sell",mainVariant,x,{channel:"telegram",sent:false,reason:"final_exit_unverified"},null))});
   let exec;
   try{exec=await executeVts(env,date,[],missing);}
   catch(e){console.error(JSON.stringify({type:"opening_final_exit_vts_failed",date,count:missing.length,error:String(e.message||e)}));return {count:missing.length,ok:false,error:String(e.message||e)};}
