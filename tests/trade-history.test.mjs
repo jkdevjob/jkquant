@@ -165,3 +165,20 @@ test('daytrading detail panel reports missing exit and withholds aggregate retur
  vm.createContext(c);vm.runInContext(ui.slice(a,b),c);await c.loadDayTradingPaper();const html=node('dt_live_body').innerHTML;
  assert.match(html,/체결\/청산 확인 필요/);assert.doesNotMatch(html,/다음분 시가대기|>\+0\.00%/);assert.ok(boards.some(x=>x[2]==='청산 확인 필요'));
 });
+
+test('midnight closes long-hold shadow even when main has no trade',async()=>{
+ const params=global.BTC_VARIANTS.hold_120m,store=memoryStore(global.PaperStore),env={PAPER_STORE:store,MONITOR_KEY:'fixture'};
+ const late=Array.from({length:25},(_,i)=>{const minutes=21*60+55+i*5;return {date,ms:kst(0,0)+minutes*60000,hm:Math.floor(minutes/60)*100+minutes%60,time:String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0'),o:100,h:100.2,l:99.9,c:100.1,v:10};});
+ const bars=[{date,ms:kst(0,0),hm:0,time:'00:00',o:199,h:200,l:198,c:199,v:10},...late];
+ const old={date,strategy:'crypto',mainVariant:'baseline',strategyParams:global.BTC_VARIANTS.baseline,strategyVersion:'btc_midnight_orb_v2',mode:'server-live-paper-no-order',frictionPct:.14,trades:[],shadowLedgers:{hold_120m:{mainVariant:'hold_120m',strategyParams:params,frictionPct:.14,trades:[{id:'shadow',status:'open',signalTime:'21:55',signalMs:kst(21,55),entryTime:'22:00',entryMs:kst(22,0),entryHm:2200,entryPrice:100,currentPrice:100.1,strategyParams:params}]}},summary:{selected:0,accountReturnPct:0}};
+ await store.get('crypto:'+date).fetch('https://internal/paper',{method:'POST',body:JSON.stringify(old)});
+ const alerts=[];
+ await mockFetch(async(url,init)=>{
+  if(String(url).includes('api.upbit.com'))return Response.json(bars.map(b=>({candle_date_time_kst:date+'T'+b.time+':00',opening_price:b.o,high_price:b.h,low_price:b.l,trade_price:b.c,candle_acc_trade_volume:b.v})));
+  if(String(url).includes('/api/scalping-alert')){alerts.push(JSON.parse(init.body));return Response.json({ok:true});}
+  if(String(url).includes('raw.githubusercontent.com'))return Response.json({variants:[]});
+  throw Error(String(url));
+ },()=>global.runCloseSummaries(env,Date.parse('2026-10-22T00:05:00+09:00')));
+ const saved=(await (await store.get('crypto:'+date).fetch('https://internal/paper')).json()).ledger;
+ assert.equal(saved.trades.length,0);assert.equal(saved.shadowLedgers.hold_120m.trades[0].status,'closed');assert.equal(saved.shadowLedgers.hold_120m.trades[0].exitTime,'23:55');assert.ok(alerts.every(x=>x.stage==='summary'));
+});

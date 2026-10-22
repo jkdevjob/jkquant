@@ -661,9 +661,9 @@ async function runCloseSummaries(env,now){
     // Only advance the preceding session's still-open/pending ledger. Never rewrite past closed records.
     if(old&&(old.trades?.some(x=>x.status!=="closed")||Object.values(old.shadowLedgers||{}).some(l=>l.trades?.some(x=>x.status!=="closed")))){
       const vp=variantParams("crypto",old.mainVariant||"baseline"),bars=await fetchBtc(date),t=storedOrbTrade("crypto",date,old,btcTrade(bars,now,date,old.strategyParams||vp.params),bars,now,old.strategyParams||vp.params);
-      if(t){
+      if(t||Object.keys(old.shadowLedgers||{}).length){
         await writePaper(env,paperLedger("crypto",date,t,{currency:"KRW",timezone:"Asia/Seoul",version:old.strategyVersion,mainVariant:vp.name,params:old.strategyParams||vp.params,friction:.14,decision:old.decision,previous:old,bars,now}));
-        if(t.exit&&Number.isFinite(t.exit.bar.ms))await alert(env,{strategy:"crypto",stage:"sell",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+vp.name+":"+date+":"+t.signal.time+":sell:"+t.exit.bar.time,
+        if(t?.exit&&Number.isFinite(t.exit.bar.ms))await alert(env,{strategy:"crypto",stage:"sell",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+vp.name+":"+date+":"+t.signal.time+":sell:"+t.exit.bar.time,
           date,time:t.exit.bar.time,eventAt:new Date(t.exit.bar.ms+FIVE).toISOString(),
           lines:["KRW-BTC · 메인 "+vp.name+" · "+reasonKo(t.exit.reason),"매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),"매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),"전략 손익 "+signed(pct(t.exit.price,t.entryPrice)-.14)+" · 왕복 비용 0.14% 반영"]});
       }
@@ -715,7 +715,7 @@ async function run(env){
   try{await runCloseSummaries(env,now);}
   catch(e){console.error(JSON.stringify({type:"global_intraday_error",strategy:"close-summary",error:String(e.message||e)}));}
 }
-export {refreshPaper,runtimeStore,storedOrbTrade,globalShadowLedgers,parts,btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,orbExit,isNyseSessionDate,hasSoxlSessionOpenBar,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
+export {runCloseSummaries,refreshPaper,runtimeStore,storedOrbTrade,globalShadowLedgers,parts,btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,orbExit,isNyseSessionDate,hasSoxlSessionOpenBar,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
 
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
