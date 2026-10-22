@@ -537,7 +537,7 @@ async function runMinute(controller,env){
 // 08:56 예상체결가 조회(40종목씩 순차) → 08:58 갭 깊은 10종목 다시 조회 → 규칙 선택 + 장전 동시호가 VTS 매수 → 15:21 종가 동시호가 VTS 매도 → 15:40 체결 조회.
 // 매 단계 응답 원본을 별도 ledger(gapdown:날짜)에 먼저 쌓는다. 주문 호출은 재시도하지 않는다.
 // Workers 무료 요금제는 계정 전체 cron 5개가 한도라 이 Worker 는 cron 한 줄만 쓴다(wrangler.jsonc).
-// "5-31,40,56 0,6,23 * * *" 로 필요한 시각을 모두 덮고, 실제로 할 일은 한국시각으로 여기서 고른다.
+// "0,5-31,40,56 0,6,9,15,20,21,23 * * *" 로 필요한 시각을 모두 덮고, 실제로 할 일은 한국시각으로 여기서 고른다(0분은 ⑤ 15:00 매수 — 2026-10-22).
 // 토요일 09:05 — 금요일 밤(23:40) 장부로 이번 주 결과를 보낸다(코인 금요일 하루는 토 09시에 끝나 다음 주 계산에 들어감).
 export function scheduleRoute(ms){
   const p=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
@@ -554,6 +554,7 @@ export function scheduleRoute(ms){
   if(hm===1507)return "closing_day_entry";
   if(hm===1522)return "closing_overnight_signal";
   if(hm===906)return "opening"; // 병렬로 종가 베팅의 전일 종목 시가 청산
+  if(hm===1500)return "gapdown_c30";               // ⑤ 종가 30분 — 15:00 판단 · 매수(15:21 매도 · 15:40 체결 조회는 아래 ①② 단계에 붙어 돈다)
   if(hm===856)return "gapdown_preopen";
   if(hm===1521)return "gapdown_close";
   if(hm===1540)return "gapdown_reconcile";
@@ -771,6 +772,7 @@ async function claudeDayClose(env,strategy,date,ms){
 async function claudeKrClose(env,date,ms){
   await claudeDayClose(env,"opening",date,ms);
   await claudeDayClose(env,"daytrading",date,ms);
+  await claudeDayClose(env,"close30",date,ms);
 }
 export function nyDate(ms){
   return new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(ms));
@@ -800,6 +802,11 @@ export async function runGapdown(stage,controller,env){
       catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"holiday",error:String(e.message||e)}));}
     }
     console.log(JSON.stringify({type:"gapdown_holiday",date,stage,action:hol}));
+    return;
+  }
+  if(stage==="c30"){                               // ⑤ 15:00 — 지금 가격이 전일 종가보다 메인 기준 미만이면 시장가 매수(Pages 가 판단 · 주문, 재시도 없음)
+    await runEtf(env,date,"c30_buy",ms);
+    await claudeAlertsNow(env);                      // ⑤ 매수 기록 직후 바로 알림
     return;
   }
   if(stage==="preopen"){
@@ -860,16 +867,19 @@ export async function runGapdown(stage,controller,env){
     catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage,error:String(e.message||e)}));}
     console.log(JSON.stringify({type:"gapdown_"+stage,date,positions:(res.positions||[]).length,orders:(res.orders||[]).length}));
   }
+  // ⑤ 종가 30분: 15:21 오늘 15:00 매수분 종가 동시호가 매도(보유가 없으면 Pages 가 주문하지 않음) — ② 매수 판단보다 먼저(15:28 창 안)
+  if(stage==="close")await runEtf(env,date,"c30_sell",ms);
   // ② ETF: 15:21 종가 매수 판단(매일) · 15:40 체결 조회(매일)
   await runEtf(env,date,stage==="close"?"etf_buy":"etf_reconcile",ms);
-  if(stage!=="close")await claudeKrClose(env,date,ms);   // 15:40 체결조회로 ①② 장부가 마감된 뒤 전략별 마감 장부 저장(텔레그램 없음)
+  if(stage!=="close")await runEtf(env,date,"c30_reconcile",ms);   // ⑤ 15:40 오늘 매수 · 매도 체결 조회
+  if(stage!=="close")await claudeKrClose(env,date,ms);   // 15:40 체결조회로 ①②⑤ 장부가 마감된 뒤 전략별 마감 장부 저장(텔레그램 없음)
   await claudeAlertsNow(env);                      // ② 매수(15:21) · ① 매도 체결(15:40) 직후 바로 알림
 }
 
 export const CLAUDE_CONFIG_KEY="main";
 export function claudeConfigEvent(b){
   if(!b||typeof b!=="object")return null;
-  const tabs=["opening","daytrading","crypto","soxl"];
+  const tabs=["opening","daytrading","crypto","soxl","close30"];
   if(!tabs.includes(b.tab)||!b.version||typeof b.params!=="object"||!b.params||!/^\d{4}-\d{2}-\d{2}$/.test(String(b.effectiveFrom||""))||!b.promotedAt)return null;
   const payload={tab:b.tab,version:String(b.version).slice(0,80),name:String(b.name||"").slice(0,120),rule:String(b.rule||"").slice(0,400),
     params:b.params,effectiveFrom:String(b.effectiveFrom),promotedAt:String(b.promotedAt),prevVersion:String(b.prevVersion||""),by:String(b.by||"").slice(0,120),

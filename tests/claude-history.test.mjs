@@ -14,6 +14,7 @@ test("읽을 파일 경로: 목록 · 탭/버전만 — 경로 문자 · 모르�
   assert.deepEqual(P("tab=opening&version=g_open_q7_k3_gap3"), { path: "opening/g_open_q7_k3_gap3.json" });
   assert.deepEqual(P("tab=opening&version=opening_gapdown_v1%2Bv2filter"), { path: "opening/opening_gapdown_v1%2Bv2filter.json" });   // + 는 인코딩
   assert.deepEqual(P("tab=crypto&version=coin_breakout_v1:KRW-BTC"), { path: "crypto/coin_breakout_v1%3AKRW-BTC.json" });
+  assert.deepEqual(P("tab=close30&version=g_c30_th1.5"), { path: "close30/g_c30_th1.5.json" });   // ⑤ 종가 30분(2026-10-22)
   for (const q of ["tab=opening&version=../latest", "tab=opening&version=a/b", "tab=opening&version=..", "tab=opening&version=", "tab=x&version=v1",
     "tab=opening&version=" + "a".repeat(81), "tab=opening&version=a%20b", "version=v1"])
     assert.ok(P(q).error, q);

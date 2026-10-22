@@ -11377,11 +11377,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
       const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
       const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
     const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
-    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
-       crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
+    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:00(⑤)·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
+       crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_c30===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
        &&count.claude_kr===5&&count.duel===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
        &&count.closing_day_signal===5&&count.closing_day_entry===5&&count.closing_overnight_signal===5    // 지피티 종가 30분 · 종가 베팅(종이 장부) 15:06 · 15:07 · 15:22
-       &&Object.keys(count).length===11&&r0==='gapdown_preopen'&&r1===null
+       &&Object.keys(count).length===12&&r0==='gapdown_preopen'&&r1===null
+       &&route(Date.parse('2026-10-05T06:00:00Z'))==='gapdown_c30'&&route(Date.parse('2026-10-04T06:00:00Z'))===null      // 월 15:00 KST ⑤ / 일요일 없음
        &&route(Date.parse('2026-10-05T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-05T21:05:00Z'))===null      // 여름(EDT) 05:05 KST
        &&route(Date.parse('2026-12-07T21:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-12-07T20:05:00Z'))===null      // 겨울(EST) 06:05 KST
        &&route(Date.parse('2026-10-09T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-10T20:05:00Z'))===null      // 금요일 마감(한국 토요일) · 토요일 없음
@@ -11417,15 +11418,15 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
        .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>연구\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>연구\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('연구(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) · 전체 계좌 탭 없음(2026-10-14 삭제) · 탭마다 GPT 같은 기간 비교',
-     ['today','opening','daytrading','crypto','soxl'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))&&!/data-tab="all"|showTab\('all'\)/.test(scl2)
-     &&/if\(\/\^\(today\|opening\|daytrading\|crypto\|soxl\|duel\|tenbagger\)\$\/\.test\(q\)\)TAB=q/.test(scl2)
+     ['today','opening','daytrading','crypto','soxl','close30'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))&&!/data-tab="all"|showTab\('all'\)/.test(scl2)
+     &&/if\(\/\^\(today\|opening\|daytrading\|crypto\|soxl\|close30\|duel\|tenbagger\)\$\/\.test\(q\)\)TAB=q/.test(scl2)
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
     ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로 · 예외 하나: 매일 08:00 연구 리포트(op=report, [클로드 연구 리포트] — 2026-10-14 사용자 요청)',
        /function authorized\(request,env\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
-       &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\|텐배거\)\\\] \/;/.test(tg)
+       &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\|종가30분\|텐배거\)\\\] \/;/.test(tg)
        &&/if\(b\.op==="send"\|\|KINDS\.includes\(String\(b\.kind\|\|""\)\)\)return json\(\{ok:true,skipped:"buy_sell_only"\}\);/.test(tg)
        &&(tg.match(/await sendOnce\(env,/g)||[]).length===2&&/if\(b\.op==="report"\)\{[\s\S]{0,120}text\.startsWith\(REPORT_HEAD\)/.test(tg)&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
     // 하루 마감 장부: DO 에 한 번만 저장(먼저 저장된 것이 정본) — 밤 계산 · 대결 비교가 읽는다. 텔레그램은 보내지 않는다
@@ -11442,7 +11443,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&['① 전략 · 종목 선정 규칙','② 오늘 종목 선정 · 감시','③ 매수 타이밍','④ 매도 · 손절 · 리스크','⑤ 오늘 장중 모의 매매이력','⑥ 전략 경쟁 · 자동 개선','⑦ 누적 모의 매매이력','⑧ 실행 품질'].every(x=>scl2.includes(x))
        &&/setInterval\(function\(\)\{if\(!document\.hidden&&ME\)loadLive\(\)\},60000\)/.test(scl2)
        &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=html;/.test(scl2)&&!/statusBar/.test(scl2)
-       &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
+       &&['opening','daytrading','crypto','soxl','close30'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
     ok('전략 경쟁: 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 신규 투입 · 7일 1위 자동 승격(다음 날부터) · 이번 주 결과 카드는 전체 계좌 탭과 함께 삭제',
@@ -12162,10 +12163,10 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      &&/const cfg=await loadMainEvents\(env\);/.test(lv)&&/const cfg=await loadMainEvents\(env\);/.test(tg)&&/const R=etfRuleFor\(await loadMainEvents\(env,3000\),date\);/.test(og)
      &&!fs.existsSync(__d+'/functions/api/claude-promote.js'));
   const cp=require('child_process');
-  const py=cp.spawnSync('python3',['-c','import sys,json;sys.path.insert(0,"scripts");import claude_lab as L;print(json.dumps({t:L.MAIN_DEFAULT[t]["params"] for t in L.TABS4}))'],{cwd:__d,encoding:'utf8'});
+  const py=cp.spawnSync('python3',['-c','import sys,json;sys.path.insert(0,"scripts");import claude_lab as L;print(json.dumps({t:L.MAIN_DEFAULT[t]["params"] for t in L.TABS_ALL}))'],{cwd:__d,encoding:'utf8'});
   const js=cp.spawnSync(process.execPath,['--input-type=module','-e','import {MAIN_DEFAULT as M} from "'+require('url').pathToFileURL(__d+'/functions/api/_claude_main.js').href+'";console.log(JSON.stringify(Object.fromEntries(Object.entries(M).map(([k,v])=>[k,v.params]))))'],{encoding:'utf8'});
   let same=false,why='';
-  try{const a=JSON.parse(py.stdout),b=JSON.parse(js.stdout);same=['opening','daytrading','crypto','soxl'].every(t=>JSON.stringify(Object.keys(a[t]).sort().map(k=>[k,a[t][k]]))===JSON.stringify(Object.keys(b[t]).sort().map(k=>[k,b[t][k]])));why=JSON.stringify([a,b]).slice(0,300);}
+  try{const a=JSON.parse(py.stdout),b=JSON.parse(js.stdout);same=['opening','daytrading','crypto','soxl','close30'].every(t=>JSON.stringify(Object.keys(a[t]).sort().map(k=>[k,a[t][k]]))===JSON.stringify(Object.keys(b[t]).sort().map(k=>[k,b[t][k]])));why=JSON.stringify([a,b]).slice(0,300);}
   catch(e){why=(py.stderr||'')+(js.stderr||'')+e.message;}
   ok('기본 메인 변수: 밤 계산(Python) = 실시간·주문(JS) — 한쪽만 바뀌면 빨간불',same,why);
   // 새 구조 변수(③ hiN · ④ ibsMax/downDays/RSI 끄기) 범위 검사: 밤 계산(Python _valid_params) = 실시간·승격 기록(JS validateParams)
@@ -12211,7 +12212,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
     ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만 · 켜기/끄기는 설정 → 알림 한 곳(연구 화면 상단 상태 줄과 🔔 버튼은 2026-10-14 사용자 요청으로 삭제)',
-       JSON.parse(wr).triggers.crons.join()==="5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
+       JSON.parse(wr).triggers.crons.join()==="0,5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
        &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(fs.readFileSync(__d+'/claude-push-client.js','utf8'))
@@ -12247,7 +12248,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
      &&/var ARENA_KIND=\{new:\["🆕","신규 투입"/.test(ch)&&!/claude-promote|승격 버튼/.test(ch)
-     &&/def arena\(ctx, today=None, state=None, tabs=TABS4\):/.test(lp)&&/ARENA_PATH\.write_text\(/.test(lp));
+     &&/def arena\(ctx, today=None, state=None, tabs=TABS_ALL\):/.test(lp)&&/ARENA_PATH\.write_text\(/.test(lp));
   ok('자동 승격은 감시키가 있을 때만 Worker 기록 → 효력은 다음 날 · 텔레그램 알림(탭별 하루 한 번)',
      /eff = \(date\.fromisoformat\(today\) \+ timedelta\(days=1\)\)\.isoformat\(\)/.test(lp)&&/if not key:\n\s*return dict\(ok=False, due=True/.test(lp)
      &&/\+ "\/claude-config", ev, key\)/.test(lp)&&/const KINDS=\["preopen","etfbuy","weekly","duel","promote"\];/.test(tg));
