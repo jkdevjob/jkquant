@@ -122,7 +122,7 @@ test("여섯 탭 개별 동의는 설정 화면과 같이 전체 보고 동의 �
   await x.seed(endpoint,all);await x.seed("https://push.example/four",all.slice(0,5));
   const delivery=await x.app.notifyAll("gpt");assert.equal(delivery.sent,1);assert.equal(delivery.eligible,1);
   assert.deepEqual(x.calls,[{endpoint,topic:"gpt"}]);
-  assert.equal((await(await x.get("/health")).json()).topicSubscriptions.gpt,2,"전체 기기를 두 번 집계하지 않음");
+  assert.equal((await(await x.get("/health")).json()).topicSubscriptions.gpt,1,"6개 전부 동의한 기기만 전체알림으로 집계");
   const sw=swFixture(),now=Date.now(),payload={alerts:[{id:"morning",type:"gpt",createdAt:new Date(now).toISOString()}]};
   assert.deepEqual([...sw.ctx.pickAlerts(payload,all,[],now)].map(a=>a.id),["morning"]);
   assert.equal(sw.ctx.pickAlerts(payload,all.slice(0,5),[],now).length,0);
