@@ -362,6 +362,12 @@ canvas{display:block;width:100%;height:auto}
       <div id="daily_results_body"><p class="sub">전략별 오늘 결과를 불러오는 중…</p></div>
       <p class="note">목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 자금배분이 정해지기 전에는 단순 합산하지 않습니다.<br><b>보유 원칙:</b> 현재 4개 기준전략은 모두 당일청산·오버나이트 금지입니다. 향후 예외 후보도 별도 검증을 거쳐 최대 5거래일까지만 허용하며 6거래일 이상은 단타 전략에서 제외합니다.</p>
     </div>
+    <div class="card" id="daily_closing30_card">
+      <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">개별 주식 · 당일 종가 / 익일 시가 · 독립 모의연구</span></h3>
+      <p class="lead">메인+10개 그림자 전략을 별도 원본 장부로 매일 검증합니다. 종가 베팅은 익일 시가가 관측되기 전에는 수익을 확정하지 않습니다.</p>
+      <div id="daily_closing30_status" class="sub">종가 연구 결과 불러오는 중…</div>
+      <button class="ghostbtn sm" onclick="showStrategy('closing30')">종가 전략·모든 거래이력 보기 →</button>
+    </div>
     <div id="daily_trend_card" class="card">
       <div id="daily_cumulative_chart"><p class="sub">전략별 누적 수익률 추이를 불러오는 중…</p></div>
     </div>
@@ -1971,6 +1977,34 @@ async function loadScalpingVariantOptions(name){
     if([...sel.options].some(x=>x.value===selected))sel.value=selected;
   }catch(e){console.warn('variant history options',e);}
 }
+async function loadClosing30Research(){
+  const el=$('closing30_research_body'),daily=$('daily_closing30_status');
+  try{
+    const u='https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/closing30.json?t='+Date.now();
+    const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('첫 야간 연구 결과 미생성');
+    const j=await r.json(),all=j.variants||[];
+    const base=all.filter(x=>x.name==='baseline');
+    const lines=base.map(x=>{
+      const y=x.summary||{};
+      return '<div class="outbox"><div class="ol">'+(x.kind==='day'?'당일 종가 청산':'종가 베팅 · 익일 시가')+'</div>'+
+        '<div class="ov">'+Number(y.trades||0)+'건</div><div class="sub">비용 후 평균 '+histPct(y.avgPnl)+
+        ' · 승률 '+(y.winRate==null?'미확정':Number(y.winRate).toFixed(1)+'%')+'</div></div>';
+    }).join('');
+    if(daily)daily.innerHTML='<div class="out">'+lines+'</div><span class="sub">'+esc(j.date||'')+' 연구 · 누적 원본 '+Number(j.archiveDays||0)+'일 · '+esc(j.status||'collecting')+'</span>';
+    if(el){
+      el.innerHTML='<p class="sub">최종 연구 '+esc(j.generatedAt||'')+' · 메인 자동승격은 충분한 순방향 실측/위험 통과 후 적용 · 실주문 없음</p>'+
+        '<div class="htable-wrap"><table class="htable"><thead><tr><th>유형</th><th>그림자</th><th>거래</th><th>승률</th><th>평균 순익</th><th>PF</th><th>MDD</th><th>상태</th></tr></thead><tbody>'+
+        all.map(v=>{const z=v.summary||{};return '<tr><td>'+esc(v.kind==='day'?'당일청산':'종가 베팅')+'</td>'+
+          '<td>'+esc(v.name)+'</td><td>'+Number(z.trades||0)+'</td><td>'+ (z.winRate==null?'—':Number(z.winRate).toFixed(1)+'%')+
+          '</td><td>'+histPct(z.avgPnl)+'</td><td>'+ (z.profitFactor==null?'—':Number(z.profitFactor).toFixed(2))+
+          '</td><td>'+histPct(z.mddPct)+'</td><td>'+esc(v.status||'수집 중')+'</td></tr>';}).join('')+'</tbody></table></div>';
+      if(j.errors?.length)el.innerHTML+='<div class="warn">누락 원본 '+j.errors.length+'건 · 확정 거래에 포함하지 않음</div>';
+    }
+  }catch(e){
+    const v='첫 자동연구 수집 중 · '+esc(e.message||e);
+    if(daily)daily.textContent=v;if(el)el.textContent=v;
+  }
+}
 async function loadClosing30History(){
   const body=$('closing30_history_body'),msg=$('closing30_history_msg'),sum=$('closing30_summary');
   if(!body||!msg||!me)return;
@@ -2782,6 +2816,7 @@ function showStrategy(name){
   if(name==='duel'){ loadScalpingDuel(false); }
   if(name==='tenbagger'){window.TenbaggerResearch?.boot();}
   if(name==='daily'){
+    void loadClosing30Research();
     void refreshDailyLiveResults();
     /* 오늘 탭의 핵심은 '오늘 결과'다. 연구/누적 그래프 9개 요청을 동시에 던져
        첫 카드까지 늦추지 말고, 핵심 결과가 끝난 뒤 낮은 우선순위로 나눠 불러온다. */
@@ -2792,7 +2827,7 @@ function showStrategy(name){
       setTimeout(()=>active.forEach(x=>loadStrategyScorecard(x)),220);
     });
   }
-  if(name==='closing30')loadClosing30History();
+  if(name==='closing30'){loadClosing30History();loadClosing30Research();}
   if(active.includes(name)){ loadScalpingVariantOptions(name); loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); loadScalpingReview(name,false); loadShadowRankings(false); renderStrategyStatus(name); renderPlan(name); }
   if(name==='opening'){loadServerOpeningHistory();startOpeningPaperAuto();}
   else stopOpeningPaperAuto();
