@@ -38,5 +38,8 @@ def main():
           'summary':ledger.get('summary')},ensure_ascii=False))
     runtime=call('/runtime').get('runtime')
     print(json.dumps({'cronRuntime':runtime},ensure_ascii=False))
+    at=dt.datetime.fromisoformat(str((runtime or {}).get('at') or '').replace('Z','+00:00')) if (runtime or {}).get('at') else None
+    if at is None or (dt.datetime.now(dt.timezone.utc)-at).total_seconds()>180:
+        raise RuntimeError('Scheduled heartbeat missing/stale; source refresh does not verify automatic execution')
 
 if __name__=='__main__':main()
