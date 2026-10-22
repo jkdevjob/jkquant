@@ -12,10 +12,20 @@ jobs:
       - name: Read original ledgers only
         env:
           MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           python - <<'PY'
-          import os,json,subprocess,datetime,collections
+          import os,json,subprocess,datetime,collections,urllib.request
           from zoneinfo import ZoneInfo
+          cf='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']+'/workers/scripts/jkquant-global-intraday-scheduler'
+          def api(path):
+              return json.load(urllib.request.urlopen(urllib.request.Request(cf+path,headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN']}),timeout=15)).get('result') or {}
+          deployments=api('/deployments').get('deployments') or []
+          for v in (deployments[0].get('versions') or [])[:1]:
+              detail=api('/versions/'+v['version_id']);resources=detail.get('resources') or {}
+              print('ACTIVE_HANDLERS',json.dumps({'version':v['version_id'],'script':resources.get('script'),'runtime':{k:(resources.get('script_runtime') or {}).get(k) for k in ['compatibility_date','limits','usage_model']}},ensure_ascii=False))
+          print('SCHEDULES',json.dumps(api('/schedules')))
           date=datetime.datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()
           base='https://jkquant-opening-scheduler.mumae4.workers.dev'
           sources={
@@ -32,6 +42,6 @@ jobs:
               for ledger in ledgers:
                   events=ledger.get('events') or []
                   counts=collections.Counter((e.get('kind') or '')+':'+str(e.get('stage')) for e in events)
-                  print(name,json.dumps({'ok':j.get('ok'),'date':ledger.get('date'),'updatedAt':ledger.get('updatedAt'),'scans':len(ledger.get('scans') or []),'events':len(events),'stages':dict(counts),'mainVariant':ledger.get('mainVariant'),'mainTrades':len(ledger.get('trades') or []),'shadowVariants':len(ledger.get('shadowLedgers') or {}),'summary':ledger.get('summary')},ensure_ascii=False))
+                  print(name,json.dumps({'ok':j.get('ok'),'date':ledger.get('date'),'updatedAt':ledger.get('updatedAt'),'scans':len(ledger.get('scans') or []),'scanDetails':[{k:s.get(k) for k in ['targetHm','partial','quoteErrors','eventCount']} for s in (ledger.get('scans') or [])[-3:]],'events':len(events),'stages':dict(counts),'mainVariant':ledger.get('mainVariant'),'mainTrades':len(ledger.get('trades') or []),'shadowVariants':len(ledger.get('shadowLedgers') or {}),'summary':ledger.get('summary')},ensure_ascii=False))
               if not ledgers:print(name,json.dumps({'ok':j.get('ok'),'ledgerCount':0,'error':j.get('error')}))
           PY
