@@ -633,7 +633,7 @@ def main():
     with (OUT / "variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
         columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source"]
         w=csv.DictWriter(f,fieldnames=columns);w.writeheader()
-        for variant,trs in sorted(trade_map.items()):
+        for variant,trs in sorted(variant_trades.items()):
             for t in trs:
                 w.writerow({"variant":variant,"date":t.get("date"),"code":"KRW-BTC","name":"비트코인",
                     "strategyVersion":t.get("strategyVersion"),"signalTime":t.get("signalTimeKst"),
