@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "date": "2026-10-23",
+  "preparedAt": "2026-10-22T22:11:12.066Z",
+  "mainSha": "e2180bbb90195e9b1601866f277eb6466d467151",
+  "summary": "22일 운영은 시초가 재구성 +0.673%(VTS주문0)·데이트레이딩 -1.250%; BTC는21일 -0.161%, SOXL은22일까지 무매매. 그림자는 시초가 -0.719%·데이트레이딩 -0.250%. 09:20가설은28/30건이라 보류. 텐배거 신규등록18·신규진입46·손절청산2.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "collecting",
+      "findings": "22일 확정·잠정부터: 시초가 baseline은 삼성E&A 1건 재구성+0.673%이나 원본 events와 VTS주문은0건이라 실체결 검증이 아닙니다. 데이트레이딩은3건 모두 손절,3슬롯 계좌-1.250%; 원본/EOD경로3/3 일치하나 VTS주문0건입니다. BTC는21일-0.161% 확정,22일 자료는08:55 KST까지만 있어 미확정. SOXL은 미국22일까지 무매매. 그림자는 시초가-0.719%,데이트레이딩-0.250%,BTC0건,SOXL0건. 자료시각은 그림자22일23:03,nightly23일00:51,Claude23일03:49 KST. 전일 보고 영수증 Push2/2·Telegram1회 성공; 실제 기기 표시는 미확인. 화면v1.48.0·서버2.9.0,코드시험46/46 통과.",
+      "nextTest": "시초가 재구성 거래를 VTS 주문·체결과 대조하고 BTC22일 완료봉을 확보합니다. Claude 신규 종가30분은 첫 전향 주문일인23일부터만 별도 집계합니다. 평가금액은 인증 원본에서 현금·미실현·입출금·수익률 분모가 같은 기간인지 확인합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/vts-research/2026-10-22.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/claude-lab/latest.json",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "collecting",
+      "findings": "22일 baseline은 삼성E&A 09:12→09:22 익절 재구성+0.673%. 누적51거래/9매매일 평균일수익-0.531%,PF0.510,MDD-5.407%,최악-2.550%,+1%일0/+5%주0;이번 주+0.717%,목표까지4.283%p. 원본 장중 events는0건이고 VTS주문도0건이라 운영 재구성으로만 봅니다. +1%그림자는 PSK손절 1건,2슬롯 계좌-0.719%:13일/11거래 평균-0.635%,PF0.043,MDD-7.985%,최악-2.026%,+1%일0/+5%주0;이번 주-3.922%. 집중가설 entry_by_0920은28거래 평균-0.042%,baseline 대비+0.305%p이나 최소30건 미달,선두2/7회라 보류합니다.",
+      "nextTest": "비용0.23%+편도2.5호가 fallback,갭+2~+7%,09:30청산,동일 모집단·자본을 고정합니다. 후보2건과 선두5회 이상을 더 모으고 VTS 정합성 회복 전 새 shadowVersion·메인 승격을 하지 않습니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/opening-history/2026-10-22.json",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=opening&from=2026-10-01&to=2026-10-23",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/nightly-research/2026-10-23.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "verified",
+      "findings": "검증 완료의 의미:22일 운영 모의원본과 장마감 재구성의 LIG디펜스앤에어로스페이스·가온전선·LS ELECTRIC 진입/청산/손익이3/3 일치했습니다(실제 VTS주문 검증은 아님). 각-1.25%,3슬롯 계좌-1.250%. 누적40거래/15기록일 평균-0.396%,PF0.495,MDD-6.513%,최악-1.250%,+1%일0/+5%주0;이번 주-1.006%,목표까지6.006%p. +1%그림자는 삼성E&A+1.35%·삼성물산-1.05%·현대건설-1.05%,계좌-0.250%:14일/42거래 평균-0.067%,PF0.883,MDD-4.374%,최악-1.050%,+1%일3/+5%주0;이번 주+2.415%,목표까지2.585%p.",
+      "nextTest": "동일3슬롯·비용0.25%·동시점 모집단을 고정해 최소20전향일을 채우고 시장국면별 손익·빈도를 대조합니다. baseline은 유지하고 그림자만 계속 관찰합니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-10-23",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/daytrading-research/2026-10-22.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "blocked",
+      "findings": "21일 BTC baseline 17:50→18:45 시간청산-0.161%가 고정 CSV/API에 반영됐습니다. 누적13거래/13매매일 평균-0.103%,PF0.532,MDD-2.030%,최악-0.640%,+1%일0/+5%주0;이번 주-0.800%,목표까지5.800%p. 22일 currentSession은 watching·거래0이나 생성14:55 KST 대비 마지막봉08:55 KST이고 API가 degraded라 무매매/0%로 확정하지 않습니다. +1%그림자는19일/0거래로 PF·MDD·기대값 미검증. Claude ETH도22일 pending이라 같은 날짜 비교가 불가합니다.",
+      "nextTest": "22일 완료봉·고정 장부·수집지연 원인을 확보하고 원본 체결경로를 대조합니다. null을0수익으로 바꾸거나 빈도 확보를 위해 필터를 완화하지 않습니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-10-23",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/crypto-research/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "verified",
+      "findings": "검증 완료의 의미:고정 API의 미국20~22일 결정행이 모두 무매매이며 마지막 거래는19일-1.400%입니다. 6거래/16기록세션 평균일수익-0.525%,PF0,MDD-8.111%,최악-1.400%,+1%일0/+5%주0;이번 주-1.400%,목표까지6.400%p. +1%그림자는 미국21일0건:15일/1거래 평균+0.087%,PF999상한,MDD0,최악+1.311%,+1%일1/+5%주0;표본1이라 미검증. Claude 새 SOXL 메인은21일부터 효력이고 이번 자료의 current/today/nextSignal 버전 표시는 일치합니다. 실제 VTS주문·기기 표시는 확인한 것이 아닙니다.",
+      "nextTest": "미국22일 고정 분봉·모의장부·비용0.20%를 재대조하고 그림자 전향 표본을 늘립니다. 표본1의 이익을 승격 근거로 쓰지 않습니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-10-23",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/soxl-research/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/claude-lab/latest.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "21일 원천이23일00:29 KST 반영: 신규등록18(고유17)·신규진입46→총119등록/112종목·진입81·대기38. 손절/추적청산2건 추가(삼양엔씨켐-10.868%,라온시큐어-15.112%)로 누적6,1260보유군청산0. 20/60/120/252/756/1260성숙0,2/5/10배 최초도달0라 미검증. 관찰0~5세션,종가순손익-22.333~+20.934%,MFE최대+22.149%,MAE/MDD최악-22.781%,원천수정0;계좌CAGR·지수초과 아님. v1.0.0/규칙5e690dd8 유지,원천6e356ea7·결합7366df 갱신. 생성기해시는ba0d0863→9c75e0f2로 변해 규칙 불변과 별도로 재현성 대조가 필요합니다. Claude는20일까지20종목 보유·청산0.",
+      "nextTest": "생성기 해시 변경 원인을 같은 원천 재실행으로 확인하고 신규46진입·두 청산군·정지·누락·폐지정산을 추적합니다. 가격조건 탐색가설이며 실패대조·시장국면·공시시점 재무·유동성·비용 검증 전 새 규칙을 채택하지 않습니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/tenbagger-forward/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/tenbagger-claude-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/e2180bbb90195e9b1601866f277eb6466d467151/data/tenbagger/gpt/forward-latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/e2180bbb90195e9b1601866f277eb6466d467151/TENBAGGER_FORWARD_RESEARCH.md"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "22일까지 표시누적 GPT-3.508%/Claude-9.268%,일별승부 Claude9·GPT6·무2. 22일은 GPT+0.076%,Claude-0.511%로 GPT 승이나 GPT 시초가는 재구성이고 Claude 시초가3건·종가30분1건은 모의계좌 현금부족으로 실제 주문되지 않았습니다. 따라서 표시 승부를 동등한 실행 사례의 우위로 확정할 수 없습니다. Claude 데이트레이딩 신메인 g_etf_th4.75는24일부터 효력이라 22일 old today 표시는 정상입니다. 신규 종가30분 close30_dip_v1은 사후발견 규칙으로 전향0/20건; R15 개별종목 종가→익일시가는 검증-0.35%/거래일·t-4.9로 기각됐습니다.",
+      "nextTest": "같은 확정날짜·당시 운영버전·동일자본·비용·실제 주문 가능 사례만 비교합니다. Claude 현금부족과 GPT 시초가 VTS0건을 해소하고 종가30분은23일 이후 전향 장부만 20매매일까지 관찰합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/claude-lab/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/e2180bbb90195e9b1601866f277eb6466d467151/CLAUDE-SCALPING-RESEARCH.md",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/9e3991153099166b248c86ca9c8be2b209fd941e/data/nightly-research/lifecycle.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-10-22.json"
+      ]
+    }
+  ]
+}
