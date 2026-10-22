@@ -44,6 +44,10 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
 #gate .gbox{max-width:380px;width:100%}#gate .glogo{font-size:26px;font-weight:800;margin-bottom:6px}#gate .gsub{color:var(--dim);font-size:13px;margin-bottom:24px;line-height:1.6}
 #gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px}
+.hov{position:fixed;inset:0;z-index:200;background:rgba(8,10,18,.88);overflow-y:auto;overflow-x:hidden;padding:14px 10px 40px}.hov[hidden]{display:none}
+.hov .hbox{max-width:980px;margin:0 auto;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px}.hov .hx{float:right;padding:6px 12px;border:1px solid var(--border);background:var(--surf2);color:var(--text);border-radius:8px;cursor:pointer}
+.hlink{color:var(--text);text-decoration:underline dotted;cursor:pointer;background:none;border:0;padding:0;font:inherit;text-align:left}.hbtn{padding:6px 10px;border:1px solid var(--border);background:var(--surf2);color:var(--text);border-radius:8px;cursor:pointer;font-size:12px}
+.hov table{min-width:0}.hov td.nm{white-space:normal}
 </style>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
@@ -78,7 +82,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.19.1</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.20.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -112,6 +116,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   </div>
   <div id="body"><div class="loading">불러오는 중…</div></div>
 </div></main>
+<div class="hov" id="hov" hidden onclick="if(event.target===this)closeHist()"><div class="hbox" id="hbox"></div></div>
 
 <script>
 function jkMenuToggle(e){if(e)e.stopPropagation();var p=document.getElementById("jkmenuPop");if(p)p.hidden=!p.hidden}
@@ -360,12 +365,13 @@ function shadowCard(tab){
     var star=pr.code==="candidate"?"🥇 ":"";
     var sc="<b>"+pct(r.score,3)+"</b>"+(r.stable!=null&&r.freqFactor!=null?"<div class='sub'>안정 "+pct(r.stable,3)+" × 빈도 "+num(r.freqFactor,2)+"</div>":"")+
       (r.raw!=null?"<div class='sub'>그대로 "+pct(r.raw,3)+(r.plateau!=null?" · 이웃 "+pct(r.plateau,3):"")+"</div>":"");
-    return "<tr><td>"+r.rank+"</td><td class='nm' style='text-align:left'>"+star+esc(r.name)+tag+"<div class='sub'>"+esc(r.rule||"")+(r.op&&!r.isMain?" · "+esc(ARENA_OP[r.op]||r.op):"")+"</div></td><td class='"+cls(r.score)+"'>"+sc+"</td>"+
+    return "<tr><td>"+r.rank+"</td><td class='nm' style='text-align:left'>"+star+histLink(tab,r.version,r.name)+tag+"<div class='sub'>"+esc(r.rule||"")+(r.op&&!r.isMain?" · "+esc(ARENA_OP[r.op]||r.op):"")+"</div></td><td class='"+cls(r.score)+"'>"+sc+"</td>"+
       "<td class='"+cls(y.totalPct)+"'>"+pct(y.totalPct,1)+"</td><td class='"+cls(d.totalPct)+"'>"+pct(d.totalPct,1)+"</td><td>"+mddTxt(f.mddPct)+"</td>"+
       "<td>"+num(f.tradeDaysPerYear,0)+(tab==="soxl"&&r.tradesPerYear!=null?"<div class='sub'>들어감 "+num(r.tradesPerYear,0)+"회</div>":"")+"</td><td>"+num(f.plus1DaysPerYear,0)+"</td><td>"+(o.tradeDays?pct(o.totalPct,1)+"<span class='sub'> ("+o.tradeDays+"일)</span>":"<span class='sub'>—</span>")+"</td></tr>"}).join("");
   var lg=arenaLog(z.log,false);
   return sec("⑥ 전략 경쟁 · 자동 개선 (메인 + 그림자 "+(z.poolSize||0)+"개)",
     "<div class='why'>"+arenaStatus(z)+"</div>"+arenaGen(z)+
+    "<div class='row' style='margin:6px 0'><button class='hbtn' onclick=\"openHistList('"+tab+"')\">📜 전략별 전체 매매이력 (메인 · 그림자 · 퇴출)</button><span class='sub'>표에서 전략 이름을 눌러도 됩니다</span></div>"+
     "<div class='sub'>메인: <b>"+esc(z.mainName||z.main)+"</b>"+(z.effectiveFrom?" ("+esc(z.effectiveFrom)+" 부터)":" (처음 채택)")+" · 오늘 신규 "+(z.added||[]).length+" · 퇴출 "+(z.retiredToday||[]).length+" · 지금까지 시험한 후보 "+((z.triedCount||0)+(z.rows||[]).length)+"개 · 계산 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</div>"+
     "<div class='tw'><table class='board arena'><thead><tr><th>순위</th><th style='text-align:left'>전략 · 규칙</th><th>순위 점수<div class='sub'>안정(주 평균 %) × 빈도</div></th><th>최근 1년</th><th>최근 90일</th><th>MDD</th><th>매매일/년</th><th>+1%일/년</th><th>10/1~ 구간</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+
@@ -623,6 +629,63 @@ function liveCard0(tab){
       "<div class='kpi'><div class='l'>지금 손익 (칸 전액)</div><div class='v "+cls(u.pnlPct)+"'>"+(u.pnlPct==null?"—":pct(u.pnlPct))+"</div></div>"+
       "<div class='kpi'><div class='l'>마지막 확정 세션 "+esc(ls?ls.date:"")+"</div><div class='v "+cls(ls&&ls.pnlPct)+"'>"+(ls&&ls.pnlPct!=null?pct(ls.pnlPct):"—")+"</div><div class='sub'>"+esc(ls?ls.action:"")+" · 칸 전액 기준</div></div></div></div>";}
   return head+"<div class='tw'><table class='board'><thead><tr><th>종목 · 상태</th><th style='text-align:left'>매수 → 매도</th><th>손익(순)</th></tr></thead><tbody>"+body+"</tbody></table></div></div>";
+}
+// ── 전략별 매매 이력(메인 · 그림자 · 퇴출) — 사용자 요청(2026-10-22) "모든 탭 그림자 전략 포함 모든 매매이력 기록하고 조회 가능하게 만들어" ──
+// 밤 계산(claude_lab write_history)이 전략마다 남긴 파일을 /api/claude-history 로 읽는다.
+// 매일 기록 = 날짜마다 한 번만 쓰고 덮어쓰지 않음 · 실시간 장부 = 메인이던 날 Worker 마감 장부(모의투자) · 과거 계산 = 지금 규칙으로 전 기간 다시 계산.
+var HV={data:null,page:0,year:""},HPAGE=100;
+var HSTAT={main:"메인",shadow:"그림자",retired:"퇴출"},HACT={trade:"매매",no_trade:"매매 없음",enter:"매수",hold:"보유",exit:"매도"};
+var HTAB={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL"};
+function closeHist(){var o=document.getElementById("hov");if(o)o.hidden=true;document.body.style.overflow=""}
+function histShow(html){var o=document.getElementById("hov"),b=document.getElementById("hbox");b.innerHTML="<button class='hx' onclick='closeHist()'>닫기 ✕</button>"+html;o.hidden=false;document.body.style.overflow="hidden";o.scrollTop=0}
+async function histGet(q){var r=await fetch("/api/claude-history?"+q,{headers:await authHeaders()});var j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));return j.data}
+function histLink(tab,version,label){return "<button class='hlink' onclick=\"openHist('"+esc(tab)+"','"+esc(version)+"')\">"+esc(label)+"</button>"}
+async function openHistList(tab){
+  histShow("<div class='loading'>불러오는 중…</div>");
+  try{
+    var ix=await histGet("index=1"),rows=((ix.tabs||{})[tab]||[]);
+    var tr=rows.map(function(x){return "<tr><td class='nm' style='text-align:left'>"+histLink(tab,x.version,x.name||x.version)+"<div class='sub'>"+esc(x.version)+"</div></td><td>"+esc(HSTAT[x.status]||x.status)+(x.retiredAt?"<div class='sub'>"+esc(x.retiredAt)+"</div>":"")+"</td><td>"+(x.trades==null?"—":x.trades)+"</td><td class='"+cls(x.avgPct)+"'>"+pct(x.avgPct)+"</td><td>"+(x.forwardDays||0)+"</td><td>"+(x.liveDays||0)+"</td></tr>"}).join("");
+    histShow("<h3>📜 "+esc(HTAB[tab]||tab)+" — 전략별 매매 이력</h3><div class='sub'>메인 · 그림자 · 퇴출 전략 모두. 이름을 누르면 그 전략의 매매가 보입니다. 매일 기록은 "+esc(ix.start||"")+" 부터 날짜마다 한 번만 씁니다.</div>"+
+      (rows.length?"<div class='tw'><table class='board'><thead><tr><th style='text-align:left'>전략</th><th>상태</th><th>과거 계산 매매</th><th>매매당 평균</th><th>매일 기록(일)</th><th>실시간 장부(일)</th></tr></thead><tbody>"+tr+"</tbody></table></div>"
+        :"<p class='note'>아직 기록이 없습니다 — 밤 계산 뒤 생깁니다.</p>"));
+  }catch(e){histShow("<div class='warn'>불러오기 실패: "+esc(e.message||String(e))+"</div>")}
+}
+async function openHist(tab,version){
+  histShow("<div class='loading'>불러오는 중…</div>");
+  try{HV={data:await histGet("tab="+encodeURIComponent(tab)+"&version="+encodeURIComponent(version)),page:0,year:"",tab:tab};histRender()}
+  catch(e){histShow("<div class='warn'>불러오기 실패: "+esc(e.message||String(e))+"</div>")}
+}
+// 매매 행 = [손익 날짜, 진입 시각, 진입가, 청산 시각, 청산가, 종목, 이름, 순손익 %, 사유] (밤 계산 HIST_FIELDS)
+function histTradeRow(t){return "<tr><td>"+esc(t[0])+"</td><td class='nm' style='text-align:left'><b>"+esc(t[6]||t[5]||"")+"</b><div class='sub'>"+esc(t[1]||"")+" "+won(t[2])+" → "+(t[3]?esc(t[3])+" "+won(t[4]):"보유 중")+"</div></td><td class='"+cls(t[7])+"'><b>"+pct(t[7])+"</b></td><td style='text-align:left;white-space:normal'>"+esc(t[8]||"")+"</td></tr>"}
+function histLiveTrades(list){return (list||[]).map(function(x){return esc(x.name||x.code||"")+" "+esc(x.entryTime||"")+" "+won(x.entryPrice)+(x.exitPrice!=null?" → "+esc(x.exitTime||"")+" "+won(x.exitPrice):"")+" <b class='"+cls(x.pnlPct)+"'>"+pct(x.pnlPct)+"</b>"+(x.reason?" · "+esc(x.reason):"")}).join("<br>")}
+function histPage(n){HV.page=Math.max(0,HV.page+n);histRender()}
+function histYear(y){HV.year=y;HV.page=0;histRender()}
+function histRender(){
+  var d=HV.data||{},s=d.summary||{},bt=(d.backtest||[]).slice().reverse(),fw=(d.forward||[]).slice().reverse(),lv=(d.live||[]).slice().reverse();
+  var years=[];bt.forEach(function(t){var y=String(t[0]).slice(0,4);if(years.indexOf(y)<0)years.push(y)});
+  var sel=HV.year?bt.filter(function(t){return String(t[0]).slice(0,4)===HV.year}):bt,pages=Math.max(1,Math.ceil(sel.length/HPAGE));
+  if(HV.page>=pages)HV.page=pages-1;
+  var part=sel.slice(HV.page*HPAGE,(HV.page+1)*HPAGE),done=sel.filter(function(t){return t[3]&&t[7]!=null}),pn=done.map(function(t){return +t[7]});
+  var avg=pn.length?pn.reduce(function(a,b){return a+b},0)/pn.length:null,win=pn.length?pn.filter(function(v){return v>0}).length/pn.length*100:null;
+  var params=Object.keys(d.params||{}).map(function(k){var v=d.params[k];return esc(k)+"="+esc(v==null?"없음":Array.isArray(v)?v.join("·"):v)}).join(" · ");
+  var head="<h3>"+esc(d.name||d.version||"")+" <span class='tag'>"+esc(HSTAT[d.status]||d.status||"")+"</span></h3><div class='sub'>"+esc(HTAB[d.tab]||d.tab||"")+" · "+esc(d.version||"")+
+    (d.since?" · 경쟁군 "+esc(d.since)+" 부터":"")+(d.retiredAt?" · "+esc(d.retiredAt)+" 퇴출 — "+esc(d.retireReason||""):"")+"</div>"+
+    (d.rule?"<div class='rule'>"+esc(d.rule)+"</div>":"")+(params?"<div class='sub' style='margin-top:6px'>변수: "+params+"</div>":"")+
+    "<div class='kpis'><div class='kpi'><div class='l'>과거 계산 매매"+(HV.year?" ("+esc(HV.year)+")":"")+"</div><div class='v'>"+done.length+"건</div><div class='sub'>"+esc(s.first||"")+" ~ "+esc(s.last||"")+"</div></div>"+
+    "<div class='kpi'><div class='l'>승률</div><div class='v'>"+(win==null?"—":num(win,0)+"%")+"</div></div><div class='kpi'><div class='l'>매매당 평균(순)</div><div class='v "+cls(avg)+"'>"+pct(avg)+"</div></div>"+
+    "<div class='kpi'><div class='l'>매일 기록 · 실시간 장부</div><div class='v' style='font-size:16px'>"+fw.length+"일 · "+lv.length+"일</div><div class='sub'>확정 "+esc(s.settledThrough||"—")+" 까지</div></div></div>";
+  var fwh="<div style='margin-top:12px'><b>📒 매일 기록</b> <span class='sub'>날짜마다 한 번만 쓰고 덮어쓰지 않음 · 그날 버전 · 변수 그대로</span></div>"+(fw.length?"<div class='tw'><table class='board'><thead><tr><th>날짜</th><th>판단</th><th>그날 손익</th><th style='text-align:left'>매매</th><th>기록 시각</th></tr></thead><tbody>"+
+    fw.map(function(x){return "<tr><td>"+esc(x.date)+"</td><td>"+esc(HACT[x.action]||x.action||"")+"</td><td class='"+cls(x.dayPct)+"'>"+(x.dayPct==null?"—":pct(x.dayPct))+"</td><td style='text-align:left;white-space:normal'>"+
+      ((x.trades||[]).map(function(t){return esc(t[6]||t[5]||"")+" "+won(t[2])+" → "+won(t[4])+" <b class='"+cls(t[7])+"'>"+pct(t[7])+"</b>"}).join("<br>")||"<span class='sub'>—</span>")+"</td><td class='sub'>"+esc(String(x.recordedAt||"").slice(5,16).replace("T"," "))+"</td></tr>"}).join("")+"</tbody></table></div>"
+    :"<p class='note'>아직 없음 — 확정된 날부터 밤 계산이 한 줄씩 붙입니다.</p>");
+  var lvh=lv.length?"<div style='margin-top:12px'><b>🧾 실시간 마감 장부</b> <span class='sub'>이 전략이 메인이던 날 · Worker 하루 마감 장부(모의투자 체결) 원본</span></div><div class='tw'><table class='board'><thead><tr><th>날짜</th><th style='text-align:left'>매매(전략 손익)</th><th style='text-align:left'>측정용 · 미청산</th><th style='text-align:left'>메모</th></tr></thead><tbody>"+
+    lv.map(function(x){return "<tr><td>"+esc(x.date)+"</td><td style='text-align:left;white-space:normal'>"+(histLiveTrades(x.trades)||"<span class='sub'>매매 없음</span>")+"</td><td style='text-align:left;white-space:normal'>"+histLiveTrades((x.measure||[]).concat(x.open||[]))+"</td><td style='text-align:left;white-space:normal' class='sub'>"+esc(x.note||"")+"</td></tr>"}).join("")+"</tbody></table></div>":"";
+  var yb="<div class='row' style='margin-top:6px'><button class='hbtn' onclick=\"histYear('')\""+(HV.year?"":" disabled")+">전체</button>"+years.map(function(y){return "<button class='hbtn' onclick=\"histYear('"+y+"')\""+(HV.year===y?" disabled":"")+">"+y+"</button>"}).join("")+"</div>";
+  var btH="<div style='margin-top:12px'><b>🧮 과거 계산</b> <span class='sub'>지금 규칙 · 지금 자료로 전 기간 다시 계산(경쟁 점수와 같은 함수 · 같은 비용) — 밤마다 바뀔 수 있음 · 최근 순</span></div>"+yb+
+    (part.length?"<div class='tw'><table class='board'><thead><tr><th>손익 날짜</th><th style='text-align:left'>종목 · 진입 → 청산</th><th>순손익</th><th style='text-align:left'>사유</th></tr></thead><tbody>"+part.map(histTradeRow).join("")+"</tbody></table></div>"
+      +"<div class='row' style='margin-top:8px'><button class='hbtn' onclick='histPage(-1)'"+(HV.page?"":" disabled")+">◀ 최근</button><span class='sub'>"+(HV.page+1)+" / "+pages+" 쪽 · "+sel.length+"건</span><button class='hbtn' onclick='histPage(1)'"+(HV.page+1<pages?"":" disabled")+">이전 ▶</button></div>"
+      :"<p class='note'>매매 없음</p>");
+  histShow(head+fwh+lvh+btH+"<p class='note'><button class='hlink' onclick=\"openHistList('"+esc(HV.tab||d.tab||"")+"')\">← 이 탭 전략 목록</button></p>");
 }
 async function load(){
   var body=document.getElementById("body");

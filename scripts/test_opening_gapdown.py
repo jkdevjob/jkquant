@@ -1060,6 +1060,141 @@ class ArenaScoreTest(unittest.TestCase):
         self.assertEqual(set(lab.op_weights("soxl", {}, 0)), {"explore"})            # 기준 통과 전략이 없으면 탐색만
 
 
+class HistoryTest(unittest.TestCase):
+    """매매 이력(사용자 2026-10-22 '그림자 포함 모든 매매이력 기록 · 조회'): 매매 행이 경쟁 점수와 같은 시계열에서 나오고,
+    매일 기록은 날짜마다 한 번만(덮어쓰지 않음) · 퇴출되면 멈추고 · 실시간 장부는 적힌 버전의 전략에만 붙는다."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.old = (lab.DATA, lab.HISTORY, lab.HISTORY_START, dict(lab.ETF_BARS), list(lab.MAIN_EVENTS))
+        lab.DATA = Path(self.tmp.name)
+        lab.HISTORY = lab.DATA / "claude-lab" / "history"
+        lab.MAIN_EVENTS[:] = []
+
+    def tearDown(self):
+        lab.DATA, lab.HISTORY, lab.HISTORY_START = self.old[0], self.old[1], self.old[2]
+        lab.ETF_BARS.clear()
+        lab.ETF_BARS.update(self.old[3])
+        lab.MAIN_EVENTS[:] = self.old[4]
+        self.tmp.cleanup()
+
+    def csv(self, rel, rows):
+        f = lab.DATA / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        lab.write_csv(f, rows)
+
+    def etf(self, closes, opens=None, code="122630"):
+        ds = days(len(closes), "2026-10-12")
+        lab.ETF_BARS[code] = [(d, (opens or closes)[i], c) for i, (d, c) in enumerate(zip(ds, closes))]
+        return ds
+
+    def test_opening_rows_are_the_scored_picks(self):
+        self.csv("opening-gapdown-research/decisions.csv", [dict(date="2026-10-13", rsiPassed=6), dict(date="2026-10-14", rsiPassed=2)])
+        sig = lambda d, code, gap, pnl: dict(date=d, code=code, name="N" + code, gapPct=gap, entryPrice=100, exitPrice=100 + pnl, pnl=pnl)
+        self.csv("opening-gapdown-research/signals.csv", [sig("2026-10-13", "A", -2.5, 1.0), sig("2026-10-13", "B", -6.0, -3.0), sig("2026-10-13", "C", -4.0, 5.0),
+                                                          sig("2026-10-14", "D", -9.0, 9.0)])
+        p = dict(minQ=5, topK=2, gapMax=-3.0)
+        rows, dv, cal, acts = lab.strategy_trades("opening", p, {})
+        self.assertEqual([r[5] for r in rows], ["B", "C"])                          # 깊은 갭 · −3% 이하 2종목, 통과 2<5 인 날은 없음
+        self.assertAlmostEqual(dv["2026-10-13"], 1.0)                               # (−3 + 5) / 2
+        self.assertEqual(dv, lab.d1_series(p)[0])                                   # 경쟁 점수와 같은 값
+        self.assertEqual(acts, {"2026-10-13": "trade", "2026-10-14": "no_trade"})
+        self.assertEqual(rows[0][1], "2026-10-13 09:00")
+        self.assertEqual(rows[0][3], "2026-10-13 15:30")
+
+    def test_etf_rows_match_series_and_overnight_dates(self):
+        ds = self.etf([100.0, 96.0, 97.0, 90.0, 92.0], opens=[100.0, 99.0, 98.5, 95.0, 93.0])
+        p = dict(code="122630", th=-3.0)
+        rows, dv, cal, acts = lab.strategy_trades("daytrading", p, {"kr_cal": ds})
+        self.assertEqual(dv, lab.etf_variant("122630", -3.0)[0])
+        self.assertEqual([r[0] for r in rows], [ds[2], ds[4]])                      # −4% 날 종가 매수 → 다음 날 시가 매도
+        self.assertEqual(rows[0][1], ds[1] + " 15:30")
+        self.assertEqual(rows[0][2], 96.0)
+        self.assertEqual(rows[0][4], 98.5)
+        self.assertAlmostEqual(rows[0][7], round((98.5 / 96 - 1) * 100 - (0.03 + 2 * 1 / 96 * 100), 4))
+        self.assertEqual(acts[ds[1]], "no_trade")
+
+    def test_soxl_trade_compounds_daily_values_and_open_position(self):
+        d0 = lab.date.fromisoformat("2026-01-01")
+        closes = [100.0] * 5 + [90.0, 80.0, 70.0, 75.0, 80.0, 85.0, 70.0, 60.0]
+        srows = [((d0 + lab.timedelta(days=i)).isoformat(), c, c, c, c) for i, c in enumerate(closes)]
+        p = dict(lab.MAIN_DEFAULT["soxl"]["params"], rsiMax=20.0, ma=0)
+        rows, dv, cal, acts = lab.strategy_trades("soxl", p, {"soxl": srows})
+        _, full, dec, _ = lab.soxl_series(p, srows)
+        done = [r for r in rows if r[3]]
+        self.assertTrue(done)
+        r0 = done[0]
+        span = [d for d in cal if r0[1][:10] <= d <= r0[0]]
+        eq = 1.0
+        for d in span:
+            eq *= 1 + full.get(d, 0.0) / 100
+        self.assertAlmostEqual(r0[7], round((eq - 1) * 100, 4))                     # 매매 손익 = 그 사이 일 손익 복리
+        self.assertEqual(acts[r0[0]], "exit")
+        if rows[-1][3] is None:
+            self.assertEqual(rows[-1][8], "보유 중")
+
+    def test_forward_is_append_only_and_stops_at_retirement(self):
+        lab.HISTORY_START = "2026-10-13"
+        ds = self.etf([100.0, 96.0, 97.0, 90.0, 92.0, 92.0], opens=[100.0, 99.0, 98.5, 95.0, 93.0, 92.0])
+        info = dict(version="v1", name="n", params=dict(code="122630", th=-3.0), status="shadow", since="2026-10-12")
+        a = lab.history_entry("daytrading", info, {"kr_cal": ds}, None, "2026-10-20T19:00")
+        self.assertEqual([x["date"] for x in a["forward"]], ds[1:])                 # HISTORY_START 부터 · 확정된 날까지
+        first = {x["date"]: x for x in a["forward"]}
+        self.assertEqual(first[ds[2]]["action"], "trade")
+        self.assertEqual(len(first[ds[2]]["trades"]), 1)
+        self.assertEqual(first[ds[1]]["action"], "no_trade")
+        # 자료가 바뀌어(다시 계산) 과거 계산 값이 달라져도 이미 쓴 날은 그대로, 새 날만 붙는다
+        ds2 = self.etf([100.0, 96.0, 99.0, 90.0, 92.0, 92.0, 80.0, 85.0], opens=[100.0, 99.0, 50.0, 95.0, 93.0, 92.0, 91.0, 84.0])
+        b = lab.history_entry("daytrading", info, {"kr_cal": ds2}, a, "2026-10-21T19:00")
+        self.assertEqual(b["forward"][:len(a["forward"])], a["forward"])
+        self.assertEqual([x["date"] for x in b["forward"]], ds2[1:])
+        self.assertNotEqual(b["backtest"], a["backtest"])                           # 과거 계산은 다시 계산된 값
+        self.assertEqual(b["forward"][-1]["recordedAt"], "2026-10-21T19:00")
+        # 퇴출된 날부터는 쓰지 않는다
+        c = lab.history_entry("daytrading", dict(info, status="retired", retiredAt=ds2[6]), {"kr_cal": ds2}, a, "2026-10-22T19:00")
+        self.assertEqual(max(x["date"] for x in c["forward"]), ds2[5])
+        # HISTORY_START 전 날짜는 매일 기록에 없다(재구성으로 채우지 않는다)
+        lab.HISTORY_START = ds2[4]
+        d = lab.history_entry("daytrading", info, {"kr_cal": ds2}, None, "2026-10-22T19:00")
+        self.assertEqual(min(x["date"] for x in d["forward"]), ds2[4])
+
+    def test_live_ledger_goes_to_recorded_version(self):
+        ds = self.etf([100.0, 96.0, 97.0])
+        live = {"2026-10-13": dict(strategyVersion="etf_dip_overnight_v1", trades=[dict(name="x", pnlPct=1.0)]),
+                "2026-10-14": dict(strategyVersion="other", trades=[]), "2026-10-15": dict(trades=[])}
+        info = dict(version="etf_dip_overnight_v1", name="n", params=dict(code="122630", th=-3.0), status="main", since=None)
+        h = lab.history_entry("daytrading", info, {"kr_cal": ds}, None, "t", live)
+        self.assertEqual([x["date"] for x in h["live"]], ["2026-10-13", "2026-10-15"])   # 버전이 적힌 날은 그 버전, 없으면 그날 메인(기본)
+        h2 = lab.history_entry("daytrading", info, {"kr_cal": ds}, h, "t2", dict(live, **{"2026-10-13": dict(strategyVersion="etf_dip_overnight_v1", trades=[])}))
+        self.assertEqual(h2["live"][0]["trades"], [dict(name="x", pnlPct=1.0)])          # 실시간 장부도 날짜마다 한 번만
+
+    def test_write_if_changed_ignores_updated_at(self):
+        f = lab.DATA / "h.json"
+        self.assertTrue(lab.write_if_changed(f, dict(a=1), "t1"))
+        self.assertFalse(lab.write_if_changed(f, dict(a=1), "t2"))                 # 내용 같으면 다시 쓰지 않는다
+        self.assertEqual(json.loads(f.read_text())["updatedAt"], "t1")
+        self.assertTrue(lab.write_if_changed(f, dict(a=2), "t3"))
+
+    def test_write_history_index_and_retired_frozen(self):
+        lab.HISTORY_START = "2026-10-13"
+        ds = self.etf([100.0, 96.0, 97.0, 90.0, 92.0])
+        main = dict(version="g_etf_th2", name="main", rule="r", params=dict(code="122630", th=-2.0), addedAt="2026-10-12", isMain=True)
+        sh = dict(version="g_etf_th3", name="sh", rule="r", params=dict(code="122630", th=-3.0), addedAt="2026-10-12", isMain=False)
+        out = {"daytrading": dict(rows=[main, sh])}
+        st = {"tabs": {"daytrading": dict(retired=[dict(version="old_x", name="old", params=dict(code="122630", th=-5.0), retiredAt="2026-10-01", reason="r"),
+                                                    dict(version="../bad", name="bad", params=dict(code="122630", th=-5.0), retiredAt="2026-10-01")])}}
+        r = lab.write_history(out, st, {"kr_cal": ds}, now="t1", tabs=("daytrading",))
+        self.assertEqual(r["errors"], [])
+        idx = json.loads((lab.HISTORY / "index.json").read_text())
+        self.assertEqual([(x["version"], x["status"]) for x in idx["tabs"]["daytrading"]], [("g_etf_th2", "main"), ("g_etf_th3", "shadow"), ("old_x", "retired")])
+        self.assertFalse((lab.HISTORY / "daytrading" / "..").joinpath("bad.json").exists())   # 경로 문자 버전은 쓰지 않는다
+        old = json.loads((lab.HISTORY / "daytrading" / "old_x.json").read_text())
+        self.assertEqual(old["forward"], [])                                         # 2026-10-01 퇴출 — 매일 기록 없음
+        self.etf([100.0, 90.0, 80.0, 70.0, 60.0])                                    # 자료가 바뀌어도
+        lab.write_history(out, st, {"kr_cal": ds}, now="t2", tabs=("daytrading",))
+        self.assertEqual(json.loads((lab.HISTORY / "daytrading" / "old_x.json").read_text())["backtest"], old["backtest"])   # 퇴출 전략은 다시 계산 안 함
+
+
 class UsRowsTest(unittest.TestCase):
     def test_blank_close_dropped(self):
         nan = float("nan")
