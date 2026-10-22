@@ -572,12 +572,14 @@ def main():
                 key=tuple(str(row.get(k) or "") for k in ("variant","date","code","entryTime"))
                 archived[key]=row
     with (OUT/"variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
-        columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source"]
+        columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source","strategyParams"]
         w=csv.DictWriter(f,fieldnames=columns);w.writeheader()
+        params_by_name={p.name:asdict(p) for p in VARIANTS}
         for variant,trs in sorted(trade_map.items()):
             for t in trs:
                 row={k:v for k,v in {**t,"variant":variant,"source":"research-reconstructed"}.items() if k in columns}
                 key=tuple(str(row.get(k) or "") for k in ("variant","date","code","entryTime"))
+                row["strategyParams"]=json.dumps(params_by_name.get(variant),ensure_ascii=False)
                 archived.setdefault(key,row)
 
         for key in sorted(archived):

@@ -5,7 +5,7 @@
 // 실제 주문은 하지 않는다. 사용자 요청(2026-10-13): 후보 신호는 텔레그램으로 보내지 않는다 — 모든 연구 메뉴는 실제 매수 · 매도 때만 알린다
 // (연구(지피티) 데이트레이딩의 모의 매수 · 매도는 daytrading-scheduler → /api/scalping-alert 가 '[지피티 연구 데이트레이딩]' 으로 보낸다).
 
-import { minuteVolume, daySignal, DAY_SHADOW_VARIANTS, dayVariant } from "./_daytrading.js";
+import { minuteVolume, daySignal, DAY_BASE_PARAMS, DAY_SHADOW_VARIANTS, dayVariant } from "./_daytrading.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 
@@ -38,7 +38,7 @@ async function generatedDayVariants(){
   }catch(e){return [];}
 }
 function emptyShadow(variants){
-  return Object.fromEntries((variants||[]).map(v=>[v.name,{name:v.name,label:v.label,params:v.params,signals:[]}]));
+  return Object.fromEntries((variants||[]).map(v=>[v.name,{name:v.name,label:v.label,params:{...DAY_BASE_PARAMS,...v.params},signals:[]}]));
 }
 function mainVariantDef(name){
   const n=String(name||"baseline");
@@ -56,7 +56,7 @@ function validTarget(now,requested){
 async function scanShard(origin,now,snap,shard,shards,targetHm,mainVariant="baseline"){
   const universe=(snap.universe||[]).filter((_,i)=>i%shards===shard);
   const generated=await generatedDayVariants();
-  const shadowVariants=[...DAY_SHADOW_VARIANTS,...generated.filter(v=>!DAY_SHADOW_VARIANTS.some(s=>s.name===v.name))];
+  const shadowVariants=[{name:"baseline",label:"기준전략",params:{}},...DAY_SHADOW_VARIANTS,...generated.filter(v=>!DAY_SHADOW_VARIANTS.some(s=>s.name===v.name))];
   const signals=[],shadow=emptyShadow(shadowVariants),errors=[];let idx=0;
   const mainDef=mainVariantDef(mainVariant);
   async function worker(){
@@ -67,7 +67,7 @@ async function scanShard(origin,now,snap,shard,shards,targetHm,mainVariant="base
         if(!mj.minutes||!mj.minutes.length)continue;
         const rows=minuteVolume(mj.minutes).filter(x=>String(x.t||"").slice(0,10)===now.date);
         const base=daySignal(rows,targetHm,{snapshotHm:+snap.snapshotHm||1000,...mainDef.params});
-        if(base)signals.push({code:u.code,name:u.name||u.code,rank:+u.rank||0,mainVariant:mainDef.name,strategyParams:mainDef.params,...base});
+        if(base)signals.push({code:u.code,name:u.name||u.code,rank:+u.rank||0,mainVariant:mainDef.name,strategyParams:{...DAY_BASE_PARAMS,...mainDef.params},...base});
         for(const v of shadowVariants){
           const s=daySignal(rows,targetHm,{snapshotHm:+snap.snapshotHm||1000,...v.params});
           if(s)shadow[v.name].signals.push({code:u.code,name:u.name||u.code,rank:+u.rank||0,...s});

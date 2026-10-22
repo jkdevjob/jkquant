@@ -184,6 +184,16 @@ export class OpeningSignalStore extends DurableObject {
       await this.ctx.storage.put("strategyConfig",config);
       return json({ok:true,config});
     }
+    if(u.pathname==="/history-index"){
+      const b=request.method==="POST"?await request.json():null;
+      const dates=await this.ctx.storage.get("historyDates")||[];
+      if(b){
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(String(b.date||"")))return json({ok:false,error:"invalid date"},400);
+        const next=[...new Set([...dates,b.date])].sort();await this.ctx.storage.put("historyDates",next);
+        return json({ok:true,dates:next});
+      }
+      return json({ok:true,dates});
+    }
     if(request.method==="GET"&&u.pathname==="/ledger"){
       const ledger=await this.ctx.storage.get("ledger");
       return json({ok:true,ledger:ledger||null});
@@ -260,6 +270,11 @@ async function appendLedger(env,payload,kind=""){
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("signal store HTTP "+r.status));
+  if(/^\d{4}-\d{2}-\d{2}$/.test(String(payload.date))){
+    const index=await store(env,"__history_index__",kind).fetch("https://opening-signal.internal/history-index",{
+      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({date:payload.date})});
+    if(!index.ok)throw new Error("signal history index unavailable");
+  }
   return j;
 }
 async function readLedger(env,date,kind=""){
@@ -267,6 +282,21 @@ async function readLedger(env,date,kind=""){
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("signal store HTTP "+r.status));
   return j.ledger||null;
+}
+async function readEventHistory(env,kind,from,to,limit=3650){
+  const r=await store(env,"__history_index__",kind).fetch("https://opening-signal.internal/history-index");
+  const j=await r.json();if(!r.ok||!j.ok)throw new Error("history index unavailable");
+  // Older immutable ledgers predate the index. Probe a bounded window as well;
+  // the nightly archive supplies the full preceding evidence without date guessing.
+  const recent=[];let d=new Date(to+"T12:00:00Z");
+  for(let i=0;i<31;i++){const date=d.toISOString().slice(0,10);if(date<from)break;recent.push(date);d.setUTCDate(d.getUTCDate()-1);}
+  const dates=[...new Set([...(j.dates||[]),...recent])].filter(d=>d>=from&&d<=to).sort().reverse().slice(0,limit);
+  const ledgers=[],sourceWarnings=[];
+  for(let i=0;i<dates.length;i+=6){
+    const batch=await Promise.allSettled(dates.slice(i,i+6).map(d=>readLedger(env,d,kind)));
+    batch.forEach((x,k)=>{if(x.status==="fulfilled"){if(x.value)ledgers.push(x.value);}else sourceWarnings.push(dates[i+k]+": "+String(x.reason?.message||x.reason));});
+  }
+  return {dates,ledgers,sourceWarnings};
 }
 
 async function scanOne(env,shard,target,mainVariant){
@@ -584,7 +614,7 @@ function closingEvent(date,kind,variant,code,stage,price=null,meta={}){
     name:meta.name||code,stage,targetHm:meta.targetHm||null,
     createdAt:new Date().toISOString(),price:price??null,
     source:meta.source||"paper-only",pnl:meta.pnl??null,
-    signal:meta.signal||null,decisionVersion:"closing30_v1",
+    signal:meta.signal||null,strategyParams:meta.strategyParams||null,priceAt:meta.priceAt||null,decisionVersion:"closing30_v1",
     orderStatus:"paper_only_no_broker_order",state:stage==="signal"?"candidate":"paper_filled"};
 }
 async function closingApi(env,params){
@@ -629,7 +659,7 @@ async function runClosing30(route,controller,env){
     const kind=route==="closing_day_signal"?"day":"overnight";
     const j=await closingApi(env,{op:"scan",kind,date:today});
     const events=(j.signals||[]).map(x=>closingEvent(today,kind,x.variant,x.code,"signal",null,{
-      name:x.name,source:"15시 완성봉 관측",targetHm:hm,signal:x.signal}));
+      name:x.name,source:"15시 완성봉 관측",targetHm:hm,signal:x.signal,strategyParams:x.strategyParams}));
     const receipt=await appendLedger(env,{date:today,mainVariant:"baseline",scanId:"closing:"+today+":"+route,
       scheduledTime:scheduled,capturedAt:new Date(now).toISOString(),targetHm:hm,
       partial:!!j.partial,failed:j.errors||[],okShards:1,quoteErrors:j.errors?.length||0,events},"closing30");
@@ -661,7 +691,7 @@ async function runClosing30(route,controller,env){
         pnl=(q.price/bought.price-1)*100-.23; // 보수적인 왕복 비용 0.23% 연구가정
       }
       return [closingEvent(prior,kind,x.variant,x.code,destStage,q.price,{
-        name:x.name,source:q.source,targetHm:hm,pnl,signal:x.signal||null})];
+        name:x.name,source:q.source,targetHm:hm,pnl,signal:x.signal||null,strategyParams:x.strategyParams,priceAt:q.priceAt})];
     });
     if(!events.length){console.warn(JSON.stringify({type:"closing30_fill_unavailable",route,kind,date:prior,missing:quotes.missing}));continue;}
     // 09:06 경과 후 이전 거래일 장부에 다음날 시가 청산 결과를 소급 첨부하되 주문은 소급하지 않는다.
@@ -998,6 +1028,13 @@ export default {
   },
   async fetch(request,env){
     const u=new URL(request.url);
+    if(u.pathname==="/event-history"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const kind=u.searchParams.get("kind")||"opening",from=u.searchParams.get("from")||"2000-01-01",to=u.searchParams.get("to")||kstParts().date;
+      if(!["opening","closing30"].includes(kind)||!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to)return json({ok:false,error:"invalid history query"},400);
+      try{return json({ok:true,...await readEventHistory(env,kind==="opening"?"":kind,from,to,Math.max(1,Math.min(3650,+u.searchParams.get("limit")||3650)))});}
+      catch(e){return json({ok:false,error:String(e.message||e)},502);}
+    }
     if(u.pathname==="/closing-ledger"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const date=u.searchParams.get("date")||kstParts().date;

@@ -81,7 +81,8 @@ export async function onRequestGet({request,env}){
     // 15:30 종가 단일가 확정 후 15:40만 사용. 장중에는 절대로 종가를 입력에 쓰지 않는다.
     price=day.close;source="15:30 종가 단일가 (15:40 이후)";
    }
-   return price>0?{code,price,source}:null;
+   const priceHm=stage==="day_entry"?"15:06":stage==="overnight_exit"?"09:00":"15:30";
+   return price>0?{code,price,source,priceAt:date+"T"+priceHm+":00+09:00"}:null;
   });
   return respond({ok:true,date,stage,prices:output,errors,missing:codes.length-output.length});
  }

@@ -21,6 +21,18 @@ KEY=os.environ.get("KEY") or os.environ.get("AUTOTRADE_KEY") or ""
 WORKER=(os.environ.get("CLOSING_WORKER_URL") or "https://jkquant-opening-scheduler.mumae4.workers.dev").rstrip("/")
 FEE=.23
 
+def needs_refresh(path, recent=False):
+    if recent or not path.is_file():return True
+    try:
+        # A long holiday can keep an overnight record open beyond five days.
+        return any(x['kind']=='overnight' and x['state']=='open' for x in flatten(json.loads(path.read_text(encoding='utf-8'))))
+    except Exception:return True
+
+def leader_streak(prior, leader, research_date):
+    if not leader:return 0
+    if prior.get('leader')!=leader:return 1
+    return int(prior.get('leaderStreak') or 0)+(prior.get('date')!=research_date)
+
 def download(date):
     if not KEY:
         return date,None,"research monitor key not configured"
@@ -90,7 +102,7 @@ def main():
     RAW.mkdir(parents=True,exist_ok=True);OUT.mkdir(parents=True,exist_ok=True)
     errors=[];received=0
     # Refresh last 5 days (late overnight fills) plus any day whose immutable copy is absent.
-    wanted=[d for d in days if d>=days[4] or not (RAW/(d+".json")).exists()]
+    wanted=[d for d in days if needs_refresh(RAW/(d+".json"),d>=days[4])]
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
         for date,ledger,error in pool.map(download,wanted):
             if error:errors.append({"date":date,"error":error});continue
@@ -130,8 +142,9 @@ def main():
           key=lambda v:v["summary"]["avgPnl"],default=None)
         prior=previous.get(kind) or {}
         leader=(best or {}).get("name")
-        streak=(int(prior.get("leaderStreak") or 0)+1) if leader and prior.get("leader")==leader and prior.get("date")!=now.date().isoformat() else (1 if leader else 0)
-        winners[kind]={"date":now.date().isoformat(),"leader":leader,"leaderStreak":streak,
+        research_date=max((x['date'] for x in all_rows if x['kind']==kind and x['state']=='closed'),default=now.date().isoformat())
+        streak=leader_streak(prior,leader,research_date)
+        winners[kind]={"date":research_date,"leader":leader,"leaderStreak":streak,
           "reviewReady":bool(best and streak>=7),
           "activeMain":"baseline", # live change requires separate protected promotion path
           "reason":"7 연속 연구세션 1위 및 OOS 위험조건 필요"}
