@@ -127,6 +127,7 @@ function modeList(env) {
   }
   return out;
 }
+export function researchVtsConnections(env){return Object.fromEntries(modeList(env).filter(x=>x.env==='vts').map(x=>[x.market,{ready:x.ready,missing:x.missing}]));}
 function configured(env) { return !!(env.KIS_APPKEY && env.KIS_APPSECRET && env.KIS_ACCOUNT); }
 function acct(env) {
   const a = String(env.KIS_ACCOUNT || "").replace(/\s/g, "");
@@ -246,6 +247,25 @@ async function hashkey(env, body) {
   });
   const j = await r.json().catch(() => ({}));
   return j.HASH || "";
+}
+
+// Research relay only: cancel the outstanding quantity of an owned SOXL VTS order.
+// Official KIS overseas order-rvsecncl, VTTT1004U. Never retries an ambiguous POST.
+export async function cancelSoxlVts(environment,order){
+  const env=withEnv(environment,'vts','us');
+  if(order.code!=='SOXL'||!/^\d+$/.test(String(order.orderNo))||!Number.isSafeInteger(order.qty)||order.qty<=0||!['NASD','NYSE','AMEX'].includes(order.market))return json({notSubmitted:true,error:'invalid research cancellation'},400);
+  if(!configured(env))return json({notSubmitted:true,error:'해외 모의투자 키 없음'},400);
+  const a=acct(env);if(!a)return json({notSubmitted:true,error:'모의계좌 형식 오류'},400);
+  const body={CANO:a.cano,ACNT_PRDT_CD:a.prod,OVRS_EXCG_CD:order.market,PDNO:'SOXL',ORGN_ODNO:String(order.orderNo),
+    RVSE_CNCL_DVSN_CD:'02',ORD_QTY:String(order.qty),OVRS_ORD_UNPR:'0',MGCO_APTM_ODNO:'',ORD_SVR_DVSN_CD:'0'};
+  try{
+    const token=await getToken(env),hk=await hashkey(env,body);
+    const r=await fetch(base(env)+'/uapi/overseas-stock/v1/trading/order-rvsecncl',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token,
+      appkey:env.KIS_APPKEY,appsecret:env.KIS_APPSECRET,tr_id:'VTTT1004U',custtype:'P',hashkey:hk},body:JSON.stringify(body)});
+    const raw=await r.json();if(TOKEN_BAD(raw))await dropToken(token);
+    const ok=String(raw.rt_cd)==='0';return json({ok,env:'vts',code:'SOXL',originalOrderNo:order.orderNo,
+      orderNo:raw.output?.ODNO||raw.output?.odno||'',msg:raw.msg1||'',raw},ok?200:502);
+  }catch(e){return json({error:'취소 결과 미확인: '+String(e.message||e)},502);}
 }
 
 // ── 사이트 소유자 판정 ──
@@ -905,7 +925,8 @@ export async function onRequestPost({ request, env }) {
     const trU = side === "buy" ? (real ? "TTTT1002U" : "VTTT1002U") : (real ? "TTTT1006U" : "VTTT1001U");
     const send = async (dvsn) => {
       const ordU = { CANO: a.cano, ACNT_PRDT_CD: a.prod, OVRS_EXCG_CD: mkt, PDNO: code,
-        ORD_QTY: String(qty), OVRS_ORD_UNPR: price.toFixed(2), ORD_SVR_DVSN_CD: "0", ORD_DVSN: dvsn };
+        ORD_QTY: String(qty), OVRS_ORD_UNPR: price.toFixed(2), ORD_SVR_DVSN_CD: "0", ORD_DVSN: dvsn,
+        SLL_TYPE: side==='sell'?'00':'', MGCO_APTM_ODNO:'' };
       const token = await getToken(env);
       const hk = await hashkey(env, ordU);
       const r = await fetch(base(env) + "/uapi/overseas-stock/v1/trading/order", {

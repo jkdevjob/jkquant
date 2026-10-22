@@ -2,7 +2,7 @@
 let TRADE_HISTORY_CONTROLLER=null,TRADE_HISTORY_REQUEST=0;
 const TRADE_HISTORY_LABELS={opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL',closing30:'종가 30분',closing_bet:'개별 종목 종가 베팅',tenbagger:'텐배거 연구'};
 const TRADE_STATE_LABELS={signal:'신호 기록',pending:'진입 대기',open:'보유',closed:'청산',unverified:'체결/청산 확인 필요'};
-const TRADE_ORIGIN_LABELS={'server-paper':'서버 모의장부','server-signal':'당시 신호 원본','research-import':'과거 연구 DB 이관','research-reconstructed':'사후 연구 재구성','forward-research':'순방향 연구'};
+const TRADE_ORIGIN_LABELS={'server-paper':'서버 모의장부','server-signal':'당시 신호 원본','server-broker':'한투 모의주문 원장','research-import':'과거 연구 DB 이관','research-reconstructed':'사후 연구 재구성','forward-research':'순방향 연구'};
 function tradeHistoryQuery(page=1){
   const q=new URLSearchParams({page:String(page),pageSize:'50'});
   for(const name of ['strategy','variant','from','to','symbol','status','origin']){
@@ -30,8 +30,10 @@ function tradeHistoryRow(x){
   const e=esc,role=({main:'메인',shadow:'그림자',research:'연구'})[x.role]||'연구';
   const price=v=>histPrice(x.strategy==='soxl'?'soxl':'opening',v);
   const fields={strategyVersion:x.strategyVersion||'원본 미기록',strategyParams:x.strategyParams||'원본 미기록',recordedAt:x.recordedAt,evidence:x.evidence,events:x.events,broker:x.broker};
-  const brokerLabels={accepted:'접수 · 체결 미확인',rejected:'주문 거절',not_submitted:'주문 안 함',unverified:'결과 미확인',unrecorded:'결과 원본 없음'};
-  const broker=x.broker?'매수 '+e(brokerLabels[x.broker.buy]||x.broker.buy)+'<br>매도 '+e(brokerLabels[x.broker.sell]||x.broker.sell)+'<div class="sub">한투 체결정산 미확인 · 조건·근거에서 주문별 사유 조회</div>':'<span class="sub">연구용 모의기록</span>';
+  const brokerLabels={accepted:'접수 · 체결 미확인',filled:'체결 확인',partial:'부분체결',canceled:'미체결 잔량 취소',rejected:'주문 거절',not_submitted:'주문 안 함',unverified:'결과 미확인',unrecorded:'결과 원본 없음'};
+  const broker=x.broker?'매수 '+e(brokerLabels[x.broker.buy]||x.broker.buy)+'<br>매도 '+e(brokerLabels[x.broker.sell]||x.broker.sell)+
+    (x.broker.heldQty==null?'':'<div class="sub">매수체결 '+e(x.broker.filledBuyQty)+'주 · 매도체결 '+e(x.broker.filledSellQty)+'주 · 보유 '+e(x.broker.heldQty)+'주</div>')+
+    '<div class="sub">'+(x.broker.settlement==='fills_confirmed_fees_unknown'?'왕복 체결 확인 · 세금/수수료 정산 미확인':'한투 체결정산 미확인')+' · 조건·근거에서 주문별 사유 조회</div>':'<span class="sub">연구용 모의기록</span>';
   return '<tr><td>'+e(x.date)+'</td><td>'+e(TRADE_HISTORY_LABELS[x.strategy]||x.strategy)+'<div class="sub">'+e(role+' · '+x.variant)+'</div></td>'+
     '<td><b>'+e(x.name||x.code)+'</b><div class="sub">'+e(x.code)+'</div></td><td>'+e(TRADE_STATE_LABELS[x.status]||x.status)+'</td>'+
     '<td>'+e(tradeHistoryTime(x.signalTime,x.timezone))+'</td><td>'+e(tradeHistoryTime(x.entryTime,x.timezone))+'<div class="sub">'+e(price(x.entryPrice))+'</div></td>'+

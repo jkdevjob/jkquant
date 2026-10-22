@@ -2,7 +2,7 @@ import fs from "node:fs";
 
 let src=fs.readFileSync("worker/global-intraday-scheduler/src/index.js","utf8");
 globalThis.DurableObject=class {};
-src=src.replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;');
+src=src.replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;').replaceAll('../../../functions/api/',new URL('../functions/api/',import.meta.url).href);
 const mod=await import("data:text/javascript;base64,"+Buffer.from(src).toString("base64"));
 const {btcTrade,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION}=mod;
 

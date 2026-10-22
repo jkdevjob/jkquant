@@ -11377,11 +11377,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
       const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
       const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
     const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
-    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:00(⑤)·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
+    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:00(⑤)·15:21·15:23 연구 주문·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
        crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_c30===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
        &&count.claude_kr===5&&count.duel===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
-       &&count.closing_day_signal===5&&count.closing_day_entry===5&&count.closing_overnight_signal===5    // 지피티 종가 30분 · 종가 베팅(종이 장부) 15:06 · 15:07 · 15:22
-       &&Object.keys(count).length===12&&r0==='gapdown_preopen'&&r1===null
+       &&count.closing_day_signal===5&&count.closing_day_entry===5&&count.closing_overnight_signal===5&&count.research_close===5    // 연구 장부 15:06/15:07/15:22 · 한투 모의 15:23
+       &&Object.keys(count).length===13&&r0==='gapdown_preopen'&&r1===null
        &&route(Date.parse('2026-10-05T06:00:00Z'))==='gapdown_c30'&&route(Date.parse('2026-10-04T06:00:00Z'))===null      // 월 15:00 KST ⑤ / 일요일 없음
        &&route(Date.parse('2026-10-05T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-05T21:05:00Z'))===null      // 여름(EDT) 05:05 KST
        &&route(Date.parse('2026-12-07T21:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-12-07T20:05:00Z'))===null      // 겨울(EST) 06:05 KST

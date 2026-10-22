@@ -18,7 +18,7 @@ main{padding:22px 0 70px}.hero{margin-bottom:14px}.hero h2{font-size:23px;margin
 .alert-list{display:grid;gap:10px;margin-top:12px}.alert-item{border:1px solid var(--border);background:var(--surf2);border-radius:11px;padding:14px}.alert-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.alert-name{font-size:14px;font-weight:900}.alert-desc{font-size:10px;color:var(--dim);margin-top:4px;line-height:1.55}.badge{display:inline-block;padding:3px 8px;border-radius:999px;font-size:9px;font-weight:900;background:#2b3151;color:var(--dim);white-space:nowrap}.badge.on{color:var(--green);background:rgba(54,211,153,.1);border:1px solid rgba(54,211,153,.25)}
 .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}.actions button{border:1px solid var(--border2);background:#353765;color:#fff;border-radius:8px;padding:8px 11px;font-size:11px;font-weight:900}.actions button.secondary{background:transparent;color:var(--dim)}.actions button:disabled{opacity:.45}
 .help{font-size:10px;color:var(--dim);line-height:1.55;margin-top:10px;padding-top:9px;border-top:1px solid var(--border)}.server{margin-top:10px;font-size:9px;color:var(--faint)}
-.paper-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}.paper-controls label{font-size:12px;color:var(--dim)}.paper-controls input[type=number]{display:block;width:180px;max-width:100%;margin-top:4px;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px}.paper-controls button{padding:8px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--accent);color:#fff}.paper-controls :disabled{opacity:.5}.panel[hidden]{display:none}
+.paper-controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}.paper-controls label{font-size:12px;color:var(--dim)}.paper-controls select,.paper-controls input[type=number]{display:block;width:180px;max-width:100%;margin-top:4px;padding:8px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px}.paper-controls button{padding:8px 14px;border-radius:8px;border:1px solid var(--border2);background:var(--accent);color:#fff}.paper-controls :disabled{opacity:.5}.panel[hidden]{display:none}
 @media(max-width:560px){.wrap{padding:0 10px}.hero h2{font-size:20px}.panel{padding:12px}.alert-top{gap:8px}.actions{display:grid;grid-template-columns:1fr 1fr}.actions button:first-child:last-child{grid-column:1/-1}}
 </style>
 <script src="/jk-money.js?v=1.0.0"></script>
@@ -45,7 +45,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">SETTINGS</div><h1>JK <span class="v">설정</span> <span style="font-size:12px;font-weight:400;color:var(--faint)">v1.5.0</span></h1></div>
+  <div class="brand"><div class="kicker">SETTINGS</div><h1>JK <span class="v">설정</span> <span style="font-size:12px;font-weight:400;color:var(--faint)">v1.6.0</span></h1></div>
   <div class="jkmenu">
     <button class="jkmenu-btn" aria-label="메뉴">☰</button>
     <div class="jkmenu-pop" hidden>
@@ -85,7 +85,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 <script src="/settings-notifications.js?v=1.2.0" defer></script>
 <script src="/claude-push-client.js?v=1.0.1" defer></script>
 <script src="/settings-claude-push.js?v=1.0.3" defer></script>
-<script src="/settings-paper-trading.js?v=1.0.0" defer></script>
+<script src="/settings-paper-trading.js?v=1.1.0" defer></script>
 </body>
 </html>
 

@@ -1,9 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
+import {soxlBrokerPlans,sendResearchPlans,reconcileResearchBroker,RESEARCH_BROKER_VERSION} from "../../../functions/api/_research-orders.js";
 
 // Cloudflare Worker — BTC + SOXL intraday research signal scheduler
 // Every minute, but signals are based only on completed 5m strategy bars.
 // It sends Telegram research/paper alerts through Pages /api/scalping-alert.
-// It NEVER places broker or exchange orders.
+// BTC remains research only. SOXL may submit KIS VTS orders through the guarded broker.
 
 const FIVE=5*60*1000;
 const BTC_OPEN_HM=0;
@@ -591,7 +592,9 @@ async function runSoxl(env,now){
   }
   const mainVariant=await mainVariantForDate(env,"soxl",n.date),vp=variantParams("soxl",mainVariant);
   const previous=await readPaper(env,"soxl",n.date),t=storedOrbTrade("soxl",n.date,previous,soxlTrade(bars,now,n.date,vp.params),bars,now,vp.params);
-  await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.20,previous,bars,now,extraVariants:await researchVariantNames("soxl")}));
+  const saved=await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.20,previous,bars,now,extraVariants:await researchVariantNames("soxl")}));
+  try{await sendResearchPlans(env,soxlBrokerPlans(saved,now));}
+  catch(e){console.error(JSON.stringify({type:'soxl_broker_error',date:n.date,error:String(e.message||e)}));}
   if(!t||t.waiting||!Number.isFinite(t.entry?.ms)||!Number.isFinite(t.vr))return;
   await alert(env,{
     strategy:"soxl",stage:"buy",eventId:"soxl:"+mainVariant+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time+" ET",eventAt:new Date(t.entry.ms).toISOString(),
@@ -710,6 +713,8 @@ async function run(env){
   const now=Date.now();
   // 같은 분의 장부 갱신이 끝난 뒤 마감요약을 읽는다. 16:05 SOXL 요약이 16:04 장부를 읽는 경합을 막는다.
   const live=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
+  // Exact owned order IDs are reconciled independently of market-data success.
+  try{await reconcileResearchBroker(env);}catch(e){console.error('research broker reconcile: '+String(e.message||e));}
   await runtimeStore(env,{at:new Date(now).toISOString(),strategies:Object.fromEntries(live.map((x,i)=>[i===0?"crypto":"soxl",{ok:x.status==="fulfilled",error:x.status==="rejected"?String(x.reason?.message||x.reason).slice(0,180):null}]))}).catch(e=>console.error("runtime status: "+String(e)));
   live.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":"soxl",error:String(x.reason&&x.reason.message||x.reason)}));});
   try{await runCloseSummaries(env,now);}
@@ -721,6 +726,10 @@ export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
+    if(u.pathname==='/broker-status'){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      return json({ok:true,version:RESEARCH_BROKER_VERSION,strategies:['gpt_soxl'],unsupported:['gpt_crypto'],environment:'vts',settings:'opening-scheduler /paper-settings'});
+    }
     if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",executionModelVersion:"orb_completed_candle_deadline_v2",schedule:"every minute · BTC 00:05 KST close ⑤⑥ · SOXL 16:05 ET close ⑤⑥",strategies:["crypto","soxl"],paperStore:"Durable Object SQLite + per-strategy date index",crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"baseline 23:05 KST · long variants through 23:59 + 00:05 previous-session finalization"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order",manualPromotion:"owner button -> next session lock"});
     if(u.pathname==="/runtime"){
       if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);

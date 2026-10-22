@@ -4,6 +4,7 @@
 // 체결 후 수수료·제세금은 이 endpoint에서 추정하지 않고 vts-reconcile이 KIS 당일 체결조회 응답으로 측정한다.
 
 import {paperPermission} from './_paper-trading.js';
+import {openingOwnedQty} from './_opening-execution.js';
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const KRCODE=/^(?:\d{6}|\d{4}[A-Z]\d)$/;
@@ -108,16 +109,10 @@ async function orders(origin,env,date,code){
 }
 async function openingQty(origin,env,date,x){
   const all=await orders(origin,env,date,x.code);
-  const ent=hmMin(x.entryTime);
-  // 이 전략의 매수는 내부 진입시각 직후에 나간다. ±5분 밖의 체결은 수동/다른 전략 물량으로 간주한다.
-  const buys=all.filter(o=>String(o.sideCode)==="02"&&+o.fillQty>0&&Math.abs(hmMin(hhmm(o.orderTime))-ent)<=5);
-  const buyQty=buys.reduce((s,o)=>s+(+o.fillQty||0),0);
-  if(!buyQty)return {qty:0,buyQty:0,soldQty:0,error:"시초가 VTS 매수 체결수량 0"};
-  const times=buys.map(o=>hmMin(hhmm(o.orderTime))).filter(Number.isFinite);
-  const first=times.length?Math.min(...times):ent;
-  const sells=all.filter(o=>String(o.sideCode)==="01"&&+o.fillQty>0&&hmMin(hhmm(o.orderTime))>=first);
-  const soldQty=sells.reduce((s,o)=>s+(+o.fillQty||0),0);
-  return {qty:Math.max(0,buyQty-soldQty),buyQty,soldQty};
+  const base=String(env.OPENING_WORKER_URL||'https://jkquant-opening-scheduler.mumae4.workers.dev').replace(/\/$/,'');
+  const r=await fetch(base+'/events?date='+encodeURIComponent(date),{headers:{'x-monitor-key':env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY}}),j=await r.json();
+  if(!r.ok||!j.ok||!j.ledger)throw Error('시초가 원본 주문장부 조회 실패');
+  return openingOwnedQty(j.ledger,x,all);
 }
 
 export async function onRequestPost({request,env}){

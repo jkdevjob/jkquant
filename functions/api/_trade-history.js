@@ -96,11 +96,28 @@ export function tenbaggerRecords(data){
     pnl:a.status==='closed'?a.netReturnPct:null,unrealizedPnl:a.status==='closed'?null:x.netMarkPct,status:a.status||'pending',
     reason:a.exitReason,capturedAt:x.registeredAt,evidence:{dataStatus:x.dataStatus,source:x.sourceSnapshot}},x.pattern+'.'+arm,'forward-research')));
 }
+export function brokerRecords(positions){
+ return (positions||[]).map(p=>{
+  const plan=p.plan,b=p.operations.buy||{},s=p.operations.sell||{},strategy=plan.strategy.replace(/^gpt_/,''),buyQty=b.fillQty||0,sellQty=s.fillQty||0;
+  const unknown=b.status==='unverified'||s.status==='unverified';
+  const done=buyQty>0&&sellQty===buyQty&&s.status==='filled',held=unknown?null:Math.max(0,buyQty-sellQty);
+  const gross=done&&(b.fillPrice>0)&&(s.fillPrice>0)?(s.fillPrice-b.fillPrice)*sellQty:null;
+  const state=unknown?'unverified':done?'closed':held>0?'open':b.status==='not_submitted'||b.status==='rejected'||b.status==='canceled'&&!buyQty?'signal':['accepted','partial'].includes(b.status)?'pending':'unverified';
+  const r=record(strategy,{id:p.key,date:p.date,code:plan.code,name:plan.name,signalTime:plan.source?.signalTime||plan.dueAt,
+   entryTime:b.at,entryPrice:b.fillPrice,exitTime:s.at,exitPrice:s.fillPrice,pnl:null,status:state,
+   strategyVersion:plan.sourceVersion,strategyParams:plan.source?.params,capturedAt:p.createdAt,reason:p.lastError||s.reason||b.reason,
+   evidence:{source:plan.source,entrySettings:p.entrySettings},events:p.events},plan.variant,'server-broker',plan.variant);
+  r.status=state;
+  r.broker={kind:'kis-vts',buy:b.status||'unrecorded',sell:s.status||'unrecorded',settlement:done?'fills_confirmed_fees_unknown':'unverified',pnl:null,
+   filledBuyQty:buyQty,filledSellQty:sellQty,heldQty:held,currency:strategy==='soxl'?'USD':'KRW',grossRealized:gross,fees:null,
+   operations:p.operations,attempts:p.events.filter(e=>e.phase==='intent'||e.phase==='result'||e.phase==='not_submitted').map((e,i)=>({...e,id:p.key+':'+i})),lastError:p.lastError||null};return r;
+ });
+}
 // Keep research and observed evidence as separate records, even when their fills agree.
 export function uniqueRecords(rows){
   const map=new Map();for(const x of rows){const k=x.recordOrigin+':'+x.strategy+':'+x.date+':'+x.variant+':'+x.code+':'+(x.signalTime||'');
     const old=map.get(k),chosen=old?.status==='closed'?old:x;
-    map.set(k,old?.broker||x.broker?{...chosen,broker:mergeOpeningBroker(old?.broker,x.broker)}:chosen);}
+    map.set(k,x.strategy==='opening'&&(old?.broker||x.broker)?{...chosen,broker:mergeOpeningBroker(old?.broker,x.broker)}:chosen);}
   return [...map.values()];
 }
 export function filterRecords(rows,q){
