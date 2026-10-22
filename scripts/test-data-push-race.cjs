@@ -51,7 +51,7 @@ try{
     saves+=(text.match(/bash \.app\/scripts\/push-scalping-data\.sh/g)||[]).length;
   }
   assert.equal(writers,13,'텐배거(지피티·클로드) · 헤드라인 수집(연구 R11) 포함 모든 데이터 저장 workflow');
-  assert.equal(saves,15,'조건부 저장을 포함한 모든 데이터 저장 경로');
+  assert.equal(saves,16,'조건부 저장 및 새 장중 시간 무관 이력 백필 경로까지 전부 공용 저장');
   for(const file of ['daytrading-research.yml','soxl-research.yml','daily1-shadow-research.yml'])
     assert(!fs.readFileSync(path.join(root,'.github/workflows',file),'utf8').includes('- "scalping.html"'),file+' UI 수정은 연구 수집을 실행하지 않음');
   console.log('PASS 13개 workflow의 모든 저장 경로 공용화 · UI 수정으로 연구 수집 재실행 없음');
