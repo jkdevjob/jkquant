@@ -1,6 +1,5 @@
 # jkquant 점검 기록 — 무한매수법 · VR (+ 섀넌 · 200일선 · 적립 · ASAP)
 
-
 ## 2026-10-13 · 연구(클로드) · 텐배거 전향 시험(고정 모형 20종목 모의 장부)
 
 - 요청: 과거에서 찾은 패턴으로 앞으로 종목을 시험 · 단타(클로드) → 연구(클로드) · 탭 추가 · 다른 연구와 함께 알림. 시작 main fb8d06c(#481 연구(지피티) 포함).
@@ -1868,7 +1867,6 @@ const D=bars.filter(d=>d.date>=from);   // 상한이 없다
 5. **무매 리버스 매수가** — 별지점 −$0.01 이 맞는가? gap% 변형의 원전 근거가 있는가?
 6. **VR 적립식 첫 매수** — `initAmt` 인가 `startPool + contrib` 인가? → **제12차 ① 에서 정리: 초기 투자금(initAmt)** · 초기 투자금 0 인 적립식만 첫 적립금 · 시작 Pool 은 Pool 에 그대로 (4-10장)
 
-
 ## 2026-09-26 — 자동익절 하향 기준 MA150 −10% → 10%
 
 사용자 요청: 기존 MA150 −5% → 익절 10% 하향을 −10% → 10%로 적용.
@@ -2079,7 +2077,6 @@ const D=bars.filter(d=>d.date>=from);   // 상한이 없다
 운영 쪽은 매일 v1 주문을 그대로 내서 체결을 재고, preopen 원본에 `breadth.qualified`·`v2Signal`을 남겨 v2를 가른다. 동시호가 체결이라 과거 일봉 결과가 실제 체결과 거의 같다. 실측으로 확인할 것은 예상체결가와 실제 시가의 차이 하나뿐이다.
 값 시험 JS 1개, 회귀 1개를 더했고, 변이(기준 5→1)를 탐지한다.
 
-
 ## Historical opening price-basis validation (v1.29.1)
 
 Observed daily/minute opening-price ratios such as 22700/2270 invalidate mixed-source performance interpretation. The research report now compares the exact opening minute (including delayed session schedules) with stored daily open. A greater than 1% discrepancy blocks comparison/adoption; missing opening observations remain unverified. This is a diagnostic threshold, not a correction factor or proof that smaller discrepancies are safe. Corporate-action and volume basis still require source verification. No raw bars, prices, signal records, versions, or numeric results are changed. Pre-gate statistical adoption decisions remain recorded; effective adoption is disabled on mismatched/unverified data. Both dated and latest reports carry the gate, and validation.json is regenerated. Tests cover 10x mismatch, delayed session, missing opening minute, nonmutation of inputs/statistics, and disabled adoption. Mutations removing mismatch detection or the gate must fail. All work uses stored archives during market hours; no orders or backfill requests.
@@ -2087,7 +2084,6 @@ Observed daily/minute opening-price ratios such as 22700/2270 invalidate mixed-s
 ## Historical daily basis reference (v1.29.2)
 
 GET /api/kis?op=dayhist&code=011930&start=20260202&end=20260216&adjustment=1 returns original KIS daily output1/output2 for price and volume reconciliation; adjustment=0 requests adjusted prices. Based on the official KIS FHKST03010100 sample, FID_ORG_ADJ_PRC=1 is original and 0 adjusted. Require explicit basis and valid ordered dates, at most 100 calendar days, no future endpoint. Both the client and server forbid historical reference requests 08:30-15:40 KST. Authentication-token and quotation GET are the only upstream requests; shared order validators/routes remain untouched. Mock tests verify both price flags, raw volume preservation, invalid dates/range/code, exact market-hour boundaries, and zero upstream calls when blocked. Mutation tests remove the guard or force the original-price flag and must fail. This adds a diagnostic source only; no historical prices or returns are automatically rescaled.
-
 
 ## BTC 기준전략 v2 — 00:00 KST 세션 / 22:00 신규진입 (v1.29.3, 2026-10-01)
 
@@ -3226,7 +3222,6 @@ Cron 한 줄에 시각(UTC 15 · 20 · 21시)만 더했다. GPT 시초가 스캔
 - 실현손익: 실제 매도가에서 매수가·취득비·매도비·양도세·전체 이자/보유비만 차감. 대출 원금은 중복 비용으로 차감하지 않음. 미입력 비용은 확인된 0과 구분.
 - 시험: 투자판단/기록/계정 값 14건 PASS 및 미확인 값·마감·대출 원금 중복차감 변이 3개 검출. 전체 CI와 실제 DB/공식 API/아이폰 검증은 TEST_RESULTS.md에 별도 기록.
 
-
 ## 2026-10-12 · GPT 단타 조회·연구 정합성 점검 (v1.43.11)
 
 시작 기준은 main@95a8e09d이며 운영 scalping.html은 해당 파일과 동일했다.
@@ -3343,7 +3338,6 @@ Telegram 실패 후 캐시 영수증 해제와 웹푸시 독립 재시도를 확
   - 비교 기준: 대장 보유 룩어헤드 · 보유세 누락. 그 밖: 바뀐 때를 결정 달로 · 지금 대장을 한 달 뒤 시세로.
 - 화면: 360px에서 매매 기록·지금 × 두 전략과 대장 목록을 펼친 화면 모두 가로 넘침 0, 화면 오류 0. 로컬 서버의 404 는 지피티 칸 API 몫이다.
 
-
 ## 2026-10-16 · 모의 자동이력 저장 용량 (운영3.110.40 / 플랜1.43.38 / 관리자0.12.28)
 
 - 계산/회계 규칙이 아닌 전송 형식 변경이다. 기존 거래를 정리·절삭하지 않으며 실계좌와 모의 수동 행은 기본 문서에 유지한다.
@@ -3355,7 +3349,6 @@ Telegram 실패 후 캐시 영수증 해제와 웹푸시 독립 재시도를 확
 - Firestore는 Map 키를 정렬한다. 서명은 중첩 Map을 정규화해 계산하고, 모든 SDK 대역은 실제 규약처럼 키 정렬 결과를 반환한다. 첫 보완 전의 삽입 순서 서명을 변이로 되살리면 냉시작 복원 실패를 검출한다. 아직 실제 사용자 DB에 이관하지 않은 배포 전 보완이다.
 
 - 서버 자동주문 복원은 한투 연결된 inf 모의 세션으로 한정한다. 선택 밖 조각을 조회하면 실패하는 시험으로 브라우저 전체 복원/서버 선택 복원을 함께 검사했다.
-
 
 ## 2026-10-19 · 연구(클로드) ① 장전 매수 — 현금 고르게 · 한투 초당 제한 간격 (v2.18.0)
 
@@ -3418,7 +3411,6 @@ Telegram 실패 후 캐시 영수증 해제와 웹푸시 독립 재시도를 확
   - 체결 12건 평균: 실제 시가 갭 − 예상 갭 = +5.4%p.
   - 연구 계산 openVsExpectedPct: +6.29%, 16건.
   - 실제 시가로 조건을 만족한 비율: 45%.
-
 
 ## 2026-10-20 · 연구(클로드) ① 08:58 다시 보고 판단 (v2.19.0 · Worker opening-scheduler)
 
@@ -3664,3 +3656,12 @@ kis.js 는 운영 · 지피티 · 클로드가 같이 쓰는 파일이라 사용
   - ⑤ 는 KIS 현재가(15:00)로 사는 것으로 본다. 실제 시장가 체결과의 차이는 반 호가로 근사했다.
   - 병합 직후 밤 작업이 옛 Pages 를 부르면 옛 형식이라 저장하지 않는다. 다음 실행(23:40 · 07:30)에서 다시 받는다.
   - Worker 가 안 돈 날(원장 없음)은 확정 대기로 남는다. 10월 거래일은 모두 원장이 있었다.
+
+## 2026-10-22 · 연구1.46.1 종가 원천 요청 한도
+
+- 운영 증거: 50종목×2원천+universe1=101요청을 한 Pages 실행에서 처리했다. 실제26개 Too many subrequests/1개 timeout, partial25신호가 남았다. 데이터가 완전하지 않아 실제 모의 진입을 확정하지 않은 기존 가드는 보존한다.
+- 수정: 부모는 Top50을 한 번 고정하고 10종목 단위로 같은 인증·같은 cutoff의 내부 요청을 한다. 자식별20원천 호출, 부모6호출. 35가격도 자식20/부모4. 원천 동시성은 부모2×자식2=기존4종목을 유지. 전체 결과를 기존 chooseClosingSignals에 한 번 넣어 범위·순위·체결 규칙을 바꾸지 않는다.
+- 검증: 실행당50한도를 모델링한 실제 핸들러 시험. Top50/Top3 값·35가격·source failure·입력/인증·미래 봉 배제 및 한도/선정 축소 변이. 과거 partial 원장을 재선정·소급 체결하지 않는다.
+- 스케줄: CF 1분 등록을 동일 주기로 갱신한 뒤 15:17/15:22 heartbeat 확인. config는 동등한 분 단위 표현을 반영한다. 배포 probe는 수동 조회 결과와 자동 실행을 구분하고 heartbeat가 없으면 실패로 남긴다.
+
+- 시초가 표시 추가 감사: 10/22 26개 원본(오류0) 중 09:06 분이 없지만 기존 요약은 마지막 09:30 한 개만 검사해 no_signal/0%로 표시했다. 각 예정 분을 집합으로 검사하고 중복 분으로 누락을 채우지 않는다. 같은 분의 성공 재시도는 인정하며, 장중 미래 분은 요구하지 않는다. 누락 시 모든 알려진 매매/실현 손익을 보존하되 전체 수익률과 noTrade 확정을 막고 누락 시각을 표시한다. 마지막 한 분만 검사하는 변이를 값 시험이 검출한다.

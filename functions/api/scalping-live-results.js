@@ -81,6 +81,22 @@ function summarizePaperLedger(strategy,ledger,now=Date.now()){
   if(row.unverified){row.state='unavailable';row.returnPct=null;row.reason='거래 기한 경과 · 체결/청산 원본 확인 필요';}
   return freshness(row,clock);
 }
+function openingScanOkay(scan){
+  return scan&&!scan.partial&&scan.okShards===5&&Number(scan.quoteErrors||0)===0&&!(scan.failed||[]).length;
+}
+function openingCoverage(scans,clock){
+  // Signals are emitted only for the current minute. A later successful scan
+  // cannot recover an earlier missed signal, so the last scan alone is insufficient.
+  const last=Math.max(903,...scans.map(s=>Number(s.targetHm)||0));
+  const throughHm=clock.ended?930:Math.min(930,clock.hm-1,last);
+  const expected=Array.from({length:Math.max(0,throughHm-903)},(_,i)=>904+i);
+  const observed=new Set(scans.map(s=>Number(s.targetHm)));
+  const good=new Set(scans.filter(openingScanOkay).map(s=>Number(s.targetHm)));
+  const missingTargets=expected.filter(t=>!observed.has(t));
+  const failedTargets=expected.filter(t=>observed.has(t)&&!good.has(t));
+  return {throughHm,expected:expected.length,observed:expected.filter(t=>observed.has(t)).length,
+    missingTargets,failedTargets,complete:!!expected.length&&!missingTargets.length&&!failedTargets.length};
+}
 function summarizeOpeningLedger(ledger,now=Date.now()){
   const clock=sessionClock('opening',now);
   if(clock.marketClosed)return missingRow(clock);
@@ -107,7 +123,8 @@ function summarizeOpeningLedger(ledger,now=Date.now()){
   const pn=closed.map(x=>x.pnl);row.realizedReturnPct=pn.length&&pn.every(x=>x!==null)?pn.reduce((a,b)=>a+b,0)/Math.max(1,a.length):null;
   row.returnPct=!row.open&&pn.every(x=>x!==null)?(pn.length?pn.reduce((a,b)=>a+b,0)/pn.length:0):null;
   row.wins=pn.filter(x=>x>0).length;row.losses=pn.filter(x=>x!==null&&x<0).length;
-  const partial=!!latest.partial||latest.okShards!==5||Number(latest.quoteErrors||0)>0||(latest.failed||[]).length>0;
+  const coverage=openingCoverage(scans,clock),partial=!coverage.complete;
+  row.scanCoverage=coverage;
   row.state=row.unverified?'unavailable':row.open?'holding':closed.length?'closed':partial?'unavailable':'no_signal';
   if(row.unverified){row.returnPct=null;row.sourceWarning='09:30 매도 시도 '+row.unverified+'건 · VTS 체결/잔고 확인 필요';}
   if(clock.ended&&row.open){
@@ -116,7 +133,15 @@ function summarizeOpeningLedger(ledger,now=Date.now()){
   }
   row.noTrade=!a.length&&!partial;
   row.reason=row.unverified?'09:30 강제매도 신호 생성 · 실제 체결 미확인':clock.ended&&row.open?'09:30 청산 원본 누락 · 체결 미확인':partial?'부분 감시/시세 오류 · 원본 신호 누락 가능':clock.ended?'09:30까지 감시한 원본 신호 · 감시 종료':'현재까지 감시한 원본 신호 · 신호 없음이면 다음 1분봉 확인';
-  if(partial){row.sourceWarning=row.reason;if(!a.length)row.returnPct=null;}
+  if(partial){
+    const hm=t=>String(t).padStart(4,'0').replace(/(\d{2})(\d{2})/,'$1:$2');
+    const details=[coverage.missingTargets.length?'감시 기록 누락 '+coverage.missingTargets.map(hm).join(', '):'',
+      coverage.failedTargets.length?'시세/부분 조회 오류 '+coverage.failedTargets.map(hm).join(', '):''].filter(Boolean).join(' · ');
+    row.sourceIncomplete=true;row.sourceWarning=details||'감시 범위 확인 필요';
+    row.reason=row.sourceWarning+' · 조건 미충족으로 확정할 수 없음';
+    row.state='unavailable';row.noTrade=false;row.returnPct=null;
+    if(!a.length)row.realizedReturnPct=null;
+  }
   if(pn.some(x=>x===null)){row.state='unavailable';row.reason='청산 원본 손익 누락';row.returnPct=null;}
   return freshness(row,clock);
 }
