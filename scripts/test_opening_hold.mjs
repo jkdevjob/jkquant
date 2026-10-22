@@ -24,3 +24,32 @@ assert.notEqual(mutant,source);
 const changed=await load(mutant);
 assert.throws(()=>probe(changed));
 console.log('Opening hold live parity and intraday-exit mutant: ALL PASS');
+
+
+const delayedCloseRows=Array.from({length:30},(_,i)=>{
+  const close=i<3?103:i===3?104:i===4?103.6:i===5?104.2:104.1;
+  return {t:`2026-10-21 09:${String(i).padStart(2,'0')}`,close,high:close,vol:i===5?500:100};
+});
+const delayedExit=(await load(source)).rebreakTrade(delayedCloseRows,{open:103,prevClose:100},930);
+assert(delayedExit,'late 09:30 minute must still compute the already entered signal');
+assert.equal(delayedExit.entryTime,905);
+assert.equal(delayedExit.exitTime,930);
+assert.equal(delayedExit.evidence.finalExitPriceProxyHm,929);
+assert.equal(delayedExit.evidence.finalExitPriceUnconfirmed,true);
+const workerSource=fs.readFileSync(new URL('../worker/opening-scheduler/src/index.js',import.meta.url),'utf8');
+const exitFn=workerSource.slice(workerSource.indexOf('export function openingUnmatchedExits('),workerSource.indexOf('async function forceOpeningSessionClose('));
+assert(exitFn.includes('openingUnmatchedExits('),'worker closing fallback exists');
+const unmatched=new Function(exitFn.replace('export function','function')+';return openingUnmatchedExits;')();
+const orderEvent=(stage,code,variant='baseline',hm=905)=>({stage,variant,code,name:code,signal:{code,name:code,entryTime:hm}});
+const recovered=unmatched({events:[
+  orderEvent('buy','A'),
+  orderEvent('buy','B'),orderEvent('sell','B'),
+  orderEvent('buy','C','shadow'),
+  orderEvent('buy','D','baseline',930),
+]},'baseline');
+assert.deepEqual(recovered.map(x=>x.code),['A'],'only truly unmatched main entry may create an exit order');
+assert.equal(recovered[0].exitTime,930);
+assert.equal(recovered[0].exitPrice,null);
+assert.equal(recovered[0].pnl,null);
+assert.equal(recovered[0].finalExitUnverified,true);
+assert.deepEqual(unmatched({events:[orderEvent('buy','A'),orderEvent('sell','A')]},'baseline'),[],'already closed must never sell twice');
