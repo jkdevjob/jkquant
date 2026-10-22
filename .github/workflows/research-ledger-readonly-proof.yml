@@ -8,40 +8,39 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
-      - name: Read original ledgers only
+      - name: Read original opening evidence and patched quote routes
         env:
           MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           python - <<'PY'
-          import os,json,subprocess,datetime,collections,urllib.request
+          import os,json,subprocess,datetime,collections,urllib.parse
           from zoneinfo import ZoneInfo
-          cf='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']+'/workers/scripts/jkquant-global-intraday-scheduler'
-          def api(path):
-              return json.load(urllib.request.urlopen(urllib.request.Request(cf+path,headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN']}),timeout=15)).get('result') or {}
-          deployments=api('/deployments').get('deployments') or []
-          for v in (deployments[0].get('versions') or [])[:1]:
-              detail=api('/versions/'+v['version_id']);resources=detail.get('resources') or {}
-              print('ACTIVE_HANDLERS',json.dumps({'version':v['version_id'],'script':resources.get('script'),'runtime':{k:(resources.get('script_runtime') or {}).get(k) for k in ['compatibility_date','limits','usage_model']}},ensure_ascii=False))
-          print('SCHEDULES',json.dumps(api('/schedules')))
+          def get(url,timeout=30):
+              r=subprocess.run(['curl','--silent','--show-error','--fail-with-body','--max-time',str(timeout),'--user-agent','JKQuant-readonly-proof/1.1','-H','x-monitor-key: '+os.environ['MONITOR_KEY'],url],capture_output=True,text=True,timeout=timeout+5)
+              try:return json.loads(r.stdout)
+              except Exception:raise RuntimeError('source response unavailable '+str(r.returncode))
           date=datetime.datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()
-          base='https://jkquant-opening-scheduler.mumae4.workers.dev'
-          sources={
-            'closing':'https://jkquant.pages.dev/api/closing30-archive?date='+date,
-            'opening':base+'/event-history?kind=opening&from='+date+'&to='+date,
-            'day':'https://jkquant-daytrading-scheduler.mumae4.workers.dev/paper?date='+date,
-            'globalRuntime':'https://jkquant-global-intraday-scheduler.mumae4.workers.dev/runtime'}
-          for name,url in sources.items():
-              result=subprocess.run(['curl','--silent','--show-error','--max-time','20','--user-agent','JKQuant-research-proof/1.0','-H','x-monitor-key: '+os.environ['MONITOR_KEY'],url],capture_output=True,text=True,timeout=25)
-              try:j=json.loads(result.stdout)
-              except Exception:print(name,'source unavailable',result.returncode);continue
-              if name=='globalRuntime':print(name,json.dumps(j,ensure_ascii=False));continue
-              ledgers=j.get('ledgers') or ([j['ledger']] if j.get('ledger') else [])
-              for ledger in ledgers:
-                  events=ledger.get('events') or []
-                  counts=collections.Counter((e.get('kind') or '')+':'+str(e.get('stage')) for e in events)
-                  print(name,json.dumps({'ok':j.get('ok'),'date':ledger.get('date'),'updatedAt':ledger.get('updatedAt'),'scans':len(ledger.get('scans') or []),'failedErrors':dict(collections.Counter(e.get('error','') for s in (ledger.get('scans') or []) for e in (s.get('failed') or []))),'scanDetails':[{k:s.get(k) for k in ['targetHm','partial','quoteErrors','eventCount']} for s in (ledger.get('scans') or [])[-3:]],'events':len(events),'stages':dict(counts),'mainVariant':ledger.get('mainVariant'),'mainTrades':len(ledger.get('trades') or []),'shadowVariants':len(ledger.get('shadowLedgers') or {}),'summary':ledger.get('summary')},ensure_ascii=False))
-              if not ledgers:print(name,json.dumps({'ok':j.get('ok'),'ledgerCount':0,'error':j.get('error')}))
+          opening=get('https://jkquant-opening-scheduler.mumae4.workers.dev/event-history?kind=opening&from=2026-10-22&to=2026-10-22')
+          for l in opening.get('ledgers') or []:
+              scans=l.get('scans') or [];events=l.get('events') or [];main=l.get('mainVariant') or 'baseline'
+              print('OPENING_ORIGINAL',json.dumps({'date':l.get('date'),'mainVariant':main,'updatedAt':l.get('updatedAt'),'scans':len(scans),'targets':[s.get('targetHm') for s in scans],'partialScans':sum(bool(s.get('partial')) for s in scans),'quoteErrors':sum(s.get('quoteErrors') or 0 for s in scans),'failedShards':sum(len(s.get('failed') or []) for s in scans),'eventsByVariant':dict(collections.Counter(e.get('variant')+':'+str(e.get('stage')) for e in events)),'mainEvents':sum(e.get('variant')==main for e in events)},ensure_ascii=False))
+          runtime=get('https://jkquant-global-intraday-scheduler.mumae4.workers.dev/runtime')
+          print('GLOBAL_RUNTIME',json.dumps(runtime,ensure_ascii=False))
+          archive=get('https://jkquant.pages.dev/api/closing30-archive?date=2026-10-22')
+          for l in archive.get('ledgers') or ([archive['ledger']] if archive.get('ledger') else []):
+              events=l.get('events') or []
+              print('CLOSING_ORIGINAL',json.dumps({'date':l.get('date'),'scans':[{k:s.get(k) for k in ['targetHm','partial','quoteErrors','eventCount']} for s in l.get('scans') or []],'stages':dict(collections.Counter(str(e.get('kind'))+':'+str(e.get('stage')) for e in events)),'events':len(events)},ensure_ascii=False))
+          base='https://f4ea434e.jkquant.pages.dev'
+          scan=get(base+'/api/closing30-monitor?op=scan&kind=day&date='+date,150)
+          print('PATCH_SCAN',json.dumps({k:scan.get(k) for k in ['ok','error','date','kind','scanned','valid','partial','cutoff','errors']},ensure_ascii=False))
+          if scan.get('ok'):
+              assert scan.get('scanned')==50 and not scan.get('partial') and not scan.get('errors'),'Top50 scan incomplete'
+              universe=get(base+'/api/universe?limit=100')
+              codes=[str(x.get('code')) for x in universe.get('universe') or [] if len(str(x.get('code','')))==6 and str(x.get('code','')).isdigit()][:35]
+              assert len(codes)==35
+              prices=get(base+'/api/closing30-monitor?op=prices&stage=overnight_entry&date='+date+'&codes='+','.join(codes),150)
+              print('PATCH_PRICES',json.dumps({'ok':prices.get('ok'),'count':len(prices.get('prices') or []),'missing':prices.get('missing'),'errors':prices.get('errors'),'priceTimes':sorted(set(x.get('priceAt','') for x in prices.get('prices') or []))},ensure_ascii=False))
+              assert prices.get('ok') and len(prices.get('prices') or [])==35 and not prices.get('errors') and prices.get('missing')==0,'35 prices incomplete'
           PY
