@@ -991,7 +991,7 @@ export default {
     if(u.pathname==="/closing-ledger"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const date=u.searchParams.get("date")||kstParts().date;
-      if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return json({ok:false,error:"bad date"},400);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"bad date"},400);
       try{return json({ok:true,date,ledger:await readLedger(env,date,"closing30")});}
       catch(e){return json({ok:false,error:String(e.message||e)},500);}
     }
