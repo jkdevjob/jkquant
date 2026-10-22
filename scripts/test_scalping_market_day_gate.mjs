@@ -16,10 +16,11 @@ ok(kis.includes('/uapi/domestic-stock/v1/quotations/chk-holiday')
   'KRX gate uses KIS official holiday API opnd_yn');
 
 const oGate=opening.indexOf('if(krRoute){');
-const oRun=opening.indexOf('else if(route==="opening")ctx.waitUntil(runMinute');
+const oRun=opening.indexOf('else if(route==="opening")');
 ok(oGate>=0&&oRun>oGate
   &&opening.includes('await krMarketOpen(env,date)')
-  &&opening.includes('market_day_unknown_skip'),
+  &&opening.includes('market_day_unknown_skip')
+  &&opening.indexOf('ctx.waitUntil(runMinute(controller,env))',oRun)>oRun,
   'opening/gapdown/Claude KR routes fail closed before strategy execution');
 
 const dGate=day.indexOf('await krMarketOpen(env,sched.date)');
