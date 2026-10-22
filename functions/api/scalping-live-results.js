@@ -88,17 +88,24 @@ function summarizeOpeningLedger(ledger,now=Date.now()){
   }
   for(const e of events.filter(e=>e.stage==='sell')){
     const s=e.signal||{},id=String(e.code||s.code)+':'+String(s.entryTime||'');
-    const p=positions.get(id);if(p)Object.assign(p,{status:'closed',exitTime:s.exitTime,pnl:numeric(s.pnl)});
+    const p=positions.get(id);if(p)Object.assign(p,{status:s.finalExitUnverified?'unverified':'closed',exitTime:s.exitTime,pnl:numeric(s.pnl)});
   }
   const row=baseRow(clock),a=[...positions.values()],closed=a.filter(x=>x.status==='closed');
-  row.updatedAt=latest.capturedAt||ledger.updatedAt||null;row.mainVariant=variant;row.positions=a;row.trades=a.length;row.open=a.length-closed.length;row.closed=closed.length;
+  row.updatedAt=latest.capturedAt||ledger.updatedAt||null;row.mainVariant=variant;row.positions=a;row.trades=a.length;
+  row.unverified=a.filter(x=>x.status==='unverified').length;
+  row.open=a.filter(x=>x.status==='open').length;row.closed=closed.length;
   const pn=closed.map(x=>x.pnl);row.realizedReturnPct=pn.length&&pn.every(x=>x!==null)?pn.reduce((a,b)=>a+b,0)/Math.max(1,a.length):null;
   row.returnPct=!row.open&&pn.every(x=>x!==null)?(pn.length?pn.reduce((a,b)=>a+b,0)/pn.length:0):null;
   row.wins=pn.filter(x=>x>0).length;row.losses=pn.filter(x=>x!==null&&x<0).length;
   const partial=!!latest.partial||latest.okShards!==5||Number(latest.quoteErrors||0)>0||(latest.failed||[]).length>0;
-  row.state=row.open?'holding':closed.length?'closed':partial?'unavailable':'no_signal';
+  row.state=row.unverified?'unavailable':row.open?'holding':closed.length?'closed':partial?'unavailable':'no_signal';
+  if(row.unverified){row.returnPct=null;row.sourceWarning='09:30 매도 시도 '+row.unverified+'건 · VTS 체결/잔고 확인 필요';}
+  if(clock.ended&&row.open){
+    row.state='unavailable';row.returnPct=null;row.finalized=false;
+    row.sourceWarning='09:30 이후 미청산 '+row.open+'건 · 청산 신호/모의계좌 잔고 대조 필요';
+  }
   row.noTrade=!a.length&&!partial;
-  row.reason=partial?'부분 감시/시세 오류 · 원본 신호 누락 가능':clock.ended?'09:30까지 감시한 원본 신호 · 감시 종료':'현재까지 감시한 원본 신호 · 신호 없음이면 다음 1분봉 확인';
+  row.reason=row.unverified?'09:30 강제매도 신호 생성 · 실제 체결 미확인':clock.ended&&row.open?'09:30 청산 원본 누락 · 체결 미확인':partial?'부분 감시/시세 오류 · 원본 신호 누락 가능':clock.ended?'09:30까지 감시한 원본 신호 · 감시 종료':'현재까지 감시한 원본 신호 · 신호 없음이면 다음 1분봉 확인';
   if(partial){row.sourceWarning=row.reason;if(!a.length)row.returnPct=null;}
   if(pn.some(x=>x===null)){row.state='unavailable';row.reason='청산 원본 손익 누락';row.returnPct=null;}
   return freshness(row,clock);

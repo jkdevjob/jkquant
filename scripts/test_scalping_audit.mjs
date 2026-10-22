@@ -81,7 +81,7 @@ try{
 
   const state=pairKst('crypto','BTC',{sessions:[],error:'source failure'},'2026-10-12');
   assert.equal(state.status,'error');assert.equal(state.current.pending,true);assert.notEqual(state.current.noTrade,true);
-  assert.equal(pairKst('crypto','BTC',{sessions:[]},'2026-10-12').status,'collecting');
+  assert.equal(pairKst('crypto','BTC',{sessions:[]},'2026-10-12').status,'degraded'); // 지난 날짜의 누락 장부는 무기한 수집중이 아니다
   let activeSources=0,maxSources=0;
   globalThis.fetch=async()=>{
     activeSources++;maxSources=Math.max(maxSources,activeSources);

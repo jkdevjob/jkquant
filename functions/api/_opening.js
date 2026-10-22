@@ -253,7 +253,7 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
 
     for(let j=i+1;j<a.length;j++){
       const y=a[j];
-      if(y.hm>p.entryCutoff)break;
+      if(y.hm>p.entryCutoff||y.hm>=p.finalExit)break; // 종료 분봉에는 신규 진입 금지
       const jp=y.close,jv=y.vol,ja=jp*jv;
       const volRatio=jv/Math.max(1,baseVol),amountRatio=ja/Math.max(1,baseAmt);
       if(jp>peak&&volRatio>=p.volMult&&amountRatio>=p.amountMult){
@@ -293,11 +293,15 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
         }
         if(tr.exitTime==null&&cutoffHm>=p.finalExit){
           const b=a.filter(x=>x.hm<=p.finalExit).slice(-1)[0];
-          if(b){tr.exitTime=b.hm;tr.exitPrice=b.close;tr.reason="09:30 청산";}
+          if(b){
+             // 09:30 분봉 지연 시 마지막 확인 봉의 가격은 추정값, 청산 주문 신호 시각은 09:30으로 고정.
+             tr.exitTime=p.finalExit;tr.exitPrice=b.close;tr.reason="09:30 청산";
+             if(b.hm!==p.finalExit){tr.evidence.finalExitPriceProxyHm=b.hm;tr.evidence.finalExitPriceUnconfirmed=true;}
+           }
         }
         if(tr.exitPrice!=null){
           tr.friction=friction;
-          tr.pnl=(tr.exitPrice/tr.entryPrice-1)*100-friction.totalPct;
+          tr.pnl=tr.evidence.finalExitPriceUnconfirmed?null:(tr.exitPrice/tr.entryPrice-1)*100-friction.totalPct;
         }
         return tr;
       }
