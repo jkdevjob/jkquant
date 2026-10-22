@@ -236,6 +236,15 @@ export async function onRequestGet({request,env}){
     if(variant&&!/^[a-zA-Z0-9_-]{1,80}$/.test(variant))
       return new Response(JSON.stringify({ok:false,error:"invalid variant"}),{status:400,headers:JH});
     const srcPath=variant?src.path.replace("baseline-trades.csv","variant-trades.csv"):src.path;
+    if(u.searchParams.get("variants")==="1"){
+      try{
+        const rr=await historyFetch(RAW+src.path.replace("baseline-trades.csv","variant-trades.csv"),{headers:{Accept:"text/csv"}});
+        if(rr.status===404)return new Response(JSON.stringify({ok:true,strategy,variants:["baseline"],status:"collecting",reason:"그림자 전체 이력은 다음 연구 데이터 갱신 후 반영"}),{headers:JH});
+        if(!rr.ok)throw Error("history variant source "+rr.status);
+        const vs=[...new Set(parseCsv(await rr.text()).map(x=>x.variant).filter(x=>/^[a-zA-Z0-9_-]{1,80}$/.test(String(x||""))))].sort((a,b)=>a==="baseline"?-1:b==="baseline"?1:a.localeCompare(b));
+        return new Response(JSON.stringify({ok:true,strategy,variants:vs,status:"ok"}),{headers:JH});
+      }catch(e){return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{status:502,headers:JH});}
+    }
     const rawPromise=(async()=>{const r=await historyFetch(RAW+srcPath,{
       headers:{"Accept":"text/csv","User-Agent":"jkquant-scalping-history/1.1"},
       ...(trendOnly?{cf:{cacheEverything:true,cacheTtl:300}}:{})
