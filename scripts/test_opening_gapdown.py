@@ -584,6 +584,129 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertEqual(n, 5)
 
 
+class OrderSettleTest(unittest.TestCase):
+    """①②⑤ 주문 정산(2026-10-22 사용자 "모의계좌로 판단하지 말고 그냥 모의계좌에 주문한 건으로 정산") — 밤 계산은 Pages 마감 장부 값을 그대로 쓴다."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.old = (lab.DATA, dict(lab.ORDERS), dict(lab.CAL), dict(lab.DECISIONS), lab.ETF_PW, lab.C30_PW, lab.d1_live_status, lab.d1_live_reason, lab.read_json)
+        lab.DATA = Path(self.tmp.name)
+
+    def tearDown(self):
+        lab.DATA = self.old[0]
+        lab.ORDERS.clear(); lab.ORDERS.update(self.old[1])
+        lab.CAL.clear(); lab.CAL.update(self.old[2])
+        lab.DECISIONS.clear(); lab.DECISIONS.update(self.old[3])
+        lab.ETF_PW, lab.C30_PW, lab.d1_live_status, lab.d1_live_reason, lab.read_json = self.old[4:]
+        self.tmp.cleanup()
+
+    def put_live(self, d, **recs):
+        f = lab.DATA / "claude-live" / f"{d}.json"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(dict(ok=True, date=d, ledger=dict(events=[dict(id="close:" + k, payload=v) for k, v in recs.items()]))), encoding="utf-8")
+
+    def put_copy(self, d, **recs):
+        f = lab.DATA / "claude-settle" / f"{d}.json"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(json.dumps(dict(date=d, records=recs)), encoding="utf-8")
+
+    @staticmethod
+    def rec(v, settled=True, basis="orders", **kw):
+        return dict(dict(status="closed", basis=basis, settled=settled, dayPct=v, trades=[], strategyVersion="g_open_q7_k3_gap3"), **kw)
+
+    def test_records_prefer_worker_then_nightly_and_only_settled(self):
+        old_fmt = dict(status="closed", trades=[], open=[], note="메인 매매일(통과 9종목)")          # 10/22 15:40 Worker 저장분(체결 기준 · 0건)
+        self.put_live("2026-10-21", opening=self.rec(9.0))                                          # SETTLE_FROM 전 — 안 쓴다
+        self.put_live("2026-10-22", opening=old_fmt, daytrading=dict(status="closed", trades=[]))
+        self.put_copy("2026-10-22", opening=self.rec(-2.486), daytrading=self.rec(None))            # 밤 사본(Pages 같은 계산)
+        self.put_live("2026-10-23", opening=self.rec(1.2), daytrading=self.rec(0.4), close30=self.rec(-0.3))
+        self.put_copy("2026-10-23", opening=self.rec(7.7))                                          # Worker 장부가 확정이면 그것이 정본
+        self.put_live("2026-10-26", opening=self.rec(None, settled=False), close30=self.rec(0.5, basis=None))   # 확정 전 · 옛 형식 → 대기
+        o = lab.load_orders()
+        self.assertEqual({d: (x["v"], x["src"]) for d, x in o["opening"].items()}, {"2026-10-22": (-2.486, "nightly"), "2026-10-23": (1.2, "worker")})
+        self.assertEqual({d: (x["v"], x["src"]) for d, x in o["daytrading"].items()}, {"2026-10-22": (None, "nightly"), "2026-10-23": (0.4, "worker")})
+        self.assertEqual({d: x["v"] for d, x in o["close30"].items()}, {"2026-10-23": -0.3})
+        self.assertEqual(lab.claude_closed_records("opening")["2026-10-22"]["dayPct"], -2.486)     # 대결도 주문 정산 장부
+        self.assertEqual(lab.claude_closed_records("opening")["2026-10-21"]["dayPct"], 9.0)        # 그 전 날은 Worker 장부 그대로
+
+    def test_apply_orders_and_cells(self):
+        lab.ORDERS.clear()
+        lab.ORDERS.update(opening={"2026-10-22": dict(v=-2.486, src="nightly", rec={}), "2026-10-23": dict(v=None, src="worker", rec={})}, daytrading={}, close30={})
+        rule = {"2026-10-21": 3.0, "2026-10-22": 5.0, "2026-10-26": 4.0}                          # 연구 규칙 값(그날 고른 종목이 다를 수 있다)
+        s = lab.apply_orders(rule, "opening")
+        self.assertEqual(s, {"2026-10-21": 3.0, "2026-10-22": -2.486})                              # 10/22~ 는 주문 정산 값만 · 확정 안 된 10/26 은 빠진다
+        self.assertEqual(lab.apply_orders(s, "opening"), s)                                         # 두 번 적용해도 같다
+        before = lambda d: "before:" + str(d)
+        cell = lambda d: lab.order_cell("opening", s, d, "2026-10-26", before)
+        self.assertEqual([cell("2026-10-21"), cell("2026-10-22"), cell("2026-10-23"), cell("2026-10-24"), cell("2026-10-26"), cell("2026-10-27")],
+                         ["before:2026-10-21", -2.486, "no_trade", "holiday", "pending", None])
+        self.assertEqual(lab.apply_orders({"2026-10-22": 5.0, "2026-10-23": 1.0}, "close30"), {"2026-10-22": 5.0})   # ⑤ 는 채택일(10/23)부터 주문 정산
+
+    def test_paper_and_account_use_order_settlement(self):
+        lab.d1_live_status = lambda d: "pending"
+        lab.d1_live_reason = lambda d: ""
+        lab.read_json = lambda p, _r=lab.read_json: {"to": "2026-10-23"} if "etf-overnight" in str(p) else _r(p) if "claude-" in str(p) else {}
+        lab.CAL.clear()
+        lab.CAL.update(etf=["2026-10-21", "2026-10-22", "2026-10-23"], coin=["2026-10-22", "2026-10-23"], us=["2026-10-22"], close30=["2026-10-23"])
+        lab.DECISIONS.clear()
+        tr = [dict(name="금호타이어", code="073240", entryTime="09:00 시가(동시호가)", entryPrice=5460, exitTime="15:30 종가(동시호가)", exitPrice=5330, qty=382,
+                   pnlPct=-3.0, vts=dict(ok=False, msg="매수 생략 — 매수가능 0주(계좌 현금 부족)"))]
+        lab.ORDERS.clear()
+        lab.ORDERS.update(opening={"2026-10-22": dict(v=-2.486, src="nightly", rec=self.rec(-2.486, trades=tr, warn="모의계좌 주문 안 됨 3건"))},
+                          daytrading={"2026-10-22": dict(v=None, src="nightly", rec=self.rec(None)), "2026-10-23": dict(v=0.8, src="worker", rec=self.rec(0.8))},
+                          close30={"2026-10-23": dict(v=None, src="worker", rec=self.rec(None))})
+        lab.ETF_PW = {"2026-10-21": 1.0, "2026-10-22": 7.0, "2026-10-23": 0.5}                    # 규칙 값 — 10/22~ 는 주문 정산 값으로
+        lab.C30_PW = {}
+        d1_rule = {"2026-10-20": 2.0, "2026-10-22": 4.0}
+        out = lab.paper_entries({}, d1_rule, ["2026-10-20", "2026-10-21"], {"2026-10-22": 1.0, "2026-10-23": 1.0}, {}, ["2026-10-22", "2026-10-23"])
+        o1 = dict(out["opening_d1v2"])
+        self.assertEqual(sorted(o1), ["2026-10-20", "2026-10-21", "2026-10-22"])                  # 10/23 ① 은 확정 전 — 기다린다
+        r = o1["2026-10-22"]
+        self.assertEqual((r["action"], r["pnlPct"], r["source"], r["strategyVersion"], r["liveVersion"], r["warn"]),
+                         ("trade", -2.486, "orders:nightly", lab.main_for("opening", "2026-10-22")["version"], "g_open_q7_k3_gap3", "모의계좌 주문 안 됨 3건"))
+        self.assertEqual((r["trades"][0]["entryPrice"], r["trades"][0]["exitPrice"], r["trades"][0]["qty"], r["trades"][0]["vtsOk"]), (5460, 5330, 382, False))
+        self.assertEqual((o1["2026-10-20"]["pnlPct"], o1["2026-10-20"]["source"]), (2.0, "kis-vts+final-daily-bars"))   # 그 전 날은 옛 규칙 그대로
+        e2 = dict(out["daytrading_etf"])
+        self.assertEqual([(d, e2[d]["action"], e2[d]["pnlPct"]) for d in sorted(e2)], [("2026-10-20", "no_trade", 0.0), ("2026-10-21", "trade", 1.0), ("2026-10-22", "no_trade", 0.0), ("2026-10-23", "trade", 0.8)])   # 규칙 값 7.0 · 0.5 가 아니라 주문 정산
+        self.assertEqual([(d, r["action"]) for d, r in out["close30_etf"]], [("2026-10-23", "no_trade")])
+        self.assertEqual(lab.kr_settled_through("2026-10-21", "2026-10-23", lab.CAL["etf"], "2026-10-21", "2026-10-23", lab.ORDERS), "2026-10-22")   # 10/23 ① 확정 전
+        self.assertEqual(lab.kr_settled_through("2026-10-21", "2026-10-23", lab.CAL["etf"], "2026-10-21", "2026-10-23"), "2026-10-21")   # orders 없이 부르면 옛 규칙(① 확정 일봉 기다림)
+        acct = dict(out["account"])
+        self.assertEqual(sorted(acct), ["2026-10-22"])                                              # 국내는 10/22 까지 확정
+        for k, rows in out.items():
+            self.assertEqual(len(rows), len({d for d, _ in rows}), k)                                # 같은 날 두 줄 없음
+        late = lab.paper_entries({}, d1_rule, ["2026-10-20", "2026-10-21", "2026-10-22"], {"2026-10-22": 1.0}, {}, ["2026-10-22"])   # 확정 일봉이 10/22 까지 와도
+        for k in ("opening_d1v2", "daytrading_etf", "close30_etf"):
+            self.assertEqual(len(late[k]), len({d for d, _ in late[k]}), k)                          # 10/22~ 는 주문 정산 한 줄만(규칙 값 줄을 따로 쓰지 않는다)
+        self.assertEqual(dict(late["opening_d1v2"])["2026-10-22"]["source"], "orders:nightly")
+        self.assertAlmostEqual(acct["2026-10-22"]["pnlPct"], lab.account_daily({"2026-10-22": -2.486}, {"2026-10-22": 1.0, "2026-10-23": 1.0}, {}, ["2026-10-22"])["2026-10-22"])
+
+    def test_fetch_settle_copies_only_settled_once(self):
+        calls = []
+        def post(url, body, key):
+            calls.append((body["date"], body["strategy"]))
+            self.assertTrue(url.endswith("/api/claude-telegram")); self.assertEqual((body["op"], key), ("close", "k"))
+            if body["strategy"] == "daytrading" and body["date"] == "2026-10-23":
+                raise OSError("timeout")
+            v = {"opening": -2.486, "daytrading": None, "close30": 0.3}[body["strategy"]]
+            return dict(ok=True, result=self.rec(v, settled=body["date"] != "2026-10-26"))
+        self.put_live("2026-10-23", opening=self.rec(1.2))                                          # Worker 장부가 이미 확정 — 부르지 않는다
+        now = datetime(2026, 10, 26, 15, 50, tzinfo=lab.KST)                                        # 월요일 16:00 전 — 오늘은 건너뛴다
+        self.assertEqual(lab.fetch_settle_copies(now, post, key=""), dict(skipped="감시키 없음"))
+        r = lab.fetch_settle_copies(now, post, key="k")
+        self.assertEqual(sorted(calls), [("2026-10-22", "daytrading"), ("2026-10-22", "opening"), ("2026-10-23", "close30"), ("2026-10-23", "daytrading")])   # 주말 · 10/22 전 · ⑤ 채택일 전 안 부름
+        self.assertEqual(sorted(r["got"]), ["2026-10-22:daytrading", "2026-10-22:opening", "2026-10-23:close30"])
+        self.assertEqual([e["tab"] for e in r["errors"]], ["daytrading"])
+        j = json.loads((lab.DATA / "claude-settle" / "2026-10-22.json").read_text(encoding="utf-8"))
+        self.assertEqual((j["records"]["opening"]["dayPct"], j["records"]["opening"]["copiedAt"], j["source"]), (-2.486, "2026-10-26T15:50:00+09:00", "pages-claude-telegram-op-close(nightly)"))
+        calls.clear()
+        r2 = lab.fetch_settle_copies(datetime(2026, 10, 26, 18, 40, tzinfo=lab.KST), post, key="k")   # 다시 돌면 받은 것은 그대로 · 남은 것만
+        self.assertEqual(sorted(calls), [("2026-10-23", "daytrading"), ("2026-10-26", "close30"), ("2026-10-26", "daytrading"), ("2026-10-26", "opening")])
+        self.assertEqual(r2["got"], [])                                                             # 10/26 은 확정 전(settled false) — 저장 안 함
+        self.assertFalse((lab.DATA / "claude-settle" / "2026-10-26.json").exists())
+        self.assertEqual(json.loads((lab.DATA / "claude-settle" / "2026-10-22.json").read_text(encoding="utf-8"))["records"]["opening"]["copiedAt"], "2026-10-26T15:50:00+09:00")
+
+
 class ReviewHolidayTest(unittest.TestCase):
     """밤 점검: 휴장일(10/5 개천절 대체휴일)엔 ①② 원본이 없어도 정상, 개장일(10/6)엔 '원본 없음' 점검. 주문 실패는 날과 상관없이 점검."""
 
@@ -1303,7 +1426,7 @@ class Close30Test(unittest.TestCase):
             lab.d1_live_status = old
 
     def test_paper_close30_from_adoption_day(self):
-        old = (lab.d1_live_status, lab.d1_live_reason, lab.etf_daily, lab.read_json, dict(lab.CAL), dict(lab.DECISIONS), lab.C30_PW)
+        old = (lab.d1_live_status, lab.d1_live_reason, lab.etf_daily, lab.read_json, dict(lab.CAL), dict(lab.DECISIONS), lab.C30_PW, dict(lab.ORDERS))
         try:
             lab.d1_live_status = lambda d: "pending"
             lab.d1_live_reason = lambda d: ""
@@ -1312,10 +1435,14 @@ class Close30Test(unittest.TestCase):
             lab.CAL.clear()
             lab.CAL.update(etf=["2026-10-22", "2026-10-23"], coin=["2026-10-23"], us=["2026-10-22"], close30=["2026-10-22", "2026-10-23", "2026-10-26"])
             lab.DECISIONS.clear()
-            lab.C30_PW = {"2026-10-22": 5.0, "2026-10-26": 1.5}
+            lab.C30_PW = {"2026-10-22": 5.0, "2026-10-26": 9.9}                                   # 규칙 값(Yahoo 60분봉) — 채택일부터는 안 쓴다
+            rec = lambda v: dict(status="closed", basis="orders", settled=True, dayPct=v, trades=[], strategyVersion="close30_dip_v1")
+            lab.ORDERS.clear()
+            lab.ORDERS.update(close30={"2026-10-22": dict(v=5.0, src="worker", rec=rec(5.0)), "2026-10-23": dict(v=None, src="worker", rec=rec(None)),
+                                       "2026-10-26": dict(v=1.5, src="nightly", rec=rec(1.5))})
             out = lab.paper_entries({}, {}, ["2026-10-22", "2026-10-23"], {}, {}, ["2026-10-22", "2026-10-23"])
-            self.assertEqual([(d, r["action"], r["pnlPct"], r["strategyVersion"]) for d, r in out["close30_etf"]],
-                             [("2026-10-23", "no_trade", 0.0, "close30_dip_v1"), ("2026-10-26", "trade", 1.5, "close30_dip_v1")])   # 10/22(채택 전)은 쓰지 않는다
+            self.assertEqual([(d, r["action"], r["pnlPct"], r["strategyVersion"], r["source"]) for d, r in out["close30_etf"]],
+                             [("2026-10-23", "no_trade", 0.0, "close30_dip_v1", "orders:worker"), ("2026-10-26", "trade", 1.5, "close30_dip_v1", "orders:nightly")])   # 10/22(채택 전)은 쓰지 않는다 · 주문 정산 값
         finally:
             lab.d1_live_status, lab.d1_live_reason, lab.etf_daily, lab.read_json = old[:4]
             lab.CAL.clear()
@@ -1323,6 +1450,8 @@ class Close30Test(unittest.TestCase):
             lab.DECISIONS.clear()
             lab.DECISIONS.update(old[5])
             lab.C30_PW = old[6]
+            lab.ORDERS.clear()
+            lab.ORDERS.update(old[7])
 
     def test_params_versions_and_catalog(self):
         self.assertEqual(lab._valid_params("close30", dict(code="233740", th=-1.5)), dict(code="233740", th=-1.5))

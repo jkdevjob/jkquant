@@ -82,7 +82,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.21.1</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.22.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -182,7 +182,8 @@ function buyCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("③ 매수 타이밍","<div class='tw'><table class='board doc'><tbody>"+docRow("매수",d.buy)+docRow("시간표",d.times)+"</tbody></table></div>",true);}
 function sellCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("④ 매도 · 손절 · 리스크","<div class='tw'><table class='board doc'><tbody>"+docRow("매도",d.sell)+docRow("위험 관리",d.risk)+"</tbody></table></div><p class='note'>목표(+1%/일 · +5%/주)를 맞추려고 기준·손절을 임의로 바꾸지 않습니다. 바꿀 때는 그림자 전략으로 먼저 검증합니다.</p>",true);}
-var EXEC={opening:"KIS 모의투자(VTS) 실제 주문 · 체결 조회",daytrading:"KIS 모의투자(VTS) 실제 주문 · 체결 조회",crypto:"주문 없음 — 업비트 60분봉 모의 장부",soxl:"주문 없음 — 미국 일봉 모의 장부",close30:"KIS 모의투자(VTS) 실제 주문 · 체결 조회"};
+var KR_SETTLE="KIS 모의투자(VTS) 주문 · 손익은 주문한 건을 공식 시가 · 종가로 정산(모의투자 체결 · 거절은 측정용 — 2026-10-22~)";
+var EXEC={opening:KR_SETTLE,daytrading:KR_SETTLE,crypto:"주문 없음 — 업비트 60분봉 모의 장부",soxl:"주문 없음 — 미국 일봉 모의 장부",close30:KR_SETTLE};
 var MARKET={opening:"코스피·코스닥 보통주 (전일 RSI<30 명단)",daytrading:"KODEX 코스닥150레버리지 233740",crypto:"업비트 KRW-BTC · KRW-ETH (하루 단타)",soxl:"SOXL (반도체 3배)",close30:"KODEX 코스닥150레버리지 233740 (15:00 → 15:30)"};
 var WEEKKEY={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"],close30:["close30_etf"]};
 // 탭 맨 위 운영판 — 기준전략 · 오늘 · 왜 · 누적 · 그림자 판정 표본 · 이번 주 · 데이터 날짜
@@ -435,7 +436,7 @@ function tabPage(tab,T,gd,et,wl){
     var el=et.live||{},erows=((el.rows)||[]).slice().reverse().map(function(x){return "<tr><td>"+esc(x.signalDate)+" → "+esc(x.exitDate||"—")+"</td><td>"+pct(x.expectedDropPct)+"</td><td>"+pct(x.buySlipPct)+"</td><td>"+pct(x.sellSlipPct)+"</td><td class='"+cls(x.realizedNetPct)+"'>"+pct(x.realizedNetPct)+"</td></tr>"}).join("");
     html+=sec("⑧ 실행 품질 · VTS 대조",erows?"<div class='tw'><table><thead><tr><th>매수 → 매도</th><th>예상 하락</th><th>매수 슬립</th><th>매도 슬립</th><th>순손익</th></tr></thead><tbody>"+erows+"</tbody></table></div>":"<p class='note'>아직 매수 신호가 난 날이 없습니다.</p>",false);
   }
-  if(tab==="close30")html+=sec("⑧ 실행 품질","<p class='note'>KIS 모의투자로 실제 주문합니다: 15:00 시장가 매수 → 15:21 종가 동시호가 시장가 매도 → 15:40 체결 조회. ②(같은 종목)와는 접수 시각으로 나눠 셉니다 — ⑤ 매수 15:00~15:15 · 매도 15:15 이후, ② 매수 15:15 이후 · 매도 09:00 전. 비용은 밤 계산과 같은 식(수수료 0.03% + 15:00 매수 반 호가)을 체결가에도 뺍니다.</p>",false);
+  if(tab==="close30")html+=sec("⑧ 실행 품질","<p class='note'>KIS 모의투자로 실제 주문합니다: 15:00 시장가 매수 → 15:21 종가 동시호가 시장가 매도 → 15:40 체결 조회. ②(같은 종목)와는 접수 시각으로 나눠 셉니다 — ⑤ 매수 15:00~15:15 · 매도 15:15 이후, ② 매수 15:15 이후 · 매도 09:00 전. 손익은 주문한 건을 15:00 판단 가격 → 공식 종가로 정산합니다(모의투자 체결 · 거절은 측정용). 비용은 밤 계산과 같은 식(수수료 0.03% + 15:00 매수 반 호가).</p>",false);
   if(tab==="crypto"||tab==="soxl")html+=sec("⑧ 실행 품질","<p class='note'>"+(tab==="crypto"?"주문 없이 업비트 60분봉으로 기록합니다: 돌파한 봉에서 max(봉 시가, 어제 고가)+0.05% 에 매수, 다음 날 09:00 직전 봉 종가에 매도, 손절은 매수가 −5%(+0.1% 미끄러짐), 왕복 비용 0.14%. 같은 봉 안에서 손절선과 종가 순서를 모르면 손절로 봅니다(보수적). 실주문 전에는 실제 체결 차이를 따로 재야 합니다.":"주문 없이 일봉으로 기록합니다: 마감 확정 종가로 판단 → 다음 미국장 시가 매수 · 매도(같은 종가로 판단하고 체결하지 않음), 왕복 비용 0.20%. 미국장 결과는 한국시각 다음 날 아침에 확정됩니다.")+"</p>",false);
   return html;
 }
@@ -689,8 +690,8 @@ function histRender(){
     fw.map(function(x){return "<tr><td>"+esc(x.date)+"</td><td>"+esc(HACT[x.action]||x.action||"")+"</td><td class='"+cls(x.dayPct)+"'>"+(x.dayPct==null?"—":pct(x.dayPct))+"</td><td style='text-align:left;white-space:normal'>"+
       ((x.trades||[]).map(function(t){return esc(t[6]||t[5]||"")+" "+won(t[2])+" → "+won(t[4])+" <b class='"+cls(t[7])+"'>"+pct(t[7])+"</b>"}).join("<br>")||"<span class='sub'>—</span>")+"</td><td class='sub'>"+esc(String(x.recordedAt||"").slice(5,16).replace("T"," "))+"</td></tr>"}).join("")+"</tbody></table></div>"
     :"<p class='note'>아직 없음 — 확정된 날부터 밤 계산이 한 줄씩 붙입니다.</p>");
-  var lvh=lv.length?"<div style='margin-top:12px'><b>🧾 실시간 마감 장부</b> <span class='sub'>이 전략이 메인이던 날 · Worker 하루 마감 장부(모의투자 체결) 원본</span></div><div class='tw'><table class='board'><thead><tr><th>날짜</th><th style='text-align:left'>매매(전략 손익)</th><th style='text-align:left'>측정용 · 미청산</th><th style='text-align:left'>메모</th></tr></thead><tbody>"+
-    lv.map(function(x){return "<tr><td>"+esc(x.date)+"</td><td style='text-align:left;white-space:normal'>"+(histLiveTrades(x.trades)||"<span class='sub'>매매 없음</span>")+"</td><td style='text-align:left;white-space:normal'>"+histLiveTrades((x.measure||[]).concat(x.open||[]))+"</td><td style='text-align:left;white-space:normal' class='sub'>"+esc(x.note||"")+"</td></tr>"}).join("")+"</tbody></table></div>":"";
+  var lvh=lv.length?"<div style='margin-top:12px'><b>🧾 실시간 마감 장부</b> <span class='sub'>이 전략이 메인이던 날 · Worker 하루 마감 장부 원본(10/22까지 모의투자 체결 기준 · 10/23부터 주문한 건을 공식 시가 · 종가로 정산)</span></div><div class='tw'><table class='board'><thead><tr><th>날짜</th><th style='text-align:left'>매매(전략 손익)</th><th style='text-align:left'>측정용 · 미청산</th><th style='text-align:left'>메모</th></tr></thead><tbody>"+
+    lv.map(function(x){return "<tr><td>"+esc(x.date)+"</td><td style='text-align:left;white-space:normal'>"+(histLiveTrades(x.trades)||"<span class='sub'>매매 없음</span>")+"</td><td style='text-align:left;white-space:normal'>"+histLiveTrades((x.measure||[]).concat(x.open||[]))+"</td><td style='text-align:left;white-space:normal' class='sub'>"+(x.dayPct!=null?"그날 "+pct(x.dayPct)+" · ":"")+esc(x.note||"")+(x.warn?"<br>⚠️ "+esc(x.warn):"")+"</td></tr>"}).join("")+"</tbody></table></div>":"";
   var yb="<div class='row' style='margin-top:6px'><button class='hbtn' onclick=\"histYear('')\""+(HV.year?"":" disabled")+">전체</button>"+years.map(function(y){return "<button class='hbtn' onclick=\"histYear('"+y+"')\""+(HV.year===y?" disabled":"")+">"+y+"</button>"}).join("")+"</div>";
   var btH="<div style='margin-top:12px'><b>🧮 과거 계산</b> <span class='sub'>지금 규칙 · 지금 자료로 전 기간 다시 계산(경쟁 점수와 같은 함수 · 같은 비용) — 밤마다 바뀔 수 있음 · 최근 순</span></div>"+yb+
     (part.length?"<div class='tw'><table class='board'><thead><tr><th>손익 날짜</th><th style='text-align:left'>종목 · 진입 → 청산</th><th>순손익</th><th style='text-align:left'>사유</th></tr></thead><tbody>"+part.map(histTradeRow).join("")+"</tbody></table></div>"
