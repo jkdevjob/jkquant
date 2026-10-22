@@ -38,13 +38,13 @@ export async function onRequestGet({request,env}){
  if(!permitted(request,env))return respond({ok:false,error:"unauthorized"},401);
  const u=new URL(request.url),op=u.searchParams.get("op"),kind=u.searchParams.get("kind");
  const today=kst(),date=u.searchParams.get("date")||today.date,origin=authOrigin(request);
- if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return respond({ok:false,error:"invalid date"},400);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return respond({ok:false,error:"invalid date"},400);
  if(op==="scan"){
   if(!["day","overnight"].includes(kind))return respond({ok:false,error:"kind"},400);
   if(date!==today.date||today.hm<(kind==="day"?1505:1521))return respond({ok:false,error:"not due"},409);
   const cutoff=kind==="day"?1504:1520;
   const univers=await getJson(origin+"/api/universe?limit=100");
-  const symbols=(univers.universe||[]).filter(x=>x&&/^\\d{6}$/.test(String(x.code||""))).slice(0,50);
+  const symbols=(univers.universe||[]).filter(x=>x&&/^\d{6}$/.test(String(x.code||""))).slice(0,50);
   if(!symbols.length)return respond({ok:false,error:"universe empty"},503);
   const {output,errors}=await batch(symbols,async stock=>{
    const q=await quote(origin,stock.code),day=sessionDaily(q.daily,date);
@@ -64,7 +64,7 @@ export async function onRequestGet({request,env}){
   if(date!==today.date)return respond({ok:false,error:"pricing only current session"},409);
   const allowed={day_entry:1507,day_exit:1540,overnight_entry:1540,overnight_exit:906};
   if(today.hm<allowed[stage])return respond({ok:false,error:"stage not settled"},409);
-  const codes=[...new Set(String(u.searchParams.get("codes")||"").split(",").filter(x=>/^\\d{6}$/.test(x)))].slice(0,35);
+  const codes=[...new Set(String(u.searchParams.get("codes")||"").split(",").filter(x=>/^\d{6}$/.test(x)))].slice(0,35);
   const {output,errors}=await batch(codes,async code=>{
    const q=await quote(origin,code),day=sessionDaily(q.daily,date);
    if(!day)return null;
