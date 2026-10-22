@@ -75,7 +75,7 @@
     const names=f.rules?.patterns||{};
     const records=f.records||[];
     const rows=records.slice().reverse().slice(0,100).map(r=>`<tr><td>${esc(r.name)}<span class="rule-note">${esc(r.code)} · ${esc(r.market)}</span></td><td>${esc(names[r.pattern]||r.pattern)}</td><td>${esc(r.signalDate)}<span class="rule-note">등록 ${esc(r.registeredDate)}</span></td><td>${esc(r.entryDate||'다음 세션 대기')}</td><td class="num">${n(r.sessions,0)}</td><td class="num">${pct(r.netMarkPct)}</td><td>${esc(r.dataStatus)}${r.revisionDates?.length?'<span class="rule-note">원천 수정 감지 · 기존 기록 보존</span>':''}</td></tr>`);
-    return `<div class="notice"><strong>미래 후보를 테스트하는 연구 · 자동주문 없음</strong><br>과거에 정의한 세 가격 패턴을 고정했습니다. 텐배거 예측력과 수익성은 아직 미검증입니다. 신호·등록일 모두 지난 다음 거래 가능한 KRX 종가부터 관찰하며, 과거 결과를 소급해서 모의 수익으로 넣지 않습니다.</div>
+    return `<div class="notice"><strong>미래 후보를 테스트하는 연구 · 한투 모의는 설정에서 별도 선택</strong><br>과거에 정의한 세 가격 패턴을 고정했습니다. 텐배거 예측력과 수익성은 아직 미검증입니다. 신호·등록일 모두 지난 다음 거래 가능한 KRX 종가부터 관찰하며, 과거 결과를 소급해서 모의 수익으로 넣지 않습니다. 한투 모의는 설정에서 청산군을 고르고 ON한 이후의 신규 등록부터 종가 동시호가로 주문합니다. 연구 가격과 실제 모의 체결은 전체 매매이력에서 구분합니다.</div>
       <div class="cards">${metric('시세 기준일',f.asOf||'대기','KRX 정규장 종가 / 마감·발표 지연 반영')}${metric('이번 조건 통과',n(f.candidates?.length||0,0)+'신호','한 종목에 여러 패턴 가능 / 매수 추천 아님')}${metric('누적 실험 등록',n(records.length,0)+'건','같은 종목·패턴의 활성 실험은 중복 등록 안 함')}${metric('관찰 시작 / 청산군',n(f.entered||0,0)+' / '+n(f.closedArms||0,0),'청산 미확인은 확정 0%가 아님')}</div>
       <div class="box"><h3>고정한 탐색 가설 v${esc(f.strategyVersion)}</h3>${table(['패턴','등록 조건'],[
         '<tr><td>상승 200일선 재돌파</td><td>종가가 200일선 위로 재진입 + 200일선의 20일 변화 양수</td></tr>',

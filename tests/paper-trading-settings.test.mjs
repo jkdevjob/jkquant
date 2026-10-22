@@ -83,7 +83,7 @@ test('settings owner/monitor authorization and method validation prevent unautho
  });
 });
 async function executionEndpoint(src=read('functions/api/opening-execute.js')){
- return (await dataImport(src.replace("'./_paper-trading.js'",JSON.stringify(new URL('../functions/api/_paper-trading.js',import.meta.url).href))+'\n// isolated '+Math.random())).onRequestPost;
+ return (await dataImport(src.replace(/'\.\/(_paper-trading|_opening-execution)\.js'/g,(_,f)=>JSON.stringify(new URL('../functions/api/'+f+'.js',import.meta.url).href))+'\n// isolated '+Math.random())).onRequestPost;
 }
 async function atOpening(fn){const old=globalThis.Date,now=old.parse(date+'T09:08:00+09:00');globalThis.Date=class extends old{constructor(...a){super(...(a.length?a:[now]));}static now(){return now;}};try{return await fn();}finally{globalThis.Date=old;}}
 const executeReq=()=>new Request('https://app/api/opening-execute',{method:'POST',headers:{'x-monitor-key':'fixture'},body:JSON.stringify({date,buyEvents:[signal],sellEvents:[]})});
@@ -186,6 +186,7 @@ function uiHarness(src=read('settings-paper-trading.js')){
 }
 async function checkUI(src){
  const h=uiHarness(src);await h.c.loadPaperSettings();assert.equal((h.html.match(/>OFF<\/span>/g)||[]).length,7);assert.equal(h.node('paper_enabled_gpt_crypto').disabled,true);
+ for(const s of PAPER_STRATEGIES.filter(s=>s.supported))assert.equal(h.node('paper_enabled_'+s.id).disabled,false);
  h.node('paper_enabled_gpt_opening').checked=true;h.node('paper_budget_gpt_opening').value='500000';await h.c.savePaperSetting('gpt_opening');assert.equal(h.server.strategies.gpt_opening.enabled,true);assert.equal(h.server.strategies.gpt_opening.budget,500000);assert.match(h.html,/>ON<\/span>/);
  await h.c.savePaperSetting(null,true);assert.ok(Object.values(h.server.strategies).every(x=>!x.enabled));assert.equal(JSON.parse(h.requests.at(-1).body).expectedRevision,1);
  h.node('paper_enabled_gpt_opening').checked=true;h.fail=true;await h.c.savePaperSetting('gpt_opening');assert.match(h.node('paperTradingMessage').textContent,/저장 실패/);assert.doesNotMatch(h.html,/>ON<\/span>/);assert.equal(h.node('paperReload').disabled,false);

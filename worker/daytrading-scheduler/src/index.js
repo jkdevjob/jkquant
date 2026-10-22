@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import {dayBrokerPlans,sendResearchPlans,RESEARCH_BROKER_VERSION} from "../../../functions/api/_research-orders.js";
 
 const SHARDS=5;
 const MAX_SCAN_LAG_MS=3*60*1000;
@@ -551,6 +552,9 @@ async function reconcilePaper(env,date,target,candidates,mainVariant="baseline",
     signalEvents};
   ledger.summary=ledgerSummary(ledger);
   const saved=await writePaper(env,ledger);
+  // Only the persisted operating main can order. Backfills and shadow ledgers cannot.
+  try{await sendResearchPlans(env,dayBrokerPlans(saved,Date.now(),partial));}
+  catch(e){console.error(JSON.stringify({type:'daytrading_broker_error',date,error:String(e.message||e)}));}
   await notifyPaperTransitions(env,old,saved);await retryPaperWebPush(env,saved);
   return saved;
 }
@@ -648,6 +652,10 @@ export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(runScheduled(controller,env));},
   async fetch(request,env){
     const u=new URL(request.url);
+    if(u.pathname==='/broker-status'){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      return json({ok:true,version:RESEARCH_BROKER_VERSION,strategies:['gpt_daytrading'],environment:'vts',settings:'opening-scheduler /paper-settings'});
+    }
     if(u.pathname==="/health")return json({
       ok:true,service:"jkquant-daytrading-scheduler",
       schedule:"09:55 snapshot + 10:00~14:31 signal scans + 14:32~15:11 paper exits",

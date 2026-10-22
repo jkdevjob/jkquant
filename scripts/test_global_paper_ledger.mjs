@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 globalThis.DurableObject=class {};
 let workerSrc=fs.readFileSync(path.join(__dirname,'..','worker/global-intraday-scheduler/src/index.js'),'utf8');
-workerSrc=workerSrc.replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;');
+workerSrc=workerSrc.replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;').replaceAll('../../../functions/api/',new URL('../functions/api/',import.meta.url).href);
 const mod=await import('data:text/javascript;base64,'+Buffer.from(workerSrc).toString('base64'));
 
 function near(a,b,tol=1e-9){return Math.abs(Number(a)-Number(b))<=tol;}

@@ -7,7 +7,7 @@ import {onRequestGet} from '../functions/api/trade-history.js';
 import {summarizePaperLedger} from '../functions/api/scalping-live-results.js';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 globalThis.DurableObject=class{constructor(ctx){this.ctx=ctx;}};
-const worker=async name=>import('data:text/javascript;base64,'+Buffer.from(read('worker/'+name+'-scheduler/src/index.js').replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;')).toString('base64'));
+const worker=async name=>import('data:text/javascript;base64,'+Buffer.from(read('worker/'+name+'-scheduler/src/index.js').replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;').replaceAll('../../../functions/api/',new URL('../functions/api/',import.meta.url).href)).toString('base64'));
 const global=await worker('global-intraday'),day=await worker('daytrading');
 function memoryStore(Class){
   const stores=new Map();
@@ -133,7 +133,7 @@ test('value mutants: shadow omission, reconstructed provenance loss, invented de
   assert.throws(()=>assert.equal(mutant.paperRecords('daytrading',{date,trades:[base],shadowLedgers:{x:{trades:[base]}}}).length,2),assert.AssertionError);
   const collapsed=await import('data:text/javascript;base64,'+Buffer.from(source.replace("x.recordOrigin+':'+x.strategy","x.strategy")).toString('base64'));
   const x=record('crypto',base);assert.throws(()=>assert.equal(collapsed.uniqueRecords([x,{...x,recordOrigin:'server-paper'}]).length,2),assert.AssertionError);
-  const src=read('worker/daytrading-scheduler/src/index.js').replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;').replace('// No fill at 15:10 without the 15:10 completed candle.','if(t.status==="open"&&target>=PAPER_FINAL_EXIT_HM){t.status="closed";t.exitPrice=t.currentPrice;t.exitTime=1510;}');
+  const src=read('worker/daytrading-scheduler/src/index.js').replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;').replace('// No fill at 15:10 without the 15:10 completed candle.','if(t.status==="open"&&target>=PAPER_FINAL_EXIT_HM){t.status="closed";t.exitPrice=t.currentPrice;t.exitTime=1510;}').replaceAll('../../../functions/api/',new URL('../functions/api/',import.meta.url).href);
   const fake=await import('data:text/javascript;base64,'+Buffer.from(src).toString('base64'));
   assert.throws(()=>assert.equal(fake.applyBars({...base,status:'open',entryTime:1509,exitPrice:null},[{t:date+' 15:09:00',o:100,h:100,l:100,c:100}],1510).status,'open'),assert.AssertionError);
 });
@@ -145,7 +145,7 @@ test('today card stops showing held trades after the recorded deadline or final 
   assert.equal(btc.state,'unavailable');assert.equal(btc.positions[0].status,'unverified');
 });
 test('value mutants: lost stored entry and retired variants are detected',async()=>{
-  const src=read('worker/global-intraday-scheduler/src/index.js').replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;');
+  const src=read('worker/global-intraday-scheduler/src/index.js').replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;').replaceAll('../../../functions/api/',new URL('../functions/api/',import.meta.url).href);
   const lost=await import('data:text/javascript;base64,'+Buffer.from(src.replace('const x=old?.trades?.[0];if(!x)return candidate;','return candidate; const x=old?.trades?.[0];')).toString('base64'));
   const old={trades:[{...base,entryPrice:100}],strategyParams:global.BTC_VARIANTS.baseline};
   assert.throws(()=>assert.equal(lost.storedOrbTrade('crypto',date,old,{entryPrice:999},btcBars(),kst(3,0),global.BTC_VARIANTS.baseline).entryPrice,100),assert.AssertionError);

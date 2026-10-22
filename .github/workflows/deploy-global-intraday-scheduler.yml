@@ -5,6 +5,7 @@ on:
   push:
     branches: [main]
     paths:
+      - "functions/api/_research-orders.js"
       - "worker/global-intraday-scheduler/**"
       - "scripts/backfill_scalping_paper.py"
       - ".github/workflows/deploy-global-intraday-scheduler.yml"

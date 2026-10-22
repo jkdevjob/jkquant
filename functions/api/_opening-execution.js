@@ -51,3 +51,22 @@ export function openingBroker(events,signalIds){
   }
  }return mergeOpeningBroker({attempts});
 }
+export function openingOwnedQty(ledger,signal,orders){
+ const refs=openingOrderRefs(ledger.date,[signal],[signal]),broker=openingBroker(ledger.executionEvents,refs.map(x=>x.signalId));
+ const norm=v=>String(v||'').replace(/^0+(?=\d)/,'');
+ let buyQty=0,soldQty=0;
+ for(const side of ['buy','sell']){
+  const ids=new Set(broker.attempts.filter(a=>a.side===side&&a.status==='accepted'&&a.orderNo).map(a=>norm(a.orderNo)));
+  const by=new Map();for(const x of orders||[]){
+   if(x.code!==signal.code||!ids.has(norm(x.orderNo))||x.sideCode!==(side==='buy'?'02':'01')||String(x.orderDate).replaceAll('-','')!==ledger.date.replaceAll('-',''))continue;
+   const prior=by.get(norm(x.orderNo));if(!prior||+x.fillQty>+prior.fillQty)by.set(norm(x.orderNo),x);
+  }
+  // Incomplete inquiry must not reuse a previous quantity or another strategy's shares.
+  if(by.size!==ids.size)throw Error('시초가 주문번호별 체결 원본 미확인');
+  for(const x of by.values()){
+   if(!Number.isSafeInteger(+x.fillQty)||+x.fillQty<0||+x.remainingQty>0)throw Error('시초가 미체결 잔량/수량 확인 필요');
+   if(side==='buy')buyQty+=+x.fillQty;else soldQty+=+x.fillQty;
+  }
+ }
+ return {qty:Math.max(0,buyQty-soldQty),buyQty,soldQty,error:buyQty?'':'시초가 VTS 매수 체결수량 0'};
+}

@@ -5,6 +5,8 @@ on:
   push:
     branches: [main]
     paths:
+      - "functions/api/_research-orders.js"
+      - "functions/api/_research-broker.js"
       - "worker/opening-scheduler/**"
       - "functions/api/_krx_calendar.js"
       - "functions/api/_paper-trading.js"
