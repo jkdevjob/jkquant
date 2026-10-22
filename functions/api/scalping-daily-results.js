@@ -381,6 +381,11 @@ function closedRow(date,source,marketDate=null){
 function pendingRow(date,reason,marketDate=null){
   return {date,marketDate,pending:true,pendingReason:reason,finalized:false,source:"kst-calendar"};
 }
+function missingClosedRow(date,strategy,reason,marketDate=null){
+  // 이미 끝난 세션의 장부 누락은 무기한 대기가 아니라 미확정 오류다.
+  return {date,marketDate,unavailable:true,missingClose:true,returnPct:null,finalized:false,
+    source:"missing-closed-ledger",reason:reason||strategy+" 마감 장부 확인 실패 · 거래 여부 확인 필요"};
+}
 function unknownRow(date,error){
   return {date,marketDayUnknown:true,marketDayError:error||"개장일 확인 실패",finalized:false,source:"market-calendar"};
 }
@@ -407,7 +412,10 @@ function pairKst(name,label,result,kstDate,krStatuses=null){
   const a=normalizeKstSessions(name,result),prevDate=shiftIso(kstDate,-1);
   const statusMap=new Map((Array.isArray(krStatuses)?krStatuses:[]).filter(Boolean).map(x=>[String(x.date),x]));
   const current=a.find(x=>String(x.date)===kstDate)||placeholderFor(name,kstDate,statusMap.get(kstDate)||null);
-  const previous=a.find(x=>String(x.date)===prevDate)||placeholderFor(name,prevDate,statusMap.get(prevDate)||null);
+  const previous=a.find(x=>String(x.date)===prevDate)||
+    ((name==="opening"||name==="daytrading")&&statusMap.get(prevDate)?.open===false
+      ?placeholderFor(name,prevDate,statusMap.get(prevDate))
+      :missingClosedRow(prevDate,name,name==="crypto"?"전날 비트코인 마감 장부 누락 · 거래 여부 확인 필요":"전날 마감 자료 누락 · 거래 여부 확인 필요",name==="soxl"?shiftIso(prevDate,-1):null));
   return {
     strategy:name,label,marketTime:"KST",timeZone:"Asia/Seoul",dateRule:"kst-calendar",
     current,previous,
