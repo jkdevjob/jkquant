@@ -39,6 +39,10 @@ jobs:
         run: |
           node --test tests/kis-token.test.mjs
           python scripts/mutation_test_kis_token.py
+      - name: 단타(클로드) 전략별 매매 이력 조회 — 경로 검사 · 소유자만 (값·변이)
+        run: |
+          node --test tests/claude-history.test.mjs
+          python scripts/mutation_test_claude_history.py
 
       - name: 연구 GPT 허브·텐배거 전향 기록 값·변이 검사
         run: |
@@ -360,7 +364,7 @@ jobs:
           if(!c.includes('if(hm===1810)return "duel"')||!c.includes('/api/scalping-duel')){
             console.error('✗ GPT·클로드 대결 18:10 KST Worker 경로 없음'); fail++;
           }
-          if(!/if\(hm>=905&&hm<=931\)return "opening";/.test(c)||!/if\(route==="opening"\)ctx\.waitUntil\(runMinute/.test(c)){
+          if(!/if\(hm>=905&&hm<=931\)return "opening";/.test(c)||!/if\(route==="opening"\)\{?\s*ctx\.waitUntil\(runMinute/.test(c)){
             console.error('✗ 09:05~09:31 KST 평일만 시초가 스캔으로 보내는 경로가 없습니다.'); fail++;
           }
           const must=[

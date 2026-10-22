@@ -11380,7 +11380,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
     ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
        crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
        &&count.claude_kr===5&&count.duel===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
-       &&Object.keys(count).length===8&&r0==='gapdown_preopen'&&r1===null
+       &&count.closing_day_signal===5&&count.closing_day_entry===5&&count.closing_overnight_signal===5    // 지피티 종가 30분 · 종가 베팅(종이 장부) 15:06 · 15:07 · 15:22
+       &&Object.keys(count).length===11&&r0==='gapdown_preopen'&&r1===null
        &&route(Date.parse('2026-10-05T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-05T21:05:00Z'))===null      // 여름(EDT) 05:05 KST
        &&route(Date.parse('2026-12-07T21:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-12-07T20:05:00Z'))===null      // 겨울(EST) 06:05 KST
        &&route(Date.parse('2026-10-09T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-10T20:05:00Z'))===null      // 금요일 마감(한국 토요일) · 토요일 없음
@@ -11396,8 +11397,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/if\(stage!=="close"\)await claudeKrClose\(env,date,ms\);[^\n]*\n\s*await claudeAlertsNow\(env\);/.test(ow));
   ok('Worker: 매 단계 응답을 gapdown ledger 에 먼저 저장 + 일부 조회 시 주문 없음 + 라우팅으로만 실행',
      /gapdownRecord\(env,date,"quote",q,ms\)/.test(ow)&&/gapdown_quote_partial/.test(ow)
-     &&/if\(route==="opening"\)ctx\.waitUntil\(runMinute\(controller,env\)\);/.test(ow)
-     &&/else if\(route&&route\.startsWith\("gapdown_"\)\)ctx\.waitUntil\(runGapdown\(route\.slice\(8\),controller,env\)\);/.test(ow));
+     &&/if\(route==="opening"\)\{?\s*ctx\.waitUntil\(runMinute\(controller,env\)\);/.test(ow)
+     &&/else if\(route&&route\.startsWith\("gapdown_"\)\)\{?\s*ctx\.waitUntil\(runGapdown\(route\.slice\(8\),controller,env\)\);/.test(ow));
   ok('Worker: 오후 매도·조회는 아침 매수 접수 성공 종목만',
      /o\.side==="buy"&&o\.vts&&o\.vts\.ok/.test(ow));
   ok('연구 workflow: KIS 호출·주문 없음 + 실측 원본은 날짜별 한 번만 저장(덮어쓰기 없음) + 16시 전 저장 안 함',
