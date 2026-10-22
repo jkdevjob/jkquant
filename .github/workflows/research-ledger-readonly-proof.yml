@@ -1,0 +1,37 @@
+name: Research ledger read-only proof
+on:
+  push:
+    branches: [fix/intraday-session-close-20261022]
+    paths: [.github/workflows/research-ledger-readonly-proof.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read original ledgers only
+        env:
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,subprocess,datetime,collections
+          from zoneinfo import ZoneInfo
+          date=datetime.datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()
+          base='https://jkquant-opening-scheduler.mumae4.workers.dev'
+          sources={
+            'closing':'https://jkquant.pages.dev/api/closing30-archive?date='+date,
+            'opening':base+'/event-history?kind=opening&from='+date+'&to='+date,
+            'day':'https://jkquant-daytrading-scheduler.mumae4.workers.dev/paper?date='+date,
+            'globalRuntime':'https://jkquant-global-intraday-scheduler.mumae4.workers.dev/runtime'}
+          for name,url in sources.items():
+              result=subprocess.run(['curl','--silent','--show-error','--max-time','20','--user-agent','JKQuant-research-proof/1.0','-H','x-monitor-key: '+os.environ['MONITOR_KEY'],url],capture_output=True,text=True,timeout=25)
+              try:j=json.loads(result.stdout)
+              except Exception:print(name,'source unavailable',result.returncode);continue
+              if name=='globalRuntime':print(name,json.dumps(j,ensure_ascii=False));continue
+              ledgers=j.get('ledgers') or ([j['ledger']] if j.get('ledger') else [])
+              for ledger in ledgers:
+                  events=ledger.get('events') or []
+                  counts=collections.Counter((e.get('kind') or '')+':'+str(e.get('stage')) for e in events)
+                  print(name,json.dumps({'ok':j.get('ok'),'date':ledger.get('date'),'updatedAt':ledger.get('updatedAt'),'scans':len(ledger.get('scans') or []),'events':len(events),'stages':dict(counts),'mainVariant':ledger.get('mainVariant'),'mainTrades':len(ledger.get('trades') or []),'shadowVariants':len(ledger.get('shadowLedgers') or {}),'summary':ledger.get('summary')},ensure_ascii=False))
+              if not ledgers:print(name,json.dumps({'ok':j.get('ok'),'ledgerCount':0,'error':j.get('error')}))
+          PY
