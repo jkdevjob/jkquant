@@ -52,3 +52,11 @@ test("global UI includes real closing tab, broker-free policy, historical varian
  assert(worker.includes('orderStatus:"paper_only_no_broker_order"'));
  assert(!worker.includes('executeVts(env,date,[],missing)}, "closing30"'));
 });
+
+test("private nightly relay rejects anonymous access and invalid dates before any upstream fetch",async()=>{
+ const {onRequestGet}=await import("../functions/api/closing30-archive.js");
+ const anon=await onRequestGet({request:new Request("https://jkquant.pages.dev/api/closing30-archive?date=2026-10-22"),env:{AUTOTRADE_KEY:"fixture"}});
+ assert.equal(anon.status,401);
+ const bad=await onRequestGet({request:new Request("https://jkquant.pages.dev/api/closing30-archive?date=bad",{headers:{"x-monitor-key":"fixture"}}),env:{AUTOTRADE_KEY:"fixture"}});
+ assert.equal(bad.status,400);
+});
