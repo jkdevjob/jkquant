@@ -123,3 +123,17 @@ test('mutants: missing numeric null guard, main variant filter and polling inter
  ]){const c={...base};vm.createContext(c);vm.runInContext(mutate(executable),c);assert.throws(()=>verify(c),{name:'AssertionError'});}
  const b=browser(block.replace('DAILY_LIVE_INTERVAL_MS=30000','DAILY_LIVE_INTERVAL_MS=60000'));b.ctx.startDailyLiveAuto();assert.throws(()=>assert.equal(b.intervals[0].ms,30000),{name:'AssertionError'});
 });
+
+
+test('09:30 finalization never leaves a previous opening buy as normal held or fake closed',()=>{
+ const at=Date.parse('2026-10-14T09:39:00+09:00');
+ const unresolved=opening(scan([event('buy',null)]),at);
+ assert.equal(unresolved.state,'unavailable');assert.equal(unresolved.open,1);
+ assert.equal(unresolved.returnPct,null);assert.match(unresolved.reason,/청산/);
+ const buy=event('buy',null),end=event('sell',null);
+ end.signal.finalExitUnverified=true;
+ const attempted=opening(scan([buy,end]),at);
+ assert.equal(attempted.open,0);assert.equal(attempted.unverified,1);
+ assert.equal(attempted.state,'unavailable');assert.equal(attempted.returnPct,null);
+ assert.match(attempted.sourceWarning,/체결/);
+});
