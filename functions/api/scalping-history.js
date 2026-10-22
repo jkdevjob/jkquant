@@ -95,6 +95,12 @@ function normalize(strategy,x){
     rank:null,detail:{openingHigh:n(x.openingHigh),signalVwap:n(x.signalVwap),volRatio:n(x.volumeRatio),mfePct:n(x.mfePct),maePct:n(x.maePct)}
   };
 }
+function normalizeVariantTrade(x){
+ return {date:x.date,variant:x.variant||"baseline",code:x.code||"",name:x.name||x.code||"",
+  strategyVersion:x.strategyVersion||"",signalTime:hm(x.signalTime),entryTime:hm(x.entryTime),
+  entryPrice:n(x.entryPrice),exitTime:hm(x.exitTime),exitPrice:n(x.exitPrice),
+  reason:x.reason||"",pnl:n(x.pnl),recordOrigin:x.source||"research-reconstructed"};
+}
 function dateDaysAgo(days){
   const d=new Date(Date.now()-days*86400000);
   return d.toISOString().slice(0,10);
@@ -226,23 +232,39 @@ export async function onRequestGet({request,env}){
     const src=SOURCES[strategy];
     if(!src)return new Response(JSON.stringify({ok:false,error:"strategy must be opening|daytrading|crypto|soxl"}),{status:400,headers:JH});
 
-    const rawPromise=(async()=>{const r=await historyFetch(RAW+src.path,{
+    const variant=(u.searchParams.get("variant")||"").trim();
+    if(variant&&!/^[a-zA-Z0-9_-]{1,80}$/.test(variant))
+      return new Response(JSON.stringify({ok:false,error:"invalid variant"}),{status:400,headers:JH});
+    const srcPath=variant?src.path.replace("baseline-trades.csv","variant-trades.csv"):src.path;
+    if(u.searchParams.get("variants")==="1"){
+      try{
+        const rr=await historyFetch(RAW+src.path.replace("baseline-trades.csv","variant-trades.csv"),{headers:{Accept:"text/csv"}});
+        if(rr.status===404)return new Response(JSON.stringify({ok:true,strategy,variants:["baseline"],status:"collecting",reason:"그림자 전체 이력은 다음 연구 데이터 갱신 후 반영"}),{headers:JH});
+        if(!rr.ok)throw Error("history variant source "+rr.status);
+        const vs=[...new Set(parseCsv(await rr.text()).map(x=>x.variant).filter(x=>/^[a-zA-Z0-9_-]{1,80}$/.test(String(x||""))))].sort((a,b)=>a==="baseline"?-1:b==="baseline"?1:a.localeCompare(b));
+        return new Response(JSON.stringify({ok:true,strategy,variants:vs,status:"ok"}),{headers:JH});
+      }catch(e){return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{status:502,headers:JH});}
+    }
+    const rawPromise=(async()=>{const r=await historyFetch(RAW+srcPath,{
       headers:{"Accept":"text/csv","User-Agent":"jkquant-scalping-history/1.1"},
       ...(trendOnly?{cf:{cacheEverything:true,cacheTtl:300}}:{})
     });
     if(r.status===404)return {found:false,rows:[]};
     if(!r.ok)throw new Error("GitHub raw "+src.path+" HTTP "+r.status);
-    return {found:true,rows:parseCsv(await r.text()).map(x=>normalize(strategy,x)).filter(x=>x.date)};
+    return {found:true,rows:parseCsv(await r.text())
+      .filter(x=>!variant||String(x.variant||"baseline")===variant)
+      .map(x=>variant?normalizeVariantTrade(x):normalize(strategy,x)).filter(x=>x.date)};
     })();
     const [raw,live]=await Promise.allSettled([rawPromise,
-      strategy==="opening"?Promise.resolve([]):durableLedgers(env,strategy,trendOnly?120:3650)]);
+      variant||strategy==="opening"?Promise.resolve([]):durableLedgers(env,strategy,trendOnly?120:3650)]);
     const sourceWarnings=[];
     if(raw.status==="rejected")sourceWarnings.push("연구 이력 조회 실패: "+String(raw.reason?.message||raw.reason));
     if(live.status==="rejected")sourceWarnings.push("장중 모의장부 조회 실패: "+String(live.reason?.message||live.reason));
     if(raw.status==="rejected"&&(strategy==="opening"||live.status==="rejected"))throw new Error(sourceWarnings.join(" / "));
     let rows=raw.status==="fulfilled"?raw.value.rows:[];
+    if(variant&&raw.status==="fulfilled"&&!raw.value.found)sourceWarnings.push("그림자 원장 생성 전 · 야간 연구 수집 필요");
     let durableDays=[];
-    if(strategy!=="opening"){
+    if(!variant&&strategy!=="opening"){
         const db=durableTradeRows(strategy,live.status==="fulfilled"?live.value:[]);
         durableDays=db.days;
         if(durableDays.length){
@@ -282,7 +304,7 @@ export async function onRequestGet({request,env}){
     const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
 
     return new Response(JSON.stringify({
-      ok:true,strategy,market:src.market,source:src.path,durableDbDays:durableDays.length,status,sourceWarnings,total,filtered,
+      ok:true,strategy,variant:variant||"baseline",market:src.market,source:srcPath,durableDbDays:durableDays.length,status,sourceWarnings,total,filtered,
       page,pageSize,pages,trades,
       summary:{
         trades:filtered,

@@ -24,7 +24,7 @@ test('연구 탭 복원·직접 링크와 기존 전략 경로 보존',()=>{
 
 function tabOrderValues(html){
   const tabs=[...html.matchAll(/<button class="strategy-tab([^"\n]*)" data-strategy="([^"]+)" onclick="([^"]+)">/g)];
-  assert.deepEqual(tabs.map(x=>x[2]),['daily','opening','daytrading','crypto','soxl','tenbagger','duel']);
+  assert.deepEqual(tabs.map(x=>x[2]),['daily','opening','daytrading','closing30','crypto','soxl','tenbagger','duel']);
   assert.deepEqual(tabs.filter(x=>x[1].trim()==='on').map(x=>x[2]),['daily'],'오늘 기본 선택 유지');
   const calls=[];
   vm.runInNewContext(tabs.find(x=>x[2]==='tenbagger')[3],{showStrategy:n=>calls.push(n)});

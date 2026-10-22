@@ -4,7 +4,7 @@
 // 장 종료 일일결과(summary)는 보내지 않는다(요청은 받아 skipped 로 답한다).
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
-const LABELS={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL",swing:"과매도 반등"};
+const LABELS={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL",swing:"과매도 반등",closing30:"종가 30분"};
 
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
 function authorized(request,env){

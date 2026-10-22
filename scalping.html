@@ -322,6 +322,7 @@ canvas{display:block;width:100%;height:auto}
     <button class="strategy-tab on" data-strategy="daily" onclick="showStrategy('daily')">📅 오늘</button>
     <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
     <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
+    <button class="strategy-tab" data-strategy="closing30" onclick="showStrategy('closing30')">🌇 종가 30분</button>
     <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
     <button class="strategy-tab" data-strategy="soxl" onclick="showStrategy('soxl')">⚡ SOXL</button>
     <button class="strategy-tab" data-strategy="tenbagger" onclick="showStrategy('tenbagger')">🔟 텐배거 연구</button>
@@ -361,6 +362,12 @@ canvas{display:block;width:100%;height:auto}
       <div id="daily_results_body"><p class="sub">전략별 오늘 결과를 불러오는 중…</p></div>
       <p class="note">목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 자금배분이 정해지기 전에는 단순 합산하지 않습니다.<br><b>보유 원칙:</b> 현재 4개 기준전략은 모두 당일청산·오버나이트 금지입니다. 향후 예외 후보도 별도 검증을 거쳐 최대 5거래일까지만 허용하며 6거래일 이상은 단타 전략에서 제외합니다.</p>
     </div>
+    <div class="card" id="daily_closing30_card">
+      <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">개별 주식 · 당일 종가 / 익일 시가 · 독립 모의연구</span></h3>
+      <p class="lead">메인+10개 그림자 전략을 별도 원본 장부로 매일 검증합니다. 종가 베팅은 익일 시가가 관측되기 전에는 수익을 확정하지 않습니다.</p>
+      <div id="daily_closing30_status" class="sub">종가 연구 결과 불러오는 중…</div>
+      <button class="ghostbtn sm" onclick="showStrategy('closing30')">종가 전략·모든 거래이력 보기 →</button>
+    </div>
     <div id="daily_trend_card" class="card">
       <div id="daily_cumulative_chart"><p class="sub">전략별 누적 수익률 추이를 불러오는 중…</p></div>
     </div>
@@ -383,6 +390,35 @@ canvas{display:block;width:100%;height:auto}
     <div class="strategy-head">GPT 기준전략과 클로드 기준전략의 실시간 모의매매 장부를 같은 규칙으로 일별·누적 비교</div>
     <div id="scalping_duel_body">
       <div class="card"><p class="sub">대결 자료를 불러오는 중…</p></div>
+    </div>
+  </div>
+
+  <div id="strategy_closing30" class="strategy-pane">
+    <div class="strategy-head">🌇 종가 30분 · 당일 청산 + 개별 종목 종가 베팅(다음 거래일 시가 청산)</div>
+    <div class="card">
+      <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">메인 + 그림자 10개 · 서버 자동 실행 · 증권사 주문 없음</span></h3>
+      <p class="lead">기준전략은 15시까지 하락한 개별 종목을 유동성 순으로 선정합니다. <b>당일청산형</b>은 15:06 신호 → 15:07 모의매수 → 15:40 당일 종가 확인으로 종료합니다.
+       <b>종가 베팅형</b>은 15:22 신호 → 15:40 종가 매수가 확정 → 다음 거래일 09:06 시가 확인으로 청산합니다.
+       신호는 그 시점까지 완료된 분봉만 사용합니다. 종가 단일가나 다음 날 시가를 미리 알아내는 백테스트 오류를 금지합니다.</p>
+      <div class="warn"><b>연구용:</b> 15:07의 가상 매수가격과 15:30 종가/익일 시가는 실거래 체결을 보장하지 않습니다. 실제 주문·VTS 주문은 전혀 제출하지 않으며, 이력은 수익률과 함께 매매 신호·체결가 원천·미확정 상태를 기록합니다. 거래비용 왕복 0.23%는 초기 보수적 가정이며, 별도 실측 검증이 필요합니다.</div>
+      <div class="out" id="closing30_summary" style="margin-top:12px"><div class="outbox"><div class="ol">상태</div><div class="ov">원본 조회 전</div></div></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>📚 전략별 전체 모의 매매이력 <span class="sub">메인 · 그림자 · 승격 이전 이력까지</span></h3>
+      <div class="row" style="margin-bottom:10px;align-items:flex-end">
+        <div class="fld"><label>유형</label><select id="closing30_kind" onchange="loadClosing30History()"><option value="all">전체</option><option value="day">당일 종가 청산</option><option value="overnight">종가 베팅 · 익일 시가</option></select></div>
+        <div class="fld"><label>메인/그림자</label><select id="closing30_variant" onchange="loadClosing30History()"><option value="all">전체</option></select></div>
+        <div class="fld"><label>종료일</label><input type="date" id="closing30_to" onchange="loadClosing30History()"></div>
+        <div class="fld"><label>조회 기간</label><select id="closing30_days" onchange="loadClosing30History()"><option value="7">7일</option><option value="14" selected>14일</option><option value="31">31일</option></select></div>
+        <button class="ghostbtn" onclick="loadClosing30History()">🔄 조회</button>
+      </div>
+      <p class="sub" id="closing30_history_msg">아직 서버 장부를 불러오지 않았습니다.</p>
+      <div id="closing30_history_body"><p class="sub">탭을 열면 메인·그림자 전체 원본을 조회합니다.</p></div>
+    </div>
+    <div class="card">
+      <h3><span class="dot"></span>🧬 매일 자동 연구 · 개선 현황</h3>
+      <p class="lead">동일 시점 기준선·그림자 후보별 승률, 비용 차감 평균수익, 낙폭, 홀드아웃 및 미확정 건수를 분리합니다. 우연히 좋은 한 주의 후보는 바로 승격하지 않습니다.</p>
+      <div id="closing30_research_body">첫 누적 연구 결과를 수집 중입니다.</div>
     </div>
   </div>
 
@@ -1915,6 +1951,7 @@ function cumulativeHistoryCard(name){
   return flowCard('📚 과거 누적 매매이력',
     '<p class="lead"><b>'+HIST_LABELS[name]+' 기준전략의 전체 확정 매매이력</b>입니다. 오늘 장부와 분리해 누적 원본을 최신순으로 조회합니다.</p>'+
     '<div class="row" style="margin-bottom:8px;align-items:flex-end">'+
+      '<div class="fld"><label>메인/그림자</label><select id="hist_'+name+'_variant" onchange="'+call+'"><option value="">운영 메인/기준</option><option value="baseline">기준 재구성</option></select></div>'+
       '<div class="fld"><label>기간</label><select id="hist_'+name+'_range" onchange="'+call+'"><option value="30">1개월</option><option value="90">3개월</option><option value="180" selected>6개월</option><option value="365">1년</option><option value="all">전체</option><option value="custom">날짜 지정</option></select></div>'+
       '<div class="fld"><label>시작일</label><input id="hist_'+name+'_from" type="date"></div>'+
       '<div class="fld"><label>종료일</label><input id="hist_'+name+'_to" type="date"></div>'+
@@ -1924,6 +1961,82 @@ function cumulativeHistoryCard(name){
     '<div id="hist_'+name+'_sum" class="out" style="margin-bottom:10px"></div>'+
     '<div id="hist_'+name+'_body"><p class="sub">탭을 열면 자동으로 불러옵니다.</p></div>'+
     '<div id="hist_'+name+'_pager" class="row" style="margin-top:10px"></div>');
+}
+async function loadScalpingVariantOptions(name){
+  const sel=$('hist_'+name+'_variant');if(!sel)return;
+  const selected=sel.value;
+  try{
+    const r=await fetch('/api/scalping-history?strategy='+encodeURIComponent(name)+'&variants=1',{cache:'no-store'});
+    const j=await r.json();if(!r.ok||!j.ok)return;
+    const options=['<option value="">운영 메인/기준</option>'];
+    for(const v of j.variants||[]){
+      if(!/^[a-zA-Z0-9_-]{1,80}$/.test(v))continue;
+      options.push('<option value="'+esc(v)+'">'+(v==='baseline'?'기준 재구성':esc(v))+'</option>');
+    }
+    sel.innerHTML=options.join('');
+    if([...sel.options].some(x=>x.value===selected))sel.value=selected;
+  }catch(e){console.warn('variant history options',e);}
+}
+async function loadClosing30Research(){
+  const el=$('closing30_research_body'),daily=$('daily_closing30_status');
+  try{
+    const u='https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/closing30.json?t='+Date.now();
+    const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error('첫 야간 연구 결과 미생성');
+    const j=await r.json(),all=j.variants||[];
+    const base=all.filter(x=>x.name==='baseline');
+    const lines=base.map(x=>{
+      const y=x.summary||{};
+      return '<div class="outbox"><div class="ol">'+(x.kind==='day'?'당일 종가 청산':'종가 베팅 · 익일 시가')+'</div>'+
+        '<div class="ov">'+Number(y.trades||0)+'건</div><div class="sub">비용 후 평균 '+histPct(y.avgPnl)+
+        ' · 승률 '+(y.winRate==null?'미확정':Number(y.winRate).toFixed(1)+'%')+'</div></div>';
+    }).join('');
+    if(daily)daily.innerHTML='<div class="out">'+lines+'</div><span class="sub">'+esc(j.date||'')+' 연구 · 누적 원본 '+Number(j.archiveDays||0)+'일 · '+esc(j.status||'collecting')+'</span>';
+    if(el){
+      el.innerHTML='<p class="sub">최종 연구 '+esc(j.generatedAt||'')+' · 메인 자동승격은 충분한 순방향 실측/위험 통과 후 적용 · 실주문 없음</p>'+
+        '<div class="htable-wrap"><table class="htable"><thead><tr><th>유형</th><th>그림자</th><th>거래</th><th>승률</th><th>평균 순익</th><th>PF</th><th>MDD</th><th>상태</th></tr></thead><tbody>'+
+        all.map(v=>{const z=v.summary||{};return '<tr><td>'+esc(v.kind==='day'?'당일청산':'종가 베팅')+'</td>'+
+          '<td>'+esc(v.name)+'</td><td>'+Number(z.trades||0)+'</td><td>'+ (z.winRate==null?'—':Number(z.winRate).toFixed(1)+'%')+
+          '</td><td>'+histPct(z.avgPnl)+'</td><td>'+ (z.profitFactor==null?'—':Number(z.profitFactor).toFixed(2))+
+          '</td><td>'+histPct(z.mddPct)+'</td><td>'+esc(v.status||'수집 중')+'</td></tr>';}).join('')+'</tbody></table></div>';
+      if(j.errors?.length)el.innerHTML+='<div class="warn">누락 원본 '+j.errors.length+'건 · 확정 거래에 포함하지 않음</div>';
+    }
+  }catch(e){
+    const v='첫 자동연구 수집 중 · '+esc(e.message||e);
+    if(daily)daily.textContent=v;if(el)el.textContent=v;
+  }
+}
+async function loadClosing30History(){
+  const body=$('closing30_history_body'),msg=$('closing30_history_msg'),sum=$('closing30_summary');
+  if(!body||!msg||!me)return;
+  msg.textContent='종가 연구 서버 장부 조회 중…';
+  try{
+    const token=await me.getIdToken();
+    const q=new URLSearchParams({kind:$('closing30_kind').value,variant:$('closing30_variant').value,days:$('closing30_days').value});
+    if($('closing30_to').value)q.set('to',$('closing30_to').value);
+    const r=await fetch('/api/closing30-history?'+q.toString(),{cache:'no-store',headers:{Authorization:'Bearer '+token}});
+    const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'HTTP '+r.status);
+    const v=$('closing30_variant'),selected=v.value;
+    const opts=['<option value="all">전체</option>',...(j.variants||[]).map(x=>'<option value="'+esc(x)+'">'+esc(x==='baseline'?'기준전략':x)+'</option>')];
+    v.innerHTML=opts.join('');if([...v.options].some(x=>x.value===selected))v.value=selected;
+    msg.textContent='원본 '+j.recordedDates.length+'일 · 조회 '+j.trades.length+'건 · 메인/그림자 '+j.variants.length+'종'+
+      (j.sourceWarnings.length?' · 일부 원본 누락: '+j.sourceWarnings.length+'일':'');
+    const z=j.summary||{},format=x=>x==null?'미확정':(x>=0?'+':'')+Number(x).toFixed(2)+'%';
+    sum.innerHTML='<div class="outbox"><div class="ol">매수/진입 후보</div><div class="ov">'+z.signals+'</div></div>'+
+      '<div class="outbox"><div class="ol">청산 완료</div><div class="ov">'+z.closed+'</div></div>'+
+      '<div class="outbox"><div class="ol">미청산/가격 확인필요</div><div class="ov">'+(z.open+z.missing)+'</div></div>'+
+      '<div class="outbox"><div class="ol">검증 거래 평균순익</div><div class="ov">'+format(z.avgPnl)+'</div></div>';
+    const title=x=>x.kind==='day'?'당일 종가 청산':'종가 베팅 → 익일 시가';
+    body.innerHTML=j.sourceWarnings.length?'<div class="warn">'+esc(j.sourceWarnings.slice(0,4).join(' / '))+'</div>':'';
+    if(!j.trades.length)body.innerHTML+='<div class="warn">확정된 거래가 없거나 첫 연구 세션을 기다리고 있습니다. 기록이 없다는 이유로 수익률 0%로 간주하지 않습니다.</div>';
+    else body.innerHTML+='<div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>전략</th><th>그림자ID</th><th>종목</th><th>매수</th><th>매도</th><th>손익</th><th>상태</th></tr></thead><tbody>'+
+      j.trades.map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(title(x))+'</td><td>'+esc(x.variant)+'</td><td>'+esc(x.name||x.code)+'</td>'+
+      '<td>'+esc(x.entryTime?scalpingKstStamp(x.entryTime):'—')+'<div class="sub">'+histPrice('opening',x.entryPrice)+'</div></td>'+
+      '<td>'+esc(x.exitTime?scalpingKstStamp(x.exitTime):'—')+'<div class="sub">'+histPrice('opening',x.exitPrice)+'</div></td>'+
+      '<td>'+histPct(x.pnl)+'</td><td>'+esc(x.status)+'</td></tr>').join('')+'</tbody></table></div>';
+    const research=$('closing30_research_body');
+    if(research)research.innerHTML='<div class="sub">누적 신호 '+j.allCount+'건 · 현재 확인된 변형 '+j.variants.length+'개 · '+esc(j.status)+
+      '. 매일 야간 연구 결과는 누적 표본·비용·위험 기준으로 순위를 산출하며, 통계 검증 전 메인 변경은 하지 않습니다.</div>';
+  }catch(e){msg.textContent='조회 실패';body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';}
 }
 function histPrice(name,v){
   if(v==null||v==='')return '—';
@@ -1943,6 +2056,7 @@ async function loadScalpingHistory(name,page=1){
   try{
     const range=($('hist_'+name+'_range')||{}).value||'180';
     const q=new URLSearchParams({strategy:name,range:range,page:String(page),pageSize:'100'});
+    const v=($('hist_'+name+'_variant')||{}).value||'';if(v)q.set('variant',v);
     if(range==='custom'){
       const f=$('hist_'+name+'_from'),t=$('hist_'+name+'_to');
       if(f&&f.value)q.set('from',f.value);
@@ -2693,7 +2807,7 @@ async function loadShadowRankings(force=false){
 
 function showStrategy(name){
   const active=['opening','daytrading','crypto','soxl'];
-  const tabs=['daily','duel','tenbagger',...active];
+  const tabs=['daily','duel','tenbagger','closing30',...active];
   if(!tabs.includes(name))name='daily';
   document.querySelectorAll('.strategy-pane').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
@@ -2702,6 +2816,7 @@ function showStrategy(name){
   if(name==='duel'){ loadScalpingDuel(false); }
   if(name==='tenbagger'){window.TenbaggerResearch?.boot();}
   if(name==='daily'){
+    void loadClosing30Research();
     void refreshDailyLiveResults();
     /* 오늘 탭의 핵심은 '오늘 결과'다. 연구/누적 그래프 9개 요청을 동시에 던져
        첫 카드까지 늦추지 말고, 핵심 결과가 끝난 뒤 낮은 우선순위로 나눠 불러온다. */
@@ -2712,7 +2827,8 @@ function showStrategy(name){
       setTimeout(()=>active.forEach(x=>loadStrategyScorecard(x)),220);
     });
   }
-  if(active.includes(name)){ loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); loadScalpingReview(name,false); loadShadowRankings(false); renderStrategyStatus(name); renderPlan(name); }
+  if(name==='closing30'){loadClosing30History();loadClosing30Research();}
+  if(active.includes(name)){ loadScalpingVariantOptions(name); loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); loadScalpingReview(name,false); loadShadowRankings(false); renderStrategyStatus(name); renderPlan(name); }
   if(name==='opening'){loadServerOpeningHistory();startOpeningPaperAuto();}
   else stopOpeningPaperAuto();
   if(name==='daytrading'){
@@ -2727,7 +2843,7 @@ function showStrategy(name){
 function restoreStrategy(){
   const linked=new URLSearchParams(location.search).get('strategy')||(location.hash==='#tenbagger'?'tenbagger':null);
   let n=String(linked||(SCALP_PREFS&&SCALP_PREFS.strategyTab)||'daily');
-  if(!['daily','duel','tenbagger','opening','daytrading','crypto','soxl'].includes(n))n='daily';
+  if(!['daily','duel','tenbagger','opening','daytrading','crypto','soxl','closing30'].includes(n))n='daily';
   showStrategy(n);
 }
 

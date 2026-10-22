@@ -550,6 +550,10 @@ export function scheduleRoute(ms){
   if(g("weekday")==="Sat"||g("weekday")==="Sun")return null;
   const hm=+g("hour")*100+ +g("minute");
   if(hm>=905&&hm<=931)return "opening";
+  if(hm===1506)return "closing_day_signal";
+  if(hm===1507)return "closing_day_entry";
+  if(hm===1522)return "closing_overnight_signal";
+  if(hm===906)return "opening"; // 병렬로 종가 베팅의 전일 종목 시가 청산
   if(hm===856)return "gapdown_preopen";
   if(hm===1521)return "gapdown_close";
   if(hm===1540)return "gapdown_reconcile";
@@ -567,6 +571,109 @@ export function kisTokenRecord(b,now=Date.now()){
   if(!(exp>now+60e3)||exp>now+25*36e5)return null;
   return {k:b.k,token,exp};
 }
+
+// ── 종가 30분: 당일 15:06~15:30 + 개별 종목 종가 매수/익일 시가 매도 ──
+// 기준/10 그림자 모두 같은 보존 가능한 신호장부. 연구용 종이체결만, VTS 실주문 금지.
+// 매수 신호와 확정 가능한 모의가격을 분리해 15:30 종가를 미리 아는 오류를 방지한다.
+const CLOSING_STAGE_MAP={closing_day_signal:1506,closing_day_entry:1507,
+  closing_overnight_signal:1522,closing_settle:1540,closing_overnight_exit:906};
+const closingKey=(kind,variant,code,stage)=>[kind,variant,code,stage].join(":");
+function closingEvent(date,kind,variant,code,stage,price=null,meta={}){
+  return {id:[date,kind,variant,code,stage].join(":"),date,kind,variant,code,
+    name:meta.name||code,stage,targetHm:meta.targetHm||null,
+    createdAt:new Date().toISOString(),price:price??null,
+    source:meta.source||"paper-only",pnl:meta.pnl??null,
+    signal:meta.signal||null,decisionVersion:"closing30_v1",
+    orderStatus:"paper_only_no_broker_order",state:stage==="signal"?"candidate":"paper_filled"};
+}
+async function closingApi(env,params){
+  const q=new URLSearchParams(params);
+  const r=await fetch(baseUrl(env)+"/api/closing30-monitor?"+q.toString(),{
+    headers:{"x-monitor-key":env.MONITOR_KEY,"accept":"application/json"}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw Error(j.error||"closing monitor "+r.status);
+  return j;
+}
+async function closingAlert(env,date,e,stage){
+  if(e.variant!=="baseline")return;
+  const lines=[
+    e.name+" ("+e.code+") · "+(e.kind==="day"?"종가 30분 당일청산":"종가 베팅 · 익일 시가청산"),
+    "모의체결 "+Number(e.price).toLocaleString("ko-KR")+"원 · "+e.source,
+    stage==="sell"&&e.pnl!=null?"비용반영 손익 "+(e.pnl>=0?"+":"")+e.pnl.toFixed(2)+"%":"증권사 실제 주문 없음 · 모의장부"];
+  try{
+    const time=String(e.targetHm||0).padStart(4,"0").replace(/(..)(..)$/,"$1:$2");
+    const r=await fetch(baseUrl(env)+"/api/scalping-alert",{method:"POST",
+      headers:{"x-monitor-key":env.MONITOR_KEY,"content-type":"application/json"},
+      body:JSON.stringify({strategy:"closing30",stage,date:e.createdAt.slice(0,10)||date,time,
+        eventId:e.id,eventAt:e.createdAt,lines})});
+    const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)console.error("closing30 alert "+(j.error||r.status));
+  }catch(error){console.error("closing30 alert failed "+String(error));}
+}
+async function lastOpenDate(env,date){
+  let d=new Date(date+"T00:00:00Z");
+  for(let i=0;i<9;i++){
+    d.setUTCDate(d.getUTCDate()-1);const prior=d.toISOString().slice(0,10);
+    try{if(await krMarketOpen(env,prior))return prior;}catch(error){throw Error("KRX previous day not verified: "+error);}
+  }
+  throw Error("previous open day not resolved");
+}
+function closingEntries(ledger,kind,stage){
+  return (ledger?.events||[]).filter(e=>e&&e.kind===kind&&e.stage===stage);
+}
+async function runClosing30(route,controller,env){
+  const scheduled=Number(controller.scheduledTime)||Date.now(),now=Date.now();
+  if(Math.max(0,now-scheduled)>MAX_SCAN_LAG_MS)throw Error("closing30 scheduled invocation stale");
+  const today=kstParts(scheduled).date,hm=kstHm(scheduled);
+  if(route==="closing_day_signal"||route==="closing_overnight_signal"){
+    const kind=route==="closing_day_signal"?"day":"overnight";
+    const j=await closingApi(env,{op:"scan",kind,date:today});
+    const events=(j.signals||[]).map(x=>closingEvent(today,kind,x.variant,x.code,"signal",null,{
+      name:x.name,source:"15시 완성봉 관측",targetHm:hm,signal:x.signal}));
+    const receipt=await appendLedger(env,{date:today,mainVariant:"baseline",scanId:"closing:"+today+":"+route,
+      scheduledTime:scheduled,capturedAt:new Date(now).toISOString(),targetHm:hm,
+      partial:!!j.partial,failed:j.errors||[],okShards:1,quoteErrors:j.errors?.length||0,events},"closing30");
+    console.log(JSON.stringify({type:route,date:today,signals:events.length,recorded:receipt.added,partial:j.partial}));
+    return;
+  }
+  const prior=route==="closing_overnight_exit"?await lastOpenDate(env,today):today;
+  const ledger=await readLedger(env,prior,"closing30");
+  if(!ledger){console.warn(JSON.stringify({type:"closing30_missing_signal_ledger",date:prior,route}));return;}
+  if((ledger.scans||[]).some(x=>x.partial))throw Error("partial input: do not fill unverified signals");
+  const cases=route==="closing_day_entry"?[["day","signal","buy","day_entry"]]:
+    route==="closing_settle"?[["day","buy","sell","day_exit"],["overnight","signal","buy","overnight_entry"]]:
+    [["overnight","buy","sell","overnight_exit"]];
+  for(const [kind,sourceStage,destStage,priceStage] of cases){
+    const previous=closingEntries(ledger,kind,sourceStage),already=new Set(closingEntries(ledger,kind,destStage)
+      .map(e=>closingKey(e.kind,e.variant,e.code,sourceStage)));
+    const fresh=previous.filter(e=>!already.has(closingKey(e.kind,e.variant,e.code,sourceStage)));
+    if(!fresh.length)continue;
+    const codes=[...new Set(fresh.map(x=>x.code))];
+    const quotes=await closingApi(env,{op:"prices",stage:priceStage,date:today,codes:codes.join(",")});
+    const prices=new Map((quotes.prices||[]).map(x=>[x.code,x]));
+    const events=fresh.flatMap(x=>{
+      const q=prices.get(x.code);
+      if(!q||!(q.price>0))return [];
+      let pnl=null;
+      if(destStage==="sell"){
+        const bought=closingEntries(ledger,kind,"buy").find(y=>y.variant===x.variant&&y.code===x.code);
+        if(!bought||!(bought.price>0))return [];
+        pnl=(q.price/bought.price-1)*100-.23; // 보수적인 왕복 비용 0.23% 연구가정
+      }
+      return [closingEvent(prior,kind,x.variant,x.code,destStage,q.price,{
+        name:x.name,source:q.source,targetHm:hm,pnl,signal:x.signal||null})];
+    });
+    if(!events.length){console.warn(JSON.stringify({type:"closing30_fill_unavailable",route,kind,date:prior,missing:quotes.missing}));continue;}
+    // 09:06 경과 후 이전 거래일 장부에 다음날 시가 청산 결과를 소급 첨부하되 주문은 소급하지 않는다.
+    const saved=await appendLedger(env,{date:prior,mainVariant:"baseline",
+      scanId:"closing:"+prior+":"+route+":"+today,scheduledTime:scheduled,
+      capturedAt:new Date(now).toISOString(),targetHm:hm,
+      partial:false,okShards:1,quoteErrors:quotes.errors?.length||0,events},"closing30");
+    // 이미 처리된 id는 저장소에서 중복 배제. 재호출 시 동일 event를 다시 알리지 않는다.
+    if(saved.added>0)for(const e of events.filter(e=>e.variant==="baseline"))await closingAlert(env,prior,e,destStage);
+    console.log(JSON.stringify({type:route,kind,date:prior,events:events.length,stored:saved.added,priceErrors:quotes.errors?.length||0}));
+  }
+}
+
 const GAPDOWN_PARTS=2;
 // ① 08:58 다시 보기(2026-10-19 사용자 선택 '가'): 08:56 예상가가 실제 시가보다 평균 5.4%p 깊었다(체결 12건) — 실제로는 갭하락이 아닌 종목을 샀다.
 // 08:56 전체 조회(1~2분 걸림)는 그대로 두고, 갭 깊은 n 종목만 08:58:00 뒤 다시 물어 그 값으로 고른다.
@@ -844,7 +951,7 @@ export default {
     const at=Number(controller.scheduledTime)||Date.now();
     ctx.waitUntil(pushStore(env,"ensure",{}).catch(()=>null));   // 알림 감시 알람이 살아 있는지만 확인(감시는 저장소 알람이 5분마다 — 장 일정과 따로)
     const route=scheduleRoute(at);
-    const krRoute=route==="opening"||route==="claude_kr"||route==="duel"||(route&&route.startsWith("gapdown_"));
+    const krRoute=route==="opening"||route==="claude_kr"||route==="duel"||(route&&route.startsWith("closing_"))||(route&&route.startsWith("gapdown_"));
     if(krRoute){
       const date=kstParts(at).date;
       try{
@@ -869,11 +976,25 @@ export default {
     else if(route==="claude_soxl")ctx.waitUntil(claudeDayClose(env,"soxl",nyDate(at),at));
     else if(route==="claude_kr"){if(krHolidayAction("close",kstParts(at).date)==="run")ctx.waitUntil(claudeKrClose(env,kstParts(at).date,at));}
     else if(route==="duel")ctx.waitUntil(sendDuelSummary(env,kstParts(at).date));
-    else if(route==="opening")ctx.waitUntil(runMinute(controller,env));
-    else if(route&&route.startsWith("gapdown_"))ctx.waitUntil(runGapdown(route.slice(8),controller,env));
+    else if(route==="opening"){
+      ctx.waitUntil(runMinute(controller,env));
+      if(kstHm(at)===906)ctx.waitUntil(runClosing30("closing_overnight_exit",controller,env));
+    }
+    else if(route&&route.startsWith("closing_"))ctx.waitUntil(runClosing30(route,controller,env));
+    else if(route&&route.startsWith("gapdown_")){
+      ctx.waitUntil(runGapdown(route.slice(8),controller,env));
+      if(route==="gapdown_reconcile")ctx.waitUntil(runClosing30("closing_settle",controller,env));
+    }
   },
   async fetch(request,env){
     const u=new URL(request.url);
+    if(u.pathname==="/closing-ledger"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const date=u.searchParams.get("date")||kstParts().date;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"bad date"},400);
+      try{return json({ok:true,date,ledger:await readLedger(env,date,"closing30")});}
+      catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
     if(u.pathname==="/gapdown"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const date=u.searchParams.get("date")||kstParts().date;
