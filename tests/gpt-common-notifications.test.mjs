@@ -119,18 +119,18 @@ test("서비스워커: 공통 탭 선택·원천 구분·중복/오래된 신호
 
 test("여섯 탭 개별 동의는 설정 화면과 같이 전체 보고 동의 · 일부 탭은 제외",async()=>{
   const all=["opening","daytrading","crypto","soxl","closing30","tenbagger_gpt"],x=fixture(),endpoint="https://push.example/all-individual";
-  await x.seed(endpoint,all);await x.seed("https://push.example/four",all.slice(0,5));
+  await x.seed(endpoint,all);await x.seed("https://push.example/four",all.slice(0,4));
   const delivery=await x.app.notifyAll("gpt");assert.equal(delivery.sent,1);assert.equal(delivery.eligible,1);
   assert.deepEqual(x.calls,[{endpoint,topic:"gpt"}]);
   assert.equal((await(await x.get("/health")).json()).topicSubscriptions.gpt,2,"개별 gpt 관련 구독은 두 기기를 중복 없이 집계, 실제 전체 발송은 6개 전부 동의한 기기만");
   const sw=swFixture(),now=Date.now(),payload={alerts:[{id:"morning",type:"gpt",createdAt:new Date(now).toISOString()}]};
   assert.deepEqual([...sw.ctx.pickAlerts(payload,all,[],now)].map(a=>a.id),["morning"]);
-  assert.equal(sw.ctx.pickAlerts(payload,all.slice(0,5),[],now).length,0);
+  assert.equal(sw.ctx.pickAlerts(payload,all.slice(0,4),[],now).length,0);
   assert.equal(sw.ctx.pickAlerts(payload,["research"],[],now).length,0);
 });
 
 test("공통 알림 변이 2종: 서버 또는 기기 공통 주제 누락을 실제 전달/표시 결과로 차단",async()=>{
-  const badWorker=workerSource.replace('||(GPT_TOPICS.has(topic)&&t.includes("gpt"))','');assert.notEqual(badWorker,workerSource);
+  const badWorker=workerSource.replace('||(GPT_TOPICS.has(topic)&&(t.includes("gpt")||(topic==="closing30"&&legacyAll)))','');assert.notEqual(badWorker,workerSource);
   const imports=badWorker.replace(/from (["'])([^"']+)\1/g,(_all,_quote,path)=>"from "+JSON.stringify(new URL(path,workerFile).href));
   const {PresaleAlertStore:Mutant}=await import("data:text/javascript;base64,"+Buffer.from(imports).toString("base64"));
   await assert.rejects(()=>checkDeliveries(Mutant),{name:"AssertionError"});
