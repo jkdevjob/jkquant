@@ -145,3 +145,8 @@ const missingKr=pairKst("opening","시초가",{sessions:[]},"2026-10-22",[{date:
 assert.equal(missingKr.previous.unavailable,true,'previous open market day without archival is unverified');
 const sat=pairKst("opening","시초가",{sessions:[]},"2026-10-18");
 assert.equal(sat.previous.marketClosed,true,'Saturday remains a real market holiday');
+
+const incompletePrior=pairKst("crypto","비트코인",{sessions:[{date:"2026-10-21",pending:true,finalized:false,returnPct:null}]},"2026-10-22");
+assert.equal(incompletePrior.previous.unavailable,true,'incomplete recorded previous crypto is also unverified');
+assert.equal(incompletePrior.previous.pending,false,'incomplete previous session cannot remain pending');
+assert.equal(incompletePrior.previous.returnPct,null);
