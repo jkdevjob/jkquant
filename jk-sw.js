@@ -6,7 +6,7 @@ const META_CACHE="jk-push-meta-v2";
 const TOPICS_KEY="/__jk_push_topics";
 const SHOWN_KEY="/__jk_push_shown";
 const REQUEST_SHOWN_KEY="/__jk_approval_requests_shown";
-const GPT_TOPICS=new Set(["opening","daytrading","crypto","soxl","tenbagger_gpt"]);
+const GPT_TOPICS=new Set(["opening","daytrading","crypto","soxl","closing30","tenbagger_gpt"]);
 const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
 
 async function getConfig(){
