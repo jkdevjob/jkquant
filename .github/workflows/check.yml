@@ -28,7 +28,7 @@ jobs:
 
       - name: 종가 당일/익일 시가 · 모든 그림자 이력 · 시간적 오염방지 검사
         run: |
-          node --test tests/closing30-research.test.mjs tests/trade-history.test.mjs
+          node --test tests/closing30-research.test.mjs tests/closing30-budget.test.mjs tests/trade-history.test.mjs
           python scripts/test_closing_history.py
           python -m py_compile scripts/nightly_closing30_research.py scripts/nightly_scalping_research.py scripts/backtest_crypto_orb.py scripts/backtest_daytrading.py scripts/backtest_soxl_intraday.py
 
