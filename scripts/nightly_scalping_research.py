@@ -795,7 +795,7 @@ def vts_report():
 def archive_opening_variants():
     """시초가 연구 원본의 메인/그림자 거래를 날짜+변형ID로 병합. 사후 수정값은 연구 재구성으로 표시."""
     import csv
-    cols=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source"]
+    cols=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source","strategyParams"]
     records={}
     for path in sorted(OPEN.glob("20??-??-??.json")):
         day=load_json(path,{}) or {}
@@ -814,7 +814,8 @@ def archive_opening_variants():
                     "signalTime":x.get("signalTime") or x.get("entryTime"),
                     "entryTime":x.get("entryTime"),"entryPrice":x.get("entryPrice"),
                     "exitTime":x.get("exitTime"),"exitPrice":x.get("exitPrice"),
-                    "reason":x.get("reason"),"pnl":x.get("pnl"),"source":"research-reconstructed"}
+                    "reason":x.get("reason"),"pnl":x.get("pnl"),"source":"research-reconstructed",
+                    "strategyParams":json.dumps(x.get("strategyParams"),ensure_ascii=False)}
     if not OPEN.is_dir():return 0
     with (OPEN/"variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
         writer=csv.DictWriter(f,fieldnames=cols);writer.writeheader()

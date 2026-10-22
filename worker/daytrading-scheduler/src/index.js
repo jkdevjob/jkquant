@@ -199,14 +199,14 @@ async function writePaper(env,ledger){
   await rememberPaperDate(env,ledger.date);
   return j.ledger;
 }
-async function readPaperHistory(env,limit=120){
-  const dates=(await readPaperDates(env)).slice().sort().reverse().slice(0,Math.max(1,Math.min(3650,Number(limit)||120)));
-  const ledgers=[];
+async function readPaperHistory(env,limit=120,range={}){
+  const dates=(await readPaperDates(env)).filter(d=>(!range.from||d>=range.from)&&(!range.to||d<=range.to)).slice().sort().reverse().slice(0,Math.max(1,Math.min(3650,Number(limit)||120)));
+  const ledgers=[],sourceWarnings=[];
   for(let i=0;i<dates.length;i+=6){
-    const batch=await Promise.all(dates.slice(i,i+6).map(date=>readPaper(env,date).catch(()=>null)));
-    ledgers.push(...batch.filter(Boolean));
+    const batch=await Promise.allSettled(dates.slice(i,i+6).map(date=>readPaper(env,date)));
+    batch.forEach((x,k)=>{if(x.status==="fulfilled"){if(x.value)ledgers.push(x.value);}else sourceWarnings.push(dates[i+k]+": "+String(x.reason?.message||x.reason));});
   }
-  return {dates,ledgers};
+  return {dates,ledgers,sourceWarnings};
 }
 async function importHistoricalPaper(env,ledger){
   if(!ledger||typeof ledger!=="object"||!Array.isArray(ledger.trades))throw new Error("invalid paper ledger");
@@ -305,6 +305,7 @@ function blankTrade(c,date,params=DAY_EXIT_VARIANTS.baseline){
     id:String(c.code)+":"+String(c.signalTime),
     date,code:String(c.code||""),name:c.name||c.code,rank:+c.rank||0,
     mainVariant:String(c.mainVariant||"baseline"),strategyParams:c.strategyParams||null,
+    strategyVersion:'daytrading_vwap_breakout_v1@'+String(c.mainVariant||'baseline'),firstRecordedAt:new Date().toISOString(),
     signalTime:+c.signalTime||0,signalPrice:+c.signalPrice||0,score:+c.score||0,
     sessionRet:+c.sessionRet||0,vwapSlope:+c.vwapSlope||0,volRatio:+c.volRatio||0,
     entryTime:addHm(+c.signalTime||0,1),entryPrice:null,status:"pending",
@@ -349,13 +350,7 @@ function applyBars(trade,bars,target){
       break;
     }
   }
-  if(t.status==="open"&&target>=PAPER_FINAL_EXIT_HM){
-    const z=bars.filter(x=>barHm(x)<=PAPER_FINAL_EXIT_HM).slice(-1)[0];
-    if(z){
-      t.status="closed";t.exitTime=PAPER_FINAL_EXIT_HM;t.exitPrice=+(z.c||t.currentPrice||t.entryPrice);t.reason="time_exit";
-      t.lastEvaluatedHm=barHm(z);
-    }
-  }
+  // No fill at 15:10 without the 15:10 completed candle.
   if(t.status==="closed"&&t.exitPrice>0){
     t.grossPnl=(t.exitPrice/t.entryPrice-1)*100;
     t.pnl=t.grossPnl-Number(t.frictionPct||PAPER_FRICTION_PCT);
@@ -365,7 +360,7 @@ function applyBars(trade,bars,target){
   }
   return t;
 }
-async function advanceTrade(env,date,candidate,existing,target,params=DAY_EXIT_VARIANTS.baseline){
+async function advanceTrade(env,date,candidate,existing,target,params=DAY_EXIT_VARIANTS.baseline,barCache=null){
   let t=existing?{...existing}:blankTrade(candidate,date,params);
   if(t.status==="closed")return t;
   if(target<t.entryTime)return t;
@@ -373,7 +368,7 @@ async function advanceTrade(env,date,candidate,existing,target,params=DAY_EXIT_V
   if(t.entryPrice>0&&t.lastEvaluatedHm)from=addHm(t.lastEvaluatedHm,1);
   if(hmToMin(from)>hmToMin(target))return t;
   try{
-    const bars=await kisRange(env,t.code,date,from,target);
+    const bars=barCache?await barCache.get(t.code):await kisRange(env,t.code,date,from,target);
     t=applyBars(t,bars,target);
     t.lastError=null;
   }catch(e){
@@ -489,45 +484,76 @@ async function retryPaperWebPush(env,ledger){
       type:"day_webpush_retry_failed",eventId:b.eventId,reason:result?.webPush?.error||"relay_error"}));
   }
 }
-async function reconcilePaper(env,date,target,candidates,mainVariant="baseline"){
-  const old=await readPaper(env,date);
-  const params=dayExitParams(mainVariant);
-  const by=new Map(((old&&old.trades)||[]).map(x=>[x.id,x]));
-  const trades=[];
-  for(const c of candidates){
-    const id=String(c.code)+":"+String(c.signalTime);
-    trades.push(await advanceTrade(env,date,c,by.get(id)||null,target,params));
+// Once selected, a signal keeps its identity, entry and parameters through rescans.
+function retainedCandidates(previous,candidates,maxTrades){
+  const out=(previous||[]).map(x=>({...x})),seen=new Set(out.map(x=>String(x.code)));
+  for(const x of candidates||[]){if(out.length>=maxTrades)break;if(!seen.has(String(x.code))){out.push(x);seen.add(String(x.code));}}
+  return out;
+}
+function dayVariantSets(parts,mainVariant){
+  const map=new Map([[mainVariant,{name:mainVariant,params:parts[0]?.mainParams||{},parts:parts.map(x=>({signals:x.signals||[]}))}]]);
+  for(const part of parts)for(const v of part.shadowEvents||[]){
+    if(v.name===mainVariant)continue;
+    if(!map.has(v.name))map.set(v.name,{name:v.name,params:v.params||{},parts:[]});
+    map.get(v.name).parts.push({signals:v.signals||[]});
   }
-  const ledger={
-    schema:1,date,updatedAt:new Date().toISOString(),targetHm:target,mainVariant,
-    strategy:"VWAP trend breakout v1",mode:"server-live-paper-no-order",
-    maxTrades:params.maxTrades,stopPct:params.stopPct,takeProfitPct:params.takeProfitPct,
-    finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT,
-    trades
-  };
+  return map;
+}
+function daySignalEvidence(parts,date,mainVariant,previous=[],eligible=true){
+  const seen=new Map(previous.map(e=>[e.id,e])),at=new Date().toISOString();
+  for(const v of dayVariantSets(parts,mainVariant).values())for(const part of v.parts)for(const x of part.signals||[]){
+    const id=[date,v.name,x.code,x.signalTime].join(':');
+    if(!seen.has(id))seen.set(id,{...x,id,date,variant:v.name,strategyVersion:'daytrading_vwap_breakout_v1@'+v.name,
+      strategyParams:{...v.params,...dayExitParams(v.name)},capturedAt:at,selectionEligible:eligible});
+  }
+  return [...seen.values()];
+}
+async function reconcilePaper(env,date,target,candidates,mainVariant="baseline",parts=[],partial=false){
+  const old=await readPaper(env,date),params=dayExitParams(mainVariant);
+  const signalEvents=daySignalEvidence(parts,date,mainVariant,old?.signalEvents||[],!partial);
+  // Persist source evidence before any potentially slow fill/price lookup.
+  if(parts.length)await writePaper(env,{...old,schema:2,date,mainVariant,mode:'server-live-paper-no-order',
+    updatedAt:new Date().toISOString(),trades:old?.trades||[],signalEvents});
+  const defs=dayVariantSets(parts,mainVariant),groups=new Map();
+  const primary=retainedCandidates(old?.trades,partial?[]:candidates,params.maxTrades);
+  groups.set(mainVariant,{old:old||{},params,candidates:primary});
+  for(const name of new Set([...Object.keys(old?.shadowLedgers||{}),...defs.keys()])){
+    if(name===mainVariant)continue;
+    const previous=old?.shadowLedgers?.[name]||{},def=defs.get(name),p={...dayExitParams(name),...(previous.strategyParams||def?.params||{})};
+    groups.set(name,{old:previous,params:p,candidates:retainedCandidates(previous.trades,partial?[]:pickCandidates(def?.parts||[],p.maxTrades),p.maxTrades)});
+  }
+  // All variants share one fetch per symbol/range; shadow recording does not multiply quote requests.
+  const ranges=new Map(),barCache=new Map();
+  for(const g of groups.values())for(const c of g.candidates){
+    if(c.status==='closed')continue;
+    const from=c.entryPrice>0&&c.lastEvaluatedHm?addHm(c.lastEvaluatedHm,1):c.entryTime||addHm(c.signalTime,1);
+    if(from<=target)ranges.set(String(c.code),Math.min(ranges.get(String(c.code))||9999,from));
+  }
+  for(const [code,from] of ranges){
+    try{barCache.set(code,await kisRange(env,code,date,from,target));}catch(error){barCache.set(code,Promise.reject(error));barCache.get(code).catch(()=>{});}
+  }
+  const built=new Map();
+  for(const [name,g] of groups){
+    const by=new Map((g.old.trades||[]).map(x=>[x.id,x])),trades=[];
+    for(const c of g.candidates){
+      const candidate={...c,mainVariant:name,strategyParams:c.strategyParams||g.old.strategyParams||defs.get(name)?.params||g.params};
+      trades.push(await advanceTrade(env,date,candidate,by.get(String(c.code)+':'+String(c.signalTime))||null,target,g.params,barCache));
+    }
+    built.set(name,{strategyVersion:'daytrading_vwap_breakout_v1@'+name,strategyParams:g.old.strategyParams||defs.get(name)?.params||g.params,trades});
+  }
+  const ledger={...old,schema:2,date,updatedAt:new Date().toISOString(),targetHm:target,mainVariant,
+    strategy:'VWAP trend breakout v1',strategyVersion:'daytrading_vwap_breakout_v1@'+mainVariant,mode:'server-live-paper-no-order',
+    maxTrades:params.maxTrades,stopPct:params.stopPct,takeProfitPct:params.takeProfitPct,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT,
+    ...built.get(mainVariant),shadowLedgers:Object.fromEntries([...built].filter(([v])=>v!==mainVariant)),
+    signalEvents};
   ledger.summary=ledgerSummary(ledger);
   const saved=await writePaper(env,ledger);
-  await notifyPaperTransitions(env,old,saved);
-  await retryPaperWebPush(env,saved);
+  await notifyPaperTransitions(env,old,saved);await retryPaperWebPush(env,saved);
   return saved;
 }
 async function advanceExistingPaper(env,date,target){
-  const old=await readPaper(env,date);
-  if(!old||!Array.isArray(old.trades)||!old.trades.length)return old;
-  const trades=[];
-  for(const x of old.trades){
-    const c={
-      code:x.code,name:x.name,rank:x.rank,signalTime:x.signalTime,signalPrice:x.signalPrice,
-      score:x.score,sessionRet:x.sessionRet,vwapSlope:x.vwapSlope,volRatio:x.volRatio
-    };
-    trades.push(await advanceTrade(env,date,c,x,target,{stopPct:x.stopPct||old.stopPct,takeProfitPct:x.takeProfitPct||old.takeProfitPct,maxTrades:old.maxTrades||PAPER_MAX_TRADES}));
-  }
-  const ledger={...old,updatedAt:new Date().toISOString(),targetHm:target,trades};
-  ledger.summary=ledgerSummary(ledger);
-  const saved=await writePaper(env,ledger);
-  await notifyPaperTransitions(env,old,saved);
-  await retryPaperWebPush(env,saved);
-  return saved;
+  const old=await readPaper(env,date);if(!old)return null;
+  return reconcilePaper(env,date,target,[],old.mainVariant||'baseline');
 }
 
 async function sendDailySummary(env,date){
@@ -561,7 +587,7 @@ async function runScheduled(controller,env){
     return;
   }
 
-  if(sched.hm===1535){ await sendDailySummary(env,sched.date); return; }
+  if(sched.hm===1535){ await advanceExistingPaper(env,sched.date,PAPER_FINAL_EXIT_HM); await sendDailySummary(env,sched.date); return; }
   const lag=Math.max(0,Date.now()-scheduled);
 
   // 09:55 KST: immutable Top100 snapshot. If it is delayed beyond 10:15,
@@ -601,11 +627,11 @@ async function runScheduled(controller,env){
   if(ok.length===SHARDS){
     const mainVariant=String(snapshot.mainVariant||"baseline"),params=dayExitParams(mainVariant);
     const candidates=pickCandidates(ok,params.maxTrades);
-    ledger=await reconcilePaper(env,sched.date,target,candidates,mainVariant);
+    ledger=await reconcilePaper(env,sched.date,target,candidates,mainVariant,ok);
   }else{
     // 일부 샤드 실패 시 새 진입은 만들지 않지만 과거 확정 신호 웹푸시는 계속 복구한다.
     const existing=await readPaper(env,sched.date).catch(()=>null);
-    if(existing)await retryPaperWebPush(env,{...existing,targetHm:target});
+    await reconcilePaper(env,sched.date,target,[],existing?.mainVariant||snapshot.mainVariant||"baseline",ok,true);
   }
   console.log(JSON.stringify({
     type:"day_scan",date:sched.date,targetHm:target,lagMs:lag,snapshotHm:snapshot.snapshotHm,
@@ -654,8 +680,8 @@ export default {
     if(u.pathname==="/paper-history"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const limit=Math.max(1,Math.min(3650,Number(u.searchParams.get("limit")||120)));
-      const h=await readPaperHistory(env,limit);
-      return json({ok:true,dates:h.dates,ledgers:h.ledgers});
+      const h=await readPaperHistory(env,limit,{from:u.searchParams.get("from"),to:u.searchParams.get("to")});
+      return json({ok:true,dates:h.dates,ledgers:h.ledgers,sourceWarnings:h.sourceWarnings});
     }
     if(u.pathname==="/paper-import"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
@@ -669,3 +695,5 @@ export default {
     return json({ok:false,error:"not found"},404);
   }
 };
+
+export {retainedCandidates,dayVariantSets,daySignalEvidence,applyBars,reconcilePaper};

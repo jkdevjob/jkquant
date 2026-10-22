@@ -97,6 +97,10 @@ function authorized(request,env){const got=request.headers.get("x-monitor-key")|
 export class PaperStore extends DurableObject{
   async fetch(request){
     const u=new URL(request.url);
+    if(u.pathname==="/runtime"){
+      if(request.method==="POST"){const status=await request.json();await this.ctx.storage.put("runtime",status);return json({ok:true});}
+      return json({ok:true,runtime:await this.ctx.storage.get("runtime")||null});
+    }
     if(request.method==="GET"&&u.pathname==="/config"){
       const strategy=String(u.searchParams.get("strategy")||"");
       const config=(await this.ctx.storage.get("strategyConfig"))||{schema:1,strategy,selectedVariant:"baseline",updatedAt:null,updatedBy:null};
@@ -187,15 +191,15 @@ async function writePaper(env,ledger){
   await rememberPaperDate(env,ledger.strategy,ledger.date);
   return j.ledger;
 }
-async function readPaperHistory(env,strategy,limit=120){
-  const dates=(await readPaperDates(env,strategy)).slice().sort().reverse().slice(0,Math.max(1,Math.min(3650,Number(limit)||120)));
-  const ledgers=[];
+async function readPaperHistory(env,strategy,limit=120,range={}){
+  const dates=(await readPaperDates(env,strategy)).filter(d=>(!range.from||d>=range.from)&&(!range.to||d<=range.to)).slice().sort().reverse().slice(0,Math.max(1,Math.min(3650,Number(limit)||120)));
+  const ledgers=[],sourceWarnings=[];
   // Bound concurrent reads; hundreds of historical BTC dates must not be read serially.
   for(let i=0;i<dates.length;i+=6){
-    const batch=await Promise.all(dates.slice(i,i+6).map(date=>readPaper(env,strategy,date).catch(()=>null)));
-    ledgers.push(...batch.filter(Boolean));
+    const batch=await Promise.allSettled(dates.slice(i,i+6).map(date=>readPaper(env,strategy,date)));
+    batch.forEach((x,k)=>{if(x.status==="fulfilled"){if(x.value)ledgers.push(x.value);}else sourceWarnings.push(dates[i+k]+": "+String(x.reason?.message||x.reason));});
   }
-  return {dates,ledgers};
+  return {dates,ledgers,sourceWarnings};
 }
 async function importHistoricalPaper(env,strategy,ledger){
   if(!ledger||typeof ledger!=="object"||!Array.isArray(ledger.trades))throw new Error("invalid paper ledger");
@@ -214,11 +218,54 @@ async function importHistoricalPaper(env,strategy,ledger){
     mode:"historical-research-import-no-order",importedAt:new Date().toISOString()};
   return {imported:true,kept:false,ledger:await writePaper(env,clean)};
 }
+// Replay may update prices, but it cannot replace an already observed entry or a closed fill.
+function storedOrbTrade(strategy,date,old,candidate,bars,now,params){
+  const x=old?.trades?.[0];if(!x)return candidate;
+  const rows=bars.filter(b=>b.date===date),p=x.strategyParams||old.strategyParams||params;
+  const signal=rows.find(b=>b.ms===x.signalMs||b.time===x.signalTime)||{time:x.signalTime,ms:x.signalMs};
+  if(x.status==='closed')return {...candidate,date,signal,entry:{time:x.entryTime,ms:x.entryMs,hm:x.entryHm,o:x.entryPrice},entryPrice:x.entryPrice,
+    params:p,exit:{bar:{time:x.exitTime,ms:x.exitMs,c:x.exitPrice},price:x.exitPrice,reason:x.reason},friction:old.frictionPct,
+    opening:old.signalEvidence?.opening||candidate?.opening||{},orHigh:old.signalEvidence?.orHigh||candidate?.orHigh,vwap:old.signalEvidence?.vwap||candidate?.vwap,vr:old.signalEvidence?.vr||candidate?.vr};
+  const entry=rows.find(b=>b.ms===x.entryMs||b.time===x.entryTime)||rows.find(b=>b.ms===signal.ms+FIVE);
+  if(!entry||entry.ms>now){
+    if(x.entryPrice>0)return {...candidate,date,signal,entry:{time:x.entryTime,ms:x.entryMs,hm:x.entryHm,o:x.entryPrice},entryPrice:x.entryPrice,
+      currentBar:{c:x.currentPrice||x.entryPrice},exit:null,deadlineMs:x.deadlineMs,waiting:false,params:p};
+    return {...candidate,date,signal,entry:null,entryPrice:null,waiting:true,params:p};
+  }
+  const fixed={...entry,o:x.entryPrice>0?x.entryPrice:entry.o};
+  return {...candidate,date,signal,entry:fixed,entryPrice:fixed.o,waiting:false,params:p,
+    ...orbExit(rows,fixed,now,p,strategy==='crypto'?1440:960),friction:old.frictionPct,
+    opening:old.signalEvidence?.opening||candidate?.opening||{},orHigh:old.signalEvidence?.orHigh||candidate?.orHigh,vwap:old.signalEvidence?.vwap||candidate?.vwap,vr:old.signalEvidence?.vr||candidate?.vr};
+}
+function globalShadowLedgers(strategy,date,bars,now,main,previous={},extra=[]){
+  const variants=strategy==='crypto'?BTC_VARIANTS:SOXL_VARIANTS,out={};
+  for(const name of new Set([...Object.keys(variants),...Object.keys(previous),...extra])){
+    if(name===main)continue;
+    const old=previous[name],resolved=variantParams(strategy,name),p=old?.strategyParams||resolved.params;
+    if(resolved.name!==name&&!old)continue;
+    const candidate=(strategy==='crypto'?btcTrade:soxlTrade)(bars,now,date,p);
+    const t=storedOrbTrade(strategy,date,old,candidate,bars,now,p);
+    out[name]=paperLedger(strategy,date,t,{currency:strategy==='crypto'?'KRW':'USD',timezone:strategy==='crypto'?'Asia/Seoul':'America/New_York',
+      version:old?.strategyVersion||(strategy==='crypto'?BTC_STRATEGY_VERSION:SOXL_STRATEGY_VERSION)+'@'+name,
+      mainVariant:name,params:p,friction:strategy==='crypto'?.14:.20,previous:old,now});
+  }
+  return out;
+}
+const RESEARCH_VARIANT_CACHE=new Map();
+async function researchVariantNames(strategy){
+  const cached=RESEARCH_VARIANT_CACHE.get(strategy);if(cached&&Date.now()-cached.at<300000)return cached.names;
+  try{
+    const r=await fetch(RESEARCH_RAW[strategy],{headers:{accept:'application/json'},signal:AbortSignal.timeout(5000)});
+    if(!r.ok)throw Error('research variants '+r.status);
+    const j=await r.json(),names=(j.variants||[]).map(x=>x.params?.name).filter(x=>/^cf_g\d{4,}$/.test(x||''));
+    RESEARCH_VARIANT_CACHE.set(strategy,{at:Date.now(),names});return names;
+  }catch{return cached?.names||[];}
+}
 function paperLedger(strategy,date,t,opts={}){
   const currency=opts.currency||"USD",timezone=opts.timezone||"UTC",version=opts.version||"",friction=Number(opts.friction||0);
   let trades=[];
   if(t){
-    const waiting=!!t.waiting;
+    const waiting=!!t.waiting,unverified=!waiting&&!t.exit&&Number.isFinite(t.deadlineMs)&&Number(opts.now||Date.now())>=t.deadlineMs+1500;
     const current=t.exit?t.exit.bar:(t.currentBar||t.entry||null);
     const entryPrice=waiting?null:Number(t.entryPrice||0)||null;
     const exitPrice=t.exit?Number(t.exit.price||0)||null:null;
@@ -230,28 +277,36 @@ function paperLedger(strategy,date,t,opts={}){
     }
     trades=[{
       id:strategy+":"+date+":"+String(t.signal&&t.signal.time||""),
-      strategyVersion:version,mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t.params||null,status:waiting?"pending":(t.exit?"closed":"open"),
+      strategyVersion:version,mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t.params||null,status:waiting?"pending":(t.exit?"closed":unverified?"unverified":"open"),
       signalTime:t.signal&&t.signal.time||null,entryTime:t.entry&&t.entry.time||null,
+      signalMs:t.signal?.ms||null,entryMs:t.entry?.ms||null,entryHm:t.entry?.hm??null,exitMs:t.exit?.bar?.ms||null,deadlineMs:t.deadlineMs||null,
+      firstRecordedAt:opts.previous?.trades?.[0]?.firstRecordedAt||new Date().toISOString(),
       exitTime:t.exit&&t.exit.bar&&t.exit.bar.time||null,
       entryPrice,exitPrice,currentPrice,
-      reason:t.exit?t.exit.reason:(waiting?"next_bar_open_wait":"tracking"),
+      reason:t.exit?t.exit.reason:(waiting?"next_bar_open_wait":unverified?"deadline_exit_unconfirmed":"tracking"),
       grossPnlPct:gross,pnlPct:pnl,frictionPct:friction,
       currency,updatedAt:new Date().toISOString()
     }];
   }
   const live=trades.map(x=>Number(x.pnlPct)).filter(Number.isFinite);
   const sum=live.reduce((a,b)=>a+b,0);
-  return {
-    schema:1,strategy,date,timezone,strategyVersion:version,executionModelVersion:"orb_completed_candle_deadline_v2",mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t?.params||null,mode:"server-live-paper-no-order",
+  const ledger={
+    schema:2,strategy,date,timezone,strategyVersion:version,executionModelVersion:"orb_completed_candle_deadline_v2",mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t?.params||null,mode:"server-live-paper-no-order",
     updatedAt:new Date().toISOString(),slots:1,frictionPct:friction,trades,decision:opts.decision||null,
+    signalEvidence:opts.previous?.signalEvidence||(t?{opening:t.opening||null,orHigh:t.orHigh||null,vwap:t.vwap||null,vr:t.vr||null}:null),
     summary:{selected:trades.length,pending:trades.filter(x=>x.status==="pending").length,open:trades.filter(x=>x.status==="open").length,
-      closed:trades.filter(x=>x.status==="closed").length,accountReturnPct:sum,tradeSumPct:sum}
+      closed:trades.filter(x=>x.status==="closed").length,unverified:trades.filter(x=>x.status==="unverified").length,accountReturnPct:sum,tradeSumPct:sum}
   };
+  if(opts.previous?.trades?.[0]?.status==="closed"){ledger.trades=opts.previous.trades;ledger.summary=opts.previous.summary;}
+  if(opts.bars)ledger.shadowLedgers=globalShadowLedgers(strategy,date,opts.bars,opts.now||Date.now(),ledger.mainVariant,opts.previous?.shadowLedgers||{},opts.extraVariants||[]);
+  return ledger;
 }
 function baseUrl(env){return String(env.BASE_URL||"https://jkquant.pages.dev").replace(/\/$/,"");}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+const DATE_FORMATTERS=new Map();
 function parts(ms,tz){
-  const p=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false,weekday:"short"}).formatToParts(new Date(ms));
+  if(!DATE_FORMATTERS.has(tz))DATE_FORMATTERS.set(tz,new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23",weekday:"short"}));
+  const p=DATE_FORMATTERS.get(tz).formatToParts(new Date(ms));
   const g=t=>p.find(x=>x.type===t)?.value||"";
   const hh=+g("hour"),mm=+g("minute");
   return {date:g("year")+"-"+g("month")+"-"+g("day"),hh,mm,hm:hh*100+mm,weekday:g("weekday")};
@@ -492,13 +547,14 @@ async function runBtc(env,now){
   const mainVariant=await mainVariantForDate(env,"crypto",k.date),vp=variantParams("crypto",mainVariant);
   const minute=Math.min(1439,22*60+vp.params.maxHoldBars*5+5);
   const trackEnd=Math.floor(minute/60)*100+minute%60;
-  if(k.hm>trackEnd)return;
-  const bars=await fetchBtc(k.date),t=btcTrade(bars,now,k.date,vp.params);
+  if(k.hm>Math.max(trackEnd,2359))return;
+  const bars=await fetchBtc(k.date),previous=await readPaper(env,"crypto",k.date);
+  const t=storedOrbTrade("crypto",k.date,previous,btcTrade(bars,now,k.date,vp.params),bars,now,vp.params);
   const decision=t
     ? {code:t.waiting?"qualified_wait":"qualified_signal",reason:t.waiting?"조건 충족 신호 발생 · 다음 5분봉 시가 진입 대기":"돌파·거래량·VWAP 조건 충족"}
     : btcNoTradeDecision(bars,now,k.date,vp.params);
-  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:vp.params,friction:.14,decision}));
-  if(!t||t.waiting)return;
+  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.14,decision,previous,bars,now,extraVariants:await researchVariantNames("crypto")}));
+  if(!t||t.waiting||!Number.isFinite(t.entry?.ms)||!Number.isFinite(t.vr))return;
   await alert(env,{
     strategy:"crypto",stage:"buy",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+mainVariant+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time,eventAt:new Date(t.entry.ms).toISOString(),
     lines:[
@@ -534,9 +590,9 @@ async function runSoxl(env,now){
     return;
   }
   const mainVariant=await mainVariantForDate(env,"soxl",n.date),vp=variantParams("soxl",mainVariant);
-  const t=soxlTrade(bars,now,n.date,vp.params);
-  await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:vp.params,friction:.20}));
-  if(!t||t.waiting)return;
+  const previous=await readPaper(env,"soxl",n.date),t=storedOrbTrade("soxl",n.date,previous,soxlTrade(bars,now,n.date,vp.params),bars,now,vp.params);
+  await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.20,previous,bars,now,extraVariants:await researchVariantNames("soxl")}));
+  if(!t||t.waiting||!Number.isFinite(t.entry?.ms)||!Number.isFinite(t.vr))return;
   await alert(env,{
     strategy:"soxl",stage:"buy",eventId:"soxl:"+mainVariant+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time+" ET",eventAt:new Date(t.entry.ms).toISOString(),
     lines:[
@@ -603,11 +659,11 @@ async function runCloseSummaries(env,now){
   if(k.hm===5){
     const date=previousDate(k.date),old=await readPaper(env,"crypto",date);
     // Only advance the preceding session's still-open/pending ledger. Never rewrite past closed records.
-    if(old&&old.trades?.some(x=>x.status!=="closed")){
-      const vp=variantParams("crypto",old.mainVariant||"baseline"),t=btcTrade(await fetchBtc(date),now,date,old.strategyParams||vp.params);
+    if(old&&(old.trades?.some(x=>x.status!=="closed")||Object.values(old.shadowLedgers||{}).some(l=>l.trades?.some(x=>x.status!=="closed")))){
+      const vp=variantParams("crypto",old.mainVariant||"baseline"),bars=await fetchBtc(date),t=storedOrbTrade("crypto",date,old,btcTrade(bars,now,date,old.strategyParams||vp.params),bars,now,old.strategyParams||vp.params);
       if(t){
-        await writePaper(env,paperLedger("crypto",date,t,{currency:"KRW",timezone:"Asia/Seoul",version:old.strategyVersion,mainVariant:vp.name,params:old.strategyParams||vp.params,friction:.14,decision:old.decision}));
-        if(t.exit)await alert(env,{strategy:"crypto",stage:"sell",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+vp.name+":"+date+":"+t.signal.time+":sell:"+t.exit.bar.time,
+        await writePaper(env,paperLedger("crypto",date,t,{currency:"KRW",timezone:"Asia/Seoul",version:old.strategyVersion,mainVariant:vp.name,params:old.strategyParams||vp.params,friction:.14,decision:old.decision,previous:old,bars,now}));
+        if(t.exit&&Number.isFinite(t.exit.bar.ms))await alert(env,{strategy:"crypto",stage:"sell",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+vp.name+":"+date+":"+t.signal.time+":sell:"+t.exit.bar.time,
           date,time:t.exit.bar.time,eventAt:new Date(t.exit.bar.ms+FIVE).toISOString(),
           lines:["KRW-BTC · 메인 "+vp.name+" · "+reasonKo(t.exit.reason),"매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),"매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),"전략 손익 "+signed(pct(t.exit.price,t.entryPrice)-.14)+" · 왕복 비용 0.14% 반영"]});
       }
@@ -626,22 +682,60 @@ async function runCloseSummaries(env,now){
   }
 }
 
+async function runtimeStore(env,status=null){
+  if(!env.PAPER_STORE)return null;
+  const stub=env.PAPER_STORE.get(env.PAPER_STORE.idFromName('__runtime__'));
+  const r=await stub.fetch('https://paper.internal/runtime',status?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(status)}:undefined);
+  const j=await r.json();return j.runtime||null;
+}
+async function refreshPaper(env,strategy,date,now=Date.now()){
+  const tz=strategy==='crypto'?'Asia/Seoul':'America/New_York',today=parts(now,tz).date;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>today||Date.parse(today)-Date.parse(date)>(strategy==='crypto'?1:7)*86400000)throw Error('refresh outside available source window');
+  const previous=await readPaper(env,strategy,date);
+  if(previous?.mode==='historical-research-import-no-order')return previous;
+  const main=await mainVariantForDate(env,strategy,date),vp=variantParams(strategy,main);
+  const bars=strategy==='crypto'?await fetchBtc(date):await fetchSoxl();
+  if(!bars.some(b=>b.date===date&&b.hm===(strategy==='crypto'?0:930)))throw Error('session opening bar unavailable');
+  const p=previous?.strategyParams||vp.params;
+  const t=storedOrbTrade(strategy,date,previous,(strategy==='crypto'?btcTrade:soxlTrade)(bars,now,date,p),bars,now,p);
+  const ledger=paperLedger(strategy,date,t,{currency:strategy==='crypto'?'KRW':'USD',timezone:tz,
+    version:previous?.strategyVersion||(strategy==='crypto'?BTC_STRATEGY_VERSION:SOXL_STRATEGY_VERSION)+'@'+main,
+    mainVariant:main,params:p,friction:strategy==='crypto'?.14:.20,previous,bars,now,extraVariants:await researchVariantNames(strategy)});
+  if(!previous&&date<today)ledger.mode='historical-research-import-no-order';
+  ledger.refreshSource='authenticated-source-refresh-no-alert-no-order';
+  return writePaper(env,ledger);
+}
 async function run(env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const now=Date.now();
   // 같은 분의 장부 갱신이 끝난 뒤 마감요약을 읽는다. 16:05 SOXL 요약이 16:04 장부를 읽는 경합을 막는다.
   const live=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
+  await runtimeStore(env,{at:new Date(now).toISOString(),strategies:Object.fromEntries(live.map((x,i)=>[i===0?"crypto":"soxl",{ok:x.status==="fulfilled",error:x.status==="rejected"?String(x.reason?.message||x.reason).slice(0,180):null}]))}).catch(e=>console.error("runtime status: "+String(e)));
   live.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":"soxl",error:String(x.reason&&x.reason.message||x.reason)}));});
   try{await runCloseSummaries(env,now);}
   catch(e){console.error(JSON.stringify({type:"global_intraday_error",strategy:"close-summary",error:String(e.message||e)}));}
 }
-export {btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,orbExit,isNyseSessionDate,hasSoxlSessionOpenBar,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
+export {refreshPaper,runtimeStore,storedOrbTrade,globalShadowLedgers,parts,btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,orbExit,isNyseSessionDate,hasSoxlSessionOpenBar,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
 
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
     if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",executionModelVersion:"orb_completed_candle_deadline_v2",schedule:"every minute · BTC 00:05 KST close ⑤⑥ · SOXL 16:05 ET close ⑤⑥",strategies:["crypto","soxl"],paperStore:"Durable Object SQLite + per-strategy date index",crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"baseline 23:05 KST · long variants through 23:59 + 00:05 previous-session finalization"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order",manualPromotion:"owner button -> next session lock"});
+    if(u.pathname==="/runtime"){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      return json({ok:true,runtime:await runtimeStore(env)});
+    }
+    if(u.pathname==="/refresh"){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      if(request.method!=='POST')return json({ok:false,error:'method not allowed'},405);
+      try{
+        const b=await request.json(),strategy=String(b.strategy||'');
+        if(!['crypto','soxl'].includes(strategy))return json({ok:false,error:'unsupported strategy'},400);
+        const date=String(b.date||parts(Date.now(),strategy==='crypto'?'Asia/Seoul':'America/New_York').date);
+        return json({ok:true,ledger:await refreshPaper(env,strategy,date)});
+      }catch(e){return json({ok:false,error:String(e.message||e)},502);}
+    }
     if(u.pathname==="/bars"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
@@ -681,8 +775,8 @@ export default {
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
       if(!["crypto","soxl"].includes(strategy))return json({ok:false,error:"unsupported strategy"},400);
       const limit=Math.max(1,Math.min(3650,Number(u.searchParams.get("limit")||120)));
-      const h=await readPaperHistory(env,strategy,limit);
-      return json({ok:true,strategy,dates:h.dates,ledgers:h.ledgers});
+      const h=await readPaperHistory(env,strategy,limit,{from:u.searchParams.get("from"),to:u.searchParams.get("to")});
+      return json({ok:true,strategy,dates:h.dates,ledgers:h.ledgers,sourceWarnings:h.sourceWarnings});
     }
     if(u.pathname==="/paper-import"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);

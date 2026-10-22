@@ -45,7 +45,7 @@ export function chooseClosingSignals(stockFeatures,model,limit=3){
       .sort((a,b)=>b.feature.liquidity-a.feature.liquidity||String(a.code).localeCompare(String(b.code)))
       .slice(0,limit);
     for(const x of matches)all.push({kind:model,variant:v.id,variantLabel:v.label,code:x.code,name:x.name,
-      signal:x.feature,signalHm:x.feature.signalHm,fillStatus:"signal_only",strategyVersion:"close30-paper-v1"});
+      strategyParams:{...v,maxTrades:limit,frictionPct:CLOSE_FEES_PCT,signalCutoff:model==="day"?1504:1520,entry:model==="day"?"next_completed_minute_proxy":"official_close",exit:model==="day"?"official_close":"next_session_open"},signal:x.feature,signalHm:x.feature.signalHm,fillStatus:"signal_only",strategyVersion:"close30-paper-v1"});
   }
   return all;
 }

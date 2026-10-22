@@ -638,8 +638,9 @@ def main():
                 key=tuple(str(row.get(k) or "") for k in ("variant","date","code","entryTime"))
                 archived[key]=row
     with (OUT / "variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
-        columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source"]
+        columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source","strategyParams"]
         w=csv.DictWriter(f,fieldnames=columns);w.writeheader()
+        params_by_name={p.name:asdict(p) for p in VARIANTS}
         for variant,trs in sorted(variant_trades.items()):
             for t in trs:
                 row={"variant":variant,"date":t.get("date"),"code":"KRW-BTC","name":"비트코인",
@@ -648,6 +649,7 @@ def main():
                     "exitTime":t.get("exitTimeKst"),"exitPrice":t.get("exitPrice"),
                     "reason":t.get("reason"),"pnl":t.get("pnlPct"),"source":"research-reconstructed"}
                 key=tuple(str(row.get(k) or "") for k in ("variant","date","code","entryTime"))
+                row["strategyParams"]=json.dumps(params_by_name.get(variant),ensure_ascii=False)
                 archived.setdefault(key,row)
 
         for key in sorted(archived):

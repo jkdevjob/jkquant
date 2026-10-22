@@ -40,7 +40,7 @@ export async function onRequestGet({request,env}){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"bad date"},400);
  if(date>kstDate())return json({ok:false,error:"future date"},400);
  const kind=q.get("kind")||"all",variant=q.get("variant")||"all";
- if(!["all","day","overnight"].includes(kind)||!/^([a-zA-Z0-9_-]{1,80}|all)$/.test(variant))return json({ok:false,error:"invalid filter"},400);
+ if(!["all","day","overnight"].includes(kind)||!/^([a-zA-Z0-9_.-]{1,80}|all)$/.test(variant))return json({ok:false,error:"invalid filter"},400);
  const dates=Array.from({length:days},(_,i)=>isoShift(date,-i));
  const results=await Promise.allSettled(dates.map(d=>readDay(env,d)));
  const warnings=results.flatMap((r,i)=>r.status==="rejected"?[dates[i]+": "+String(r.reason?.message||r.reason)]:[]);

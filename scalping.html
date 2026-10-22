@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.45.2</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.46.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -323,10 +323,12 @@ canvas{display:block;width:100%;height:auto}
     <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
     <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
     <button class="strategy-tab" data-strategy="closing30" onclick="showStrategy('closing30')">🌇 종가 30분</button>
+    <button class="strategy-tab" data-strategy="closing_bet" onclick="showStrategy('closing_bet')">🌙 개별 종목 종가 베팅</button>
     <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
     <button class="strategy-tab" data-strategy="soxl" onclick="showStrategy('soxl')">⚡ SOXL</button>
     <button class="strategy-tab" data-strategy="tenbagger" onclick="showStrategy('tenbagger')">🔟 텐배거 연구</button>
     <button class="strategy-tab" data-strategy="duel" onclick="showStrategy('duel')">🆚 클로드 대결</button>
+    <button class="strategy-tab" data-strategy="trades" onclick="openTradeHistory()">📚 전체 매매이력</button>
   </div>
 
   <div id="strategy_tenbagger" class="strategy-pane"><div id="tbg-root" data-host="research" data-default-view="forward">
@@ -393,8 +395,30 @@ canvas{display:block;width:100%;height:auto}
     </div>
   </div>
 
+  <div id="strategy_trades" class="strategy-pane">
+    <div class="strategy-head">📚 모든 전략 · 메인과 그림자 매매이력</div>
+    <div class="card">
+      <p class="lead">시초가·데이트레이딩·비트코인·SOXL·종가 30분·개별 종목 종가 베팅·텐배거의 기록을 조회합니다. <b>당시 신호 원본, 서버 모의장부, 순방향 연구, 사후 재구성</b>을 출처별로 구분합니다. 오늘 탭과 대결의 GPT 결과도 같은 전략 기록을 사용합니다.</p>
+      <form onsubmit="event.preventDefault();loadTradeHistory(1)">
+        <div class="row" style="align-items:flex-end;gap:10px">
+          <div class="fld"><label for="trades_strategy">전략</label><select id="trades_strategy"><option value="all">모든 전략</option><option value="opening">시초가</option><option value="daytrading">데이트레이딩</option><option value="crypto">비트코인</option><option value="soxl">SOXL</option><option value="closing30">종가 30분 · 당일 청산</option><option value="closing_bet">개별 종목 종가 베팅 · 익일 시가</option><option value="tenbagger">텐배거 연구</option></select></div>
+          <div class="fld"><label for="trades_variant">메인/그림자</label><select id="trades_variant"><option value="all">전체 메인·그림자·연구</option><option value="main">당시 운영 메인</option><option value="shadow">당시 그림자</option></select></div>
+          <div class="fld"><label for="trades_from">시작일</label><input id="trades_from" type="date" required></div>
+          <div class="fld"><label for="trades_to">종료일</label><input id="trades_to" type="date" required></div>
+          <div class="fld"><label for="trades_symbol">종목명/코드</label><input id="trades_symbol" type="search" placeholder="예: 삼성전자, 005930" maxlength="80"></div>
+          <div class="fld"><label for="trades_status">매매 상태</label><select id="trades_status"><option value="all">전체</option><option value="closed">청산</option><option value="open">보유</option><option value="pending">진입 대기</option><option value="signal">신호 기록</option><option value="unverified">체결/청산 확인 필요</option></select></div>
+          <div class="fld"><label for="trades_origin">출처</label><select id="trades_origin"><option value="all">전체 출처</option><option value="paper">당시 신호·서버 모의장부</option><option value="research">사후 연구·DB 이관</option><option value="forward">텐배거 순방향 연구</option></select></div>
+          <button class="ghostbtn" type="submit">조회</button><button class="ghostbtn" type="button" onclick="loadTradeHistory(1,true)">선택 조건 전체 CSV</button>
+        </div>
+      </form>
+      <p class="sub">기간을 지정하면 과거 이력도 조회합니다. 손익은 비용을 반영한 개별 거래 수익률입니다. 여러 전략·그림자·재구성 기록을 계좌수익률로 합산하지 않습니다. 원본에 없는 체결가와 조건은 미기록으로 표시합니다.</p>
+      <p class="sub" id="trades_msg" role="status" aria-live="polite">원본 조회 전</p><div id="trades_body"></div><div class="row" id="trades_pager" style="margin-top:12px"></div>
+    </div>
+  </div>
+
   <div id="strategy_closing30" class="strategy-pane">
     <div class="strategy-head">🌇 종가 30분 · 당일 청산 + 개별 종목 종가 베팅(다음 거래일 시가 청산)</div>
+    <div class="row"><button class="ghostbtn sm" onclick="openTradeHistory('closing30')">종가 30분 전체 이력 / CSV</button><button class="ghostbtn sm" onclick="openTradeHistory('closing_bet')">개별 종목 종가 베팅 전체 이력 / CSV</button></div>
     <div class="card">
       <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">메인 + 그림자 10개 · 서버 자동 실행 · 증권사 주문 없음</span></h3>
       <p class="lead">기준전략은 15시까지 하락한 개별 종목을 유동성 순으로 선정합니다. <b>당일청산형</b>은 15:06 신호 → 15:07 모의매수 → 15:40 당일 종가 확인으로 종료합니다.
@@ -754,6 +778,7 @@ canvas{display:block;width:100%;height:auto}
 
 </div>
 
+<script src="/trade-history-ui.js?v=1.46.0"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1949,6 +1974,7 @@ async function loadDailyStrategyResults(force){
 function cumulativeHistoryCard(name){
   const call="loadScalpingHistory('"+name+"',1)";
   return flowCard('📚 과거 누적 매매이력',
+    '<button class="ghostbtn sm" onclick="openTradeHistory(&quot;'+name+'&quot;)">장중·모든 그림자 원본 조회 / CSV →</button>'+
     '<p class="lead"><b>'+HIST_LABELS[name]+' 기준전략의 전체 확정 매매이력</b>입니다. 오늘 장부와 분리해 누적 원본을 최신순으로 조회합니다.</p>'+
     '<div class="row" style="margin-bottom:8px;align-items:flex-end">'+
       '<div class="fld"><label>메인/그림자</label><select id="hist_'+name+'_variant" onchange="'+call+'"><option value="">운영 메인/기준</option><option value="baseline">기준 재구성</option></select></div>'+
@@ -1970,7 +1996,7 @@ async function loadScalpingVariantOptions(name){
     const j=await r.json();if(!r.ok||!j.ok)return;
     const options=['<option value="">운영 메인/기준</option>'];
     for(const v of j.variants||[]){
-      if(!/^[a-zA-Z0-9_-]{1,80}$/.test(v))continue;
+      if(!/^[a-zA-Z0-9_.-]{1,80}$/.test(v))continue;
       options.push('<option value="'+esc(v)+'">'+(v==='baseline'?'기준 재구성':esc(v))+'</option>');
     }
     sel.innerHTML=options.join('');
@@ -2807,12 +2833,13 @@ async function loadShadowRankings(force=false){
 
 function showStrategy(name){
   const active=['opening','daytrading','crypto','soxl'];
-  const tabs=['daily','duel','tenbagger','closing30',...active];
+  const tabs=['daily','duel','tenbagger','closing30','closing_bet','trades',...active];
   if(!tabs.includes(name))name='daily';
   document.querySelectorAll('.strategy-pane').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
-  const p=$('strategy_'+name); if(p)p.classList.add('on');
+  const p=$('strategy_'+(name==='closing_bet'?'closing30':name)); if(p)p.classList.add('on');
   SCALP_PREFS.strategyTab=name;if(me)void cloudSave();
+  if(name==='trades')loadTradeHistory(1);
   if(name==='duel'){ loadScalpingDuel(false); }
   if(name==='tenbagger'){window.TenbaggerResearch?.boot();}
   if(name==='daily'){
@@ -2827,7 +2854,7 @@ function showStrategy(name){
       setTimeout(()=>active.forEach(x=>loadStrategyScorecard(x)),220);
     });
   }
-  if(name==='closing30'){loadClosing30History();loadClosing30Research();}
+  if(name==='closing30'||name==='closing_bet'){if($('closing30_kind'))$('closing30_kind').value=name==='closing_bet'?'overnight':'day';loadClosing30History();loadClosing30Research();}
   if(active.includes(name)){ loadScalpingVariantOptions(name); loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); loadScalpingReview(name,false); loadShadowRankings(false); renderStrategyStatus(name); renderPlan(name); }
   if(name==='opening'){loadServerOpeningHistory();startOpeningPaperAuto();}
   else stopOpeningPaperAuto();
@@ -2843,7 +2870,7 @@ function showStrategy(name){
 function restoreStrategy(){
   const linked=new URLSearchParams(location.search).get('strategy')||(location.hash==='#tenbagger'?'tenbagger':null);
   let n=String(linked||(SCALP_PREFS&&SCALP_PREFS.strategyTab)||'daily');
-  if(!['daily','duel','tenbagger','opening','daytrading','crypto','soxl','closing30'].includes(n))n='daily';
+  if(!['daily','duel','tenbagger','opening','daytrading','crypto','soxl','closing30','closing_bet','trades'].includes(n))n='daily';
   showStrategy(n);
 }
 
