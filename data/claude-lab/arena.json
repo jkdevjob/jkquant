@@ -3124,7 +3124,16 @@
     "g_coin_ma30_s3_hi20_h21_btc",
     "g_coin_ma5_s99_vb0.8_h18_eth",
     "g_coin_ma25_s6_vb0.5_both",
-    "g_coin_ma80_s99_hi10_h12_eth"
+    "g_coin_ma80_s99_hi10_h12_eth",
+    "g_coin_ma40_s6_hi15_h12_eth",
+    "g_coin_ma100_s6_vb1_btc",
+    "g_coin_ma100_s8_hi20_h12_eth",
+    "g_coin_ma20_s2_hi20_h12_btc",
+    "g_coin_ma20_s3_hi20_h15_btc",
+    "g_coin_ma10_s8_vb0.8_h15_both",
+    "g_coin_ma10_s8_vb1_h18_btc",
+    "g_coin_ma25_s3_vb1_h15_both",
+    "g_coin_ma25_s2_vb0.8_h15_btc"
    ],
    "snapshots": [
     {
@@ -3509,7 +3518,7 @@
      "accepted": 0
     },
     "explore": {
-     "tried": 1734,
+     "tried": 1743,
      "accepted": 4
     },
     "jump2": {
@@ -6039,6 +6048,156 @@
     "cross": {
      "tried": 88,
      "accepted": 10
+    }
+   }
+  },
+  "close30": {
+   "pool": [
+    {
+     "version": "close30_dip_v1",
+     "name": "기본 · ⑤ 코스닥150 레버리지 장 마감 30분 반등 (실험)",
+     "rule": "KODEX 코스닥150레버리지가 15:00 에 전일 종가보다 내려 있으면 15:00 매수 → 15:30 종가 매도(당일 청산). R14(10/22) 사후 발견이라 실험 — 앞으로 쌓아 확인",
+     "params": {
+      "code": "233740",
+      "th": 0.0
+     },
+     "source": "seed",
+     "addedAt": "2026-10-22"
+    },
+    {
+     "version": "close30_dip_th05",
+     "name": "15:00 까지 −0.5% 미만",
+     "rule": "15:00 에 전일 종가보다 0.5% 넘게 내린 날만",
+     "params": {
+      "code": "233740",
+      "th": -0.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-22"
+    },
+    {
+     "version": "close30_dip_th1",
+     "name": "15:00 까지 −1% 미만",
+     "rule": "15:00 에 1% 넘게 내린 날만",
+     "params": {
+      "code": "233740",
+      "th": -1.0
+     },
+     "source": "seed",
+     "addedAt": "2026-10-22"
+    },
+    {
+     "version": "close30_dip_th15",
+     "name": "15:00 까지 −1.5% 미만",
+     "rule": "15:00 에 1.5% 넘게 내린 날만",
+     "params": {
+      "code": "233740",
+      "th": -1.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-22"
+    },
+    {
+     "version": "close30_dip_th2",
+     "name": "15:00 까지 −2% 미만",
+     "rule": "15:00 에 2% 넘게 내린 날만",
+     "params": {
+      "code": "233740",
+      "th": -2.0
+     },
+     "source": "seed",
+     "addedAt": "2026-10-22"
+    },
+    {
+     "version": "close30_dip_th3",
+     "name": "15:00 까지 −3% 미만",
+     "rule": "15:00 에 3% 넘게 내린 날만",
+     "params": {
+      "code": "233740",
+      "th": -3.0
+     },
+     "source": "seed",
+     "addedAt": "2026-10-22"
+    },
+    {
+     "version": "close30_dip_th4",
+     "name": "15:00 까지 −4% 미만",
+     "rule": "15:00 에 4% 넘게 내린 날만",
+     "params": {
+      "code": "233740",
+      "th": -4.0
+     },
+     "source": "seed",
+     "addedAt": "2026-10-22"
+    },
+    {
+     "version": "g_c30_th3.75",
+     "name": "15:00 까지 3.75% 넘게 내린 날",
+     "rule": "KODEX 코스닥150레버리지가 15:00 에 전일 종가보다 3.75% 넘게 내려 있으면 15:00 매수 → 15:30 종가 매도",
+     "params": {
+      "code": "233740",
+      "th": -3.75
+     },
+     "source": "generated",
+     "addedAt": "2026-10-22",
+     "op": "explore",
+     "parents": []
+    }
+   ],
+   "retired": [
+    {
+     "version": "close30_k200_dip",
+     "name": "코스피200 레버리지 · 내린 날",
+     "retiredAt": "2026-10-22",
+     "reason": "주문 경로 없음(다른 종목) — 자동 승격 불가라 경쟁군에서 뺌"
+    },
+    {
+     "version": "close30_kq150_dip",
+     "name": "코스닥150 (1배) · 내린 날",
+     "retiredAt": "2026-10-22",
+     "reason": "주문 경로 없음(다른 종목) — 자동 승격 불가라 경쟁군에서 뺌"
+    }
+   ],
+   "tried": [
+    "g_c30_th0.25",
+    "g_c30_th1.25",
+    "g_c30_th0.75",
+    "g_c30_th3.5",
+    "g_c30_th1.75",
+    "g_c30_th3.25",
+    "g_c30_th2.25",
+    "g_c30_th2.5",
+    "g_c30_th2.75"
+   ],
+   "snapshots": [
+    {
+     "date": "2026-10-22",
+     "top": "close30_dip_v1",
+     "main": "close30_dip_v1",
+     "bottom": [
+      "close30_dip_th2",
+      "close30_dip_th3",
+      "close30_dip_th4"
+     ],
+     "ranks": [
+      "close30_dip_v1",
+      "close30_dip_th05",
+      "close30_dip_th15",
+      "close30_dip_th1",
+      "close30_dip_th2",
+      "close30_dip_th3",
+      "close30_dip_th4"
+     ]
+    }
+   ],
+   "ops": {
+    "neighbor": {
+     "tried": 3,
+     "accepted": 0
+    },
+    "explore": {
+     "tried": 7,
+     "accepted": 1
     }
    }
   }
@@ -9259,8 +9418,36 @@
    "version": "",
    "name": "",
    "reason": "후보 9개 계산 → 기준 통과 9 · 투입 0(교체 0) · 탈락: 점수 부족 9"
+  },
+  {
+   "date": "2026-10-22",
+   "at": "2026-10-22T16:12+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 9개 계산 → 기준 통과 9 · 투입 0(교체 0) · 탈락: 점수 부족 9"
+  },
+  {
+   "date": "2026-10-22",
+   "at": "2026-10-22T16:12+09:00",
+   "tab": "close30",
+   "kind": "new",
+   "version": "g_c30_th3.75",
+   "name": "15:00 까지 3.75% 넘게 내린 날",
+   "reason": "격자 탐색 · 순위 점수 +0.092 (안정 +0.122 × 빈도 0.76 · 그대로 +0.279 · 이웃 중앙 +0.141) · 매매일 118 · 연 41회 · MDD -8.5% · 플러스 3/4해",
+   "op": "explore"
+  },
+  {
+   "date": "2026-10-22",
+   "at": "2026-10-22T16:12+09:00",
+   "tab": "close30",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 10개 계산 → 기준 통과 10 · 투입 1(교체 0) · 탈락: 복제 9"
   }
  ],
- "updatedAt": "2026-10-22T14:10+09:00",
+ "updatedAt": "2026-10-22T16:12+09:00",
  "freqBeta": 0.25
 }
