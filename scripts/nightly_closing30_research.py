@@ -10,7 +10,7 @@ import json
 import math
 import os
 import statistics
-import urllib.request
+import subprocess
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -30,11 +30,16 @@ def download(date):
                "https://jkquant.pages.dev/api/closing30-archive?date="+date]
     errors=[]
     for url in endpoints:
-        req=urllib.request.Request(url,headers={"x-monitor-key":KEY,"accept":"application/json"})
         try:
-            with urllib.request.urlopen(req,timeout=10) as r:
-                obj=json.loads(r.read(1_500_000))
-            if not obj.get("ok"):raise ValueError(obj.get("error","ledger error"))
+            # GitHub runners can get Cloudflare bot 403 for Python-urllib's default UA.
+            # Use the same curl client as existing successful project archivers.
+            result=subprocess.run(["curl","--fail","--silent","--show-error","--max-time","12",
+                "--user-agent","JKQuant-nightly-research/1.0","-H","x-monitor-key: "+KEY,
+                "-H","accept: application/json",url],capture_output=True,text=True,timeout=15)
+            if result.returncode!=0:
+                raise ValueError("curl HTTP/network failure (exit "+str(result.returncode)+")")
+            obj=json.loads(result.stdout[:1_500_000])
+            if not obj.get("ok"):raise ValueError(str(obj.get("error","ledger error"))[:100])
             return date,obj.get("ledger"),None
         except Exception as e:
             errors.append(str(e)[:160])
