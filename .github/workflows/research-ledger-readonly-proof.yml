@@ -1,4 +1,4 @@
-name: Research paper settings OFF proof
+name: Research stock broker deployment OFF proof
 on:
   push:
     branches: [fix/intraday-session-close-20261022]
@@ -8,51 +8,137 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 9
     steps:
-      - name: Persist requested OFF settings and verify original evidence
+      - name: Verify deployed connectors, persist OFF and preserve original ledgers
         env:
           MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
         run: |
           python - <<'PY'
-          import os,json,urllib.request,urllib.error,hashlib
-          base='https://jkquant-opening-scheduler.mumae4.workers.dev'
+          import os,json,urllib.request,urllib.error,hashlib,time
+          workers={k:'https://jkquant-'+v+'-scheduler.mumae4.workers.dev' for k,v in [('opening','opening'),('daytrading','daytrading'),('global','global-intraday')]}
+          pages='https://jkquant.pages.dev'
           def request(url,body=None,authorized=True):
-              headers={'User-Agent':'JKQuant-settings-off-proof/1.0','Accept':'application/json'}
+              headers={'User-Agent':'JKQuant-broker-off-proof/1.0','Accept':'application/json','Cache-Control':'no-cache'}
               if authorized:headers['x-monitor-key']=os.environ['MONITOR_KEY']
               if body is not None:headers['Content-Type']='application/json'
               req=urllib.request.Request(url,data=None if body is None else json.dumps(body).encode(),headers=headers)
               try:
-                  with urllib.request.urlopen(req,timeout=30) as r:return r.status,r.read().decode()
+                  with urllib.request.urlopen(req,timeout=35) as r:return r.status,r.read().decode()
               except urllib.error.HTTPError as e:return e.code,e.read().decode()
-          def api(path,body=None):
-              status,raw=request(base+path,body)
-              assert status==200,'worker status '+str(status)
+          def api(url,body=None):
+              status,raw=request(url,body)
+              assert status==200,url+' HTTP '+str(status)
               data=json.loads(raw);assert data.get('ok'),'worker operation failed'
               return data
-          original=api('/event-history?kind=opening&from=2026-10-22&to=2026-10-22')
-          digest=lambda x:hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
-          assert len(original.get('ledgers') or [])==1,'original ledger missing'
-          before=digest(original.get('ledgers'))
-          first=api('/paper-settings')['settings']
           expected={'gpt_opening','gpt_daytrading','gpt_closing30','gpt_closing_bet','gpt_crypto','gpt_soxl','gpt_tenbagger'}
-          assert set(first['strategies'])==expected,'strategy catalog mismatch'
-          print('INITIAL_STATE',json.dumps({'revision':first['revision'],'enabled':{k:v['enabled'] for k,v in first['strategies'].items()}},sort_keys=True))
-          saved=api('/paper-settings',{'allOff':True,'expectedRevision':first['revision']})['settings']
-          loaded=api('/paper-settings')['settings']
-          assert loaded==saved and loaded['revision']==first['revision']+1,'saved setting mismatch'
-          assert all(v['enabled'] is False for v in loaded['strategies'].values()),'not all OFF'
+          stocks=expected-{'gpt_crypto'}
+          connected=set()
+          for k,base in workers.items():
+              data=api(base+'/broker-status')
+              assert data['version']=='research_kis_vts_v1' and data['environment']=='vts','broker deploy mismatch'
+              connected.update(data['strategies'])
+              if k=='global':assert data['unsupported']==['gpt_crypto']
+              print('DEPLOYED_WORKER',k,json.dumps(data,sort_keys=True))
+          assert connected==stocks,'stock connector coverage mismatch'
+          ledger_urls={
+              'opening':workers['opening']+'/event-history?kind=opening&from=2026-10-22&to=2026-10-22',
+              'closing':workers['opening']+'/event-history?kind=closing30&from=2026-10-22&to=2026-10-22',
+              'daytrading':workers['daytrading']+'/paper-history?from=2026-10-22&to=2026-10-22&limit=10',
+              'soxl':workers['global']+'/paper-history?strategy=soxl&from=2026-10-22&to=2026-10-22&limit=10',
+              'btc':workers['global']+'/paper-history?strategy=crypto&from=2026-10-22&to=2026-10-22&limit=10'}
+          digest=lambda x:hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+          before={k:digest(api(url).get('ledgers')) for k,url in ledger_urls.items()}
+          assert before['opening']=='37f82a53213fde57e84db9d7ee54204f65d8589ef7e4d0cfe7df23c40b781d75','previous opening evidence changed'
+          first=api(workers['opening']+'/paper-settings')['settings']
+          assert set(first['strategies'])==expected
+          assert all(v['enabled'] is False for v in first['strategies'].values()),'requested OFF state changed'
+          saved=api(workers['opening']+'/paper-settings',{'allOff':True,'expectedRevision':first['revision']})['settings']
+          loaded=api(workers['opening']+'/paper-settings')['settings']
+          assert loaded==saved and loaded['revision']==first['revision']+1
+          assert all(v['enabled'] is False for v in loaded['strategies'].values())
           print('PERSISTED_OFF',json.dumps(loaded,sort_keys=True))
-          after=api('/event-history?kind=opening&from=2026-10-22&to=2026-10-22')
-          assert digest(after.get('ledgers'))==before,'original ledger changed'
-          print('ORIGINAL_PRESERVED',json.dumps({'ledgers':len(after.get('ledgers') or []),'sha256':before}))
-          for url in [base+'/paper-settings','https://jkquant.pages.dev/api/paper-trading-settings']:
-              status,raw=request(url,authorized=False);assert status==401,'anonymous access '+str(status)
-              print('ANONYMOUS_BLOCKED',url,status)
-          status,page=request('https://jkquant.pages.dev/settings',authorized=False)
-          assert status==200 and 'v1.5.0' in page and 'data-settings-tab="paper"' in page and 'settings-paper-trading.js?v=1.0.0' in page,'settings deploy mismatch'
-          status,page=request('https://jkquant.pages.dev/scalping',authorized=False)
-          assert status==200 and 'id="scVer">v1.47.0<' in page,'research deploy mismatch'
-          print('DEPLOYED_VERSIONS','settings=1.5.0 research=1.47.0')
+          after={k:digest(api(url).get('ledgers')) for k,url in ledger_urls.items()}
+          assert before==after,'original ledger changed by settings update'
+          print('ORIGINAL_PRESERVED',json.dumps(after,sort_keys=True))
+          journal=api(workers['opening']+'/research-history?from=2026-10-01&to=2026-10-31')
+          assert journal['version']=='research_kis_vts_v1'
+          assert all(not op.get('orderNo') for p in journal['positions'] for op in p['operations'].values()),'unexpected broker order while switches OFF'
+          print('BROKER_JOURNAL',json.dumps({'positions':len(journal['positions']),'orderNumbers':0}))
+          for url,body in [(workers['opening']+'/paper-settings',None),(workers['opening']+'/research-history',None),(workers['opening']+'/research-execute',{}),(workers['opening']+'/research-reconcile',{}),(pages+'/api/paper-trading-settings',None),(pages+'/api/research-kis',{})]:
+              status,_=request(url,body,False);assert status==401,'anonymous access '+url+' '+str(status)
+          print('ANONYMOUS_BLOCKED','all settings/order/history routes')
+          for attempt in range(12):
+              status,settings=request(pages+'/settings?broker-proof=1.48.0',authorized=False)
+              status2,research=request(pages+'/scalping?broker-proof=1.48.0',authorized=False)
+              if status==status2==200 and 'v1.6.0' in settings and 'id="scVer">v1.48.0<' in research:break
+              time.sleep(10)
+          else:raise AssertionError('Pages deployed versions missing')
+          assert 'settings-paper-trading.js?v=1.1.0' in settings and 'data-settings-tab="paper"' in settings
+          status,asset=request(pages+'/settings-paper-trading.js?v=1.1.0',authorized=False)
+          assert status==200 and 'paper_pattern_' in asset and 'paper_arm_' in asset
+          status,config=request(pages+'/api/kis?op=config&env=vts',authorized=False)
+          assert status==200
+          config=json.loads(config)
+          ready={m['id']:{'ready':m['ready'],'missing':m.get('missing',[])} for m in config.get('modes',[]) if m.get('env')=='vts'}
+          print('VTS_CONFIGURATION',json.dumps(ready,sort_keys=True))
+          print('DEPLOYED_VERSIONS','settings=1.6.0 research=1.48.0')
           print('NO_BROKER_ORDER_OR_NOTIFICATION_CALLED')
           PY
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Mobile and desktop settings browser smoke with local fixtures only
+        shell: bash
+        run: |
+          npm install --prefix /tmp/jk-ui-proof --no-audit --no-fund playwright@1.56.1
+          export UI_BROWSER_PATH="$(command -v google-chrome)"
+          test -n "$UI_BROWSER_PATH"
+          cat > /tmp/jk-ui-proof/smoke.cjs <<'JS'
+          const {chromium}=require('/tmp/jk-ui-proof/node_modules/playwright');
+          const fs=require('fs');
+          const {pathToFileURL}=require('url');
+          const assert=require('node:assert/strict');
+          (async()=>{
+           const root=process.cwd();
+           const {PAPER_STRATEGIES,defaultPaperSettings,changePaperSettings}=await import(pathToFileURL(root+'/functions/api/_paper-trading.js').href);
+           let state=defaultPaperSettings(),calls=0;
+           const browser=await chromium.launch({headless:true,executablePath:process.env.UI_BROWSER_PATH,args:['--no-sandbox']});
+           try{
+            const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:1});
+            const errors=[];page.on('pageerror',e=>errors.push(e.message));
+            await page.exposeFunction('fixtureSettings',async body=>{
+             calls++;if(body)try{state=changePaperSettings(state,JSON.parse(body));}catch(e){return {ok:false,error:e.message};}
+             return {ok:true,settings:state,strategies:PAPER_STRATEGIES,connections:{kr:{ready:true},us:{ready:true}}};
+            });
+            const html=fs.readFileSync(root+'/settings.html','utf8').replace(/<script\b[\s\S]*?<\/script>/g,'').replace(/<link\b[^>]*>/g,'');
+            await page.setContent(html);await page.addStyleTag({path:root+'/jk-mobile.css'});
+            await page.evaluate(()=>{
+             window.jkAuth={currentUser:{getIdToken:async()=>'local-fixture-only'}};
+             window.fetch=async(url,init={})=>{if(url!=='/api/paper-trading-settings')throw Error('unexpected network '+url);const j=await window.fixtureSettings(init.body);return new Response(JSON.stringify(j),{status:j.ok?200:400,headers:{'content-type':'application/json'}});};
+            });
+            await page.addScriptTag({path:root+'/settings-paper-trading.js'});
+            await page.evaluate(()=>document.dispatchEvent(new Event('DOMContentLoaded')));
+            await page.locator('[data-settings-tab="paper"]').click();await page.waitForSelector('#paper_enabled_gpt_tenbagger');
+            assert.equal(await page.locator('.alert-item').count(),7);assert.equal(await page.locator('.badge.on').count(),0);
+            assert.equal(await page.locator('#paper_enabled_gpt_crypto').isDisabled(),true);
+            for(const s of PAPER_STRATEGIES.filter(x=>x.supported))assert.equal(await page.locator('#paper_enabled_'+s.id).isEnabled(),true);
+            const save=page.locator('[data-paper-save="gpt_tenbagger"]');
+            await page.locator('#paper_enabled_gpt_tenbagger').check();await save.click();
+            await page.waitForFunction(()=>document.getElementById('paperTradingMessage').textContent.includes('가격 가설'));
+            assert.equal(state.strategies.gpt_tenbagger.enabled,false);
+            await page.locator('#paperReload').click();await page.waitForFunction(()=>document.getElementById('paperTradingMessage').textContent.includes('저장된 서버'));
+            await page.locator('#paper_pattern_gpt_tenbagger').selectOption('trend200');await page.locator('#paper_arm_gpt_tenbagger').selectOption('stop12_trail35');
+            await page.locator('#paper_enabled_gpt_tenbagger').check();await save.click();
+            await page.waitForFunction(()=>document.getElementById('paperTradingMessage').textContent==='저장했습니다. 다음 주문 처리부터 적용됩니다.');
+            assert.equal(state.strategies.gpt_tenbagger.enabled,true);assert.equal(state.strategies.gpt_tenbagger.pattern,'trend200');assert.equal(state.strategies.gpt_tenbagger.exitArm,'stop12_trail35');
+            await page.locator('#paperAllOff').click();await page.waitForFunction(()=>document.getElementById('paperTradingMessage').textContent.includes('OFF로 저장'));
+            assert.ok(Object.values(state.strategies).every(x=>!x.enabled));
+            assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);assert.deepEqual(errors,[]);
+            await page.screenshot({path:'/tmp/research-vts-settings-mobile.png',fullPage:true});
+            await page.setViewportSize({width:1280,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
+            console.log(JSON.stringify({ok:true,fixtureOnly:true,calls,strategies:7,supported:6,initialAndFinalOff:true,tenbaggerSelectionRequired:true,mobile393NoOverflow:true,desktop1280NoOverflow:true,errors}));
+           }finally{await browser.close();}
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/jk-ui-proof/smoke.cjs
