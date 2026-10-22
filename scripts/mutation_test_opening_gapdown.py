@@ -165,7 +165,7 @@ JS = [
     ("d1 live opens before 09:00", "claude-live.js", "opened=hm>=900&&+b.open>0", "opened=+b.open>0"),
     ("d1 live closes before 15:31", "claude-live.js", "closed=opened&&hm>=1531&&+b.close>0", "closed=opened&&+b.close>0"),
     ("d1 live rejected order no pnl", "claude-live.js", "pnlPct:opened&&now?pct(now,buy)-d1CostPct(buy):null", "pnlPct:opened&&now&&o.vts&&o.vts.ok?pct(now,buy)-d1CostPct(buy):null"),
-    ("vts note skipped silent", "claude-live.js", 'if(!o||!o.vts)return skipped?"모의계좌 주문 안 함("+skipped+") — 시세로 정산":"";', 'if(!o||!o.vts)return "";'),
+    ("vts note skipped silent", "claude-live.js", ':skipped?"모의계좌 주문 안 함("+skipped+") — 시세로 정산":"";', ':"";'),
     ("etf live fill over close", "claude-live.js", "bp=bc>0?bc:+((buyPrev.quote||{}).expectedPrice)||null", "bp=+((((prevSt.etf_reconcile||{}).fills||{}).closeBuy||{}).avgPrice)||(bc>0?bc:+((buyPrev.quote||{}).expectedPrice)||null)"),
     ("etf live sells before open", "claude-live.js", "sp=hm>=900&&+bar(today).open>0?+bar(today).open:null", "sp=+bar(today).open>0?+bar(today).open:null"),
     ("etf live buy close before 15:31", "claude-live.js", "const bc=hm>=1531?+bar(today).close:0", "const bc=+bar(today).close"),
