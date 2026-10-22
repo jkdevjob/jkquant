@@ -325,6 +325,41 @@ function collectEvents(date,target,parts){
   }
   return out;
 }
+// 장중 신호 엔진의 09:30 분봉 지연/누락을 대비한 마지막 청산 안전망.
+// 장부에 기록된 메인 매수 중 매도 신호가 없는 것만 반환한다. 다른 전략·그림자·전일 물량은 제외.
+// 이는 '모의 매도 주문 시도'이며 KIS 체결 확정이나 확정 손익을 의미하지 않는다.
+export function openingUnmatchedExits(ledger,mainVariant){
+  if(!ledger||!Array.isArray(ledger.events))return [];
+  const buys=new Map(),sold=new Set();
+  const key=e=>String(e.code||e.signal?.code||"")+":"+String(e.signal?.entryTime||"");
+  for(const e of ledger.events){
+    if(!e||e.variant!==mainVariant||!["buy","sell"].includes(e.stage))continue;
+    const id=key(e),sig=e.signal||{};
+    if(!String(sig.entryTime||"")||!String(e.code||sig.code||""))continue;
+    if(e.stage==="buy")buys.set(id,{...sig,code:e.code||sig.code,name:e.name||sig.name||e.code});
+    else sold.add(id);
+  }
+  return [...buys].filter(([id,x])=>!sold.has(id)&&+x.entryTime<930)
+    .map(([,x])=>({...x,exitTime:930,exitPrice:null,pnl:null,
+      reason:"09:30 종료 매도 원본 누락 · 모의주문/체결 확인 필요",finalExitUnverified:true}));
+}
+async function forceOpeningSessionClose(env,date,mainVariant,target){
+  if(target!==930)return {count:0};
+  const ledger=await readLedger(env,date,"opening");
+  const missing=openingUnmatchedExits(ledger,mainVariant);
+  if(!missing.length)return {count:0};
+  const now=Date.now();
+  // 원본 보관 실패 시 주문하지 않는다. 이전 매도/다른 전략을 절대로 다시 팔지 않는다.
+  await appendLedger(env,{scanId:date+":opening:final-exit-check",date,mainVariant,
+    scheduledTime:now,capturedAt:new Date(now).toISOString(),targetHm:930,
+    partial:false,okShards:0,quoteErrors:0,events:missing.map(x=>
+      liveEvent(date,930,"sell",mainVariant,x,{channel:"telegram",sent:false,reason:"final_exit_unverified"},null))},"opening");
+  let exec;
+  try{exec=await executeVts(env,date,[],missing);}
+  catch(e){console.error(JSON.stringify({type:"opening_final_exit_vts_failed",date,count:missing.length,error:String(e.message||e)}));return {count:missing.length,ok:false,error:String(e.message||e)};}
+  console.log(JSON.stringify({type:"opening_final_exit_recovery",date,count:missing.length,vts:exec.events||[]}));
+  return {count:missing.length,ok:true};
+}
 function telegramFailures(parts){
   let n=0;
   for(const p of parts){
@@ -439,6 +474,12 @@ async function runMinute(controller,env){
     console.error(JSON.stringify({type:"signal_archive_failed",date:kst.date,targetHm:target,error:String(e.message||e)}));
   }
   await retryOpeningNotifications(env,kst.date,target);
+  // 09:31 KST: 원본 장부에서 종료되지 않은 실제 메인 매수 신호만 VTS 매도 시도.
+  // 일부 샤드 실패에도 이미 기록된 매수분은 보호하되, 미확정 가격/체결을 수익으로 확정하지 않는다.
+  if(target===930){
+    try{await forceOpeningSessionClose(env,kst.date,mainVariant,target);}
+    catch(e){console.error(JSON.stringify({type:"opening_final_exit_recovery_failed",date:kst.date,error:String(e.message||e)}));}
+  }
 
   if(ok.length!==SHARDS){
     console.error(JSON.stringify({type:"scan_partial",targetHm:target,okShards:ok.length,failed,archive}));
