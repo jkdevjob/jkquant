@@ -1,4 +1,4 @@
-name: Research ledger read-only proof
+name: Research paper settings OFF proof
 on:
   push:
     branches: [fix/intraday-session-close-20261022]
@@ -8,58 +8,51 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 4
     steps:
-      - uses: actions/checkout@v4
-        with: {ref: main}
-      - uses: actions/setup-node@v4
-        with: {node-version: '22'}
-      - name: Read original opening evidence and patched quote routes
+      - name: Persist requested OFF settings and verify original evidence
         env:
           MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
         run: |
           python - <<'PY'
-          import os,json,subprocess,datetime,collections,urllib.parse
-          from zoneinfo import ZoneInfo
-          def get(url,timeout=30):
-              r=subprocess.run(['curl','--silent','--show-error','--fail-with-body','--max-time',str(timeout),'--user-agent','JKQuant-readonly-proof/1.1','-H','x-monitor-key: '+os.environ['MONITOR_KEY'],url],capture_output=True,text=True,timeout=timeout+5)
-              try:return json.loads(r.stdout)
-              except Exception:raise RuntimeError('source response unavailable '+str(r.returncode))
-          date=datetime.datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()
-          opening=get('https://jkquant-opening-scheduler.mumae4.workers.dev/event-history?kind=opening&from=2026-10-22&to=2026-10-22')
-          assert opening.get('ok') and len(opening.get('ledgers') or [])==1,'opening original unavailable'
-          open('/tmp/opening-readonly-proof.json','w').write(json.dumps(opening['ledgers'][0]))
-          for l in opening.get('ledgers') or []:
-              scans=l.get('scans') or [];events=l.get('events') or [];main=l.get('mainVariant') or 'baseline'
-              print('OPENING_ORIGINAL',json.dumps({'date':l.get('date'),'mainVariant':main,'updatedAt':l.get('updatedAt'),'scans':len(scans),'targets':[s.get('targetHm') for s in scans],'partialScans':sum(bool(s.get('partial')) for s in scans),'quoteErrors':sum(s.get('quoteErrors') or 0 for s in scans),'failedShards':sum(len(s.get('failed') or []) for s in scans),'eventsByVariant':dict(collections.Counter(e.get('variant')+':'+str(e.get('stage')) for e in events)),'mainEvents':sum(e.get('variant')==main for e in events)},ensure_ascii=False))
-          runtime=get('https://jkquant-global-intraday-scheduler.mumae4.workers.dev/runtime')
-          print('GLOBAL_RUNTIME',json.dumps(runtime,ensure_ascii=False))
-          archive=get('https://jkquant.pages.dev/api/closing30-archive?date=2026-10-22')
-          for l in archive.get('ledgers') or ([archive['ledger']] if archive.get('ledger') else []):
-              events=l.get('events') or []
-              print('CLOSING_ORIGINAL',json.dumps({'date':l.get('date'),'scans':[{k:s.get(k) for k in ['targetHm','partial','quoteErrors','eventCount']} for s in l.get('scans') or []],'stages':dict(collections.Counter(str(e.get('kind'))+':'+str(e.get('stage')) for e in events)),'events':len(events)},ensure_ascii=False))
-          base='https://jkquant.pages.dev'
-          scan=get(base+'/api/closing30-monitor?op=scan&kind=day&date='+date,150)
-          print('PATCH_SCAN',json.dumps({k:scan.get(k) for k in ['ok','error','date','kind','scanned','valid','partial','cutoff','errors']},ensure_ascii=False))
-          assert scan.get('ok'),'production monitor unavailable'
-          if scan.get('ok'):
-              assert scan.get('scanned')==50 and not scan.get('partial') and not scan.get('errors'),'Top50 scan incomplete'
-              universe=get(base+'/api/universe?limit=100')
-              codes=[str(x.get('code')) for x in universe.get('universe') or [] if len(str(x.get('code','')))==6 and str(x.get('code','')).isdigit()][:35]
-              assert len(codes)==35
-              prices=get(base+'/api/closing30-monitor?op=prices&stage=overnight_entry&date='+date+'&codes='+','.join(codes),150)
-              print('PATCH_PRICES',json.dumps({'ok':prices.get('ok'),'count':len(prices.get('prices') or []),'missing':prices.get('missing'),'errors':prices.get('errors'),'priceTimes':sorted(set(x.get('priceAt','') for x in prices.get('prices') or []))},ensure_ascii=False))
-              assert prices.get('ok') and len(prices.get('prices') or [])==35 and not prices.get('errors') and prices.get('missing')==0,'35 prices incomplete'
+          import os,json,urllib.request,urllib.error,hashlib
+          base='https://jkquant-opening-scheduler.mumae4.workers.dev'
+          def request(url,body=None,authorized=True):
+              headers={'User-Agent':'JKQuant-settings-off-proof/1.0','Accept':'application/json'}
+              if authorized:headers['x-monitor-key']=os.environ['MONITOR_KEY']
+              if body is not None:headers['Content-Type']='application/json'
+              req=urllib.request.Request(url,data=None if body is None else json.dumps(body).encode(),headers=headers)
+              try:
+                  with urllib.request.urlopen(req,timeout=30) as r:return r.status,r.read().decode()
+              except urllib.error.HTTPError as e:return e.code,e.read().decode()
+          def api(path,body=None):
+              status,raw=request(base+path,body)
+              assert status==200,'worker status '+str(status)
+              data=json.loads(raw);assert data.get('ok'),'worker operation failed'
+              return data
+          original=api('/event-history?kind=opening&from=2026-10-22&to=2026-10-22')
+          digest=lambda x:hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+          assert len(original.get('ledgers') or [])==1,'original ledger missing'
+          before=digest(original.get('ledgers'))
+          first=api('/paper-settings')['settings']
+          expected={'gpt_opening','gpt_daytrading','gpt_closing30','gpt_closing_bet','gpt_crypto','gpt_soxl','gpt_tenbagger'}
+          assert set(first['strategies'])==expected,'strategy catalog mismatch'
+          print('INITIAL_STATE',json.dumps({'revision':first['revision'],'enabled':{k:v['enabled'] for k,v in first['strategies'].items()}},sort_keys=True))
+          saved=api('/paper-settings',{'allOff':True,'expectedRevision':first['revision']})['settings']
+          loaded=api('/paper-settings')['settings']
+          assert loaded==saved and loaded['revision']==first['revision']+1,'saved setting mismatch'
+          assert all(v['enabled'] is False for v in loaded['strategies'].values()),'not all OFF'
+          print('PERSISTED_OFF',json.dumps(loaded,sort_keys=True))
+          after=api('/event-history?kind=opening&from=2026-10-22&to=2026-10-22')
+          assert digest(after.get('ledgers'))==before,'original ledger changed'
+          print('ORIGINAL_PRESERVED',json.dumps({'ledgers':len(after.get('ledgers') or []),'sha256':before}))
+          for url in [base+'/paper-settings','https://jkquant.pages.dev/api/paper-trading-settings']:
+              status,raw=request(url,authorized=False);assert status==401,'anonymous access '+str(status)
+              print('ANONYMOUS_BLOCKED',url,status)
+          status,page=request('https://jkquant.pages.dev/settings',authorized=False)
+          assert status==200 and 'v1.5.0' in page and 'data-settings-tab="paper"' in page and 'settings-paper-trading.js?v=1.0.0' in page,'settings deploy mismatch'
+          status,page=request('https://jkquant.pages.dev/scalping',authorized=False)
+          assert status==200 and 'id="scVer">v1.47.0<' in page,'research deploy mismatch'
+          print('DEPLOYED_VERSIONS','settings=1.5.0 research=1.47.0')
+          print('NO_BROKER_ORDER_OR_NOTIFICATION_CALLED')
           PY
-      - name: Check final summary using that exact original
-        run: |
-          node --input-type=module - <<'JS'
-          import fs from 'node:fs';import assert from 'node:assert/strict';
-          import {summarizeOpeningLedger} from './functions/api/scalping-live-results.js';
-          const ledger=JSON.parse(fs.readFileSync('/tmp/opening-readonly-proof.json','utf8'));
-          const result=summarizeOpeningLedger(ledger);
-          console.log('ORIGINAL_TO_SUMMARY',JSON.stringify({date:result.date,state:result.state,sourceIncomplete:result.sourceIncomplete,noTrade:result.noTrade,returnPct:result.returnPct,scanCoverage:result.scanCoverage,reason:result.reason}));
-          assert.equal(result.state,'unavailable');assert.equal(result.sourceIncomplete,true);
-          assert.equal(result.returnPct,null);assert.equal(result.noTrade,false);
-          assert.deepEqual(result.scanCoverage.missingTargets,[906]);
-          JS
