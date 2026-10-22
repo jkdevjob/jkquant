@@ -9,7 +9,7 @@ let topics=new Set();
 let approvalLinked=false;
 let adminRequests=false;
 let topicSchemaVersion=1;
-const GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
+const GPT_TOPICS=["opening","daytrading","crypto","soxl","closing30","tenbagger_gpt"];
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent||"")}
