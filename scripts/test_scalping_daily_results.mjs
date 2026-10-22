@@ -132,3 +132,16 @@ const wait=renderCell({date:"2026-10-09",marketDate:"2026-10-08",pending:true,pe
 assert.match(wait,/미국 10-08장/);assert.match(wait,/>대기</);
 
 console.log("ALL PASS — scalping today live results");
+
+
+const missingPriorCrypto=pairKst("crypto","비트코인",{sessions:[]},"2026-10-22");
+assert.equal(missingPriorCrypto.current.pending,true,'current crypto may await same-day close');
+assert.equal(missingPriorCrypto.previous.date,'2026-10-21');
+assert.equal(missingPriorCrypto.previous.unavailable,true,'yesterday must not wait forever');
+assert.equal(missingPriorCrypto.previous.pending,undefined);
+assert.equal(missingPriorCrypto.previous.returnPct,null,'no fake zero profit for lost ledger');
+assert.equal(missingPriorCrypto.status,'degraded');
+const missingKr=pairKst("opening","시초가",{sessions:[]},"2026-10-22",[{date:"2026-10-21",open:true}]);
+assert.equal(missingKr.previous.unavailable,true,'previous open market day without archival is unverified');
+const sat=pairKst("opening","시초가",{sessions:[]},"2026-10-18");
+assert.equal(sat.previous.marketClosed,true,'Saturday remains a real market holiday');
