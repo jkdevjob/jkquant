@@ -32,6 +32,11 @@ jobs:
           for l in archive.get('ledgers') or ([archive['ledger']] if archive.get('ledger') else []):
               events=l.get('events') or []
               print('CLOSING_ORIGINAL',json.dumps({'date':l.get('date'),'scans':[{k:s.get(k) for k in ['targetHm','partial','quoteErrors','eventCount']} for s in l.get('scans') or []],'stages':dict(collections.Counter(str(e.get('kind'))+':'+str(e.get('stage')) for e in events)),'events':len(events)},ensure_ascii=False))
+          research=[]
+          for shard in range(5):
+              part=get('https://jkquant.pages.dev/api/opening-monitor?serverHistory=1&shard='+str(shard)+'&shards=5&limit=100&mainVariant=baseline',60)
+              research.append({'shard':shard,'ok':part.get('ok'),'error':part.get('error'),'universe':part.get('universe'),'trades':len(part.get('operationalTrades') or []),'quoteErrors':part.get('errors'),'entryTimes':[x.get('entryTime') for x in part.get('operationalTrades') or []]})
+          print('OPENING_RECONSTRUCTION_QA',json.dumps(research,ensure_ascii=False))
           base='https://f4ea434e.jkquant.pages.dev'
           scan=get(base+'/api/closing30-monitor?op=scan&kind=day&date='+date,150)
           print('PATCH_SCAN',json.dumps({k:scan.get(k) for k in ['ok','error','date','kind','scanned','valid','partial','cutoff','errors']},ensure_ascii=False))
