@@ -1399,26 +1399,26 @@ async function loadGlobalPaper(strategy,silent=false){
     if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
     const l=j.ledger;
     if(!l){msg.textContent='오늘 서버 장부 미확인';body.innerHTML='<div class="warn">'+esc(paperMissingText(strategy))+'</div>';return;}
-    const a=l.trades||[],sum=l.summary||{},x=a[0]||null;
+    const a=l.trades||[],sum=l.summary||{},x=a[0]||null,unverified=a.some(x=>x.status==='unverified');
     const updated=scalpingKstStamp(l.updatedAt);
     msg.textContent=(j.date||l.date||'')+' · '+(sum.selected||a.length)+'건 · '+updated+' 갱신';
     const pct=v=>v==null?'—':((+v>=0?'+':'')+(+v).toFixed(2)+'%');
     const price=v=>v==null?'—':(strategy==='crypto'?Math.round(+v).toLocaleString('ko-KR')+'원':window.JKMoney?window.JKMoney.usdHtml(+v):'$'+Number(v).toFixed(2));
     let html='<div class="out" style="margin-bottom:10px">'+
-      '<div class="outbox"><div class="ol">오늘 계좌수익률</div><div class="ov '+((sum.accountReturnPct||0)>=0?'good':'bad')+'">'+pct(sum.accountReturnPct||0)+'</div><div class="sub">1슬롯 기준</div></div>'+
-      '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+((sum.tradeSumPct||0)>=0?'good':'bad')+'">'+pct(sum.tradeSumPct||0)+'</div></div>'+
-      '<div class="outbox"><div class="ol">상태</div><div class="ov" style="font-size:14px">'+(x?(x.status==='closed'?'청산완료':x.status==='open'?'보유중':'진입대기'):'신호 없음')+'</div></div>'+
+      '<div class="outbox"><div class="ol">오늘 계좌수익률</div><div class="ov '+((sum.accountReturnPct||0)>=0?'good':'bad')+'">'+pct(unverified?null:sum.accountReturnPct||0)+'</div><div class="sub">1슬롯 기준</div></div>'+
+      '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+((sum.tradeSumPct||0)>=0?'good':'bad')+'">'+pct(unverified?null:sum.tradeSumPct||0)+'</div></div>'+
+      '<div class="outbox"><div class="ol">상태</div><div class="ov" style="font-size:14px">'+(x?(x.status==='closed'?'청산완료':x.status==='open'?'보유중':x.status==='unverified'?'체결/청산 확인 필요':'진입대기'):'신호 없음')+'</div></div>'+
       '</div>';
     if(!x){
       const why=l.decision&&l.decision.reason?esc(l.decision.reason):'현재까지 기준전략을 통과한 신호가 없습니다.';
       html+='<div class="warn"><b>매매없음</b> · '+why+'<br><span class="sub">0건도 정상 결과이며, 서버가 다음 확정 5분봉마다 조건을 다시 평가합니다.</span></div>';
     }
     else{
-      const pl=x.pnlPct;
-      const reason=x.reason==='stop'||x.reason==='stop_same_bar'?'손절':x.reason==='take_profit'?'익절':x.reason==='time_exit'?'시간청산':x.reason==='tracking'?'추적중':'다음봉 시가대기';
+      const pl=x.status==='unverified'?null:x.pnlPct;
+      const reason=x.reason==='stop'||x.reason==='stop_same_bar'?'손절':x.reason==='take_profit'?'익절':x.reason==='time_exit'?'시간청산':x.status==='unverified'?'체결/청산 원본 확인 필요':x.reason==='tracking'?'추적중':'다음봉 시가대기';
       html+='<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>신호</th><th>상태</th><th>진입</th><th>현재/청산</th><th>사유</th><th>순손익</th></tr></thead><tbody>'+
         '<tr><td><b>'+(strategy==='crypto'?'KRW-BTC':'SOXL')+'</b><div class="sub">'+esc(x.strategyVersion||'')+'</div></td>'+
-        '<td>'+esc(x.signalTime||'—')+'</td><td>'+esc(x.status||'—')+'</td>'+
+        '<td>'+esc(x.signalTime||'—')+'</td><td>'+esc(x.status==='unverified'?'체결/청산 확인 필요':x.status||'—')+'</td>'+
         '<td>'+esc(x.entryTime||'—')+' · '+price(x.entryPrice)+'</td>'+
         '<td>'+esc(x.exitTime||'—')+' · '+price(x.exitPrice==null?x.currentPrice:x.exitPrice)+'</td>'+
         '<td>'+reason+'</td><td class="'+(pl==null?'':Number(pl)>=0?'win':'loss')+'">'+pct(pl)+'</td></tr>'+
@@ -2901,13 +2901,14 @@ async function loadDayTradingPaper(silent=false){
       body.innerHTML='<div class="warn">'+esc(paperMissingText('daytrading'))+'</div>';
       return;
     }
-    const a=l.trades||[],sum=l.summary||{};
+    const a=l.trades||[],sum=l.summary||{},unverified=a.some(x=>x.status==='unverified');
     const livePn=a.map(x=>x.status==='closed'?Number(x.pnl):x.status==='open'?Number(x.unrealizedPnl):null).filter(Number.isFinite);
-    const liveTradeSum=livePn.reduce((a,b)=>a+b,0),liveSlots=Number(l.maxTrades||3)||3,liveAccount=liveTradeSum/liveSlots;
+    const liveTradeSum=livePn.reduce((a,b)=>a+b,0),liveSlots=Number(l.maxTrades||3)||3,liveAccount=unverified?null:liveTradeSum/liveSlots;
     const pending=(a||[]).find(x=>x.status==='pending'),open=(a||[]).find(x=>x.status==='open'),closed=(a||[]).filter(x=>x.status==='closed').slice(-1)[0];
     if(pending) setTimingBoard('daytrading','buy','진입대기','<b>'+esc(pending.name||pending.code)+'</b> · 신호 '+String(pending.signalTime||'').padStart(4,'0'),'다음 1분봉 시가 모의진입 대기 · 신호가 '+commas(Math.round(pending.signalPrice||0))+'원');
     else setTimingBoard('daytrading','buy','대기','현재 진입대기 신호가 없습니다.','10:00~14:30 서버 기준전략을 계속 감시합니다.');
-    if(open) setTimingBoard('daytrading','sell','보유중','<b>'+esc(open.name||open.code)+'</b> · 진입 '+commas(Math.round(open.entryPrice||0))+'원','손절 '+commas(Math.round((open.entryPrice||0)*(1-Number(open.stopPct||l.stopPct||1)/100)))+' · 익절 '+commas(Math.round((open.entryPrice||0)*(1+Number(open.takeProfitPct||l.takeProfitPct||2)/100)))+' · 15:10 시간청산');
+    if(unverified)setTimingBoard('daytrading','sell','청산 확인 필요','거래 기한 경과 · 체결/청산 원본 확인 필요','확정되지 않은 청산가나 손익은 계산하지 않습니다.');
+    else if(open) setTimingBoard('daytrading','sell','보유중','<b>'+esc(open.name||open.code)+'</b> · 진입 '+commas(Math.round(open.entryPrice||0))+'원','손절 '+commas(Math.round((open.entryPrice||0)*(1-Number(open.stopPct||l.stopPct||1)/100)))+' · 익절 '+commas(Math.round((open.entryPrice||0)*(1+Number(open.takeProfitPct||l.takeProfitPct||2)/100)))+' · 15:10 시간청산');
     else if(closed) setTimingBoard('daytrading','sell','최근 청산','<b>'+esc(closed.name||closed.code)+'</b> · '+(closed.reason||'청산'),'손익 '+((closed.pnl||0)>=0?'+':'')+Number(closed.pnl||0).toFixed(2)+'%');
     else setTimingBoard('daytrading','sell','대기','현재 보유 포지션이 없습니다.','선택된 메인전략의 손절·익절·15:10 규칙을 표시합니다.');
     const updated=scalpingKstStamp(l.updatedAt);
@@ -2915,10 +2916,10 @@ async function loadDayTradingPaper(silent=false){
 
     const pct=v=>v==null?'—':((+v>=0?'+':'')+(+v).toFixed(2)+'%');
     const money=v=>v==null?'—':commas(Math.round(+v));
-    const status=x=>x.status==='pending'?'진입대기':x.status==='open'?'보유중':x.status==='closed'?'청산':'—';
+    const status=x=>x.status==='pending'?'진입대기':x.status==='open'?'보유중':x.status==='closed'?'청산':x.status==='unverified'?'체결/청산 확인 필요':'—';
     let html='<div class="out" style="margin-bottom:10px">'+
       '<div class="outbox"><div class="ol">오늘 계좌수익률</div><div class="ov '+(liveAccount>=0?'good':'bad')+'">'+pct(liveAccount)+'</div><div class="sub">'+liveSlots+'슬롯 동일비중 · 미사용 슬롯 현금</div></div>'+
-      '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+(liveTradeSum>=0?'good':'bad')+'">'+pct(liveTradeSum)+'</div><div class="sub">청산+보유 현재손익 합계</div></div>'+
+      '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+(liveTradeSum>=0?'good':'bad')+'">'+pct(unverified?null:liveTradeSum)+'</div><div class="sub">청산+보유 현재손익 합계</div></div>'+
       '<div class="outbox"><div class="ol">오늘 선정</div><div class="ov">'+(sum.selected||a.length)+'/'+liveSlots+'</div></div>'+
       '<div class="outbox"><div class="ol">보유중</div><div class="ov">'+(sum.open||0)+'</div></div>'+
       '<div class="outbox"><div class="ol">청산완료</div><div class="ov">'+(sum.closed||0)+'</div></div>'+
@@ -2928,8 +2929,8 @@ async function loadDayTradingPaper(silent=false){
     }else{
       html+='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>신호</th><th>상태</th><th>진입</th><th>현재/청산</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
         a.map(x=>{
-          const pl=x.status==='closed'?x.pnl:x.unrealizedPnl;
-          const reason=x.reason==='stop'?'손절':x.reason==='take_profit'?'익절':x.reason==='time_exit'?'시간청산':x.status==='open'?'추적중':'다음분 시가대기';
+          const pl=x.status==='unverified'?null:x.status==='closed'?x.pnl:x.unrealizedPnl;
+          const reason=x.reason==='stop'?'손절':x.reason==='take_profit'?'익절':x.reason==='time_exit'?'시간청산':x.status==='unverified'?'체결/청산 원본 확인 필요':x.status==='open'?'추적중':'다음분 시가대기';
           return '<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
             '<td>'+String(x.signalTime||'').padStart(4,'0')+'<div class="sub">'+money(x.signalPrice)+'</div></td>'+
             '<td><span class="sig '+(x.status==='open'?'watch':x.status==='closed'?'on':'off')+'">'+status(x)+'</span></td>'+

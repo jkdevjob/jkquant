@@ -100,6 +100,7 @@ test('day shadow evaluation shares source bars and retains filled positions on r
     const parts=[{mainParams:{volMult:1.5},signals:[candidate],shadowEvents:[{name:'vol_1.0',params:{volMult:1},signals:[candidate]}]}];
     const ledger=await day.reconcilePaper(env,date,1001,[candidate],'baseline',parts);assert.equal(reads,1);assert.equal(ledger.trades[0].entryPrice,100);assert.equal(ledger.shadowLedgers['vol_1.0'].trades[0].entryPrice,100);
     const next=await day.reconcilePaper(env,date,1001,[{...candidate,code:'000660'}],'baseline',[],true);assert.equal(next.trades[0].code,'005930');assert.ok(next.shadowLedgers['vol_1.0']);
+    const expired=await day.reconcilePaper(env,date,1510,[],'baseline',[],true);assert.equal(expired.trades[0].status,'unverified');assert.equal(expired.summary.unverified,1);assert.equal(expired.trades[0].exitPrice,null);
   });
 });
 function btcBars(){return Array.from({length:30},(_,i)=>({date,ms:kst(0,0)+i*300000,hm:Math.floor(i*5/60)*100+i*5%60,time:String(Math.floor(i*5/60)).padStart(2,'0')+':'+String(i*5%60).padStart(2,'0'),o:100,h:i===0?100:i===1?101:100.2,l:99.9,c:i===0?100:i===1?101:100.1,v:i===1?20:10}));}
@@ -150,4 +151,17 @@ test('value mutants: lost stored entry and retired variants are detected',async(
   assert.throws(()=>assert.equal(lost.storedOrbTrade('crypto',date,old,{entryPrice:999},btcBars(),kst(3,0),global.BTC_VARIANTS.baseline).entryPrice,100),assert.AssertionError);
   const retired=await import('data:text/javascript;base64,'+Buffer.from(src.replace('...Object.keys(previous),','')).toString('base64'));
   assert.throws(()=>assert.ok(retired.globalShadowLedgers('crypto',date,[],kst(3,0),'baseline',{retired:{trades:[base],strategyParams:global.BTC_VARIANTS.baseline}}).retired),assert.AssertionError);
+});
+
+test('BTC/SOXL detail panel never renders unconfirmed exit as entry waiting or zero profit',async()=>{
+ const ui=read('scalping.html'),a=ui.indexOf('async function loadGlobalPaper('),b=ui.indexOf('async function loadCryptoResearch(',a),nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:''});return nodes.get(id);};
+ const c={$:node,me:{getIdToken:async()=>'fixture'},fetch:async()=>Response.json({ok:true,date,ledger:{date,trades:[{...base,status:'unverified',pnlPct:2}],summary:{selected:1,accountReturnPct:0,tradeSumPct:0}}}),esc:String,scalpingKstStamp:String,window:{}};
+ vm.createContext(c);vm.runInContext(ui.slice(a,b),c);await c.loadGlobalPaper('crypto');const html=node('crypto_live_paper_body').innerHTML;
+ assert.match(html,/체결\/청산 확인 필요/);assert.doesNotMatch(html,/다음봉 시가대기|진입대기|>\+0\.00%/);
+});
+test('daytrading detail panel reports missing exit and withholds aggregate return',async()=>{
+ const ui=read('scalping.html'),a=ui.indexOf('async function loadDayTradingPaper('),b=ui.indexOf('\nasync function ',a+20),nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:''});return nodes.get(id);},boards=[];
+ const c={$:node,me:{getIdToken:async()=>'fixture'},fetch:async()=>Response.json({ok:true,ledger:{date,trades:[{...base,status:'unverified',unrealizedPnl:2}],summary:{selected:1,open:0,closed:0,unverified:1}}}),esc:String,scalpingKstStamp:String,window:{},commas:String,setTimingBoard:(...args)=>boards.push(args)};
+ vm.createContext(c);vm.runInContext(ui.slice(a,b),c);await c.loadDayTradingPaper();const html=node('dt_live_body').innerHTML;
+ assert.match(html,/체결\/청산 확인 필요/);assert.doesNotMatch(html,/다음분 시가대기|>\+0\.00%/);assert.ok(boards.some(x=>x[2]==='청산 확인 필요'));
 });

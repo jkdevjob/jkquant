@@ -374,6 +374,9 @@ async function advanceTrade(env,date,candidate,existing,target,params=DAY_EXIT_V
   }catch(e){
     t.lastError=String(e.message||e).slice(0,180);
   }
+  if(target>=PAPER_FINAL_EXIT_HM&&t.status!=="closed"){
+    t.status="unverified";t.reason="deadline_exit_unconfirmed";t.pnl=null;
+  }
   return t;
 }
 function pickCandidates(parts,maxTrades=PAPER_MAX_TRADES){
@@ -394,7 +397,7 @@ function ledgerSummary(ledger){
   const closed=a.filter(x=>x.status==="closed"),pn=closed.map(x=>+x.pnl||0);
   return {
     selected:a.length,pending:a.filter(x=>x.status==="pending").length,
-    open:a.filter(x=>x.status==="open").length,closed:closed.length,
+    open:a.filter(x=>x.status==="open").length,closed:closed.length,unverified:a.filter(x=>x.status==="unverified").length,
     realizedPnlSumPct:pn.reduce((s,x)=>s+x,0),
     realizedAvgPnlPct:pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:null
   };
@@ -563,7 +566,7 @@ async function sendDailySummary(env,date){
   const pn=closed.map(x=>Number(x.pnl)).filter(Number.isFinite),wins=pn.filter(x=>x>0).length,losses=pn.filter(x=>x<0).length;
   const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0;
   const lines=[
-    "후보/진입 "+a.length+"건 · 청산 "+closed.length+"건 · 미청산 "+open.length+"건",
+    "후보/진입 "+a.length+"건 · 청산 "+closed.length+"건 · 미청산 "+open.length+"건 · 체결/청산 확인필요 "+a.filter(x=>x.status==="unverified").length+"건",
     "승 "+wins+" · 패 "+losses+" · 승률 "+(pn.length?(wins/pn.length*100).toFixed(1):"0.0")+"%",
     "실현 평균 순수익률 "+signedPct(avg)+" · 왕복 마찰비용 "+PAPER_FRICTION_PCT.toFixed(2)+"% 반영"
   ];
