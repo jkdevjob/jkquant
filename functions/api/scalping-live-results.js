@@ -97,8 +97,12 @@ function summarizeOpeningLedger(ledger,now=Date.now()){
   row.wins=pn.filter(x=>x>0).length;row.losses=pn.filter(x=>x!==null&&x<0).length;
   const partial=!!latest.partial||latest.okShards!==5||Number(latest.quoteErrors||0)>0||(latest.failed||[]).length>0;
   row.state=row.open?'holding':closed.length?'closed':partial?'unavailable':'no_signal';
+  if(clock.ended&&row.open){
+    row.state='unavailable';row.returnPct=null;row.finalized=false;
+    row.sourceWarning='09:30 이후 미청산 '+row.open+'건 · 청산 신호/모의계좌 잔고 대조 필요';
+  }
   row.noTrade=!a.length&&!partial;
-  row.reason=partial?'부분 감시/시세 오류 · 원본 신호 누락 가능':clock.ended?'09:30까지 감시한 원본 신호 · 감시 종료':'현재까지 감시한 원본 신호 · 신호 없음이면 다음 1분봉 확인';
+  row.reason=clock.ended&&row.open?'09:30 청산 원본 누락 · 체결 미확인':partial?'부분 감시/시세 오류 · 원본 신호 누락 가능':clock.ended?'09:30까지 감시한 원본 신호 · 감시 종료':'현재까지 감시한 원본 신호 · 신호 없음이면 다음 1분봉 확인';
   if(partial){row.sourceWarning=row.reason;if(!a.length)row.returnPct=null;}
   if(pn.some(x=>x===null)){row.state='unavailable';row.reason='청산 원본 손익 누락';row.returnPct=null;}
   return freshness(row,clock);
