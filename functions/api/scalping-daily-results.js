@@ -418,10 +418,15 @@ function pairKst(name,label,result,kstDate,krStatuses=null){
       :name==="soxl"&&!isNyseSessionDate(shiftIso(prevDate,-1))
         ?placeholderFor(name,prevDate,null)
       :missingClosedRow(prevDate,name,name==="crypto"?"전날 비트코인 마감 장부 누락 · 거래 여부 확인 필요":"전날 마감 자료 누락 · 거래 여부 확인 필요",name==="soxl"?shiftIso(prevDate,-1):null));
+  // 과거 거래일에 뒤늦게 들어온 미완성 연구 CSV/서버 장부도 '대기'로 방치하지 않는다.
+  // 거래가 없었다거나 0%였다고 추정하지 않고 미확정 원본임을 보여 준다.
+  const resolvedPrevious=(previous.pending||previous.incomplete||previous.finalized===false&&!previous.marketClosed)
+    ?{...previous,pending:false,unavailable:true,missingClose:true,returnPct:null,finalized:false,
+      reason:"전날 마감 손익 미확정 · 원본 체결/세션 결과 대조 필요"}:previous;
   return {
     strategy:name,label,marketTime:"KST",timeZone:"Asia/Seoul",dateRule:"kst-calendar",
-    current,previous,
-    status:result&&result.error?"error":(previous.unavailable||result?.sourceWarnings?.length||a.some(x=>x.incomplete||x.sourceConflict)?"degraded":(a.length?"ok":"collecting")),
+    current,previous:resolvedPrevious,
+    status:result&&result.error?"error":(resolvedPrevious.unavailable||result?.sourceWarnings?.length||a.some(x=>x.incomplete||x.sourceConflict)?"degraded":(a.length?"ok":"collecting")),
     error:result&&result.error||null,
     sourceWarnings:result?.sourceWarnings||[]
   };
