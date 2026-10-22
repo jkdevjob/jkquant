@@ -3,8 +3,9 @@
 const H={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const response=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:H});
 export async function onRequestGet({request,env}){
- const want=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"");
- if(!want||request.headers.get("x-monitor-key")!==want)return response({ok:false,error:"unauthorized"},401);
+ const keys=[env.OPENING_MONITOR_KEY,env.AUTOTRADE_KEY].map(x=>String(x||"")).filter(Boolean);
+ const want=request.headers.get("x-monitor-key")||"";
+ if(!want||!keys.includes(want))return response({ok:false,error:"unauthorized"},401);
  const date=new URL(request.url).searchParams.get("date")||"";
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return response({ok:false,error:"invalid date"},400);
  const base=String(env.OPENING_WORKER_URL||"https://jkquant-opening-scheduler.mumae4.workers.dev").replace(/\/$/,"");
