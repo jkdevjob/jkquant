@@ -301,7 +301,7 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
         }
         if(tr.exitPrice!=null){
           tr.friction=friction;
-          tr.pnl=(tr.exitPrice/tr.entryPrice-1)*100-friction.totalPct;
+          tr.pnl=tr.evidence.finalExitPriceUnconfirmed?null:(tr.exitPrice/tr.entryPrice-1)*100-friction.totalPct;
         }
         return tr;
       }
