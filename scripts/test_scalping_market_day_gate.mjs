@@ -33,7 +33,7 @@ ok(dGate>=0&&dSnapshot>dGate&&dScan>dGate
 
 const sGate=globalWorker.indexOf('if(!isNyseSessionDate(n.date))');
 const sBars=globalWorker.indexOf('const bars=await fetchSoxl();',sGate);
-const sTrade=globalWorker.indexOf('const t=soxlTrade(bars,now,n.date',sGate);
+const sTrade=globalWorker.indexOf('soxlTrade(bars,now,n.date',sGate);
 ok(sGate>=0&&sBars>sGate&&sTrade>sBars
   &&globalWorker.includes('hasSoxlSessionOpenBar(bars,n.date)')
   &&globalWorker.includes('09:30 ET bar missing'),

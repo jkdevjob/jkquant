@@ -1,7 +1,7 @@
 import { buildDailyDigest, IPO_SCORE_VERSION } from "./ipo-score.mjs";
 import { verifyFirebaseToken } from "../../../functions/api/_firebase_token.js";
 import { evaluatePresale, describeEvaluation, won, SCORING_VERSION } from "./presale-score.mjs";
-import {normalizeGptReport,missingGptReport,gptReportDate,gptReportDue,gptReportMessage} from "../../../functions/api/_gpt_morning_report.js";
+import {normalizeGptReport,enrichClosingReport,missingGptReport,gptReportDate,gptReportDue,gptReportMessage} from "../../../functions/api/_gpt_morning_report.js";
 const enc=new TextEncoder();
 const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
@@ -301,7 +301,7 @@ export class PresaleAlertStore{
       const date=new URL(request.url).searchParams.get('date')||await st.get('gpt-report:latest');
       return json(request,{ok:true,report:date?await st.get('gpt-report:'+date)||null:null,delivery:date?await st.get('gpt-report-delivery:'+date)||null:null});
     }
-    let report;try{report=normalizeGptReport(await request.json());}catch(e){return json(request,{ok:false,error:String(e.message)},400);}
+    let report;try{report=await enrichClosingReport(normalizeGptReport(await request.json()));}catch(e){return json(request,{ok:false,error:String(e.message)},400);}
     const receipt=await st.get('gpt-report-delivery:'+report.date);
     if(receipt){
       // Full consent saved as five individual tabs has the same meaning as the settings card.
@@ -905,7 +905,7 @@ export class PresaleAlertStore{
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
       const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
       const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.8.1",topicSchemaVersion:2,subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.9.0",topicSchemaVersion:2,subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,lastTelegramDeliveries,
         telegramSignalDedup:{version:1,store:"durable-object",unknownRetry:false},gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }

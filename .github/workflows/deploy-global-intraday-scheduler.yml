@@ -77,3 +77,8 @@ jobs:
         env:
           MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
         run: python scripts/backfill_scalping_paper.py --strategies crypto,soxl --backfill
+
+      - name: 원천 재조회 · 메인/그림자 저장 · Cron 상태 확인 (알림/주문 없음)
+        env:
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        run: python scripts/probe_global_paper.py

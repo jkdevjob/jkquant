@@ -241,6 +241,9 @@ def report(state, candidates, coverage, now, source, new_count):
     records = []
     for r in state['records']:
         x = {k: v for k, v in r.items() if k != 'observations'}
+        prices = {o['date']: o.get('rawClose') for o in r['observations']}
+        x['entryPrice'] = prices.get(r.get('entryDate'))
+        x['arms'] = {name: {**arm, 'exitPrice': prices.get(arm.get('exitDate'))} for name, arm in r['arms'].items()}
         x['lastObservedDate'] = r['observations'][-1]['date'] if r['observations'] else None
         records.append(x)
     stats = []
