@@ -364,7 +364,7 @@ jobs:
           if(!c.includes('if(hm===1810)return "duel"')||!c.includes('/api/scalping-duel')){
             console.error('✗ GPT·클로드 대결 18:10 KST Worker 경로 없음'); fail++;
           }
-          if(!/if\(hm>=905&&hm<=931\)return "opening";/.test(c)||!/if\(route==="opening"\)ctx\.waitUntil\(runMinute/.test(c)){
+          if(!/if\(hm>=905&&hm<=931\)return "opening";/.test(c)||!/if\(route==="opening"\)\{?\s*ctx\.waitUntil\(runMinute/.test(c)){
             console.error('✗ 09:05~09:31 KST 평일만 시초가 스캔으로 보내는 경로가 없습니다.'); fail++;
           }
           const must=[
