@@ -629,6 +629,18 @@ def main():
     with (OUT / "latest.json").open("w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
+    # 기준 및 모든 그림자 전략의 개별 거래를 공통 필드로 보존한다.
+    with (OUT / "variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
+        columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source"]
+        w=csv.DictWriter(f,fieldnames=columns);w.writeheader()
+        for variant,trs in sorted(trade_map.items()):
+            for t in trs:
+                w.writerow({"variant":variant,"date":t.get("date"),"code":"KRW-BTC","name":"비트코인",
+                    "strategyVersion":t.get("strategyVersion"),"signalTime":t.get("signalTimeKst"),
+                    "entryTime":t.get("entryTimeKst"),"entryPrice":t.get("entryPrice"),
+                    "exitTime":t.get("exitTimeKst"),"exitPrice":t.get("exitPrice"),
+                    "reason":t.get("reason"),"pnl":t.get("pnlPct"),"source":"research-reconstructed"})
+
     with (OUT / "baseline-trades.csv").open("w", encoding="utf-8", newline="") as f:
         cols = [
             "date","strategyVersion","signalTimeKst","entryTimeKst","exitTimeKst","openingHigh","openingLow",
