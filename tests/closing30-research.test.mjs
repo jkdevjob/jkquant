@@ -24,7 +24,7 @@ test("10 shadow candidates plus baseline persist stable variant keys",()=>{
  assert(xs.every(x=>x.kind==="day"&&x.fillStatus==="signal_only"));
 });
 test("strict paper net PnL costs and no fabricated price",()=>{
- assert.equal(closeNetPct(100,101),.77);
+ assert(Math.abs(closeNetPct(100,101)-.77)<1e-8);
  assert.equal(closeNetPct(null,101),null);
  assert.equal(closeNetPct(100,null),null);
 });
