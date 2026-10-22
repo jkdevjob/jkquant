@@ -15,6 +15,8 @@ on:
       - "scripts/nightly_scalping_research.py"
       - "functions/api/nightly-research-summary.js"
       - "scripts/backtest_soxl_intraday.py"
+      - "scripts/nightly_closing30_research.py"
+      - "functions/api/closing30-monitor.js"
 
 permissions:
   contents: write
@@ -54,6 +56,7 @@ jobs:
           set -e
           DATE=$(TZ=Asia/Seoul date +%F)
           python .app/scripts/nightly_scalping_research.py
+          python .app/scripts/nightly_closing30_research.py
 
           REPORT="data/nightly-research/latest.json"
           if [ -n "$KEY" ] && [ -f "$REPORT" ]; then
@@ -69,7 +72,8 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/nightly-research
+          git add data/nightly-research data/opening-history/variant-trades.csv
+          [ -d data/closing30 ] && git add data/closing30 || true
           if git diff --cached --quiet; then
             echo "야간 연구결과 변경 없음"
             exit 0
