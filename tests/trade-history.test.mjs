@@ -128,7 +128,7 @@ test('UI uses a shared filtered view and discards a response after logout',async
   const ui=read('scalping.html');assert.match(ui,/data-strategy="closing_bet"/);assert.match(ui,/data-strategy="trades"/);assert.match(ui,/openTradeHistory\('closing_bet'\)/);
 });
 test('value mutants: shadow omission, reconstructed provenance loss, invented deadline fill',async()=>{
-  const source=read('functions/api/_trade-history.js');
+  const source=read('functions/api/_trade-history.js').replace("'./_opening-execution.js'",JSON.stringify(new URL('../functions/api/_opening-execution.js',import.meta.url).href));
   const mutant=await import('data:text/javascript;base64,'+Buffer.from(source.replace('...Object.entries(ledger.shadowLedgers||{})','...Object.entries({})')).toString('base64'));
   assert.throws(()=>assert.equal(mutant.paperRecords('daytrading',{date,trades:[base],shadowLedgers:{x:{trades:[base]}}}).length,2),assert.AssertionError);
   const collapsed=await import('data:text/javascript;base64,'+Buffer.from(source.replace("x.recordOrigin+':'+x.strategy","x.strategy")).toString('base64'));
