@@ -29,6 +29,11 @@ function finish(r) {
   delete r.realizedBase;
   return r;
 }
+// 신호 낸 조건 — 정산 줄마다 판단 시각 · 판단 가격 · 기준을 같이 남긴다(2026-10-22 사용자 "너가 모의투자 신호 보낸 조건으로 이력 남기고 정산").
+// 시각은 그 단계 판단이 끝난 시각(finishedAt, 한국시각 HH:MM:SS).
+export const kstClock = iso => { const t = Date.parse(iso || ""); return Number.isFinite(t) ? new Date(t + 9 * 36e5).toISOString().slice(11, 19) : null; };
+const etfSignal = s => ({ at: kstClock(s.finishedAt), expectedPrice: (s.quote || {}).expectedPrice ?? null, basePrice: (s.quote || {}).basePrice ?? null,
+  dropPct: s.dropPct ?? null, th: (s.rule || {}).dropMaxPct ?? null, version: s.strategyVersion || null, reason: s.decisionReason || "" });
 function stagesOf(ledger) {
   const m = {};
   for (const e of (ledger && Array.isArray(ledger.events) ? ledger.events : [])) if (e && e.stage) m[e.stage] = e.payload || {};
@@ -53,7 +58,9 @@ export function openingDay(date, ledger, krOpen, marks = {}, main = null, bars =
     const code = String(p.code), bar = (bars || {})[code] || {}, o = ord[code] || {}, ps = pos[code] || {}, pb = ps.buy || {}, pv = ps.sell || {};
     const qty = +((o.sizing || {}).planned) || +o.qty || 0;                 // 주문한 수량(계좌 현금에 맞추기 전 계획)
     const vts = { ok: !!(o.vts && o.vts.ok), msg: String(o.vts ? o.vts.msg || "" : pre.ordersSkipped || "주문 기록 없음"), buyQty: +pb.qty || 0, buyAvg: pb.avgPrice ?? null, sellQty: +pv.qty || 0, sellAvg: pv.avgPrice ?? null };
-    const base = { name: p.name || o.name || code, code, entryTime: "09:00 시가(동시호가)", qty, vts };
+    const signal = { at: kstClock(pre.finishedAt), expectedPrice: p.expectedPrice ?? null, basePrice: p.basePrice ?? null, expectedGapPct: p.expectedGapPct ?? null,
+      rsi14Prev: p.rsi14Prev ?? null, qualified: b.qualified ?? null, recheck: !!(pre.recheck && pre.recheck.used), reason: pre.decisionReason || "" };
+    const base = { name: p.name || o.name || code, code, entryTime: "09:00 시가(동시호가)", qty, vts, signal };
     if (+bar.open > 0 && +bar.close > 0) {
       const net = pct(+bar.close, +bar.open) - d1CostPct(+bar.open), notional = qty * +bar.open;
       rows.push(Object.assign(base, { entryPrice: +bar.open, exitTime: "15:30 종가(동시호가)", exitPrice: +bar.close, notional, pnlPct: net, pnlAmount: (notional * net) / 100, reason: "종가 청산" }));
@@ -93,17 +100,17 @@ export function etfDay(date, ledger, prevLedger, prevDate, krOpen, bars = {}) {
     if (bc > 0 && so > 0) {
       const net = pct(so, bc) - etfRuleCost(bc), notional = qty * bc;
       r.trades.push({ name: N, code: "233740", entryTime: prevDate + " 15:30 종가", entryPrice: bc, exitTime: "09:00 시가", exitPrice: so, qty, notional,
-        pnlPct: net, pnlAmount: (notional * net) / 100, reason: "다음 날 시가 청산", vts });
+        pnlPct: net, pnlAmount: (notional * net) / 100, reason: "다음 날 시가 청산", vts, signal: etfSignal(pb) });
       dayPct = net;
     } else {
       settled = false;
-      r.open.push({ name: N, code: "233740", entryTime: prevDate + " 15:30 종가", entryPrice: bc || null, qty, pnlPct: null, reason: "시세 없음 — 점검", vts });
+      r.open.push({ name: N, code: "233740", entryTime: prevDate + " 15:30 종가", entryPrice: bc || null, qty, pnlPct: null, reason: "시세 없음 — 점검", vts, signal: etfSignal(pb) });
     }
   }
   if (buy && buy.signal) {                                                  // 오늘 주문한 건 — 내일 시가 매도
     const bc = +bar(date).close, o = buy.order || {}, qty = +((o.sizing || {}).planned) || +o.qty || 0;
     r.open.push({ name: N, code: "233740", entryTime: "15:30 종가", entryPrice: bc || +((buy.quote || {}).expectedPrice) || null, qty, pnlPct: 0, reason: "내일 09:00 시가 매도",
-      vts: vtsOf(buy.order, ((st.etf_reconcile || {}).fills || {}).closeBuy, buy.ordersSkipped) });
+      vts: vtsOf(buy.order, ((st.etf_reconcile || {}).fills || {}).closeBuy, buy.ordersSkipped), signal: etfSignal(buy) });
   }
   const nv = [...r.trades, ...r.open].filter(x => !x.vts.ok);
   if (nv.length) r.warn = "모의계좌 주문 안 됨 " + nv.length + "건(" + nv[0].vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 주문한 건의 종가 · 시가로";
@@ -111,6 +118,7 @@ export function etfDay(date, ledger, prevLedger, prevDate, krOpen, bars = {}) {
   return Object.assign(finish(r), {
     status: "closed", settled, dayPct, candidates: buy && buy.signal ? 1 : 0, entries: buy && buy.signal ? 1 : 0,
     strategyVersion: buy && buy.strategyVersion || MAIN_DEFAULT.daytrading.version,
+    params: buy && buy.rule ? { code: "233740", th: buy.rule.dropMaxPct } : Object.assign({}, MAIN_DEFAULT.daytrading.params),
     note: buy ? (buy.signal ? "15:21 예상 하락 " + (+buy.dropPct).toFixed(2) + "% → 종가 매수" : "15:21 예상 하락 " + (buy.dropPct == null ? "—" : (+buy.dropPct).toFixed(2) + "%") + " (기준 " + String((buy.rule && buy.rule.dropMaxPct) ?? -3).replace("-", "−") + "% 이하 아님) → 매수 없음")
       : "15:21 판단 기록 없음 — 점검"
   });
@@ -129,14 +137,16 @@ export function close30Day(date, ledger, krOpen, bars = {}) {
     const qty = +((o.sizing || {}).planned) || +o.qty || 0;
     const vts = { ok: !!(o.vts && o.vts.ok), msg: String(o.vts ? o.vts.msg || "" : buy.ordersSkipped || "주문 기록 없음"), buyQty: +(f.buy || {}).qty || 0, buyAvg: (f.buy || {}).avgPrice ?? null,
       sellQty: +(f.sell || {}).qty || 0, sellAvg: (f.sell || {}).avgPrice ?? null };
+    const signal = { at: kstClock(buy.finishedAt), price: (buy.quote || {}).price ?? null, sofarPct: buy.sofarPct ?? null, th: (buy.rule || {}).th ?? null,
+      version: buy.strategyVersion || null, reason: buy.decisionReason || "" };
     if (p15 > 0 && close > 0) {
       const net = pct(close, p15) - c30CostPct(p15), notional = qty * p15;
       r.trades.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: p15, exitTime: "15:30 종가(동시호가)", exitPrice: close, qty, notional,
-        pnlPct: net, pnlAmount: (notional * net) / 100, reason: "종가 청산", vts });
+        pnlPct: net, pnlAmount: (notional * net) / 100, reason: "종가 청산", vts, signal });
       dayPct = net;
     } else {
       settled = false;
-      r.open.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: p15 || null, qty, pnlPct: null, reason: "시세 없음 — 점검", vts });
+      r.open.push({ name: N, code: "233740", entryTime: "15:00", entryPrice: p15 || null, qty, pnlPct: null, reason: "시세 없음 — 점검", vts, signal });
     }
     if (!vts.ok) r.warn = "모의계좌 주문 안 됨(" + vts.msg.replace(/^매수 생략 — /, "").replace(/ · 계획.*$/, "") + ") — 정산은 15:00 가격 · 종가로";
   }

@@ -679,7 +679,7 @@ def order_paper(tab, d, base, now):
     x = ORDERS[tab][d]
     c = x["rec"]
     trades = [dict(name=t.get("name"), code=t.get("code"), entryTime=t.get("entryTime"), entryPrice=t.get("entryPrice"), exitTime=t.get("exitTime"),
-                   exitPrice=t.get("exitPrice"), qty=t.get("qty"), pnlPct=t.get("pnlPct"), vtsOk=(t.get("vts") or {}).get("ok"))
+                   exitPrice=t.get("exitPrice"), qty=t.get("qty"), pnlPct=t.get("pnlPct"), vtsOk=(t.get("vts") or {}).get("ok"), signal=t.get("signal"))
               for t in c.get("trades") or []]
     return dict(date=d, **base, action="trade" if x["v"] is not None else "no_trade", pnlPct=x["v"] if x["v"] is not None else 0.0,
                 source="orders:" + x["src"], basis="주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)", trades=trades,
@@ -2145,6 +2145,14 @@ def history_entry(tab, info, ctx, old, now, live=None):
                            realizedPct=_r(c.get("realizedPct")), note=c.get("note") or "", strategyVersion=c.get("strategyVersion"), recordedAt=now,
                            **(dict(basis=c["basis"], dayPct=_r(c.get("dayPct")), settled=c.get("settled"), warn=c.get("warn") or "") if c.get("basis") else {})))
     lv.sort(key=lambda x: x["date"])
+    # 주문 정산(2026-10-22~) — Worker 원본이 확정된 주문 정산이 아닌 날(옛 형식 · 15:40 시세 없음)은 원본을 그대로 두고 밤 사본의 정산을 따로 붙인다(출처 표시 · 한 번만)
+    orders = (ORDERS.get(tab) or {}) if tab in ORDER_TABS else {}
+    for e in lv:
+        x = orders.get(e.get("date"))
+        if x and x["src"] == "nightly" and "settle" not in e:
+            c = x["rec"]
+            e["settle"] = dict(source="nightly-pages-op-close", dayPct=_r(x["v"]), trades=c.get("trades") or [], open=c.get("open") or [],
+                               warn=c.get("warn") or "", recordedAt=now)
     done = [r for r in rows if r[3] is not None]
     pn = [r[7] for r in done if r[7] is not None]
     return dict(schema=1, tab=tab, version=info["version"], name=info.get("name") or info["version"], rule=info.get("rule") or "",

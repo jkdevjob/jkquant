@@ -650,7 +650,7 @@ class OrderSettleTest(unittest.TestCase):
         lab.CAL.update(etf=["2026-10-21", "2026-10-22", "2026-10-23"], coin=["2026-10-22", "2026-10-23"], us=["2026-10-22"], close30=["2026-10-23"])
         lab.DECISIONS.clear()
         tr = [dict(name="금호타이어", code="073240", entryTime="09:00 시가(동시호가)", entryPrice=5460, exitTime="15:30 종가(동시호가)", exitPrice=5330, qty=382,
-                   pnlPct=-3.0, vts=dict(ok=False, msg="매수 생략 — 매수가능 0주(계좌 현금 부족)"))]
+                   pnlPct=-3.0, vts=dict(ok=False, msg="매수 생략 — 매수가능 0주(계좌 현금 부족)"), signal=dict(at="08:58:15", expectedGapPct=-4.74, expectedPrice=5230))]
         lab.ORDERS.clear()
         lab.ORDERS.update(opening={"2026-10-22": dict(v=-2.486, src="nightly", rec=self.rec(-2.486, trades=tr, warn="모의계좌 주문 안 됨 3건"))},
                           daytrading={"2026-10-22": dict(v=None, src="nightly", rec=self.rec(None)), "2026-10-23": dict(v=0.8, src="worker", rec=self.rec(0.8))},
@@ -665,6 +665,7 @@ class OrderSettleTest(unittest.TestCase):
         self.assertEqual((r["action"], r["pnlPct"], r["source"], r["strategyVersion"], r["liveVersion"], r["warn"]),
                          ("trade", -2.486, "orders:nightly", lab.main_for("opening", "2026-10-22")["version"], "g_open_q7_k3_gap3", "모의계좌 주문 안 됨 3건"))
         self.assertEqual((r["trades"][0]["entryPrice"], r["trades"][0]["exitPrice"], r["trades"][0]["qty"], r["trades"][0]["vtsOk"]), (5460, 5330, 382, False))
+        self.assertEqual(r["trades"][0]["signal"], dict(at="08:58:15", expectedGapPct=-4.74, expectedPrice=5230))   # 신호 낸 조건도 장부에
         self.assertEqual((o1["2026-10-20"]["pnlPct"], o1["2026-10-20"]["source"]), (2.0, "kis-vts+final-daily-bars"))   # 그 전 날은 옛 규칙 그대로
         e2 = dict(out["daytrading_etf"])
         self.assertEqual([(d, e2[d]["action"], e2[d]["pnlPct"]) for d in sorted(e2)], [("2026-10-20", "no_trade", 0.0), ("2026-10-21", "trade", 1.0), ("2026-10-22", "no_trade", 0.0), ("2026-10-23", "trade", 0.8)])   # 규칙 값 7.0 · 0.5 가 아니라 주문 정산
@@ -1290,6 +1291,31 @@ class HistoryTest(unittest.TestCase):
         self.assertEqual([x["date"] for x in h["live"]], ["2026-10-13", "2026-10-15"])   # 버전이 적힌 날은 그 버전, 없으면 그날 메인(기본)
         h2 = lab.history_entry("daytrading", info, {"kr_cal": ds}, h, "t2", dict(live, **{"2026-10-13": dict(strategyVersion="etf_dip_overnight_v1", trades=[])}))
         self.assertEqual(h2["live"][0]["trades"], [dict(name="x", pnlPct=1.0)])          # 실시간 장부도 날짜마다 한 번만
+
+    def test_live_ledger_keeps_original_and_attaches_order_settlement(self):
+        ds = self.etf([100.0, 96.0, 97.0])
+        old = dict(lab.ORDERS)
+        try:
+            tr = [dict(name="KODEX", entryPrice=6045, exitPrice=6100, pnlPct=0.8, signal=dict(at="15:21:35", dropPct=-3.5, th=-3))]
+            lab.ORDERS.clear()
+            lab.ORDERS.update(daytrading={"2026-10-22": dict(v=0.8, src="nightly", rec=dict(trades=tr, open=[], warn="모의계좌 주문 안 됨 1건")),
+                                          "2026-10-23": dict(v=0.5, src="worker", rec=dict(trades=[], open=[]))})
+            live = {"2026-10-22": dict(strategyVersion="etf_dip_overnight_v1", trades=[], note="옛 형식(체결 기준)"),
+                    "2026-10-23": dict(strategyVersion="etf_dip_overnight_v1", basis="orders", settled=True, dayPct=0.5, trades=[dict(name="KODEX", pnlPct=0.5)])}
+            info = dict(version="etf_dip_overnight_v1", name="n", params=dict(code="122630", th=-3.0), status="main", since=None)
+            h = lab.history_entry("daytrading", info, {"kr_cal": ds}, None, "t", live)
+            by = {x["date"]: x for x in h["live"]}
+            self.assertEqual(by["2026-10-22"]["trades"], [])                                 # 실시간 원본(모의투자 체결 기준)은 그대로
+            st = by["2026-10-22"]["settle"]
+            self.assertEqual((st["dayPct"], st["trades"], st["source"], st["warn"]), (0.8, tr, "nightly-pages-op-close", "모의계좌 주문 안 됨 1건"))   # 신호 조건 포함
+            self.assertNotIn("settle", by["2026-10-23"])                                     # Worker 장부가 확정된 주문 정산이면 따로 안 붙인다
+            self.assertEqual((by["2026-10-23"]["basis"], by["2026-10-23"]["dayPct"]), ("orders", 0.5))
+            lab.ORDERS["daytrading"]["2026-10-22"] = dict(v=9.9, src="nightly", rec=dict(trades=[], open=[]))
+            h2 = lab.history_entry("daytrading", info, {"kr_cal": ds}, json.loads(json.dumps(h)), "t2", live)
+            self.assertEqual({x["date"]: x for x in h2["live"]}["2026-10-22"]["settle"]["dayPct"], 0.8)   # 한 번 붙이면 그대로
+        finally:
+            lab.ORDERS.clear()
+            lab.ORDERS.update(old)
 
     def test_write_if_changed_ignores_updated_at(self):
         f = lab.DATA / "h.json"

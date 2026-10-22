@@ -82,7 +82,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.22.0</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.22.1</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -669,7 +669,14 @@ async function openHist(tab,version){
 }
 // 매매 행 = [손익 날짜, 진입 시각, 진입가, 청산 시각, 청산가, 종목, 이름, 순손익 %, 사유] (밤 계산 HIST_FIELDS)
 function histTradeRow(t){return "<tr><td>"+esc(t[0])+"</td><td class='nm' style='text-align:left'><b>"+esc(t[6]||t[5]||"")+"</b><div class='sub'>"+esc(t[1]||"")+" "+won(t[2])+" → "+(t[3]?esc(t[3])+" "+won(t[4]):"보유 중")+"</div></td><td class='"+cls(t[7])+"'><b>"+pct(t[7])+"</b></td><td style='text-align:left;white-space:normal'>"+esc(t[8]||"")+"</td></tr>"}
-function histLiveTrades(list){return (list||[]).map(function(x){return esc(x.name||x.code||"")+" "+esc(x.entryTime||"")+" "+won(x.entryPrice)+(x.exitPrice!=null?" → "+esc(x.exitTime||"")+" "+won(x.exitPrice):"")+" <b class='"+cls(x.pnlPct)+"'>"+pct(x.pnlPct)+"</b>"+(x.reason?" · "+esc(x.reason):"")}).join("<br>")}
+// 신호 낸 조건(판단 시각 · 판단 가격 · 기준) — ① 예상 갭 · ② 15:21 예상 하락 · ⑤ 15:00 전일 대비
+function histSignal(g){if(!g)return "";var t=g.at?esc(String(g.at).slice(0,5))+" ":"";
+  if(g.expectedGapPct!=null)return t+"예상 갭 "+pct(g.expectedGapPct)+(g.expectedPrice?" ("+won(g.expectedPrice)+")":"");
+  if(g.dropPct!=null)return t+"예상 하락 "+pct(g.dropPct)+(g.th!=null?" · 기준 "+esc(String(g.th))+"%":"");
+  if(g.sofarPct!=null)return t+"전일 대비 "+pct(g.sofarPct)+(g.price?" ("+won(g.price)+")":"");return t;}
+function histLiveTrades(list){return (list||[]).map(function(x){var g=histSignal(x.signal),v=x.vts&&x.vts.ok===false?"모의계좌 주문 안 됨":"";
+  return esc(x.name||x.code||"")+" "+esc(x.entryTime||"")+" "+won(x.entryPrice)+(x.exitPrice!=null?" → "+esc(x.exitTime||"")+" "+won(x.exitPrice):"")+" <b class='"+cls(x.pnlPct)+"'>"+pct(x.pnlPct)+"</b>"+(x.reason?" · "+esc(x.reason):"")+
+    (g||v?"<div class='sub'>"+(g?"신호 "+g:"")+(g&&v?" · ":"")+v+"</div>":"")}).join("<br>")}
 function histPage(n){HV.page=Math.max(0,HV.page+n);histRender()}
 function histYear(y){HV.year=y;HV.page=0;histRender()}
 function histRender(){
@@ -691,7 +698,9 @@ function histRender(){
       ((x.trades||[]).map(function(t){return esc(t[6]||t[5]||"")+" "+won(t[2])+" → "+won(t[4])+" <b class='"+cls(t[7])+"'>"+pct(t[7])+"</b>"}).join("<br>")||"<span class='sub'>—</span>")+"</td><td class='sub'>"+esc(String(x.recordedAt||"").slice(5,16).replace("T"," "))+"</td></tr>"}).join("")+"</tbody></table></div>"
     :"<p class='note'>아직 없음 — 확정된 날부터 밤 계산이 한 줄씩 붙입니다.</p>");
   var lvh=lv.length?"<div style='margin-top:12px'><b>🧾 실시간 마감 장부</b> <span class='sub'>이 전략이 메인이던 날 · Worker 하루 마감 장부 원본(10/22까지 모의투자 체결 기준 · 10/23부터 주문한 건을 공식 시가 · 종가로 정산)</span></div><div class='tw'><table class='board'><thead><tr><th>날짜</th><th style='text-align:left'>매매(전략 손익)</th><th style='text-align:left'>측정용 · 미청산</th><th style='text-align:left'>메모</th></tr></thead><tbody>"+
-    lv.map(function(x){return "<tr><td>"+esc(x.date)+"</td><td style='text-align:left;white-space:normal'>"+(histLiveTrades(x.trades)||"<span class='sub'>매매 없음</span>")+"</td><td style='text-align:left;white-space:normal'>"+histLiveTrades((x.measure||[]).concat(x.open||[]))+"</td><td style='text-align:left;white-space:normal' class='sub'>"+(x.dayPct!=null?"그날 "+pct(x.dayPct)+" · ":"")+esc(x.note||"")+(x.warn?"<br>⚠️ "+esc(x.warn):"")+"</td></tr>"}).join("")+"</tbody></table></div>":"";
+    lv.map(function(x){var se=x.settle,tr=se?se.trades:x.trades,op=se?se.open:x.open;
+      return "<tr><td>"+esc(x.date)+"</td><td style='text-align:left;white-space:normal'>"+(se?"<div class='sub'>주문 정산(밤 사본 · 원본 장부는 메모)</div>":"")+(histLiveTrades(tr)||"<span class='sub'>매매 없음</span>")+"</td><td style='text-align:left;white-space:normal'>"+histLiveTrades((x.measure||[]).concat(op||[]))+"</td><td style='text-align:left;white-space:normal' class='sub'>"+
+      (se&&se.dayPct!=null?"그날 "+pct(se.dayPct)+" · ":x.dayPct!=null?"그날 "+pct(x.dayPct)+" · ":"")+esc(x.note||"")+(se?"<br>원본: "+(x.basis==="orders"?"15:40 장부 확정 전":"모의투자 체결 기준 "+((x.trades||[]).length)+"건"):"")+((se&&se.warn)||x.warn?"<br>⚠️ "+esc((se&&se.warn)||x.warn):"")+"</td></tr>"}).join("")+"</tbody></table></div>":"";
   var yb="<div class='row' style='margin-top:6px'><button class='hbtn' onclick=\"histYear('')\""+(HV.year?"":" disabled")+">전체</button>"+years.map(function(y){return "<button class='hbtn' onclick=\"histYear('"+y+"')\""+(HV.year===y?" disabled":"")+">"+y+"</button>"}).join("")+"</div>";
   var btH="<div style='margin-top:12px'><b>🧮 과거 계산</b> <span class='sub'>지금 규칙 · 지금 자료로 전 기간 다시 계산(경쟁 점수와 같은 함수 · 같은 비용) — 밤마다 바뀔 수 있음 · 최근 순</span></div>"+yb+
     (part.length?"<div class='tw'><table class='board'><thead><tr><th>손익 날짜</th><th style='text-align:left'>종목 · 진입 → 청산</th><th>순손익</th><th style='text-align:left'>사유</th></tr></thead><tbody>"+part.map(histTradeRow).join("")+"</tbody></table></div>"
