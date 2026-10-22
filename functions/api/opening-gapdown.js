@@ -8,6 +8,9 @@
 //   stage=etf_buy   15:20~15:28  ② 코스닥150 레버리지(233740) 예상 종가가 기준가 대비 그날 메인 기준(기본 −3%) 이하면 종가 동시호가 시장가 매수
 //   stage=etf_sell  08:50~08:59:40 ② 전날 이 전략이 산 수량만 장전 동시호가 시장가 매도
 //   stage=etf_reconcile 15:35~   ② 오늘 매도·매수 체결가 조회 (주문 없음)
+//   stage=c30_buy   15:00~15:10  ⑤ 코스닥150 레버리지(233740) 지금 가격이 전일 종가보다 그날 메인 기준(기본 0%) 미만이면 시장가 매수
+//   stage=c30_sell  15:20~15:28  ⑤ 오늘 15:00 에 이 전략이 산 체결수량만 종가 동시호가 시장가 매도(당일 청산)
+//   stage=c30_reconcile 15:35~   ⑤ 오늘 매수·매도 체결가 조회 (주문 없음)
 // 목적은 수익이 아니라 측정이다: 예상체결가 대 실제 시가, 실제 체결가 대 시가·종가(슬리피지)를 매 건 남긴다.
 // 호출자는 opening-scheduler Worker 이고, Worker 가 응답 전체를 Durable Object 원본 ledger 에 먼저 저장한다.
 // 주문은 절대 자동 재시도하지 않는다.
@@ -52,6 +55,9 @@ export function stageWindow(stage,hms){
   if(stage==="preopen")return hms>=85000&&hms<ORDER_DEADLINE;
   if(stage==="close")return hms>=152000&&hms<152800;
   if(stage==="reconcile")return hms>=153500&&hms<235959;
+  if(stage==="c30_buy")return hms>=150000&&hms<151000;
+  if(stage==="c30_sell")return hms>=152000&&hms<152800;
+  if(stage==="c30_reconcile")return hms>=153500&&hms<235959;
   return false;
 }
 export function signalId(date,code,side){return ["gapdown",date,String(code),side].join(":");}
@@ -158,6 +164,13 @@ export async function sizedBuy(origin,env,date,x,planned,meta={}){
 }
 async function quote(origin,code){
   const r=await fetch(origin+"/api/kis?op=expected&env=vts&code="+encodeURIComponent(code),{headers:{"Accept":"application/json"}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||j.error)throw new Error(j.error||("HTTP "+r.status));
+  return j;
+}
+// ⑤ 15:00 지금 가격 · 전일 대비 등락률(KIS 현재가 조회 — 읽기 전용, 주문 없음)
+async function price(origin,code){
+  const r=await fetch(origin+"/api/kis?op=price&env=vts&code="+encodeURIComponent(code),{headers:{"Accept":"application/json"}});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||j.error)throw new Error(j.error||("HTTP "+r.status));
   return j;
@@ -400,6 +413,85 @@ async function etfReconcile(origin,env,date){
   return out;
 }
 
+// ── ⑤ close30_dip_v1: 코스닥150 레버리지 장 마감 30분 반등 — 15:00 판단 · 매수 → 15:30 종가 동시호가 매도(당일 청산) ──
+// 사용자 요청(2026-10-22) "종가 전략도 탭에 추가하고 다른 전략이랑 동일하게 적용해 알림" — 연구 R14(scripts/research/r14_close30.py):
+// 15:00 가격이 전일 종가보다 내려 있는 날 15:00 에 사서 그날 종가에 판다. 결과를 보고 찾은 규칙이라 '실험' — 밤 계산(claude_lab close30)이
+// 같은 규칙 · 같은 자료로 계속 쌓아 확인한다. 하룻밤 보유 없음. 판단은 15:00 가격과 전일 종가만 쓴다(그날 종가를 미리 보지 않음).
+// ② 와 같은 종목(233740)이라 체결은 시각으로 가른다: ⑤ 매수 = 15:00~15:15 접수 매수 · 매도 = 15:15 이후 접수 매도.
+// ② 는 매수 = 15:15 이후 접수 매수 · 매도 = 09:00 전 접수 매도라 서로 섞이지 않는다(etfFills 와 c30Fills 의 시간창이 겹치지 않음).
+export const C30_RULE=Object.freeze({code:"233740",name:"KODEX 코스닥150레버리지",th:0,version:"close30_dip_v1",budgetMultiple:3});
+// 15:00 전일 대비 등락률(%) — KIS 현재가 조회의 전일 대비율(prdy_ctrt). 값이 없으면 null(판단하지 않음).
+export function c30SofarPct(q){
+  const px=+(q&&q.price)||0,c=q&&q.chgRate;
+  return px>0&&c!=null&&c!==""&&Number.isFinite(+c)?+c:null;
+}
+// th = 그날 ⑤ 메인 기준(%, 기본 0). 15:00 등락률이 th '미만'일 때만 매수 — 보합(0%)은 사지 않는다(밤 계산 close30_trades 와 같은 부등호).
+export function c30Decision(sofar,th=C30_RULE.th){
+  if(sofar===null||!Number.isFinite(sofar))return {signal:false,decisionReason:"price_missing"};
+  if(!(sofar<th))return {signal:false,decisionReason:"no_signal_not_below_"+th+"%"};
+  return {signal:true,decisionReason:"price_vs_prev_close<"+th+"%"};
+}
+export function c30BuyPlan(R,q){
+  const sofarPct=c30SofarPct(q);
+  return {sofarPct,...c30Decision(sofarPct,R.rule.th)};
+}
+// 그날 ⑤ 메인 규칙 — 승격 기록을 못 읽으면 기본 규칙으로 하되 그 사실을 장부에 남긴다(주문을 막지 않는다)
+export function c30RuleFor(cfg,date){
+  const m=mainFor(cfg&&cfg.ok?cfg.events:[],"close30",date);
+  const ok=!!(cfg&&cfg.ok)&&m.params.code===C30_RULE.code;
+  return {rule:{...C30_RULE,th:ok?m.params.th:C30_RULE.th,version:ok?m.version:C30_RULE.version},
+    mainVersion:ok?m.version:C30_RULE.version,ruleSource:ok?"main-config":"default (메인 기록 읽기 실패: "+((cfg&&cfg.error)||"없음")+")"};
+}
+export function c30SignalId(date,side){return ["close30",date,C30_RULE.code,side].join(":");}
+// 이 전략 물량만: 매수 = 15:00~15:15 접수(장중 시장가), 매도 = 15:15 이후 접수(종가 동시호가)
+export function c30Fills(rows){
+  const f=(side,from,to)=>(Array.isArray(rows)?rows:[]).filter(o=>String(o.sideCode)===side&&+o.fillQty>0&&hms6(o.orderTime)>=from&&hms6(o.orderTime)<to);
+  const agg=list=>{
+    const qty=list.reduce((s,o)=>s+(+o.fillQty||0),0);
+    const amt=list.reduce((s,o)=>s+(+o.fillAmount||(+o.fillQty||0)*(+o.fillPrice||0)),0);
+    return {qty,avgPrice:qty?amt/qty:null,orderNos:list.map(o=>o.orderNo),orderTimes:list.map(o=>o.orderTime)};
+  };
+  return {buy:agg(f("02",150000,151500)),sell:agg(f("01",151500,240000))};
+}
+async function c30Buy(origin,env,date){
+  const R=c30RuleFor(await loadMainEvents(env,3000),date);
+  const out={stage:"c30_buy",strategy:"close30_dip",strategyVersion:R.rule.version,date,code:C30_RULE.code,
+    rule:R.rule,ruleSource:R.ruleSource,startedAt:new Date().toISOString(),quote:null,sofarPct:null,signal:false,order:null,decisionReason:""};
+  let q;
+  try{q=await price(origin,C30_RULE.code);}catch(e){out.decisionReason="quote_failed: "+String(e.message||e);return out;}
+  finally{_lastKisAt=Date.now();}                                      // 시세 조회 직후 매수가능 조회가 초당 한도에 몰리지 않게
+  out.quote={price:+q.price||null,chgRate:q.chgRate??null,open:+q.open||null,at:new Date().toISOString()};
+  Object.assign(out,c30BuyPlan(R,q));
+  if(!out.signal)return out;
+  if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
+  if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
+  const qty=Math.floor(budget(env)*C30_RULE.budgetMultiple/Math.max(1,+q.price||0));
+  out.order=await sizedBuy(origin,env,date,{code:C30_RULE.code,name:C30_RULE.name},qty,
+    {id:c30SignalId(date,"buy"),strategy:"close30_dip",version:R.rule.version});
+  return out;
+}
+// 오늘 이 전략이 산 체결수량(15:00~15:15 매수) − 이미 판 수량(15:15 이후 매도)만 판다. 보유가 없으면 주문하지 않는다.
+async function c30Sell(origin,env,date){
+  const out={stage:"c30_sell",strategy:"close30_dip",strategyVersion:C30_RULE.version,date,code:C30_RULE.code,
+    startedAt:new Date().toISOString(),boughtQty:0,alreadySoldQty:0,order:null,decisionReason:""};
+  try{
+    const f=c30Fills(await orders(origin,env,date,C30_RULE.code));
+    out.boughtQty=f.buy.qty;out.alreadySoldQty=f.sell.qty;
+  }catch(e){out.decisionReason="체결조회 실패: "+String(e.message||e);return out;}
+  const qty=Math.max(0,out.boughtQty-out.alreadySoldQty);
+  if(!(qty>0)){out.decisionReason="no_position";return out;}
+  await sleep(1200);
+  out.decisionReason="close_exit";
+  out.order=await vtsOrder(origin,env,date,"sell",{code:C30_RULE.code,name:C30_RULE.name},qty,
+    {id:c30SignalId(date,"sell"),strategy:"close30_dip",version:C30_RULE.version});
+  return out;
+}
+async function c30Reconcile(origin,env,date){
+  const out={stage:"c30_reconcile",strategy:"close30_dip",strategyVersion:C30_RULE.version,date,code:C30_RULE.code,fills:null};
+  try{out.fills=c30Fills(await orders(origin,env,date,C30_RULE.code));}catch(e){out.error="체결조회 실패: "+String(e.message||e);}
+  return out;
+}
+
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
   let b={};
@@ -424,6 +516,9 @@ export async function onRequestPost({request,env}){
     if(stage==="etf_buy")return json({ok:true,...await etfBuy(origin,env,date),finishedAt:new Date().toISOString()});
     if(stage==="etf_sell")return json({ok:true,...await etfSell(origin,env,date,String(b.buyDate||"")),finishedAt:new Date().toISOString()});
     if(stage==="etf_reconcile")return json({ok:true,...await etfReconcile(origin,env,date),finishedAt:new Date().toISOString()});
+    if(stage==="c30_buy")return json({ok:true,...await c30Buy(origin,env,date),finishedAt:new Date().toISOString()});
+    if(stage==="c30_sell")return json({ok:true,...await c30Sell(origin,env,date),finishedAt:new Date().toISOString()});
+    if(stage==="c30_reconcile")return json({ok:true,...await c30Reconcile(origin,env,date),finishedAt:new Date().toISOString()});
     const picks=(Array.isArray(b.picks)?b.picks:[]).slice(0,5);
     return json({ok:true,...await closeOrReconcile(origin,env,date,stage,picks),finishedAt:new Date().toISOString()});
   }catch(e){

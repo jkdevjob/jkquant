@@ -1681,7 +1681,7 @@ function paperMissingText(strategy){
     : '오늘 서버 장부가 아직 없습니다. 첫 감시 전에는 준비 중일 수 있습니다. 감시 시간에 장부가 없으면 실행 여부 점검이 필요하며, 매매없음으로 확정하지 않습니다.';
 }
 function dailyLiveState(x){
-  const labels={market_closed:'휴장',scheduled:'감시 시작 전',no_signal:'신호 없음',entry_pending:'진입 대기',holding:'보유 중',closed:'청산 완료',unavailable:'실행 미확인'};
+  const labels={market_closed:'휴장',scheduled:'감시 시작 전',no_signal:'매수 조건 미충족',entry_pending:'진입 대기',holding:'보유 중',closed:'청산 완료',unavailable:x.sourceIncomplete?'감시 확인 필요':'실행 미확인'};
   const value=x.returnPct==null||x.returnPct===''?null:Number(x.returnPct);
   return {label:labels[x.state]||'확인필요',detail:(x.stale?'갱신 지연 · ':'')+(x.reason||''),returnPct:value!=null&&Number.isFinite(value)?value:null};
 }

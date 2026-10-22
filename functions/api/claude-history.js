@@ -8,7 +8,7 @@
 import { claudeAuthorized } from "./_claude_auth.js";
 const JH = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
 const RAW = "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/history/";
-export const HIST_TABS = ["opening", "daytrading", "crypto", "soxl"];
+export const HIST_TABS = ["opening", "daytrading", "crypto", "soxl", "close30"];
 export const VERSION_RE = /^[A-Za-z0-9_.+:-]{1,80}$/;              // 밤 계산 VERSION_RE 와 같다 — 경로 문자(/ ..)는 받지 않는다
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: JH });
 

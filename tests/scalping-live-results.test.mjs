@@ -6,7 +6,7 @@ import {sessionClock,summarizeOpeningLedger as opening,summarizePaperLedger as p
 const now=Date.parse('2026-10-14T10:02:00+09:00');
 const stamp=t=>new Date(t).toISOString();
 const ledger=(trades=[],extra={})=>({date:'2026-10-14',updatedAt:stamp(now),trades,...extra});
-const scan=(events=[],extra={})=>({date:'2026-10-14',mainVariant:'baseline',events,scans:[{targetHm:930,capturedAt:'2026-10-14T09:31:00+09:00',okShards:5,quoteErrors:0,...extra}]});
+const scan=(events=[],extra={})=>({date:'2026-10-14',mainVariant:'baseline',events,scans:Array.from({length:27},(_,i)=>({targetHm:904+i,capturedAt:'2026-10-14T09:31:00+09:00',okShards:5,quoteErrors:0,...extra}))});
 const event=(stage,pnl,variant='baseline')=>({stage,variant,code:'A',name:'종목',signal:{entryTime:910,exitTime:930,pnl}});
 test('09:39 opening finished: original complete empty scan is no signal, not pending',()=>{
  const r=opening(scan(),Date.parse('2026-10-14T09:39:00+09:00'));
@@ -24,6 +24,31 @@ test('partial scan or quote failure is unverified, never zero/no-trade',()=>{
  for(const extra of [{partial:true},{okShards:4},{quoteErrors:1},{failed:['x']}]){
   const r=opening(scan([],extra),now);assert.equal(r.state,'unavailable');assert.equal(r.noTrade,false);assert.equal(r.returnPct,null);
  }
+});
+test('a missing 09:06 scan cannot become no signal just because the 09:30 scan succeeded',()=>{
+ const l=scan();l.scans=l.scans.filter(s=>s.targetHm!==906);
+ const r=opening(l,now);
+ assert.equal(r.state,'unavailable');assert.equal(r.sourceIncomplete,true);
+ assert.equal(r.noTrade,false);assert.equal(r.returnPct,null);assert.equal(r.realizedReturnPct,null);
+ assert.deepEqual(r.scanCoverage.missingTargets,[906]);assert.match(r.reason,/09:06/);
+});
+test('earlier quote failure, duplicate minutes and missing final scan retain incomplete coverage',()=>{
+ const bad=scan();bad.scans[2].quoteErrors=1;
+ assert.deepEqual(opening(bad,now).scanCoverage.failedTargets,[906]);
+ assert.equal(opening(bad,now).state,'unavailable');
+ const duplicate=scan();duplicate.scans[2]={...duplicate.scans[3]};
+ assert.equal(duplicate.scans.length,27);assert.equal(opening(duplicate,now).noTrade,false);
+ const final=scan();final.scans.pop();assert.deepEqual(opening(final,now).scanCoverage.missingTargets,[930]);
+ // A successful retry of that same minute can complete its coverage.
+ bad.scans.push({...bad.scans[2],quoteErrors:0});assert.equal(opening(bad,now).state,'no_signal');
+});
+test('active session checks completed minutes without requiring future scans; known trades survive gaps',()=>{
+ const active=scan();active.scans=active.scans.filter(s=>s.targetHm<=910);
+ const r=opening(active,Date.parse('2026-10-14T09:11:00+09:00'));
+ assert.equal(r.state,'no_signal');assert.equal(r.scanCoverage.expected,7);assert.equal(r.scanCoverage.complete,true);
+ const traded=scan([event('buy',null),event('sell',1.25)]);traded.scans=traded.scans.filter(s=>s.targetHm!==906);
+ const known=opening(traded,now);assert.equal(known.trades,1);assert.equal(known.closed,1);
+ assert.equal(known.realizedReturnPct,1.25);assert.equal(known.returnPct,null);assert.equal(known.state,'unavailable');
 });
 test('opening only promoted main original events, excludes baseline and shadow',()=>{
  const l=scan([event('buy',null),event('sell',99),event('buy',null,'promoted'),event('sell',-1.25,'promoted'),event('buy',null,'shadow')]);l.mainVariant='promoted';
@@ -119,6 +144,7 @@ test('mutants: missing numeric null guard, main variant filter and polling inter
  const base={tzParts:(zone,t)=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(t));const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return {date:p.year+'-'+p.month+'-'+p.day,hm:Number(p.hour)*100+Number(p.minute)};},shiftIso:()=>'',isNyseSessionDate:()=>true,krxDay:()=>({closed:false}),Response,Date};
  for(const [mutate,verify] of [
   [s=>s.replace("v==null||v===''||",''),c=>assert.equal(c.summarizePaperLedger('daytrading',ledger([{status:'closed',pnl:null}]),now).returnPct,null)],
+  [s=>s.replace('partial=!coverage.complete','partial=!openingScanOkay(latest)'),c=>{const l=scan();l.scans=l.scans.filter(s=>s.targetHm!==906);assert.equal(c.summarizeOpeningLedger(l,now).state,'unavailable');}],
   [s=>s.replace('e.variant===variant&&',''),c=>{const l=scan([event('buy',null),event('sell',99),event('buy',null,'promoted'),event('sell',-1.25,'promoted')]);l.events[0].signal.entryTime=900;l.events[1].signal.entryTime=900;l.mainVariant='promoted';assert.equal(c.summarizeOpeningLedger(l,now).trades,1);}]
  ]){const c={...base};vm.createContext(c);vm.runInContext(mutate(executable),c);assert.throws(()=>verify(c),{name:'AssertionError'});}
  const b=browser(block.replace('DAILY_LIVE_INTERVAL_MS=30000','DAILY_LIVE_INTERVAL_MS=60000'));b.ctx.startDailyLiveAuto();assert.throws(()=>assert.equal(b.intervals[0].ms,30000),{name:'AssertionError'});

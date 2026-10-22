@@ -9,7 +9,7 @@ const KR_PCT = v => (v >= 0 ? "+" : "") + Number(v).toFixed(2) + "%";
 const won = v => (v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("en-US"));
 export function kstDateOf(ms) { return new Date(ms + 9 * 36e5).toISOString().slice(0, 10); }
 const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
-export const HEAD = { open: "[클로드 연구 시초가]", etf: "[클로드 연구 데이트레이딩]", coin: "[클로드 연구 비트코인]", soxl: "[클로드 연구 SOXL]" };
+export const HEAD = { open: "[클로드 연구 시초가]", etf: "[클로드 연구 데이트레이딩]", coin: "[클로드 연구 비트코인]", soxl: "[클로드 연구 SOXL]", c30: "[클로드 연구 종가30분]" };
 export const APP_URL = "jkquant.pages.dev/claude";
 
 // 매일 08:00 연구 리포트 — 사용자 요청(2026-10-14): "연구 모든탭에 대해 매일 아침 8시 일정한 시간에 더 나은 방향으로 연구해서 결과 알려줘 앱푸시랑 텔레그램으로".
@@ -48,6 +48,13 @@ export function pushEvents(live, nowMs, sent = {}) {
       add("etf:" + d + ":buy", HEAD.etf + " 🟢 매수", r.name + " 종가 매수" + (r.dropPct != null ? " (오늘 " + KR_PCT(r.dropPct) + ")" : "") + " → 다음 거래일 09:00 시가 매도");
     if (/^오늘 09:00/.test(r.sellTime || "") && (r.status === "매도 접수" || r.status === "청산"))
       add("etf:" + d + ":sell", HEAD.etf + " 🔴 매도", r.name + " 시가 매도" + (r.realized && r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : " 접수"));
+  }
+  // ⑤ 종가 30분 — 15:00 매수 / 15:21 종가 동시호가 매도(15:30 체결 · 당일 청산)
+  for (const r of (T.close30 && T.close30.rows) || []) {
+    if (r.buyTime && r.status && r.status !== "주문 실패" && r.status !== "매매 없음")
+      add("c30:" + d + ":buy", HEAD.c30 + " 🟢 매수", r.name + " 15:00 매수" + (r.sofarPct != null ? " (전일 대비 " + KR_PCT(r.sofarPct) + ")" : "") + " → 15:30 종가 매도");
+    if (r.status === "매도 접수" || r.status === "청산")
+      add("c30:" + d + ":sell", HEAD.c30 + " 🔴 매도", r.name + " 종가 매도" + (r.realized && r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : " 접수") + " — 15:30 종가");
   }
   // ③ 비트코인 — 업비트 하루(09:00 시작) 돌파 매수 · 손절 / 다음 날 09:00 매도
   const ud = kstDateOf(nowMs - 9 * 36e5), pud = addDays(ud, -1);

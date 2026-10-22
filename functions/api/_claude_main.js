@@ -1,20 +1,23 @@
 // 단타(클로드) 메인 전략 — 탭마다 하나. 승격 버튼으로 바뀌고, 그 기록은 Worker(claude-config)에 쌓기만 한다(덮어쓰지 않음).
 // 실시간 화면(claude-live) · 하루 마감 장부/텔레그램(_claude_day · claude-telegram) · ② VTS 주문(opening-gapdown)이
 // 모두 이 파일 하나로 "그 날짜에 유효한 메인"을 고른다. 밤 계산(scripts/claude_lab.py MAIN_DEFAULT)과 기본값이 같아야 한다(회귀가 비교).
+// ⑤ close30(2026-10-22 사용자 요청 "종가 전략도 탭에 추가하고 다른 전략이랑 동일하게 적용") — 15:00 판단 → 15:30 종가 청산, ⑤ VTS 주문도 이 기록을 읽는다.
 
 export const WORKER = "https://jkquant-opening-scheduler.mumae4.workers.dev";
-export const TABS = ["opening", "daytrading", "crypto", "soxl"];
+export const TABS = ["opening", "daytrading", "crypto", "soxl", "close30"];
 export const MAIN_DEFAULT = {
   opening: { version: "opening_gapdown_v1+v2filter", name: "① D-1 갭하락 과매도 v2", params: { minQ: 5, topK: 3, gapMax: null } },
   daytrading: { version: "etf_dip_overnight_v1", name: "② 코스닥150 레버리지 하락일 야간", params: { code: "233740", th: -3.0 } },
   crypto: { version: "coin_breakout_v1", name: "③ BTC·ETH 어제 고가 돌파 하루 단타",
     params: { ma: 20, stopPct: 5.0, level: "prevhigh", k: 0.5, hiN: 1, lastEntryHour: null, tabSize: 0.8, markets: ["KRW-BTC", "KRW-ETH"] } },
   soxl: { version: "soxl_rsi2_meanrev_v1", name: "④ SOXL 단기 과매도 반등 (최대 5일)", params: { rsiMax: 20.0, rsiN: 2, ibsMax: 1.0, downDays: 0, ma: 200, maxHoldDays: 5, tabSize: 0.5 } },
+  close30: { version: "close30_dip_v1", name: "⑤ 코스닥150 레버리지 장 마감 30분 반등 (실험)", params: { code: "233740", th: 0.0 } },
 };
 
 const num = (v, lo, hi) => { const x = Number(v); if (!Number.isFinite(x) || x < lo || x > hi) throw new Error("범위 밖 값 " + v + " (" + lo + "~" + hi + ")"); return x; };
 const int = (v, lo, hi) => { const x = num(v, lo, hi); if (!Number.isInteger(x)) throw new Error("정수가 아님 " + v); return x; };
-// 승격으로 들어올 수 있는 변수와 범위 — 주문 경로가 그대로 실행할 수 있는 것만. 보유 최대 5일(사용자 규칙) · ② 는 233740 만(주문 경로 전용).
+// 승격으로 들어올 수 있는 변수와 범위 — 주문 경로가 그대로 실행할 수 있는 것만. 보유 최대 5일(사용자 규칙) · ②⑤ 는 233740 만(주문 경로 전용).
+// ⑤ th: 15:00 가격이 전일 종가보다 th% '미만'이면 매수(0 = 내려 있으면) — −10~0.
 // ③ hiN: 최근 N일 고가 돌파(1 = 어제 고가). ④ rsiMax 100 = RSI 조건 없음 · ibsMax 1 = 종가 위치 조건 없음 · downDays 0 = 연속 하락 조건 없음(셋 다 꺼지면 거절).
 export function validateParams(tab, p) {
   p = p || {};
@@ -35,6 +38,10 @@ export function validateParams(tab, p) {
       ma: int(p.ma, 0, 250), maxHoldDays: int(p.maxHoldDays, 1, 5), tabSize: num(p.tabSize, 0.1, 1) };
     if (o.rsiMax >= 100 && o.ibsMax >= 1 && !o.downDays) throw new Error("④ 진입 조건 없음");
     return o;
+  }
+  if (tab === "close30") {
+    if (String(p.code) !== "233740") throw new Error("⑤ 주문 경로는 233740 전용 — 다른 종목은 승격 불가");
+    return { code: "233740", th: num(p.th, -10, 0) };
   }
   throw new Error("탭 오류");
 }
