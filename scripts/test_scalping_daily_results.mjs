@@ -138,7 +138,7 @@ const missingPriorCrypto=pairKst("crypto","비트코인",{sessions:[]},"2026-10-
 assert.equal(missingPriorCrypto.current.pending,true,'current crypto may await same-day close');
 assert.equal(missingPriorCrypto.previous.date,'2026-10-21');
 assert.equal(missingPriorCrypto.previous.unavailable,true,'yesterday must not wait forever');
-assert.equal(missingPriorCrypto.previous.pending,undefined);
+assert.equal(missingPriorCrypto.previous.pending,false);
 assert.equal(missingPriorCrypto.previous.returnPct,null,'no fake zero profit for lost ledger');
 assert.equal(missingPriorCrypto.status,'degraded');
 const missingKr=pairKst("opening","시초가",{sessions:[]},"2026-10-22",[{date:"2026-10-21",open:true}]);
