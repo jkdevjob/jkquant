@@ -350,7 +350,7 @@ async function forceOpeningSessionClose(env,date,mainVariant,target){
   if(!missing.length)return {count:0};
   const now=Date.now();
   // 원본 보관 실패 시 주문하지 않는다. 이전 매도/다른 전략을 절대로 다시 팔지 않는다.
-  await appendLedger(env,{scanId:date+":opening:final-exit-check",date,mainVariant,
+  await appendLedger(env,{scanId:(ledger.scans||[]).at(-1)?.id||date+":opening:final-exit-check",date,mainVariant,
     scheduledTime:now,capturedAt:new Date(now).toISOString(),targetHm:930,
     partial:false,okShards:0,quoteErrors:0,events:missing.map(x=>
       liveEvent(date,930,"sell",mainVariant,x,{channel:"telegram",sent:false,reason:"final_exit_unverified"},null))},"opening");
