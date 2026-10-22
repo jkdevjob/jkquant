@@ -1,4 +1,4 @@
-name: Intraday read-only diagnosis
+name: Intraday scheduler recovery verification
 on:
   push:
     branches: [fix/intraday-session-close-20261022]
@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - name: Observe scheduled events and runtime (no alerts or orders)
+      - name: Verify and re-register existing cron (same frequency, no manual alerts/orders)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -24,7 +24,8 @@ jobs:
           timeout 115s npx --yes wrangler@4 tail jkquant-global-intraday-scheduler --format json > /tmp/intraday-tail.jsonl 2>/tmp/intraday-tail.stderr &
           TAIL_PID=$!
           cat > /tmp/read-runtime.py <<'PY'
-          import json, os, subprocess, urllib.request
+          import json, os, subprocess, urllib.request, datetime
+          from pathlib import Path
           base='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CLOUDFLARE_ACCOUNT_ID']+'/workers/scripts/jkquant-global-intraday-scheduler'
           for route in ['schedules','settings','deployments']:
               req=urllib.request.Request(base+'/'+route,headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN']})
@@ -37,8 +38,28 @@ jobs:
               except Exception as e:print(route.upper(),type(e).__name__)
           args=['curl','--silent','--show-error','--max-time','15','-H','x-monitor-key: '+os.environ['MONITOR_KEY'],'https://jkquant-global-intraday-scheduler.mumae4.workers.dev/runtime']
           r=subprocess.run(args,capture_output=True,text=True,timeout=20)
-          try:print('RUNTIME',json.dumps(json.loads(r.stdout),ensure_ascii=False))
-          except Exception:print('RUNTIME_NOT_JSON',r.returncode)
+          try:
+              runtime=json.loads(r.stdout);print('RUNTIME',json.dumps(runtime,ensure_ascii=False))
+          except Exception:
+              runtime={};print('RUNTIME_NOT_JSON',r.returncode)
+          marker=Path('/tmp/cron-repair-attempted')
+          if not marker.exists():
+              marker.touch()
+              at=(runtime.get('runtime') or {}).get('at')
+              try:fresh=(datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(at.replace('Z','+00:00'))).total_seconds()<180
+              except Exception:fresh=False
+              if fresh:print('CRON_ALREADY_ACTIVE')
+              else:
+                  req=urllib.request.Request(base+'/schedules',headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN']})
+                  current=json.load(urllib.request.urlopen(req,timeout=15)).get('result') or {}
+                  schedules=current.get('schedules') or []
+                  if len(schedules)!=1 or schedules[0].get('cron')!='* * * * *':
+                      raise RuntimeError('Unexpected cron; registration preserved')
+                  # Equivalent one-minute expression forces registration refresh without adding a schedule.
+                  req=urllib.request.Request(base+'/schedules',method='PUT',data=json.dumps([{'cron':'*/1 * * * *'}]).encode(),headers={'Authorization':'Bearer '+os.environ['CLOUDFLARE_API_TOKEN'],'Content-Type':'application/json'})
+                  changed=json.load(urllib.request.urlopen(req,timeout=15))
+                  if not changed.get('success'):raise RuntimeError('Cron registration rejected')
+                  print('CRON_RE_REGISTERED',json.dumps(changed.get('result'),ensure_ascii=False))
           PY
           python /tmp/read-runtime.py
           sleep 50
