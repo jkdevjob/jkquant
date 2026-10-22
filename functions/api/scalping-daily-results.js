@@ -413,13 +413,15 @@ function pairKst(name,label,result,kstDate,krStatuses=null){
   const statusMap=new Map((Array.isArray(krStatuses)?krStatuses:[]).filter(Boolean).map(x=>[String(x.date),x]));
   const current=a.find(x=>String(x.date)===kstDate)||placeholderFor(name,kstDate,statusMap.get(kstDate)||null);
   const previous=a.find(x=>String(x.date)===prevDate)||
-    ((name==="opening"||name==="daytrading")&&statusMap.get(prevDate)?.open===false
+    ((name==="opening"||name==="daytrading")&&(statusMap.get(prevDate)?.open===false||[0,6].includes(weekdayUtc(prevDate)))
       ?placeholderFor(name,prevDate,statusMap.get(prevDate))
+      :name==="soxl"&&!isNyseSessionDate(shiftIso(prevDate,-1))
+        ?placeholderFor(name,prevDate,null)
       :missingClosedRow(prevDate,name,name==="crypto"?"전날 비트코인 마감 장부 누락 · 거래 여부 확인 필요":"전날 마감 자료 누락 · 거래 여부 확인 필요",name==="soxl"?shiftIso(prevDate,-1):null));
   return {
     strategy:name,label,marketTime:"KST",timeZone:"Asia/Seoul",dateRule:"kst-calendar",
     current,previous,
-    status:result&&result.error?"error":(result?.sourceWarnings?.length||a.some(x=>x.incomplete||x.sourceConflict)?"degraded":(a.length?"ok":"collecting")),
+    status:result&&result.error?"error":(previous.unavailable||result?.sourceWarnings?.length||a.some(x=>x.incomplete||x.sourceConflict)?"degraded":(a.length?"ok":"collecting")),
     error:result&&result.error||null,
     sourceWarnings:result?.sourceWarnings||[]
   };
