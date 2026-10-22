@@ -10,6 +10,7 @@ const IPO_APP=BASE_APP+"/ipo";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
 const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl","closing30"]);
 const GPT_TOPICS=new Set([...TRADE_TOPICS,"tenbagger_gpt"]);
+const LEGACY_GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
 const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
 /* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
 const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
@@ -366,7 +367,7 @@ export class PresaleAlertStore{
   }
   async subscriptions(){return this.state.storage.list({prefix:"sub:"})}
   topicsOf(s){return normalizeTopics(s&&s.topics,s&&s.topics?[]:["presale"],Number(s&&s.topicSchemaVersion||1)<2)}
-  subscribedTo(s,topic){const t=this.topicsOf(s);return t.includes(topic)||(GPT_TOPICS.has(topic)&&t.includes("gpt"))||(topic==="gpt"&&[...GPT_TOPICS].every(x=>t.includes(x)))}
+  subscribedTo(s,topic){const t=this.topicsOf(s),legacyAll=LEGACY_GPT_TOPICS.every(x=>t.includes(x));return t.includes(topic)||(GPT_TOPICS.has(topic)&&(t.includes("gpt")||(topic==="closing30"&&legacyAll)))||(topic==="gpt"&&([ ...GPT_TOPICS].every(x=>t.includes(x))||legacyAll))}
   async subscribe(request){
     const body=await request.json().catch(()=>null),s=body&&body.subscription;
     const endpoint=clean(s&&s.endpoint,2000);
