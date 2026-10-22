@@ -24,15 +24,21 @@ FEE=.23
 def download(date):
     if not KEY:
         return date,None,"research monitor key not configured"
-    req=urllib.request.Request(WORKER+"/closing-ledger?date="+date,
-        headers={"x-monitor-key":KEY,"accept":"application/json"})
-    try:
-        with urllib.request.urlopen(req,timeout=9) as r:
-            obj=json.loads(r.read(1_500_000))
-        if not obj.get("ok"):raise ValueError(obj.get("error","ledger error"))
-        return date,obj.get("ledger"),None
-    except Exception as e:
-        return date,None,str(e)[:200]
+    # GitHub -> Workers direct can be blocked by edge policy (HTTP 403).
+    # Pages-to-Worker relay uses the same secret, remains private and read-only.
+    endpoints=[WORKER+"/closing-ledger?date="+date,
+               "https://jkquant.pages.dev/api/closing30-archive?date="+date]
+    errors=[]
+    for url in endpoints:
+        req=urllib.request.Request(url,headers={"x-monitor-key":KEY,"accept":"application/json"})
+        try:
+            with urllib.request.urlopen(req,timeout=10) as r:
+                obj=json.loads(r.read(1_500_000))
+            if not obj.get("ok"):raise ValueError(obj.get("error","ledger error"))
+            return date,obj.get("ledger"),None
+        except Exception as e:
+            errors.append(str(e)[:160])
+    return date,None," | ".join(errors)[:320]
 
 def flatten(day):
     if not day or not isinstance(day.get("events"),list):return []
