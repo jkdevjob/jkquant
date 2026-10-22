@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-22",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": -2.4859955741620703,
+  "source": "orders:nightly",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "금호타이어",
+      "code": "073240",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 5460,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 5330,
+      "qty": 382,
+      "pnlPct": -3.160402930402933,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:15",
+        "expectedPrice": 5230,
+        "basePrice": 5490,
+        "expectedGapPct": -4.735883424408016,
+        "rsi14Prev": 27.991,
+        "qualified": 9,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "현대로템",
+      "code": "064350",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 86000,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 84800,
+      "qty": 23,
+      "pnlPct": -1.9741860465116239,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:15",
+        "expectedPrice": 85300,
+        "basePrice": 88600,
+        "expectedGapPct": -3.724604966139955,
+        "rsi14Prev": 28.819,
+        "qualified": 9,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "HD현대중공업",
+      "code": "329180",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 310500,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 305500,
+      "qty": 6,
+      "pnlPct": -2.3233977455716546,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:15",
+        "expectedPrice": 309000,
+        "basePrice": 320000,
+        "expectedGapPct": -3.4375000000000044,
+        "rsi14Prev": 20.965,
+        "qualified": 9,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "모의계좌 주문 안 됨 3건(매수가능 0주(계좌 현금 부족)) — 정산은 주문한 종목의 시가 · 종가로",
+  "note": "메인 매매일(통과 9종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-10-22T23:00:51.303157+09:00"
+}

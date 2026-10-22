@@ -1,0 +1,185 @@
+{
+ "date": "2026-10-22",
+ "source": "pages-claude-telegram-op-close(nightly)",
+ "records": {
+  "opening": {
+   "strategy": "opening",
+   "name": "① 시초가 · D-1 갭하락 과매도",
+   "date": "2026-10-22",
+   "currency": "KRW",
+   "basis": "orders",
+   "trades": [
+    {
+     "name": "금호타이어",
+     "code": "073240",
+     "entryTime": "09:00 시가(동시호가)",
+     "qty": 382,
+     "vts": {
+      "ok": false,
+      "msg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 382주",
+      "buyQty": 0,
+      "buyAvg": null,
+      "sellQty": 0,
+      "sellAvg": null
+     },
+     "signal": {
+      "at": "08:58:15",
+      "expectedPrice": 5230,
+      "basePrice": 5490,
+      "expectedGapPct": -4.735883424408016,
+      "rsi14Prev": 27.991,
+      "qualified": 9,
+      "recheck": true,
+      "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+     },
+     "entryPrice": 5460,
+     "exitTime": "15:30 종가(동시호가)",
+     "exitPrice": 5330,
+     "notional": 2085720,
+     "pnlPct": -3.160402930402933,
+     "pnlAmount": -65917.15600000005,
+     "reason": "종가 청산"
+    },
+    {
+     "name": "현대로템",
+     "code": "064350",
+     "entryTime": "09:00 시가(동시호가)",
+     "qty": 23,
+     "vts": {
+      "ok": false,
+      "msg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 23주",
+      "buyQty": 0,
+      "buyAvg": null,
+      "sellQty": 0,
+      "sellAvg": null
+     },
+     "signal": {
+      "at": "08:58:15",
+      "expectedPrice": 85300,
+      "basePrice": 88600,
+      "expectedGapPct": -3.724604966139955,
+      "rsi14Prev": 28.819,
+      "qualified": 9,
+      "recheck": true,
+      "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+     },
+     "entryPrice": 86000,
+     "exitTime": "15:30 종가(동시호가)",
+     "exitPrice": 84800,
+     "notional": 1978000,
+     "pnlPct": -1.9741860465116239,
+     "pnlAmount": -39049.39999999992,
+     "reason": "종가 청산"
+    },
+    {
+     "name": "HD현대중공업",
+     "code": "329180",
+     "entryTime": "09:00 시가(동시호가)",
+     "qty": 6,
+     "vts": {
+      "ok": false,
+      "msg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 6주",
+      "buyQty": 0,
+      "buyAvg": null,
+      "sellQty": 0,
+      "sellAvg": null
+     },
+     "signal": {
+      "at": "08:58:15",
+      "expectedPrice": 309000,
+      "basePrice": 320000,
+      "expectedGapPct": -3.4375000000000044,
+      "rsi14Prev": 20.965,
+      "qualified": 9,
+      "recheck": true,
+      "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+     },
+     "entryPrice": 310500,
+     "exitTime": "15:30 종가(동시호가)",
+     "exitPrice": 305500,
+     "notional": 1863000,
+     "pnlPct": -2.3233977455716546,
+     "pnlAmount": -43284.89999999993,
+     "reason": "종가 청산"
+    }
+   ],
+   "open": [],
+   "measure": [],
+   "warn": "모의계좌 주문 안 됨 3건(매수가능 0주(계좌 현금 부족)) — 정산은 주문한 종목의 시가 · 종가로",
+   "exits": 3,
+   "wins": 0,
+   "losses": 3,
+   "winRate": 0,
+   "realizedAmount": -148251.4559999999,
+   "realizedPct": -2.5014081313104026,
+   "status": "closed",
+   "settled": true,
+   "dayPct": -2.4859955741620703,
+   "watched": 30,
+   "candidates": 9,
+   "entries": 3,
+   "strategyVersion": "g_open_q7_k3_gap3",
+   "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3
+   },
+   "note": "메인 매매일(통과 9종목)",
+   "copiedAt": "2026-10-22T23:00:34+09:00"
+  },
+  "daytrading": {
+   "strategy": "daytrading",
+   "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+   "date": "2026-10-22",
+   "currency": "KRW",
+   "basis": "orders",
+   "trades": [],
+   "open": [
+    {
+     "name": "KODEX 코스닥150레버리지",
+     "code": "233740",
+     "entryTime": "15:30 종가",
+     "entryPrice": 5510,
+     "qty": 1087,
+     "pnlPct": 0,
+     "reason": "내일 09:00 시가 매도",
+     "vts": {
+      "ok": false,
+      "msg": "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 1087주",
+      "qty": 0,
+      "avg": null
+     },
+     "signal": {
+      "at": "15:21:35",
+      "expectedPrice": 5515,
+      "basePrice": 6045,
+      "dropPct": -8.767576509511999,
+      "th": -3,
+      "version": "etf_dip_overnight_v1",
+      "reason": "expected_close_vs_base<=-3%"
+     }
+    }
+   ],
+   "watched": 1,
+   "warn": "모의계좌 주문 안 됨 1건(매수가능 0주(계좌 현금 부족)) — 정산은 주문한 건의 종가 · 시가로",
+   "exits": 0,
+   "wins": 0,
+   "losses": 0,
+   "winRate": null,
+   "realizedAmount": 0,
+   "realizedPct": 0,
+   "status": "closed",
+   "settled": true,
+   "dayPct": null,
+   "candidates": 1,
+   "entries": 1,
+   "strategyVersion": "etf_dip_overnight_v1",
+   "params": {
+    "code": "233740",
+    "th": -3
+   },
+   "note": "15:21 예상 하락 -8.77% → 종가 매수",
+   "copiedAt": "2026-10-22T23:00:34+09:00"
+  }
+ }
+}
