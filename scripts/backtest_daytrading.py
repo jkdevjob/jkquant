@@ -563,6 +563,14 @@ def main():
     (OUT/"latest.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
     (OUT/f"{raw_labels[-1]}.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 
+    # 모든 기준/그림자 개별 거래 원장: 전략 퇴출/승격 이후에도 variant ID를 유지한다.
+    with (OUT/"variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
+        columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source"]
+        w=csv.DictWriter(f,fieldnames=columns);w.writeheader()
+        for variant,trs in sorted(trade_map.items()):
+            for t in trs:
+                w.writerow({k:v for k,v in {**t,"variant":variant,"source":"research-reconstructed"}.items() if k in columns})
+
     with (OUT/"baseline-trades.csv").open("w",encoding="utf-8",newline="") as f:
         cols=["date","strategyVersion","rank","code","name","snapshotHm","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason",
               "sessionRet","vwapSlope","breakoutPct","volRatio","timeBucket","marketRegime","k200Ret","kosdaq150Ret",
