@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
+      - uses: actions/checkout@v4
+        with: {ref: main}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
       - name: Read original opening evidence and patched quote routes
         env:
           MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
@@ -23,6 +27,8 @@ jobs:
               except Exception:raise RuntimeError('source response unavailable '+str(r.returncode))
           date=datetime.datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()
           opening=get('https://jkquant-opening-scheduler.mumae4.workers.dev/event-history?kind=opening&from=2026-10-22&to=2026-10-22')
+          assert opening.get('ok') and len(opening.get('ledgers') or [])==1,'opening original unavailable'
+          open('/tmp/opening-readonly-proof.json','w').write(json.dumps(opening['ledgers'][0]))
           for l in opening.get('ledgers') or []:
               scans=l.get('scans') or [];events=l.get('events') or [];main=l.get('mainVariant') or 'baseline'
               print('OPENING_ORIGINAL',json.dumps({'date':l.get('date'),'mainVariant':main,'updatedAt':l.get('updatedAt'),'scans':len(scans),'targets':[s.get('targetHm') for s in scans],'partialScans':sum(bool(s.get('partial')) for s in scans),'quoteErrors':sum(s.get('quoteErrors') or 0 for s in scans),'failedShards':sum(len(s.get('failed') or []) for s in scans),'eventsByVariant':dict(collections.Counter(e.get('variant')+':'+str(e.get('stage')) for e in events)),'mainEvents':sum(e.get('variant')==main for e in events)},ensure_ascii=False))
@@ -32,14 +38,10 @@ jobs:
           for l in archive.get('ledgers') or ([archive['ledger']] if archive.get('ledger') else []):
               events=l.get('events') or []
               print('CLOSING_ORIGINAL',json.dumps({'date':l.get('date'),'scans':[{k:s.get(k) for k in ['targetHm','partial','quoteErrors','eventCount']} for s in l.get('scans') or []],'stages':dict(collections.Counter(str(e.get('kind'))+':'+str(e.get('stage')) for e in events)),'events':len(events)},ensure_ascii=False))
-          research=[]
-          for shard in range(5):
-              part=get('https://jkquant.pages.dev/api/opening-monitor?serverHistory=1&shard='+str(shard)+'&shards=5&limit=100&mainVariant=baseline',60)
-              research.append({'shard':shard,'ok':part.get('ok'),'error':part.get('error'),'universe':part.get('universe'),'trades':len(part.get('operationalTrades') or []),'quoteErrors':part.get('errors'),'entryTimes':[x.get('entryTime') for x in part.get('operationalTrades') or []]})
-          print('OPENING_RECONSTRUCTION_QA',json.dumps(research,ensure_ascii=False))
-          base='https://f4ea434e.jkquant.pages.dev'
+          base='https://jkquant.pages.dev'
           scan=get(base+'/api/closing30-monitor?op=scan&kind=day&date='+date,150)
           print('PATCH_SCAN',json.dumps({k:scan.get(k) for k in ['ok','error','date','kind','scanned','valid','partial','cutoff','errors']},ensure_ascii=False))
+          assert scan.get('ok'),'production monitor unavailable'
           if scan.get('ok'):
               assert scan.get('scanned')==50 and not scan.get('partial') and not scan.get('errors'),'Top50 scan incomplete'
               universe=get(base+'/api/universe?limit=100')
@@ -49,3 +51,15 @@ jobs:
               print('PATCH_PRICES',json.dumps({'ok':prices.get('ok'),'count':len(prices.get('prices') or []),'missing':prices.get('missing'),'errors':prices.get('errors'),'priceTimes':sorted(set(x.get('priceAt','') for x in prices.get('prices') or []))},ensure_ascii=False))
               assert prices.get('ok') and len(prices.get('prices') or [])==35 and not prices.get('errors') and prices.get('missing')==0,'35 prices incomplete'
           PY
+      - name: Check final summary using that exact original
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs';import assert from 'node:assert/strict';
+          import {summarizeOpeningLedger} from './functions/api/scalping-live-results.js';
+          const ledger=JSON.parse(fs.readFileSync('/tmp/opening-readonly-proof.json','utf8'));
+          const result=summarizeOpeningLedger(ledger);
+          console.log('ORIGINAL_TO_SUMMARY',JSON.stringify({date:result.date,state:result.state,sourceIncomplete:result.sourceIncomplete,noTrade:result.noTrade,returnPct:result.returnPct,scanCoverage:result.scanCoverage,reason:result.reason}));
+          assert.equal(result.state,'unavailable');assert.equal(result.sourceIncomplete,true);
+          assert.equal(result.returnPct,null);assert.equal(result.noTrade,false);
+          assert.deepEqual(result.scanCoverage.missingTargets,[906]);
+          JS
