@@ -45,7 +45,7 @@ export async function onRequestGet({request,env}){
   const cutoff=kind==="day"?1504:1520;
   const univers=await getJson(origin+"/api/universe?limit=100");
   // 종가 베팅은 개별 상장주식만: ETF/ETN은 기존 별도 연구와 구분한다.
-  const fundName=/^(KODEX|TIGER|RISE|ACE|PLUS|SOL |HANARO|TIMEFOLIO|KOSEF|KBSTAR|ARIRANG|FOCUS|WOORI|1Q |BNK|KIWOOM|TREX)|\\b(ETF|ETN)\\b/i;
+  const fundName=/^(KODEX|TIGER|RISE|ACE|PLUS|SOL |HANARO|TIMEFOLIO|KOSEF|KBSTAR|ARIRANG|FOCUS|WOORI|1Q |BNK|KIWOOM|TREX)|\b(ETF|ETN)\b/i;
   const symbols=(univers.universe||[]).filter(x=>x&&/^\d{6}$/.test(String(x.code||""))&&!fundName.test(String(x.name||""))).slice(0,50);
   if(!symbols.length)return respond({ok:false,error:"universe empty"},503);
   const {output,errors}=await batch(symbols,async stock=>{
