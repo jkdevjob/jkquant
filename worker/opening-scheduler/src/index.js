@@ -951,7 +951,7 @@ export default {
     const at=Number(controller.scheduledTime)||Date.now();
     ctx.waitUntil(pushStore(env,"ensure",{}).catch(()=>null));   // 알림 감시 알람이 살아 있는지만 확인(감시는 저장소 알람이 5분마다 — 장 일정과 따로)
     const route=scheduleRoute(at);
-    const krRoute=route==="opening"||route==="claude_kr"||route==="duel"||route.startsWith("closing_")||(route&&route.startsWith("gapdown_"));
+    const krRoute=route==="opening"||route==="claude_kr"||route==="duel"||(route&&route.startsWith("closing_"))||(route&&route.startsWith("gapdown_"));
     if(krRoute){
       const date=kstParts(at).date;
       try{
