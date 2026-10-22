@@ -42,6 +42,6 @@ jobs:
               for ledger in ledgers:
                   events=ledger.get('events') or []
                   counts=collections.Counter((e.get('kind') or '')+':'+str(e.get('stage')) for e in events)
-                  print(name,json.dumps({'ok':j.get('ok'),'date':ledger.get('date'),'updatedAt':ledger.get('updatedAt'),'scans':len(ledger.get('scans') or []),'scanDetails':[{k:s.get(k) for k in ['targetHm','partial','quoteErrors','eventCount']} for s in (ledger.get('scans') or [])[-3:]],'events':len(events),'stages':dict(counts),'mainVariant':ledger.get('mainVariant'),'mainTrades':len(ledger.get('trades') or []),'shadowVariants':len(ledger.get('shadowLedgers') or {}),'summary':ledger.get('summary')},ensure_ascii=False))
+                  print(name,json.dumps({'ok':j.get('ok'),'date':ledger.get('date'),'updatedAt':ledger.get('updatedAt'),'scans':len(ledger.get('scans') or []),'failedErrors':dict(collections.Counter(e.get('error','') for s in (ledger.get('scans') or []) for e in (s.get('failed') or []))),'scanDetails':[{k:s.get(k) for k in ['targetHm','partial','quoteErrors','eventCount']} for s in (ledger.get('scans') or [])[-3:]],'events':len(events),'stages':dict(counts),'mainVariant':ledger.get('mainVariant'),'mainTrades':len(ledger.get('trades') or []),'shadowVariants':len(ledger.get('shadowLedgers') or {}),'summary':ledger.get('summary')},ensure_ascii=False))
               if not ledgers:print(name,json.dumps({'ok':j.get('ok'),'ledgerCount':0,'error':j.get('error')}))
           PY
