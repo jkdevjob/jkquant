@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-23",
+  "strategy": "② 코스닥150 레버리지 하락일 야간",
+  "strategyVersion": "etf_dip_overnight_v1",
+  "params": {
+    "code": "233740",
+    "th": -3.0
+  },
+  "action": "trade",
+  "pnlPct": -4.385716878402903,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "KODEX 코스닥150레버리지",
+      "code": "233740",
+      "entryTime": "2026-10-22 15:30 종가",
+      "entryPrice": 5510,
+      "exitTime": "09:00 시가",
+      "exitPrice": 5280,
+      "qty": 1087,
+      "pnlPct": -4.385716878402903,
+      "vtsOk": false,
+      "signal": {
+        "at": "15:21:35",
+        "expectedPrice": 5515,
+        "basePrice": 6045,
+        "dropPct": -8.767576509511999,
+        "th": -3,
+        "version": "etf_dip_overnight_v1",
+        "reason": "expected_close_vs_base<=-3%"
+      }
+    }
+  ],
+  "warn": "모의계좌 주문 안 됨 1건(매수가능 0주(계좌 현금 부족)) — 정산은 주문한 건의 종가 · 시가로",
+  "note": "15:21 예상 하락 -4.36% → 종가 매수",
+  "liveVersion": "etf_dip_overnight_v1",
+  "recordedAt": "2026-10-23T23:26:00.138863+09:00"
+}

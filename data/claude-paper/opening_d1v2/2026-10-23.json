@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-23",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": -0.2540002982745602,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "태웅",
+      "code": "044490",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 25300,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 25300,
+      "qty": 81,
+      "pnlPct": -0.822885375494071,
+      "vtsOk": true,
+      "signal": {
+        "at": "08:58:38",
+        "expectedPrice": 24500,
+        "basePrice": 26250,
+        "expectedGapPct": -6.666666666666665,
+        "rsi14Prev": 28.99,
+        "qualified": 26,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "에이디테크놀로지",
+      "code": "200710",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 17970,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 18490,
+      "qty": 114,
+      "pnlPct": 2.496766833611571,
+      "vtsOk": true,
+      "signal": {
+        "at": "08:58:38",
+        "expectedPrice": 17520,
+        "basePrice": 18750,
+        "expectedGapPct": -6.559999999999999,
+        "rsi14Prev": 26.386,
+        "qualified": 26,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "한화",
+      "code": "000880",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 95200,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 93400,
+      "qty": 21,
+      "pnlPct": -2.4358823529411806,
+      "vtsOk": true,
+      "signal": {
+        "at": "08:58:38",
+        "expectedPrice": 91200,
+        "basePrice": 97600,
+        "expectedGapPct": -6.5573770491803245,
+        "rsi14Prev": 28.829,
+        "qualified": 26,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "메인 매매일(통과 26종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-10-23T23:26:00.138863+09:00"
+}
