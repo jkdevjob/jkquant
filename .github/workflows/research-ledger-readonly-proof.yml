@@ -1,4 +1,4 @@
-name: Opening missing-minute runtime diagnosis
+name: Research 1.48.1 production verification
 on:
   push:
     branches: [fix/intraday-session-close-20261022]
@@ -8,39 +8,93 @@ permissions:
 jobs:
   inspect:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
-      - name: Read stored runtime logs for the two missing morning scans
+      - name: Verify deployed alert views, shared official calendar and immutable originals
         env:
-          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
         run: |
           python - <<'PY'
-          import os,json,urllib.request,urllib.error,datetime
-          ms=lambda s:int(datetime.datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()*1000)
-          body={'queryId':'jkquant-opening-gap-20261023','dry':True,'view':'events','limit':300,
-            'timeframe':{'from':ms('2026-10-23T00:10:00Z'),'to':ms('2026-10-23T00:20:00Z')},
-            'parameters':{'datasets':['cloudflare-workers'],'filterCombination':'and','filters':[
-              {'key':'$metadata.service','operation':'eq','type':'string','value':'jkquant-opening-scheduler'}]}}
-          url='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CF_ACCOUNT']+'/workers/observability/telemetry/query'
-          req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={'Authorization':'Bearer '+os.environ['CF_TOKEN'],'Content-Type':'application/json'})
-          try:
-              with urllib.request.urlopen(req,timeout=35) as r:data=json.load(r)
-          except urllib.error.HTTPError as e:
-              print('OBSERVABILITY_UNAVAILABLE',e.code,e.read().decode()[:200]);raise SystemExit(0)
-          print('RUNTIME_QUERY',data.get('success'),[(x.get('message') or '')[:150] for x in data.get('errors',[])])
-          result=data.get('result') or {}
-          print('RESULT_FIELDS',sorted(result))
-          events=result.get('events')
-          if isinstance(events,dict):
-              print('EVENT_FIELDS',sorted(events));events=events.get('events') or events.get('data') or []
-          for e in events or []:
-              meta=e.get('$metadata') or e.get('metadata') or {}
-              workers=e.get('$workers') or e.get('workers') or {}
-              source=e.get('source') or {}
-              msg=meta.get('message') or source.get('message') or e.get('message')
-              if not msg and source:msg=json.dumps({k:v for k,v in source.items() if k not in ('request','headers','response')},ensure_ascii=False)
-              print('RUNTIME_EVENT',json.dumps({'timestamp':e.get('timestamp'),'trigger':meta.get('trigger'),'type':meta.get('type'),'error':meta.get('error'),'message':str(msg or '')[:700],
-                'outcome':workers.get('outcome'),'cpuTimeMs':workers.get('cpuTimeMs'),'wallTimeMs':workers.get('wallTimeMs'),'event':{k:v for k,v in (workers.get('event') or {}).items() if k in ('cron','scheduledTime')}},ensure_ascii=False))
-          print('READ_ONLY_NO_ORDER_NO_ALERT_NO_SETTINGS_WRITE')
+          import os,json,urllib.request,urllib.error,hashlib,collections,datetime
+          
+          PAGES='https://jkquant.pages.dev'
+          OPENING='https://jkquant-opening-scheduler.mumae4.workers.dev'
+          DAY='https://jkquant-daytrading-scheduler.mumae4.workers.dev'
+          GLOBAL='https://jkquant-global-intraday-scheduler.mumae4.workers.dev'
+          PUSH='https://jkquant-presale-alert.mumae4.workers.dev'
+          DATE='2026-10-23'
+          def get(url,auth=False):
+              headers={'Accept':'application/json','Cache-Control':'no-cache','User-Agent':'JKQuant-deployment-audit/1.48.1'}
+              if auth:headers['x-monitor-key']=os.environ['MONITOR_KEY']
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=30) as r:return r.status,r.read().decode()
+              except urllib.error.HTTPError as e:return e.code,e.read().decode()
+          def api(url,auth=False):
+              status,text=get(url,auth);assert status==200,url.split('?')[0]+' HTTP '+str(status)
+              data=json.loads(text);assert data.get('ok') is True,'API did not confirm operation'
+              return data
+          def digest(value):return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+          
+          status,html=get(PAGES+'/scalping?audit=1.48.1')
+          assert status==200 and 'id="scVer">v1.48.1<' in html
+          assert 'trade-history-ui.js?v=1.48.1' in html
+          health=api(PUSH+'/health');assert health['version']=='2.9.1'
+          print('DEPLOYED_VERSIONS','research=1.48.1 push=2.9.1')
+          
+          settings=api(OPENING+'/paper-settings',True)['settings']
+          expected={'gpt_opening','gpt_daytrading','gpt_closing30','gpt_closing_bet','gpt_crypto','gpt_soxl','gpt_tenbagger'}
+          assert set(settings['strategies'])==expected and settings['revision']==2
+          assert all(row['enabled'] is False for row in settings['strategies'].values())
+          print('OFF_PRESERVED',json.dumps({'revision':settings['revision'],'strategies':{k:v['enabled'] for k,v in settings['strategies'].items()}},sort_keys=True))
+          
+          before=api(OPENING+'/events?date='+DATE,True)['ledger']
+          assert digest(before)=='12a665558738dae2d5f081bbf797e375868ee6e756fbf30d3d955563c660c722'
+          present={int(s['targetHm']) for s in before['scans']}
+          assert [x for x in range(904,931) if x not in present]==[912,915]
+          assert len(before['scans'])==25 and len(before['events'])==0
+          print('OPENING_ORIGINAL_PRESERVED',digest(before),'scans=25 missing=09:12,09:15 events=0')
+          
+          latest=api(PUSH+'/latest?topic=closing30')
+          rows=[a for a in latest.get('alerts',[]) if a.get('type')=='closing30']
+          assert rows and all('undefined' not in a['title'] for a in rows)
+          old=[a for a in rows if a.get('id') in [f'trade:closing30:{DATE}:day:baseline:005930:buy',f'trade:closing30:{DATE}:day:baseline:009150:buy']]
+          assert len(old)==2
+          for alert in old:
+              assert alert['title']=='[지피티 연구 종가 30분] 🟢 매수'
+              assert alert['url']==PAGES+'/scalping?strategy=closing30'
+              assert alert['createdAt'].startswith(DATE+'T06:0')
+          print('LEGACY_ALERT_VIEW_FIXED',json.dumps([{'id':a['id'],'title':a['title'],'createdAt':a['createdAt'],'url':a['url']} for a in old],ensure_ascii=False))
+          
+          # Normal public calendar GET performs only provider lookup and verified-fact cache writes.
+          calendar=api(PAGES+'/api/kis?op=holiday&market=kr&date=20261023&audit=1.48.1')
+          assert calendar['source']=='KIS/CTCA0903R' and calendar['date']==DATE and isinstance(calendar['open'],bool)
+          assert calendar['env']=='real' and calendar['opndYn'] in ['Y','N'] and calendar.get('checkedAt')
+          cached=api(OPENING+'/market-day?date='+DATE,True)['evidence']
+          assert cached and all(cached[k]==calendar[k] for k in ['date','open','opndYn','source','checkedAt'])
+          assert not any(k in cached for k in ['token','appkey','appsecret','account'])
+          assert get(OPENING+'/market-day?date='+DATE)[0]==401
+          print('SHARED_OFFICIAL_CALENDAR',json.dumps(cached,sort_keys=True))
+          assert digest(api(OPENING+'/events?date='+DATE,True)['ledger'])==digest(before)
+          assert api(OPENING+'/paper-settings',True)['settings']==settings
+          
+          for name,url in [('daytrading',DAY+'/paper?date='+DATE),('closing',OPENING+'/closing-ledger?date='+DATE),
+                           ('crypto',GLOBAL+'/paper?strategy=crypto&date='+DATE),('soxl',GLOBAL+'/paper?strategy=soxl&date=2026-10-22')]:
+              ledger=api(url,True).get('ledger')
+              assert ledger is not None,name+' original source absent'
+              if name=='closing':
+                  stages=collections.Counter(e.get('kind','?')+':'+e.get('stage','?') for e in ledger.get('events',[]))
+                  result={'date':ledger['date'],'events':dict(stages),'scans':len(ledger.get('scans',[]))}
+              else:
+                  assert isinstance(ledger.get('trades'),list)
+                  result={'date':ledger['date'],'updatedAt':ledger.get('updatedAt'),'trades':dict(collections.Counter(t.get('status','?') for t in ledger['trades'])),'shadowVariants':len(ledger.get('shadowLedgers') or {})}
+              print('ORIGINAL_SOURCE',name,json.dumps(result,sort_keys=True))
+          
+          ten=api(PAGES+'/api/tenbagger-research')
+          assert ten['schemaVersion']==1 and isinstance(ten['records'],list) and isinstance(ten['candidates'],list)
+          print('TENBAGGER_SOURCE',json.dumps({k:ten.get(k) for k in ['dataSource','asOf','generatedAt','strategyVersion','status']},sort_keys=True))
+          runtime=api(GLOBAL+'/runtime',True)['runtime']
+          at=datetime.datetime.fromisoformat(runtime['at'].replace('Z','+00:00'))
+          assert (datetime.datetime.now(datetime.timezone.utc)-at).total_seconds()<180
+          print('SCHEDULED_RUNTIME',json.dumps({k:runtime.get(k) for k in ['at','source','ok','type','error']},sort_keys=True))
+          print('NO_TEST_ORDER_NO_TEST_ALERT_NO_SETTINGS_WRITE')
           PY
