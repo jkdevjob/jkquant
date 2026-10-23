@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "date": "2026-10-24",
+  "preparedAt": "2026-10-23T22:05:00.000Z",
+  "mainSha": "3a49a8c0ee702427247cb48b84bf11cdd4b3de02",
+  "summary": "23일 확정은 시초가 무신호0%·데이트레이딩 -1.250%, BTC22일 무매매, SOXL 미국23일 -1.400%. 09:20 진입가설은28/30건·선두3/7회라 보류. 텐배거 신규등록3·진입18·손절청산2. 중복·오제목 알림 수정본 시험78/78 통과.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "verified",
+      "findings": "검증 완료의 의미: 23일 원본·고정장부를 대조했습니다. 시초가는 09:04~09:30 필수 감시 완료·선정0으로 무신호0%, 데이트레이딩은 SK스퀘어·대우건설·효성중공업 3건 모두 -1.25%로 3슬롯 계좌 -1.250%, BTC는22일 필터 통과 없음, SOXL은 미국23일 1건 손절 -1.400%입니다. 데이트레이딩은 내부 원본/EOD에는 있으나 VTS 일치0/3이라 실체결 검증은 아닙니다. 그림자는 시초가 -1.622%·데이트레이딩 -1.050%, BTC0건·SOXL은 미국22일까지0건. 전일 아침보고 영수증은 Push3/3·Telegram1회 성공, 실제 기기 표시는 미확인. 최신 화면v1.48.1·서버2.9.1의 중복/오제목 수정 관련 시험78/78 통과.",
+      "nextTest": "현재24일 BTC 매도 알림 영수증은 손익 확정과 분리하고 고정 장부 반영 뒤 대조합니다. 인증 계좌 평가금액·현금·미실현·입출금·수익률 분모와 실제 기기 표시를 소유자 화면에서 별도 확인합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/opening-history/2026-10-23.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/vts-research/2026-10-23.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/daily1-shadow/latest.json",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "verified",
+      "findings": "검증 완료의 의미: 23일 운영 원본의 09:04~09:30 필수 분 감시가 partial/error 없이 끝났고 events=[]라 '대기'가 아닌 무신호·무매매0%입니다. 누적51거래/9매매일 평균일수익 -0.531%, PF0.510, MDD-5.407%, 최악-2.550%, +1%일0/+5%주0; 이번 주 +0.717%, 목표까지4.283%p. +1%그림자는 한화시스템-1.734%·비나텍-1.510%, 2슬롯 -1.622%: 14일/13거래 평균-0.706%, PF0.036, MDD-9.477%, 최악-2.026%, +1%일0/+5%주0; 주간-5.481%. 집중가설 entry_by_0920은28거래 평균-0.042%, baseline 대비 +0.305%p, 최근 +0.279%p이나 30건 미달·선두3/7회라 보류합니다.",
+      "nextTest": "비용0.23%+편도2.5호가 fallback, 갭+2~+7%, 09:30청산, 동일 모집단·자본·시간순 OOS를 고정합니다. 후보2건과 선두4회를 더 확보하며 VTS 정합성 회복 전 새 버전·메인 승격은 하지 않습니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=opening&from=2026-10-01&to=2026-10-24",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/opening-history/2026-10-23.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/nightly-research/2026-10-24.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "collecting",
+      "findings": "23일 운영 모의원본은 SK스퀘어·대우건설·효성중공업 3건 모두 손절 -1.25%, 3슬롯 계좌 -1.250%. 누적43거래/16기록일 평균일수익 -0.450%, PF0.448, MDD-7.681%, 최악-1.250%, +1%일0/+5%주0; 이번 주 -2.244%, 목표까지7.244%p. 내부 원본/EOD 기록은 있으나 KIS VTS 주문9건은 Claude 전략 주문이고 GPT 3건 일치가0이라 실제 브로커 체결 성과로 확정하지 않습니다. +1%그림자는3건 모두 -1.05%, 계좌-1.050%: 15일/45거래 평균-0.133%, PF0.781, MDD-4.374%, 최악-1.050%, +1%일3/+5%주0; 주간+1.340%, 목표까지3.660%p. 연구 후보 combo_slope15_e1400은 선두5/7회로 아직 승격 조건 미달입니다.",
+      "nextTest": "동일3슬롯·비용0.25%·동시점 모집단을 고정해 최소20전향일을 채우고 VTS 체결 정합성·시장국면별 손익·빈도를 대조합니다. baseline은 유지하고 후보는 그림자로만 관찰합니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-10-24",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/daytrading-research/2026-10-23.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/daily1-shadow/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/vts-research/2026-10-23.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "collecting",
+      "findings": "22일 BTC baseline은 21:55까지 조건 충족 돌파가 없어 무매매로 고정됐습니다. 마지막 거래는21일 -0.161%; 누적13거래/13매매일 평균-0.103%, PF0.532, MDD-2.030%, 최악-0.640%, +1%일0/+5%주0; 이번 주-0.800%, 목표까지5.800%p. 23일 연구 원천은 생성13:57 KST 시점 마지막봉08:55·degraded라 당일 결과를0%로 확정하지 않습니다. 24일 01:40→02:40 매도 알림은 Push3/3·Telegram 성공 영수증만 확인됐고 고정 손익은 아직 미반영입니다. +1%그림자는20일/0거래로 PF·MDD·기대값 미검증, hold30 후보는 선두2/7회입니다.",
+      "nextTest": "23~24일 완료봉·고정 장부·비용 포함 손익과 알림 eventId를 대조합니다. null을0으로 바꾸거나 거래 빈도 확보를 위해 필터를 완화하지 않습니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-10-24",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/crypto-research/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/daily1-shadow/latest.json",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "verified",
+      "findings": "검증 완료의 의미: 공개 고정 API에 미국23일 SOXL 10:35→11:10 손절 -1.400%가 live-paper로 추가됐고 Push3/3·Telegram 영수증도 있습니다. 누적7거래/17기록세션 평균일수익 -0.576%, PF0, MDD-9.398%, 최악-1.400%, +1%일0/+5%주0; 이번 주-2.780%, 목표까지7.780%p. 원천 research/latest는 미국22일까지라 23일 성과는 durable live-paper API 기준입니다. +1%그림자는 미국22일까지16일/1거래 평균+0.082%, PF999상한, MDD0, 최악+1.311%, +1%일1/+5%주0; 표본1이라 미검증. 후보 stop_0.8_tp1.6은 선두4/7회입니다. 실제 기기 표시·브로커 체결은 확인하지 않았습니다.",
+      "nextTest": "미국23일 분봉·모의장부·비용0.20%와 durable API를 재대조하고 그림자 표본을 늘립니다. 표본1의 이익이나 선두4회를 승격 근거로 쓰지 않습니다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-10-24",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/soxl-research/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/daily1-shadow/latest.json",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "22일 원천이24일00:21 KST 반영: 신규등록3(삼성E&A·유니퀘스트·비나텍)·신규진입18→총122등록/114종목·진입99·대기23. 손절청산2건 추가(코미팜 -19.627%, 동양고속 -18.016%)로 손절/추적 누적8, 1260보유군청산0. 20/60/120/252/756/1260 성숙0, 2/5/10배 최초도달0라 미검증. 관찰0~6세션, 종가순손익 -29.468~+14.986%, MFE최대+22.149%, MAE/MDD최악-28.759%, 원천수정0; 계좌CAGR·지수초과가 아닙니다. v1.0.0·규칙5e690dd8·생성기9c75e0f2 유지. Claude는21일까지20종목 보유·청산0으로 하루 더 느립니다.",
+      "nextTest": "신규18진입·두 청산군의 누락·정지·폐지정산과 원천수정을 추적합니다. 가격조건 탐색가설이며 실패대조·시장국면·공시시점 재무·유동성·비용을 별도 버전으로 검증하기 전 기존 규칙을 바꾸지 않습니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/tenbagger-forward/latest.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/tenbagger-claude-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/3a49a8c0ee702427247cb48b84bf11cdd4b3de02/data/tenbagger/gpt/forward-latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/3a49a8c0ee702427247cb48b84bf11cdd4b3de02/TENBAGGER_FORWARD_RESEARCH.md"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "23일까지 표시누적 GPT -3.810%/Claude -10.229%, 일별승부 Claude9·GPT7·무2. 23일은 GPT -0.313%, Claude -1.060%로 GPT 표시승입니다. 다만 GPT 데이트레이딩3건은 VTS일치0이고, Claude 데이트레이딩 -4.386%는 전일 현금부족으로 매수 주문이 실패한 재구성 손익입니다. Claude 시초가3건은 실제 VTS 체결, 종가30분 첫 전향1건은 비용후 -1.299%로 1/20 표본입니다. 서로 실행 가능성이 달라 우위 확정은 차단합니다. Claude 데이트레이딩 신메인 g_etf_th4.75는24일부터 효력. R15 개별종목 종가→익일시가는 검증 -0.35%/거래일·t -4.9로 기각 상태입니다.",
+      "nextTest": "같은 확정날짜·당시 운영버전·동일자본·비용·실제 주문 가능 사례만 비교합니다. 주문 불일치를 해소하고 종가30분은23일 이후 전향 장부만 20매매일까지 관찰합니다.",
+      "evidence": [
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/claude-lab/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/3a49a8c0ee702427247cb48b84bf11cdd4b3de02/CLAUDE-SCALPING-RESEARCH.md",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/nightly-research/lifecycle.json",
+        "https://raw.githubusercontent.com/jkdevjob/jkquant/e63f783024f9d5ad4e1ce44d1b4b83e1a120c9c0/data/vts-research/2026-10-23.json"
+      ]
+    }
+  ]
+}
