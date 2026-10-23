@@ -311,7 +311,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.40</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.41</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -453,8 +453,9 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
           </div>
           <div class="btnrow"><button class="btn primary" id="alphaEditSave">수정 저장</button><button class="btn" id="alphaEditCancel">취소</button></div>
         </div>
+        <div class="alpha-ledger-note">손익금액은 매도 당시 평단 기준이며 수수료 제외입니다. 손익률은 무매와 같이 플랜 시작자금 대비입니다. 매수는 —, 평단을 모르는 매도는 평단 미등록으로 표시합니다.</div>
         <div class="table-wrap" style="margin-top:10px">
-          <table class="alpha-ledger-table"><thead><tr><th>날짜</th><th>종목</th><th>구분</th><th>수량</th><th>체결가</th><th>수수료</th><th>금액</th><th>관리</th></tr></thead><tbody id="alphaLedgerBody"></tbody></table>
+          <table class="alpha-ledger-table"><thead><tr><th>날짜</th><th>종목</th><th>구분</th><th>수량</th><th>체결가</th><th>수수료</th><th>금액</th><th>손익률</th><th>손익금액</th><th>관리</th></tr></thead><tbody id="alphaLedgerBody"></tbody></table>
         </div>
       </div>
 
@@ -2652,7 +2653,7 @@ function alphaLedgerCalc(ledger=alphaLedger){
   const S={
     tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),
     avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null,
-    cash:Number.isFinite(+b.cash)?+b.cash:0,minCash:Number.isFinite(+b.cash)?+b.cash:0,invalid:false,error:"",divIn:0,netFlow:0
+    cash:Number.isFinite(+b.cash)?+b.cash:0,minCash:Number.isFinite(+b.cash)?+b.cash:0,invalid:false,error:"",divIn:0,netFlow:0,tradePnl:{}
   };
   for(const e of alphaEventList(ledger)){
     /* 현금 기록 — 배당(분배금)·입금·출금. 매매가 아니다: 수량·평단은 그대로, 현금만 바뀐다.
@@ -2675,6 +2676,10 @@ function alphaLedgerCalc(ledger=alphaLedger){
       S[ak]=oldQ===0?p:(Number.isFinite(oldAvg)?(oldQ*oldAvg+q*p)/(oldQ+q):null);
       S[k]+=q;S.cash-=q*p+fee;S.minCash=Math.min(S.minCash,S.cash);
     }else if(e.side==='sell'){
+      /* 표시용 파생값: 평단이 사라지는 전량매도도 매도 직전 평단으로 계산한다.
+         무매 거래이력과 같이 수수료 제외 손익이며 원본 체결·계좌 계산은 변경하지 않는다. */
+      S.tradePnl[e._i]={profit:q<=S[k]&&Number.isFinite(S[ak])?(p-S[ak])*q:null,
+        reason:q>S[k]?'이력 오류':!Number.isFinite(S[ak])?'평단 미등록':''};
       if(q>S[k]){S.invalid=true;S.error=String(e.date||'')+' '+sym+' 매도 '+q+'주 > 당시 보유 '+S[k]+'주';}
       S[k]=Math.max(0,S[k]-q);if(S[k]===0)S[ak]=null;S.cash+=q*p-fee;S.minCash=Math.min(S.minCash,S.cash);
     }
@@ -2691,7 +2696,7 @@ function alphaSyncInputs(){
 function alphaAvgText(q,avg){return q>0?(Number.isFinite(avg)?'평단 '+usd2(avg):'평단가 미등록'):'평단 —';}
 function renderAlphaLedger(){
   alphaSyncInputs();
-  const S=alphaLedgerCalc(),ev=alphaEventList(alphaLedger).reverse(),b=alphaLedger.base||{};
+  const S=alphaLedgerCalc(),ev=alphaEventList(alphaLedger).reverse(),b=alphaLedger.base||{},cap=Math.max(0,num('startCapital'));
   if($('alphaLedgerStatus')){$('alphaLedgerStatus').textContent=S.invalid?'이력 오류':'이력 자동 계산';$('alphaLedgerStatus').className='status-pill '+(S.invalid?'warn':'good');}
   if($('alphaAcctTeclQty'))$('alphaAcctTeclQty').textContent=S.tecl+'주';
   if($('alphaAcctTqqqQty'))$('alphaAcctTqqqQty').textContent=S.tqqq+'주';
@@ -2724,15 +2729,17 @@ function renderAlphaLedger(){
   if($('alphaLedgerBody')){
     const rows=ev.map(e=>{
       const actions='<button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-aedit="'+e.id+'">수정</button> <button class="ledger-del" data-aeid="'+e.id+'">✕</button>';
-      if(e.type==='cash'){const amt=Math.max(0,+e.amount||0),lab=e.kind==='wd'?'출금':e.kind==='dep'?'입금':'배당';return '<tr><td>'+String(e.date||'')+'</td><td>현금</td><td class="adjtxt">'+lab+'</td><td colspan="4">'+(e.kind==='wd'?'−':'+')+usd2(amt)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
-      if(e.type==='reconcile'){const x=e.snapshot||{};return '<tr><td>'+String(e.date||'')+'</td><td>계좌</td><td class="adjtxt">이전버전 보정</td><td colspan="4">TECL '+(+x.tecl||0)+' · TQQQ '+(+x.tqqq||0)+' · SGOV '+(+x.sgov||0)+' · 현금 '+usd2(+x.cash||0)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
+      if(e.type==='cash'){const amt=Math.max(0,+e.amount||0),lab=e.kind==='wd'?'출금':e.kind==='dep'?'입금':'배당';return '<tr><td>'+String(e.date||'')+'</td><td>현금</td><td class="adjtxt">'+lab+'</td><td colspan="6">'+(e.kind==='wd'?'−':'+')+usd2(amt)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
+      if(e.type==='reconcile'){const x=e.snapshot||{};return '<tr><td>'+String(e.date||'')+'</td><td>계좌</td><td class="adjtxt">이전버전 보정</td><td colspan="6">TECL '+(+x.tecl||0)+' · TQQQ '+(+x.tqqq||0)+' · SGOV '+(+x.sgov||0)+' · 현금 '+usd2(+x.cash||0)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
       const gross=(+e.qty||0)*(+e.price||0),buy=e.side==='buy';
-      return '<tr><td>'+String(e.date||'')+'</td><td>'+String(e.symbol||'')+'</td><td class="'+(buy?'buytxt':'selltxt')+'">'+(buy?'매수':'매도')+'</td><td>'+Math.floor(+e.qty||0)+'</td><td>'+usd2(+e.price||0)+'</td><td>'+usd2(+e.fee||0)+'</td><td>'+usd2(gross)+'</td><td>'+actions+'</td></tr>';
+      const pnl=S.tradePnl[e._i],profit=pnl?pnl.profit:null,known=Number.isFinite(profit),col=known?(profit>=0?'pos':'neg'):'',sign=known&&profit>=0?'+':'';
+      const pct=known&&cap>0?sign+(profit/cap*100).toFixed(2)+'%':'—',amount=known?sign+usd2(profit):(pnl&&pnl.reason||'—');
+      return '<tr><td>'+String(e.date||'')+'</td><td>'+String(e.symbol||'')+'</td><td class="'+(buy?'buytxt':'selltxt')+'">'+(buy?'매수':'매도')+'</td><td>'+Math.floor(+e.qty||0)+'</td><td>'+usd2(+e.price||0)+'</td><td>'+usd2(+e.fee||0)+'</td><td>'+usd2(gross)+'</td><td class="'+col+'">'+pct+'</td><td class="'+col+'">'+amount+'</td><td>'+actions+'</td></tr>';
     });
     const baseParts=['TECL '+Math.max(0,Math.floor(+b.tecl||0))+'주'+(Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?' @ '+usd2(+b.avgTecl):''),
       'TQQQ '+Math.max(0,Math.floor(+b.tqqq||0))+'주'+(Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?' @ '+usd2(+b.avgTqqq):''),
       'SGOV '+Math.max(0,Math.floor(+b.sgov||0))+'주'+(Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?' @ '+usd2(+b.avgSgov):''),'현금 '+usd2(+b.cash||0)];
-    rows.push('<tr><td>'+String(b.date||'')+'</td><td>시작</td><td class="adjtxt">시작잔고</td><td colspan="4">'+baseParts.join(' · ')+'</td><td><button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-abase="1">수정</button></td></tr>');
+    rows.push('<tr><td>'+String(b.date||'')+'</td><td>시작</td><td class="adjtxt">시작잔고</td><td colspan="6">'+baseParts.join(' · ')+'</td><td><button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-abase="1">수정</button></td></tr>');
     $('alphaLedgerBody').innerHTML=rows.join('');
   }
 }

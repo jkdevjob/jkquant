@@ -51,5 +51,6 @@ async function main(){
   await d.deleteAssetSession('b');assert.equal(box.activeByHorizon[5],'a');assert.equal(loaded,1);
   await d.deleteAssetSession('a');assert.equal(box.activeByHorizon[5],'');assert.equal(loaded,2);
   console.log('PASS deleting inactive/active session preserves correct selection');
+  require('./check-plan-history-pnl.cjs');
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});
