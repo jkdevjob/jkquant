@@ -2280,7 +2280,7 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
 
   // 실제 해석 결과를 직접 돌려 본다 — 정규식만으로는 새는지 알 수 없다
   {
-    const F=new Function(kis.replace(/export /g,'')+'\nreturn {withEnv,modeList};')();
+    const F=new Function(kis.replace(/^import [^\n]+;\r?$/gm,'').replace(/export /g,'')+'\nreturn {withEnv,modeList};')();
     const solo={KIS_ENV:'vts',KIS_APPKEY:'k',KIS_APPSECRET:'s',KIS_ACCOUNT:'11111111-01'};
     const ids=m=>F.modeList(m).filter(x=>x.ready).map(x=>x.id).sort().join(',');
     ok('옛 단일키는 모의 두 갈래만 연다', ids(solo)==='kr-vts,us-vts', ids(solo));
@@ -10282,7 +10282,7 @@ console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 
   const {spawnSync}=require('child_process');
   const kisP=__d+'/functions/api/kis.js';
   function __kisHarness(){
-    const fs=require('fs'); const body=fs.readFileSync(process.argv[2],'utf8').replace(/^export /gm,'')+'\nreturn {onRequestGet};';
+    const fs=require('fs'); const body=fs.readFileSync(process.argv[2],'utf8').replace(/^import [^\n]+;\r?$/gm,'').replace(/^export /gm,'')+'\nreturn {onRequestGet};';
     const mk=(scn)=>{
       const calls=[], sleeps=[];
       const res=(obj,status=200)=>({status,ok:status>=200&&status<300,json:async()=>obj,text:async()=>JSON.stringify(obj)});
@@ -10328,6 +10328,7 @@ console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 
     fs.writeFileSync(tmp,'('+__kisHarness.toString()+')();');
     const r=spawnSync(process.execPath,[tmp,kisP],{encoding:'utf8',timeout:60000});
     try{ K=JSON.parse((r.stdout||'').trim().split('\n').pop()||'{}'); }catch(e){ K={error:'출력 해석 실패: '+(r.stdout||'').slice(0,200)+(r.stderr||'').slice(0,300)}; }
+    if(r.status!==0)K={error:'한투 조회 시험 실행 실패: '+(r.stderr||'').slice(0,400)};
     try{ fs.unlinkSync(tmp); }catch(e){} }
   const J=o=>JSON.stringify(o||K.error||{});
   const {A={},R={},N={},P={},E={},U={}}=K;
@@ -12204,7 +12205,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
       om=fs.readFileSync(__d+'/functions/api/opening-monitor.js','utf8'),dm=fs.readFileSync(__d+'/functions/api/daytrading-monitor.js','utf8'),
       du=fs.readFileSync(__d+'/functions/api/scalping-duel.js','utf8'),cp2=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8');
     ok('연구 메뉴 알림: [지피티 연구 탭] · [클로드 연구 탭] 머리말 · 실제 매수·매도만(지피티 일일결과 · 데이트레이딩 후보 · 대결 요약 텔레그램 없음)',
-       /"\[지피티 연구 "\+LABELS\[strategy\]\+"\] "\+icon/.test(sa)&&/if\(stage==="summary"\)return json\(\{ok:true,eventId,skipped:"buy_sell_only"\}\);/.test(sa)
+       /"\[지피티 연구 "\+info\.label\+"\] "\+icon/.test(sa)&&/researchTradeAlert\(inputStrategy,b\.kind\)/.test(sa)&&/if\(stage==="summary"\)return json\(\{ok:true,eventId,skipped:"buy_sell_only"\}\);/.test(sa)
        &&/title:"\[지피티 연구 "\+name\+"\] "/.test(pa)&&/"\[지피티 연구 시초가\] 🟢 매수 · "/.test(om)&&/text:title\+/.test(om)
        &&!/api\.telegram\.org|모의 후보 신호/.test(dm)&&!/api\.telegram\.org/.test(du)
        &&/open: "\[클로드 연구 시초가\]", etf: "\[클로드 연구 데이트레이딩\]", coin: "\[클로드 연구 비트코인\]", soxl: "\[클로드 연구 SOXL\]"/.test(cp2));

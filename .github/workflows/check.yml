@@ -39,6 +39,7 @@ jobs:
       - name: 한투 접근 토큰 하루 한 번 — 모의 토큰 중앙 보관 · 실전 토큰 밖으로 안 보냄 · 거절 시 그 토큰만 버림 (값·변이)
         run: |
           node --test tests/kis-token.test.mjs
+          node --test tests/market-day-cache.test.mjs
           python scripts/mutation_test_kis_token.py
       - name: 단타(클로드) 전략별 매매 이력 조회 — 경로 검사 · 소유자만 (값·변이)
         run: |

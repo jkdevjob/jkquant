@@ -60,3 +60,25 @@ test("private nightly relay rejects anonymous access and invalid dates before an
  const bad=await onRequestGet({request:new Request("https://jkquant.pages.dev/api/closing30-archive?date=bad",{headers:{"x-monitor-key":"fixture"}}),env:{AUTOTRADE_KEY:"fixture"}});
  assert.equal(bad.status,400);
 });
+test('종가 스케줄러가 당일/익일 유형을 알림까지 전달하고 그림자는 발송하지 않는다 (누락 변이 포함)',async()=>{
+ const file=new URL('../worker/opening-scheduler/src/index.js',import.meta.url),src=fs.readFileSync(file,'utf8');
+ const load=s=>import('data:text/javascript;base64,'+Buffer.from(s.replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=class {};')
+  .replaceAll('../../../functions/api/',new URL('../functions/api/',import.meta.url).href)+'\nexport {closingAlert};').toString('base64'));
+ async function probe(module){
+  const previous=globalThis.fetch,calls=[];
+  globalThis.fetch=async(u,init)=>{calls.push(JSON.parse(init.body));return Response.json({ok:true});};
+  try{
+   for(const kind of ['day','overnight']){
+    const e={id:'test:'+kind,kind,variant:'baseline',name:'종목',code:'005930',price:100,source:'연구 기준가격',createdAt:'2026-10-23T06:07:00Z',targetHm:1507};
+    await module.closingAlert({MONITOR_KEY:'fixture'},'2026-10-23',e,'buy');
+    assert.equal(calls.at(-1).kind,kind);assert.equal(calls.at(-1).eventId,e.id);
+    assert.equal(calls.at(-1).strategy,'closing30');
+    await module.closingAlert({MONITOR_KEY:'fixture'},'2026-10-23',{...e,variant:'dip_2'},'buy');
+   }
+   assert.equal(calls.length,2);
+  }finally{globalThis.fetch=previous;}
+ }
+ await probe(await load(src));
+ const mutant=src.replace('kind:e.kind,stage,date:','stage,date:');assert.notEqual(mutant,src);
+ await assert.rejects(async()=>probe(await load(mutant)),{name:'AssertionError'});
+});

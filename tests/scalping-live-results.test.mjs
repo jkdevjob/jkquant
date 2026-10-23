@@ -50,6 +50,16 @@ test('active session checks completed minutes without requiring future scans; kn
  const known=opening(traded,now);assert.equal(known.trades,1);assert.equal(known.closed,1);
  assert.equal(known.realizedReturnPct,1.25);assert.equal(known.returnPct,null);assert.equal(known.state,'unavailable');
 });
+test('active monitor stops: elapsed missing minutes cannot stay no signal behind its last scan',()=>{
+ const l=scan();l.scans=l.scans.filter(s=>s.targetHm<=910);
+ // The 09:11 target may still be in flight at 09:12; earlier completed scans stay valid.
+ assert.equal(opening(l,Date.parse('2026-10-14T09:12:00+09:00')).state,'no_signal');
+ const stopped=opening(l,Date.parse('2026-10-14T09:16:00+09:00'));
+ assert.deepEqual(stopped.scanCoverage.missingTargets,[911,912,913,914]);
+ assert.equal(stopped.state,'unavailable');assert.equal(stopped.returnPct,null);
+ assert.equal(stopped.noTrade,false);assert.equal(stopped.sourceIncomplete,true);
+ assert.equal(opening(l,Date.parse('2026-10-14T09:31:00+09:00')).scanCoverage.missingTargets.at(-1),930);
+});
 test('opening only promoted main original events, excludes baseline and shadow',()=>{
  const l=scan([event('buy',null),event('sell',99),event('buy',null,'promoted'),event('sell',-1.25,'promoted'),event('buy',null,'shadow')]);l.mainVariant='promoted';
  const r=opening(l,now);assert.equal(r.trades,1);assert.equal(r.returnPct,-1.25);assert.equal(r.state,'closed');assert.equal(r.losses,1);
@@ -145,6 +155,7 @@ test('mutants: missing numeric null guard, main variant filter and polling inter
  for(const [mutate,verify] of [
   [s=>s.replace("v==null||v===''||",''),c=>assert.equal(c.summarizePaperLedger('daytrading',ledger([{status:'closed',pnl:null}]),now).returnPct,null)],
   [s=>s.replace('partial=!coverage.complete','partial=!openingScanOkay(latest)'),c=>{const l=scan();l.scans=l.scans.filter(s=>s.targetHm!==906);assert.equal(c.summarizeOpeningLedger(l,now).state,'unavailable');}],
+  [s=>s.replace('Math.max(last,clock.hm-2)','last'),c=>{const l=scan();l.scans=l.scans.filter(s=>s.targetHm<=910);assert.equal(c.summarizeOpeningLedger(l,Date.parse('2026-10-14T09:16:00+09:00')).state,'unavailable');}],
   [s=>s.replace('e.variant===variant&&',''),c=>{const l=scan([event('buy',null),event('sell',99),event('buy',null,'promoted'),event('sell',-1.25,'promoted')]);l.events[0].signal.entryTime=900;l.events[1].signal.entryTime=900;l.mainVariant='promoted';assert.equal(c.summarizeOpeningLedger(l,now).trades,1);}]
  ]){const c={...base};vm.createContext(c);vm.runInContext(mutate(executable),c);assert.throws(()=>verify(c),{name:'AssertionError'});}
  const b=browser(block.replace('DAILY_LIVE_INTERVAL_MS=30000','DAILY_LIVE_INTERVAL_MS=60000'));b.ctx.startDailyLiveAuto();assert.throws(()=>assert.equal(b.intervals[0].ms,30000),{name:'AssertionError'});
