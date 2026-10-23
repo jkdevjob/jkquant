@@ -23,6 +23,91 @@ function today(tz){
   return new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 }
 
+async function allTradePresentations({Worker=PresaleAlertStore,Pages}={}){
+  const pages=Pages||await import('../functions/api/scalping-alert.js');
+  const x=fakeStore();
+  if(Worker!==PresaleAlertStore){
+    x.worker=new Worker({storage:{get:async k=>x.state.get(k),put:async(k,v)=>{x.state.set(k,v)},list:async({prefix})=>new Map([...x.state].filter(([k])=>k.startsWith(prefix)))}},{MONITOR_KEY:'test-monitor-key'});
+    x.worker.notifyAll=async()=>({eligible:1,sent:1,failed:0,removed:0,total:1});
+  }
+  const oldFetch=globalThis.fetch,telegrams=[],pushes=[];
+  globalThis.fetch=async(url,init={})=>{
+    if(String(url).includes('api.telegram.org')){
+      telegrams.push(JSON.parse(init.body).text);
+      return Response.json({ok:true,result:{message_id:telegrams.length}});
+    }
+    pushes.push(JSON.parse(init.body));
+    return x.worker.fetch(new Request(url,init));
+  };
+  const cases=[
+    ['opening',undefined,'시초가','opening'],
+    ['daytrading',undefined,'데이트레이딩','daytrading'],
+    ['crypto',undefined,'비트코인','crypto'],
+    ['soxl',undefined,'SOXL','soxl'],
+    ['closing30','day','종가 30분','closing30'],
+    ['closing30','overnight','개별 종목 종가 베팅','closing_bet']
+  ];
+  try{
+    for(const [strategy,kind,label,tab] of cases)for(const stage of ['buy','sell']){
+      const b={strategy,kind,stage,eventId:`all:${tab}:${stage}`,date:today(strategy==='soxl'?'America/New_York':'Asia/Seoul'),time:'15:07',eventAt:new Date().toISOString(),lines:['테스트 종목 · 연구 기준가격']};
+      const post=()=>pages.onRequestPost({request:new Request('https://app.test/api/scalping-alert',{method:'POST',headers:{'x-monitor-key':'test-monitor-key'},body:JSON.stringify(b)}),env:{AUTOTRADE_KEY:'test-monitor-key',TELEGRAM_BOT_TOKEN:'fixture',TELEGRAM_CHAT_ID:'fixture'}});
+      assert.equal((await post()).status,200,tab+' '+stage);
+      const latest=await(await x.worker.fetch(new Request('https://push.test/latest'))).json();
+      const title=`[지피티 연구 ${label}] ${stage==='buy'?'🟢 매수':'🔴 매도'}`;
+      assert.equal(latest.alert.title,title,tab+' web title');
+      assert.equal(telegrams.at(-1).split('\n')[0],title,tab+' Telegram title');
+      assert.equal(latest.alert.url,'https://jkquant.pages.dev/scalping?strategy='+tab,tab+' destination');
+      assert.equal(latest.alert.type,strategy,'existing subscription retained');
+      assert.doesNotMatch(latest.alert.title+' '+latest.alert.body,/undefined|NaN|\[object Object\]/);
+      const count=telegrams.length;
+      assert.equal((await(await post()).json()).duplicate,true);
+      assert.equal(telegrams.length,count,'no second Telegram');
+    }
+    assert.equal(telegrams.length,12);
+    assert.equal(pushes.filter(x=>x.kind==='overnight'&&x.strategy==='closing30').length,4,'closing subscription and subtype survive relay');
+  }finally{globalThis.fetch=oldFetch;}
+}
+test('전체 매매전략·종가 두 유형: 매수/매도 웹푸시와 Telegram 제목·탭·기존 영수증 일치',()=>allTradePresentations());
+
+test('미등록 전략·상속 속성·잘못된 종가 유형은 전송 전에 거절한다',async()=>{
+  const pages=await import('../functions/api/scalping-alert.js'),oldFetch=globalThis.fetch;let calls=0;
+  globalThis.fetch=async()=>{calls++;throw Error('must reject first');};
+  try{
+    for(const [strategy,kind] of [['unknown'],['constructor'],['__proto__'],['toString'],['closing30','wrong']]){
+      const r=await pages.onRequestPost({request:new Request('https://app.test/api/scalping-alert',{method:'POST',headers:{'x-monitor-key':'test-monitor-key'},body:JSON.stringify({strategy,kind,stage:'buy',eventId:'invalid',date:today('Asia/Seoul')})}),env:{AUTOTRADE_KEY:'test-monitor-key'}});
+      assert.equal(r.status,400,strategy);
+    }
+    assert.equal(calls,0);
+  }finally{globalThis.fetch=oldFetch;}
+});
+test('기존 undefined 알림은 읽기 화면에서 바로잡고 원본·시각·ID·전송 영수증은 보존한다',async()=>{
+  const x=fakeStore(),date=today('Asia/Seoul'),createdAt=new Date().toISOString();
+  const rows=['day','overnight'].map(kind=>({id:`trade:closing30:${date}:${kind}:baseline:005930:buy`,type:'closing30',stage:'buy',title:'[지피티 연구 undefined] 🟢 매수',body:'원본 본문',url:'https://jkquant.pages.dev/scalping?strategy=closing30',createdAt}));
+  x.state.set('latest',rows[0]);x.state.set('recentAlerts',rows);
+  const before=JSON.stringify([...x.state]);
+  const j=await(await x.worker.fetch(new Request('https://push.test/latest'))).json();
+  assert.equal(j.alert.title,'[지피티 연구 종가 30분] 🟢 매수');
+  assert.equal(j.alerts[1].title,'[지피티 연구 개별 종목 종가 베팅] 🟢 매수');
+  assert.equal(j.alerts[1].url,'https://jkquant.pages.dev/scalping?strategy=closing_bet');
+  assert.deepEqual(j.alerts.map(x=>[x.id,x.createdAt,x.body]),rows.map(x=>[x.id,x.createdAt,x.body]));
+  assert.equal(JSON.stringify([...x.state]),before);assert.equal(x.deliveries.length,0);
+});
+
+test('값 변이: 종가 이름 누락·종가 베팅 유형 유실·잘못된 이동 탭을 실제 알림으로 잡는다',async()=>{
+  const workerFile=new URL('../worker/presale-alert/src/index.js',import.meta.url),pageFile=new URL('../functions/api/scalping-alert.js',import.meta.url);
+  const ws=readFileSync(workerFile,'utf8'),ps=readFileSync(pageFile,'utf8');
+  const load=async(s,file)=>import('data:text/javascript;base64,'+Buffer.from(s.replace(/from (["'])(\.\.?\/[^"']+)\1/g,(_,q,p)=>'from '+q+new URL(p,file).href+q)).toString('base64'));
+  for(const [source,file,from,to,isWorker] of [
+    [ws,workerFile,'const name=info.label;','const name={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic];',true],
+    [ps,pageFile,'kind:b.kind','kind:undefined',false],
+    [ws,workerFile,'+info.tab','+topic',true]
+  ]){
+    assert(source.includes(from),'mutation anchor '+from);
+    const module=await load(source.replace(from,to),file);
+    await assert.rejects(()=>allTradePresentations(isWorker?{Worker:module.PresaleAlertStore}:{Pages:module}),{name:'AssertionError'});
+  }
+});
+
 test("신호 인증·중복 차단·시장일 제한·매수/매도 각각 푸시",async()=>{
   const x=fakeStore(),b={strategy:"opening",stage:"buy",eventId:"opening-test-1",date:today("Asia/Seoul"),time:"09:07 KST",lines:["000001 테스트","매수 알림"]};
   assert.equal((await x.send(b,"wrong")).status,401);

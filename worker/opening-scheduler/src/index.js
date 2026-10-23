@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { krxDay } from "../../../functions/api/_krx_calendar.js";   // KRX 휴장일 — 주문 경로(Pages)와 같은 목록
+import {marketDayCache} from "../../../functions/api/_market-day-cache.js";
 import {defaultPaperSettings,changePaperSettings} from "../../../functions/api/_paper-trading.js";
 import {openingOrderRefs,openingExecutionResult} from "../../../functions/api/_opening-execution.js";
 import {researchBroker} from "../../../functions/api/_research-broker.js";
@@ -157,6 +158,7 @@ export class OpeningSignalStore extends DurableObject {
   }
   async fetch(request){
     const u=new URL(request.url);
+    if(u.pathname==='/market-day')return marketDayCache(this.ctx.storage,request);
     if(u.pathname.startsWith('/research-')){
       if(request.method==='GET')return researchBroker(this.ctx.storage,this.env,request);
       // Serialize the research broker calls across strategies; claims are also transactional.
@@ -694,7 +696,7 @@ async function closingAlert(env,date,e,stage){
     const time=String(e.targetHm||0).padStart(4,"0").replace(/(..)(..)$/,"$1:$2");
     const r=await fetch(baseUrl(env)+"/api/scalping-alert",{method:"POST",
       headers:{"x-monitor-key":env.MONITOR_KEY,"content-type":"application/json"},
-      body:JSON.stringify({strategy:"closing30",stage,date:e.createdAt.slice(0,10)||date,time,
+      body:JSON.stringify({strategy:"closing30",kind:e.kind,stage,date:e.createdAt.slice(0,10)||date,time,
         eventId:e.id,eventAt:e.createdAt,lines})});
     const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)console.error("closing30 alert "+(j.error||r.status));
   }catch(error){console.error("closing30 alert failed "+String(error));}
@@ -1123,6 +1125,11 @@ export default {
   },
   async fetch(request,env){
     const u=new URL(request.url);
+    if(u.pathname==='/market-day'){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      if(!['GET','POST'].includes(request.method))return json({ok:false,error:'method not allowed'},405);
+      return store(env,'__market_days__').fetch(new Request('https://opening-signal.internal/market-day'+u.search,request));
+    }
     if(u.pathname==='/broker-status'){
       if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
       return json({ok:true,version:RESEARCH_BROKER_VERSION,strategies:['gpt_opening','gpt_closing30','gpt_closing_bet','gpt_tenbagger'],environment:'vts',settings:'/paper-settings'});

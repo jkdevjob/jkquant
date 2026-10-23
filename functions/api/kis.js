@@ -31,6 +31,7 @@
 //   시장은 고를 필요가 없다 — code 가 6자리면 국내, 영문 티커면 해외로 알아서 간다.
 //   그래서 kr-vts · kr-real · us-vts · us-real 네 조합이 모두 열린다.
 
+import {marketDayEvidence} from "./_market-day-cache.js";
 const JH = {
   "Content-Type": "application/json; charset=utf-8",
   "Access-Control-Allow-Origin": "*",
@@ -443,18 +444,36 @@ export async function onRequestGet({ request, env }) {
     if (!/^\d{8}$/.test(date)) return json({ error: "날짜는 YYYYMMDD 형식입니다." }, 400);
 
     const cacheUrl = new URL(request.url);
-    cacheUrl.search = "?op=holiday&market=kr&date=" + date;
+    const isoDate = date.slice(0,4) + "-" + date.slice(4,6) + "-" + date.slice(6,8);
+    if (!Number.isFinite(Date.parse(isoDate+'T00:00:00Z')) || new Date(isoDate+'T00:00:00Z').toISOString().slice(0,10)!==isoDate)
+      return json({ok:false,error:"올바른 날짜가 아닙니다."},400);
+    cacheUrl.search = "?op=holiday&market=kr&date=" + date + "&cacheVersion=2";
     const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
+    const responseFor = evidence => new Response(JSON.stringify(evidence), {status:200,headers:{...JH,
+      "Cache-Control":"public, max-age=3600, s-maxage=86400"}});
+    const cacheMonitorKey = String(rawEnv.OPENING_MONITOR_KEY || rawEnv.AUTOTRADE_KEY || '').trim();
+    const cacheEndpoint = String(rawEnv.OPENING_WORKER_URL || 'https://jkquant-opening-scheduler.mumae4.workers.dev').replace(/\/$/,'') + '/market-day';
+    const sharedDay = async evidence => {
+      if (!cacheMonitorKey) return null;
+      try {
+        const r = await fetch(cacheEndpoint + (evidence ? '' : '?date='+isoDate), {
+          method:evidence?'POST':'GET',headers:{'x-monitor-key':cacheMonitorKey,'content-type':'application/json'},
+          ...(evidence?{body:JSON.stringify(evidence)}:{}),signal:AbortSignal.timeout(2500)});
+        const j=await r.json();
+        return r.ok&&j.ok===true?marketDayEvidence(j.evidence,isoDate):null;
+      } catch { return null; }
+    };
     try {
       const cache = globalThis.caches && globalThis.caches.default;
       const hit = cache ? await cache.match(cacheKey) : null;
-      if (hit) return hit;
+      const evidence = hit ? marketDayEvidence(await hit.json(),isoDate) : null;
+      if (evidence) return responseFor(evidence);
     } catch (e) {}
-
-    const requested = String(url.searchParams.get("env") || "").toLowerCase();
-    const order = requested === "real" || requested === "vts"
-      ? [requested, requested === "real" ? "vts" : "real"]
-      : [wantEnv(null, rawEnv), wantEnv(null, rawEnv) === "real" ? "vts" : "real"];
+    const shared = await sharedDay();
+    if (shared) return responseFor(shared);
+    // CTCA0903R is a read-only exchange calendar query unsupported by KIS VTS.
+    // Keep real credentials in Pages; share only its verified Y/N answer across isolates.
+    const order = ['real'];
     const tried = [], errors = [];
     for (const mode of [...new Set(order)]) {
       const e = withEnv(rawEnv, mode, "kr");
@@ -476,23 +495,24 @@ export async function onRequestGet({ request, env }) {
         const rows = Array.isArray(j.output) ? j.output : (j.output ? [j.output] : []);
         const row = rows.find(x => String(x && x.bass_dt || "") === date);
         if (!row) throw new Error("응답에 기준일자가 없습니다.");
-        const open = String(row.opnd_yn || "").toUpperCase() === "Y";
-        const body = JSON.stringify({
+        const opndYn = String(row.opnd_yn || "").toUpperCase();
+        if (!['Y','N'].includes(opndYn)) throw new Error("응답에 유효한 개장 여부가 없습니다.");
+        const open = opndYn === "Y";
+        const evidence = {
           ok: true,
           market: "KRX",
           date: date.slice(0,4) + "-" + date.slice(4,6) + "-" + date.slice(6,8),
           open,
-          opndYn: String(row.opnd_yn || ""),
+          opndYn,
           businessDay: String(row.bzdy_yn || ""),
           tradeDay: String(row.tr_day_yn || ""),
           settlementDay: String(row.sttl_day_yn || ""),
           source: "KIS/CTCA0903R",
           env: mode,
-        });
-        const response = new Response(body, { status: 200, headers: {
-          ...JH,
-          "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=172800",
-        }});
+          checkedAt: new Date().toISOString(),
+        };
+        await sharedDay(evidence);
+        const response = responseFor(evidence);
         try {
           const cache = globalThis.caches && globalThis.caches.default;
           if (cache) await cache.put(cacheKey, response.clone());
@@ -502,6 +522,10 @@ export async function onRequestGet({ request, env }) {
         errors.push(mode + ": " + String(e.message || e));
       }
     }
+    // A concurrent Pages location may have completed the one fresh lookup while
+    // this location encountered a token rate limit. Re-read evidence, never retry an order.
+    const concurrent = await sharedDay();
+    if (concurrent) return responseFor(concurrent);
     return json({
       ok: false,
       market: "KRX",

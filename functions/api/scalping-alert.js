@@ -3,8 +3,8 @@
 // 사용자 요청(2026-10-13): 모든 연구 메뉴는 실제 매수 · 매도 때만 알린다 — 메시지는 '[지피티 연구 시초가]' 처럼 시작하고,
 // 장 종료 일일결과(summary)는 보내지 않는다(요청은 받아 skipped 로 답한다).
 
+import {researchTradeAlert} from "./_research_alerts.js";
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
-const LABELS={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL",swing:"과매도 반등",closing30:"종가 30분"};
 
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
 function authorized(request,env){
@@ -29,7 +29,7 @@ async function webPush(env,b){
   const endpoint=String(env.PUSH_ALERT_WORKER_URL||"https://jkquant-presale-alert.mumae4.workers.dev").replace(/\/$/,"")+"/signal";
   try{
     const r=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json","x-monitor-key":key},
-      body:JSON.stringify({strategy:b.strategy,stage:b.stage,eventId:b.eventId,date:b.date,time:b.time,eventAt:b.eventAt,lines:b.lines})});
+      body:JSON.stringify({strategy:b.strategy,kind:b.kind,stage:b.stage,eventId:b.eventId,date:b.date,time:b.time,eventAt:b.eventAt,lines:b.lines})});
     const j=await r.json().catch(()=>({}));
     return r.ok&&j.ok?{ok:true,duplicate:!!j.duplicate,delivery:j.delivery||null}:{ok:false,error:j.error||("push HTTP "+r.status)};
   }catch(e){return {ok:false,error:String(e.message||e)};}
@@ -56,8 +56,11 @@ export async function onRequestPost({request,env}){
   let eventId="",webDelivery=null;
   try{
     const b=await request.json();
-    const strategy=clean(b.strategy,30).toLowerCase(),stage=clean(b.stage,20).toLowerCase();
-    if(!LABELS[strategy])return json({ok:false,error:"unknown strategy"},400);
+    const inputStrategy=clean(b.strategy,30).toLowerCase(),stage=clean(b.stage,20).toLowerCase();
+    // Preserve the retired swing Telegram route, while rejecting inherited object keys.
+    const info=researchTradeAlert(inputStrategy,b.kind)||(inputStrategy==='swing'?{label:'과매도 반등',topic:'swing'}:null);
+    if(!info)return json({ok:false,error:"unknown strategy or kind"},400);
+    const strategy=info.topic,kind=info.tab==='closing_bet'?'overnight':b.kind;
     if(!["buy","sell","summary"].includes(stage))return json({ok:false,error:"unknown stage"},400);
     eventId=clean(b.eventId,220);
     if(!eventId)return json({ok:false,error:"eventId required"},400);
@@ -69,7 +72,7 @@ export async function onRequestPost({request,env}){
     if(stage==="summary")return json({ok:true,eventId,skipped:"buy_sell_only"});
     const webOnly=b.webOnly===true;
     // Web push has its own durable receipt. A Telegram receipt must not suppress its retry.
-    webDelivery=await webPush(env,{...b,strategy,stage,eventId});
+    webDelivery=await webPush(env,{...b,strategy,kind,stage,eventId});
     if(webOnly)return json({ok:webDelivery.ok,eventId,webPush:webDelivery},webDelivery.ok?200:502);
     // This durable, serialized claim works across Pages locations and survives restarts.
     // Fail closed: a receipt-store outage must never fall back to a direct Telegram send.
@@ -84,7 +87,7 @@ export async function onRequestPost({request,env}){
     const when=[clean(b.date,20),clean(b.time,20)].filter(Boolean).join(" ");
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,500)).filter(Boolean).slice(0,16):[];
     const msg=[
-      "[지피티 연구 "+LABELS[strategy]+"] "+icon+" "+action,
+      "[지피티 연구 "+info.label+"] "+icon+" "+action,
       when,
       "",
       ...lines,

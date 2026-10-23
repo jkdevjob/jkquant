@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const source=fs.readFileSync(new URL('../functions/api/kis.js',import.meta.url),'utf8');
-const load=async s=>import('data:text/javascript;base64,'+Buffer.from(s+'\nexport {dailyHistoryQuery};').toString('base64'));
+const load=async s=>import('data:text/javascript;base64,'+Buffer.from(s.replace('"./_market-day-cache.js"',JSON.stringify(new URL('../functions/api/_market-day-cache.js',import.meta.url).href))+'\nexport {dailyHistoryQuery};').toString('base64'));
 const off=Date.parse('2026-10-01T07:00:00Z'); // 16:00 KST
 const params=()=>new URLSearchParams({op:'dayhist',code:'0220WL',start:'20260825',end:'20260826',adjustment:'1'});
 function probe(m){
