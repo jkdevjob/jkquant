@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "date": "2026-10-25",
+  "preparedAt": "2026-10-24T22:04:00.000Z",
+  "mainSha": "ade24fc6d17e304250682c3921d264447d66f94a",
+  "dataSha": "24742d5d46d9ebcab4d9ff6077eb37559a588df7",
+  "previousReportDate": "2026-10-24",
+  "previousReportCommit": "4b484b8aa1855672d5461892523064b09e55696e",
+  "decision": "새 거래 표본 없음. 채택 보류; 기존 운영전략·주문·계좌·장부·main·PR·배포 변경 없음.",
+  "focusedReview": {
+    "hypothesis": "시초가 진입을 09:20 KST 이전으로 제한하면 비용 후 손실이 줄어든다.",
+    "frozenCriteria": "비용0.23%+편도2.5호가 fallback, 갭+2~+7%, 09:30청산, 동일 모집단·자본, 시간순 OOS; baseline50/후보30거래 이상, 전체+0.10%p·최근20일+0.05%p, 선두7회 필요.",
+    "baseline": {"trades":67,"avgTradePct":-0.346572,"last20Trades":55,"last20AvgTradePct":-0.320489},
+    "candidate": {"trades":28,"avgTradePct":-0.041642,"edgeAllPp":0.304930,"edgeLast20Pp":0.278848,"leaderSessions":3,"requiredLeaderSessions":7},
+    "result": "주말 신규 표본0. 최소30거래·선두7회 미달이므로 보류하고 새 shadowVersion을 만들지 않음."
+  },
+  "baseline": {
+    "opening": {"latestDecisionDate":"2026-10-23","latestTradeDate":"2026-10-22","dailyPct":0,"trades":51,"days":9,"avgDailyPct":-0.530615,"profitFactor":0.509753,"mddPct":-5.407310,"worstDayPct":-2.549722,"plus1Days":0,"plus5Weeks":0,"weekPct":0.717377,"weekGapPp":4.282623},
+    "daytrading": {"latestDate":"2026-10-23","dailyPct":-1.25,"trades":43,"days":16,"avgDailyPct":-0.449743,"profitFactor":0.447922,"mddPct":-7.681194,"worstDayPct":-1.25,"plus1Days":0,"plus5Weeks":0,"weekPct":-2.243629,"weekGapPp":7.243629},
+    "crypto": {"latestDecisionDate":"2026-10-23","latestTradeDate":"2026-10-21","dailyPct":0,"trades":13,"days":13,"avgDailyPct":-0.103230,"profitFactor":0.532088,"mddPct":-2.029979,"worstDayPct":-0.64,"plus1Days":0,"plus5Weeks":0,"weekPct":-0.799677,"weekGapPp":5.799677,"quality":"23 fixed no_trade; 24 trade alert not fixed"},
+    "soxl": {"latestTradeDate":"2026-10-23","dailyPct":-1.4,"trades":7,"days":17,"avgDailyPct":-0.576471,"profitFactor":0,"mddPct":-9.397871,"worstDayPct":-1.4,"plus1Days":0,"plus5Weeks":0,"weekPct":-2.7804,"weekGapPp":7.7804}
+  },
+  "shadow": {
+    "opening": {"latestDate":"2026-10-23","dailyPct":-1.622036,"trades":13,"days":14,"avgDailyPct":-0.705945,"profitFactor":0.036189,"mddPct":-9.477183,"worstDayPct":-2.026469,"plus1Days":0,"plus5Weeks":0,"weekPct":-5.480826},
+    "daytrading": {"latestDate":"2026-10-23","dailyPct":-1.05,"trades":45,"days":15,"avgDailyPct":-0.132862,"profitFactor":0.780984,"mddPct":-4.374347,"worstDayPct":-1.05,"plus1Days":3,"plus5Weeks":0,"weekPct":1.339860},
+    "crypto": {"latestDate":"2026-10-23","dailyPct":0,"trades":0,"days":21,"verified":false},
+    "soxl": {"latestDate":"2026-10-23","dailyPct":0,"trades":1,"days":17,"avgDailyPct":0.077128,"profitFactor":999,"mddPct":0,"worstDayPct":1.311170,"plus1Days":1,"plus5Weeks":0,"verified":false}
+  },
+  "tenbagger": {"asOf":"2026-10-22","generatedAt":"2026-10-23T15:21:40.398194Z","strategyVersion":"1.0.0","rulesSha256":"5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465","engineSha256":"9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391","sourceUpstreamCommit":"eeed0817d1478597b738a3a6149c170ec7e3f4cb","sourceCombinedSha256":"02cfe92add84d61cf27661f296ac94b5fe0067929c1aa726661c23edf28e3c40","registrations":122,"uniqueSymbols":114,"newRegistrations":0,"entered":99,"waiting":23,"newEntries":0,"closedStopTrail":8,"newClosedStopTrail":0,"closedHold1260":0,"matured":{"20":0,"60":0,"120":0,"252":0,"756":0,"1260":0},"firstTouches":{"2x":0,"5x":0,"10x":0},"revisions":0,"limitations":"가격조건 탐색가설;재무시점패널·시장대조 없음;종목별 관찰이며 계좌수익/CAGR/초과수익 아님"},
+  "claudeResearch": {"generatedAt":"2026-10-24T03:44:23.856720+09:00","duelThrough":"2026-10-23","gptCumulativePct":-3.809598,"claudeCumulativePct":-10.229424,"record":{"claude":9,"gpt":7,"draw":2},"close30":"first prospective trade -1.298797%, 1/20","tenbaggerAsOf":"2026-10-22","tenbaggerHoldings":20,"tenbaggerClosed":0,"tenbaggerMarkedRetPct":2.23,"tenbaggerMddPct":-2.69},
+  "sourceTimes": {"shadowGeneratedAt":"2026-10-24T14:06:56.189228+09:00","nightlyGeneratedAt":"2026-10-24T23:26:49.003635+09:00","claudeGeneratedAt":"2026-10-24T03:44:23.856720+09:00","cryptoGeneratedAt":"2026-10-24","soxlGeneratedAt":"2026-10-24","tenbaggerGeneratedAt":"2026-10-23T15:21:40.398194Z"},
+  "uiAndNotifications": {"researchUiVersion":"1.48.1","pushWorkerVersion":"2.9.1","previousMorningReport":{"date":"2026-10-24","pushSent":3,"pushEligible":3,"pushFailed":0,"telegram":"sent","complete":true},"latestTradeReceipts":{"crypto20261024":"push3/3,telegram sent; fixed PnL absent","soxl20261023":"push3/3,telegram sent"},"actualDeviceDisplay":"unverified","ownerAccountValues":"unverified"},
+  "tests": {"unitPassed":78,"unitFailed":0,"scope":"최신 main의 보고·실시간 표출·알림 중복·제목·라우팅·시장일 값검증; 실기기·실체결·수익성 검증 아님"}
+}
