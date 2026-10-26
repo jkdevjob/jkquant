@@ -52,15 +52,15 @@ function world(worker=W){
 async function mocked(h,fn){const old=globalThis.fetch;globalThis.fetch=h.fetch.bind(h);try{return await fn();}finally{globalThis.fetch=old;}}
 const ownerRequest=(method='GET',patch)=>new Request('https://app/api/paper-trading-settings',{method,headers:{Authorization:'Bearer fixture'},...(patch?{body:JSON.stringify(patch)}:{})});
 const patch={expectedRevision:0,strategy:'gpt_opening',enabled:true,budget:300000};
-test('seven research strategies default OFF; malformed/unsupported/budget settings rejected',()=>{
- const s=defaultPaperSettings();assert.equal(PAPER_STRATEGIES.length,7);assert.ok(Object.values(s.strategies).every(x=>x.enabled===false));assert.ok(validPaperSettings(s));
- for(const change of [{...patch,budget:9999},{...patch,budget:100000001},{...patch,budget:1.5},{...patch,enabled:'true'},{...patch,strategy:'gpt_crypto'},{...patch,strategy:'claude_opening'}])assert.throws(()=>changePaperSettings(s,change));
+test('research strategies (GPT 7 · Claude 5) default OFF; malformed/unsupported/budget settings rejected',()=>{
+ const s=defaultPaperSettings();assert.equal(PAPER_STRATEGIES.length,12);assert.ok(Object.values(s.strategies).every(x=>x.enabled===false));assert.ok(validPaperSettings(s));
+ for(const change of [{...patch,budget:9999},{...patch,budget:100000001},{...patch,budget:1.5},{...patch,enabled:'true'},{...patch,strategy:'gpt_crypto'},{...patch,strategy:'claude_crypto'},{...patch,strategy:'claude_unknown'}])assert.throws(()=>changePaperSettings(s,change));
  assert.equal(s.revision,0);assert.equal(s.strategies.gpt_opening.enabled,false);
  assert.throws(()=>changePaperSettings(s,{...patch,expectedRevision:1}),e=>e.status===409);
 });
 test('owner API writes durable settings; reload, global stop and all-OFF persist without order calls',async()=>{
  const h=world();await mocked(h,async()=>{
-  let r=await onRequest({request:ownerRequest(),env:h.env}),j=await r.json();assert.equal(j.settings.revision,0);assert.equal(j.strategies.length,7);
+  let r=await onRequest({request:ownerRequest(),env:h.env}),j=await r.json();assert.equal(j.settings.revision,0);assert.equal(j.strategies.length,12);
   r=await onRequest({request:ownerRequest('POST',patch),env:h.env});j=await r.json();assert.equal(r.status,200);assert.equal(j.settings.strategies.gpt_opening.enabled,true);assert.equal(j.settings.strategies.gpt_opening.budget,300000);
   j=await (await onRequest({request:ownerRequest(),env:{...h.env,SCALPING_VTS_AUTO:'0'}})).json();assert.equal(j.settings.revision,1);assert.equal(j.globalStopped,true);
   j=await (await onRequest({request:ownerRequest('POST',{allOff:true,expectedRevision:1,secret:'must not persist'}),env:h.env})).json();assert.equal(j.settings.revision,2);assert.ok(Object.values(j.settings.strategies).every(x=>!x.enabled));
@@ -185,19 +185,19 @@ function uiHarness(src=read('settings-paper-trading.js')){
  vm.createContext(c);vm.runInContext(src,c);h.c=c;h.events=events;h.buttons=()=>buttons;return h;
 }
 async function checkUI(src){
- const h=uiHarness(src);await h.c.loadPaperSettings();assert.equal((h.html.match(/>OFF<\/span>/g)||[]).length,7);assert.equal(h.node('paper_enabled_gpt_crypto').disabled,true);
+ const h=uiHarness(src);await h.c.loadPaperSettings();assert.equal((h.html.match(/>OFF<\/span>/g)||[]).length,12);assert.equal(h.node('paper_enabled_gpt_crypto').disabled,true);assert.equal(h.node('paper_enabled_claude_crypto').disabled,true);assert.equal(h.node('paper_enabled_claude_opening').disabled,false);
  for(const s of PAPER_STRATEGIES.filter(s=>s.supported))assert.equal(h.node('paper_enabled_'+s.id).disabled,false);
  h.node('paper_enabled_gpt_opening').checked=true;h.node('paper_budget_gpt_opening').value='500000';await h.c.savePaperSetting('gpt_opening');assert.equal(h.server.strategies.gpt_opening.enabled,true);assert.equal(h.server.strategies.gpt_opening.budget,500000);assert.match(h.html,/>ON<\/span>/);
  await h.c.savePaperSetting(null,true);assert.ok(Object.values(h.server.strategies).every(x=>!x.enabled));assert.equal(JSON.parse(h.requests.at(-1).body).expectedRevision,1);
  h.node('paper_enabled_gpt_opening').checked=true;h.fail=true;await h.c.savePaperSetting('gpt_opening');assert.match(h.node('paperTradingMessage').textContent,/저장 실패/);assert.doesNotMatch(h.html,/>ON<\/span>/);assert.equal(h.node('paperReload').disabled,false);
 }
-test('actual settings UI renders seven OFF, saves per-strategy budget, all OFF and failed writes honestly',()=>checkUI());
+test('actual settings UI renders all twelve OFF, saves per-strategy budget, all OFF and failed writes honestly',()=>checkUI());
 test('logout/user switch drops stale responses and new login still loads server settings',async()=>{
  const h=uiHarness();let release;h.defer=()=>new Promise(r=>release=r);const old=h.c.loadPaperSettings();await new Promise(setImmediate);
  h.c.window.jkAuth.currentUser=null;h.events['jk-settings-auth']();assert.equal(h.html,'');
  h.defer=null;h.c.window.jkAuth.currentUser={getIdToken:async()=>'new'};h.events['jk-settings-auth']();await new Promise(setImmediate);
  release(Response.json({ok:true,settings:changePaperSettings(defaultPaperSettings(),patch),strategies:PAPER_STRATEGIES}));await old;
- assert.equal((h.html.match(/>OFF<\/span>/g)||[]).length,7);assert.doesNotMatch(h.html,/>ON<\/span>/);
+ assert.equal((h.html.match(/>OFF<\/span>/g)||[]).length,12);assert.doesNotMatch(h.html,/>ON<\/span>/);
 });
 test('value mutants catch default ON, missing order guard, top-level success and unrecorded intents',async()=>{
  const defaults=read('functions/api/_paper-trading.js'),mutant=await dataImport(defaults.replace('enabled:false,budget:2000000','enabled:true,budget:2000000'));
