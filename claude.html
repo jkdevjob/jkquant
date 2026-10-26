@@ -82,7 +82,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.22.1</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.24.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -182,7 +182,7 @@ function buyCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("③ 매수 타이밍","<div class='tw'><table class='board doc'><tbody>"+docRow("매수",d.buy)+docRow("시간표",d.times)+"</tbody></table></div>",true);}
 function sellCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("④ 매도 · 손절 · 리스크","<div class='tw'><table class='board doc'><tbody>"+docRow("매도",d.sell)+docRow("위험 관리",d.risk)+"</tbody></table></div><p class='note'>목표(+1%/일 · +5%/주)를 맞추려고 기준·손절을 임의로 바꾸지 않습니다. 바꿀 때는 그림자 전략으로 먼저 검증합니다.</p>",true);}
-var KR_SETTLE="KIS 모의투자(VTS) 주문 · 손익은 주문한 건을 공식 시가 · 종가로 정산(모의투자 체결 · 거절은 측정용 — 2026-10-22~)";
+var KR_SETTLE="손익은 신호대로(그날 고른 종목 · 신호를 공식 시가 · 종가로) 정산 · KIS 모의투자(VTS) 주문은 설정 › 모의투자에서 전략별로 켜고 끈다(기본 꺼짐 · 예산도 거기서 — 켜면 체결은 측정용)";
 var EXEC={opening:KR_SETTLE,daytrading:KR_SETTLE,crypto:"주문 없음 — 업비트 60분봉 모의 장부",soxl:"주문 없음 — 미국 일봉 모의 장부",close30:KR_SETTLE};
 var MARKET={opening:"코스피·코스닥 보통주 (전일 RSI<30 명단)",daytrading:"KODEX 코스닥150레버리지 233740",crypto:"업비트 KRW-BTC · KRW-ETH (하루 단타)",soxl:"SOXL (반도체 3배)",close30:"KODEX 코스닥150레버리지 233740 (15:00 → 15:30)"};
 var WEEKKEY={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"],close30:["close30_etf"]};
@@ -436,7 +436,7 @@ function tabPage(tab,T,gd,et,wl){
     var el=et.live||{},erows=((el.rows)||[]).slice().reverse().map(function(x){return "<tr><td>"+esc(x.signalDate)+" → "+esc(x.exitDate||"—")+"</td><td>"+pct(x.expectedDropPct)+"</td><td>"+pct(x.buySlipPct)+"</td><td>"+pct(x.sellSlipPct)+"</td><td class='"+cls(x.realizedNetPct)+"'>"+pct(x.realizedNetPct)+"</td></tr>"}).join("");
     html+=sec("⑧ 실행 품질 · VTS 대조",erows?"<div class='tw'><table><thead><tr><th>매수 → 매도</th><th>예상 하락</th><th>매수 슬립</th><th>매도 슬립</th><th>순손익</th></tr></thead><tbody>"+erows+"</tbody></table></div>":"<p class='note'>아직 매수 신호가 난 날이 없습니다.</p>",false);
   }
-  if(tab==="close30")html+=sec("⑧ 실행 품질","<p class='note'>KIS 모의투자로 실제 주문합니다: 15:00 시장가 매수 → 15:21 종가 동시호가 시장가 매도 → 15:40 체결 조회. ②(같은 종목)와는 접수 시각으로 나눠 셉니다 — ⑤ 매수 15:00~15:15 · 매도 15:15 이후, ② 매수 15:15 이후 · 매도 09:00 전. 손익은 주문한 건을 15:00 판단 가격 → 공식 종가로 정산합니다(모의투자 체결 · 거절은 측정용). 비용은 밤 계산과 같은 식(수수료 0.03% + 15:00 매수 반 호가).</p>",false);
+  if(tab==="close30")html+=sec("⑧ 실행 품질","<p class='note'>KIS 모의투자 주문은 설정 › 모의투자 '클로드 ⑤ 종가 30분'에서 켜고 끕니다(기본 꺼짐 · 주문 예산도 거기서). 켜면: 15:00 시장가 매수 → 15:21 종가 동시호가 시장가 매도 → 15:40 체결 조회. ②(같은 종목)와는 접수 시각으로 나눠 셉니다 — ⑤ 매수 15:00~15:15 · 매도 15:15 이후, ② 매수 15:15 이후 · 매도 09:00 전. 손익은 주문한 건을 15:00 판단 가격 → 공식 종가로 정산합니다(모의투자 체결 · 거절은 측정용). 비용은 밤 계산과 같은 식(수수료 0.03% + 15:00 매수 반 호가).</p>",false);
   if(tab==="crypto"||tab==="soxl")html+=sec("⑧ 실행 품질","<p class='note'>"+(tab==="crypto"?"주문 없이 업비트 60분봉으로 기록합니다: 돌파한 봉에서 max(봉 시가, 어제 고가)+0.05% 에 매수, 다음 날 09:00 직전 봉 종가에 매도, 손절은 매수가 −5%(+0.1% 미끄러짐), 왕복 비용 0.14%. 같은 봉 안에서 손절선과 종가 순서를 모르면 손절로 봅니다(보수적). 실주문 전에는 실제 체결 차이를 따로 재야 합니다.":"주문 없이 일봉으로 기록합니다: 마감 확정 종가로 판단 → 다음 미국장 시가 매수 · 매도(같은 종가로 판단하고 체결하지 않음), 왕복 비용 0.20%. 미국장 결과는 한국시각 다음 날 아침에 확정됩니다.")+"</p>",false);
   return html;
 }
@@ -674,7 +674,7 @@ function histSignal(g){if(!g)return "";var t=g.at?esc(String(g.at).slice(0,5))+"
   if(g.expectedGapPct!=null)return t+"예상 갭 "+pct(g.expectedGapPct)+(g.expectedPrice?" ("+won(g.expectedPrice)+")":"");
   if(g.dropPct!=null)return t+"예상 하락 "+pct(g.dropPct)+(g.th!=null?" · 기준 "+esc(String(g.th))+"%":"");
   if(g.sofarPct!=null)return t+"전일 대비 "+pct(g.sofarPct)+(g.price?" ("+won(g.price)+")":"");return t;}
-function histLiveTrades(list){return (list||[]).map(function(x){var g=histSignal(x.signal),v=x.vts&&x.vts.ok===false?"모의계좌 주문 안 됨":"";
+function histLiveTrades(list){return (list||[]).map(function(x){var g=histSignal(x.signal),v=x.vts&&x.vts.ok===false?(x.vts.msg==="모의투자 꺼짐(설정)"?"모의투자 꺼짐":"모의계좌 주문 안 됨"):"";
   return esc(x.name||x.code||"")+" "+esc(x.entryTime||"")+" "+won(x.entryPrice)+(x.exitPrice!=null?" → "+esc(x.exitTime||"")+" "+won(x.exitPrice):"")+" <b class='"+cls(x.pnlPct)+"'>"+pct(x.pnlPct)+"</b>"+(x.reason?" · "+esc(x.reason):"")+
     (g||v?"<div class='sub'>"+(g?"신호 "+g:"")+(g&&v?" · ":"")+v+"</div>":"")}).join("<br>")}
 function histPage(n){HV.page=Math.max(0,HV.page+n);histRender()}

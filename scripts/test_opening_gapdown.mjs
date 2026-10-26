@@ -17,6 +17,10 @@ const KRX = await import(pathToFileURL(path.join(dir, "_krx_calendar.js")).href)
 const MAIN = await import(pathToFileURL(path.join(dir, "_claude_main.js")).href);
 const FT = await import(pathToFileURL(path.join(dir, "_firebase_token.js")).href);
 const PU = await import(pathToFileURL(path.join(dir, "_claude_push.js")).href);
+const PT = await import(pathToFileURL(path.join(dir, "_paper-trading.js")).href);
+// 설정 › 모의투자 서버 값(가짜) — on: {claude_opening: 예산, …} 인 탭만 켠다
+const PAPER_URL = "https://jkquant-opening-scheduler.mumae4.workers.dev/paper-settings";
+const paperSettings = (on = {}) => { const s = PT.defaultPaperSettings(); for (const [id, budget] of Object.entries(on)) s.strategies[id] = { enabled: true, budget }; return s; };
 import nodeCrypto from "node:crypto";
 let n = 0;
 const pending = [];
@@ -711,10 +715,13 @@ t("① 08:58 다시 보기(2026-10-19 사용자 선택 '가') — 08:56 전체 �
   const nm = (code, name) => ({ code, name, market: "KOSDAQ", rsi14: 20, prevClose: 10000, prevAmountKrw: 5e9 });
   const wlj = { strategyVersion: G.GAPDOWN_VERSION, basedOn: "2026-10-19", rule, names: [nm("000001", "가"), nm("000002", "나"), nm("000003", "다"), nm("000004", "라")] };
   const kis = [], oldFetch = globalThis.fetch, oldNow = Date.now;
+  let paper1 = paperSettings(), paperDown = false;
   globalThis.fetch = async u => {
     u = String(u);
     if (u.startsWith(WLURL)) return new Response(JSON.stringify(wlj));
     if (u.includes("/api/kis?op=expected")) { const code = u.split("code=")[1]; kis.push(code); return new Response(JSON.stringify({ code, expectedPrice: code === "000001" ? 9400 : 9800, basePrice: 10000 })); }
+    if (u === PAPER_URL) return paperDown ? new Response("{}", { status: 503 }) : new Response(JSON.stringify({ ok: true, settings: paper1 }));
+    if (u.includes("/api/kis?op=buyable") || u.includes("/api/kis?op=order")) { kis.push("ORDER-PATH"); return new Response(JSON.stringify({ qty: 5, cash: 50000, ok: true, orderNo: "X" })); }   // 꺼져 있으면 오면 안 된다
     throw new Error("unexpected " + u);
   };
   Date.now = () => kst("08:58:10");
@@ -731,6 +738,20 @@ t("① 08:58 다시 보기(2026-10-19 사용자 선택 '가') — 08:56 전체 �
     near(pre.picks[0].expectedGapPct, -6); near(pre.picks[0].expectedGapPct0856, -15);
     assert.deepEqual([pre.breadth.qualified, pre.recheck], [3, { asked: 3, priced: 3, used: true }]);
     assert.equal(pre.ordersSkipped, "SCALPING_VTS_AUTO=0");
+    const postE = (body, e) => F.onRequestPost({ request: new Request("https://p.test/api/opening-gapdown", { method: "POST", headers: { "x-monitor-key": "k" }, body: JSON.stringify(body) }), env: e }).then(r => r.json());
+    let tick = kst("08:58:10"); Date.now = () => (tick += 20);                    // 흐르는 시계 — 주문 경로로 새도 간격 대기가 끝나게(멈춘 시계면 무한 대기)
+    kis.length = 0; F._resetPacingForTest();                                       // 앞 시험(실제 시각)의 주문 간격 기록이 가짜 시각과 섞이지 않게
+    const off1 = await postE({ stage: "preopen", date: "2026-10-20", candidates: [px("000001", 8500), px("000002", 8600), px("000003", 8700)] }, { OPENING_MONITOR_KEY: "k", AUTOTRADE_KEY: "ak" });
+    assert.deepEqual([off1.picks.length, off1.ordersSkipped, off1.orders, kis.includes("ORDER-PATH"), off1.vtsSetting], [3, "모의투자 꺼짐(설정)", [], false, { revision: 0, on: false, budget: null }]);
+    paper1 = paperSettings({ claude_opening: 300000 }); kis.length = 0; F._resetPacingForTest();   // 설정에서 ① 을 켬(종목마다 30만)
+    const on1 = await postE({ stage: "preopen", date: "2026-10-20", candidates: [px("000001", 8500), px("000002", 8600), px("000003", 8700)] }, { OPENING_MONITOR_KEY: "k", AUTOTRADE_KEY: "ak" });
+    assert.deepEqual([on1.ordersSkipped, on1.orders.length, (on1.orders[0] || {}).code, ((on1.orders[0] || {}).sizing || {}).planned, kis.includes("ORDER-PATH")],
+      [undefined, 3, "000001", Math.floor(300000 / 8500), true]);                          // 계획 = 설정의 종목당 예산 ÷ 예상가   // 모의투자 꺼짐(기본) — 고른 종목 · 신호는 남기고 매수가능 조회 · 주문은 없다
+    assert.deepEqual([on1.vtsSetting, on1.budgetPerPick], [{ revision: 0, on: true, budget: 300000 }, 300000]);
+    paperDown = true; kis.length = 0; F._resetPacingForTest();                          // 설정을 못 읽으면 켜 둔 설정이 있어도 주문하지 않는다
+    const unk1 = await postE({ stage: "preopen", date: "2026-10-20", candidates: [px("000001", 8500), px("000002", 8600), px("000003", 8700)] }, { OPENING_MONITOR_KEY: "k", AUTOTRADE_KEY: "ak" });
+    assert.deepEqual([unk1.picks.length, unk1.ordersSkipped, unk1.orders, unk1.vtsSetting, kis.includes("ORDER-PATH")], [3, "모의투자 설정 확인 실패", [], null, false]);
+    paperDown = false;
     const pre0 = await post({ stage: "preopen", date: "2026-10-20", candidates: [px("000001", 8500), px("000002", 8600), px("000003", 8700)] });
     assert.deepEqual([pre0.picks.map(x => x.code), pre0.recheck, "expectedGapPct0856" in pre0.picks[0]], [["000001", "000002", "000003"], null, false]);
   } finally { globalThis.fetch = oldFetch; Date.now = oldNow; }
@@ -1259,11 +1280,13 @@ t("⑤ Pages 주문 단계 끝까지(가짜 KIS): 15:00 −0.8% → 매수가능
   const oldFetch = globalThis.fetch, oldNow = Date.now, oldTimeout = globalThis.setTimeout, kst = s => Date.parse("2026-10-23T" + s + "+09:00");
   globalThis.setTimeout = (fn, ms, ...a) => oldTimeout(fn, ms >= 500 && ms <= 3000 ? 1 : ms, ...a);   // 호출 간격 대기만 짧게(변이 시험 시간)
   const kis = [], orders = [];
-  let chg = -0.8, fills = [];
+  let chg = -0.8, fills = [], paper = paperSettings();
   globalThis.fetch = async (u, init = {}) => {
     u = String(u);
     if (u.endsWith("/claude-config")) return new Response(JSON.stringify({ ok: true, events: [] }));
+    if (u === PAPER_URL) return new Response(JSON.stringify({ ok: true, settings: paper }));
     if (u.includes("/api/kis?op=price")) { kis.push("price"); return new Response(JSON.stringify({ code: "233740", price: 9800, chgRate: chg, open: 9900 })); }
+    if (u.includes("/api/kis?op=expected")) { kis.push("expected"); return new Response(JSON.stringify({ code: "233740", expectedPrice: 9400, basePrice: 9800, phase: "121" })); }
     if (u.includes("/api/kis?op=buyable")) { kis.push("buyable"); return new Response(JSON.stringify({ qty: 500, cash: 4900000 })); }
     if (u.includes("/api/kis?op=orders")) { kis.push("orders"); return new Response(JSON.stringify({ orders: fills })); }
     if (u.includes("/api/kis?op=order&internal=1")) { const b = JSON.parse(init.body); orders.push(b); return new Response(JSON.stringify({ ok: true, orderNo: "N" + orders.length })); }
@@ -1274,12 +1297,25 @@ t("⑤ Pages 주문 단계 끝까지(가짜 KIS): 15:00 −0.8% → 매수가능
     .then(async r => ({ status: r.status, j: await r.json() }));
   try {
     F._resetPacingForTest();
+    // 모의투자 꺼짐(설정 기본값 · 2026-10-22 사용자 "우선은 모의 투자 off로 해놓고") — 판단 · 신호는 그대로, 매수가능 조회 · 주문은 없다
+    const offEnv = env;
+    Date.now = () => kst("15:00:05");
+    const off5 = await post({ stage: "c30_buy", date: "2026-10-23" }, offEnv);
+    assert.deepEqual([off5.status, off5.j.signal, off5.j.ordersSkipped, off5.j.order, orders.length, kis], [200, true, "모의투자 꺼짐(설정)", null, 0, ["price"]]);
+    Date.now = () => kst("15:21:00"); kis.length = 0;
+    const off2 = await post({ stage: "etf_buy", date: "2026-10-23" }, offEnv);
+    assert.deepEqual([off2.status, off2.j.signal, off2.j.ordersSkipped, off2.j.order, orders.length, kis], [200, true, "모의투자 꺼짐(설정)", null, 0, ["expected"]]);
+    paper = paperSettings({ claude_daytrading: 2000000, claude_close30: 6000000 });                  // 설정에서 ② · ⑤ 를 켬(주문 예산 200만 · 600만)
+    const on2 = await post({ stage: "etf_buy", date: "2026-10-23" });
+    assert.deepEqual([on2.j.ordersSkipped, (on2.j.order || {}).signalId, ((on2.j.order || {}).sizing || {}).planned, orders.length, on2.j.vtsSetting],
+      [undefined, "etf_dip:2026-10-23:233740:buy", 212, 1, { revision: 0, on: true, budget: 2000000 }]);   // 계획 = 설정 예산 200만 ÷ 예상가 9,400
+    kis.length = 0; orders.length = 0; F._resetPacingForTest();
     Date.now = () => kst("15:00:05");
     const b = await post({ stage: "c30_buy", date: "2026-10-23" });
     assert.equal(b.status, 200, JSON.stringify(b.j));
     assert.deepEqual([b.j.signal, b.j.sofarPct, b.j.strategyVersion, b.j.ruleSource, b.j.quote.price], [true, -0.8, "close30_dip_v1", "main-config", 9800]);
     assert.deepEqual(orders, [{ env: "vts", side: "buy", code: "233740", qty: 500, price: 0, priceType: "market" }]);   // 계획 612주(600만 ÷ 9,800) → 매수가능 500주
-    assert.deepEqual([b.j.order.signalId, b.j.order.sizing.planned, b.j.order.sizing.qty, b.j.order.vts.ok], ["close30:2026-10-23:233740:buy", 612, 500, true]);
+    assert.deepEqual([b.j.order.signalId, b.j.order.sizing.planned, b.j.order.sizing.qty, b.j.order.vts.ok, b.j.vtsSetting], ["close30:2026-10-23:233740:buy", 612, 500, true, { revision: 0, on: true, budget: 6000000 }]);
     assert.deepEqual(kis, ["price", "buyable"]);
     chg = 0; orders.length = 0; kis.length = 0;
     const flat = await post({ stage: "c30_buy", date: "2026-10-23" });
@@ -1343,6 +1379,70 @@ t("⑤ Worker: 15:00 경로 · 15:21 매도는 ② 매수 판단보다 먼저 ·
   const e = W.claudeConfigEvent({ tab: "close30", version: "close30_dip_th1", params: { th: -1 }, effectiveFrom: "2026-10-24", promotedAt: "2026-10-23T19:00" });
   assert.equal((e || {}).payload && e.payload.tab, "close30");
   assert.equal(W.claudeConfigEvent({ tab: "closebet", version: "x", params: {}, effectiveFrom: "2026-10-24", promotedAt: "t" }), null);
+});
+t("설정 › 모의투자 목록에 클로드 ①②⑤(켤 수 있음) · ③④(표시만) — 옛 저장값(GPT 7개)도 깨지지 않고 클로드는 꺼짐으로 채움", async () => {
+  const ids = PT.PAPER_STRATEGIES.filter(x => x.group === "연구(클로드)").map(x => [x.id, x.supported]);
+  assert.deepEqual(ids, [["claude_opening", true], ["claude_daytrading", true], ["claude_close30", true], ["claude_crypto", false], ["claude_soxl", false]]);
+  const full = PT.defaultPaperSettings();
+  const old = { ...full, revision: 7, strategies: Object.fromEntries(Object.entries(full.strategies).filter(([k]) => k.startsWith("gpt_"))) };
+  old.strategies.gpt_opening = { enabled: true, budget: 500000, enabledSince: "2026-10-23T00:00:00.000Z" };
+  assert.equal(PT.validPaperSettings(old), false);                                                  // 옛 저장값 그대로는 새 목록과 안 맞는다
+  const n = PT.withPaperDefaults(old);
+  assert.equal(PT.validPaperSettings(n), true);
+  assert.deepEqual([n.revision, n.strategies.gpt_opening, n.strategies.claude_opening, n.strategies.claude_soxl],
+    [7, old.strategies.gpt_opening, { enabled: false, budget: 2000000 }, { enabled: false, budget: 2000000 }]);   // GPT 값은 그대로 · 클로드는 꺼짐
+  assert.equal(PT.withPaperDefaults(n).strategies.claude_opening, n.strategies.claude_opening);
+  let c = null;
+  try { c = PT.changePaperSettings(old, { expectedRevision: 7, strategy: "claude_close30", enabled: true, budget: 3000000 }, "2026-10-26T13:00:00.000Z"); }
+  catch (e) { assert.fail("옛 저장값 위에 저장 실패: " + e.message); }
+  assert.deepEqual([c.revision, c.strategies.claude_close30, c.strategies.gpt_opening.enabled],
+    [8, { enabled: true, budget: 3000000, enabledSince: "2026-10-26T13:00:00.000Z" }, true]);       // 옛 저장값 위에 바로 저장된다
+  assert.throws(() => PT.changePaperSettings(old, { expectedRevision: 7, strategy: "claude_crypto", enabled: true, budget: 3000000 }));   // ③ 은 주문 경로 없음
+  const off = PT.changePaperSettings(c, { expectedRevision: 8, allOff: true });
+  assert.ok(Object.values(off.strategies).every(x => !x.enabled));                                  // 전체 OFF 에 클로드도 포함
+  const oldFetch = globalThis.fetch;
+  globalThis.fetch = async u => String(u).endsWith("/paper-settings") ? Response.json({ ok: true, settings: old }) : Promise.reject(new Error("unexpected " + u));
+  try {
+    const r = await PT.readPaperSettings({ OPENING_MONITOR_KEY: "k" }).catch(e => assert.fail("옛 저장값 읽기 실패: " + e.message));   // 서버가 옛 값을 줘도 읽힌다(주문 판단이 멈추지 않게)
+    assert.deepEqual([r.strategies.gpt_opening.enabled, r.strategies.claude_opening.enabled], [true, false]);
+    assert.deepEqual(await PT.paperPermission({ OPENING_MONITOR_KEY: "k" }, "gpt_opening"), { ...old.strategies.gpt_opening, revision: 7, reason: "" });
+    assert.deepEqual((await MAIN.claudeVts({ OPENING_MONITOR_KEY: "k" }, "opening")).on, false);
+  } finally { globalThis.fetch = oldFetch; }
+});
+t("모의투자 켜기 · 끄기 = 설정 › 모의투자(2026-10-26 사용자 \"설정 모의투자에 추가하라니까\"): 기본 꺼짐 · 탭별로 켬 · 예산 · 설정을 못 읽으면 주문 안 함 · 꺼둔 것은 실패로 적지 않는다", async () => {
+  const read = s => async () => s;
+  assert.deepEqual(await MAIN.claudeVts({}, "opening", read(paperSettings())), { on: false, reason: MAIN.VTS_OFF, revision: 0 });
+  assert.deepEqual(await MAIN.claudeVts({}, "close30", read(paperSettings({ claude_close30: 4900000 }))), { on: true, budget: 4900000, revision: 0 });
+  assert.deepEqual((await MAIN.claudeVts({}, "daytrading", read(paperSettings({ claude_close30: 4900000 })))).on, false);   // 다른 탭을 켠 것은 상관없음
+  assert.deepEqual((await MAIN.claudeVts({}, "opening", read(paperSettings({ gpt_opening: 4900000 })))).on, false);         // GPT 시초가 설정과 따로
+  const bad = await MAIN.claudeVts({}, "opening", async () => { throw new Error("worker down"); });
+  assert.deepEqual([bad.on, bad.reason, bad.error], [false, "모의투자 설정 확인 실패", "worker down"]);           // 못 읽으면 주문하지 않는다
+  assert.deepEqual((await MAIN.claudeVts({}, "crypto", read(paperSettings()))).on, false);
+  assert.deepEqual(MAIN.CLAUDE_PAPER_ID, { opening: "claude_opening", daytrading: "claude_daytrading", close30: "claude_close30" });
+  assert.equal(MAIN.VTS_OFF, "모의투자 꺼짐(설정)");
+  assert.equal(LV.vtsNote(undefined, null, MAIN.VTS_OFF), "모의투자 꺼짐 — 신호대로 정산");
+  assert.equal(LV.vtsNote(undefined, null, "SCALPING_VTS_AUTO=0"), "모의계좌 주문 안 함(SCALPING_VTS_AUTO=0) — 시세로 정산");   // 긴급 중지는 그대로 알린다
+  const st = { preopen: { picks: [{ code: "000010", name: "A", expectedPrice: 1000, expectedGapPct: -5 }], orders: [], ordersSkipped: MAIN.VTS_OFF, breadth: { qualified: 9 } } };
+  const rows = LV.openingRows(st, { "000010": 1040 }, { "000010": { open: 1005, close: 1045 } }, 1100);
+  assert.deepEqual([rows[0].status, rows[0].vts], ["보유중", "모의투자 꺼짐 — 신호대로 정산"]); near(rows[0].pnlPct, (1040 / 1005 - 1) * 100 - LV.d1CostPct(1005));
+  const sm = LV.todaySummary("opening", { rows, decision: { breadth: { qualified: 9 } } }, 1100);
+  assert.deepEqual([sm.trades, /모의계좌/.test(sm.why)], [1, false]);
+  const M = { params: { minQ: 5, topK: 3, gapMax: null } };
+  const ev = PU.pushEvents({ today: "2026-10-07", tabs: { opening: { main: M, decision: { breadth: { qualified: 9 } }, rows: rows.map(r => ({ ...r, expectedGapPct: -5 })) } } }, Date.parse("2026-10-07T11:00:00+09:00"), {});
+  assert.deepEqual(ev.map(e => e.body), ["A (갭 -5.00%) — 09:00 시가 → 15:30 종가 매도"]);   // 꺼둔 날은 '모의계좌 주문 안 됨'을 붙이지 않는다
+  const L = (...x) => ({ events: x.map(([stage, payload]) => ({ stage, payload })) });
+  const d1 = DAY.openingDay("2026-10-07", L(["preopen", { ...st.preopen, watchlist: { size: 5 } }]), true, {}, null, { "000010": { open: 1005, close: 1045 } });
+  assert.deepEqual([d1.trades.length, d1.warn, (d1.trades[0] || {}).vts && d1.trades[0].vts.msg, d1.settled], [1, undefined, MAIN.VTS_OFF, true]);
+  const e2 = DAY.etfDay("2026-10-07", L(["etf_buy", { signal: true, dropPct: -4, ordersSkipped: MAIN.VTS_OFF, quote: { expectedPrice: 7900 } }]),
+    L(["etf_buy", { signal: true, dropPct: -3.5, ordersSkipped: MAIN.VTS_OFF }]), "2026-10-06", true, { "2026-10-06": { close: 8000 }, "2026-10-07": { open: 8100, close: 7880 } });
+  assert.deepEqual([e2.exits, e2.open.length, e2.warn], [1, 1, undefined]);
+  const c5 = DAY.close30Day("2026-10-07", L(["c30_buy", { signal: true, sofarPct: -0.5, rule: { th: 0 }, quote: { price: 9800 }, ordersSkipped: MAIN.VTS_OFF }]), true, { "2026-10-07": { close: 9850 } });
+  assert.deepEqual([c5.exits, c5.warn, c5.settled], [1, undefined, true]);
+  const c5x = DAY.close30Day("2026-10-07", L(["c30_buy", { signal: true, sofarPct: -0.5, rule: { th: 0 }, quote: { price: 9800 }, order: { vts: { ok: false, msg: "매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 600주" } } }]), true, { "2026-10-07": { close: 9850 } });
+  assert.match(c5x.warn || "", /^모의계좌 주문 안 됨\(매수가능 0주/);                                  // 켜 둔 날의 거절은 그대로 경고
+  const c5u = DAY.close30Day("2026-10-07", L(["c30_buy", { signal: true, sofarPct: -0.5, rule: { th: 0 }, quote: { price: 9800 }, ordersSkipped: MAIN.VTS_UNKNOWN }]), true, { "2026-10-07": { close: 9850 } });
+  assert.match(c5u.warn || "", /^모의계좌 주문 안 됨\(모의투자 설정 확인 실패\)/);                       // 설정을 못 읽은 날은 꺼둔 날과 달리 경고
+  assert.equal(LV.vtsNote(undefined, null, MAIN.VTS_UNKNOWN), "모의계좌 주문 안 함(모의투자 설정 확인 실패) — 시세로 정산");
 });
 t("15:40 마감 장부(closeDay — Worker op=close 경로): ①②⑤ 주문한 건을 /api/quote 그날 일봉(공식 시가 · 종가)으로 정산 · 모의투자 체결 0건이어도(2026-10-22 사용자)", async () => {
   await Promise.all(pending.slice());                                         // 전역 fetch 를 바꾸므로 앞 시험이 다 끝난 뒤에

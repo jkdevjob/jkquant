@@ -60,7 +60,7 @@ async function using(h,fn){
  try{return await fn();}finally{globalThis.Date=RealDate;globalThis.fetch=priorFetch;globalThis.setTimeout=priorTimeout;}
 }
 test('six stock strategies connected, BTC unsupported, persisted switches stay OFF and arm is explicit',()=>{
- assert.deepEqual(PAPER_STRATEGIES.filter(s=>s.supported).map(x=>x.id),['gpt_opening','gpt_daytrading','gpt_closing30','gpt_closing_bet','gpt_soxl','gpt_tenbagger']);
+ assert.deepEqual(PAPER_STRATEGIES.filter(s=>s.supported).map(x=>x.id),['gpt_opening','gpt_daytrading','gpt_closing30','gpt_closing_bet','gpt_soxl','gpt_tenbagger','claude_opening','claude_daytrading','claude_close30']);
  const s=defaultPaperSettings();assert.ok(Object.values(s.strategies).every(v=>!v.enabled));assert.throws(()=>changePaperSettings(s,{expectedRevision:0,strategy:'gpt_crypto',enabled:true,budget:2000000}));
  assert.throws(()=>changePaperSettings(s,{expectedRevision:0,strategy:'gpt_tenbagger',enabled:true,budget:2000000}));
  const a=changePaperSettings(s,{expectedRevision:0,strategy:'gpt_tenbagger',enabled:true,budget:2000000,exitArm:'hold1260',pattern:'trend200'},toIso(at(900)));

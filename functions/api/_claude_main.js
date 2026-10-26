@@ -2,6 +2,7 @@
 // 실시간 화면(claude-live) · 하루 마감 장부/텔레그램(_claude_day · claude-telegram) · ② VTS 주문(opening-gapdown)이
 // 모두 이 파일 하나로 "그 날짜에 유효한 메인"을 고른다. 밤 계산(scripts/claude_lab.py MAIN_DEFAULT)과 기본값이 같아야 한다(회귀가 비교).
 // ⑤ close30(2026-10-22 사용자 요청 "종가 전략도 탭에 추가하고 다른 전략이랑 동일하게 적용") — 15:00 판단 → 15:30 종가 청산, ⑤ VTS 주문도 이 기록을 읽는다.
+import { readPaperSettings } from "./_paper-trading.js";
 
 export const WORKER = "https://jkquant-opening-scheduler.mumae4.workers.dev";
 export const TABS = ["opening", "daytrading", "crypto", "soxl", "close30"];
@@ -77,6 +78,23 @@ export function kstDate(ms = Date.now()) {
 export function effectiveFromKst(ms = Date.now()) { return kstDate(ms + 864e5); }
 
 // Worker 에서 승격 기록을 읽는다. 실패하면 {ok:false} — 부르는 쪽이 기본값으로 갈지, 표시할지 정한다.
+// ── 모의투자(VTS) 주문 켜기 · 끄기 — 설정 › 모의투자(전략별 · 기본 꺼짐)를 따른다.
+// 2026-10-22 사용자 "우선은 모의 투자 off로 해놓고" · 2026-10-26 "설정 모의투자에 추가하라니까".
+// 꺼져 있으면 ①②⑤ 는 판단 · 신호 · 알림 · 마감 장부(신호대로 정산)만 남기고 KIS 매수가능 조회 · 매수 주문을 하지 않는다.
+// 매도는 이 전략이 산 체결수량만 팔므로 꺼져 있으면 팔 것도 없다. 설정을 못 읽으면 주문하지 않는다(안전 쪽).
+export const VTS_OFF = "모의투자 꺼짐(설정)";
+export const VTS_UNKNOWN = "모의투자 설정 확인 실패";
+export const CLAUDE_PAPER_ID = Object.freeze({ opening: "claude_opening", daytrading: "claude_daytrading", close30: "claude_close30" });
+export async function claudeVts(env, tab, read = readPaperSettings) {
+  const id = CLAUDE_PAPER_ID[tab];
+  if (!id) return { on: false, reason: VTS_OFF };
+  let s;
+  try { s = await read(env); } catch (e) { return { on: false, reason: VTS_UNKNOWN, error: String((e && e.message) || e) }; }
+  const v = ((s && s.strategies) || {})[id] || {};
+  return v.enabled === true && Number.isSafeInteger(v.budget) && v.budget > 0
+    ? { on: true, budget: v.budget, revision: s.revision }
+    : { on: false, reason: VTS_OFF, revision: s && s.revision };
+}
 export async function loadMainEvents(env, timeoutMs = 4000) {
   const key = String(env.OPENING_MONITOR_KEY || env.AUTOTRADE_KEY || "").trim();
   if (!key) return { ok: false, events: [], error: "감시키 없음" };

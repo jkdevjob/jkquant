@@ -1,6 +1,6 @@
 // One Durable Object owns research broker identities, intents and receipts.
 // Paper returns never enter this store. An accepted order is not a fill.
-import {defaultPaperSettings,validPaperSettings} from './_paper-trading.js';
+import {defaultPaperSettings,validPaperSettings,withPaperDefaults} from './_paper-trading.js';
 import {validateBrokerPlan,localClock,BROKER_STRATEGIES} from './_research-orders.js';
 const headers={'content-type':'application/json; charset=utf-8','cache-control':'no-store'};
 const json=(o,status=200)=>new Response(JSON.stringify(o),{status,headers});
@@ -20,7 +20,7 @@ export function exactOrderFill(op,rows,code,side){
 async function settings(env){
  const st=env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName('__paper_settings__'));
  const r=await st.fetch('https://opening-signal.internal/paper-settings'),j=await r.json();
- const value=j.settings||defaultPaperSettings();if(!r.ok||!j.ok||!validPaperSettings(value))throw Error('모의투자 설정 원본 확인 실패');return value;
+ const value=withPaperDefaults(j.settings||defaultPaperSettings());if(!r.ok||!j.ok||!validPaperSettings(value))throw Error('모의투자 설정 원본 확인 실패');return value;
 }
 async function relay(env,action,p,extra={}){
  const url=String(env.BASE_URL||'https://jkquant.pages.dev').replace(/\/$/,'')+'/api/research-kis';
