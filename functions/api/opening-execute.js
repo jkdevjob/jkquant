@@ -3,6 +3,8 @@
 // 실계좌 경로는 없다. 5개 감시 shard가 병렬로 계산한 이벤트를 workflow가 한 번에 모아 이 endpoint로 보낸다.
 // 체결 후 수수료·제세금은 이 endpoint에서 추정하지 않고 vts-reconcile이 KIS 당일 체결조회 응답으로 측정한다.
 
+import {paperPermission} from './_paper-trading.js';
+import {openingOwnedQty} from './_opening-execution.js';
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const KRCODE=/^(?:\d{6}|\d{4}[A-Z]\d)$/;
@@ -89,7 +91,8 @@ async function kisOrder(origin,env,side,x,qty,date){
       body:JSON.stringify({env:"vts",side,code:x.code,qty,price:0,priceType:"market"})
     });
     const j=await r.json().catch(()=>({}));
-    rec.vts={ok:r.ok&&!!j.ok,env:"vts",priceType:"market",orderNo:j.orderNo||"",
+    rec.vts={ok:r.ok&&j.ok===true,env:"vts",priceType:"market",orderNo:j.orderNo||"",
+      rejected:j.raw?.rt_cd!=null&&String(j.raw.rt_cd)!=='0',
       msg:j.msg||j.error||("HTTP "+r.status),httpStatus:r.status};
   }catch(e){
     rec.vts.msg="전송 결과 불명 — 안전상 자동 재시도하지 않음: "+String(e.message||e);
@@ -106,21 +109,19 @@ async function orders(origin,env,date,code){
 }
 async function openingQty(origin,env,date,x){
   const all=await orders(origin,env,date,x.code);
-  const ent=hmMin(x.entryTime);
-  // 이 전략의 매수는 내부 진입시각 직후에 나간다. ±5분 밖의 체결은 수동/다른 전략 물량으로 간주한다.
-  const buys=all.filter(o=>String(o.sideCode)==="02"&&+o.fillQty>0&&Math.abs(hmMin(hhmm(o.orderTime))-ent)<=5);
-  const buyQty=buys.reduce((s,o)=>s+(+o.fillQty||0),0);
-  if(!buyQty)return {qty:0,buyQty:0,soldQty:0,error:"시초가 VTS 매수 체결수량 0"};
-  const times=buys.map(o=>hmMin(hhmm(o.orderTime))).filter(Number.isFinite);
-  const first=times.length?Math.min(...times):ent;
-  const sells=all.filter(o=>String(o.sideCode)==="01"&&+o.fillQty>0&&hmMin(hhmm(o.orderTime))>=first);
-  const soldQty=sells.reduce((s,o)=>s+(+o.fillQty||0),0);
-  return {qty:Math.max(0,buyQty-soldQty),buyQty,soldQty};
+  const base=String(env.OPENING_WORKER_URL||'https://jkquant-opening-scheduler.mumae4.workers.dev').replace(/\/$/,'');
+  const r=await fetch(base+'/events?date='+encodeURIComponent(date),{headers:{'x-monitor-key':env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY}}),j=await r.json();
+  if(!r.ok||!j.ok||!j.ledger)throw Error('시초가 원본 주문장부 조회 실패');
+  return openingOwnedQty(j.ledger,x,all);
 }
 
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
   if(String(env.SCALPING_VTS_AUTO||"1")==="0")return json({ok:true,enabled:false,reason:"SCALPING_VTS_AUTO=0",events:[]});
+  let permission;
+  try{permission=await paperPermission(env,'gpt_opening');}
+  catch{return json({ok:false,enabled:false,error:'모의투자 설정 조회 실패 · 주문 중지',events:[]},503);}
+  if(!permission.enabled)return json({ok:true,enabled:false,reason:permission.reason,settingsRevision:permission.revision,events:[]});
   if(!env.AUTOTRADE_KEY)return json({ok:false,error:"AUTOTRADE_KEY 없음"},400);
 
   let b={};
@@ -136,7 +137,7 @@ export async function onRequestPost({request,env}){
     ...rawBuys.filter(x=>!freshEvent(x,"buy",clock)).map(x=>({side:"buy",x,ageMin:eventAgeMin(x,"buy",clock)})),
     ...rawSells.filter(x=>!freshEvent(x,"sell",clock)).map(x=>({side:"sell",x,ageMin:eventAgeMin(x,"sell",clock)}))
   ];
-  const amount=budget(env),events=stale.map(({side,x,ageMin})=>({
+  const amount=budget({...env,SCALPING_VTS_BUDGET:permission.budget}),events=stale.map(({side,x,ageMin})=>({
     signalId:signalId(date,x,side),strategy:"opening",date,side,code:x.code,name:x.name||x.code,qty:0,
     paper:{time:eventHm(x,side),fillPrice:side==="buy"?+x.entryPrice||0:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:0.25},
     submittedAt:null,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",staleBlocked:true,msg:"오래된 신호 주문 차단 ("+ageMin+"분 경과, 최대 "+MAX_SIGNAL_AGE_MIN+"분)"}

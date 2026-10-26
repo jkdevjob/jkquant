@@ -1,5 +1,6 @@
 // Shared read models for original paper evidence and separately labelled research.
 // Never infer a fill, a zero return or a parameter snapshot from a later strategy.
+import {openingBroker,openingOrderRefs,mergeOpeningBroker} from './_opening-execution.js';
 export const TRADE_STRATEGIES={opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL',closing30:'종가 30분',closing_bet:'개별 종목 종가 베팅',tenbagger:'텐배거 연구'};
 export const variantValid=v=>/^[a-zA-Z0-9_.-]{1,80}$/.test(String(v||''));
 export const number=v=>v==null||v===''||!Number.isFinite(+v)?null:+v;
@@ -56,7 +57,9 @@ export function openingRecords(ledger){
     let r=by.get(key);
     if(!r){r=record('opening',{...s,id:['opening',ledger.date,key].join(':'),date:ledger.date,code:e.code,name:e.name,
       strategyVersion:e.strategyVersion||s.strategyVersion,strategyParams:e.strategyParams||s.strategyParams,
-      capturedAt:e.capturedAt,evidence:s.evidence,exitTime:null,exitPrice:null,pnl:null,status:'unverified'},v,'server-signal',main);by.set(key,r);}
+      capturedAt:e.capturedAt,evidence:s.evidence,exitTime:null,exitPrice:null,pnl:null,status:'unverified'},v,'server-signal',main);
+      if(r.role==='main'){const ref={code:e.code,entryTime:s.entryTime};r.broker=openingBroker(ledger.executionEvents,openingOrderRefs(ledger.date,[ref],[ref]).map(x=>x.signalId));}
+      by.set(key,r);}
     r.events.push({id:e.id,stage:e.stage,capturedAt:e.capturedAt||null,delivery:e.alertDelivery||null});
     if(e.stage==='buy'){r.entryTime=time(s.entryTime??e.targetHm);r.entryPrice=number(s.entryPrice);r.signalTime=r.entryTime;r.status=r.entryPrice>0?'open':'unverified';}
     if(e.stage==='sell'){
@@ -65,7 +68,9 @@ export function openingRecords(ledger){
       r.status=r.entryPrice>0&&r.exitPrice>0&&r.pnl!==null?'closed':'unverified';
     }
   }
-  return [...by.values()].map(x=>x.status==='open'&&Date.now()>Date.parse(x.date+'T09:31:00+09:00')?{...x,status:'unverified',reason:'opening_exit_not_recorded'}:x);
+  return [...by.values()].map(x=>{
+    return x.status==='open'&&Date.now()>Date.parse(x.date+'T09:31:00+09:00')?{...x,status:'unverified',reason:'opening_exit_not_recorded'}:x;
+  });
 }
 export function closingRecords(ledger){
   if(!ledger?.date)return [];
@@ -91,10 +96,28 @@ export function tenbaggerRecords(data){
     pnl:a.status==='closed'?a.netReturnPct:null,unrealizedPnl:a.status==='closed'?null:x.netMarkPct,status:a.status||'pending',
     reason:a.exitReason,capturedAt:x.registeredAt,evidence:{dataStatus:x.dataStatus,source:x.sourceSnapshot}},x.pattern+'.'+arm,'forward-research')));
 }
+export function brokerRecords(positions){
+ return (positions||[]).map(p=>{
+  const plan=p.plan,b=p.operations.buy||{},s=p.operations.sell||{},strategy=plan.strategy.replace(/^gpt_/,''),buyQty=b.fillQty||0,sellQty=s.fillQty||0;
+  const unknown=b.status==='unverified'||s.status==='unverified';
+  const done=buyQty>0&&sellQty===buyQty&&s.status==='filled',held=unknown?null:Math.max(0,buyQty-sellQty);
+  const gross=done&&(b.fillPrice>0)&&(s.fillPrice>0)?(s.fillPrice-b.fillPrice)*sellQty:null;
+  const state=unknown?'unverified':done?'closed':held>0?'open':b.status==='not_submitted'||b.status==='rejected'||b.status==='canceled'&&!buyQty?'signal':['accepted','partial'].includes(b.status)?'pending':'unverified';
+  const r=record(strategy,{id:p.key,date:p.date,code:plan.code,name:plan.name,signalTime:plan.source?.signalTime||plan.dueAt,
+   entryTime:b.at,entryPrice:b.fillPrice,exitTime:s.at,exitPrice:s.fillPrice,pnl:null,status:state,
+   strategyVersion:plan.sourceVersion,strategyParams:plan.source?.params,capturedAt:p.createdAt,reason:p.lastError||s.reason||b.reason,
+   evidence:{source:plan.source,entrySettings:p.entrySettings},events:p.events},plan.variant,'server-broker',plan.variant);
+  r.status=state;
+  r.broker={kind:'kis-vts',buy:b.status||'unrecorded',sell:s.status||'unrecorded',settlement:done?'fills_confirmed_fees_unknown':'unverified',pnl:null,
+   filledBuyQty:buyQty,filledSellQty:sellQty,heldQty:held,currency:strategy==='soxl'?'USD':'KRW',grossRealized:gross,fees:null,
+   operations:p.operations,attempts:p.events.filter(e=>e.phase==='intent'||e.phase==='result'||e.phase==='not_submitted').map((e,i)=>({...e,id:p.key+':'+i})),lastError:p.lastError||null};return r;
+ });
+}
 // Keep research and observed evidence as separate records, even when their fills agree.
 export function uniqueRecords(rows){
   const map=new Map();for(const x of rows){const k=x.recordOrigin+':'+x.strategy+':'+x.date+':'+x.variant+':'+x.code+':'+(x.signalTime||'');
-    const old=map.get(k);if(!old||old.status!=='closed')map.set(k,x);}
+    const old=map.get(k),chosen=old?.status==='closed'?old:x;
+    map.set(k,x.strategy==='opening'&&(old?.broker||x.broker)?{...chosen,broker:mergeOpeningBroker(old?.broker,x.broker)}:chosen);}
   return [...map.values()];
 }
 export function filterRecords(rows,q){
@@ -107,7 +130,7 @@ export function filterRecords(rows,q){
     .sort((a,b)=>b.date.localeCompare(a.date)||String(b.entryTime||b.signalTime||'').localeCompare(String(a.entryTime||a.signalTime||''))||a.id.localeCompare(b.id));
 }
 export function recordsCsv(rows){
-  const columns=['strategy','date','variant','role','code','name','status','signalTime','entryTime','entryPrice','exitTime','exitPrice','pnl','unrealizedPnl','timezone','recordOrigin','recordedAt','strategyVersion','strategyParams','reason','evidence','events'];
+  const columns=['strategy','date','variant','role','code','name','status','signalTime','entryTime','entryPrice','exitTime','exitPrice','pnl','unrealizedPnl','timezone','recordOrigin','recordedAt','strategyVersion','strategyParams','reason','evidence','events','broker'];
   const cell=v=>{let s=v==null?'':typeof v==='object'?JSON.stringify(v):String(v);if(/^[=+@\t\r]/.test(s)||/^-(?!\d)/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
   return '\uFEFF'+[columns.join(','),...rows.map(x=>columns.map(k=>cell(x[k])).join(','))].join('\r\n');
 }

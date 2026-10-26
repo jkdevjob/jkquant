@@ -31,6 +31,7 @@
 //   시장은 고를 필요가 없다 — code 가 6자리면 국내, 영문 티커면 해외로 알아서 간다.
 //   그래서 kr-vts · kr-real · us-vts · us-real 네 조합이 모두 열린다.
 
+import {marketDayEvidence} from "./_market-day-cache.js";
 const JH = {
   "Content-Type": "application/json; charset=utf-8",
   "Access-Control-Allow-Origin": "*",
@@ -127,6 +128,7 @@ function modeList(env) {
   }
   return out;
 }
+export function researchVtsConnections(env){return Object.fromEntries(modeList(env).filter(x=>x.env==='vts').map(x=>[x.market,{ready:x.ready,missing:x.missing}]));}
 function configured(env) { return !!(env.KIS_APPKEY && env.KIS_APPSECRET && env.KIS_ACCOUNT); }
 function acct(env) {
   const a = String(env.KIS_ACCOUNT || "").replace(/\s/g, "");
@@ -246,6 +248,25 @@ async function hashkey(env, body) {
   });
   const j = await r.json().catch(() => ({}));
   return j.HASH || "";
+}
+
+// Research relay only: cancel the outstanding quantity of an owned SOXL VTS order.
+// Official KIS overseas order-rvsecncl, VTTT1004U. Never retries an ambiguous POST.
+export async function cancelSoxlVts(environment,order){
+  const env=withEnv(environment,'vts','us');
+  if(order.code!=='SOXL'||!/^\d+$/.test(String(order.orderNo))||!Number.isSafeInteger(order.qty)||order.qty<=0||!['NASD','NYSE','AMEX'].includes(order.market))return json({notSubmitted:true,error:'invalid research cancellation'},400);
+  if(!configured(env))return json({notSubmitted:true,error:'해외 모의투자 키 없음'},400);
+  const a=acct(env);if(!a)return json({notSubmitted:true,error:'모의계좌 형식 오류'},400);
+  const body={CANO:a.cano,ACNT_PRDT_CD:a.prod,OVRS_EXCG_CD:order.market,PDNO:'SOXL',ORGN_ODNO:String(order.orderNo),
+    RVSE_CNCL_DVSN_CD:'02',ORD_QTY:String(order.qty),OVRS_ORD_UNPR:'0',MGCO_APTM_ODNO:'',ORD_SVR_DVSN_CD:'0'};
+  try{
+    const token=await getToken(env),hk=await hashkey(env,body);
+    const r=await fetch(base(env)+'/uapi/overseas-stock/v1/trading/order-rvsecncl',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+token,
+      appkey:env.KIS_APPKEY,appsecret:env.KIS_APPSECRET,tr_id:'VTTT1004U',custtype:'P',hashkey:hk},body:JSON.stringify(body)});
+    const raw=await r.json();if(TOKEN_BAD(raw))await dropToken(token);
+    const ok=String(raw.rt_cd)==='0';return json({ok,env:'vts',code:'SOXL',originalOrderNo:order.orderNo,
+      orderNo:raw.output?.ODNO||raw.output?.odno||'',msg:raw.msg1||'',raw},ok?200:502);
+  }catch(e){return json({error:'취소 결과 미확인: '+String(e.message||e)},502);}
 }
 
 // ── 사이트 소유자 판정 ──
@@ -423,18 +444,36 @@ export async function onRequestGet({ request, env }) {
     if (!/^\d{8}$/.test(date)) return json({ error: "날짜는 YYYYMMDD 형식입니다." }, 400);
 
     const cacheUrl = new URL(request.url);
-    cacheUrl.search = "?op=holiday&market=kr&date=" + date;
+    const isoDate = date.slice(0,4) + "-" + date.slice(4,6) + "-" + date.slice(6,8);
+    if (!Number.isFinite(Date.parse(isoDate+'T00:00:00Z')) || new Date(isoDate+'T00:00:00Z').toISOString().slice(0,10)!==isoDate)
+      return json({ok:false,error:"올바른 날짜가 아닙니다."},400);
+    cacheUrl.search = "?op=holiday&market=kr&date=" + date + "&cacheVersion=2";
     const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
+    const responseFor = evidence => new Response(JSON.stringify(evidence), {status:200,headers:{...JH,
+      "Cache-Control":"public, max-age=3600, s-maxage=86400"}});
+    const cacheMonitorKey = String(rawEnv.OPENING_MONITOR_KEY || rawEnv.AUTOTRADE_KEY || '').trim();
+    const cacheEndpoint = String(rawEnv.OPENING_WORKER_URL || 'https://jkquant-opening-scheduler.mumae4.workers.dev').replace(/\/$/,'') + '/market-day';
+    const sharedDay = async evidence => {
+      if (!cacheMonitorKey) return null;
+      try {
+        const r = await fetch(cacheEndpoint + (evidence ? '' : '?date='+isoDate), {
+          method:evidence?'POST':'GET',headers:{'x-monitor-key':cacheMonitorKey,'content-type':'application/json'},
+          ...(evidence?{body:JSON.stringify(evidence)}:{}),signal:AbortSignal.timeout(2500)});
+        const j=await r.json();
+        return r.ok&&j.ok===true?marketDayEvidence(j.evidence,isoDate):null;
+      } catch { return null; }
+    };
     try {
       const cache = globalThis.caches && globalThis.caches.default;
       const hit = cache ? await cache.match(cacheKey) : null;
-      if (hit) return hit;
+      const evidence = hit ? marketDayEvidence(await hit.json(),isoDate) : null;
+      if (evidence) return responseFor(evidence);
     } catch (e) {}
-
-    const requested = String(url.searchParams.get("env") || "").toLowerCase();
-    const order = requested === "real" || requested === "vts"
-      ? [requested, requested === "real" ? "vts" : "real"]
-      : [wantEnv(null, rawEnv), wantEnv(null, rawEnv) === "real" ? "vts" : "real"];
+    const shared = await sharedDay();
+    if (shared) return responseFor(shared);
+    // CTCA0903R is a read-only exchange calendar query unsupported by KIS VTS.
+    // Keep real credentials in Pages; share only its verified Y/N answer across isolates.
+    const order = ['real'];
     const tried = [], errors = [];
     for (const mode of [...new Set(order)]) {
       const e = withEnv(rawEnv, mode, "kr");
@@ -456,23 +495,24 @@ export async function onRequestGet({ request, env }) {
         const rows = Array.isArray(j.output) ? j.output : (j.output ? [j.output] : []);
         const row = rows.find(x => String(x && x.bass_dt || "") === date);
         if (!row) throw new Error("응답에 기준일자가 없습니다.");
-        const open = String(row.opnd_yn || "").toUpperCase() === "Y";
-        const body = JSON.stringify({
+        const opndYn = String(row.opnd_yn || "").toUpperCase();
+        if (!['Y','N'].includes(opndYn)) throw new Error("응답에 유효한 개장 여부가 없습니다.");
+        const open = opndYn === "Y";
+        const evidence = {
           ok: true,
           market: "KRX",
           date: date.slice(0,4) + "-" + date.slice(4,6) + "-" + date.slice(6,8),
           open,
-          opndYn: String(row.opnd_yn || ""),
+          opndYn,
           businessDay: String(row.bzdy_yn || ""),
           tradeDay: String(row.tr_day_yn || ""),
           settlementDay: String(row.sttl_day_yn || ""),
           source: "KIS/CTCA0903R",
           env: mode,
-        });
-        const response = new Response(body, { status: 200, headers: {
-          ...JH,
-          "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=172800",
-        }});
+          checkedAt: new Date().toISOString(),
+        };
+        await sharedDay(evidence);
+        const response = responseFor(evidence);
         try {
           const cache = globalThis.caches && globalThis.caches.default;
           if (cache) await cache.put(cacheKey, response.clone());
@@ -482,6 +522,10 @@ export async function onRequestGet({ request, env }) {
         errors.push(mode + ": " + String(e.message || e));
       }
     }
+    // A concurrent Pages location may have completed the one fresh lookup while
+    // this location encountered a token rate limit. Re-read evidence, never retry an order.
+    const concurrent = await sharedDay();
+    if (concurrent) return responseFor(concurrent);
     return json({
       ok: false,
       market: "KRX",
@@ -905,7 +949,8 @@ export async function onRequestPost({ request, env }) {
     const trU = side === "buy" ? (real ? "TTTT1002U" : "VTTT1002U") : (real ? "TTTT1006U" : "VTTT1001U");
     const send = async (dvsn) => {
       const ordU = { CANO: a.cano, ACNT_PRDT_CD: a.prod, OVRS_EXCG_CD: mkt, PDNO: code,
-        ORD_QTY: String(qty), OVRS_ORD_UNPR: price.toFixed(2), ORD_SVR_DVSN_CD: "0", ORD_DVSN: dvsn };
+        ORD_QTY: String(qty), OVRS_ORD_UNPR: price.toFixed(2), ORD_SVR_DVSN_CD: "0", ORD_DVSN: dvsn,
+        SLL_TYPE: side==='sell'?'00':'', MGCO_APTM_ODNO:'' };
       const token = await getToken(env);
       const hk = await hashkey(env, ordU);
       const r = await fetch(base(env) + "/uapi/overseas-stock/v1/trading/order", {

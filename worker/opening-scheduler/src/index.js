@@ -1,5 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
 import { krxDay } from "../../../functions/api/_krx_calendar.js";   // KRX 휴장일 — 주문 경로(Pages)와 같은 목록
+import {marketDayCache} from "../../../functions/api/_market-day-cache.js";
+import {defaultPaperSettings,changePaperSettings} from "../../../functions/api/_paper-trading.js";
+import {openingOrderRefs,openingExecutionResult} from "../../../functions/api/_opening-execution.js";
+import {researchBroker} from "../../../functions/api/_research-broker.js";
+import {closingBrokerPlans,tenbaggerBrokerPlans,RESEARCH_BROKER_VERSION} from "../../../functions/api/_research-orders.js";
 import { pushEvents, sendPush, vapidPublic, alertText, reportMsg } from "../../../functions/api/_claude_push.js";   // 단타(클로드) 매수·매도 알림(웹 알림 · 텔레그램 같은 사건)
 
 // Cloudflare Worker — jkquant opening scheduler
@@ -153,6 +158,27 @@ export class OpeningSignalStore extends DurableObject {
   }
   async fetch(request){
     const u=new URL(request.url);
+    if(u.pathname==='/market-day')return marketDayCache(this.ctx.storage,request);
+    if(u.pathname.startsWith('/research-')){
+      if(request.method==='GET')return researchBroker(this.ctx.storage,this.env,request);
+      // Serialize the research broker calls across strategies; claims are also transactional.
+      const next=(this.researchTail||Promise.resolve()).then(()=>researchBroker(this.ctx.storage,this.env,request));
+      this.researchTail=next.catch(()=>{});return next;
+    }
+    if(u.pathname==="/paper-settings"){
+      const patch=request.method==='POST'?await request.json().catch(()=>null):null;
+      if(request.method==='GET')return json({ok:true,settings:(await this.ctx.storage.get('paperSettings'))||defaultPaperSettings()});
+      if(request.method!=='POST')return json({ok:false,error:'method not allowed'},405);
+      try{
+        const next=await this.ctx.storage.transaction(async tx=>{
+          const current=(await tx.get('paperSettings'))||defaultPaperSettings(),next=changePaperSettings(current,patch);
+          const change=patch.allOff===true?{allOff:true}:{strategy:patch.strategy,enabled:patch.enabled,budget:patch.budget,...(patch.exitArm?{exitArm:patch.exitArm,pattern:patch.pattern}:{})};
+          const history=[...((await tx.get('paperSettingsHistory'))||[]),{at:next.updatedAt,revision:next.revision,change,previous:current}].slice(-100);
+          await tx.put({paperSettings:next,paperSettingsHistory:history});return next;
+        });
+        return json({ok:true,settings:next});
+      }catch(e){return json({ok:false,error:String(e.message||e)},e.status||400);}
+    }
     if(u.pathname.startsWith("/push/"))return this.push(u.pathname.slice(6),request);
     if(u.pathname==="/kistoken"){                       // 한투 접근 토큰(모의투자) 보관 — 아래 kisTokenRecord 설명
       const now=Date.now(),r=request.method==="GET"?null:kisTokenRecord(await request.json().catch(()=>null),now);   // 본문은 저장소 읽기 전에(읽기~쓰기 사이에 다른 요청이 끼지 않게)
@@ -197,6 +223,25 @@ export class OpeningSignalStore extends DurableObject {
     if(request.method==="GET"&&u.pathname==="/ledger"){
       const ledger=await this.ctx.storage.get("ledger");
       return json({ok:true,ledger:ledger||null});
+    }
+    if(request.method==='POST'&&u.pathname==='/execution'){
+      const e=await request.json();
+      return this.ctx.storage.transaction(async tx=>{
+        const ledger=await tx.get('ledger');
+        if(!ledger||e.date!==ledger.date||!e.id||!['intent','result'].includes(e.phase))return json({ok:false,error:'execution ledger mismatch'},409);
+        const journal=ledger.executionEvents||[],old=journal.find(x=>x.id===e.id);
+        if(old)return JSON.stringify(old)===JSON.stringify(e)?json({ok:true,duplicate:true}):json({ok:false,error:'immutable execution event'},409);
+        if(e.phase==='intent'){
+          const main=ledger.mainVariant||'baseline',events=(ledger.events||[]).filter(x=>x.variant===main);
+          const allowed=new Set(events.flatMap(x=>openingOrderRefs(ledger.date,x.stage==='buy'?[x.signal]:[],x.stage==='sell'?[x.signal]:[])).map(x=>x.signalId));
+          if(!Array.isArray(e.requests)||!e.requests.length||e.requests.length>40||e.requests.some(x=>!allowed.has(x.signalId)))return json({ok:false,error:'order intent requires original main signal'},409);
+        }else{
+          const intent=journal.find(x=>x.phase==='intent'&&x.id===e.attemptId);
+          if(!intent||e.id!==intent.id+':result'||!Array.isArray(e.receipts)||e.receipts.length!==intent.requests.length||e.receipts.some(x=>!intent.requests.some(r=>r.signalId===x.signalId)))return json({ok:false,error:'order result requires intent'},409);
+        }
+        ledger.executionEvents=[...journal,e];ledger.updatedAt=e.at;
+        await tx.put('ledger',ledger);return json({ok:true});
+      });
     }
     if(request.method==="POST"&&u.pathname==="/append"){
       const b=await request.json();
@@ -306,15 +351,28 @@ async function scanOne(env,shard,target,mainVariant){
   if(!r.ok||!j.ok)throw new Error("shard "+shard+" HTTP "+r.status+" "+String(j.error||j.skipped||""));
   return j;
 }
-async function executeVts(env,date,buyEvents,sellEvents){
-  const r=await fetch(baseUrl(env)+"/api/opening-execute",{
-    method:"POST",
-    headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
-    body:JSON.stringify({date,buyEvents,sellEvents,source:"cloudflare-cron"})
-  });
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok||!j.ok)throw new Error("opening-execute HTTP "+r.status+" "+String(j.error||""));
-  return j;
+async function appendExecution(env,event){
+  const r=await store(env,event.date).fetch('https://opening-signal.internal/execution',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(event)});
+  const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||'execution evidence storage failed');
+}
+export async function executeVts(env,date,buyEvents,sellEvents,blockedReason=''){
+  const intent={id:crypto.randomUUID(),phase:'intent',date,at:new Date().toISOString(),requests:openingOrderRefs(date,buyEvents,sellEvents)};
+  if(!intent.requests.length)return {ordersOk:false,eventCount:0};
+  // No broker request before durable intent. A missing result remains unknown, never auto-retried here.
+  await appendExecution(env,intent);
+  let response={},status=0,error='';
+  if(blockedReason){response={ok:true,enabled:false,reason:blockedReason};status=200;}
+  else try{
+    const r=await fetch(baseUrl(env)+"/api/opening-execute",{
+      method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
+      body:JSON.stringify({date,buyEvents,sellEvents,source:"cloudflare-cron"})
+    });
+    status=r.status;response=await r.json();
+    if(!r.ok||!response.ok)error='opening-execute HTTP '+status+' '+String(response.error||'');
+  }catch(e){error=String(e.message||e);}
+  const result=openingExecutionResult(intent,response,status,error);
+  await appendExecution(env,result);
+  return {...response,ordersOk:result.ordersOk,counts:result.counts,eventCount:result.receipts.length,executionError:error||null};
 }
 function liveEvent(date,target,stage,variant,x,delivery,variantMeta){
   const signal=x||{};
@@ -373,7 +431,7 @@ export function openingUnmatchedExits(ledger,mainVariant){
     .map(([,x])=>({...x,exitTime:930,exitPrice:null,pnl:null,
       reason:"09:30 종료 매도 원본 누락 · 모의주문/체결 확인 필요",finalExitUnverified:true}));
 }
-async function forceOpeningSessionClose(env,date,mainVariant,target){
+export async function forceOpeningSessionClose(env,date,mainVariant,target){
   if(target!==930)return {count:0};
   const ledger=await readLedger(env,date);
   const missing=openingUnmatchedExits(ledger,mainVariant);
@@ -388,7 +446,7 @@ async function forceOpeningSessionClose(env,date,mainVariant,target){
   try{exec=await executeVts(env,date,[],missing);}
   catch(e){console.error(JSON.stringify({type:"opening_final_exit_vts_failed",date,count:missing.length,error:String(e.message||e)}));return {count:missing.length,ok:false,error:String(e.message||e)};}
   console.log(JSON.stringify({type:"opening_final_exit_recovery",date,count:missing.length,vts:exec.events||[]}));
-  return {count:missing.length,ok:true};
+  return {count:missing.length,ok:exec.ordersOk,counts:exec.counts};
 }
 function telegramFailures(parts){
   let n=0;
@@ -536,7 +594,8 @@ async function runMinute(controller,env){
   // Preserve previous safety behavior: if the user alert failed, retain the signal but do not place a VTS order.
   if((buyEvents.length||sellEvents.length)&&deliveryFailures){
     result.webPush=await notifyOpeningWebPush(env,kst.date,buyEvents,sellEvents,mainVariant);
-    result.vts={ok:false,skipped:"alert_delivery_failed"};
+    const exec=await executeVts(env,kst.date,buyEvents,sellEvents,'알림 전송 실패 · 주문 중지');
+    result.vts={ok:false,skipped:"alert_delivery_failed",counts:exec.counts};
     console.error(JSON.stringify(result));
     return;
   }
@@ -544,7 +603,7 @@ async function runMinute(controller,env){
   if((buyEvents.length||sellEvents.length)&&lag<=MAX_EXEC_LAG_MS){
     try{
       const exec=await executeVts(env,kst.date,buyEvents,sellEvents);
-      result.vts={ok:true,eventCount:Array.isArray(exec.events)?exec.events.length:0};
+      result.vts={ok:exec.ordersOk,eventCount:exec.eventCount,counts:exec.counts,error:exec.executionError};
     }catch(e){
       result.vts={ok:false,error:String(e.message||e)};
       result.webPush=await notifyOpeningWebPush(env,kst.date,buyEvents,sellEvents,mainVariant);
@@ -552,7 +611,8 @@ async function runMinute(controller,env){
       throw e;
     }
   }else if(buyEvents.length||sellEvents.length){
-    result.vts={ok:false,skipped:"stale_signal",maxExecLagMs:MAX_EXEC_LAG_MS};
+    const exec=await executeVts(env,kst.date,buyEvents,sellEvents,'오래된 신호 · 주문 중지');
+    result.vts={ok:false,skipped:"stale_signal",maxExecLagMs:MAX_EXEC_LAG_MS,counts:exec.counts};
   }
 
   if(buyEvents.length||sellEvents.length){
@@ -583,6 +643,7 @@ export function scheduleRoute(ms){
   if(hm===1506)return "closing_day_signal";
   if(hm===1507)return "closing_day_entry";
   if(hm===1522)return "closing_overnight_signal";
+  if(hm===1523)return "research_close";
   if(hm===906)return "opening"; // 병렬로 종가 베팅의 전일 종목 시가 청산
   if(hm===1500)return "gapdown_c30";               // ⑤ 종가 30분 — 15:00 판단 · 매수(15:21 매도 · 15:40 체결 조회는 아래 ①② 단계에 붙어 돈다)
   if(hm===856)return "gapdown_preopen";
@@ -604,7 +665,7 @@ export function kisTokenRecord(b,now=Date.now()){
 }
 
 // ── 종가 30분: 당일 15:06~15:30 + 개별 종목 종가 매수/익일 시가 매도 ──
-// 기준/10 그림자 모두 같은 보존 가능한 신호장부. 연구용 종이체결만, VTS 실주문 금지.
+// 기준/10 그림자 종이장부 보존. 한투 모의주문은 별도 장부와 마감 전 스케줄에서만 실행.
 // 매수 신호와 확정 가능한 모의가격을 분리해 15:30 종가를 미리 아는 오류를 방지한다.
 const CLOSING_STAGE_MAP={closing_day_signal:1506,closing_day_entry:1507,
   closing_overnight_signal:1522,closing_settle:1540,closing_overnight_exit:906};
@@ -630,12 +691,12 @@ async function closingAlert(env,date,e,stage){
   const lines=[
     e.name+" ("+e.code+") · "+(e.kind==="day"?"종가 30분 당일청산":"종가 베팅 · 익일 시가청산"),
     "모의체결 "+Number(e.price).toLocaleString("ko-KR")+"원 · "+e.source,
-    stage==="sell"&&e.pnl!=null?"비용반영 손익 "+(e.pnl>=0?"+":"")+e.pnl.toFixed(2)+"%":"증권사 실제 주문 없음 · 모의장부"];
+    stage==="sell"&&e.pnl!=null?"비용반영 손익 "+(e.pnl>=0?"+":"")+e.pnl.toFixed(2)+"%":"연구 기준가격 · 한투 모의주문/체결은 별도 장부"];
   try{
     const time=String(e.targetHm||0).padStart(4,"0").replace(/(..)(..)$/,"$1:$2");
     const r=await fetch(baseUrl(env)+"/api/scalping-alert",{method:"POST",
       headers:{"x-monitor-key":env.MONITOR_KEY,"content-type":"application/json"},
-      body:JSON.stringify({strategy:"closing30",stage,date:e.createdAt.slice(0,10)||date,time,
+      body:JSON.stringify({strategy:"closing30",kind:e.kind,stage,date:e.createdAt.slice(0,10)||date,time,
         eventId:e.id,eventAt:e.createdAt,lines})});
     const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)console.error("closing30 alert "+(j.error||r.status));
   }catch(error){console.error("closing30 alert failed "+String(error));}
@@ -701,7 +762,35 @@ async function runClosing30(route,controller,env){
       partial:false,okShards:1,quoteErrors:quotes.errors?.length||0,events},"closing30");
     // 이미 처리된 id는 저장소에서 중복 배제. 재호출 시 동일 event를 다시 알리지 않는다.
     if(saved.added>0)for(const e of events.filter(e=>e.variant==="baseline"))await closingAlert(env,prior,e,destStage);
+    if(route==='closing_day_entry')await runClosingBroker(env,'day','buy',today);
     console.log(JSON.stringify({type:route,kind,date:prior,events:events.length,stored:saved.added,priceErrors:quotes.errors?.length||0}));
+  }
+}
+
+async function runClosingBroker(env,kind,side,today){
+  const date=kind==='overnight'&&side==='sell'?await lastOpenDate(env,today):today;
+  const ledger=await readLedger(env,date,'closing30');
+  const plans=closingBrokerPlans(ledger,kind,side,today);
+  for(const plan of plans){
+    const r=await store(env,'__research_broker__').fetch('https://opening-signal.internal/research-execute',{
+      method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(plan)});
+    if(!r.ok)console.error(JSON.stringify({type:'closing_broker_error',strategy:plan.strategy,code:plan.code,error:(await r.json()).error}));
+  }
+}
+async function runTenbaggerBroker(env,today){
+  const r=await store(env,'__paper_settings__').fetch('https://opening-signal.internal/paper-settings'),j=await r.json();
+  const selected=j.settings?.strategies?.gpt_tenbagger?.exitArm;
+  const pattern=j.settings?.strategies?.gpt_tenbagger?.pattern;
+  if(!selected)return; // A research exit arm must be selected explicitly, including while OFF.
+  const previous=await lastOpenDate(env,today),response=await fetch(baseUrl(env)+'/api/tenbagger-research',{headers:{accept:'application/json'}});
+  if(!response.ok)throw Error('tenbagger forward source unavailable');
+  const data=await response.json(),current=await store(env,'__research_broker__').fetch('https://opening-signal.internal/research-history?strategy=gpt_tenbagger'),history=await current.json();
+  // Existing holdings retain their selected exit arm even after a settings change.
+  const arms=new Set([selected,...(history.positions||[]).filter(x=>x.operations.buy?.orderNo&&!x.operations.sell).map(x=>x.plan.exitArm)]);
+  for(const arm of arms)for(const plan of tenbaggerBrokerPlans(data,previous,today,arm)){
+    if(plan.side==='buy'&&(arm!==selected||plan.source.pattern!==pattern))continue;
+    const q=await store(env,'__research_broker__').fetch('https://opening-signal.internal/research-execute',{method:'POST',body:JSON.stringify(plan)});
+    if(!q.ok)console.error(JSON.stringify({type:'tenbagger_broker_error',code:plan.code,error:(await q.json()).error}));
   }
 }
 
@@ -991,7 +1080,7 @@ export default {
     const at=Number(controller.scheduledTime)||Date.now();
     ctx.waitUntil(pushStore(env,"ensure",{}).catch(()=>null));   // 알림 감시 알람이 살아 있는지만 확인(감시는 저장소 알람이 5분마다 — 장 일정과 따로)
     const route=scheduleRoute(at);
-    const krRoute=route==="opening"||route==="claude_kr"||route==="duel"||(route&&route.startsWith("closing_"))||(route&&route.startsWith("gapdown_"));
+    const krRoute=route==="opening"||route==="claude_kr"||route==="duel"||route==="research_close"||(route&&route.startsWith("closing_"))||(route&&route.startsWith("gapdown_"));
     if(krRoute){
       const date=kstParts(at).date;
       try{
@@ -1004,6 +1093,14 @@ export default {
         return;
       }
     }
+    // Original closing signals are persisted at 15:22. Orders precede the 15:30 close.
+    const brokerHm=kstHm(at);
+    if(krRoute&&brokerHm===1523){
+      ctx.waitUntil(runClosingBroker(env,'day','sell',kstParts(at).date));
+      ctx.waitUntil(runClosingBroker(env,'overnight','buy',kstParts(at).date));
+      ctx.waitUntil(runTenbaggerBroker(env,kstParts(at).date));
+    }
+    if(krRoute&&brokerHm===856)ctx.waitUntil(runClosingBroker(env,'overnight','sell',kstParts(at).date));
     if(route==="claude_soxl"){
       const date=nyDate(at);
       if(!isNyseSessionDate(date)){
@@ -1028,6 +1125,25 @@ export default {
   },
   async fetch(request,env){
     const u=new URL(request.url);
+    if(u.pathname==='/market-day'){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      if(!['GET','POST'].includes(request.method))return json({ok:false,error:'method not allowed'},405);
+      return store(env,'__market_days__').fetch(new Request('https://opening-signal.internal/market-day'+u.search,request));
+    }
+    if(u.pathname==='/broker-status'){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      return json({ok:true,version:RESEARCH_BROKER_VERSION,strategies:['gpt_opening','gpt_closing30','gpt_closing_bet','gpt_tenbagger'],environment:'vts',settings:'/paper-settings'});
+    }
+    if(['/research-execute','/research-reconcile','/research-history'].includes(u.pathname)){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      if(u.pathname==='/research-history'&&request.method!=='GET'||u.pathname!=='/research-history'&&request.method!=='POST')return json({ok:false,error:'method not allowed'},405);
+      return store(env,'__research_broker__').fetch(new Request('https://opening-signal.internal'+u.pathname+u.search,request));
+    }
+    if(u.pathname==="/paper-settings"){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      if(!['GET','POST'].includes(request.method))return json({ok:false,error:'method not allowed'},405);
+      return store(env,'__paper_settings__').fetch(new Request('https://opening-signal.internal/paper-settings',request));
+    }
     if(u.pathname==="/event-history"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const kind=u.searchParams.get("kind")||"opening",from=u.searchParams.get("from")||"2000-01-01",to=u.searchParams.get("to")||kstParts().date;

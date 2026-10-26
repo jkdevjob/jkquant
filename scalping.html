@@ -275,7 +275,7 @@ canvas{display:block;width:100%;height:auto}
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="JK 투자">
 <link rel="stylesheet" href="/tenbagger-gpt.css?v=1.2.0">
-<script src="/tenbagger-gpt.js?v=1.2.0" defer></script>
+<script src="/tenbagger-gpt.js?v=1.3.0" defer></script>
 </head>
 <body>
 
@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.46.1</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.48.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -341,7 +341,7 @@ canvas{display:block;width:100%;height:auto}
 <button class="tb-subtab" role="tab" aria-selected="false" data-view="cases">종목별 분석</button>
 <button class="tb-subtab" role="tab" aria-selected="false" data-view="method">검증 · 출처</button>
 </div>
-<div id="tb-status" role="status" aria-live="polite">가격 패턴 탐색 실험 · 실주문 없음</div>
+<div id="tb-status" role="status" aria-live="polite">가격 패턴 탐색 실험 · 한투 모의 설정은 별도</div>
 <div id="tb-content"></div>
 </div></div>
 
@@ -420,11 +420,11 @@ canvas{display:block;width:100%;height:auto}
     <div class="strategy-head">🌇 종가 30분 · 당일 청산 + 개별 종목 종가 베팅(다음 거래일 시가 청산)</div>
     <div class="row"><button class="ghostbtn sm" onclick="openTradeHistory('closing30')">종가 30분 전체 이력 / CSV</button><button class="ghostbtn sm" onclick="openTradeHistory('closing_bet')">개별 종목 종가 베팅 전체 이력 / CSV</button></div>
     <div class="card">
-      <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">메인 + 그림자 10개 · 서버 자동 실행 · 증권사 주문 없음</span></h3>
+      <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">메인 + 그림자 10개 · 서버 자동 실행 · 한투 모의는 설정에서 ON</span></h3>
       <p class="lead">기준전략은 15시까지 하락한 개별 종목을 유동성 순으로 선정합니다. <b>당일청산형</b>은 15:06 신호 → 15:07 모의매수 → 15:40 당일 종가 확인으로 종료합니다.
        <b>종가 베팅형</b>은 15:22 신호 → 15:40 종가 매수가 확정 → 다음 거래일 09:06 시가 확인으로 청산합니다.
        신호는 그 시점까지 완료된 분봉만 사용합니다. 종가 단일가나 다음 날 시가를 미리 알아내는 백테스트 오류를 금지합니다.</p>
-      <div class="warn"><b>연구용:</b> 15:07의 가상 매수가격과 15:30 종가/익일 시가는 실거래 체결을 보장하지 않습니다. 실제 주문·VTS 주문은 전혀 제출하지 않으며, 이력은 수익률과 함께 매매 신호·체결가 원천·미확정 상태를 기록합니다. 거래비용 왕복 0.23%는 초기 보수적 가정이며, 별도 실측 검증이 필요합니다.</div>
+      <div class="warn"><b>연구용:</b> 15:07의 가상 매수가격과 15:30 종가/익일 시가는 실거래 체결을 보장하지 않습니다. 한투 모의투자는 설정에서 켠 이후의 메인 신호만 별도 주문합니다. 15:23 종가 동시호가 주문과 다음 거래일 08:56 시가 동시호가 주문은 연구 기준가격과 다를 수 있습니다. 전체 매매이력에 주문·체결·미확정 상태를 따로 기록합니다. 거래비용 왕복 0.23%는 초기 보수적 가정이며, 별도 실측 검증이 필요합니다.</div>
       <div class="out" id="closing30_summary" style="margin-top:12px"><div class="outbox"><div class="ol">상태</div><div class="ov">원본 조회 전</div></div></div>
     </div>
     <div class="card">
@@ -455,7 +455,7 @@ canvas{display:block;width:100%;height:auto}
     <h3><span class="dot"></span>🔥 실시간 시초가 돌파 감시 <span class="sub" style="font-weight:600">갭 + 첫고점 + 눌림 + 재돌파 + 수급</span></h3>
     <p class="lead">첫 3분 고점을 확정한 뒤 <b>최초 돌파 → 0.3~1.0% 눌림 → 시초가 지지 → 전고점 재돌파</b>를 확인하고,
       재돌파 시 <b>1분 거래량과 추정 거래대금이 다시 붙는 종목</b>만 후보로 표시한다. 조건 충족 시 Telegram으로 한 번 알린다.</p>
-    <div class="warn" style="margin-bottom:10px"><b>서버 자동감시 + VTS 병행체결:</b> 매 영업일 09:00~09:30에는 웹페이지를 닫아도 Cloudflare 서버가 Top100을 매분 검사한다. 기준전략 신호가 발생하면 <b>내부 모의체결 기준값을 기록하면서 한국투자 VTS에 시장가 모의주문도 자동 제출</b>하고 Telegram 매수·매도 알림을 보낸다. 주문은 5개 감시 shard에서 직접 쏘지 않고 한 실행기로 모아 순차 처리해 VTS 호출 제한을 피한다. 개선후보들은 주문하지 않고 그림자 신호로만 병렬 기록한다.</div>
+    <div class="warn" style="margin-bottom:10px"><b>서버 자동감시 + VTS 병행체결:</b> 매 영업일 09:00~09:30에는 웹페이지를 닫아도 Cloudflare 서버가 Top100을 매분 검사한다. 기준전략 신호가 발생하면 <b>내부 모의체결 기준값을 기록하고, 설정에서 시초가 모의투자 ON일 때만 한국투자 VTS 시장가 모의주문을 제출</b>하고 Telegram 매수·매도 알림을 보낸다. 주문은 5개 감시 shard에서 직접 쏘지 않고 한 실행기로 모아 순차 처리해 VTS 호출 제한을 피한다. 개선후보들은 주문하지 않고 그림자 신호로만 병렬 기록한다.</div>
     <div class="row" style="align-items:flex-end;margin-bottom:8px">
       <div class="fld"><label>감시 유니버스</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
       <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ 시초가 감시 시작</button>
@@ -486,7 +486,7 @@ canvas{display:block;width:100%;height:auto}
     <div class="row" style="margin-bottom:8px">
       <button class="ghostbtn" onclick="loadVtsReconcile('opening')">🔄 오늘 VTS 대조</button>
       <button class="ghostbtn" onclick="loadVtsResearch('opening')">📊 누적 실행품질</button>
-      <span class="sub" id="ob_vts_msg">자동 제출된 VTS 모의체결을 읽어 내부 모의체결과 비교합니다.</span>
+      <span class="sub" id="ob_vts_msg">설정 ON으로 제출된 VTS 모의체결을 읽어 내부 모의체결과 비교합니다.</span>
     </div>
     <div id="ob_vts_body"></div>
     <div id="ob_vts_research" style="margin-top:10px"></div>
@@ -554,7 +554,7 @@ canvas{display:block;width:100%;height:auto}
 
     <div class="card">
       <h3><span class="dot"></span>📈 데이트레이딩 기준전략 v1 <span class="sub" style="font-weight:600">VWAP 추세 돌파 · 연구/모의 전용</span></h3>
-      <p class="lead">시초가 30분 전략과 분리해서 <b>장중 추세가 이어지는 종목</b>을 찾는다. 아직 검증 전 가설이므로 실제 주문에는 연결하지 않고,
+      <p class="lead">시초가 30분 전략과 분리해서 <b>장중 추세가 이어지는 종목</b>을 찾는다. 연구용 가설이며 한투 모의주문은 설정에서 ON일 때만 실행하고,
         기준전략 + 그림자전략을 매일 같은 원본 1분봉으로 병렬 비교한다.</p>
       <div class="step"><div class="st"><span class="n">1</span>유니버스 고정</div><ul>
         <li><b>10:00 전후 거래대금 Top100</b>을 그날 파일로 고정한다.</li>
@@ -583,7 +583,7 @@ canvas{display:block;width:100%;height:auto}
     </div>
 
     <div class="card">
-      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 주문 없음</span></h3>
+      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 연구 기준가격</span></h3>
       <p class="lead">웹페이지를 닫아도 Cloudflare Durable Object에 오늘 장부가 유지된다. 신호가 과거에 이미 발생했더라도
         서버가 다시 시작되면 당일 신호를 복구해 KIS 과거 1분봉으로 <b>진입·손절·익절 경로를 재구성</b>한다.</p>
       <div class="row" style="margin-bottom:8px">
@@ -669,7 +669,7 @@ canvas{display:block;width:100%;height:auto}
     </div>
 
     <div class="card">
-      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 주문 없음</span></h3>
+      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 연구 기준가격</span></h3>
       <p class="lead">Cloudflare 서버가 오늘 BTC 기준전략의 <b>신호 → 다음 5분봉 시가 진입 → 손절/익절/시간청산</b>을 계속 재구성해 저장합니다. 실거래소 주문은 보내지 않으며, 진행 중 포지션도 현재 모의손익을 표시합니다.</p>
       <div class="row" style="margin-bottom:8px"><button class="ghostbtn" onclick="loadGlobalPaper('crypto')">🔄 장중 이력 새로고침</button><span class="sub" id="crypto_live_paper_msg">오늘 서버 장부 불러오는 중…</span></div>
       <div id="crypto_live_paper_body"><p class="sub">비트코인 탭을 열면 자동으로 갱신됩니다.</p></div>
@@ -733,11 +733,11 @@ canvas{display:block;width:100%;height:auto}
     </div>
 
     <div class="card">
-      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 주문 없음</span></h3>
+      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 연구 기준가격</span></h3>
       <p class="lead">Cloudflare 서버가 미국 정규장 기준전략의 <b>OR 돌파 → 다음 5분봉 시가 진입 → 손절/익절/시간청산</b>을 계속 재구성해 저장합니다. 한국투자 VTS 주문과는 별개의 JK 투자 연구용 모의장부입니다.</p>
       <div class="row" style="margin-bottom:8px"><button class="ghostbtn" onclick="loadGlobalPaper('soxl')">🔄 장중 이력 새로고침</button><span class="sub" id="soxl_live_paper_msg">오늘 서버 장부 불러오는 중…</span></div>
       <div id="soxl_live_paper_body"><p class="sub">SOXL 탭을 열면 자동으로 갱신됩니다.</p></div>
-      <p class="note">1슬롯 전략이므로 매매 순손익과 계좌수익률이 같습니다. VTS 체결이력은 별도 대조용이며 이 장부는 주문을 생성하지 않습니다.</p>
+      <p class="note">1슬롯 전략이므로 매매 순손익과 계좌수익률이 같습니다. 한투 모의주문은 설정에서 ON일 때만 지정가로 제출하며, 체결·미체결·잔량 취소는 전체 매매이력의 한투 모의주문 원장에서 확인합니다.</p>
     </div>
     <div class="card">
       <h3><span class="dot"></span>🧪 SOXL 누적 연구 <span class="sub" style="font-weight:600">기준 + 그림자 병렬 비교</span></h3>
@@ -778,7 +778,7 @@ canvas{display:block;width:100%;height:auto}
 
 </div>
 
-<script src="/trade-history-ui.js?v=1.46.0"></script>
+<script src="/trade-history-ui.js?v=1.48.1"></script>
 <script>
 const $=id=>document.getElementById(id);
 const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -1733,7 +1733,7 @@ function dailyLiveResultCell(x,top){
   return '<div class="daily-result-box">'+top+'<div class="daily-result-meta">장중 원본 · '+esc(s.label)+(x.open?' · 보유 평가손익':'')+'</div>'+
     '<div class="daily-result-ret '+cls+'">'+esc(result)+'</div>'+
     '<div class="daily-result-meta">선정 '+Number(x.trades||0)+' · 진입대기 '+Number(x.pendingTrades||0)+' · 보유 '+Number(x.open||0)+' · 청산 '+Number(x.closed||0)+'</div>'+
-    (x.realizedReturnPct!=null?'<div class="daily-result-meta">실현 계좌손익 '+dailyResultPct(x.realizedReturnPct)+(x.slots?' · '+Number(x.slots)+'슬롯':'')+'</div>':'')+
+    (x.realizedReturnPct!=null?'<div class="daily-result-meta">'+(x.pnlBasis==='strategy-paper'?'전략 모의손익 ':'실현 계좌손익 ')+dailyResultPct(x.realizedReturnPct)+(x.slots?' · '+Number(x.slots)+'슬롯':'')+(x.pnlBasis==='strategy-paper'?' · 한투 체결정산과 별도':'')+'</div>':'')+
     '<div class="daily-result-meta">'+esc(s.detail)+'</div>'+
     (x.sourceWarning?'<div class="warn">'+esc(x.sourceWarning)+'</div>':'')+
     (x.stale?'<div class="warn">서버 갱신 지연 · 아래 원본 시각 기준의 이전 값입니다.</div>':'')+
@@ -2208,9 +2208,9 @@ async function loadStrategyScorecard(name,force=false){
 
 const STRATEGY_UI_META={
   opening:{version:'opening_rebreak_v1',market:'KOSPI/KOSDAQ Top100',selection:'09:00~09:30 · 갭 + 첫3분 고점 + 눌림 + 재돌파 + 수급',execution:'내부 모의 + KIS VTS 모의 병행',risk:'당일청산 · −1.0% / +1.5% / 09:30 시간청산'},
-  daytrading:{version:'daytrading_vwap_breakout_v1',market:'10시 전후 거래대금 Top100',selection:'10:00~14:30 · VWAP 추세 + 20분 고점돌파 + 거래량',execution:'서버 내부 모의만 · 주문 없음',risk:'당일청산 · −1.0% / +2.0% / 15:10 시간청산 · 최대3건'},
+  daytrading:{version:'daytrading_vwap_breakout_v1',market:'10시 전후 거래대금 Top100',selection:'10:00~14:30 · VWAP 추세 + 20분 고점돌파 + 거래량',execution:'연구 모의장부 + 한투 모의주문 선택 · 기본 OFF',risk:'당일청산 · −1.0% / +2.0% / 15:10 시간청산 · 최대3건'},
   crypto:{version:'btc_midnight_orb_v2',market:'Upbit KRW-BTC',selection:'00:00 ORB · 첫 고점 재돌파 + 거래량 + VWAP · 22:00까지',execution:'JK 투자 독립 모의만 · 주문 없음',risk:'당일청산 · −0.5% / +1.0% / 최대60분 · 1슬롯'},
-  soxl:{version:'soxl_orb_v1',market:'SOXL only · 미국 정규장',selection:'09:30~09:45 ET OR · 11:30 이전 첫 돌파 + VWAP + 거래량',execution:'SOXL만 내부 모의 · QQQ/TQQQ 매매대체 금지 · VTS는 별도 대조',risk:'당일청산 · −1.2% / +2.4% / 최대90분 · 1슬롯'}
+  soxl:{version:'soxl_orb_v1',market:'SOXL only · 미국 정규장',selection:'09:30~09:45 ET OR · 11:30 이전 첫 돌파 + VWAP + 거래량',execution:'SOXL만 연구 모의 + 한투 지정가 모의 선택 · 기본 OFF · 체결은 별도 장부',risk:'당일청산 · −1.2% / +2.4% / 최대90분 · 1슬롯'}
 };
 const DAILY_RESULT_CACHE={};
 const HISTORY_RISK_CACHE={};

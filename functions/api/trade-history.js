@@ -1,7 +1,7 @@
 // Owner-only all-tab history. Reads evidence; never submits orders or changes rules.
 import {ownerAuthorized} from './global-paper.js';
 import {historyFetch,parseCsv} from './scalping-history.js';
-import {TRADE_STRATEGIES,variantValid,record,paperRecords,openingRecords,closingRecords,tenbaggerRecords,uniqueRecords,filterRecords,recordsCsv} from './_trade-history.js';
+import {TRADE_STRATEGIES,variantValid,record,paperRecords,openingRecords,closingRecords,tenbaggerRecords,brokerRecords,uniqueRecords,filterRecords,recordsCsv} from './_trade-history.js';
 const RAW='https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/';
 const WORKERS={opening:'https://jkquant-opening-scheduler.mumae4.workers.dev',daytrading:'https://jkquant-daytrading-scheduler.mumae4.workers.dev',global:'https://jkquant-global-intraday-scheduler.mumae4.workers.dev'};
 const paths={opening:'opening-history',daytrading:'daytrading-research',crypto:'crypto-research',soxl:'soxl-research'};
@@ -52,6 +52,11 @@ export async function onRequestGet({request,env}){
     });
   }
   if(includes('tenbagger'))add('텐배거 순방향 기록',async()=>tenbaggerRecords(await (await source(RAW+'tenbagger-forward/latest.json')).json()));
+  if(strategy==='all'||['daytrading','closing30','closing_bet','soxl','tenbagger'].includes(strategy))add('한투 모의주문 원장',async()=>{
+    if(!key)throw Error('monitor key missing');
+    const base=String(env.OPENING_WORKER_URL||WORKERS.opening).replace(/\/$/,''),p=new URLSearchParams({from,to,strategy:strategy==='all'?'all':'gpt_'+strategy});
+    const j=await (await source(base+'/research-history?'+p,{headers:workerHeaders})).json();if(!j.ok)throw Error('broker journal unavailable');return brokerRecords(j.positions||[]);
+  });
   const results=await Promise.allSettled(tasks.map(x=>x.run)),warnings=[],all=[];
   results.forEach((r,i)=>{if(r.status==='fulfilled'){all.push(...(Array.isArray(r.value)?r.value:r.value.rows));if(r.value.warnings?.length)warnings.push(...r.value.warnings.map(w=>tasks[i].label+': '+w));}else warnings.push(tasks[i].label+': '+String(r.reason?.message||r.reason));});
   const unique=uniqueRecords(all),rows=filterRecords(unique,q);
@@ -61,7 +66,7 @@ export async function onRequestGet({request,env}){
     return new Response(recordsCsv(rows),{headers:{...headers,'content-type':'text/csv; charset=utf-8','content-disposition':'attachment; filename="jkquant-trades-'+from+'_'+to+'.csv"'}});
   }
   const page=Math.max(1,Math.floor(+q.get('page')||1)),pageSize=Math.max(1,Math.min(200,Math.floor(+q.get('pageSize')||50)));
-  const closed=rows.filter(x=>x.status==='closed'&&Number.isFinite(x.pnl)),variants=[...new Set(unique.map(x=>x.variant))].sort();
+  const closed=rows.filter(x=>x.status==='closed'),variants=[...new Set(unique.map(x=>x.variant))].sort();
   return json({ok:true,status:warnings.length?'degraded':unique.length?'ok':'collecting',from,to,strategy,variant,
     sourceWarnings:warnings,strategies:TRADE_STRATEGIES,variants,total:rows.length,page,pageSize,pages:Math.ceil(rows.length/pageSize),
     trades:rows.slice((page-1)*pageSize,page*pageSize),summary:{records:rows.length,closed:closed.length,

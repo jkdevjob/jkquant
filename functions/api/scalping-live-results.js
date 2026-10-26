@@ -88,7 +88,9 @@ function openingCoverage(scans,clock){
   // Signals are emitted only for the current minute. A later successful scan
   // cannot recover an earlier missed signal, so the last scan alone is insufficient.
   const last=Math.max(903,...scans.map(s=>Number(s.targetHm)||0));
-  const throughHm=clock.ended?930:Math.min(930,clock.hm-1,last);
+  // Give the in-flight minute one minute to finish, but do not let a stopped
+  // monitor keep reporting complete coverage up to its old last scan forever.
+  const throughHm=clock.ended?930:Math.min(930,clock.hm-1,Math.max(last,clock.hm-2));
   const expected=Array.from({length:Math.max(0,throughHm-903)},(_,i)=>904+i);
   const observed=new Set(scans.map(s=>Number(s.targetHm)));
   const good=new Set(scans.filter(openingScanOkay).map(s=>Number(s.targetHm)));
@@ -117,6 +119,7 @@ function summarizeOpeningLedger(ledger,now=Date.now()){
     const p=positions.get(id);if(p)Object.assign(p,{status:s.finalExitUnverified?'unverified':'closed',exitTime:s.exitTime,pnl:numeric(s.pnl)});
   }
   const row=baseRow(clock),a=[...positions.values()],closed=a.filter(x=>x.status==='closed');
+  row.pnlBasis='strategy-paper';
   row.updatedAt=latest.capturedAt||ledger.updatedAt||null;row.mainVariant=variant;row.positions=a;row.trades=a.length;
   row.unverified=a.filter(x=>x.status==='unverified').length;
   row.open=a.filter(x=>x.status==='open').length;row.closed=closed.length;
