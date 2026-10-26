@@ -9,11 +9,13 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
   // TECL 리밸을 주(월) 첫 거래일에만: wkDn(내릴 때만) · wkAll(둘 다) · moDn(내릴 때 월 1회). 오늘(=전일 k 다음 날)의 달력만 본다 — 룩어헤드 아님
   const gvT=p.gs0?ind.vol(P.C[GA],p.look):null;   // TQQQ 슬리브 비중도 역분산: gw × min(1, gs0²/σ²) (gs0 없으면 Guard ON 이면 gw 그대로)
   let lastK=-1; const wk=d=>Math.floor((Date.parse(d)/864e5+3)/7), isStart=(k,f)=>k+1<P.dates.length&&k>=0&&f(P.dates[k+1])!==f(P.dates[k]);
+  const MO=p.gRebMo||1, sh=d=>{ const y=+d.slice(0,4), m=+d.slice(5,7); return [m>=MO?y:y-1,(m-MO+12)%12]; };   // gRebMo: 정기 맞춤을 몇 월부터 셀지(기본 1월) — 달력 운 검사용
+  const PER={m:d=>d.slice(0,7), q:d=>{ const [y,m]=sh(d); return y+'-'+Math.floor(m/3); }, h:d=>{ const [y,m]=sh(d); return y+'-'+Math.floor(m/6); }, y:d=>String(sh(d)[0]), y2:d=>String(Math.floor(sh(d)[0]/2))};
   const rv=p.down?dvol(P.C[R],p.look):p.look2?(()=>{ const a=ind.vol(P.C[R],p.look), b=ind.vol(P.C[R],p.look2); return a.map((x,i)=>(x==null||b[i]==null)?null:Math.max(x,b[i])); })():ind.vol(P.C[R],p.look), gm=ind.ma(P.C[G],p.ma), rm=p.rMA?ind.ma(P.C[R],p.rMA):null;
   const rvDn=p.lookDn?ind.vol(P.C[R],p.lookDn):null;   // 내릴 때만 빠른 σ: 목표 = min(σ look 목표, σ lookDn 목표) 가 지금 비중보다 낮으면 그쪽으로(올릴 때는 σ look 그대로)
   const extra=p.div?{sym:p.div, w:p.dw, m:ind.ma(P.C[p.div],p.dMA||200)}:null;
   return {assets:[R,GA].concat(extra?[extra.sym]:[]), warm:Math.max(p.ma,p.look+1,(p.lookDn||0)+1,(p.look2||0)+1,p.rMA||0,extra?(p.dMA||200):0)+1,
-    bandOf:(s,t,c)=>{ if(s!==R) return (s===GA&&t>0&&c>0)?(((p.gsbDn!=null&&t<c)?p.gsbDn:(p.gsbUp!=null&&t>c)?p.gsbUp:(p.gsb??0.02))):0.02;
+    bandOf:(s,t,c)=>{ if(s!==R) return (s===GA&&t>0&&c>0)?(p.gReb?(isStart(lastK,PER[p.gReb])?(p.gRebB??0.02):Infinity):((p.gsbDn!=null&&t<c)?p.gsbDn:(p.gsbUp!=null&&t>c)?p.gsbUp:(p.gsb??0.02))):0.02;   // gReb: TQQQ 를 정해진 때(월 m·분기 q·반기 h·연 y 첫 거래일)만 목표로 — 그날 gRebB 넘게 벌어졌을 때
       if((p.wkAll&&!isStart(lastK,wk))||(p.wkDn&&t<c&&!isStart(lastK,wk))||(p.moDn&&t<c&&!isStart(lastK,d=>d.slice(0,7)))) return Infinity;
       return ((p.sbDn!=null&&t<c)?p.sbDn:(p.sbUp!=null&&t>c)?p.sbUp:p.sb)*p.tw; },   // TECL 비중: 내릴 때 sbDn · 올릴 때 sbUp (없으면 sb)
     target(k,cur,st){ lastK=k; const s=rv[k]; let w=Math.min(1,(p.s0*p.s0)/(s*s));
