@@ -70,3 +70,37 @@ jobs:
           print('NO_TEST_ORDER_NO_TEST_ALERT_NO_SETTINGS_WRITE')
           
           PY
+      - name: Read closing day signal and entry runtime logs
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          python - <<'PY'
+          import os,json,urllib.request,urllib.error,datetime
+          ms=lambda s:int(datetime.datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()*1000)
+          body={'queryId':'jkquant-closing-gap-20261026','dry':True,'view':'events','limit':300,
+            'timeframe':{'from':ms('2026-10-26T06:04:00Z'),'to':ms('2026-10-26T06:13:00Z')},
+            'parameters':{'datasets':['cloudflare-workers'],'filterCombination':'and','filters':[
+              {'key':'$metadata.service','operation':'eq','type':'string','value':'jkquant-opening-scheduler'}]}}
+          url='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CF_ACCOUNT']+'/workers/observability/telemetry/query'
+          req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={'Authorization':'Bearer '+os.environ['CF_TOKEN'],'Content-Type':'application/json'})
+          try:
+              with urllib.request.urlopen(req,timeout=35) as r:data=json.load(r)
+          except urllib.error.HTTPError as e:
+              print('OBSERVABILITY_UNAVAILABLE',e.code,e.read().decode()[:200]);raise SystemExit(0)
+          print('RUNTIME_QUERY',data.get('success'),[(x.get('message') or '')[:150] for x in data.get('errors',[])])
+          result=data.get('result') or {}
+          print('RESULT_FIELDS',sorted(result))
+          events=result.get('events')
+          if isinstance(events,dict):
+              print('EVENT_FIELDS',sorted(events));events=events.get('events') or events.get('data') or []
+          for e in events or []:
+              meta=e.get('$metadata') or e.get('metadata') or {}
+              workers=e.get('$workers') or e.get('workers') or {}
+              source=e.get('source') or {}
+              msg=meta.get('message') or source.get('message') or e.get('message')
+              if not msg and source:msg=json.dumps({k:v for k,v in source.items() if k not in ('request','headers','response')},ensure_ascii=False)
+              print('RUNTIME_EVENT',json.dumps({'timestamp':e.get('timestamp'),'trigger':meta.get('trigger'),'type':meta.get('type'),'error':meta.get('error'),'message':str(msg or '')[:700],
+                'outcome':workers.get('outcome'),'cpuTimeMs':workers.get('cpuTimeMs'),'wallTimeMs':workers.get('wallTimeMs'),'event':{k:v for k,v in (workers.get('event') or {}).items() if k in ('cron','scheduledTime')}},ensure_ascii=False))
+          print('READ_ONLY_NO_ORDER_NO_ALERT_NO_SETTINGS_WRITE')
+          PY
