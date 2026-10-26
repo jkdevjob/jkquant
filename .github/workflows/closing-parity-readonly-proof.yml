@@ -1,0 +1,72 @@
+name: Closing strategy parity read-only verification
+on:
+  push:
+    branches: [ops/closing-parity-proof-20261026]
+    paths: [.github/workflows/closing-parity-readonly-proof.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Verify originals, OFF settings and common closing views
+        env:
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+          VERIFY_DEPLOYMENT: "0"
+        run: |
+          python - <<'PY'
+          import os,json,urllib.request,urllib.error,hashlib,collections,time
+          PAGES='https://jkquant.pages.dev'
+          OPENING='https://jkquant-opening-scheduler.mumae4.workers.dev'
+          def get(url,auth=False):
+              headers={'User-Agent':'JKQuant-readonly-proof/1.0','Accept':'application/json'}
+              if auth:headers['x-monitor-key']=os.environ['MONITOR_KEY']
+              with urllib.request.urlopen(urllib.request.Request(url,headers=headers),timeout=35) as r:return r.read().decode()
+          def api(url,auth=False):
+              j=json.loads(get(url,auth));assert j.get('ok') is True,'unconfirmed API';return j
+          def digest(x):return hashlib.sha256(json.dumps(x,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+          settings=api(OPENING+'/paper-settings',True)['settings']
+          assert len(settings['strategies'])==7 and all(x['enabled'] is False for x in settings['strategies'].values())
+          print('OFF_PRESERVED',json.dumps({'revision':settings['revision'],'strategies':{k:v['enabled'] for k,v in settings['strategies'].items()}},sort_keys=True))
+          ls=[]
+          for date in ['2026-10-22','2026-10-23','2026-10-26']:
+              l=api(OPENING+'/closing-ledger?date='+date,True).get('ledger')
+              if l is not None:
+                  ls.append(l)
+                  print('ORIGINAL_CLOSING',json.dumps({'date':date,'sha256':digest(l),'events':len(l.get('events',[])),'scans':len(l.get('scans',[])),'stages':dict(collections.Counter(e.get('kind','')+':'+e.get('stage','') for e in l.get('events',[])))},sort_keys=True))
+          assert ls,'no original closing ledgers'
+          open('/tmp/closing-originals.json','w').write(json.dumps(ls))
+          if os.environ.get('VERIFY_DEPLOYMENT')=='1':
+              html=get(PAGES+'/scalping?parity=1.49.0')
+              assert 'id="scVer">v1.49.0<' in html and '6전략 누적 상태' in html
+              assert 'trade-history-ui.js?v=1.49.0' in html
+              print('DEPLOYED_VERSION research=1.49.0 six-strategy-overview')
+              daily=api(PAGES+'/api/scalping-daily-results?refresh=1')
+              assert {x['strategy'] for x in daily['strategies']}=={'opening','daytrading','crypto','soxl','closing30','closing_bet'}
+              print('DAILY_SIX',json.dumps({x['strategy']:{'date':x['current']['date'],'returnPct':x['current'].get('returnPct'),'status':x['status']} for x in daily['strategies']},sort_keys=True))
+              rank=api(PAGES+'/api/scalping-shadow-ranking?parity=1.49.0')
+              for strategy in ['closing30','closing_bet']:
+                  r=rank['rankings'][strategy];assert r['shadowCount']>=10 and r['promotionRule']['leaderResearchSessions']==7
+                  conf=api(OPENING+'/config?strategy='+strategy,True)['config']
+                  print('CLOSING_PARITY',json.dumps({'strategy':strategy,'active':r['shadowCount'],'pool':r['totalCandidatePool'],'factory':r['lifecycle'].get('candidateFactory'),'main':conf['selectedVariant'],'leader':r['lifecycle'].get('leader')},sort_keys=True))
+                  assert r['lifecycle'].get('candidateFactory')=='prospective-mixed-radix-v2'
+              raw='https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/'
+              research=json.loads(get(raw+'latest.json'))
+              assert all(k in research for k in ['closing30','closing_bet'])
+              close=json.loads(get(raw+'closing30.json'));assert isinstance(close['operationalSessions'],list)
+              trend=json.loads(get(PAGES+'/api/scalping-trend?parity=1.49.0'))
+              assert all(k in trend['strategies'] for k in ['closing30','closing_bet'])
+              print('CLOSING_TREND',json.dumps({k:len(trend['strategies'][k].get('daily',[])) for k in ['closing30','closing_bet']},sort_keys=True))
+              for k in ['closing30','closing_bet']:
+                  review=api(PAGES+'/api/scalping-review?strategy='+k)
+                  assert review['records'] and review['autoPromotion'] is not False if 'autoPromotion' in review else review['records']
+              duel=api(PAGES+'/api/scalping-duel');assert 'closing30' in duel['report']['tabs']
+              print('CLOSING_DUEL_AND_DAILY_RESEARCH verified')
+          assert api(OPENING+'/paper-settings',True)['settings']==settings
+          print('NO_TEST_ORDER_NO_TEST_ALERT_NO_SETTINGS_WRITE')
+          
+          PY
