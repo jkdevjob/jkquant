@@ -70,7 +70,7 @@ jobs:
           print('NO_TEST_ORDER_NO_TEST_ALERT_NO_SETTINGS_WRITE')
           
           PY
-      - name: Read closing day signal and entry runtime logs
+      - name: Read Pages source failure around closing signal
         env:
           CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -78,10 +78,10 @@ jobs:
           python - <<'PY'
           import os,json,urllib.request,urllib.error,datetime
           ms=lambda s:int(datetime.datetime.fromisoformat(s.replace('Z','+00:00')).timestamp()*1000)
-          body={'queryId':'jkquant-closing-gap-20261026','dry':True,'view':'events','limit':300,
-            'timeframe':{'from':ms('2026-10-26T06:04:00Z'),'to':ms('2026-10-26T06:13:00Z')},
+          body={'queryId':'jkquant-closing-pages-20261026','dry':True,'view':'events','limit':300,
+            'timeframe':{'from':ms('2026-10-26T06:06:00Z'),'to':ms('2026-10-26T06:08:00Z')},
             'parameters':{'datasets':['cloudflare-workers'],'filterCombination':'and','filters':[
-              {'key':'$metadata.service','operation':'eq','type':'string','value':'jkquant-opening-scheduler'}]}}
+              {'key':'$metadata.type','operation':'eq','type':'string','value':'cf-worker'}]}}
           url='https://api.cloudflare.com/client/v4/accounts/'+os.environ['CF_ACCOUNT']+'/workers/observability/telemetry/query'
           req=urllib.request.Request(url,data=json.dumps(body).encode(),headers={'Authorization':'Bearer '+os.environ['CF_TOKEN'],'Content-Type':'application/json'})
           try:
@@ -100,6 +100,7 @@ jobs:
               source=e.get('source') or {}
               msg=meta.get('message') or source.get('message') or e.get('message')
               if not msg and source:msg=json.dumps({k:v for k,v in source.items() if k not in ('request','headers','response')},ensure_ascii=False)
+              if not any(word in str(msg or '').lower() for word in ['closing','universe','error','exception','failed','limit']):continue
               print('RUNTIME_EVENT',json.dumps({'timestamp':e.get('timestamp'),'trigger':meta.get('trigger'),'type':meta.get('type'),'error':meta.get('error'),'message':str(msg or '')[:700],
                 'outcome':workers.get('outcome'),'cpuTimeMs':workers.get('cpuTimeMs'),'wallTimeMs':workers.get('wallTimeMs'),'event':{k:v for k,v in (workers.get('event') or {}).items() if k in ('cron','scheduledTime')}},ensure_ascii=False))
           print('READ_ONLY_NO_ORDER_NO_ALERT_NO_SETTINGS_WRITE')
