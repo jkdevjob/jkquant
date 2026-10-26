@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-25T14:24:05.645197+09:00",
+  "generatedAt": "2026-10-26T14:26:14.982070+09:00",
   "mode": "prospective-shadow-paper",
   "paperStart": "2026-10-01",
   "designEnd": "2026-09-30",
@@ -13,7 +13,7 @@
   "latestSourceDates": {
     "opening": "2026-10-23",
     "daytrading": "2026-10-23",
-    "crypto": "2026-10-24",
+    "crypto": "2026-10-25",
     "soxl": "2026-10-23"
   },
   "strategies": {
@@ -3008,21 +3008,21 @@
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 22,
-        "trades": 0,
-        "tradeDays": 0,
+        "days": 23,
+        "trades": 1,
+        "tradeDays": 1,
         "winRatePct": 0.0,
-        "avgTradePnlPct": 0.0,
-        "avgDailyReturnPct": 0.0,
+        "avgTradePnlPct": -0.3877971022532888,
+        "avgDailyReturnPct": -0.016860743576229947,
         "plus1Days": 0,
         "plus1DayRatePct": 0.0,
         "plus5Weeks": 0,
-        "weeklyAvgPct": 0.0,
-        "lossDayAvgPct": 0.0,
-        "worstDayPct": 0.0,
+        "weeklyAvgPct": -0.09709058278127847,
+        "lossDayAvgPct": -0.3877971022532888,
+        "worstDayPct": -0.3877971022532888,
         "profitFactor": 0.0,
-        "compoundReturnPct": 0.0,
-        "maxDrawdownPct": 0.0,
+        "compoundReturnPct": -0.38779710225328445,
+        "maxDrawdownPct": -0.38779710225328445,
         "daily": [
           {
             "date": "2026-10-01",
@@ -3133,6 +3133,11 @@
             "date": "2026-10-24",
             "returnPct": 0.0,
             "trades": 0
+          },
+          {
+            "date": "2026-10-25",
+            "returnPct": -0.3877971022532888,
+            "trades": 1
           }
         ],
         "plus1DaysPerYear": 0.0,
@@ -3141,26 +3146,6 @@
       "reviewPolicy": "Rules stay frozen. Review after >=20 prospective days AND >=20 prospective trades; positive daily expectancy, PF>=1.10, MDD>=-15%, worst day>=-8%. No automatic live promotion.",
       "targetNote": "+1% day / +5% week are research thresholds, not guaranteed returns.",
       "recentTrades": [
-        {
-          "date": "2025-10-11",
-          "strategy": "crypto",
-          "strategyVersion": "btc_flush_reclaim_v1",
-          "code": "KRW-BTC",
-          "signalTime": 630,
-          "entryTime": 635,
-          "entryPrice": 172000000.0,
-          "flush60mPct": -3.5439119402040364,
-          "volumeRatio": 1.8929143871232217,
-          "reclaimClose": 172000000.0,
-          "decisionReason": "60m_flush+previous_high_reclaim+volume",
-          "sample": "design",
-          "exitTime": 635,
-          "exitPrice": 170796000.0,
-          "grossPnlPct": -0.7000000000000006,
-          "frictionPct": 0.14,
-          "pnlPct": -0.8400000000000006,
-          "reason": "stop"
-        },
         {
           "date": "2025-10-30",
           "strategy": "crypto",
@@ -3540,6 +3525,26 @@
           "frictionPct": 0.14,
           "pnlPct": -0.42393505106018015,
           "reason": "time_exit"
+        },
+        {
+          "date": "2026-10-25",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1625,
+          "entryTime": 1630,
+          "entryPrice": 108153000.0,
+          "flush60mPct": -1.5893415188890314,
+          "volumeRatio": 49.859417752037096,
+          "reclaimClose": 108156000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "outOfSample",
+          "exitTime": 1755,
+          "exitPrice": 107885000.0,
+          "grossPnlPct": -0.24779710225328877,
+          "frictionPct": 0.14,
+          "pnlPct": -0.3877971022532888,
+          "reason": "time_exit"
         }
       ]
     },
@@ -3726,21 +3731,21 @@
     }
   },
   "equalWeightPortfolio": {
-    "days": 23,
-    "trades": 59,
-    "tradeDays": 15,
-    "winRatePct": 13.043478260869565,
-    "avgTradePnlPct": -0.1148368599811553,
-    "avgDailyReturnPct": -0.1148368599811553,
+    "days": 24,
+    "trades": 60,
+    "tradeDays": 16,
+    "winRatePct": 12.5,
+    "avgTradePnlPct": -0.11409154396374559,
+    "avgDailyReturnPct": -0.11409154396374559,
     "plus1Days": 0,
     "plus1DayRatePct": 0.0,
     "plus5Weeks": 0,
-    "weeklyAvgPct": -0.6603050528409371,
-    "lossDayAvgPct": -0.2955501921278299,
+    "weeklyAvgPct": -0.6843910899744232,
+    "lossDayAvgPct": -0.2802731985459447,
     "worstDayPct": -0.6680089751561185,
-    "profitFactor": 0.2552737656981479,
-    "compoundReturnPct": -2.6151750134278506,
-    "maxDrawdownPct": -2.6476862129295675,
+    "profitFactor": 0.24848132538163029,
+    "compoundReturnPct": -2.7095888957609393,
+    "maxDrawdownPct": -2.742068575890255,
     "daily": [
       {
         "date": "2026-10-01",
@@ -3855,6 +3860,11 @@
       {
         "date": "2026-10-24",
         "returnPct": 0.0,
+        "trades": 1
+      },
+      {
+        "date": "2026-10-25",
+        "returnPct": -0.0969492755633222,
         "trades": 1
       }
     ],
