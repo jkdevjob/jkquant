@@ -6,7 +6,8 @@ const META_CACHE="jk-push-meta-v2";
 const TOPICS_KEY="/__jk_push_topics";
 const SHOWN_KEY="/__jk_push_shown";
 const REQUEST_SHOWN_KEY="/__jk_approval_requests_shown";
-const GPT_TOPICS=new Set(["opening","daytrading","crypto","soxl","tenbagger_gpt"]);
+const GPT_TOPICS=new Set(["opening","daytrading","crypto","soxl","closing30","tenbagger_gpt"]);
+const LEGACY_GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
 const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
 
 async function getConfig(){
@@ -88,7 +89,7 @@ function pickAlerts(payload,allowed,shown,now=Date.now()){
     const age=now-Date.parse(a.createdAt||"");
     if(!Number.isFinite(age)||age<0||age>20*60*1000)continue;
     const topic=a.type==="research"&&a.study==="tenbagger"?"tenbagger_gpt":String(a.type||"");
-    if(!(allowed.includes(topic)||(allowed.includes("gpt")&&GPT_TOPICS.has(topic))||(topic==="gpt"&&[...GPT_TOPICS].every(t=>allowed.includes(t))))||shown.includes(a.id))continue;
+    if(!(allowed.includes(topic)||(allowed.includes("gpt")&&GPT_TOPICS.has(topic))||(topic==="closing30"&&LEGACY_GPT_TOPICS.every(t=>allowed.includes(t)))||(topic==="gpt"&&([...GPT_TOPICS].every(t=>allowed.includes(t))||LEGACY_GPT_TOPICS.every(t=>allowed.includes(t)))))||shown.includes(a.id))continue;
     uniq.push(a);
   }
   uniq.sort((a,b)=>String(a.createdAt||"").localeCompare(String(b.createdAt||"")));

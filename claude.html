@@ -44,6 +44,10 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
 #gate .gbox{max-width:380px;width:100%}#gate .glogo{font-size:26px;font-weight:800;margin-bottom:6px}#gate .gsub{color:var(--dim);font-size:13px;margin-bottom:24px;line-height:1.6}
 #gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px}
+.hov{position:fixed;inset:0;z-index:200;background:rgba(8,10,18,.88);overflow-y:auto;overflow-x:hidden;padding:14px 10px 40px}.hov[hidden]{display:none}
+.hov .hbox{max-width:980px;margin:0 auto;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px}.hov .hx{float:right;padding:6px 12px;border:1px solid var(--border);background:var(--surf2);color:var(--text);border-radius:8px;cursor:pointer}
+.hlink{color:var(--text);text-decoration:underline dotted;cursor:pointer;background:none;border:0;padding:0;font:inherit;text-align:left}.hbtn{padding:6px 10px;border:1px solid var(--border);background:var(--surf2);color:var(--text);border-radius:8px;cursor:pointer;font-size:12px}
+.hov table{min-width:0}.hov td.nm{white-space:normal}
 </style>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
@@ -78,7 +82,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.19.1</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.22.1</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -107,11 +111,13 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
     <button class="tab" data-tab="daytrading" onclick="showTab('daytrading')">📈 데이트레이딩</button>
     <button class="tab" data-tab="crypto" onclick="showTab('crypto')">₿ 비트코인</button>
     <button class="tab" data-tab="soxl" onclick="showTab('soxl')">⚡ SOXL</button>
+    <button class="tab" data-tab="close30" onclick="showTab('close30')">⏰ 종가 30분</button>
     <button class="tab" data-tab="tenbagger" onclick="showTab('tenbagger')">🔟 텐배거</button>
     <button class="tab" data-tab="duel" onclick="showTab('duel')">🆚 GPT 대결</button>
   </div>
   <div id="body"><div class="loading">불러오는 중…</div></div>
 </div></main>
+<div class="hov" id="hov" hidden onclick="if(event.target===this)closeHist()"><div class="hbox" id="hbox"></div></div>
 
 <script>
 function jkMenuToggle(e){if(e)e.stopPropagation();var p=document.getElementById("jkmenuPop");if(p)p.hidden=!p.hidden}
@@ -158,7 +164,12 @@ var DOC={
     pick:"종목은 SOXL 하나. 미국장 마감 확정 종가로 판단: RSI(2) < 20 이고 종가 > 200일 평균.",buy:"신호가 난 다음 미국장 시가(한국시각 22:30, 서머타임 해제 시 23:30).",sell:"종가가 전날 종가보다 오른 날이 나오면 그다음 미국장 시가에 매도. 오르지 않아도 5거래일 종가 뒤 다음 시가에 무조건 매도 — 5일을 넘기지 않음.",
     risk:"손절 대신 최대 5일 보유로 끊는다(과거 손절을 넣으면 오히려 나빠짐). 탭 표시 자금 50%, 과거 MDD −24%, 최악일 −8%(자금 50% 기준).",money:"전체 계좌의 미국 칸(40%) 안에서 전액.",
     proof:"2011~2026-09(설계): 연 25회 매매, 매매일 평균 +0.18%(t=2.7), +1% 달성일 19일/년, 최근 1년 +1% 달성일 37일 · 누적 +49%. 신호 기준 RSI 10~30 어디서나 양수. 하루 한정(다음 날 무조건 매도)은 0 근처라 그림자로만 둔다.",
-    times:"미국장 마감 후 판단(한국 05~06시) · 다음 미국장 시가 매수/매도 · 텔레그램 미국장 마감 직후 05:20(겨울 06:20) — 오늘 세션 결과·다음 세션 할 일"}
+    times:"미국장 마감 후 판단(한국 05~06시) · 다음 미국장 시가 매수/매도 · 텔레그램 미국장 마감 직후 05:20(겨울 06:20) — 오늘 세션 결과·다음 세션 할 일"},
+  close30:{title:"⑤ 코스닥150 레버리지 장 마감 30분 반등 (종가 30분 · 실험)",what:"장 마감 30분 전(15:00)에 코스닥150 레버리지가 전일 종가보다 내려 있으면 사서, 그날 종가(15:30)에 판다. 장 막판에 빠졌던 몫을 되돌리는 경향을 노린다. 하룻밤 보유 없음. ETF 라 거래세가 없다.",
+    pick:"종목은 KODEX 코스닥150레버리지(233740) 하나. 15:00 가격과 전일 종가만 본다(그날 종가를 미리 보지 않음).",buy:"15:00 에 전일 대비 0% 미만(내려 있음)이면 시장가 매수. 보합 · 상승이면 매매 없음.",sell:"15:21 종가 동시호가 시장가(15:30 종가에 체결). 장중 손절 없음 — 보유 30분.",
+    risk:"보유 30분 · 하룻밤 보유 없음. 결과를 보고 찾은 규칙(사후 발견)이라 '실험'으로 표시하고 앞으로 쌓아 확인한다.",money:"①②와 같은 날이면 국내 칸(30%)을 매매한 탭끼리 똑같이 나눔(둘이면 반씩 · 셋이면 3분의 1씩).",
+    proof:"연구 R14(10/22) · Yahoo 60분봉 약 2년(2023-10~2026-10): 매매일 347일, 누적 +33.6%, MDD −10%. 15:00 하락 폭 기준을 0 → −4% 로 바꿔 보는 그림자들과 매일 경쟁한다.",
+    times:"15:00 판단 · 매수 · 15:21 매도(종가 동시호가) · 15:40 체결 확인 · 알림: 매수 · 매도 때만"}
 };
 function sec(title,inner,open,id){return "<details class='card sec'"+(open?" open":"")+(id?" id='"+id+"'":"")+"><summary><h3 style='display:inline'>"+title+"</h3></summary><div style='margin-top:8px'>"+inner+"</div></details>"}
 function docRow(k,v){return "<tr><td style='width:96px;color:var(--gold);font-weight:800;vertical-align:top'>"+k+"</td><td style='white-space:normal;text-align:left'>"+esc(v)+"</td></tr>"}
@@ -171,9 +182,10 @@ function buyCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("③ 매수 타이밍","<div class='tw'><table class='board doc'><tbody>"+docRow("매수",d.buy)+docRow("시간표",d.times)+"</tbody></table></div>",true);}
 function sellCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("④ 매도 · 손절 · 리스크","<div class='tw'><table class='board doc'><tbody>"+docRow("매도",d.sell)+docRow("위험 관리",d.risk)+"</tbody></table></div><p class='note'>목표(+1%/일 · +5%/주)를 맞추려고 기준·손절을 임의로 바꾸지 않습니다. 바꿀 때는 그림자 전략으로 먼저 검증합니다.</p>",true);}
-var EXEC={opening:"KIS 모의투자(VTS) 실제 주문 · 체결 조회",daytrading:"KIS 모의투자(VTS) 실제 주문 · 체결 조회",crypto:"주문 없음 — 업비트 60분봉 모의 장부",soxl:"주문 없음 — 미국 일봉 모의 장부"};
-var MARKET={opening:"코스피·코스닥 보통주 (전일 RSI<30 명단)",daytrading:"KODEX 코스닥150레버리지 233740",crypto:"업비트 KRW-BTC · KRW-ETH (하루 단타)",soxl:"SOXL (반도체 3배)"};
-var WEEKKEY={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"]};
+var KR_SETTLE="KIS 모의투자(VTS) 주문 · 손익은 주문한 건을 공식 시가 · 종가로 정산(모의투자 체결 · 거절은 측정용 — 2026-10-22~)";
+var EXEC={opening:KR_SETTLE,daytrading:KR_SETTLE,crypto:"주문 없음 — 업비트 60분봉 모의 장부",soxl:"주문 없음 — 미국 일봉 모의 장부",close30:KR_SETTLE};
+var MARKET={opening:"코스피·코스닥 보통주 (전일 RSI<30 명단)",daytrading:"KODEX 코스닥150레버리지 233740",crypto:"업비트 KRW-BTC · KRW-ETH (하루 단타)",soxl:"SOXL (반도체 3배)",close30:"KODEX 코스닥150레버리지 233740 (15:00 → 15:30)"};
+var WEEKKEY={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"],close30:["close30_etf"]};
 // 탭 맨 위 운영판 — 기준전략 · 오늘 · 왜 · 누적 · 그림자 판정 표본 · 이번 주 · 데이터 날짜
 function opsBoard(tab){
   var t=((J.lab||{}).tabs||{})[tab]||{},c=t.claude||{},lt=(LIVE&&LIVE.tabs&&LIVE.tabs[tab])||{},td=lt.today;
@@ -202,6 +214,8 @@ function planCard(tab,T,wl){
   else if(tab==="daytrading")x="<div>오늘·다음 거래일 15:21 — KODEX 코스닥150레버리지 예상 종가가 −3% 이하면 종가 매수, 다음 날 08:59 시가 매도.</div>";
   else if(tab==="crypto")x=nextSig(T.crypto||{},"하루(09시~)");
   else if(tab==="soxl")x=nextSig(T.soxl||{},"미국장");
+  else if(tab==="close30"){var th5=+((((J.lab||{}).main||{}).close30||{}).today||{params:{th:0}}).params.th||0;
+    x="<div>오늘 · 다음 거래일 15:00 — KODEX 코스닥150레버리지가 전일 종가보다 "+(th5?Math.abs(th5)+"% 넘게 ":"")+"내려 있으면 시장가 매수 → 15:21 종가 동시호가 매도(당일 청산).</div>";}
   var lt=(LIVE&&LIVE.tabs&&LIVE.tabs[tab])||{};
   return sec("② 오늘 종목 선정 · 감시",(lt.today?"<div class='why'>📝 "+esc(lt.today.why)+"</div>":"")+x,true);
 }
@@ -210,12 +224,12 @@ function promoBadge(pr){
   return "<div class='"+(pr.code==="candidate"?"win":"sub")+"' style='margin:2px 0 4px'>"+(pr.code==="candidate"?"⭐ ":pr.code==="keep"?"· ":"⏳ ")+esc(pr.text||"")+"</div>";
 }
 // 📈 전략별 누적 수익률 추이 — 모의 장부(실제 기록) / 최근 60일 규칙 재구성(참고)을 나눠 보인다(섞지 않음)
-var TREND_C={opening_d1v2:"#3987e5",daytrading_etf:"#d95926",coin_bo:"#199e70",us_soxl:"#c98500",account:"#d55181"};
-var TREND_N={opening_d1v2:"① 시초가",daytrading_etf:"② 데이트레이딩",coin_bo:"③ 비트코인",us_soxl:"④ SOXL",account:"🏦 전체 계좌"};
+var TREND_C={opening_d1v2:"#3987e5",daytrading_etf:"#d95926",coin_bo:"#199e70",us_soxl:"#c98500",close30_etf:"#7d63d6",account:"#d55181"};
+var TREND_N={opening_d1v2:"① 시초가",daytrading_etf:"② 데이트레이딩",coin_bo:"③ 비트코인",us_soxl:"④ SOXL",close30_etf:"⑤ 종가 30분",account:"🏦 전체 계좌"};
 function paperCurves(){
   var sm=((J.lab||{}).paper||{}).summary||{},out={};
   var tr=function(r){return r.action&&r.action!=="no_trade"&&r.action!=="flat"};
-  ["opening_d1v2","daytrading_etf","us_soxl","account"].forEach(function(k){out[k]=((sm[k]||{}).rows||[]).map(function(r){return {date:r.date,cumPct:r.cumPct,traded:tr(r)}})});
+  ["opening_d1v2","daytrading_etf","us_soxl","close30_etf","account"].forEach(function(k){out[k]=((sm[k]||{}).rows||[]).map(function(r){return {date:r.date,cumPct:r.cumPct,traded:tr(r)}})});
   var b=((sm.coin_bo_btc||{}).rows||[]),e=((sm.coin_bo_eth||{}).rows||[]),m={};b.forEach(function(r){m[r.date]=[r.pnlPct||0,0,tr(r)]});e.forEach(function(r){var x=(m[r.date]=m[r.date]||[0,0,false]);x[1]=r.pnlPct||0;x[2]=x[2]||tr(r)});
   var eq=1;out.coin_bo=Object.keys(m).sort().map(function(d){eq*=1+(m[d][0]+m[d][1])/2/100;return {date:d,cumPct:(eq-1)*100,traded:m[d][2]}});   // 코인 칸 = 두 코인 반반
   return out;
@@ -336,7 +350,7 @@ function arenaStatus(z){
   return (st.newTop?"🆕 오늘 들어온 "+esc(st.newTop)+" 가 표 1위 (1위 일수는 내일부터) · ":"")+(st.code==="main_top"?"🥇 지금 메인이 1위":st.code==="promoted"?"🏆 "+esc(st.text):
     "🥇 1위 "+esc(top.name||z.top||"")+" · "+(st.days||0)+"/7일"+(st.code==="streak"?" (7일이면 다음 날부터 자동 메인)":st.code==="due"?" · 승격 조건 충족":st.code==="failed"?" · ⚠ "+esc(st.text):""));
 }
-var ARENA_TAB={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL"};
+var ARENA_TAB={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL",close30:"⑤ 종가 30분"};
 // 사유 안의 전략 코드(g_soxl_… 등)를 사람이 읽는 전략 이름으로 — 경쟁군 · 퇴출 · 기록에 나온 이름 사전
 function arenaNames(){var m={},A=((J&&J.lab)||{}).arena||{};
   Object.keys(A).forEach(function(t){var z=A[t]||{};(z.rows||[]).concat(z.retiredToday||[]).forEach(function(r){if(r&&r.version&&r.name)m[r.version]=r.name});(z.log||[]).forEach(function(x){if(x.version&&x.name)m[x.version]=x.name})});
@@ -360,12 +374,13 @@ function shadowCard(tab){
     var star=pr.code==="candidate"?"🥇 ":"";
     var sc="<b>"+pct(r.score,3)+"</b>"+(r.stable!=null&&r.freqFactor!=null?"<div class='sub'>안정 "+pct(r.stable,3)+" × 빈도 "+num(r.freqFactor,2)+"</div>":"")+
       (r.raw!=null?"<div class='sub'>그대로 "+pct(r.raw,3)+(r.plateau!=null?" · 이웃 "+pct(r.plateau,3):"")+"</div>":"");
-    return "<tr><td>"+r.rank+"</td><td class='nm' style='text-align:left'>"+star+esc(r.name)+tag+"<div class='sub'>"+esc(r.rule||"")+(r.op&&!r.isMain?" · "+esc(ARENA_OP[r.op]||r.op):"")+"</div></td><td class='"+cls(r.score)+"'>"+sc+"</td>"+
+    return "<tr><td>"+r.rank+"</td><td class='nm' style='text-align:left'>"+star+histLink(tab,r.version,r.name)+tag+"<div class='sub'>"+esc(r.rule||"")+(r.op&&!r.isMain?" · "+esc(ARENA_OP[r.op]||r.op):"")+"</div></td><td class='"+cls(r.score)+"'>"+sc+"</td>"+
       "<td class='"+cls(y.totalPct)+"'>"+pct(y.totalPct,1)+"</td><td class='"+cls(d.totalPct)+"'>"+pct(d.totalPct,1)+"</td><td>"+mddTxt(f.mddPct)+"</td>"+
       "<td>"+num(f.tradeDaysPerYear,0)+(tab==="soxl"&&r.tradesPerYear!=null?"<div class='sub'>들어감 "+num(r.tradesPerYear,0)+"회</div>":"")+"</td><td>"+num(f.plus1DaysPerYear,0)+"</td><td>"+(o.tradeDays?pct(o.totalPct,1)+"<span class='sub'> ("+o.tradeDays+"일)</span>":"<span class='sub'>—</span>")+"</td></tr>"}).join("");
   var lg=arenaLog(z.log,false);
   return sec("⑥ 전략 경쟁 · 자동 개선 (메인 + 그림자 "+(z.poolSize||0)+"개)",
     "<div class='why'>"+arenaStatus(z)+"</div>"+arenaGen(z)+
+    "<div class='row' style='margin:6px 0'><button class='hbtn' onclick=\"openHistList('"+tab+"')\">📜 전략별 전체 매매이력 (메인 · 그림자 · 퇴출)</button><span class='sub'>표에서 전략 이름을 눌러도 됩니다</span></div>"+
     "<div class='sub'>메인: <b>"+esc(z.mainName||z.main)+"</b>"+(z.effectiveFrom?" ("+esc(z.effectiveFrom)+" 부터)":" (처음 채택)")+" · 오늘 신규 "+(z.added||[]).length+" · 퇴출 "+(z.retiredToday||[]).length+" · 지금까지 시험한 후보 "+((z.triedCount||0)+(z.rows||[]).length)+"개 · 계산 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</div>"+
     "<div class='tw'><table class='board arena'><thead><tr><th>순위</th><th style='text-align:left'>전략 · 규칙</th><th>순위 점수<div class='sub'>안정(주 평균 %) × 빈도</div></th><th>최근 1년</th><th>최근 90일</th><th>MDD</th><th>매매일/년</th><th>+1%일/년</th><th>10/1~ 구간</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+
@@ -377,11 +392,12 @@ function emptyNote(k,z){
   var st=z.start?esc(z.start.slice(5).replace("-","/")):"";
   var when={coin_bo_btc:"코인 하루(09시~다음 날 09시)가 끝난 뒤 저녁 계산(18:40)에 첫 기록",coin_bo_eth:"코인 하루(09시~다음 날 09시)가 끝난 뒤 저녁 계산(18:40)에 첫 기록",
     us_soxl:"미국장 마감 뒤 다음 날 아침 계산(07:30)에 첫 기록",account:"국내·코인·미국이 모두 확정된 날부터 기록",
-    opening_d1v2:"확정 일봉이 들어오거나 모의투자 원본이 '매매 없음'으로 끝난 날부터 기록",daytrading_etf:"ETF 일봉이 확정된 날부터 기록"}[k]||"";
+    opening_d1v2:"확정 일봉이 들어오거나 모의투자 원본이 '매매 없음'으로 끝난 날부터 기록",daytrading_etf:"ETF 일봉이 확정된 날부터 기록",
+    close30_etf:"15:00 가격(60분봉)과 종가가 확정된 날 밤 계산부터 기록"}[k]||"";
   return "아직 확정된 날이 없습니다 — "+(st?st+" 부터 · ":"")+when+".";
 }
-var PKEYS={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"]};
-var PNAME={opening_d1v2:"① D-1 v2",daytrading_etf:"② ETF 야간",coin_bo_btc:"BTC (칸 전액)",coin_bo_eth:"ETH (칸 전액)",us_soxl:"SOXL (칸 전액)",account:"🏦 전체 계좌"};
+var PKEYS={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"],close30:["close30_etf"]};
+var PNAME={opening_d1v2:"① D-1 v2",daytrading_etf:"② ETF 야간",coin_bo_btc:"BTC (칸 전액)",coin_bo_eth:"ETH (칸 전액)",us_soxl:"SOXL (칸 전액)",close30_etf:"⑤ 종가 30분",account:"🏦 전체 계좌"};
 function paperCard(tab){
   var sm=((J.lab||{}).paper||{}).summary||{};
   var html=(PKEYS[tab]||[]).map(function(k){var z=sm[k]||{},rows=(z.rows||[]).slice().reverse();
@@ -393,7 +409,7 @@ function paperCard(tab){
 }
 function reviewCard(tab){
   var rv=(J.lab||{}).review||{},hist=rv.history||[],cl=((J.lab||{}).changelog||[]).filter(function(x){return x.tab===tab||x.tab==="all"});
-  var G={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[tab];
+  var G={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL",close30:"종가 30분"}[tab];
   var rows=hist.map(function(h){var t=(h.tabs||{})[G]||{},res=t.result;var resTxt=res==null?"—":res==="no_trade"?"매매 없음":res==="pending"?"확정 대기":pct(res);
     var extra=tab==="opening"&&h.opening?((h.opening.picks||[]).length?"매수: "+h.opening.picks.join(", "):"판단: "+(h.opening.reason||"")):tab==="daytrading"&&h.etf&&h.etf.buy?"15:21: "+h.etf.buy+(h.etf.drop!=null?" ("+pct(h.etf.drop)+")":""):"";
     return "<tr><td>"+esc(h.date)+"</td><td>"+resTxt+"</td><td style='white-space:normal;text-align:left'>"+esc(extra)+(h.issues&&h.issues.length?"<div class='loss'>"+esc(h.issues.join(" / "))+"</div>":"")+"</td><td>"+esc(h.verdict||"")+"</td></tr>"}).join("");
@@ -420,12 +436,13 @@ function tabPage(tab,T,gd,et,wl){
     var el=et.live||{},erows=((el.rows)||[]).slice().reverse().map(function(x){return "<tr><td>"+esc(x.signalDate)+" → "+esc(x.exitDate||"—")+"</td><td>"+pct(x.expectedDropPct)+"</td><td>"+pct(x.buySlipPct)+"</td><td>"+pct(x.sellSlipPct)+"</td><td class='"+cls(x.realizedNetPct)+"'>"+pct(x.realizedNetPct)+"</td></tr>"}).join("");
     html+=sec("⑧ 실행 품질 · VTS 대조",erows?"<div class='tw'><table><thead><tr><th>매수 → 매도</th><th>예상 하락</th><th>매수 슬립</th><th>매도 슬립</th><th>순손익</th></tr></thead><tbody>"+erows+"</tbody></table></div>":"<p class='note'>아직 매수 신호가 난 날이 없습니다.</p>",false);
   }
+  if(tab==="close30")html+=sec("⑧ 실행 품질","<p class='note'>KIS 모의투자로 실제 주문합니다: 15:00 시장가 매수 → 15:21 종가 동시호가 시장가 매도 → 15:40 체결 조회. ②(같은 종목)와는 접수 시각으로 나눠 셉니다 — ⑤ 매수 15:00~15:15 · 매도 15:15 이후, ② 매수 15:15 이후 · 매도 09:00 전. 손익은 주문한 건을 15:00 판단 가격 → 공식 종가로 정산합니다(모의투자 체결 · 거절은 측정용). 비용은 밤 계산과 같은 식(수수료 0.03% + 15:00 매수 반 호가).</p>",false);
   if(tab==="crypto"||tab==="soxl")html+=sec("⑧ 실행 품질","<p class='note'>"+(tab==="crypto"?"주문 없이 업비트 60분봉으로 기록합니다: 돌파한 봉에서 max(봉 시가, 어제 고가)+0.05% 에 매수, 다음 날 09:00 직전 봉 종가에 매도, 손절은 매수가 −5%(+0.1% 미끄러짐), 왕복 비용 0.14%. 같은 봉 안에서 손절선과 종가 순서를 모르면 손절로 봅니다(보수적). 실주문 전에는 실제 체결 차이를 따로 재야 합니다.":"주문 없이 일봉으로 기록합니다: 마감 확정 종가로 판단 → 다음 미국장 시가 매수 · 매도(같은 종가로 판단하고 체결하지 않음), 왕복 비용 0.20%. 미국장 결과는 한국시각 다음 날 아침에 확정됩니다.")+"</p>",false);
   return html;
 }
 var J=null,TAB="today";
 // 직접 링크(?tab=tenbagger · #tenbagger) — 연구 알림을 누르면 그 탭으로 연다
-(function(){try{var q=new URLSearchParams(location.search).get("tab")||location.hash.slice(1);if(/^(today|opening|daytrading|crypto|soxl|duel|tenbagger)$/.test(q))TAB=q}catch(e){}})();
+(function(){try{var q=new URLSearchParams(location.search).get("tab")||location.hash.slice(1);if(/^(today|opening|daytrading|crypto|soxl|close30|duel|tenbagger)$/.test(q))TAB=q}catch(e){}})();
 // 🔟 텐배거 전향 시험 — 자료는 공개 가격 연구(/api/tenbagger-claude), 탭을 처음 열 때 한 번 받는다
 var TBF=null,TBF_BUSY=false;
 async function loadTbf(){
@@ -463,9 +480,10 @@ function nextSig(t,unit){
       (n.entryRule?"<br>매수 조건: "+esc(n.entryRule):"")+(n.why?"<br>안 맞은 조건: "+esc(n.why):"")+"</div></div></div>";}
   return "<div class='kpis'><div class='kpi'><div class='l'>다음 "+unit+" 신호 ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.holdNext?"good":"")+"'>"+(n.holdNext?"보유":"쉼")+"</div><div class='sub'>종가 "+Math.round(n.signalClose).toLocaleString()+" · 평균 "+Math.round(n.ma).toLocaleString()+"</div></div></div>";
 }
-// 📅 오늘 탭 — 지피티 단타 오늘 탭과 같은 구성: ① 전략별 전일·당일(모두 한국시간 어제·오늘) + 누적 추이 ② 4전략 누적 상태
+// 📅 오늘 탭 — 지피티 단타 오늘 탭과 같은 구성: ① 전략별 전일·당일(모두 한국시간 어제·오늘) + 누적 추이 ② 기준전략 누적 상태
 var TODAY_T=[["opening","① 시초가","시초가","그날 한국장 (15:40 마감)"],["daytrading","② 데이트레이딩","데이트레이딩","그날 아침 시가에 판 결과 (전날 종가 매수분)"],
-  ["crypto","③ 비트코인","비트코인","그날 09:00 시작 업비트 하루 (다음 날 09:00 확정)"],["soxl","④ SOXL","SOXL","전날 밤 미국장 (한국 아침 마감)"]];
+  ["crypto","③ 비트코인","비트코인","그날 09:00 시작 업비트 하루 (다음 날 09:00 확정)"],["soxl","④ SOXL","SOXL","전날 밤 미국장 (한국 아침 마감)"],
+  ["close30","⑤ 종가 30분","종가 30분","그날 한국장 15:00 → 15:30 종가 (15:40 마감)"]];
 // 전일·당일 = 한국 날짜 어제·오늘(실시간 자료 날짜 기준, 없으면 밤 계산 날짜). 칸마다 밤 계산 확정 값(v)과 확정 전 실시간 값(lv)을 같이 넘긴다.
 function prevDateOf(d){return new Date(Date.parse(d+"T00:00:00Z")-864e5).toISOString().slice(0,10)}
 function dayPair(r,days,today){
@@ -511,7 +529,7 @@ function todayPage(lab){
       "<div class='daily-result-meta' style='margin-top:7px'>시간 기준 "+z[3]+"</div>"+(r.plan?"<div class='daily-result-meta'>오늘: "+esc(r.plan)+"</div>":"")+"</div>";
   }).join("");
   var stamp=String(dl.generatedAt||lab.generatedAt||"").replace("T"," ").slice(0,16);
-  var pp=lab.paper||{},sm=pp.summary||{},PK={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"]};
+  var pp=lab.paper||{},sm=pp.summary||{},PK=PKEYS;
   var sp=function(v){return v==null?"—":pct(v)};
   var ov=TODAY_T.map(function(z){var c=(T[z[0]]||{}).claude||{},s=scoreOf(c.design),p=PK[z[0]].map(function(k){return sm[k]||{}});
     var td=p.reduce(function(a,x){return a+(x.tradeDays||0)},0),st=(p[0].status||{}).text||"모의 장부 대기";
@@ -521,12 +539,12 @@ function todayPage(lab){
       "<td class='"+((s.edge||0)>=0?"win":"loss")+"'>"+sp(s.edge)+"</td><td title='"+esc(st)+"'>"+prog+"</td></tr>"}).join("");
   return "<div class='strategy-head'>모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>"+
     "<div class='card'><h3><span class='dot'></span>📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익</span></h3>"+
-    "<p class='lead'>시초가·데이트레이딩·비트코인·SOXL의 <b>한국시간 어제 · 오늘</b> 결과를 한 번에 보여줍니다. 수수료·세금·슬리피지를 뺀 순수익이고, 거래가 없으면 <b>매매없음</b>(0%)입니다. 날짜는 모든 전략이 같은 <b>한국시간 어제 · 오늘</b>이고, 시장마다 그 날짜에 해당하는 결과를 넣습니다(아래 '시간 기준').</p>"+
+    "<p class='lead'>시초가·데이트레이딩·비트코인·SOXL·종가 30분의 <b>한국시간 어제 · 오늘</b> 결과를 한 번에 보여줍니다. 수수료·세금·슬리피지를 뺀 순수익이고, 거래가 없으면 <b>매매없음</b>(0%)입니다. 날짜는 모든 전략이 같은 <b>한국시간 어제 · 오늘</b>이고, 시장마다 그 날짜에 해당하는 결과를 넣습니다(아래 '시간 기준').</p>"+
     "<div class='row' style='margin-bottom:10px'><button class='ghostbtn' onclick='refreshToday()'>🔄 결과 새로고침</button><span class='sub' id='daily_results_meta'>기준일 "+esc(dl.today||"")+" · 갱신 "+esc(stamp)+"</span></div>"+
     "<div class='daily-result-list'>"+cards+"</div>"+
     "<div style='margin-top:14px'>"+trendBlock()+"</div>"+
     "<p class='note'>목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 단순 합산하지 않습니다.<br><b>보유 원칙:</b> ①②③ 은 하루를 넘기지 않고, ④ SOXL 만 최대 5거래일까지 보유합니다. 6거래일 이상은 단타 전략에서 제외합니다.</p></div>"+
-    "<div class='card'><h3><span class='dot'></span>📊 4전략 누적 상태 <span class='sub'>기준전략 · 성과 순위가 아니라 현재 측정값</span></h3>"+
+    "<div class='card'><h3><span class='dot'></span>📊 기준전략 누적 상태 <span class='sub'>기준전략 · 성과 순위가 아니라 현재 측정값</span></h3>"+
     "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>표본</th><th>승률</th><th>거래당</th><th>필요승률</th><th>엣지</th><th>검증상태</th></tr></thead><tbody>"+ov+"</tbody></table></div>"+
     "<p class='note'>표본·승률·거래당은 설계 표본(백테스트, 매매일 단위) 값입니다. 승률 = 손실이 아닌 매매일 비율, 필요승률 = 평균 이익·손실로 본 손익분기 승률, 엣지 = 승률 − 필요승률. 검증상태는 10/1 부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.</p></div>"+arenaOverview(lab);
 }
@@ -569,7 +587,7 @@ function render(){
     html+=todayPage(lab);
   }else if(TAB==="duel"){
     html+=duelPage();
-  }else if(TAB==="opening"||TAB==="daytrading"||TAB==="crypto"||TAB==="soxl"){
+  }else if(TAB==="opening"||TAB==="daytrading"||TAB==="crypto"||TAB==="soxl"||TAB==="close30"){
     html+=tabPage(TAB,T,gd,et,wl);
   }else{                                       // 옛 '🎯 전체 계좌' 탭은 2026-10-14 사용자 요청으로 지웠다 — 모르는 탭은 오늘 탭으로
     TAB="today";html+=todayPage(lab);
@@ -623,6 +641,72 @@ function liveCard0(tab){
       "<div class='kpi'><div class='l'>지금 손익 (칸 전액)</div><div class='v "+cls(u.pnlPct)+"'>"+(u.pnlPct==null?"—":pct(u.pnlPct))+"</div></div>"+
       "<div class='kpi'><div class='l'>마지막 확정 세션 "+esc(ls?ls.date:"")+"</div><div class='v "+cls(ls&&ls.pnlPct)+"'>"+(ls&&ls.pnlPct!=null?pct(ls.pnlPct):"—")+"</div><div class='sub'>"+esc(ls?ls.action:"")+" · 칸 전액 기준</div></div></div></div>";}
   return head+"<div class='tw'><table class='board'><thead><tr><th>종목 · 상태</th><th style='text-align:left'>매수 → 매도</th><th>손익(순)</th></tr></thead><tbody>"+body+"</tbody></table></div></div>";
+}
+// ── 전략별 매매 이력(메인 · 그림자 · 퇴출) — 사용자 요청(2026-10-22) "모든 탭 그림자 전략 포함 모든 매매이력 기록하고 조회 가능하게 만들어" ──
+// 밤 계산(claude_lab write_history)이 전략마다 남긴 파일을 /api/claude-history 로 읽는다.
+// 매일 기록 = 날짜마다 한 번만 쓰고 덮어쓰지 않음 · 실시간 장부 = 메인이던 날 Worker 마감 장부(모의투자) · 과거 계산 = 지금 규칙으로 전 기간 다시 계산.
+var HV={data:null,page:0,year:""},HPAGE=100;
+var HSTAT={main:"메인",shadow:"그림자",retired:"퇴출"},HACT={trade:"매매",no_trade:"매매 없음",enter:"매수",hold:"보유",exit:"매도"};
+var HTAB={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL",close30:"⑤ 종가 30분"};
+function closeHist(){var o=document.getElementById("hov");if(o)o.hidden=true;document.body.style.overflow=""}
+function histShow(html){var o=document.getElementById("hov"),b=document.getElementById("hbox");b.innerHTML="<button class='hx' onclick='closeHist()'>닫기 ✕</button>"+html;o.hidden=false;document.body.style.overflow="hidden";o.scrollTop=0}
+async function histGet(q){var r=await fetch("/api/claude-history?"+q,{headers:await authHeaders()});var j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));return j.data}
+function histLink(tab,version,label){return "<button class='hlink' onclick=\"openHist('"+esc(tab)+"','"+esc(version)+"')\">"+esc(label)+"</button>"}
+async function openHistList(tab){
+  histShow("<div class='loading'>불러오는 중…</div>");
+  try{
+    var ix=await histGet("index=1"),rows=((ix.tabs||{})[tab]||[]);
+    var tr=rows.map(function(x){return "<tr><td class='nm' style='text-align:left'>"+histLink(tab,x.version,x.name||x.version)+"<div class='sub'>"+esc(x.version)+"</div></td><td>"+esc(HSTAT[x.status]||x.status)+(x.retiredAt?"<div class='sub'>"+esc(x.retiredAt)+"</div>":"")+"</td><td>"+(x.trades==null?"—":x.trades)+"</td><td class='"+cls(x.avgPct)+"'>"+pct(x.avgPct)+"</td><td>"+(x.forwardDays||0)+"</td><td>"+(x.liveDays||0)+"</td></tr>"}).join("");
+    histShow("<h3>📜 "+esc(HTAB[tab]||tab)+" — 전략별 매매 이력</h3><div class='sub'>메인 · 그림자 · 퇴출 전략 모두. 이름을 누르면 그 전략의 매매가 보입니다. 매일 기록은 "+esc(ix.start||"")+" 부터 날짜마다 한 번만 씁니다.</div>"+
+      (rows.length?"<div class='tw'><table class='board'><thead><tr><th style='text-align:left'>전략</th><th>상태</th><th>과거 계산 매매</th><th>매매당 평균</th><th>매일 기록(일)</th><th>실시간 장부(일)</th></tr></thead><tbody>"+tr+"</tbody></table></div>"
+        :"<p class='note'>아직 기록이 없습니다 — 밤 계산 뒤 생깁니다.</p>"));
+  }catch(e){histShow("<div class='warn'>불러오기 실패: "+esc(e.message||String(e))+"</div>")}
+}
+async function openHist(tab,version){
+  histShow("<div class='loading'>불러오는 중…</div>");
+  try{HV={data:await histGet("tab="+encodeURIComponent(tab)+"&version="+encodeURIComponent(version)),page:0,year:"",tab:tab};histRender()}
+  catch(e){histShow("<div class='warn'>불러오기 실패: "+esc(e.message||String(e))+"</div>")}
+}
+// 매매 행 = [손익 날짜, 진입 시각, 진입가, 청산 시각, 청산가, 종목, 이름, 순손익 %, 사유] (밤 계산 HIST_FIELDS)
+function histTradeRow(t){return "<tr><td>"+esc(t[0])+"</td><td class='nm' style='text-align:left'><b>"+esc(t[6]||t[5]||"")+"</b><div class='sub'>"+esc(t[1]||"")+" "+won(t[2])+" → "+(t[3]?esc(t[3])+" "+won(t[4]):"보유 중")+"</div></td><td class='"+cls(t[7])+"'><b>"+pct(t[7])+"</b></td><td style='text-align:left;white-space:normal'>"+esc(t[8]||"")+"</td></tr>"}
+// 신호 낸 조건(판단 시각 · 판단 가격 · 기준) — ① 예상 갭 · ② 15:21 예상 하락 · ⑤ 15:00 전일 대비
+function histSignal(g){if(!g)return "";var t=g.at?esc(String(g.at).slice(0,5))+" ":"";
+  if(g.expectedGapPct!=null)return t+"예상 갭 "+pct(g.expectedGapPct)+(g.expectedPrice?" ("+won(g.expectedPrice)+")":"");
+  if(g.dropPct!=null)return t+"예상 하락 "+pct(g.dropPct)+(g.th!=null?" · 기준 "+esc(String(g.th))+"%":"");
+  if(g.sofarPct!=null)return t+"전일 대비 "+pct(g.sofarPct)+(g.price?" ("+won(g.price)+")":"");return t;}
+function histLiveTrades(list){return (list||[]).map(function(x){var g=histSignal(x.signal),v=x.vts&&x.vts.ok===false?"모의계좌 주문 안 됨":"";
+  return esc(x.name||x.code||"")+" "+esc(x.entryTime||"")+" "+won(x.entryPrice)+(x.exitPrice!=null?" → "+esc(x.exitTime||"")+" "+won(x.exitPrice):"")+" <b class='"+cls(x.pnlPct)+"'>"+pct(x.pnlPct)+"</b>"+(x.reason?" · "+esc(x.reason):"")+
+    (g||v?"<div class='sub'>"+(g?"신호 "+g:"")+(g&&v?" · ":"")+v+"</div>":"")}).join("<br>")}
+function histPage(n){HV.page=Math.max(0,HV.page+n);histRender()}
+function histYear(y){HV.year=y;HV.page=0;histRender()}
+function histRender(){
+  var d=HV.data||{},s=d.summary||{},bt=(d.backtest||[]).slice().reverse(),fw=(d.forward||[]).slice().reverse(),lv=(d.live||[]).slice().reverse();
+  var years=[];bt.forEach(function(t){var y=String(t[0]).slice(0,4);if(years.indexOf(y)<0)years.push(y)});
+  var sel=HV.year?bt.filter(function(t){return String(t[0]).slice(0,4)===HV.year}):bt,pages=Math.max(1,Math.ceil(sel.length/HPAGE));
+  if(HV.page>=pages)HV.page=pages-1;
+  var part=sel.slice(HV.page*HPAGE,(HV.page+1)*HPAGE),done=sel.filter(function(t){return t[3]&&t[7]!=null}),pn=done.map(function(t){return +t[7]});
+  var avg=pn.length?pn.reduce(function(a,b){return a+b},0)/pn.length:null,win=pn.length?pn.filter(function(v){return v>0}).length/pn.length*100:null;
+  var params=Object.keys(d.params||{}).map(function(k){var v=d.params[k];return esc(k)+"="+esc(v==null?"없음":Array.isArray(v)?v.join("·"):v)}).join(" · ");
+  var head="<h3>"+esc(d.name||d.version||"")+" <span class='tag'>"+esc(HSTAT[d.status]||d.status||"")+"</span></h3><div class='sub'>"+esc(HTAB[d.tab]||d.tab||"")+" · "+esc(d.version||"")+
+    (d.since?" · 경쟁군 "+esc(d.since)+" 부터":"")+(d.retiredAt?" · "+esc(d.retiredAt)+" 퇴출 — "+esc(d.retireReason||""):"")+"</div>"+
+    (d.rule?"<div class='rule'>"+esc(d.rule)+"</div>":"")+(params?"<div class='sub' style='margin-top:6px'>변수: "+params+"</div>":"")+
+    "<div class='kpis'><div class='kpi'><div class='l'>과거 계산 매매"+(HV.year?" ("+esc(HV.year)+")":"")+"</div><div class='v'>"+done.length+"건</div><div class='sub'>"+esc(s.first||"")+" ~ "+esc(s.last||"")+"</div></div>"+
+    "<div class='kpi'><div class='l'>승률</div><div class='v'>"+(win==null?"—":num(win,0)+"%")+"</div></div><div class='kpi'><div class='l'>매매당 평균(순)</div><div class='v "+cls(avg)+"'>"+pct(avg)+"</div></div>"+
+    "<div class='kpi'><div class='l'>매일 기록 · 실시간 장부</div><div class='v' style='font-size:16px'>"+fw.length+"일 · "+lv.length+"일</div><div class='sub'>확정 "+esc(s.settledThrough||"—")+" 까지</div></div></div>";
+  var fwh="<div style='margin-top:12px'><b>📒 매일 기록</b> <span class='sub'>날짜마다 한 번만 쓰고 덮어쓰지 않음 · 그날 버전 · 변수 그대로</span></div>"+(fw.length?"<div class='tw'><table class='board'><thead><tr><th>날짜</th><th>판단</th><th>그날 손익</th><th style='text-align:left'>매매</th><th>기록 시각</th></tr></thead><tbody>"+
+    fw.map(function(x){return "<tr><td>"+esc(x.date)+"</td><td>"+esc(HACT[x.action]||x.action||"")+"</td><td class='"+cls(x.dayPct)+"'>"+(x.dayPct==null?"—":pct(x.dayPct))+"</td><td style='text-align:left;white-space:normal'>"+
+      ((x.trades||[]).map(function(t){return esc(t[6]||t[5]||"")+" "+won(t[2])+" → "+won(t[4])+" <b class='"+cls(t[7])+"'>"+pct(t[7])+"</b>"}).join("<br>")||"<span class='sub'>—</span>")+"</td><td class='sub'>"+esc(String(x.recordedAt||"").slice(5,16).replace("T"," "))+"</td></tr>"}).join("")+"</tbody></table></div>"
+    :"<p class='note'>아직 없음 — 확정된 날부터 밤 계산이 한 줄씩 붙입니다.</p>");
+  var lvh=lv.length?"<div style='margin-top:12px'><b>🧾 실시간 마감 장부</b> <span class='sub'>이 전략이 메인이던 날 · Worker 하루 마감 장부 원본(10/22까지 모의투자 체결 기준 · 10/23부터 주문한 건을 공식 시가 · 종가로 정산)</span></div><div class='tw'><table class='board'><thead><tr><th>날짜</th><th style='text-align:left'>매매(전략 손익)</th><th style='text-align:left'>측정용 · 미청산</th><th style='text-align:left'>메모</th></tr></thead><tbody>"+
+    lv.map(function(x){var se=x.settle,tr=se?se.trades:x.trades,op=se?se.open:x.open;
+      return "<tr><td>"+esc(x.date)+"</td><td style='text-align:left;white-space:normal'>"+(se?"<div class='sub'>주문 정산(밤 사본 · 원본 장부는 메모)</div>":"")+(histLiveTrades(tr)||"<span class='sub'>매매 없음</span>")+"</td><td style='text-align:left;white-space:normal'>"+histLiveTrades((x.measure||[]).concat(op||[]))+"</td><td style='text-align:left;white-space:normal' class='sub'>"+
+      (se&&se.dayPct!=null?"그날 "+pct(se.dayPct)+" · ":x.dayPct!=null?"그날 "+pct(x.dayPct)+" · ":"")+esc(x.note||"")+(se?"<br>원본: "+(x.basis==="orders"?"15:40 장부 확정 전":"모의투자 체결 기준 "+((x.trades||[]).length)+"건"):"")+((se&&se.warn)||x.warn?"<br>⚠️ "+esc((se&&se.warn)||x.warn):"")+"</td></tr>"}).join("")+"</tbody></table></div>":"";
+  var yb="<div class='row' style='margin-top:6px'><button class='hbtn' onclick=\"histYear('')\""+(HV.year?"":" disabled")+">전체</button>"+years.map(function(y){return "<button class='hbtn' onclick=\"histYear('"+y+"')\""+(HV.year===y?" disabled":"")+">"+y+"</button>"}).join("")+"</div>";
+  var btH="<div style='margin-top:12px'><b>🧮 과거 계산</b> <span class='sub'>지금 규칙 · 지금 자료로 전 기간 다시 계산(경쟁 점수와 같은 함수 · 같은 비용) — 밤마다 바뀔 수 있음 · 최근 순</span></div>"+yb+
+    (part.length?"<div class='tw'><table class='board'><thead><tr><th>손익 날짜</th><th style='text-align:left'>종목 · 진입 → 청산</th><th>순손익</th><th style='text-align:left'>사유</th></tr></thead><tbody>"+part.map(histTradeRow).join("")+"</tbody></table></div>"
+      +"<div class='row' style='margin-top:8px'><button class='hbtn' onclick='histPage(-1)'"+(HV.page?"":" disabled")+">◀ 최근</button><span class='sub'>"+(HV.page+1)+" / "+pages+" 쪽 · "+sel.length+"건</span><button class='hbtn' onclick='histPage(1)'"+(HV.page+1<pages?"":" disabled")+">이전 ▶</button></div>"
+      :"<p class='note'>매매 없음</p>");
+  histShow(head+fwh+lvh+btH+"<p class='note'><button class='hlink' onclick=\"openHistList('"+esc(HV.tab||d.tab||"")+"')\">← 이 탭 전략 목록</button></p>");
 }
 async function load(){
   var body=document.getElementById("body");

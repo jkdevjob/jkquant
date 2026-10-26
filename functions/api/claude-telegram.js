@@ -5,15 +5,15 @@
 //  (옛 호출 kind=… · op=send 가 와도 보내지 않고 skipped 로 답한다).
 //  예외 하나: 매일 08:00 연구 리포트(op=report, 머리말 [클로드 연구 리포트]) — 사용자 요청(2026-10-14). Worker /push-report 가 하루 한 번 부른다.
 //  하루 마감 장부 계산(op=close)은 그대로 — Worker 가 Durable Object 에 한 번만 저장하고 밤 계산 · 대결 비교가 그 장부를 읽는다.
-import { ledger, quote } from "./claude-live.js";
-import { openingDay, etfDay, coinDay, soxlDay } from "./_claude_day.js";
+import { ledger, quote, barOn } from "./claude-live.js";
+import { openingDay, etfDay, coinDay, soxlDay, close30Day } from "./_claude_day.js";
 import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts } from "./_claude_main.js";
 import { REPORT_HEAD } from "./_claude_push.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const KINDS=["preopen","etfbuy","weekly","duel","promote"];
-export const ALERT_HEAD=/^\[클로드 연구 (시초가|데이트레이딩|비트코인|SOXL|텐배거)\] /;   // 텐배거 = 전향 시험 매수·매도(GitHub Actions 가 부른다)
+export const ALERT_HEAD=/^\[클로드 연구 (시초가|데이트레이딩|비트코인|SOXL|종가30분|텐배거)\] /;   // 텐배거 = 전향 시험 매수·매도(GitHub Actions 가 부른다)
 const SX_ACT={enter:"시가 매수",hold:"보유",exit:"시가 매도",flat:"쉼"};
 const SX_NEXT={buy:"시가 매수 (과매도 신호)",sell:"시가 매도"};
 const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL"};
@@ -98,11 +98,17 @@ export function mondayOf(date){
 }
 
 // ── 전략별 하루 마감(op=close) · 발송(op=send) — Worker 가 마감 장부를 Durable Object 에 한 번만 저장한 뒤 그 장부로 보낸다 ──
-const DAY_STRATEGIES=["opening","daytrading","crypto","soxl","overview"];
-async function krOpenOn(origin,date){
-  const q=await quote(origin,"233740");
+const DAY_STRATEGIES=["opening","daytrading","crypto","soxl","close30","overview"];
+async function krOpenOn(origin,date,q=null){
+  q=q||await quote(origin,"233740");
   const o=(q&&q.ohlc)||[];
   return o.length?o[o.length-1].date===date:null;
+}
+// ①②⑤ 정산 시세 — 주문한 종목의 그 날짜 일봉(공식 시가 · 종가). 못 받으면 빠진다(장부가 '시세 없음 — 점검'으로 남긴다).
+async function barsOf(origin,codes,dates){
+  const out={};
+  for(const c of codes){const q=await quote(origin,c);for(const d of dates){const b=barOn(q,d);if(b)(out[c]=out[c]||{})[d]=b;}}
+  return out;
 }
 export async function closeDay(origin,env,strategy,date){
   const cfg=await loadMainEvents(env);                       // 그날 메인 전략(승격 기록). 못 읽으면 기본 메인 — 장부에 그 사실을 남긴다
@@ -110,17 +116,24 @@ export async function closeDay(origin,env,strategy,date){
   return tag(await closeDay0(origin,env,strategy,date,cfg.events));
 }
 async function closeDay0(origin,env,strategy,date,events){
-  if(strategy==="opening"){
+  if(strategy==="opening"){                                   // 주문한 종목을 그날 공식 시가 → 종가로(모의투자 체결과 상관없이)
     const l=await ledger(env,date);
     const st=Object.fromEntries(((l&&l.events)||[]).map(e=>[e.stage,e.payload||{}]));
-    const open=((((st.reconcile||{}).positions)||[]).filter(p=>p.buy&&p.buy.qty>0&&!(p.sell&&p.sell.qty>0))).map(p=>p.code);
-    const marks={};for(const c of open){const q=await quote(origin,c);if(q)marks[c]=q.price;}
-    return openingDay(date,l,await krOpenOn(origin,date),marks,mainFor(events,"opening",date));
+    const codes=[...new Set((((st.preopen||{}).picks)||[]).map(p=>String(p.code)))].slice(0,5);
+    const bb=await barsOf(origin,codes,[date]),bars=Object.fromEntries(Object.entries(bb).map(([c,v])=>[c,v[date]]));
+    return openingDay(date,l,await krOpenOn(origin,date),{},mainFor(events,"opening",date),bars);
   }
-  if(strategy==="daytrading"){
+  if(strategy==="daytrading"){                                // 전날 주문한 건 — 전날 공식 종가 → 오늘 공식 시가
     const l=await ledger(env,date);let prev=null,pd=null;
     for(let k=1;k<=5&&!prev;k++){const d=new Date(Date.parse(date+"T12:00:00+09:00")-k*864e5).toISOString().slice(0,10);const x=await ledger(env,d);if(x&&(x.events||[]).length){prev=x;pd=d;}}
-    return etfDay(date,l,prev,pd,await krOpenOn(origin,date));
+    const q=await quote(origin,"233740"),bars={};
+    for(const d of [pd,date])if(d){const b=barOn(q,d);if(b)bars[d]=b;}
+    return etfDay(date,l,prev,pd,await krOpenOn(origin,date,q),bars);
+  }
+  if(strategy==="close30"){                                   // ⑤ 주문한 건 — 15:00 판단 가격 → 그날 공식 종가
+    const l=await ledger(env,date);
+    const q=await quote(origin,"233740"),b=barOn(q,date);
+    return close30Day(date,l,await krOpenOn(origin,date,q),b?{[date]:b}:{});
   }
   if(strategy==="crypto"){
     const end=Date.parse(date+"T00:00:00+09:00")+864e5,to=new Date(end).toISOString().replace(".000Z","Z");   // 마감(00:00) 전 자료만

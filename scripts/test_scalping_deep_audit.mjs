@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const mutation=process.env.SCALPING_DEEP_MUTATION?JSON.parse(readFileSync(0,'utf8')):{};
 const workerPath=process.env.SCALPING_GLOBAL_PATH||new URL('../worker/global-intraday-scheduler/src/index.js',import.meta.url);
-let workerSource=(mutation.global||readFileSync(workerPath,'utf8')).replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=class {};');
+let workerSource=(mutation.global||readFileSync(workerPath,'utf8')).replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=class {};').replaceAll('../../../functions/api/',new URL('../functions/api/',import.meta.url).href);
 const worker=await import('data:text/javascript;base64,'+Buffer.from(workerSource).toString('base64'));
 const openingSource=(mutation.opening||readFileSync(process.env.SCALPING_OPENING_PATH||new URL('../worker/opening-scheduler/src/index.js',import.meta.url),'utf8'))
   .replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=class {};')

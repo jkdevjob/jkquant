@@ -1060,7 +1060,7 @@ console.log('[19] 출금 · 복리/단리');
   /* 모의 성과표 — 단리는 익절금이 계좌 밖으로 빠져 있다. 평가금엔 더해 놨어도
      '얼마가 나갔는지'를 안 보이면 잔금이 왜 안 늘었는지 알 수 없다. */
   ok('성과표가 단리 인출액을 낸다', /_out=\{saved:\(c\.saved\|\|0\)\+_dv\.divCash, withdrawn:c\.withdrawn\|\|0, simple:!!c\.simple\}/.test(idx)
-     && /nTrade, price, out:_out, mdd\}/.test(idx));
+     && /nTrade, price, out:_out, mdd,/.test(idx));
   ok('성과표에 인출 태그를 그린다', /O\.simple\?'단리 인출':'출금'/.test(idx));
   /* 익절 조절 숨김 — SOXL 열위·MDD 악화 구간 때문. UI만 감추고 코드는 남긴다.
      감추기만 하면 켜져 있던 세션을 끌 방법이 없으므로 저장분도 꺼야 한다. */
@@ -1985,22 +1985,60 @@ console.log('[36] 분석 머리 — 여섯 탭 모두 달러·원화 병기 손�
   ok('적립·ASAP 분석도 회색 중복 원화를 다시 쓰지 않는다',generic&&!generic.includes("pre+'_pnl_krw'"));
 }
 
-console.log('[37] 모의 성과 표 — TR · MDD · MAR · 평가 순 · 투입 · 기간은 맨 오른쪽');
+console.log('[37] 모의 성과 표 — 세후 TR · TR · MDD · MAR · 평가 순 · 투입 · 기간은 맨 오른쪽');
 {
   const op=extractFn(idx,'async function openPaper()');
   // 수익 한 칸이 최종·현재·인출 셋으로 갈렸다 (v3.53) · 10-21 사용자: 기간은 맨 뒤 · TR(토탈리턴 = 옛 '최종' · 단리 인출 포함) · MDD · MAR · 평가 순
   const head=(op.match(/<thead><tr>[\s\S]*?전략 · 세션[\s\S]*?<\/tr><\/thead>/)||[''])[0];
   const labels=[...head.matchAll(/>([^<>`]+)<\/th>/g)].map(m=>m[1]).join('|');
-  ok('머리글 순서 — 전략 · 세션 | TR | MDD | MAR | 평가 | 현재 | 인출 | 연 | 투입 | 기간',
-     labels==='전략 · 세션|TR|MDD|MAR|평가|현재|인출|연|투입|기간', labels);
-  // 시세를 못 받은 줄은 TR~연 일곱 칸(TR·MDD·MAR·평가·현재·인출·연)을 colspan 으로 덮는다 — 그 뒤 투입 · 기간
-  const iSpan=op.indexOf('colspan="7"'), iInflow=op.indexOf('${paperInflowText(r)}'), iPer=op.indexOf('${r.nTrade}거래');
+  ok('머리글 순서 — 전략 · 세션 | 세후 TR | TR | MDD | MAR | 평가 | 현재 | 인출 | 연 | 투입 | 기간 (10-21 세후 TR 맨 앞)',
+     labels==='전략 · 세션|세후 TR|TR|MDD|MAR|평가|현재|인출|연|투입|기간', labels);
+  // 시세를 못 받은 줄은 세후 TR~연 여덟 칸(세후 TR·TR·MDD·MAR·평가·현재·인출·연)을 colspan 으로 덮는다 — 그 뒤 투입 · 기간
+  const iSpan=op.indexOf('colspan="8"'), iInflow=op.indexOf('${paperInflowText(r)}'), iPer=op.indexOf('${r.nTrade}거래');
   ok('투입 · 기간 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan && iPer>iInflow, `${iSpan} ${iInflow} ${iPer}`);
   ok('투입 · 기간 칸이 한 번씩만 그려진다', (op.match(/\$\{paperInflowText\(r\)\}/g)||[]).length===1 && (op.match(/\$\{r\.nTrade\}거래/g)||[]).length===1);
   { const foot=(op.match(/<b style="color:var\(--vio\)">전략 이름<\/b>[^`]*/)||[''])[0];
-    const at=['<b>TR</b>(토탈리턴) = 평가 ÷ 투입','<b>MDD</b> = 하루하루','<b>MAR</b> = CAGR','평가 = 보유 평가금','투입 = 밖에서 넣은 돈','기간 = 모의 시작일부터'].map(x=>foot.indexOf(x));
-    ok('각주 설명도 표 순서와 같다(TR · MDD · MAR · 평가 · 투입 · 기간)', at.every((x,i)=>x>=0&&(i===0||x>at[i-1])), at.join(',')); }
+    const at=['<b>세후 TR</b> = 지금 다 팔고','<b>TR</b>(토탈리턴) = 평가 ÷ 투입','<b>MDD</b> = 하루하루','<b>MAR</b> = CAGR','평가 = 보유 평가금','투입 = 밖에서 넣은 돈','기간 = 모의 시작일부터'].map(x=>foot.indexOf(x));
+    ok('각주 설명도 표 순서와 같다(세후 TR · TR · MDD · MAR · 평가 · 투입 · 기간)', at.every((x,i)=>x>=0&&(i===0||x>at[i-1])), at.join(',')); }
   // 실제 표를 그려 칸 값을 읽는 시험은 끝(비동기 PENDING)에 있다 — [37-값]
+}
+
+/* ════ [37-세후] 세후 TR — 백테와 같은 세금 규약 · 해마다 낸 세금만큼 덜 굴림 · 다 판다고 보고 마지막 세금 ════ (2026-10-21 사용자: '세후 TR 맨 앞에 추가해')
+   모의 장부는 양도세를 안 넣는다. 세후 TR 은 장부를 건드리지 않고 그 장부가 정한 날마다의 총자산·실현손익·원가로 결과를 근사한다.
+   기댓값은 여기서 손으로 센다(실코드를 다시 부르지 않는다) — 미국 22% · 연 250만원 공제 · 원화 환산 1,350원. */
+console.log('[37-세후] 세후 TR — 세금 규약 대조 · 값');
+{
+  const pick=src=>{ try{ return [(src.match(/const COST_FEE=[^\n]*/)||[''])[0], (src.match(/const isKRW=[^\n]*/)||[''])[0],
+    (src.match(/const KR_STOCK_ETF=new Set\(\[[\s\S]*?\]\);/)||[''])[0], (src.match(/const krCode=[^\n]*/)||[''])[0], (src.match(/const krTaxRate=[^\n]*/)||[''])[0],
+    extractFn(src,'function costOf(t)'), extractFn(src,'function capGainTax(pnl, t)')].join('\n'); }catch(e){ return 'ERR '+e.message; } };
+  ok('세금 규약이 백테와 글자 그대로 같다(상수 · 국내 판정 · costOf · capGainTax)', pick(idx)===pick(bt) && pick(idx).length>700, pick(idx).slice(0,80));
+  const F=new Function(pick(idx)+'\n'+extractFn(idx,'function paperAfterTaxAcc(sym, opt)')+'\nreturn {paperAfterTaxAcc};')();
+  const tax=g=>Math.max(0,g*1350-2500000)*0.22/1350;
+  const run=(opt,rows)=>{ const A=F.paperAfterTaxAcc('SOXL',opt); rows.forEach(([d,E,inf,x])=>A.step(d,E,inf,x)); return A.done(); };
+  const z={realized:0,turnover:0,held:0,cost:0}, X=o=>Object.assign({},z,o);
+  { const r=run({},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-30',20000,10000,X({held:20000,cost:10000})]]);
+    ok('S1 보유만 1만→2만$ — 다 판다고 보고 평가익 1만$ 에 세금 → +'+((20000-tax(10000))/100-100).toFixed(2)+'%', near(r.tr,(20000-tax(10000))/10000*100-100,1e-9), r&&r.tr.toFixed(4)); }
+  { // S2 2024 실현 1만$ → 연말 세금 T1 → 그만큼 덜 굴려 2025 두 배도 덜 는다
+    const T1=tax(10000), k=1-T1/20000, fin=k*40000-tax(k*20000);
+    const r=run({},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-31',20000,10000,X({realized:10000})],['2025-12-31',40000,10000,X({realized:10000,held:40000,cost:20000})]]);
+    ok('S2 해마다 낸 세금만큼 덜 굴린다 — 세후 '+(fin/100-100).toFixed(2)+'% (세금을 끝에 한 번만 빼면 '+((40000-T1-tax(20000))/100-100).toFixed(2)+'%)', near(r.tr,fin/10000*100-100,1e-9), r&&r.tr.toFixed(4));
+    // S3 단리 — 이익은 계좌 밖에 있어 세금도 거기서 낸다(굴릴 원금은 그대로)
+    const r3=run({simple:true},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-31',20000,10000,X({realized:10000})],['2025-12-31',40000,10000,X({realized:10000,held:40000,cost:20000})]]);
+    ok('S3 단리 — 세금은 빼 둔 돈에서 · 세후 '+((40000-T1-tax(20000))/100-100).toFixed(2)+'%', near(r3.tr,(40000-T1-tax(20000))/10000*100-100,1e-9), r3&&r3.tr.toFixed(4)); }
+  { // S4 수수료 없는 장부(무매) — 첫날 첫 매수 1만$ 의 0.25% · 팔 때 0.25%
+    const k=1-25/10000, liq=k*0.0025*10000, fin=k*10000-liq;
+    const r=run({addFee:true},[['2024-01-02',10000,10000,X({turnover:10000,held:10000,cost:10000})],['2024-06-28',10000,10000,X({turnover:10000,held:10000,cost:10000})]]);
+    ok('S4 수수료 없는 장부 — 첫 매수·다 팔 때 0.25% · 세후 '+(fin/100-100).toFixed(3)+'%', near(r.tr,fin/10000*100-100,1e-9) && near(r.fee,25+liq,1e-9), r&&(r.tr.toFixed(4)+' · 수수료 '+r.fee)); }
+  { // S5 적립 — 새로 넣은 돈은 예전에 낸 세금의 몫을 안 진다(단위로 산다)
+    const T1=tax(10000);
+    const r=run({},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-31',20000,10000,X({realized:10000})],['2025-01-02',30000,20000,X({realized:10000})],['2025-12-31',30000,20000,X({realized:10000})]]);
+    ok('S5 적립 1만$ 추가 — 세후 총자산 3만 − 2024 세금 = '+(30000-T1).toFixed(2)+'$', near(r.final,30000-T1,1e-6) && near(r.tr,(30000-T1)/20000*100-100,1e-9), r&&r.final.toFixed(4)); }
+  // 배선 — 날마다 걷는 자리(paperMdd)에서 같이 세고, 목록 줄(paperStat · 플랜)이 atr 로 받는다
+  const md=extractFn(idx,'function paperMdd(tab, sess, R, hist)'), ps=extractFn(idx,'function paperStat(tab, sess)'), pp=extractFn(idx,'function paperStatPlan(sess)');
+  ok('배선 — paperMdd 가 날마다 AT.step · 지금 시세로 마지막 한 번 · afterTax 를 돌려준다 · paperStat·플랜이 atr 로',
+     /AT\.step\(row\.date, tot, cur\.inflow,/.test(md) && /AT\.step\(D\[D\.length-1\]\.date, R\.total, R\.inflow,/.test(md) && /afterTax:AT\.done\(\)/.test(md)
+     && /atr:\(mdd&&mdd\.afterTax\)\?mdd\.afterTax\.tr:null/.test(ps) && /const _at=planAfterTax\(R\);/.test(pp) && /atr:_at\?_at\.tr:null/.test(pp));
+  ok('수수료 없는 장부만 수수료를 더한다 — 무매 · 적립 · ASAP', /const PAPER_NOFEE_TABS=new Set\(\['inf','dca','asap'\]\);/.test(idx));
 }
 
 console.log('[38] 세션 이동 — 보던 자리도 지킨다');
@@ -2122,7 +2160,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /onclick="refreshPaperViewButton\(\)"/.test(idx)
      && /const repaired=await paperRepairCommonStarts\(\)/.test(rvFast));
   ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
-     /const PAPER_VIEW_CACHE_VER=1;/.test(idx)
+     /const PAPER_VIEW_CACHE_VER=2;/.test(idx)
      && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
      && /x\.day===paperKstDate\(\)/.test(extractFn(idx,'function paperViewCacheFresh(x)'))
      && /if\(!force&&paperViewCacheFresh\(current\)\)return/.test(rvFast));
@@ -2242,7 +2280,7 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
 
   // 실제 해석 결과를 직접 돌려 본다 — 정규식만으로는 새는지 알 수 없다
   {
-    const F=new Function(kis.replace(/export /g,'')+'\nreturn {withEnv,modeList};')();
+    const F=new Function(kis.replace(/^import [^\n]+;\r?$/gm,'').replace(/export /g,'')+'\nreturn {withEnv,modeList};')();
     const solo={KIS_ENV:'vts',KIS_APPKEY:'k',KIS_APPSECRET:'s',KIS_ACCOUNT:'11111111-01'};
     const ids=m=>F.modeList(m).filter(x=>x.ready).map(x=>x.id).sort().join(',');
     ok('옛 단일키는 모의 두 갈래만 연다', ids(solo)==='kr-vts,us-vts', ids(solo));
@@ -2944,7 +2982,7 @@ console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
      /outAmt>0\?\(r\.retNow>=0\?'var\(--buy\)':'var\(--sell\)'\):'var\(--faint\)'/.test(idx)
      && /\$\{outAmt>0\?'\+'\+r\.retOut\.toFixed\(1\)\+'%':'—'\}/.test(idx));
   // 시세를 못 받은 줄은 평가~연 일곱 칸을 덮어야 한다
-  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="7" style="color:var\(--gold\)">시세 대기/.test(idx));
+  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="8" style="color:var\(--gold\)">시세 대기/.test(idx));
 }
 
 /* ════ 55. 단리 현금 흐름 — 출금·입금·합계와 월 수입 ════
@@ -3061,7 +3099,7 @@ console.log('\n[57] 분배금 현금 수령 — 월 수입으로 읽는다');
   ok('현금 수령분을 날짜째로 남긴다',
      /else divFlows\.push\(\{date:d\.date, out:cash, in:0\}\);/.test(cd) && /pos\.flows=divFlows;/.test(cd));
   // 재투자는 계좌 안에 남으므로 나간 돈이 아니다
-  ok('재투자는 흐름에 넣지 않는다', /if\(reinv\)\{[^}]*divShares\+=cash\/rp; \}\s*\n\s*else divFlows\.push/.test(cd));
+  ok('재투자는 흐름에 넣지 않는다', /if\(reinv\)\{[^}]*divShares\+=cash\/rp; divInv\+=cash; \} \}[^\n]*\n\s*else divFlows\.push/.test(cd));
 
   /* 카드는 이제 분석탭에 있다 — 무매가 요약·월별표를 분석탭에 두는 것과 같은 자리.
      '현재' 탭에 따로 그리던 옛 카드는 지웠다(같은 표를 두 군데서 그리면 또 어긋난다). */
@@ -3200,7 +3238,7 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   /* VR — 인출이 본질인 전략. 실현손익을 아예 안 재고 있었고 인출도 화면에 없었다. */
   const cv=(()=>{ try{ return extractFn(idx,'function computeVr()'); }catch(e){ return ''; } })();
   // 수수료는 필요경비라 실현손익에서 뺀다 (무매·백테와 같은 규약)
-  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*q-fee; cost-=av\*q;/.test(cv) && /\brealized,fees,flows,/.test(cv));
+  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*q-fee; cost-=av\*q;/.test(cv) && /\brealized,cost,fees,flows,/.test(cv));
   /* 기록에 적힌 수수료를 그대로 되살려야 재생기 안 장부와 화면 장부가 같아진다.
      실계좌 기록엔 fee 칸이 없어 0 — 예전과 글자 그대로 같다. */
   ok('VR이 기록의 수수료로 Pool 을 복원한다',
@@ -4002,7 +4040,7 @@ console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
   ok('단위가치로 잰다', /const uv=tot\/cur\.inflow;/.test(md));
   ok('거래 없는 날은 주가만 갈아끼운다',
      /if\(grew \|\| !cur\)\{ sess\.hist=h\.slice\(0,idx\); cur=paperRaw\(tab, sess\); \}/.test(md)
-     && /const tot=cur\.qty\*row\.close \+ \(cur\.qty1\|\|0\)\*p1 \+ cur\.k;/.test(md));
+     && /const held=cur\.qty\*row\.close \+ \(cur\.qty1\|\|0\)\*p1, tot=held \+ cur\.k;/.test(md));
   ok('빌려 쓴 기록은 반드시 되돌린다', /\} finally \{ sess\.hist=real; \}/.test(md));
   /* 거래가 몇 달 전에 멈췄어도 들고 있는 동안 주가는 움직인다 —
      마지막 거래일에서 끊으면 그 사이 낙폭을 통째로 놓친다. */
@@ -4026,8 +4064,9 @@ console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
       const g={ PAPER_DAYS:{t:()=>days},
                 paperRaw:(tab,sess)=>{ calls++; return rawFn(sess.hist); },
                 ivsQuote1:null, console:{error(){}} };
-      const fn=new Function('PAPER_DAYS','paperRaw','ivsQuote1','console','return ('+md.replace(/^function \w+\(/,'function (')+')')
-                 (g.PAPER_DAYS,g.paperRaw,g.ivsQuote1,g.console);
+      // 세후 TR 은 같은 걸음에서 센다 — 여기선 MDD 만 보므로 빈 셈틀을 물린다(세후 값은 [37-세후])
+      const fn=new Function('PAPER_DAYS','paperRaw','ivsQuote1','console','paperAfterTaxAcc','PAPER_NOFEE_TABS','return ('+md.replace(/^function \w+\(/,'function (')+')')
+                 (g.PAPER_DAYS,g.paperRaw,g.ivsQuote1,g.console,()=>({step(){},done(){return null;}}),new Set());
       const sess={hist:hist, simStart:hist[0].date};
       const R=rawFn(hist);
       const out=fn('t', sess, R, hist);
@@ -10243,7 +10282,7 @@ console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 
   const {spawnSync}=require('child_process');
   const kisP=__d+'/functions/api/kis.js';
   function __kisHarness(){
-    const fs=require('fs'); const body=fs.readFileSync(process.argv[2],'utf8').replace(/^export /gm,'')+'\nreturn {onRequestGet};';
+    const fs=require('fs'); const body=fs.readFileSync(process.argv[2],'utf8').replace(/^import [^\n]+;\r?$/gm,'').replace(/^export /gm,'')+'\nreturn {onRequestGet};';
     const mk=(scn)=>{
       const calls=[], sleeps=[];
       const res=(obj,status=200)=>({status,ok:status>=200&&status<300,json:async()=>obj,text:async()=>JSON.stringify(obj)});
@@ -10289,6 +10328,7 @@ console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 
     fs.writeFileSync(tmp,'('+__kisHarness.toString()+')();');
     const r=spawnSync(process.execPath,[tmp,kisP],{encoding:'utf8',timeout:60000});
     try{ K=JSON.parse((r.stdout||'').trim().split('\n').pop()||'{}'); }catch(e){ K={error:'출력 해석 실패: '+(r.stdout||'').slice(0,200)+(r.stderr||'').slice(0,300)}; }
+    if(r.status!==0)K={error:'한투 조회 시험 실행 실패: '+(r.stderr||'').slice(0,400)};
     try{ fs.unlinkSync(tmp); }catch(e){} }
   const J=o=>JSON.stringify(o||K.error||{});
   const {A={},R={},N={},P={},E={},U={}}=K;
@@ -11338,10 +11378,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
       const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
       const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
     const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
-    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
-       crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
+    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:00(⑤)·15:21·15:23 연구 주문·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
+       crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_c30===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
        &&count.claude_kr===5&&count.duel===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
-       &&Object.keys(count).length===8&&r0==='gapdown_preopen'&&r1===null
+       &&count.closing_day_signal===5&&count.closing_day_entry===5&&count.closing_overnight_signal===5&&count.research_close===5    // 연구 장부 15:06/15:07/15:22 · 한투 모의 15:23
+       &&Object.keys(count).length===13&&r0==='gapdown_preopen'&&r1===null
+       &&route(Date.parse('2026-10-05T06:00:00Z'))==='gapdown_c30'&&route(Date.parse('2026-10-04T06:00:00Z'))===null      // 월 15:00 KST ⑤ / 일요일 없음
        &&route(Date.parse('2026-10-05T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-05T21:05:00Z'))===null      // 여름(EDT) 05:05 KST
        &&route(Date.parse('2026-12-07T21:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-12-07T20:05:00Z'))===null      // 겨울(EST) 06:05 KST
        &&route(Date.parse('2026-10-09T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-10T20:05:00Z'))===null      // 금요일 마감(한국 토요일) · 토요일 없음
@@ -11357,8 +11399,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/if\(stage!=="close"\)await claudeKrClose\(env,date,ms\);[^\n]*\n\s*await claudeAlertsNow\(env\);/.test(ow));
   ok('Worker: 매 단계 응답을 gapdown ledger 에 먼저 저장 + 일부 조회 시 주문 없음 + 라우팅으로만 실행',
      /gapdownRecord\(env,date,"quote",q,ms\)/.test(ow)&&/gapdown_quote_partial/.test(ow)
-     &&/if\(route==="opening"\)ctx\.waitUntil\(runMinute\(controller,env\)\);/.test(ow)
-     &&/else if\(route&&route\.startsWith\("gapdown_"\)\)ctx\.waitUntil\(runGapdown\(route\.slice\(8\),controller,env\)\);/.test(ow));
+     &&/if\(route==="opening"\)\{?\s*ctx\.waitUntil\(runMinute\(controller,env\)\);/.test(ow)
+     &&/else if\(route&&route\.startsWith\("gapdown_"\)\)\{?\s*ctx\.waitUntil\(runGapdown\(route\.slice\(8\),controller,env\)\);/.test(ow));
   ok('Worker: 오후 매도·조회는 아침 매수 접수 성공 종목만',
      /o\.side==="buy"&&o\.vts&&o\.vts\.ok/.test(ow));
   ok('연구 workflow: KIS 호출·주문 없음 + 실측 원본은 날짜별 한 번만 저장(덮어쓰기 없음) + 16시 전 저장 안 함',
@@ -11377,15 +11419,15 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
        .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>연구\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>연구\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('연구(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) · 전체 계좌 탭 없음(2026-10-14 삭제) · 탭마다 GPT 같은 기간 비교',
-     ['today','opening','daytrading','crypto','soxl'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))&&!/data-tab="all"|showTab\('all'\)/.test(scl2)
-     &&/if\(\/\^\(today\|opening\|daytrading\|crypto\|soxl\|duel\|tenbagger\)\$\/\.test\(q\)\)TAB=q/.test(scl2)
+     ['today','opening','daytrading','crypto','soxl','close30'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))&&!/data-tab="all"|showTab\('all'\)/.test(scl2)
+     &&/if\(\/\^\(today\|opening\|daytrading\|crypto\|soxl\|close30\|duel\|tenbagger\)\$\/\.test\(q\)\)TAB=q/.test(scl2)
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
     ok('클로드 Telegram: 서버키 인증 · 주문 경로 없음 · 실제 매수·매도(op=event, [클로드 연구 탭] 머리말)만 · 판단·주간·대결·교체·마감 결과는 skipped · 마감 장부 계산(op=close)은 그대로 · 예외 하나: 매일 08:00 연구 리포트(op=report, [클로드 연구 리포트] — 2026-10-14 사용자 요청)',
        /function authorized\(request,env\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
-       &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\|텐배거\)\\\] \/;/.test(tg)
+       &&/export const ALERT_HEAD=\/\^\\\[클로드 연구 \(시초가\|데이트레이딩\|비트코인\|SOXL\|종가30분\|텐배거\)\\\] \/;/.test(tg)
        &&/if\(b\.op==="send"\|\|KINDS\.includes\(String\(b\.kind\|\|""\)\)\)return json\(\{ok:true,skipped:"buy_sell_only"\}\);/.test(tg)
        &&(tg.match(/await sendOnce\(env,/g)||[]).length===2&&/if\(b\.op==="report"\)\{[\s\S]{0,120}text\.startsWith\(REPORT_HEAD\)/.test(tg)&&!/api\.telegram\.org[\s\S]*api\.telegram\.org/.test(tg));
     // 하루 마감 장부: DO 에 한 번만 저장(먼저 저장된 것이 정본) — 밤 계산 · 대결 비교가 읽는다. 텔레그램은 보내지 않는다
@@ -11402,7 +11444,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&['① 전략 · 종목 선정 규칙','② 오늘 종목 선정 · 감시','③ 매수 타이밍','④ 매도 · 손절 · 리스크','⑤ 오늘 장중 모의 매매이력','⑥ 전략 경쟁 · 자동 개선','⑦ 누적 모의 매매이력','⑧ 실행 품질'].every(x=>scl2.includes(x))
        &&/setInterval\(function\(\)\{if\(!document\.hidden&&ME\)loadLive\(\)\},60000\)/.test(scl2)
        &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=html;/.test(scl2)&&!/statusBar/.test(scl2)
-       &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
+       &&['opening','daytrading','crypto','soxl','close30'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
     ok('전략 경쟁: 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 신규 투입 · 7일 1위 자동 승격(다음 날부터) · 이번 주 결과 카드는 전체 계좌 탭과 함께 삭제',
@@ -11562,11 +11604,11 @@ console.log('\n[CLAUDE HEADER] 머리말 통일');
 console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8');
-  ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 4전략 누적 상태: 표본·승률·거래당·필요승률·엣지·검증상태)',
+  ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 기준전략 누적 상태(⑤ 포함 5전략): 표본·승률·거래당·필요승률·엣지·검증상태)',
      /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익<\/span>/.test(ch)
      &&/var pr=dayPair\(r,lt\.days,\(LIVE&&!LIVE\.error&&LIVE\.today\)\|\|""\);/.test(ch)
      &&/resultCell\(pr\[0\]\.v,pr\[0\]\.date,"전일",cl,pr\[0\]\.lv\)\+resultCell\(pr\[1\]\.v,pr\[1\]\.date,"당일",cl,pr\[1\]\.lv\)/.test(ch)
-     &&/📊 4전략 누적 상태/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
+     &&/📊 기준전략 누적 상태/.test(ch)&&/\["close30","⑤ 종가 30분","종가 30분",/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
      &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
   // 값 시험 — 화면 함수를 그대로 떼어 실행
   const grab=n=>{const i=ch.indexOf('function '+n+'(');let d=0,j=ch.indexOf('{',i);for(;j<ch.length;j++){if(ch[j]==='{')d++;else if(ch[j]==='}'&&--d===0)break;}return ch.slice(i,j+1);};
@@ -12122,10 +12164,10 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      &&/const cfg=await loadMainEvents\(env\);/.test(lv)&&/const cfg=await loadMainEvents\(env\);/.test(tg)&&/const R=etfRuleFor\(await loadMainEvents\(env,3000\),date\);/.test(og)
      &&!fs.existsSync(__d+'/functions/api/claude-promote.js'));
   const cp=require('child_process');
-  const py=cp.spawnSync('python3',['-c','import sys,json;sys.path.insert(0,"scripts");import claude_lab as L;print(json.dumps({t:L.MAIN_DEFAULT[t]["params"] for t in L.TABS4}))'],{cwd:__d,encoding:'utf8'});
+  const py=cp.spawnSync('python3',['-c','import sys,json;sys.path.insert(0,"scripts");import claude_lab as L;print(json.dumps({t:L.MAIN_DEFAULT[t]["params"] for t in L.TABS_ALL}))'],{cwd:__d,encoding:'utf8'});
   const js=cp.spawnSync(process.execPath,['--input-type=module','-e','import {MAIN_DEFAULT as M} from "'+require('url').pathToFileURL(__d+'/functions/api/_claude_main.js').href+'";console.log(JSON.stringify(Object.fromEntries(Object.entries(M).map(([k,v])=>[k,v.params]))))'],{encoding:'utf8'});
   let same=false,why='';
-  try{const a=JSON.parse(py.stdout),b=JSON.parse(js.stdout);same=['opening','daytrading','crypto','soxl'].every(t=>JSON.stringify(Object.keys(a[t]).sort().map(k=>[k,a[t][k]]))===JSON.stringify(Object.keys(b[t]).sort().map(k=>[k,b[t][k]])));why=JSON.stringify([a,b]).slice(0,300);}
+  try{const a=JSON.parse(py.stdout),b=JSON.parse(js.stdout);same=['opening','daytrading','crypto','soxl','close30'].every(t=>JSON.stringify(Object.keys(a[t]).sort().map(k=>[k,a[t][k]]))===JSON.stringify(Object.keys(b[t]).sort().map(k=>[k,b[t][k]])));why=JSON.stringify([a,b]).slice(0,300);}
   catch(e){why=(py.stderr||'')+(js.stderr||'')+e.message;}
   ok('기본 메인 변수: 밤 계산(Python) = 실시간·주문(JS) — 한쪽만 바뀌면 빨간불',same,why);
   // 새 구조 변수(③ hiN · ④ ibsMax/downDays/RSI 끄기) 범위 검사: 밤 계산(Python _valid_params) = 실시간·승격 기록(JS validateParams)
@@ -12163,7 +12205,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
       om=fs.readFileSync(__d+'/functions/api/opening-monitor.js','utf8'),dm=fs.readFileSync(__d+'/functions/api/daytrading-monitor.js','utf8'),
       du=fs.readFileSync(__d+'/functions/api/scalping-duel.js','utf8'),cp2=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8');
     ok('연구 메뉴 알림: [지피티 연구 탭] · [클로드 연구 탭] 머리말 · 실제 매수·매도만(지피티 일일결과 · 데이트레이딩 후보 · 대결 요약 텔레그램 없음)',
-       /"\[지피티 연구 "\+LABELS\[strategy\]\+"\] "\+icon/.test(sa)&&/if\(stage==="summary"\)return json\(\{ok:true,eventId,skipped:"buy_sell_only"\}\);/.test(sa)
+       /"\[지피티 연구 "\+info\.label\+"\] "\+icon/.test(sa)&&/researchTradeAlert\(inputStrategy,b\.kind\)/.test(sa)&&/if\(stage==="summary"\)return json\(\{ok:true,eventId,skipped:"buy_sell_only"\}\);/.test(sa)
        &&/title:"\[지피티 연구 "\+name\+"\] "/.test(pa)&&/"\[지피티 연구 시초가\] 🟢 매수 · "/.test(om)&&/text:title\+/.test(om)
        &&!/api\.telegram\.org|모의 후보 신호/.test(dm)&&!/api\.telegram\.org/.test(du)
        &&/open: "\[클로드 연구 시초가\]", etf: "\[클로드 연구 데이트레이딩\]", coin: "\[클로드 연구 비트코인\]", soxl: "\[클로드 연구 SOXL\]"/.test(cp2));
@@ -12171,7 +12213,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
     ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만 · 켜기/끄기는 설정 → 알림 한 곳(연구 화면 상단 상태 줄과 🔔 버튼은 2026-10-14 사용자 요청으로 삭제)',
-       JSON.parse(wr).triggers.crons.join()==="5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
+       JSON.parse(wr).triggers.crons.join()==="0,5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
        &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(fs.readFileSync(__d+'/claude-push-client.js','utf8'))
@@ -12180,10 +12222,10 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   }
   { const og2=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8'),ks=fs.readFileSync(__d+'/functions/api/kis.js','utf8');
     const bb=ks.slice(ks.indexOf('if (op === "buyable") {'),ks.indexOf('if (op === "balance") {'));
-    ok('①② 매수 직전 계좌 현금 확인(모의 매수가능조회 · 읽기만 · 키/소유자만) → 살 수 있는 만큼만 · ① 현금 부족이면 남은 종목에 고르게 · 0주면 주문 없음 · 재시도 없음',
+    ok('①②⑤ 매수 직전 계좌 현금 확인(모의 매수가능조회 · 읽기만 · 키/소유자만) → 살 수 있는 만큼만 · ① 현금 부족이면 남은 종목에 고르게 · 0주면 주문 없음 · 재시도 없음',
        /const g = await verifyOwner\(request, env\);\n\s*if \(!g\.ok\) return json\(\{ error: g\.msg \}, 401\);\n\s*if \(isReal\(env\)\) return json\(\{ error: "buyable 은 KIS 모의투자\(vts\)만 허용합니다\." \}, 400\);/.test(bb)
        &&/tr_id: isReal\(env\) \? "TTTC8908R" : "VTTC8908R"/.test(ks)&&!/order-cash|hashkey/.test(ks.slice(ks.indexOf('async function krBuyable('),ks.indexOf('function parseEmails(')))
-       &&(og2.match(/await sizedBuy\(origin,env,date,/g)||[]).length===1&&/export async function preopenBuys\(origin,env,date,picks,amount,\{buy=sizedBuy,/.test(og2)&&/out\.orders=await preopenBuys\(origin,env,date,picks,amount\);/.test(og2)
+       &&(og2.match(/await sizedBuy\(origin,env,date,/g)||[]).length===2&&/out\.order=await sizedBuy\(origin,env,date,\{code:C30_RULE\.code,name:C30_RULE\.name\},qty,/.test(og2)&&/export async function preopenBuys\(origin,env,date,picks,amount,\{buy=sizedBuy,/.test(og2)&&/out\.orders=await preopenBuys\(origin,env,date,picks,amount\);/.test(og2)
        &&/orders\.push\(await buy\(origin,env,date,x,Math\.floor\(amount\/Math\.max\(1,\+x\.expectedPrice\|\|0\)\),\{deadline:ORDER_DEADLINE,split:picks\.length-i\}\)\);/.test(og2)
        &&!/await vtsOrder\(origin,env,date,"buy"/.test(og2.replace('const rec=await vtsOrder(origin,env,date,"buy",x,s.qty,meta);',''))
        &&/op=buyable&env=vts&market=kr/.test(og2));
@@ -12207,7 +12249,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
      &&/var ARENA_KIND=\{new:\["🆕","신규 투입"/.test(ch)&&!/claude-promote|승격 버튼/.test(ch)
-     &&/def arena\(ctx, today=None, state=None, tabs=TABS4\):/.test(lp)&&/ARENA_PATH\.write_text\(/.test(lp));
+     &&/def arena\(ctx, today=None, state=None, tabs=TABS_ALL\):/.test(lp)&&/ARENA_PATH\.write_text\(/.test(lp));
   ok('자동 승격은 감시키가 있을 때만 Worker 기록 → 효력은 다음 날 · 텔레그램 알림(탭별 하루 한 번)',
      /eff = \(date\.fromisoformat\(today\) \+ timedelta\(days=1\)\)\.isoformat\(\)/.test(lp)&&/if not key:\n\s*return dict\(ok=False, due=True/.test(lp)
      &&/\+ "\/claude-config", ev, key\)/.test(lp)&&/const KINDS=\["preopen","etfbuy","weekly","duel","promote"\];/.test(tg));
@@ -12468,7 +12510,8 @@ console.log('\n[37-값] 모의 성과 표 — TR(단리 인출 포함) · MDD ·
     const row=(name,total,out,simple,extra)=>Object.assign({tab:'inf',label:'무한매수법',name,sym:'SOXL',opts:['20분할','익절 자동','LOC 3줄'].concat(simple?['단리']:[]),
       cur:'usd',inflow:base,inflowWon:1e8,total,price:30,yrs:0.8,spanDays:292,nTrade:299,cagr:50,mdd:{pct:40,nDay:200},out:{simple,saved:out,withdrawn:0},
       ret:(total/base-1)*100,retNow:((total-out)/base-1)*100,retOut:out/base*100},extra||{});
-    const rows=[row('복리',100177.88,0,false),row('단리',95457.13,34429.80,true),row('대기',0,0,false,{price:0,pending:true})];
+    // 세후 TR 은 paperStat 이 센 값(atr · 세금 · 수수료)을 받아 그린다 — 여기선 그리는 자리만 본다(계산은 [37-세후])
+    const rows=[row('복리',100177.88,0,false,{atr:30.2,atrTax:20000,atrFee:1000}),row('단리',95457.13,34429.80,true,{atr:null}),row('대기',0,0,false,{price:0,pending:true})];
     const F=new Function('$','paperEnsureCommonWon','paperRepairLegacyStarts','paperRepairCommonStarts','syncPaperStart','paperViewCacheRead','paperViewCacheLast',
       'paperViewCacheFresh','paperWonRate','paperTitle','paperKrwRet','paperDualMoney','paperInflowText','paperUsd','paperWon','paperFxLine','paperLoadTickerNames','liveFX',
       'let paperStaleNote=false, paperNote="";\n'+op+'\nreturn openPaper;')(
@@ -12480,14 +12523,15 @@ console.log('\n[37-값] 모의 성과 표 — TR(단리 인출 포함) · MDD ·
     const trs=(body.innerHTML.split('<tbody id="paper_tbody">')[1]||'').split('</tr>').filter(x=>x.includes('<tr'));
     const cells=trs.map(tr=>[...tr.matchAll(/<td([^>]*)>([\s\S]*?)<\/td>/g)].map(m=>({span:+((m[1].match(/colspan="(\d+)"/)||[])[1]||1),t:txt(m[2])})));
     const width=cells.map(c=>c.reduce((a,x)=>a+x.span,0));
-    ok('[37-값] 그린 표 머리글 — TR · MDD · MAR · 평가 순 · 기간이 맨 끝', heads.join('|')==='전략 · 세션|TR|MDD|MAR|평가|현재|인출|연|투입|기간', heads.join('|'));
-    ok('[37-값] 줄마다 칸 수가 머리글과 같다(시세 대기 줄 포함 10칸)', trs.length===3 && width.every(w=>w===heads.length), width.join(','));
+    ok('[37-값] 그린 표 머리글 — 세후 TR · TR · MDD · MAR · 평가 순 · 기간이 맨 끝', heads.join('|')==='전략 · 세션|세후 TR|TR|MDD|MAR|평가|현재|인출|연|투입|기간', heads.join('|'));
+    ok('[37-값] 줄마다 칸 수가 머리글과 같다(시세 대기 줄 포함 11칸)', trs.length===3 && width.every(w=>w===heads.length), width.join(','));
     const [A,B,P]=cells;
-    ok('[37-값] 복리 둘째 칸 = TR +44.7% · 셋째 MDD −40.0% · 넷째 MAR 1.25(연 50 ÷ 40)', A&&A[1].t.startsWith('+44.7%')&&A[2].t==='−40.0%'&&A[3].t==='1.25', A&&[A[1].t,A[2].t,A[3].t].join(' / '));
-    ok('[37-값] 단리 둘째 칸 = 인출 포함 TR +37.9% (= 현재 −11.8% + 인출 +49.7%)',
-       B&&B[1].t.startsWith('+37.9%') && B[5].t==='-11.8%' && B[6].t==='+49.7%' && near(+B[5].t.replace('%','')+ +B[6].t.replace('%',''),37.9,0.11), B&&[B[1].t,B[5].t,B[6].t].join(' / '));
-    ok('[37-값] 다섯째 칸은 평가, 끝에서 둘째는 투입, 끝 칸은 기간(0.8년 · 299거래)',
-       [A,B,P].every(c=>c&&c[c.length-1].t==='0.8년 299거래' && c[c.length-2].t==='투입 69222') && A[4].t==='$100177.88' && B[4].t==='$95457.13',
+    ok('[37-값] 둘째 칸 = 세후 TR +30.2% · 낸 세금·수수료 2.1만$ → 원화 2,780만원(지금 환율) · 못 잰 줄은 —', A&&A[1].t==='+30.2% 세금 2,780만원' && B&&B[1].t==='—', A&&B&&(A[1].t+' / '+B[1].t));
+    ok('[37-값] 복리 셋째 칸 = TR +44.7% · 넷째 MDD −40.0% · 다섯째 MAR 1.25(연 50 ÷ 40)', A&&A[2].t.startsWith('+44.7%')&&A[3].t==='−40.0%'&&A[4].t==='1.25', A&&[A[2].t,A[3].t,A[4].t].join(' / '));
+    ok('[37-값] 단리 셋째 칸 = 인출 포함 TR +37.9% (= 현재 −11.8% + 인출 +49.7%)',
+       B&&B[2].t.startsWith('+37.9%') && B[6].t==='-11.8%' && B[7].t==='+49.7%' && near(+B[6].t.replace('%','')+ +B[7].t.replace('%',''),37.9,0.11), B&&[B[2].t,B[6].t,B[7].t].join(' / '));
+    ok('[37-값] 여섯째 칸은 평가, 끝에서 둘째는 투입, 끝 칸은 기간(0.8년 · 299거래)',
+       [A,B,P].every(c=>c&&c[c.length-1].t==='0.8년 299거래' && c[c.length-2].t==='투입 69222') && A[5].t==='$100177.88' && B[5].t==='$95457.13',
        [A,B,P].map(c=>c&&c.map(x=>x.t).join(' ¦ ')).join(' ‖ '));
   })());
 }

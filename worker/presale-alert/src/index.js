@@ -1,15 +1,17 @@
 import { buildDailyDigest, IPO_SCORE_VERSION } from "./ipo-score.mjs";
 import { verifyFirebaseToken } from "../../../functions/api/_firebase_token.js";
 import { evaluatePresale, describeEvaluation, won, SCORING_VERSION } from "./presale-score.mjs";
-import {normalizeGptReport,missingGptReport,gptReportDate,gptReportDue,gptReportMessage} from "../../../functions/api/_gpt_morning_report.js";
+import {normalizeGptReport,enrichClosingReport,missingGptReport,gptReportDate,gptReportDue,gptReportMessage} from "../../../functions/api/_gpt_morning_report.js";
+import {researchTradeAlert,RESEARCH_TRADE_TOPICS} from "../../../functions/api/_research_alerts.js";
 const enc=new TextEncoder();
 const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
 const JOB_APP=BASE_APP+"/job";
 const IPO_APP=BASE_APP+"/ipo";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
-const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl"]);
+const TRADE_TOPICS=new Set(RESEARCH_TRADE_TOPICS);
 const GPT_TOPICS=new Set([...TRADE_TOPICS,"tenbagger_gpt"]);
+const LEGACY_GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
 const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
 /* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
 const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
@@ -18,6 +20,17 @@ const RESEARCH_STUDIES={im_plan:{name:"무매·5년 플랜 연구",url:RESEARCH_
   tenbagger_claude:{name:"[클로드 연구 텐배거]",url:BASE_APP+"/claude?tab=tenbagger",trade:true}};
 /* 매매 연구(trade:true)는 실제 매수·매도 때만 보낸다(사용자 요청 2026-10-13) — 제목은 '[클로드 연구 텐배거] 🟢 매수 10/15' 처럼 머리말로 시작 */
 const RESEARCH_STAGE={buy:"🟢 매수",sell:"🔴 매도",both:"🟢🔴 매수·매도"};
+function presentedTradingAlert(alert){
+  if(!alert||!["buy","sell"].includes(alert.stage))return alert;
+  // Older closing records predate the subtype field. Its immutable event ID
+  // already identifies day/overnight; correct the read view without replaying it.
+  const kind=alert.kind||(alert.type==='closing30'?String(alert.id||'').match(/^trade:closing30:\d{4}-\d{2}-\d{2}:(day|overnight):/)?.[1]:undefined);
+  const topic=alert.type,info=researchTradeAlert(topic,kind);
+  if(!info)return alert;
+  const name=info.label;
+  return {...alert,title:"[지피티 연구 "+name+"] "+(alert.stage==="buy"?"🟢 매수":"🔴 매도"),
+    url:BASE_APP+"/scalping?strategy="+info.tab};
+}
 const APPROVAL_ADMIN="jk82investing@gmail.com";
 const FIRESTORE_PROFILE="https://firestore.googleapis.com/v1/projects/jk-invest/databases/(default)/documents/profiles/";
 
@@ -300,7 +313,7 @@ export class PresaleAlertStore{
       const date=new URL(request.url).searchParams.get('date')||await st.get('gpt-report:latest');
       return json(request,{ok:true,report:date?await st.get('gpt-report:'+date)||null:null,delivery:date?await st.get('gpt-report-delivery:'+date)||null:null});
     }
-    let report;try{report=normalizeGptReport(await request.json());}catch(e){return json(request,{ok:false,error:String(e.message)},400);}
+    let report;try{report=await enrichClosingReport(normalizeGptReport(await request.json()));}catch(e){return json(request,{ok:false,error:String(e.message)},400);}
     const receipt=await st.get('gpt-report-delivery:'+report.date);
     if(receipt){
       // Full consent saved as five individual tabs has the same meaning as the settings card.
@@ -366,7 +379,7 @@ export class PresaleAlertStore{
   }
   async subscriptions(){return this.state.storage.list({prefix:"sub:"})}
   topicsOf(s){return normalizeTopics(s&&s.topics,s&&s.topics?[]:["presale"],Number(s&&s.topicSchemaVersion||1)<2)}
-  subscribedTo(s,topic){const t=this.topicsOf(s);return t.includes(topic)||(GPT_TOPICS.has(topic)&&t.includes("gpt"))||(topic==="gpt"&&[...GPT_TOPICS].every(x=>t.includes(x)))}
+  subscribedTo(s,topic){const t=this.topicsOf(s),legacyAll=LEGACY_GPT_TOPICS.every(x=>t.includes(x));return t.includes(topic)||(GPT_TOPICS.has(topic)&&(t.includes("gpt")||(topic==="closing30"&&legacyAll)))||(topic==="gpt"&&([ ...GPT_TOPICS].every(x=>t.includes(x))||legacyAll))}
   async subscribe(request){
     const body=await request.json().catch(()=>null),s=body&&body.subscription;
     const endpoint=clean(s&&s.endpoint,2000);
@@ -631,7 +644,7 @@ export class PresaleAlertStore{
       body:"시초가·데이트레이딩·비트코인·SOXL·텐배거를 한 설정으로 관리합니다.",
       url:BASE_APP+"/scalping",createdAt:new Date().toISOString()
     }:TRADE_TOPICS.has(topic)?{
-      id:"test-"+topic+"-"+Date.now(),type:topic,title:"🔔 "+({opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic])+" 매매알림 테스트",
+      id:"test-"+topic+"-"+Date.now(),type:topic,title:"🔔 "+researchTradeAlert(topic).label+" 매매알림 테스트",
       body:"매수·매도 알림 수신이 정상 연결되었습니다. 실제 주문이 아닌 모의매매 신호입니다.",
       url:BASE_APP+"/scalping?strategy="+topic,createdAt:new Date().toISOString()
     }:topic==="ipo"?{
@@ -694,7 +707,8 @@ export class PresaleAlertStore{
     if(!this.env.MONITOR_KEY||request.headers.get("x-monitor-key")!==this.env.MONITOR_KEY)
       return json(request,{ok:false,error:"unauthorized"},401);
     const b=await request.json().catch(()=>null);
-    const topic=String(b&&b.strategy||"").toLowerCase(),stage=String(b&&b.stage||"").toLowerCase();
+    const info=researchTradeAlert(String(b&&b.strategy||"").toLowerCase(),b?.kind);
+    const topic=info?.topic,stage=String(b&&b.stage||"").toLowerCase();
     if(!TRADE_TOPICS.has(topic)||!["buy","sell"].includes(stage))return json(request,{ok:false,error:"unsupported trading signal"},400);
     const eventId=clean(b.eventId,220),date=clean(b.date,20),time=clean(b.time,30);
     if(!eventId||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date))return json(request,{ok:false,error:"invalid signal identity"},400);
@@ -717,10 +731,8 @@ export class PresaleAlertStore{
       return json(request,{ok:false,retryable:true,id,error:"delivery in progress"},409);
     const delivered=new Set(prev?.sentKeys||[]);
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,200)).filter(Boolean).slice(0,5):[];
-    const name={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic];
-    const trade={id,type:topic,stage,createdAt:new Date().toISOString(),
-      title:"[지피티 연구 "+name+"] "+(stage==="buy"?"🟢 ":"🔴 ")+(stage==="buy"?"매수":"매도"),   // 2026-10-13: 모든 연구 메뉴 같은 머리말
-      body:[date,time,...lines].filter(Boolean).join(" · ").slice(0,245),url:BASE_APP+"/scalping?strategy="+topic};
+    const trade=presentedTradingAlert({id,type:topic,stage,kind:info.tab==='closing_bet'?'overnight':b.kind,createdAt:new Date().toISOString(),
+      body:[date,time,...lines].filter(Boolean).join(" · ").slice(0,245)});
     // 송신 중인 같은 eventId 중복 요청 차단. 성공 응답 전 실패 건은 재시도 가능하도록 해제한다.
     await this.state.storage.put(claimKey,{status:"sending",at:trade.createdAt,sentKeys:[...delivered]});
     let delivery;
@@ -904,7 +916,7 @@ export class PresaleAlertStore{
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
       const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
       const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.8.1",topicSchemaVersion:2,subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.9.1",topicSchemaVersion:2,subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,lastTelegramDeliveries,
         telegramSignalDedup:{version:1,store:"durable-object",unknownRetry:false},gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }
@@ -913,7 +925,7 @@ export class PresaleAlertStore{
       const topic=String(u.searchParams.get("topic")||"");
       const alert=topic?await this.state.storage.get("latest:"+topic):await this.state.storage.get("latest");
       const alerts=await this.state.storage.get("recentAlerts");
-      return json(request,{ok:true,alert:alert||null,alerts:Array.isArray(alerts)?alerts:[]});
+      return json(request,{ok:true,alert:presentedTradingAlert(alert)||null,alerts:Array.isArray(alerts)?alerts.map(presentedTradingAlert):[]});
     }
     if(path==="/presale-item"&&request.method==="GET"){
       const key=clean(u.searchParams.get("key"),250);

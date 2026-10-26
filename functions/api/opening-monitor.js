@@ -134,7 +134,7 @@ function sellLines(rows){
   return rows.flatMap((x,i)=>[
     (i+1)+". "+x.name+" ("+x.code+")",
     "매도 "+String(x.exitTime).padStart(4,"0")+" · "+Math.round(x.exitPrice).toLocaleString("ko-KR")+"원 · "+x.reason,
-    "진입 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원 · 비용 "+((x.friction&&x.friction.totalPct)||0).toFixed(2)+"% ("+((x.friction&&x.friction.source)||"unknown")+") · 손익 "+(x.pnl>=0?"+":"")+x.pnl.toFixed(2)+"%"
+    "진입 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원 · 비용 "+((x.friction&&x.friction.totalPct)||0).toFixed(2)+"% ("+((x.friction&&x.friction.source)||"unknown")+") · 손익 "+(x.pnl==null?"체결 확인 전":(x.pnl>=0?"+":"")+x.pnl.toFixed(2)+"%")
   ]);
 }
 function shadowEvents(shadow,targetHm){

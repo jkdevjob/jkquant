@@ -53,7 +53,7 @@ async function checkDeliveries(Worker=PresaleAlertStore){
   assert.deepEqual(x.calls.filter(c=>c.topic==="research").map(c=>c.endpoint).sort(),
     [ep("legacy-research"),ep("other-research")].sort(),"지피티 공통 설정이 다른 연구를 임의로 켜지 않음");
   const health=await (await x.get("/health")).json();
-  assert.equal(health.version,"2.8.1");assert.equal(health.topicSchemaVersion,2);
+  assert.equal(health.version,"2.9.1");assert.equal(health.topicSchemaVersion,2);
   assert.equal(health.topicSubscriptions.gpt,4,"부분 구독 포함 등록기기는 중복 없이 집계");
   assert.equal(health.topicSubscriptions.opening,3);assert.equal(health.topicSubscriptions.tenbagger_gpt,3);
   assert.equal(health.topicSubscriptions.research,2);assert.ok(health.lastChecks.gpt);
@@ -97,14 +97,14 @@ function swFixture(code=swSource){
 }
 async function checkServiceWorker(code=swSource){
   const x=swFixture(code),now=Date.now(),createdAt=new Date(now-1000).toISOString();
-  const trade=["opening","daytrading","crypto","soxl","tenbagger_gpt"].map(type=>({id:type,type,createdAt}));
+  const trade=["opening","daytrading","crypto","soxl","closing30","tenbagger_gpt"].map(type=>({id:type,type,createdAt}));
   const payload={alerts:[...trade,{id:"im",type:"research",study:"im_plan",createdAt},
     {id:"claude",type:"research",study:"tenbagger_claude",createdAt},{id:"job",type:"job",createdAt},
     {id:"tenbagger_gpt",type:"research",study:"tenbagger",createdAt}]};
   assert.deepEqual([...x.ctx.pickAlerts(payload,["gpt"],[],now)].map(a=>a.id),trade.map(a=>a.id),"공통 동의 기기는 전체 탭만 한 번씩");
   assert.deepEqual([...x.ctx.pickAlerts(payload,["research"],[],now)].map(a=>a.id),["im","claude"],"새 research 동의는 다른 연구만");
   assert.equal(x.ctx.pickAlerts(payload,[],[],now).length,0);
-  assert.equal(x.ctx.pickAlerts(payload,["gpt"],["opening"],now).length,4);
+  assert.equal(x.ctx.pickAlerts(payload,["gpt"],["opening"],now).length,5);
   assert.equal(x.ctx.pickAlerts({alerts:[{id:"expired",type:"crypto",createdAt:new Date(now-21*60000).toISOString()}]},["gpt"],[],now).length,0);
   x.meta.set("/__jk_push_topics",["research"]);
   assert.deepEqual([...await x.ctx.topics()],["research","tenbagger_gpt"],"기존 캐시 동의 범위만 복원, 네 단타는 확대하지 않음");
@@ -117,12 +117,12 @@ async function checkServiceWorker(code=swSource){
 }
 test("서비스워커: 공통 탭 선택·원천 구분·중복/오래된 신호 차단·기존 캐시 동의·OFF 보존",()=>checkServiceWorker());
 
-test("다섯 탭 개별 동의는 설정 화면과 같이 전체 보고 동의 · 일부 탭은 제외",async()=>{
-  const all=["opening","daytrading","crypto","soxl","tenbagger_gpt"],x=fixture(),endpoint="https://push.example/all-individual";
+test("여섯 탭 개별 동의는 설정 화면과 같이 전체 보고 동의 · 일부 탭은 제외",async()=>{
+  const all=["opening","daytrading","crypto","soxl","closing30","tenbagger_gpt"],x=fixture(),endpoint="https://push.example/all-individual";
   await x.seed(endpoint,all);await x.seed("https://push.example/four",all.slice(0,4));
   const delivery=await x.app.notifyAll("gpt");assert.equal(delivery.sent,1);assert.equal(delivery.eligible,1);
   assert.deepEqual(x.calls,[{endpoint,topic:"gpt"}]);
-  assert.equal((await(await x.get("/health")).json()).topicSubscriptions.gpt,2,"전체 기기를 두 번 집계하지 않음");
+  assert.equal((await(await x.get("/health")).json()).topicSubscriptions.gpt,2,"개별 gpt 관련 구독은 두 기기를 중복 없이 집계, 실제 전체 발송은 6개 전부 동의한 기기만");
   const sw=swFixture(),now=Date.now(),payload={alerts:[{id:"morning",type:"gpt",createdAt:new Date(now).toISOString()}]};
   assert.deepEqual([...sw.ctx.pickAlerts(payload,all,[],now)].map(a=>a.id),["morning"]);
   assert.equal(sw.ctx.pickAlerts(payload,all.slice(0,4),[],now).length,0);
@@ -130,7 +130,7 @@ test("다섯 탭 개별 동의는 설정 화면과 같이 전체 보고 동의 �
 });
 
 test("공통 알림 변이 2종: 서버 또는 기기 공통 주제 누락을 실제 전달/표시 결과로 차단",async()=>{
-  const badWorker=workerSource.replace('||(GPT_TOPICS.has(topic)&&t.includes("gpt"))','');assert.notEqual(badWorker,workerSource);
+  const badWorker=workerSource.replace('||(GPT_TOPICS.has(topic)&&(t.includes("gpt")||(topic==="closing30"&&legacyAll)))','');assert.notEqual(badWorker,workerSource);
   const imports=badWorker.replace(/from (["'])([^"']+)\1/g,(_all,_quote,path)=>"from "+JSON.stringify(new URL(path,workerFile).href));
   const {PresaleAlertStore:Mutant}=await import("data:text/javascript;base64,"+Buffer.from(imports).toString("base64"));
   await assert.rejects(()=>checkDeliveries(Mutant),{name:"AssertionError"});

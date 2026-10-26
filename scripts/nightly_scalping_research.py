@@ -792,8 +792,40 @@ def vts_report():
         })
     return {"generatedAt":j.get("generatedAt"),"strategies":out}
 
+def archive_opening_variants():
+    """시초가 연구 원본의 메인/그림자 거래를 날짜+변형ID로 병합. 사후 수정값은 연구 재구성으로 표시."""
+    import csv
+    cols=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source","strategyParams"]
+    records={}
+    for path in sorted(OPEN.glob("20??-??-??.json")):
+        day=load_json(path,{}) or {}
+        date=day.get("date") or path.stem
+        cases=[("baseline",day.get("trades") or [])]
+        cases += [(x.get("name"),x.get("trades") or []) for x in day.get("shadowVariants") or [] if isinstance(x,dict) and x.get("name")]
+        mv=day.get("mainVariant") or "baseline"
+        if mv!="baseline":
+            cases.append((mv,day.get("operationalTrades") or []))
+        for variant,trs in cases:
+            for x in trs:
+                if not isinstance(x,dict):continue
+                identity=(str(date),str(variant),str(x.get("code")),str(x.get("entryTime")))
+                records[identity]={"variant":str(variant),"date":str(date),
+                    "code":x.get("code"),"name":x.get("name"),"strategyVersion":x.get("strategyVersion"),
+                    "signalTime":x.get("signalTime") or x.get("entryTime"),
+                    "entryTime":x.get("entryTime"),"entryPrice":x.get("entryPrice"),
+                    "exitTime":x.get("exitTime"),"exitPrice":x.get("exitPrice"),
+                    "reason":x.get("reason"),"pnl":x.get("pnl"),"source":"research-reconstructed",
+                    "strategyParams":json.dumps(x.get("strategyParams"),ensure_ascii=False)}
+    if not OPEN.is_dir():return 0
+    with (OPEN/"variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
+        writer=csv.DictWriter(f,fieldnames=cols);writer.writeheader()
+        writer.writerows(records[k] for k in sorted(records))
+    return len(records)
+
+
 def main():
     now=datetime.now(KST)
+    archive_opening_variants()
     o=opening_report()
     d=daytrading_report()
     c=crypto_report()

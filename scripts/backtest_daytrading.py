@@ -563,6 +563,28 @@ def main():
     (OUT/"latest.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
     (OUT/f"{raw_labels[-1]}.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 
+    # 모든 기준/그림자 개별 거래 원장: 전략 퇴출/승격 이후에도 variant ID를 유지한다.
+    variant_history=OUT/"variant-trades.csv"
+    archived={}
+    if variant_history.exists():
+        with variant_history.open("r",encoding="utf-8",newline="") as old:
+            for row in csv.DictReader(old):
+                key=tuple(str(row.get(k) or "") for k in ("variant","date","code","entryTime"))
+                archived[key]=row
+    with (OUT/"variant-trades.csv").open("w",encoding="utf-8",newline="") as f:
+        columns=["variant","date","code","name","strategyVersion","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason","pnl","source","strategyParams"]
+        w=csv.DictWriter(f,fieldnames=columns);w.writeheader()
+        params_by_name={p.name:asdict(p) for p in VARIANTS}
+        for variant,trs in sorted(trade_map.items()):
+            for t in trs:
+                row={k:v for k,v in {**t,"variant":variant,"source":"research-reconstructed"}.items() if k in columns}
+                key=tuple(str(row.get(k) or "") for k in ("variant","date","code","entryTime"))
+                row["strategyParams"]=json.dumps(params_by_name.get(variant),ensure_ascii=False)
+                archived.setdefault(key,row)
+
+        for key in sorted(archived):
+            w.writerow({k:archived[key].get(k) for k in columns})
+
     with (OUT/"baseline-trades.csv").open("w",encoding="utf-8",newline="") as f:
         cols=["date","strategyVersion","rank","code","name","snapshotHm","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason",
               "sessionRet","vwapSlope","breakoutPct","volRatio","timeBucket","marketRegime","k200Ret","kosdaq150Ret",

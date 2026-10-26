@@ -17,7 +17,7 @@ function sessionClock(strategy,now=Date.now()){
   const date=strategy==='soxl'?shiftIso(marketDate,1):k.date;
   const hm=strategy==='soxl'?n.hm:k.hm;
   const start=strategy==='opening'?905:strategy==='daytrading'?1000:strategy==='crypto'?5:930;
-  const end=strategy==='opening'?931:strategy==='daytrading'?1515:strategy==='crypto'?2359:1605;
+  const end=strategy==='opening'?931:strategy==='daytrading'?1511:strategy==='crypto'?2400:1605;
   const marketClosed=strategy==='soxl'?!isNyseSessionDate(marketDate):strategy==='crypto'?false:krxDay(marketDate).closed;
   return {strategy,date,marketDate:strategy==='soxl'?marketDate:null,ledgerDate:marketDate,now,hm,start,end,activeUS,
     before:strategy==='soxl'?activeUS?false:marketDate===n.date&&hm<start:hm<start,
@@ -54,10 +54,19 @@ function summarizePaperLedger(strategy,ledger,now=Date.now()){
   if(String(ledger.date)!==clock.ledgerDate)return missingRow(clock,'서버 장부 날짜 불일치 · 전일 값을 당일로 표시하지 않음');
   if(String(ledger.mode||'').startsWith('historical-research'))return missingRow(clock,'과거 연구 이관 자료는 장중 원본이 아님');
   if(!Array.isArray(ledger.trades))return missingRow(clock,'서버 장부 거래 배열 누락');
-  const a=ledger.trades,row=baseRow(clock),slots=Math.max(1,numeric(ledger.slots)||numeric(ledger.maxTrades)|| (strategy==='daytrading'?3:1));
+  const a=ledger.trades.map(x=>{
+    if(!['open','pending'].includes(x.status))return x;
+    const p=x.strategyParams||ledger.strategyParams||{},entry=String(x.entryTime||'').replace(':',''),hm=/^\d{4}$/.test(entry)?+entry:null;
+    const minutes=hm===null?null:Math.floor(hm/100)*60+hm%100;
+    const nowMinutes=Math.floor(clock.hm/100)*60+clock.hm%100;
+    const deadline=numeric(x.deadlineMs),hold=numeric(p.maxHoldBars);
+    const expired=clock.ended||(deadline!==null&&now>=deadline+1500)||(x.status==='open'&&minutes!==null&&hold>0&&nowMinutes>=Math.min(strategy==='crypto'?1440:960,minutes+hold*5)+1);
+    return expired?{...x,status:'unverified'}:x;
+  }),row=baseRow(clock),slots=Math.max(1,numeric(ledger.slots)||numeric(ledger.maxTrades)|| (strategy==='daytrading'?3:1));
   row.updatedAt=ledger.updatedAt||null;row.mainVariant=ledger.mainVariant||'baseline';row.trades=a.length;row.slots=slots;
   const closed=a.filter(x=>x.status==='closed'),open=a.filter(x=>x.status==='open'),pending=a.filter(x=>x.status==='pending');
   row.closed=closed.length;row.open=open.length;row.pendingTrades=pending.length;
+  row.unverified=a.filter(x=>x.status==='unverified').length;
   const realized=closed.map(x=>numeric(strategy==='daytrading'?x.pnl:x.pnlPct));
   const current=a.map(x=>x.status==='closed'?numeric(strategy==='daytrading'?x.pnl:x.pnlPct):x.status==='open'?numeric(strategy==='daytrading'?x.unrealizedPnl:x.pnlPct):null);
   row.realizedReturnPct=realized.every(x=>x!==null)?realized.reduce((a,b)=>a+b,0)/slots:null;
@@ -69,7 +78,26 @@ function summarizePaperLedger(strategy,ledger,now=Date.now()){
   if(a.length&&a.length!==closed.length+open.length+pending.length||closed.length&&realized.some(x=>x===null)){row.state='unavailable';row.reason='거래 상태/확정 손익 누락';row.returnPct=null;}
   else row.reason=ledger.decision?.reason|| (row.noTrade?(clock.ended?'현재 장부에 신호 없음 · 감시 종료':'현재까지 조건 미충족 · 감시 중'):'서버 원본 모의장부 · 보유 평가손익은 잠정값');
   if(row.state==='scheduled')row.reason=missingRow(clock).reason;
+  if(row.unverified){row.state='unavailable';row.returnPct=null;row.reason='거래 기한 경과 · 체결/청산 원본 확인 필요';}
   return freshness(row,clock);
+}
+function openingScanOkay(scan){
+  return scan&&!scan.partial&&scan.okShards===5&&Number(scan.quoteErrors||0)===0&&!(scan.failed||[]).length;
+}
+function openingCoverage(scans,clock){
+  // Signals are emitted only for the current minute. A later successful scan
+  // cannot recover an earlier missed signal, so the last scan alone is insufficient.
+  const last=Math.max(903,...scans.map(s=>Number(s.targetHm)||0));
+  // Give the in-flight minute one minute to finish, but do not let a stopped
+  // monitor keep reporting complete coverage up to its old last scan forever.
+  const throughHm=clock.ended?930:Math.min(930,clock.hm-1,Math.max(last,clock.hm-2));
+  const expected=Array.from({length:Math.max(0,throughHm-903)},(_,i)=>904+i);
+  const observed=new Set(scans.map(s=>Number(s.targetHm)));
+  const good=new Set(scans.filter(openingScanOkay).map(s=>Number(s.targetHm)));
+  const missingTargets=expected.filter(t=>!observed.has(t));
+  const failedTargets=expected.filter(t=>observed.has(t)&&!good.has(t));
+  return {throughHm,expected:expected.length,observed:expected.filter(t=>observed.has(t)).length,
+    missingTargets,failedTargets,complete:!!expected.length&&!missingTargets.length&&!failedTargets.length};
 }
 function summarizeOpeningLedger(ledger,now=Date.now()){
   const clock=sessionClock('opening',now);
@@ -88,18 +116,35 @@ function summarizeOpeningLedger(ledger,now=Date.now()){
   }
   for(const e of events.filter(e=>e.stage==='sell')){
     const s=e.signal||{},id=String(e.code||s.code)+':'+String(s.entryTime||'');
-    const p=positions.get(id);if(p)Object.assign(p,{status:'closed',exitTime:s.exitTime,pnl:numeric(s.pnl)});
+    const p=positions.get(id);if(p)Object.assign(p,{status:s.finalExitUnverified?'unverified':'closed',exitTime:s.exitTime,pnl:numeric(s.pnl)});
   }
   const row=baseRow(clock),a=[...positions.values()],closed=a.filter(x=>x.status==='closed');
-  row.updatedAt=latest.capturedAt||ledger.updatedAt||null;row.mainVariant=variant;row.positions=a;row.trades=a.length;row.open=a.length-closed.length;row.closed=closed.length;
+  row.pnlBasis='strategy-paper';
+  row.updatedAt=latest.capturedAt||ledger.updatedAt||null;row.mainVariant=variant;row.positions=a;row.trades=a.length;
+  row.unverified=a.filter(x=>x.status==='unverified').length;
+  row.open=a.filter(x=>x.status==='open').length;row.closed=closed.length;
   const pn=closed.map(x=>x.pnl);row.realizedReturnPct=pn.length&&pn.every(x=>x!==null)?pn.reduce((a,b)=>a+b,0)/Math.max(1,a.length):null;
   row.returnPct=!row.open&&pn.every(x=>x!==null)?(pn.length?pn.reduce((a,b)=>a+b,0)/pn.length:0):null;
   row.wins=pn.filter(x=>x>0).length;row.losses=pn.filter(x=>x!==null&&x<0).length;
-  const partial=!!latest.partial||latest.okShards!==5||Number(latest.quoteErrors||0)>0||(latest.failed||[]).length>0;
-  row.state=row.open?'holding':closed.length?'closed':partial?'unavailable':'no_signal';
+  const coverage=openingCoverage(scans,clock),partial=!coverage.complete;
+  row.scanCoverage=coverage;
+  row.state=row.unverified?'unavailable':row.open?'holding':closed.length?'closed':partial?'unavailable':'no_signal';
+  if(row.unverified){row.returnPct=null;row.sourceWarning='09:30 매도 시도 '+row.unverified+'건 · VTS 체결/잔고 확인 필요';}
+  if(clock.ended&&row.open){
+    row.state='unavailable';row.returnPct=null;row.finalized=false;
+    row.sourceWarning='09:30 이후 미청산 '+row.open+'건 · 청산 신호/모의계좌 잔고 대조 필요';
+  }
   row.noTrade=!a.length&&!partial;
-  row.reason=partial?'부분 감시/시세 오류 · 원본 신호 누락 가능':clock.ended?'09:30까지 감시한 원본 신호 · 감시 종료':'현재까지 감시한 원본 신호 · 신호 없음이면 다음 1분봉 확인';
-  if(partial){row.sourceWarning=row.reason;if(!a.length)row.returnPct=null;}
+  row.reason=row.unverified?'09:30 강제매도 신호 생성 · 실제 체결 미확인':clock.ended&&row.open?'09:30 청산 원본 누락 · 체결 미확인':partial?'부분 감시/시세 오류 · 원본 신호 누락 가능':clock.ended?'09:30까지 감시한 원본 신호 · 감시 종료':'현재까지 감시한 원본 신호 · 신호 없음이면 다음 1분봉 확인';
+  if(partial){
+    const hm=t=>String(t).padStart(4,'0').replace(/(\d{2})(\d{2})/,'$1:$2');
+    const details=[coverage.missingTargets.length?'감시 기록 누락 '+coverage.missingTargets.map(hm).join(', '):'',
+      coverage.failedTargets.length?'시세/부분 조회 오류 '+coverage.failedTargets.map(hm).join(', '):''].filter(Boolean).join(' · ');
+    row.sourceIncomplete=true;row.sourceWarning=details||'감시 범위 확인 필요';
+    row.reason=row.sourceWarning+' · 조건 미충족으로 확정할 수 없음';
+    row.state='unavailable';row.noTrade=false;row.returnPct=null;
+    if(!a.length)row.realizedReturnPct=null;
+  }
   if(pn.some(x=>x===null)){row.state='unavailable';row.reason='청산 원본 손익 누락';row.returnPct=null;}
   return freshness(row,clock);
 }

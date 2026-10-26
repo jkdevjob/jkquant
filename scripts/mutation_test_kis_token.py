@@ -42,6 +42,7 @@ for label, which, before, after in MUT:
     with tempfile.TemporaryDirectory() as tmp:
         kis, worker = Path(tmp) / "kis.js", Path(tmp) / "worker_index.js"
         shutil.copy(KIS, kis)
+        shutil.copy(KIS.parent / "_market-day-cache.js", Path(tmp) / "_market-day-cache.js")
         shutil.copy(WORKER, worker)
         path = kis if which == "kis" else worker
         src = path.read_text(encoding="utf-8")

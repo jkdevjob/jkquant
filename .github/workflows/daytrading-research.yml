@@ -70,6 +70,20 @@ jobs:
           DAY="data/daytrading/$YEAR/$DATE.json.gz"
           LIVE="data/daytrading-live/$YEAR/$DATE.json"
 
+          # 코드 push는 장중 최신 스냅샷이 없어도 저장된 과거 분봉으로
+          # 모든 기준/그림자 거래 원장만 재생성할 수 있다 (신규 장중 신호/주문 없음).
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ -d data/daytrading ]; then
+            python .app/scripts/backtest_daytrading.py
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/daytrading-research
+            if ! git diff --cached --quiet; then
+              git commit -m "data: backfill all daytrading shadow trade histories [skip ci]"
+              bash .app/scripts/push-scalping-data.sh
+            fi
+            exit 0
+          fi
+
           if [ "$DOW" -gt 5 ]; then
             echo "주말 — 종료"
             exit 0

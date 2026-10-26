@@ -9,7 +9,7 @@ const KR_PCT = v => (v >= 0 ? "+" : "") + Number(v).toFixed(2) + "%";
 const won = v => (v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("en-US"));
 export function kstDateOf(ms) { return new Date(ms + 9 * 36e5).toISOString().slice(0, 10); }
 const addDays = (d, n) => new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
-export const HEAD = { open: "[클로드 연구 시초가]", etf: "[클로드 연구 데이트레이딩]", coin: "[클로드 연구 비트코인]", soxl: "[클로드 연구 SOXL]" };
+export const HEAD = { open: "[클로드 연구 시초가]", etf: "[클로드 연구 데이트레이딩]", coin: "[클로드 연구 비트코인]", soxl: "[클로드 연구 SOXL]", c30: "[클로드 연구 종가30분]" };
 export const APP_URL = "jkquant.pages.dev/claude";
 
 // 매일 08:00 연구 리포트 — 사용자 요청(2026-10-14): "연구 모든탭에 대해 매일 아침 8시 일정한 시간에 더 나은 방향으로 연구해서 결과 알려줘 앱푸시랑 텔레그램으로".
@@ -36,18 +36,28 @@ export function pushEvents(live, nowMs, sent = {}) {
   const ot = T.opening || {}, P = (ot.main && ot.main.params) || MAIN_DEFAULT.opening.params, br = (ot.decision || {}).breadth;
   const keep = new Set(openingPick(P, ot.rows || []));
   const o = br && openingCounts(P, br.qualified) ? (ot.rows || []).filter(r => keep.has(String(r.code))) : [];
-  const ob = o.filter(r => r.status && r.status !== "주문 실패");
-  if (ob.length) add("open:" + d + ":buy", HEAD.open + " 🟢 매수", ob.map(r => r.name + (r.expectedGapPct != null ? " (갭 " + KR_PCT(r.expectedGapPct) + ")" : "")).join(" · ")
-    + " — 08:59 동시호가 → 15:30 종가 매도" + (o.length > ob.length ? " · 주문 실패 " + (o.length - ob.length) + "종목" : ""));
+  // 정산은 주문한 종목 전부(모의투자 체결과 상관없이 — 2026-10-22 사용자). 모의계좌 주문이 안 된 종목 수는 같이 적는다.
+  const nv = o.filter(r => /^모의계좌 주문 안/.test(r.vts || "")).length;
+  if (o.length) add("open:" + d + ":buy", HEAD.open + " 🟢 매수", o.map(r => r.name + (r.expectedGapPct != null ? " (갭 " + KR_PCT(r.expectedGapPct) + ")" : "")).join(" · ")
+    + " — 09:00 시가 → 15:30 종가 매도" + (nv ? " · 모의계좌 주문 안 됨 " + nv + "종목(시세로 정산)" : ""));
   const os = o.filter(r => r.realized && r.pnlPct != null);
   if (os.length) add("open:" + d + ":sell", HEAD.open + " 🔴 매도", os.map(r => r.name + " " + KR_PCT(r.pnlPct)).join(" · ")
     + " · 평균 " + KR_PCT(os.reduce((a, r) => a + r.pnlPct, 0) / os.length) + " — 15:30 종가");
   // ② 데이트레이딩 — 15:21 종가 매수 / 다음 거래일 08:56 시가 매도
   for (const r of (T.daytrading && T.daytrading.rows) || []) {
+    const nvs = /^모의계좌 주문 안/.test(r.vts || "") ? " · 모의계좌 주문 안 됨(시세로 정산)" : "";
     if (/^오늘 15:30/.test(r.buyTime || "") && r.status === "보유중(오버나잇)")
-      add("etf:" + d + ":buy", HEAD.etf + " 🟢 매수", r.name + " 종가 매수" + (r.dropPct != null ? " (오늘 " + KR_PCT(r.dropPct) + ")" : "") + " → 다음 거래일 09:00 시가 매도");
-    if (/^오늘 09:00/.test(r.sellTime || "") && (r.status === "매도 접수" || r.status === "청산"))
-      add("etf:" + d + ":sell", HEAD.etf + " 🔴 매도", r.name + " 시가 매도" + (r.realized && r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : " 접수"));
+      add("etf:" + d + ":buy", HEAD.etf + " 🟢 매수", r.name + " 종가 매수" + (r.dropPct != null ? " (오늘 " + KR_PCT(r.dropPct) + ")" : "") + " → 다음 거래일 09:00 시가 매도" + nvs);
+    if (/^오늘 09:00/.test(r.sellTime || "") && r.status === "청산")
+      add("etf:" + d + ":sell", HEAD.etf + " 🔴 매도", r.name + " 시가 매도" + (r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : "") + nvs);
+  }
+  // ⑤ 종가 30분 — 15:00 매수 / 15:21 종가 동시호가 매도(15:30 체결 · 당일 청산)
+  for (const r of (T.close30 && T.close30.rows) || []) {
+    const nvs = /^모의계좌 주문 안/.test(r.vts || "") ? " · 모의계좌 주문 안 됨(시세로 정산)" : "";
+    if (r.buyTime && r.status && r.status !== "매매 없음")
+      add("c30:" + d + ":buy", HEAD.c30 + " 🟢 매수", r.name + " 15:00 매수" + (r.sofarPct != null ? " (전일 대비 " + KR_PCT(r.sofarPct) + ")" : "") + " → 15:30 종가 매도" + nvs);
+    if (r.status === "청산")
+      add("c30:" + d + ":sell", HEAD.c30 + " 🔴 매도", r.name + " 종가 매도" + (r.pnlPct != null ? " " + KR_PCT(r.pnlPct) : "") + " — 15:30 종가" + nvs);
   }
   // ③ 비트코인 — 업비트 하루(09:00 시작) 돌파 매수 · 손절 / 다음 날 09:00 매도
   const ud = kstDateOf(nowMs - 9 * 36e5), pud = addDays(ud, -1);

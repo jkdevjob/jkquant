@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.111.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.112.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1700,7 +1700,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.111.1</b> · 2026-10-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.112.0</b> · 2026-10-21</div>
   </footer>
 </div>
 
@@ -4399,7 +4399,7 @@ function computeVr(){
   const recov=totsell+totdiv, cycTradeNet=cycTrade+cycDiv;
   const grossIn=totadd + (st.startpool||0) + initBuy;
   return {st,qty,totbuy,totsell,totdiv,totadd,totwd,buyShares,pool,V,avgNom,avgEff,up,lo,initBuy,
-          netInvested,grossIn,realized,fees,flows,recov,curCyc,cycStartPool,cycBuySpent,cycTrade,cycTradeNet,cycDiv,hist,
+          netInvested,grossIn,realized,cost,fees,flows,recov,curCyc,cycStartPool,cycBuySpent,cycTrade,cycTradeNet,cycDiv,hist,
           cycBaseQty,cycSellFilled,cycBuyFilled};
 }
 const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일). 백테 VR_CYC_DAYS 와 같은 값이어야 한다 —
@@ -5502,7 +5502,7 @@ function computeDca(){
   const divs=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.dividends) ? dcaQuoteData.dividends : [];
   const rawMap=_dcaRawMap(dcaQuoteData && dcaQuoteData.raw);
   const reinv=(st.reinv===true);
-  let divCash=0, divShares=0, nDiv=0;
+  let divCash=0, divShares=0, nDiv=0, divInv=0;
   /* 현금 수령이면 그 돈은 계좌 밖으로 나간 것이다 — 무매 단리의 인출과 같다.
      월 현금흐름을 보려면 언제 얼마가 나왔는지가 있어야 하므로 날짜째로 남긴다. */
   const divFlows=[];
@@ -5516,11 +5516,11 @@ function computeDca(){
       const cash=(held+divShares)*(+d.amount||0);
       if(!(cash>0)) continue;
       divCash+=cash; nDiv++;
-      if(reinv){ const rp=rawMap[d.date]; if(rp>0) divShares+=cash/rp; }
+      if(reinv){ const rp=rawMap[d.date]; if(rp>0){ divShares+=cash/rp; divInv+=cash; } }   // divInv — 재투자로 산 주식의 원가(모의 세후 TR)
       else divFlows.push({date:d.date, out:cash, in:0});
     }
   }
-  pos.divCash=divCash; pos.divShares=divShares; pos.nDiv=nDiv; pos.reinv=reinv; pos.flows=divFlows;
+  pos.divCash=divCash; pos.divShares=divShares; pos.nDiv=nDiv; pos.reinv=reinv; pos.flows=divFlows; pos.divInv=divInv;
 
   const _dAll=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.days) ? dcaQuoteData.days : null;
   /* 배수 판정은 확정 봉까지만 (제12차 후속) — 모의(_paperDca)·백테(_dcaOne)는 '전일 종가 ≤ 전일 200일선' 이면 오늘 배수로 산다.
@@ -6421,15 +6421,15 @@ function _asapRSI(a){ const n=a.length,o=new Array(n).fill(null); let ag=0,al=0;
   return o; }
 // 내 포지션: SOXL 보유·평단 + SGOV 리저브 (적립 +, 리저브매수 −)
 function asapPos(hist){
-  let shares=0,cost=0,reserve=0,divs=0;
+  let shares=0,cost=0,reserve=0,divs=0,realized=0,bought=0;   // realized · bought — 모의 세후 TR (실현손익 · 수수료 붙일 거래액)
   (hist||[]).forEach(h=>{
     if(h.type==='sgov'){ reserve+=(+h.amt||0); }
     // 배당 (7차 D8) — 리저브로 들어오는 계좌 안 수입. 새로 넣은 돈(sgov 적립)과 따로 센다.
     else if(h.type==='div'){ const a=+h.amt||0; reserve+=a; divs+=a; }
-    else if(h.type==='buy'){ const q=+h.qty||0, amt=(h.amt!=null?+h.amt:q*(+h.price||0)); shares+=q; cost+=amt; if(h.from==='reserve')reserve-=amt; }
-    else if(h.type==='sell'){ const q=+h.qty||0, avg=shares>0?cost/shares:0; shares-=q; cost-=avg*q; if(shares<1e-9){shares=0;cost=0;} }
+    else if(h.type==='buy'){ const q=+h.qty||0, amt=(h.amt!=null?+h.amt:q*(+h.price||0)); shares+=q; cost+=amt; bought+=amt; if(h.from==='reserve')reserve-=amt; }
+    else if(h.type==='sell'){ const q=+h.qty||0, avg=shares>0?cost/shares:0, amt=(h.amt!=null?+h.amt:q*(+h.price||0)); realized+=amt-avg*q; bought+=amt; shares-=q; cost-=avg*q; if(shares<1e-9){shares=0;cost=0;} }
   });
-  return {shares,cost,avg:shares>0?cost/shares:0,reserve,divs};
+  return {shares,cost,avg:shares>0?cost/shares:0,reserve,divs,realized,bought};
 }
 function computeAsap(){
   const st=curStrat().settings, hist=curStrat().hist;
@@ -7408,12 +7408,33 @@ function replayPlanPaper(sess){
     tecl:T.days,tqqq:Q.days,sgov:G.days,teclDiv:T.dividends,tqqqDiv:Q.dividends,sgovDiv:G.dividends});
   PLAN_PAPER_CACHE[sess.id]=R;return R;
 }
+/* 자산플랜 모의의 세후 TR — 엔진(JKPlanSessionEngine)이 정한 날마다 총자산(nav)과 체결(ledger.events)로 센다.
+   엔진은 실현손익을 따로 세지 않아 종목별 평균 원가로 여기서 한 번만 센다(매수 수수료는 원가에 · 매도 수수료는 실현에서 — 수수료는 엔진 장부에 이미 있다). */
+function planAfterTax(R){
+  if(!R||!Array.isArray(R.nav)||!R.nav.length) return null;
+  const ev=((R.ledger&&R.ledger.events)||[]).filter(e=>e&&e.type==='trade').slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  const pos={}, AT=paperAfterTaxAcc('TECL',{});   // TECL · TQQQ · SGOV — 미국 규약
+  let i=0, realized=0;
+  for(const n of R.nav){
+    while(i<ev.length && ev[i].date<=n.date){
+      const e=ev[i++], q=+e.qty||0, px=+e.price||0, fee=+e.fee||0, p=pos[e.symbol]||(pos[e.symbol]={q:0,c:0});
+      if(e.side==='buy'){ p.q+=q; p.c+=q*px+fee; }
+      else if(q>0 && p.q>0){ const qq=Math.min(q,p.q), avg=p.c/p.q; realized+=qq*px-fee-avg*qq; p.q-=qq; p.c-=avg*qq; if(p.q<1e-9){ p.q=0; p.c=0; } }
+    }
+    let cost=0; for(const k in pos) cost+=pos[k].c;
+    AT.step(n.date, +n.total||0, +n.inflow||0, {realized, turnover:0, cost,
+      held:(+n.tecl||0)*(+n.teclPx||0)+(+n.tqqq||0)*(+n.tqqqPx||0)+(+n.sgov||0)*(+n.sgovPx||0)});
+  }
+  return AT.done();
+}
 function paperStatPlan(sess){
   const R=PLAN_PAPER_CACHE[sess&&sess.id],z=R&&R.stats;if(!z)return null;
+  const _at=planAfterTax(R);
   const st=sess.settings||{},base=Math.max(1,z.inflow),inflowWon=paperInflowWon('plan',sess,base);
   return {tab:'plan',id:sess.id,name:sess.name,opts:paperOpts('plan',{...st,horizon:+sess.horizon||+st.horizon||5}),sym:'TECL/TQQQ/SGOV',cur:curOf(st),
     from:z.from,to:z.to,yrs:z.yrs,spanDays:z.spanDays,inflow:base,inflowWon,total:z.total,ret:z.ret,retNow:z.ret,retOut:0,
-    cagr:z.cagr,nTrade:z.nTrade,price:1,out:null,mdd:{pct:z.mdd,nDay:z.nDay}};
+    cagr:z.cagr,nTrade:z.nTrade,price:1,out:null,mdd:{pct:z.mdd,nDay:z.nDay},
+    atr:_at?_at.tr:null,atrTax:_at?_at.tax:null,atrFee:_at?_at.fee:null};
 }
 /* 한 세션의 성과. 전략마다 자산 구조가 달라(VR의 초기투입, 적립의 현금 없음 …)
    여기서 장부를 다시 걸으면 반드시 어긋난다 — 실제로 밸류·적립이 틀렸다.
@@ -7698,6 +7719,63 @@ const PAPER_DAYS={
   dca :()=>(typeof dcaQuoteData !=='undefined' && dcaQuoteData  && dcaQuoteData.days)||null,
   asap:()=>(typeof asapQuoteData!=='undefined' && asapQuoteData && asapQuoteData.days)||null};
 
+/* ── 세금 규약 — backtest.html 과 글자 그대로 같다(회귀가 대조한다 · 한쪽만 고치면 빨간불) ──
+   미국: 수수료 0.25% · 양도세 22%(연 250만원 기본공제 · 원화 환산 1,350원/$) · 국내: 수수료 0.015% · 국내주식형 ETF 비과세, 그 밖 15.4%. */
+const COST_FEE=0.0025, COST_SLIP=0.0005, COST_TAXRATE=0.22, COST_KRW=1350, COST_DEDUCT=250e4;
+const isKRW=t=>/^(?:\d{6}|\d{4}[A-Z]\d)(?:\.K[SQ])?$/.test(String(t||'').toUpperCase());
+const KR_STOCK_ETF=new Set(['069500','122630','233740','229200','252670','102110','091160','091170',
+  '139260','143860','232080','226490','105190','114800','251340','123310','278530','069660','148020']);
+const krCode=t=>String(t||'').toUpperCase().replace(/\.K[SQ]$/,'');
+const krTaxRate=t=>KR_STOCK_ETF.has(krCode(t))?0:0.154;
+function costOf(t){
+  return isKRW(t)
+    ? {fee:0.00015, slip:COST_SLIP, taxRate:krTaxRate(t), krw:1,        deduct:0,           cur:'₩'}
+    : {fee:COST_FEE, slip:COST_SLIP, taxRate:COST_TAXRATE, krw:COST_KRW, deduct:COST_DEDUCT, cur:'$'};
+}
+function capGainTax(pnl, t){
+  const C=costOf(t);
+  if(!(pnl>0)||!C.taxRate) return 0;
+  return Math.max(0, pnl*C.krw - C.deduct) * C.taxRate / C.krw;
+}
+/* ── 세후 TR — 모의 목록 맨 앞 칸 (2026-10-21 사용자: '세후 TR 맨 앞에 추가해') ──
+   '지금 다 팔고 세금·수수료를 다 냈다면' 의 수익률. 모의 장부는 양도세를 안 넣어(각주) 이익을 자주 실현하는 전략
+   (무매 — 사이클마다 실현)이 실제보다 좋아 보였다. 같은 구간 백테(세금 포함)의 절반이 될 수도 있다(SOXL 2022-01~ 세전 +903% · 세후 +468%).
+     · 해마다 그해 실현손익에 백테와 같은 세금(capGainTax)을 연말에 낸다 — 낸 만큼 굴릴 돈이 줄어 그 뒤 수익도 그만큼 준다.
+       계좌를 '단위'로 나눠 세금·수수료로 나간 단위를 빼고 센다(적립금이 들어와도 맞다). 백테(runIM)는 장부 안에서 바로 떼고 다시 굴린다.
+     · 마지막 해: 그해 실현손익 + 지금 들고 있는 것의 평가익(다 판다고 본다)에 세금, 팔 때 수수료.
+     · 장부에 수수료가 없는 전략(무매 · 적립 · ASAP)은 거래액의 수수료율(costOf)을 뗀다 — 나머지 장부는 이미 수수료를 뗀다.
+     · 단리는 이익을 계좌 밖으로 빼 두므로 세금·수수료도 그 돈에서 낸다(굴릴 원금은 그대로).
+   모의 장부는 건드리지 않는다 — 장부가 정한 날마다의 총자산·실현손익·원가로 결과를 근사한다.
+   step(날짜, 총자산, 투입, {realized 누적 실현손익, turnover 누적 거래액, held 보유 평가액, cost 보유 원가}) · done() → {tr %, tax, fee, final} */
+function paperAfterTaxAcc(sym, opt){
+  const feeRate=(opt&&opt.addFee)?costOf(sym).fee:0, simple=!!(opt&&opt.simple);
+  let N=0, Lost=0, C=0, year='', rg=0, taxPaid=0, feePaid=0, last=null;
+  const s=()=>simple?1:Math.max(0,(N-Lost)/N);
+  return {
+    step(date, E, inflow, x){
+      if(!(E>0) || !(inflow>0)) return;
+      const y=String(date).slice(0,4);
+      if(!last){ N=E; year=y; last={E, inflow, realized:0, turnover:0, held:0, cost:0}; }   // 첫날 거래(첫 매수 수수료)도 아래에서 센다
+      if(y!==year){                                        // 연말 정산 — 그해 마지막 날 총자산으로 단위를 뺀다
+        const T=capGainTax(rg, sym); taxPaid+=T;
+        if(simple) C+=T; else Lost+=T/(last.E/N);
+        rg=0; year=y;
+      }
+      const dIn=inflow-last.inflow;                         // 새로 넣은 돈은 그날 단위 값으로 단위를 산다
+      if(!simple && dIn>0 && E-dIn>0) N+=dIn/((E-dIn)/N);
+      const dR=(+x.realized||0)-last.realized, dT=Math.max(0,(+x.turnover||0)-last.turnover), fee=feeRate*dT;
+      if(dR||fee){ const k=s(); rg+=k*(dR-fee); feePaid+=k*fee;
+        if(simple) C+=fee; else if(fee>0) Lost+=k*fee/(E/N); }
+      last={E, inflow, realized:+x.realized||0, turnover:+x.turnover||0, held:+x.held||0, cost:+x.cost||0};
+    },
+    done(){
+      if(!last) return null;
+      const k=s(), liq=k*feeRate*last.held, gainNow=rg+k*(last.held-last.cost)-liq, Tn=capGainTax(gainNow, sym);
+      const final=(simple?last.E-C:k*last.E)-Tn-liq;
+      return {tr:(final/last.inflow-1)*100, tax:taxPaid+Tn, fee:feePaid+liq, final};
+    }
+  };
+}
 /* ── 모의 MDD — 최대 낙폭 ──
    재는 건 '단위가치 = 총자산 ÷ 그때까지 넣은 돈'이다. 총자산 그대로 재면 적립식에서
    매달 들어오는 적립금이 상승처럼 잡혀 낙폭이 지워진다(백테 _dcaOne 도 같은 이유로
@@ -7708,6 +7786,8 @@ const PAPER_DAYS={
    그러면 같은 걸 두 군데서 세는 꼴이라 목록의 '최종'과 반드시 갈린다.
    거래가 있는 날만 다시 세고(그날까지의 기록으로 paperRaw), 없는 날은 주가만 갈아끼운다.
    사다리 VR 모의 세션은 거래가 수천 건이라 이 구분이 없으면 눈에 띄게 느려진다. */
+/* 모의 장부에 수수료가 없는 전략 — 세후 TR 이 거래액의 수수료율을 뗀다(나머지 장부는 이미 뗀다: VR·섀넌 기록의 fee · 로테 maLedger 0.25% · 플랜 FEE_RATE) */
+const PAPER_NOFEE_TABS=new Set(['inf','dca','asap']);
 function paperMdd(tab, sess, R, hist){
   try{
     const getD=PAPER_DAYS[tab]; if(!getD) return null;
@@ -7733,6 +7813,9 @@ function paperMdd(tab, sess, R, hist){
       P1={}; ivsQuote1.days.forEach(x=>{ if(x&&x.close>0) P1[x.date]=x.close; });
     }
     const real=sess.hist;
+    /* 세후 TR 도 같은 걸음에서 센다 — 날마다 총자산을 다시 걸을 일을 두 번 만들지 않는다 */
+    const _st=sess.settings||{}, AT=paperAfterTaxAcc(String(_st.ticker||'').toUpperCase(),
+      {addFee:PAPER_NOFEE_TABS.has(tab), simple:tab==='inf'&&_st.compound===false});
     let peak=-Infinity, mdd=0, n=0, endTot=0, cur=null, idx=0;
     try{
       for(const row of D){
@@ -7741,15 +7824,19 @@ function paperMdd(tab, sess, R, hist){
         if(grew || !cur){ sess.hist=h.slice(0,idx); cur=paperRaw(tab, sess); }
         if(!cur || !(cur.inflow>0)) continue;
         const p1=(P1&&P1[row.date])||cur.price1||0;
-        const tot=cur.qty*row.close + (cur.qty1||0)*p1 + cur.k;
+        const held=cur.qty*row.close + (cur.qty1||0)*p1, tot=held + cur.k;
         const uv=tot/cur.inflow;
         if(!isFinite(uv)||uv<=0) continue;
         n++; endTot=tot;
         if(uv>peak) peak=uv; else if(peak>0){ const dd=(peak-uv)/peak; if(dd>mdd) mdd=dd; }
+        AT.step(row.date, tot, cur.inflow, {realized:cur.realized, turnover:cur.turnover, held, cost:cur.cost});
       }
     } finally { sess.hist=real; }
     if(n<3) return null;
-    return {pct:mdd*100, nDay:n, endTot};
+    /* 마지막은 목록의 TR 과 같은 값(지금 시세 · paperRaw)으로 — 확정 종가와 현재가가 다르면 둘이 어긋난다 */
+    if(R && R.price>0 && R.inflow>0)
+      AT.step(D[D.length-1].date, R.total, R.inflow, {realized:R.realized, turnover:R.turnover, held:R.qty*R.price+(R.qty1||0)*(R.price1||0), cost:R.cost});
+    return {pct:mdd*100, nDay:n, endTot, afterTax:AT.done()};
   }catch(e){ console.error('paperMdd',tab,e); return null; }
 }
 
@@ -7764,6 +7851,7 @@ function paperMdd(tab, sess, R, hist){
 function paperRaw(tab, sess){
   const h=sess.hist||[];
   let inflow=0, total=0, price=0, sym='', _out=null, qty=0, qty1=0, price1=0;
+  let realized=0, turnover=0, cost=0;   // 세후 TR — 누적 실현손익 · 누적 거래액(수수료 없는 장부용) · 지금 보유분의 원가
   try{
     const st=sess.settings||{};
     sym=String(st.ticker||'').toUpperCase();
@@ -7778,6 +7866,7 @@ function paperRaw(tab, sess){
       qty=c.qty;
       total=price*c.qty + c.bal + (c.outside||0) + _dv.divCash;   // 출금·단리 적립분·분배금도 자산
       _out={saved:(c.saved||0)+_dv.divCash, withdrawn:c.withdrawn||0, simple:!!c.simple};
+      realized=c.realized||0; turnover=(c.totbuy||0)+(c.totsell||0); cost=c.inv||0;
     }else if(tab==='vr'){
       /* 그 세션 종목의 시세만 쓴다. vrLastPrice 는 시세가 없으면 평단으로 대신하는데(운영 화면용),
          모의 성과에서 그러면 평가손익이 0 인 가짜 수익률이 나온다 — 없으면 0(시세 대기)으로 둔다. */
@@ -7789,6 +7878,7 @@ function paperRaw(tab, sess){
       qty=c.qty;
       inflow=c.grossIn; total=price*c.qty + c.pool + (c.totwd||0) + _dv.divCash;
       _out={saved:_dv.divCash, withdrawn:c.totwd||0, simple:false};
+      realized=c.realized||0; turnover=(c.totbuy||0)+(c.totsell||0); cost=c.cost||0;
     }else if(tab==='ivs'){
       const c=computeIvs(); price=c.price||0;
       qty=c.qty;
@@ -7801,18 +7891,21 @@ function paperRaw(tab, sess){
       inflow=(c.principal||0)+(c.added||0);                  // 출금을 빼지 않는다 — 분자에 도로 더하므로
       total=ev + (c.cash||0) + (c.withdrawn||0) + _dv.divCash;
       _out={saved:_dv.divCash, withdrawn:c.withdrawn||0, simple:false};
+      realized=c.realized||0; cost=(c.avg||0)*(c.qty||0)+(c.avg1||0)*(c.qty1||0);
     }else if(tab==='ma'){
       const c=computeMa(); price=c.ready?(c.price||c.lastClose||0):0;
       const L=maLedger(h, price, +st.principal||0);
       const _dv=sessDivCash(st, h);
       qty=L.qty;
       inflow=+st.principal||0; total=L.total + _dv.divCash;   // 로테는 인출이 없다 — 분배금만 나간다
+      realized=L.realized||0; cost=(L.avg||0)*(L.qty||0);
       if(_dv.divCash>0) _out={saved:_dv.divCash, withdrawn:0, simple:true};
     }else if(tab==='dca'){
       const c=computeDca(); price=c.ready?(c.price||c.lastClose||0):0;
       // 적립은 현금 계좌가 없다 — 매수액이 곧 투입. 받은 분배금은 자산에 더한다.
       qty=c.ready?(c.pos.shares+(c.pos.divShares||0)):c.pos.shares;
       inflow=c.pos.inv; total=c.ready?c.total:(price*c.pos.shares);
+      turnover=c.pos.inv||0; cost=(c.pos.inv||0)+(c.pos.divInv||0);   // 적립은 팔지 않는다 — 실현손익 0 · 재투자 분배금은 그 금액이 원가
       /* 현금 수령 분배금은 계좌 밖으로 나간 돈이다 — 무매 단리 인출과 같은 칸에 넣는다.
          그래야 목록의 최종·현재·인출 세 칸이 적립 세션에도 그대로 들어맞는다. */
       if(c.pos && !c.pos.reinv && (c.pos.divCash||0)>0)
@@ -7825,12 +7918,13 @@ function paperRaw(tab, sess){
       const _dv=sessDivCash(st, h);
       qty=P.shares;
       total=price*P.shares + P.reserve + _dv.divCash;         // 리저브(SGOV)도 내 돈
+      realized=P.realized||0; turnover=P.bought||0; cost=P.cost||0;
       if(_dv.divCash>0) _out={saved:_dv.divCash, withdrawn:0, simple:true};
     }
   }catch(e){ console.error('paperRaw',tab,e); }
   /* k = 주가와 무관한 나머지. 총자산이 주가에 선형이라 어느 주가로 빼도 같은 값이다 —
      그래서 MDD를 잴 때 그날 종가만 갈아끼우면 된다. */
-  return {inflow, total, price, sym, qty, qty1, price1, out:_out,
+  return {inflow, total, price, sym, qty, qty1, price1, out:_out, realized, turnover, cost,
           k: total - qty*price - qty1*price1};
 }
 /* 모의 성과 목록의 '세션' 칸에 적을 주요 설정 — 종목 뒤에 붙는다.
@@ -7939,7 +8033,8 @@ function paperStat(tab, sess){
   const inflowWon=paperInflowWon(tab,sess,base);
   return {tab, id:sess.id, name:sess.name, opts:paperOpts(tab,st), sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, inflowWon, total,
     ret:(total/base-1)*100, retNow:((total-outAmt)/base-1)*100, retOut:(outAmt/base)*100,
-    cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out, mdd};
+    cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out, mdd,
+    atr:(mdd&&mdd.afterTax)?mdd.afterTax.tr:null, atrTax:(mdd&&mdd.afterTax)?mdd.afterTax.tax:null, atrFee:(mdd&&mdd.afterTax)?mdd.afterTax.fee:null};
 }
 function paperSummary(){
   const out=[];
@@ -8118,7 +8213,7 @@ function paperFxFallback(){
    - 평소 모의 페이지를 열 때는 저장된 표를 즉시 보여 주고 전 전략 재생을 다시 하지 않는다.
    - 하루가 바뀌었거나 원장이 바뀌면 백그라운드에서 한 번만 증분 갱신한다.
    - 전체 적용/오늘 갱신은 force=true로 명시적으로 다시 계산한다. */
-const PAPER_VIEW_CACHE_VER=1;
+const PAPER_VIEW_CACHE_VER=2;   // 2: 세후 TR(atr) 칸 — 옛 저장 결과엔 없어 한 번 다시 센다 (2026-10-21)
 let _paperViewRefreshPromise=null;
 function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
 function paperViewSig(){
@@ -8286,6 +8381,7 @@ async function openPaper(){
       /* 칸 순서 TR · MDD · MAR · 평가 — 폰에서 스크롤 없이 보이는 자리에 수익률과 위험을 둔다. 기간은 맨 뒤(2026-10-21 사용자 요청).
          TR(토탈리턴) = (평가금 + 잔금 + 나간 돈) ÷ 원금 − 1 — 단리 인출·출금까지 넣는다(예전 이름 '최종', 값은 그대로). */
       + `<th style="cursor:pointer" onclick="paperSortTable('name',this)">전략 · 세션</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('atr',this)" title="세후 TR = 지금 다 팔고 세금·수수료를 다 낸 뒤의 수익률. 해마다 실현손익에 양도세(미국 22% · 연 250만원 공제 · 국내 별도)를 내고 그만큼 덜 굴린다 · 장부에 수수료가 없는 무매·적립·ASAP 은 0.25%">세후 TR</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('ret',this)" title="TR(토탈리턴) = 평가금 + 잔금 + 나간 돈 ÷ 원금 − 1 — 단리 인출·출금까지 넣은 전체 수익률. 현재 + 인출 과 정확히 같습니다">TR</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('mdd',this)" title="최대 낙폭 — 하루하루 '총자산 ÷ 그때까지 넣은 돈'을 재서 고점 대비 가장 깊이 빠진 폭. 적립금이 상승처럼 잡히지 않도록 투입으로 나눠 잽니다">MDD</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('mar',this)" title="MAR = CAGR ÷ |MDD| — 전체 모의기간의 연복리 수익률을 최대 낙폭 절대값으로 나눈 값">MAR</th>`
@@ -8324,6 +8420,9 @@ async function openPaper(){
       const _sortCagr=(ok&&long&&Number.isFinite(+r.cagr))?+r.cagr:'';
       const _sortInflow=r.inflowWon!=null?(+r.inflowWon||0):((+r.inflow||0)*(+r.wonRate||1));
       const _krwFinalRet=ok?paperKrwRet(r):null;
+      /* 세후 TR — 맨 앞 칸. 둘째 줄은 낸 세금·수수료(원화 · 지금 환율) — 폰에서는 툴팁이 안 보인다 */
+      const _atr=(ok&&r.atr!=null&&Number.isFinite(+r.atr))?+r.atr:null, _sortAtr=_atr==null?'':_atr;
+      const _atrCost=(+r.atrTax||0)+(+r.atrFee||0), _won=v=>{ const w=v*(r.cur==='krw'?1:(+r.wonRate||1)); return w>=1e8?(w/1e8).toFixed(1)+'억원':w>=1e4?Math.round(w/1e4).toLocaleString('ko-KR')+'만원':Math.round(w).toLocaleString('ko-KR')+'원'; };
       /* 전략 설명은 표 폭을 잡아먹지 않게 핵심 단위로 끊는다.
          ASAP부터는 캡처처럼 긴 설명 때문에 첫 칸이 넓어지므로 2줄로 강제 분리하고 행 패딩도 줄인다. */
       const _paperOpts=(r.opts||[]).map(x=>String(x));
@@ -8335,9 +8434,10 @@ async function openPaper(){
       const _paperOptsRest=_paperOpts.slice(_paperSplitAt);
       const _paperOptTopText=_paperOptsTop.length?' · '+_paperOptsTop.join(' · '):'';
       const _paperOptRestText=_paperOptsRest.length?`<span class="cw paper-opt-more">${_paperOptsRest.join(' · ')}</span>`:'';
-      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell">${paperTitle(r)}<span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>`
+      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-atr="${_sortAtr}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell">${paperTitle(r)}<span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>`
         + (ok
-          ? `<td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%${Number.isFinite(_krwFinalRet)?`<span class="cw" style="color:${_krwFinalRet>=0?'var(--buy)':'var(--sell)'}" title="원화 TR = 현재 환율로 환산한 총평가액(인출 포함) ÷ 투입 원화 - 1">원화 ${_krwFinalRet>=0?'+':''}${_krwFinalRet.toFixed(1)}%</span>`:''}</td>`
+          ? `<td style="color:${_atr==null?'var(--faint)':(_atr>=0?'var(--buy)':'var(--sell)')};font-weight:700" title="${_atr==null?'종가 이력이 모자라 세후를 못 쟀습니다':'세금 '+_won(+r.atrTax||0)+' · 수수료 '+_won(+r.atrFee||0)+' — 세전 TR '+(up?'+':'')+r.ret.toFixed(1)+'%'}">${_atr==null?'—':(_atr>=0?'+':'')+_atr.toFixed(1)+'%'}${_atr==null?'':`<span class="cw">세금 ${_won(_atrCost)}</span>`}</td>`
+             + `<td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%${Number.isFinite(_krwFinalRet)?`<span class="cw" style="color:${_krwFinalRet>=0?'var(--buy)':'var(--sell)'}" title="원화 TR = 현재 환율로 환산한 총평가액(인출 포함) ÷ 투입 원화 - 1">원화 ${_krwFinalRet>=0?'+':''}${_krwFinalRet.toFixed(1)}%</span>`:''}</td>`
              /* MDD는 종가 이력이 있어야 잰다 — 못 재면 0%처럼 보이지 않게 비운다 */
              + `<td style="color:${r.mdd?'var(--sell)':'var(--faint)'}" title="${r.mdd?r.mdd.nDay+'거래일을 하루하루 재봤습니다':'종가 이력이 모자라 못 쟀습니다'}">${r.mdd?'−'+r.mdd.pct.toFixed(1)+'%':'—'}</td>`
              + `<td style="color:${Number.isFinite(_mar)?(_mar>=0?'var(--buy)':'var(--sell)'):'var(--faint)'}" title="${Number.isFinite(_mar)?('CAGR '+r.cagr.toFixed(1)+'% ÷ MDD '+r.mdd.pct.toFixed(1)+'%'):'45일 미만이거나 MDD가 0/미계산이라 MAR을 표시하지 않습니다'}">${Number.isFinite(_mar)?_mar.toFixed(2):'—'}</td>`
@@ -8348,16 +8448,16 @@ async function openPaper(){
              + `<td style="color:${outAmt>0?'var(--gold)':'var(--faint)'}">${outAmt>0?'+'+r.retOut.toFixed(1)+'%':'—'}</td>`
              + `<td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
           : (r.pending
-            ? `<td colspan="7" style="color:var(--faint)">계산 중 — ${r.sym} 시세를 받는 대로 채웁니다</td>`
-            : `<td colspan="7" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`))
-        // 투입·기간은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과·위험(TR·MDD·MAR·평가)이다
+            ? `<td colspan="8" style="color:var(--faint)">계산 중 — ${r.sym} 시세를 받는 대로 채웁니다</td>`
+            : `<td colspan="8" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`))
+        // 투입·기간은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과·위험(세후 TR·TR·MDD·MAR·평가)이다
         + `<td style="color:var(--dim)">${paperInflowText(r)}</td>`
         + `<td>${per}<span class="cw">${r.nTrade}거래</span></td></tr>`; });
     h+=`</tbody></table></div>`;
     h=paperFxLine(rows)+h;
     if(paperStaleNote) h=`<p class="note" id="paper_stale_note" style="color:var(--vio)">🔄 지난번 계산 결과입니다 — 오늘 기준으로 다시 계산하는 중… (끝나면 자동으로 바뀝니다)</p>`+h;
     if(!cur && rows.some(r=>!(r.price>0)&&!r.pending)) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 새로고침하면 다시 받습니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · <b>TR</b>(토탈리턴) = 평가 ÷ 투입 − 1(단리 인출·출금 포함 · 현재 + 인출) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다) · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · 기간 = 모의 시작일부터. <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
+    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · <b>세후 TR</b> = 지금 다 팔고 세금·수수료를 낸 뒤 수익률(해마다 실현손익에 양도세 22% · 연 250만원 공제를 내고 그만큼 덜 굴린다 · 국내 종목은 국내 규약 · 장부에 수수료가 없는 무매·적립·ASAP 은 0.25% · 근사) · <b>TR</b>(토탈리턴) = 평가 ÷ 투입 − 1(세전 · 단리 인출·출금 포함 · 현재 + 인출) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다) · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · 기간 = 모의 시작일부터. <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
     void paperLoadTickerNames(body);

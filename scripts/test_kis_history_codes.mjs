@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const source=fs.readFileSync(new URL('../functions/api/kis.js',import.meta.url),'utf8');
-const load=async s=>import('data:text/javascript;base64,'+Buffer.from(s+'\nexport {validMinuteHistoryCode,KRCODE};').toString('base64'));
+const load=async s=>import('data:text/javascript;base64,'+Buffer.from(s.replace('"./_market-day-cache.js"',JSON.stringify(new URL('../functions/api/_market-day-cache.js',import.meta.url).href))+'\nexport {validMinuteHistoryCode,KRCODE};').toString('base64'));
 function probe(m){
   for(const code of ['005930','0123A0','45014K','0220WL'])assert.equal(m.validMinuteHistoryCode(code),true,code);
   for(const code of ['AAPL','45014K0','../abc','ABCDEF','45014!','0220wl','022WL0'])assert.equal(m.validMinuteHistoryCode(code),false,code);

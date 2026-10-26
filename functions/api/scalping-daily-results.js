@@ -381,6 +381,11 @@ function closedRow(date,source,marketDate=null){
 function pendingRow(date,reason,marketDate=null){
   return {date,marketDate,pending:true,pendingReason:reason,finalized:false,source:"kst-calendar"};
 }
+function missingClosedRow(date,strategy,reason,marketDate=null){
+  // 이미 끝난 세션의 장부 누락은 무기한 대기가 아니라 미확정 오류다.
+  return {date,marketDate,unavailable:true,missingClose:true,returnPct:null,finalized:false,
+    source:"missing-closed-ledger",reason:reason||strategy+" 마감 장부 확인 실패 · 거래 여부 확인 필요"};
+}
 function unknownRow(date,error){
   return {date,marketDayUnknown:true,marketDayError:error||"개장일 확인 실패",finalized:false,source:"market-calendar"};
 }
@@ -407,11 +412,21 @@ function pairKst(name,label,result,kstDate,krStatuses=null){
   const a=normalizeKstSessions(name,result),prevDate=shiftIso(kstDate,-1);
   const statusMap=new Map((Array.isArray(krStatuses)?krStatuses:[]).filter(Boolean).map(x=>[String(x.date),x]));
   const current=a.find(x=>String(x.date)===kstDate)||placeholderFor(name,kstDate,statusMap.get(kstDate)||null);
-  const previous=a.find(x=>String(x.date)===prevDate)||placeholderFor(name,prevDate,statusMap.get(prevDate)||null);
+  const previous=a.find(x=>String(x.date)===prevDate)||
+    ((name==="opening"||name==="daytrading")&&(statusMap.get(prevDate)?.open===false||[0,6].includes(weekdayUtc(prevDate)))
+      ?placeholderFor(name,prevDate,statusMap.get(prevDate))
+      :name==="soxl"&&!isNyseSessionDate(shiftIso(prevDate,-1))
+        ?placeholderFor(name,prevDate,null)
+      :missingClosedRow(prevDate,name,name==="crypto"?"전날 비트코인 마감 장부 누락 · 거래 여부 확인 필요":"전날 마감 자료 누락 · 거래 여부 확인 필요",name==="soxl"?shiftIso(prevDate,-1):null));
+  // 과거 거래일에 뒤늦게 들어온 미완성 연구 CSV/서버 장부도 '대기'로 방치하지 않는다.
+  // 거래가 없었다거나 0%였다고 추정하지 않고 미확정 원본임을 보여 준다.
+  const resolvedPrevious=(previous.pending||previous.incomplete||previous.finalized===false&&!previous.marketClosed)
+    ?{...previous,pending:false,unavailable:true,missingClose:true,returnPct:null,finalized:false,
+      reason:"전날 마감 손익 미확정 · 원본 체결/세션 결과 대조 필요"}:previous;
   return {
     strategy:name,label,marketTime:"KST",timeZone:"Asia/Seoul",dateRule:"kst-calendar",
-    current,previous,
-    status:result&&result.error?"error":(result?.sourceWarnings?.length||a.some(x=>x.incomplete||x.sourceConflict)?"degraded":(a.length?"ok":"collecting")),
+    current,previous:resolvedPrevious,
+    status:result&&result.error?"error":(resolvedPrevious.unavailable||result?.sourceWarnings?.length||a.some(x=>x.incomplete||x.sourceConflict)?"degraded":(a.length?"ok":"collecting")),
     error:result&&result.error||null,
     sourceWarnings:result?.sourceWarnings||[]
   };

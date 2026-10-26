@@ -26,6 +26,12 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
 
+      - name: 종가 당일/익일 시가 · 모든 그림자 이력 · 시간적 오염방지 검사
+        run: |
+          node --test tests/closing30-research.test.mjs tests/closing30-budget.test.mjs tests/trade-history.test.mjs tests/paper-trading-settings.test.mjs tests/research-broker.test.mjs
+          python scripts/test_closing_history.py
+          python -m py_compile scripts/nightly_closing30_research.py scripts/nightly_scalping_research.py scripts/backtest_crypto_orb.py scripts/backtest_daytrading.py scripts/backtest_soxl_intraday.py
+
       - name: 승인 이메일·개인별 웹푸시 보안 및 중복방지 검사
         run: node --test tests/approval-notification.test.mjs
       - name: 매일 연구 결과 웹알림 (요약 · 서버 인증 · 주제)
@@ -33,7 +39,12 @@ jobs:
       - name: 한투 접근 토큰 하루 한 번 — 모의 토큰 중앙 보관 · 실전 토큰 밖으로 안 보냄 · 거절 시 그 토큰만 버림 (값·변이)
         run: |
           node --test tests/kis-token.test.mjs
+          node --test tests/market-day-cache.test.mjs
           python scripts/mutation_test_kis_token.py
+      - name: 단타(클로드) 전략별 매매 이력 조회 — 경로 검사 · 소유자만 (값·변이)
+        run: |
+          node --test tests/claude-history.test.mjs
+          python scripts/mutation_test_claude_history.py
 
       - name: 연구 GPT 허브·텐배거 전향 기록 값·변이 검사
         run: |
@@ -349,13 +360,13 @@ jobs:
           let fail=0;
           // 무료 요금제 계정당 cron 5개 한도 — 이 Worker 는 한 줄만 쓰고 시각은 scheduleRoute 가 한국시각으로 고른다.
           // 15·20·21시(UTC) = 단타(클로드) 하루 마감 알림(코인 00:05 KST · SOXL 뉴욕 16:05) — 시초가 경로 수는 회귀가 한 주 재생으로 센다
-          if(!w.triggers||!Array.isArray(w.triggers.crons)||w.triggers.crons.length!==1||w.triggers.crons[0]!=='5-31,40,56 0,6,9,15,20,21,23 * * *'){
+          if(!w.triggers||!Array.isArray(w.triggers.crons)||w.triggers.crons.length!==1||w.triggers.crons[0]!=='0,5-31,40,56 0,6,9,15,20,21,23 * * *'){
             console.error('✗ opening scheduler cron 은 정시 알림/대결 슬롯을 포함한 한 줄이어야 합니다.'); fail++;
           }
           if(!c.includes('if(hm===1810)return "duel"')||!c.includes('/api/scalping-duel')){
             console.error('✗ GPT·클로드 대결 18:10 KST Worker 경로 없음'); fail++;
           }
-          if(!/if\(hm>=905&&hm<=931\)return "opening";/.test(c)||!/if\(route==="opening"\)ctx\.waitUntil\(runMinute/.test(c)){
+          if(!/if\(hm>=905&&hm<=931\)return "opening";/.test(c)||!/if\(route==="opening"\)\{?\s*ctx\.waitUntil\(runMinute/.test(c)){
             console.error('✗ 09:05~09:31 KST 평일만 시초가 스캔으로 보내는 경로가 없습니다.'); fail++;
           }
           const must=[

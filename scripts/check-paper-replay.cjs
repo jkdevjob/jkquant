@@ -50,7 +50,9 @@ function code(memo){
   return out;
 }
 function context(memo, setup){
-  const ctx=vm.createContext({console,Math,Date,JSON,Object,Array,String,Number,Map,Set,WeakMap,isFinite,isNaN,parseFloat,parseInt,Intl,RegExp,Error,Symbol,__steps:0});
+  /* 성과 계산(paperRaw·paperMdd)은 오류를 잡아 console.error 로 적고 넘어간다 — '없음' 오류는 다시 던져 의존성 모으기가 보게 한다 */
+  const con={log:console.log, warn:console.warn, error:(...a)=>{ const e=a.find(x=>x&&x.message&&/ is not defined/.test(x.message)); if(e) throw e; console.error(...a); }};
+  const ctx=vm.createContext({console:con,Math,Date,JSON,Object,Array,String,Number,Map,Set,WeakMap,isFinite,isNaN,parseFloat,parseInt,Intl,RegExp,Error,Symbol,__steps:0});
   vm.runInContext(code(memo),ctx); setup(ctx); return ctx;
 }
 /* 실행 중에야 드러나는 의존성(드문 경로의 도우미)은 더한 뒤 그 시험을 처음부터 다시 돈다 — 문맥을 새로 만들어야 보인다 */
@@ -206,4 +208,22 @@ retry(()=>{ const ctx=ledgerCtx({}), sess=ctx.S.inf.sessions[0];
   vm.runInContext('_infResume=null;',ctx); const s0=ctx.__steps; vm.runInContext('computeInf()',ctx); assert.equal(ctx.__steps-s0,sess.hist.length,'재생 밖에선 기억을 안 쓴다');
   console.log('  ✓ 안 끝난 날 · 설정 변경 · 첫 줄/기억한 끝줄 교체 · 새 배열 · 재생 밖 — 처음부터 다시 센다 (simLast 만 바뀌면 이어 센다)'); });
 
-console.log(`PASS 모의 재생 이어 계산 — 재생 ${SC.length}종(computeInf ${nCalls}회) · 무작위 ${nProp}회 · 경계 시험 전부 처음부터 센 장부와 같다`);
+/* ════ ④ 세후 TR 배선 — 실제 재생 장부로 paperStat 을 불러 세후 TR 이 나오는지 (2026-10-21 · 값 규칙은 회귀 [37-세후]) ════
+   paperRaw(누적 실현손익·거래액·원가) → paperMdd(날마다 걸으며 세금) → paperStat.atr 로 이어지는지 본다. */
+KNOWN.add('paperStat'); KNOWN.add('PAPER_CACHESYM');   // typeof 로 감싼 이름은 '없음' 오류가 안 나 미리 넣는다
+const AT=retry(()=>{ const out={};
+  for(const [name,set] of [['복리',{}],['단리',{compound:false}]]){
+    const ctx=context(true, c=>{ c.S={activeTab:'inf',inf:{active:'p',sessions:[{id:'p',paper:true,settings:{...BASE,...set},hist:[]}]}}; c.lastQuote={inf:null}; c.save=()=>{}; });
+    const q=quote('2023-06-30'); q.price=q.last=q.ohlc[q.ohlc.length-1].close; ctx.lastQuote.inf=q;
+    vm.runInContext("infSimForward('2021-01-04')",ctx);
+    out[name]=vm.runInContext("(()=>{ const r=paperStat('inf', curStrat()), c=computeInf(); return r&&{ret:r.ret,atr:r.atr,tax:r.atrTax,fee:r.atrFee,turn:c.totbuy+c.totsell,held:c.qty*lastQuote.inf.price}; })()",ctx); }
+  return out; });
+for(const [name,r] of Object.entries(AT)){
+  assert(r&&Number.isFinite(r.atr)&&Number.isFinite(r.ret),name+' — 세후 TR 이 나온다 '+JSON.stringify(r));
+  assert(r.atr<r.ret,name+' — 세후 TR 은 세전 TR 보다 낮다 '+JSON.stringify(r));
+  assert(r.tax>0,name+' — 2021 실현이익엔 세금이 붙는다 '+JSON.stringify(r));
+  // 무매 장부엔 수수료가 없어 거래액(매수+매도)의 0.25% 를 더한다 — 세금으로 줄어든 비율(≥0.8)만큼만 작아질 수 있다 · 다 팔 때 수수료까지가 위
+  assert(r.fee>=0.0025*0.8*r.turn && r.fee<=0.0025*(r.turn+r.held)*1.000001,name+' — 수수료 = 거래액 × 0.25% '+JSON.stringify(r));
+  console.log(`  ✓ 세후 TR 배선(${name}) — 2021-01~2023-06 TR ${r.ret.toFixed(1)}% → 세후 ${r.atr.toFixed(1)}% · 세금 ${Math.round(r.tax)}$ · 수수료 ${Math.round(r.fee)}$`); }
+
+console.log(`PASS 모의 재생 이어 계산 — 재생 ${SC.length}종(computeInf ${nCalls}회) · 무작위 ${nProp}회 · 경계 시험 전부 처음부터 센 장부와 같다 · 세후 TR 배선`);
