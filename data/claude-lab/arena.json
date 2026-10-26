@@ -883,20 +883,20 @@
      "top": "g_open_q7_k3_gap3",
      "main": "g_open_q7_k3_gap3",
      "bottom": [
-      "g_open_q12_k3",
+      "g_open_q9_k2_gap3",
       "g_open_q12_k2",
       "opening_gapdown_v1+v2filter"
      ],
      "ranks": [
       "g_open_q7_k3_gap3",
-      "opening_d1_min6",
       "g_open_q7_k3",
+      "opening_d1_min6",
       "g_open_q7_k2",
       "g_open_q8_k2",
-      "g_open_q5_k2_gap3",
       "g_open_q9_k3",
-      "g_open_q9_k2_gap3",
+      "g_open_q5_k2_gap3",
       "g_open_q12_k3",
+      "g_open_q9_k2_gap3",
       "g_open_q12_k2",
       "opening_gapdown_v1+v2filter"
      ]
@@ -1582,9 +1582,9 @@
      "top": "g_etf_th4.75",
      "main": "g_etf_th4.75",
      "bottom": [
-      "g_etf_th4.25",
       "etf_dip_th35",
-      "etf_dip_overnight_th4"
+      "etf_dip_overnight_th4",
+      "etf_dip_th25"
      ],
      "ranks": [
       "g_etf_th4.75",
@@ -1594,10 +1594,10 @@
       "g_etf_th7.5",
       "etf_dip_overnight_v1",
       "g_etf_th3.25",
-      "etf_dip_th25",
       "g_etf_th4.25",
       "etf_dip_th35",
-      "etf_dip_overnight_th4"
+      "etf_dip_overnight_th4",
+      "etf_dip_th25"
      ]
     }
    ],
@@ -3535,7 +3535,26 @@
     "g_coin_ma40_s8_hi3_eth",
     "g_coin_ma5_s8_vb1_eth",
     "g_coin_ma10_s8_hi_h12_btc",
-    "g_coin_ma100_s10_hi4_btc"
+    "g_coin_ma100_s10_hi4_btc",
+    "g_coin_ma5_s6_vb0.3_h12_eth",
+    "g_coin_ma20_s4_hi10_h12_eth",
+    "g_coin_ma20_s2_vb0.3_h18_eth",
+    "g_coin_ma60_s5_vb1_h18_eth",
+    "g_coin_ma30_s2_hi5_h15_eth",
+    "g_coin_ma15_s2_hi5_h12_eth",
+    "g_coin_ma60_s3_hi20_h12_eth",
+    "g_coin_ma50_s2_vb1_h12_both",
+    "g_coin_ma60_s5_vb0.4_h21_eth",
+    "g_coin_ma5_s2_hi10_h12_eth",
+    "g_coin_ma20_s5_hi3_btc",
+    "g_coin_ma50_s10_vb0.7_eth",
+    "g_coin_ma30_s10_hi20_h21_both",
+    "g_coin_ma100_s8_hi4_both",
+    "g_coin_ma25_s99_hi20_btc",
+    "g_coin_ma15_s8_hi10_h18_eth",
+    "g_coin_ma15_s6_vb0.6_h21_eth",
+    "g_coin_ma20_s99_hi15_h18_btc",
+    "g_coin_ma100_s6_hi_h15_both"
    ],
    "snapshots": [
     {
@@ -4020,7 +4039,7 @@
      "accepted": 0
     },
     "explore": {
-     "tried": 2019,
+     "tried": 2059,
      "accepted": 5
     },
     "jump2": {
@@ -6387,7 +6406,22 @@
     "g_soxl_r4lt5_ibs0.3_ma0_d1",
     "g_soxl_r2lt40_ibs0.4_dn2_ma200_d5",
     "g_soxl_r3lt40_ibs0.1_dn2_ma200_d2",
-    "g_soxl_r2lt25_ibs0.6_dn3_ma150_d3"
+    "g_soxl_r2lt25_ibs0.6_dn3_ma150_d3",
+    "g_soxl_r4lt25_ma200_d3",
+    "g_soxl_r2lt5_ibs0.5_dn3_ma100_d2",
+    "g_soxl_r2lt30_ibs0.3_dn1_ma0_d5",
+    "g_soxl_r2lt5_ibs0.5_dn3_ma0_d3",
+    "g_soxl_r3lt20_ibs0.3_dn2_ma0_d1",
+    "g_soxl_r4lt35_ibs0.7_ma150_d5",
+    "g_soxl_r3lt25_ibs0.3_dn3_ma150_d4",
+    "g_soxl_r3lt40_ibs0.3_dn3_ma150_d2",
+    "g_soxl_r3lt10_ibs0.1_dn1_ma200_d4",
+    "g_soxl_r3lt10_ibs0.1_ma150_d5",
+    "g_soxl_r4lt30_ibs0.3_dn3_ma150_d4",
+    "g_soxl_r2lt20_ibs0.7_ma200_d3",
+    "g_soxl_norsi_ibs0.2_dn3_ma150_d4",
+    "g_soxl_r4lt30_ibs0.3_dn3_ma100_d5",
+    "g_soxl_r3lt10_ibs0.1_dn1_ma50_d3"
    ],
    "snapshots": [
     {
@@ -6872,7 +6906,7 @@
      "accepted": 7
     },
     "explore": {
-     "tried": 1420,
+     "tried": 1442,
      "accepted": 5
     },
     "jump2": {
@@ -10661,8 +10695,26 @@
    "version": "",
    "name": "",
    "reason": "후보 48개 계산 → 기준 통과 23 · 투입 0(교체 0) · 탈락: 손실 기준 미달 18 · 점수 부족 8 · 해마다 일관성 부족 7 · 복제 1"
+  },
+  {
+   "date": "2026-10-27",
+   "at": "2026-10-27T02:25+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 40개 계산 → 기준 통과 30 · 투입 0(교체 0) · 탈락: 손실 기준 미달 9 · 점수 부족 9 · 해마다 일관성 부족 1"
+  },
+  {
+   "date": "2026-10-27",
+   "at": "2026-10-27T02:25+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 22개 계산 → 기준 통과 16 · 투입 0(교체 0) · 탈락: 점수 부족 9 · 손실 기준 미달 5 · 해마다 일관성 부족 1"
   }
  ],
- "updatedAt": "2026-10-27T01:18+09:00",
+ "updatedAt": "2026-10-27T02:25+09:00",
  "freqBeta": 0.25
 }
