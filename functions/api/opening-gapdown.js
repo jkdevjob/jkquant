@@ -16,7 +16,7 @@
 // 주문은 절대 자동 재시도하지 않는다.
 import { GAPDOWN_VERSION, expectedGapPct, gapdownPicks, watchlistUsable } from "./_gapdown.js";
 import { krxDay } from "./_krx_calendar.js";
-import { VTS_OFF, claudeVtsOn, loadMainEvents, mainFor } from "./_claude_main.js";
+import { claudeVts, loadMainEvents, mainFor } from "./_claude_main.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WATCH_URL="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/opening-gapdown-research/watchlist.json";
@@ -41,10 +41,6 @@ function authorized(request,env){
   const got=request.headers.get("x-monitor-key")||request.headers.get("x-autotrade-key")||"";
   const want=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim();
   return !!want&&got===want;
-}
-function budget(env){
-  const n=+env.SCALPING_VTS_BUDGET;
-  return n>0?Math.floor(n):2000000;
 }
 // 단계별 허용 시간창. 창 밖 호출은 아무 주문도 내지 않고 거절한다.
 export function stageWindow(stage,hms){
@@ -292,9 +288,11 @@ async function preopen(origin,env,date,rows,recheck){
   if(!picks.length){out.decisionReason=(ch.source==="recheck"||cands.some(x=>x.expectedGapPct!==null))?"no_expected_gap_down":"no_expected_prices";return out;}
   out.decisionReason="rsi14_prev<30+expected_gap<=-2%+deepest3";
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
-  if(!claudeVtsOn(env,"opening")){out.ordersSkipped=VTS_OFF;return out;}       // 모의투자 꺼짐 — 신호 · 장부만(2026-10-22 사용자)
+  const vts=await claudeVts(env,"opening");                           // 설정 › 모의투자(전략별 · 기본 꺼짐) — 꺼져 있으면 신호 · 장부만
+  out.vtsSetting=vts.revision!=null?{revision:vts.revision,on:vts.on,budget:vts.budget??null}:null;
+  if(!vts.on){out.ordersSkipped=vts.reason;return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
-  const amount=budget(env);
+  const amount=vts.budget;                                             // 설정의 종목당 주문 예산
   out.budgetPerPick=amount;
   out.sizingRule="even_split_when_short";                              // 현금이 모자라면 남은 종목에 고르게(매수가능 ÷ 남은 종목 수)
   _lastKisAt=Date.now();                                               // 바로 앞 시세 조회(다른 요청)와도 띄운다
@@ -339,7 +337,7 @@ async function closeOrReconcile(origin,env,date,stage,picks){
 // ── ② etf_dip_overnight_v1: 코스닥150 레버리지 하락일 종가 매수 → 다음 거래일 시가 매도 ──
 // 과거 2018-04~2026-09: 하루 −3% 이하인 날 연 45회, 평균 +0.40%(t=2.8), 9개 연도 중 8개 양수, 기준을 −2→−6% 로
 // 바꾸면 +0.23→+0.98% 로 단조 증가. ETF 라 증권거래세가 없다(왕복 비용 약 0.1%). D-1 과 시간이 겹치지 않는다.
-export const ETF_RULE=Object.freeze({code:"233740",name:"KODEX 코스닥150레버리지",dropMaxPct:-3,version:"etf_dip_overnight_v1",budgetMultiple:3});
+export const ETF_RULE=Object.freeze({code:"233740",name:"KODEX 코스닥150레버리지",dropMaxPct:-3,version:"etf_dip_overnight_v1"});
 export function etfDropPct(q){
   const px=+(q&&q.expectedPrice)||0,base=+(q&&q.basePrice)||0;
   return px>0&&base>0?(px/base-1)*100:null;
@@ -383,9 +381,11 @@ async function etfBuy(origin,env,date){
   Object.assign(out,etfBuyPlan(R,q));
   if(!out.signal)return out;
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
-  if(!claudeVtsOn(env,"daytrading")){out.ordersSkipped=VTS_OFF;return out;}
+  const vts=await claudeVts(env,"daytrading");
+  out.vtsSetting=vts.revision!=null?{revision:vts.revision,on:vts.on,budget:vts.budget??null}:null;
+  if(!vts.on){out.ordersSkipped=vts.reason;return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
-  const qty=Math.floor(budget(env)*ETF_RULE.budgetMultiple/Math.max(1,+q.expectedPrice||0));
+  const qty=Math.floor(vts.budget/Math.max(1,+q.expectedPrice||0));       // 설정의 주문 예산(이 종목 1회)
   out.order=await sizedBuy(origin,env,date,{code:ETF_RULE.code,name:ETF_RULE.name},qty,
     {id:etfSignalId(date,"buy"),strategy:"etf_dip_overnight",version:R.rule.version});
   return out;
@@ -421,7 +421,7 @@ async function etfReconcile(origin,env,date){
 // 같은 규칙 · 같은 자료로 계속 쌓아 확인한다. 하룻밤 보유 없음. 판단은 15:00 가격과 전일 종가만 쓴다(그날 종가를 미리 보지 않음).
 // ② 와 같은 종목(233740)이라 체결은 시각으로 가른다: ⑤ 매수 = 15:00~15:15 접수 매수 · 매도 = 15:15 이후 접수 매도.
 // ② 는 매수 = 15:15 이후 접수 매수 · 매도 = 09:00 전 접수 매도라 서로 섞이지 않는다(etfFills 와 c30Fills 의 시간창이 겹치지 않음).
-export const C30_RULE=Object.freeze({code:"233740",name:"KODEX 코스닥150레버리지",th:0,version:"close30_dip_v1",budgetMultiple:3});
+export const C30_RULE=Object.freeze({code:"233740",name:"KODEX 코스닥150레버리지",th:0,version:"close30_dip_v1"});
 // 15:00 전일 대비 등락률(%) — KIS 현재가 조회의 전일 대비율(prdy_ctrt). 값이 없으면 null(판단하지 않음).
 export function c30SofarPct(q){
   const px=+(q&&q.price)||0,c=q&&q.chgRate;
@@ -466,9 +466,11 @@ async function c30Buy(origin,env,date){
   Object.assign(out,c30BuyPlan(R,q));
   if(!out.signal)return out;
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
-  if(!claudeVtsOn(env,"close30")){out.ordersSkipped=VTS_OFF;return out;}
+  const vts=await claudeVts(env,"close30");
+  out.vtsSetting=vts.revision!=null?{revision:vts.revision,on:vts.on,budget:vts.budget??null}:null;
+  if(!vts.on){out.ordersSkipped=vts.reason;return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
-  const qty=Math.floor(budget(env)*C30_RULE.budgetMultiple/Math.max(1,+q.price||0));
+  const qty=Math.floor(vts.budget/Math.max(1,+q.price||0));               // 설정의 주문 예산(이 종목 1회)
   out.order=await sizedBuy(origin,env,date,{code:C30_RULE.code,name:C30_RULE.name},qty,
     {id:c30SignalId(date,"buy"),strategy:"close30_dip",version:R.rule.version});
   return out;
