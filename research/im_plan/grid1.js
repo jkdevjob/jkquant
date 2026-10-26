@@ -10,7 +10,7 @@ const V={
   x200:{cashYield:true,sig:{exitMA:200}}, x200b:{cashYield:true,sig:{exitMA:200,exitBand:.05,enterBand:.0}}, x200c:{cashYield:true,sig:{exitMA:200,exitBand:.03,enterBand:.03}},
   x150:{cashYield:true,sig:{exitMA:150}}, x150b:{cashYield:true,sig:{exitMA:150,exitBand:.05}}, x100b:{cashYield:true,sig:{exitMA:100,exitBand:.05}},
   x200tp:{cashYield:true,sig:{exitMA:200,exitBand:.05,bearTP:10,bearMA:150}},
-  rev:{cashYield:true,reverse:true},
+  rev:{cashYield:true,reverse:true}, revNoY:{reverse:true}, aRev:{autoTp:true,reverse:true},
   dyn40:{cashYield:true,sig:{slowMA:150,slowDivs:40}}, dyn40m200:{cashYield:true,sig:{slowMA:200,slowDivs:40}}, dyn60:{cashYield:true,sig:{slowMA:150,slowDivs:60}},
   dyn40tp:{cashYield:true,sig:{slowMA:150,slowDivs:40,bearTP:10,bearMA:150}},
   bear40tp:{cashYield:true,sig:{bearDivs:40,bearMA:150,bearTP:10}},
@@ -38,6 +38,12 @@ const V={
   aGTpS:{autoTp:true,sig:{guard:{tp:10,sym:'SYNTQQQ'}}}, gTpS:{sig:{guard:{tp:10,sym:'SYNTQQQ'}}},
   m1rev40:{autoTp:true,m1:{revertAfter:40}}, m1rev60:{autoTp:true,m1:{revertAfter:60}}, m1rev90:{autoTp:true,m1:{revertAfter:90}}, m1rev120:{autoTp:true,m1:{revertAfter:120}}, m1rev180:{autoTp:true,m1:{revertAfter:180}},
   base:{}, yield:{cashYield:true},
+  // 잔금 이자 — 매매 없는 경로(달러 RP·외화 MMF 자동 스윕 가정): 수수료 0 · 금리 = T-bill − cashSpread · 이자소득세 15.4%
+  rp50:{autoTp:true,cashYield:true,cashSpread:0.005}, rp75:{autoTp:true,cashYield:true,cashSpread:0.0075}, rp100:{autoTp:true,cashYield:true,cashSpread:0.01}, rp150:{autoTp:true,cashYield:true,cashSpread:0.015},
+  bRp50:{cashYield:true,cashSpread:0.005}, bRp100:{cashYield:true,cashSpread:0.01},
+  // 위를 '주 1회 손으로 옮김'으로(수시형 달러 RP 가정 · 수수료 0 · 현금은 k일치만 남김 · 모자라면 꺼냄) — sgov 고리에 spread 를 줘서
+  rpW5:{autoTp:true,sgov:{mode:'week',k:5,fee:0,spread:0.005}}, rpW7:{autoTp:true,sgov:{mode:'week',k:7,fee:0,spread:0.005}}, rpW10:{autoTp:true,sgov:{mode:'week',k:10,fee:0,spread:0.005}}, rpC10:{autoTp:true,sgov:{mode:'cyc',k:10,fee:0,spread:0.005}},
+  rpW5s1:{autoTp:true,sgov:{mode:'week',k:5,fee:0,spread:0.01}}, rpW7s1:{autoTp:true,sgov:{mode:'week',k:7,fee:0,spread:0.01}},
   g200:{cashYield:true,sig:{gateMA:200}}, g150:{cashYield:true,sig:{gateMA:150}}, g100:{cashYield:true,sig:{gateMA:100}},
   bear40:{cashYield:true,sig:{bearDivs:40,bearMA:150}}, bear30:{cashYield:true,sig:{bearDivs:30,bearMA:150}},
   bear40m200:{cashYield:true,sig:{bearDivs:40,bearMA:200}},

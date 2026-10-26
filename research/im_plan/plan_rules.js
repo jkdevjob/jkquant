@@ -10,8 +10,9 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
   const gvT=p.gs0?ind.vol(P.C[GA],p.look):null;   // TQQQ 슬리브 비중도 역분산: gw × min(1, gs0²/σ²) (gs0 없으면 Guard ON 이면 gw 그대로)
   let lastK=-1; const wk=d=>Math.floor((Date.parse(d)/864e5+3)/7), isStart=(k,f)=>k+1<P.dates.length&&k>=0&&f(P.dates[k+1])!==f(P.dates[k]);
   const rv=p.down?dvol(P.C[R],p.look):p.look2?(()=>{ const a=ind.vol(P.C[R],p.look), b=ind.vol(P.C[R],p.look2); return a.map((x,i)=>(x==null||b[i]==null)?null:Math.max(x,b[i])); })():ind.vol(P.C[R],p.look), gm=ind.ma(P.C[G],p.ma), rm=p.rMA?ind.ma(P.C[R],p.rMA):null;
+  const rvDn=p.lookDn?ind.vol(P.C[R],p.lookDn):null;   // 내릴 때만 빠른 σ: 목표 = min(σ look 목표, σ lookDn 목표) 가 지금 비중보다 낮으면 그쪽으로(올릴 때는 σ look 그대로)
   const extra=p.div?{sym:p.div, w:p.dw, m:ind.ma(P.C[p.div],p.dMA||200)}:null;
-  return {assets:[R,GA].concat(extra?[extra.sym]:[]), warm:Math.max(p.ma,p.look+1,(p.look2||0)+1,p.rMA||0,extra?(p.dMA||200):0)+1,
+  return {assets:[R,GA].concat(extra?[extra.sym]:[]), warm:Math.max(p.ma,p.look+1,(p.lookDn||0)+1,(p.look2||0)+1,p.rMA||0,extra?(p.dMA||200):0)+1,
     bandOf:(s,t,c)=>{ if(s!==R) return (s===GA&&t>0&&c>0)?(((p.gsbDn!=null&&t<c)?p.gsbDn:(p.gsbUp!=null&&t>c)?p.gsbUp:(p.gsb??0.02))):0.02;
       if((p.wkAll&&!isStart(lastK,wk))||(p.wkDn&&t<c&&!isStart(lastK,wk))||(p.moDn&&t<c&&!isStart(lastK,d=>d.slice(0,7)))) return Infinity;
       return ((p.sbDn!=null&&t<c)?p.sbDn:(p.sbUp!=null&&t>c)?p.sbUp:p.sb)*p.tw; },   // TECL 비중: 내릴 때 sbDn · 올릴 때 sbUp (없으면 sb)
@@ -22,7 +23,7 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
       else if(c>m*(1+(p.gbOn??p.gb))) st.g=true; else if(c<m*(1-offB(k))) st.g=false;   // 들어갈 때(gbOn)·나올 때(gbOff) 밴드를 따로 줄 수 있다
       if(p.full&&!st.g) w=0;                       // 변형: Guard OFF 면 TECL 도 끔
       if(rm&&P.C[R][k]<rm[k]) w=Math.min(w,p.rFloor??0);   // 변형: TECL 자체 추세
-      const t={}; t[R]=p.tw*w; t[GA]=st.g?p.gw*((p.gs0&&gvT[k]>0)?Math.min(1,p.gs0*p.gs0/(gvT[k]*gvT[k])):1):0;
+      const t={}; t[R]=p.tw*w; if(rvDn&&rvDn[k]>0){ const wd=Math.min(w,Math.min(1,(p.s0*p.s0)/(rvDn[k]*rvDn[k]))); if(p.tw*wd<(cur[R]||0)) t[R]=p.tw*wd; } t[GA]=st.g?p.gw*((p.gs0&&gvT[k]>0)?Math.min(1,p.gs0*p.gs0/(gvT[k]*gvT[k])):1):0;
       if(extra){ const on=P.C[extra.sym][k]>extra.m[k]; t[extra.sym]=on?extra.w:0; const sum=t[R]+t[G]+t[extra.sym]; if(sum>1){ t[R]*=1/sum; t[G]*=1/sum; t[extra.sym]*=1/sum; } }
       return t; } }; }
 module.exports={mk};
