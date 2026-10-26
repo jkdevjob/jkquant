@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-26",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": -3.3204196442162552,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "파마리서치",
+      "code": "214450",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 235500,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 229500,
+      "qty": 9,
+      "pnlPct": -3.414713375796178,
+      "vtsOk": true,
+      "signal": {
+        "at": "08:59:26",
+        "expectedPrice": 211000,
+        "basePrice": 239500,
+        "expectedGapPct": -11.899791231732781,
+        "rsi14Prev": 22.774,
+        "qualified": 42,
+        "recheck": false,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "LIG디펜스앤에어로스페이스",
+      "code": "079550",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 439000,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 429000,
+      "qty": 4,
+      "pnlPct": -2.8495899772209543,
+      "vtsOk": true,
+      "signal": {
+        "at": "08:59:26",
+        "expectedPrice": 434000,
+        "basePrice": 475500,
+        "expectedGapPct": -8.727655099894848,
+        "rsi14Prev": 29.861,
+        "qualified": 42,
+        "recheck": false,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "HD현대일렉트릭",
+      "code": "267260",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 461500,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 447000,
+      "qty": 4,
+      "pnlPct": -3.6969555796316342,
+      "vtsOk": true,
+      "signal": {
+        "at": "08:59:26",
+        "expectedPrice": 430000,
+        "basePrice": 470000,
+        "expectedGapPct": -8.510638297872342,
+        "rsi14Prev": 25.5,
+        "qualified": 42,
+        "recheck": false,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "메인 매매일(통과 42종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-10-27T01:18:57.114224+09:00"
+}

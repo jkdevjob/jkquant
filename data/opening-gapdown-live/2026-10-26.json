@@ -1,0 +1,1936 @@
+{
+  "ok": true,
+  "date": "2026-10-26",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-26",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-25T23:57:39.090Z",
+    "updatedAt": "2026-10-26T06:40:53.228Z",
+    "scans": [
+      {
+        "id": "2026-10-26:etf_sell:2026-10-26:opening_gapdown:etf_sell:all",
+        "scheduledTime": 1792972607392,
+        "capturedAt": "2026-10-25T23:57:38.476Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:preopen:2026-10-26:opening_gapdown:preopen:all",
+        "scheduledTime": 1792972607392,
+        "capturedAt": "2026-10-25T23:59:26.365Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:quote:2026-10-26:opening_gapdown:quote:part0",
+        "scheduledTime": 1792972607392,
+        "capturedAt": "2026-10-25T23:58:41.834Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:quote:2026-10-26:opening_gapdown:quote:part1",
+        "scheduledTime": 1792972607392,
+        "capturedAt": "2026-10-25T23:59:16.805Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:c30_buy:2026-10-26:opening_gapdown:c30_buy:all",
+        "scheduledTime": 1792994447392,
+        "capturedAt": "2026-10-26T06:01:02.513Z",
+        "targetHm": 1500,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:c30_sell:2026-10-26:opening_gapdown:c30_sell:all",
+        "scheduledTime": 1792995707392,
+        "capturedAt": "2026-10-26T06:22:01.786Z",
+        "targetHm": 1521,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:close:2026-10-26:opening_gapdown:close:all",
+        "scheduledTime": 1792995707392,
+        "capturedAt": "2026-10-26T06:21:59.116Z",
+        "targetHm": 1521,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:etf_buy:2026-10-26:opening_gapdown:etf_buy:all",
+        "scheduledTime": 1792995707392,
+        "capturedAt": "2026-10-26T06:22:06.757Z",
+        "targetHm": 1521,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:c30_reconcile:2026-10-26:opening_gapdown:c30_reconcile:all",
+        "scheduledTime": 1792996847392,
+        "capturedAt": "2026-10-26T06:40:53.166Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:etf_reconcile:2026-10-26:opening_gapdown:etf_reconcile:all",
+        "scheduledTime": 1792996847392,
+        "capturedAt": "2026-10-26T06:40:52.392Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-26:reconcile:2026-10-26:opening_gapdown:reconcile:all",
+        "scheduledTime": 1792996847392,
+        "capturedAt": "2026-10-26T06:40:51.220Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "2026-10-26:opening_gapdown:etf_sell:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-25T23:57:38.476Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "etf_sell",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "etf_sell",
+          "strategy": "etf_dip_overnight",
+          "strategyVersion": "etf_dip_overnight_v1",
+          "date": "2026-10-26",
+          "buyDate": "2026-10-23",
+          "code": "233740",
+          "startedAt": "2026-10-25T23:57:33.335Z",
+          "boughtQty": 176,
+          "alreadySoldQty": 0,
+          "order": {
+            "signalId": "etf_dip:2026-10-23:233740:sell",
+            "strategy": "etf_dip_overnight",
+            "strategyVersion": "etf_dip_overnight_v1",
+            "date": "2026-10-26",
+            "side": "sell",
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "qty": 176,
+            "submittedAt": "2026-10-25T23:57:37.902Z",
+            "vts": {
+              "ok": true,
+              "env": "vts",
+              "priceType": "market",
+              "orderNo": "0000001971",
+              "msg": "모의투자 매도주문이 완료 되었습니다.",
+              "httpStatus": 200
+            }
+          },
+          "decisionReason": "next_open_exit",
+          "finishedAt": "2026-10-25T23:57:38.474Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:preopen:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-25T23:59:26.365Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "preopen",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "preopen",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-26",
+          "startedAt": "2026-10-25T23:59:17.111Z",
+          "watchlist": {
+            "basedOn": "2026-10-23",
+            "generatedAt": "2026-10-24T03:44:12.181128+09:00",
+            "size": 63,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": 63,
+          "picks": [
+            {
+              "code": "214450",
+              "name": "파마리서치",
+              "expectedPrice": 211000,
+              "basePrice": 239500,
+              "expectedGapPct": -11.899791231732781,
+              "rsi14Prev": 22.774
+            },
+            {
+              "code": "079550",
+              "name": "LIG디펜스앤에어로스페이스",
+              "expectedPrice": 434000,
+              "basePrice": 475500,
+              "expectedGapPct": -8.727655099894848,
+              "rsi14Prev": 29.861
+            },
+            {
+              "code": "267260",
+              "name": "HD현대일렉트릭",
+              "expectedPrice": 430000,
+              "basePrice": 470000,
+              "expectedGapPct": -8.510638297872342,
+              "rsi14Prev": 25.5
+            }
+          ],
+          "orders": [
+            {
+              "signalId": "gapdown:2026-10-26:214450:buy",
+              "strategy": "opening_gapdown",
+              "strategyVersion": "opening_gapdown_v1",
+              "date": "2026-10-26",
+              "side": "buy",
+              "code": "214450",
+              "name": "파마리서치",
+              "qty": 9,
+              "submittedAt": "2026-10-25T23:59:19.624Z",
+              "vts": {
+                "ok": true,
+                "env": "vts",
+                "priceType": "market",
+                "orderNo": "0000002062",
+                "msg": "모의투자 매수주문이 완료 되었습니다.",
+                "httpStatus": 200
+              },
+              "sizing": {
+                "qty": 9,
+                "planned": 9,
+                "capped": false,
+                "cash": 9010157,
+                "note": "",
+                "lookup": [
+                  {
+                    "ms": 299,
+                    "limitMs": 6000
+                  }
+                ]
+              }
+            },
+            {
+              "signalId": "gapdown:2026-10-26:079550:buy",
+              "strategy": "opening_gapdown",
+              "strategyVersion": "opening_gapdown_v1",
+              "date": "2026-10-26",
+              "side": "buy",
+              "code": "079550",
+              "name": "LIG디펜스앤에어로스페이스",
+              "qty": 4,
+              "submittedAt": "2026-10-25T23:59:22.705Z",
+              "vts": {
+                "ok": true,
+                "env": "vts",
+                "priceType": "market",
+                "orderNo": "0000002071",
+                "msg": "모의투자 매수주문이 완료 되었습니다.",
+                "httpStatus": 200
+              },
+              "sizing": {
+                "qty": 4,
+                "planned": 4,
+                "capped": false,
+                "cash": 6255165,
+                "note": "",
+                "lookup": [
+                  {
+                    "ms": 301,
+                    "limitMs": 6000
+                  }
+                ]
+              }
+            },
+            {
+              "signalId": "gapdown:2026-10-26:267260:buy",
+              "strategy": "opening_gapdown",
+              "strategyVersion": "opening_gapdown_v1",
+              "date": "2026-10-26",
+              "side": "buy",
+              "code": "267260",
+              "name": "HD현대일렉트릭",
+              "qty": 4,
+              "submittedAt": "2026-10-25T23:59:25.784Z",
+              "vts": {
+                "ok": true,
+                "env": "vts",
+                "priceType": "market",
+                "orderNo": "0000002076",
+                "msg": "모의투자 매수주문이 완료 되었습니다.",
+                "httpStatus": 200
+              },
+              "sizing": {
+                "qty": 4,
+                "planned": 4,
+                "capped": false,
+                "cash": 3783165,
+                "note": "",
+                "lookup": [
+                  {
+                    "ms": 301,
+                    "limitMs": 6000
+                  }
+                ]
+              }
+            }
+          ],
+          "decisionReason": "rsi14_prev<30+expected_gap<=-2%+deepest3",
+          "breadth": {
+            "qualified": 42,
+            "v2MinQualified": 5,
+            "v2Signal": true
+          },
+          "recheck": null,
+          "budgetPerPick": 2000000,
+          "sizingRule": "even_split_when_short",
+          "finishedAt": "2026-10-25T23:59:26.362Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:quote:part0",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-25T23:58:41.834Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "quote",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "quote",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-26",
+          "part": 0,
+          "startedAt": "2026-10-25T23:57:39.612Z",
+          "watchlist": {
+            "basedOn": "2026-10-23",
+            "generatedAt": "2026-10-24T03:44:12.181128+09:00",
+            "size": 63,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": [
+            {
+              "code": "267250",
+              "name": "HD현대",
+              "market": "KOSPI",
+              "rsi14Prev": 18.683,
+              "prevClose": 137800,
+              "prevAmountKrw": 23436945650,
+              "quotedAt": "2026-10-25T23:57:40.121Z",
+              "expectedPrice": 134000,
+              "basePrice": 137800,
+              "expectedChgPct": -2.76,
+              "expectedVolume": 572,
+              "phase": "311",
+              "expectedGapPct": -2.7576197387518153,
+              "error": null
+            },
+            {
+              "code": "329180",
+              "name": "HD현대중공업",
+              "market": "KOSPI",
+              "rsi14Prev": 18.848,
+              "prevClose": 305000,
+              "prevAmountKrw": 99836860250,
+              "quotedAt": "2026-10-25T23:57:40.951Z",
+              "expectedPrice": 292500,
+              "basePrice": 305000,
+              "expectedChgPct": -4.1,
+              "expectedVolume": 1113,
+              "phase": "311",
+              "expectedGapPct": -4.098360655737709,
+              "error": null
+            },
+            {
+              "code": "042660",
+              "name": "한화오션",
+              "market": "KOSPI",
+              "rsi14Prev": 19.529,
+              "prevClose": 55300,
+              "prevAmountKrw": 58557971550,
+              "quotedAt": "2026-10-25T23:57:41.782Z",
+              "expectedPrice": 51500,
+              "basePrice": 55300,
+              "expectedChgPct": -6.87,
+              "expectedVolume": 25041,
+              "phase": "311",
+              "expectedGapPct": -6.871609403254975,
+              "error": null
+            },
+            {
+              "code": "127120",
+              "name": "제이에스링크",
+              "market": "KOSDAQ",
+              "rsi14Prev": 21.534,
+              "prevClose": 17160,
+              "prevAmountKrw": 2890378065,
+              "quotedAt": "2026-10-25T23:57:42.614Z",
+              "expectedPrice": 15860,
+              "basePrice": 17160,
+              "expectedChgPct": -7.58,
+              "expectedVolume": 762,
+              "phase": "311",
+              "expectedGapPct": -7.57575757575758,
+              "error": null
+            },
+            {
+              "code": "088350",
+              "name": "한화생명",
+              "market": "KOSPI",
+              "rsi14Prev": 21.793,
+              "prevClose": 4025,
+              "prevAmountKrw": 12678082679,
+              "quotedAt": "2026-10-25T23:57:43.445Z",
+              "expectedPrice": 3950,
+              "basePrice": 4025,
+              "expectedChgPct": -1.86,
+              "expectedVolume": 6158,
+              "phase": "311",
+              "expectedGapPct": -1.8633540372670843,
+              "error": null
+            },
+            {
+              "code": "055550",
+              "name": "신한지주",
+              "market": "KOSPI",
+              "rsi14Prev": 22.026,
+              "prevClose": 88100,
+              "prevAmountKrw": 90402253900,
+              "quotedAt": "2026-10-25T23:57:44.280Z",
+              "expectedPrice": 85700,
+              "basePrice": 88100,
+              "expectedChgPct": -2.72,
+              "expectedVolume": 8025,
+              "phase": "311",
+              "expectedGapPct": -2.724177071509648,
+              "error": null
+            },
+            {
+              "code": "290720",
+              "name": "푸드나무",
+              "market": "KOSDAQ",
+              "rsi14Prev": 22.073,
+              "prevClose": 1345,
+              "prevAmountKrw": 6412388454,
+              "quotedAt": "2026-10-25T23:57:46.361Z",
+              "expectedPrice": 1331,
+              "basePrice": 1345,
+              "expectedChgPct": -1.04,
+              "expectedVolume": 11184,
+              "phase": "311",
+              "expectedGapPct": -1.0408921933085513,
+              "error": null
+            },
+            {
+              "code": "214450",
+              "name": "파마리서치",
+              "market": "KOSDAQ GLOBAL",
+              "rsi14Prev": 22.774,
+              "prevClose": 239500,
+              "prevAmountKrw": 33488928750,
+              "quotedAt": "2026-10-25T23:57:47.196Z",
+              "expectedPrice": 211000,
+              "basePrice": 239500,
+              "expectedChgPct": -11.9,
+              "expectedVolume": 2888,
+              "phase": "311",
+              "expectedGapPct": -11.899791231732781,
+              "error": null
+            },
+            {
+              "code": "017960",
+              "name": "한국카본",
+              "market": "KOSPI",
+              "rsi14Prev": 23.62,
+              "prevClose": 16100,
+              "prevAmountKrw": 6059390455,
+              "quotedAt": "2026-10-25T23:57:49.275Z",
+              "expectedPrice": 15300,
+              "basePrice": 16100,
+              "expectedChgPct": -4.97,
+              "expectedVolume": 5155,
+              "phase": "311",
+              "expectedGapPct": -4.968944099378881,
+              "error": null
+            },
+            {
+              "code": "005090",
+              "name": "SGC에너지",
+              "market": "KOSPI",
+              "rsi14Prev": 23.684,
+              "prevClose": 34500,
+              "prevAmountKrw": 7217629525,
+              "quotedAt": "2026-10-25T23:57:51.329Z",
+              "expectedPrice": 33100,
+              "basePrice": 34500,
+              "expectedChgPct": -4.06,
+              "expectedVolume": 213,
+              "phase": "311",
+              "expectedGapPct": -4.057971014492756,
+              "error": null
+            },
+            {
+              "code": "030200",
+              "name": "KT",
+              "market": "KOSPI",
+              "rsi14Prev": 23.692,
+              "prevClose": 46800,
+              "prevAmountKrw": 16421019250,
+              "quotedAt": "2026-10-25T23:57:52.155Z",
+              "expectedPrice": 46300,
+              "basePrice": 46800,
+              "expectedChgPct": -1.07,
+              "expectedVolume": 431,
+              "phase": "311",
+              "expectedGapPct": -1.0683760683760646,
+              "error": null
+            },
+            {
+              "code": "009540",
+              "name": "HD한국조선해양",
+              "market": "KOSPI",
+              "rsi14Prev": 24.38,
+              "prevClose": 248000,
+              "prevAmountKrw": 49257018250,
+              "quotedAt": "2026-10-25T23:57:54.235Z",
+              "expectedPrice": 238500,
+              "basePrice": 248000,
+              "expectedChgPct": -3.83,
+              "expectedVolume": 1323,
+              "phase": "311",
+              "expectedGapPct": -3.8306451612903247,
+              "error": null
+            },
+            {
+              "code": "034220",
+              "name": "LG디스플레이",
+              "market": "KOSPI",
+              "rsi14Prev": 24.41,
+              "prevClose": 7150,
+              "prevAmountKrw": 18592136555,
+              "quotedAt": "2026-10-25T23:57:56.315Z",
+              "expectedPrice": 7000,
+              "basePrice": 7150,
+              "expectedChgPct": -2.1,
+              "expectedVolume": 47618,
+              "phase": "311",
+              "expectedGapPct": -2.0979020979020935,
+              "error": null
+            },
+            {
+              "code": "475830",
+              "name": "오름테라퓨틱",
+              "market": "KOSDAQ",
+              "rsi14Prev": 24.52,
+              "prevClose": 16260,
+              "prevAmountKrw": 2268131395,
+              "quotedAt": "2026-10-25T23:57:57.148Z",
+              "expectedPrice": 15860,
+              "basePrice": 16260,
+              "expectedChgPct": -2.46,
+              "expectedVolume": 338,
+              "phase": "311",
+              "expectedGapPct": -2.4600246002460024,
+              "error": null
+            },
+            {
+              "code": "120110",
+              "name": "코오롱인더",
+              "market": "KOSPI",
+              "rsi14Prev": 24.608,
+              "prevClose": 41650,
+              "prevAmountKrw": 10534634300,
+              "quotedAt": "2026-10-25T23:57:59.217Z",
+              "expectedPrice": 40400,
+              "basePrice": 41650,
+              "expectedChgPct": -3,
+              "expectedVolume": 499,
+              "phase": "311",
+              "expectedGapPct": -3.001200480192079,
+              "error": null
+            },
+            {
+              "code": "285130",
+              "name": "SK케미칼",
+              "market": "KOSPI",
+              "rsi14Prev": 24.634,
+              "prevClose": 40100,
+              "prevAmountKrw": 2032207300,
+              "quotedAt": "2026-10-25T23:58:01.310Z",
+              "expectedPrice": 40200,
+              "basePrice": 40100,
+              "expectedChgPct": 0.25,
+              "expectedVolume": 43,
+              "phase": "311",
+              "expectedGapPct": 0.24937655860348684,
+              "error": null
+            },
+            {
+              "code": "002380",
+              "name": "KCC",
+              "market": "KOSPI",
+              "rsi14Prev": 24.827,
+              "prevClose": 380000,
+              "prevAmountKrw": 7222102250,
+              "quotedAt": "2026-10-25T23:58:02.152Z",
+              "expectedPrice": 375000,
+              "basePrice": 380000,
+              "expectedChgPct": -1.32,
+              "expectedVolume": 55,
+              "phase": "311",
+              "expectedGapPct": -1.3157894736842146,
+              "error": null
+            },
+            {
+              "code": "010130",
+              "name": "고려아연",
+              "market": "KOSPI",
+              "rsi14Prev": 25.219,
+              "prevClose": 854000,
+              "prevAmountKrw": 17759532000,
+              "quotedAt": "2026-10-25T23:58:04.230Z",
+              "expectedPrice": 803000,
+              "basePrice": 854000,
+              "expectedChgPct": -5.97,
+              "expectedVolume": 180,
+              "phase": "311",
+              "expectedGapPct": -5.971896955503508,
+              "error": null
+            },
+            {
+              "code": "073240",
+              "name": "금호타이어",
+              "market": "KOSPI",
+              "rsi14Prev": 25.272,
+              "prevClose": 5250,
+              "prevAmountKrw": 3547193375,
+              "quotedAt": "2026-10-25T23:58:06.365Z",
+              "expectedPrice": 5060,
+              "basePrice": 5250,
+              "expectedChgPct": -3.62,
+              "expectedVolume": 15082,
+              "phase": "311",
+              "expectedGapPct": -3.6190476190476217,
+              "error": null
+            },
+            {
+              "code": "267260",
+              "name": "HD현대일렉트릭",
+              "market": "KOSPI",
+              "rsi14Prev": 25.5,
+              "prevClose": 470000,
+              "prevAmountKrw": 77660776500,
+              "quotedAt": "2026-10-25T23:58:07.200Z",
+              "expectedPrice": 430000,
+              "basePrice": 470000,
+              "expectedChgPct": -8.51,
+              "expectedVolume": 1486,
+              "phase": "311",
+              "expectedGapPct": -8.510638297872342,
+              "error": null
+            },
+            {
+              "code": "064350",
+              "name": "현대로템",
+              "market": "KOSPI",
+              "rsi14Prev": 25.566,
+              "prevClose": 82700,
+              "prevAmountKrw": 54171502300,
+              "quotedAt": "2026-10-25T23:58:09.259Z",
+              "expectedPrice": 78400,
+              "basePrice": 82700,
+              "expectedChgPct": -5.2,
+              "expectedVolume": 6375,
+              "phase": "311",
+              "expectedGapPct": -5.199516324062881,
+              "error": null
+            },
+            {
+              "code": "004170",
+              "name": "신세계",
+              "market": "KOSPI",
+              "rsi14Prev": 25.625,
+              "prevClose": 255000,
+              "prevAmountKrw": 9238065500,
+              "quotedAt": "2026-10-25T23:58:11.341Z",
+              "expectedPrice": 246000,
+              "basePrice": 255000,
+              "expectedChgPct": -3.53,
+              "expectedVolume": 112,
+              "phase": "311",
+              "expectedGapPct": -3.529411764705881,
+              "error": null
+            },
+            {
+              "code": "439960",
+              "name": "코스모로보틱스",
+              "market": "KOSDAQ",
+              "rsi14Prev": 25.641,
+              "prevClose": 5110,
+              "prevAmountKrw": 2287968995,
+              "quotedAt": "2026-10-25T23:58:12.177Z",
+              "expectedPrice": 5120,
+              "basePrice": 5110,
+              "expectedChgPct": 0.2,
+              "expectedVolume": 2298,
+              "phase": "311",
+              "expectedGapPct": 0.1956947162426559,
+              "error": null
+            },
+            {
+              "code": "267270",
+              "name": "HD건설기계",
+              "market": "KOSPI",
+              "rsi14Prev": 25.782,
+              "prevClose": 89300,
+              "prevAmountKrw": 23533062200,
+              "quotedAt": "2026-10-25T23:58:14.275Z",
+              "expectedPrice": 87100,
+              "basePrice": 89300,
+              "expectedChgPct": -2.46,
+              "expectedVolume": 351,
+              "phase": "311",
+              "expectedGapPct": -2.4636058230683044,
+              "error": null
+            },
+            {
+              "code": "200710",
+              "name": "에이디테크놀로지",
+              "market": "KOSDAQ",
+              "rsi14Prev": 25.814,
+              "prevClose": 18490,
+              "prevAmountKrw": 3619508500,
+              "quotedAt": "2026-10-25T23:58:16.346Z",
+              "expectedPrice": 17650,
+              "basePrice": 18490,
+              "expectedChgPct": -4.54,
+              "expectedVolume": 1638,
+              "phase": "311",
+              "expectedGapPct": -4.5429962141698255,
+              "error": null
+            },
+            {
+              "code": "257720",
+              "name": "실리콘투",
+              "market": "KOSDAQ",
+              "rsi14Prev": 26.125,
+              "prevClose": 30250,
+              "prevAmountKrw": 14020535125,
+              "quotedAt": "2026-10-25T23:58:17.174Z",
+              "expectedPrice": 29200,
+              "basePrice": 30250,
+              "expectedChgPct": -3.47,
+              "expectedVolume": 4363,
+              "phase": "311",
+              "expectedGapPct": -3.4710743801652844,
+              "error": null
+            },
+            {
+              "code": "077970",
+              "name": "STX엔진",
+              "market": "KOSPI",
+              "rsi14Prev": 26.148,
+              "prevClose": 16310,
+              "prevAmountKrw": 2501870525,
+              "quotedAt": "2026-10-25T23:58:19.243Z",
+              "expectedPrice": 15400,
+              "basePrice": 16310,
+              "expectedChgPct": -5.58,
+              "expectedVolume": 2854,
+              "phase": "311",
+              "expectedGapPct": -5.579399141630903,
+              "error": null
+            },
+            {
+              "code": "000880",
+              "name": "한화",
+              "market": "KOSPI",
+              "rsi14Prev": 26.165,
+              "prevClose": 93400,
+              "prevAmountKrw": 5067911450,
+              "quotedAt": "2026-10-25T23:58:21.336Z",
+              "expectedPrice": 91500,
+              "basePrice": 93400,
+              "expectedChgPct": -2.03,
+              "expectedVolume": 911,
+              "phase": "311",
+              "expectedGapPct": -2.0342612419700257,
+              "error": null
+            },
+            {
+              "code": "017670",
+              "name": "SK텔레콤",
+              "market": "KOSPI",
+              "rsi14Prev": 26.262,
+              "prevClose": 74500,
+              "prevAmountKrw": 45809544000,
+              "quotedAt": "2026-10-25T23:58:22.173Z",
+              "expectedPrice": 71600,
+              "basePrice": 74500,
+              "expectedChgPct": -3.89,
+              "expectedVolume": 6357,
+              "phase": "311",
+              "expectedGapPct": -3.892617449664426,
+              "error": null
+            },
+            {
+              "code": "034020",
+              "name": "두산에너빌리티",
+              "market": "KOSPI",
+              "rsi14Prev": 26.391,
+              "prevClose": 59400,
+              "prevAmountKrw": 156178267950,
+              "quotedAt": "2026-10-25T23:58:24.249Z",
+              "expectedPrice": 56600,
+              "basePrice": 59400,
+              "expectedChgPct": -4.71,
+              "expectedVolume": 40002,
+              "phase": "311",
+              "expectedGapPct": -4.7138047138047146,
+              "error": null
+            },
+            {
+              "code": "241560",
+              "name": "두산밥캣",
+              "market": "KOSPI",
+              "rsi14Prev": 26.509,
+              "prevClose": 49400,
+              "prevAmountKrw": 6252967225,
+              "quotedAt": "2026-10-25T23:58:26.324Z",
+              "expectedPrice": 48000,
+              "basePrice": 49400,
+              "expectedChgPct": -2.83,
+              "expectedVolume": 638,
+              "phase": "311",
+              "expectedGapPct": -2.8340080971659964,
+              "error": null
+            },
+            {
+              "code": "477850",
+              "name": "마키나락스",
+              "market": "KOSDAQ",
+              "rsi14Prev": 27.337,
+              "prevClose": 15430,
+              "prevAmountKrw": 2476129605,
+              "quotedAt": "2026-10-25T23:58:27.160Z",
+              "expectedPrice": 15440,
+              "basePrice": 15430,
+              "expectedChgPct": 0.06,
+              "expectedVolume": 324,
+              "phase": "311",
+              "expectedGapPct": 0.06480881399870686,
+              "error": null
+            },
+            {
+              "code": "007370",
+              "name": "진양제약",
+              "market": "KOSDAQ",
+              "rsi14Prev": 27.352,
+              "prevClose": 3630,
+              "prevAmountKrw": 8138641137,
+              "quotedAt": "2026-10-25T23:58:29.264Z",
+              "expectedPrice": 3620,
+              "basePrice": 3630,
+              "expectedChgPct": -0.28,
+              "expectedVolume": 2879,
+              "phase": "311",
+              "expectedGapPct": -0.27548209366391463,
+              "error": null
+            },
+            {
+              "code": "298040",
+              "name": "효성중공업",
+              "market": "KOSPI",
+              "rsi14Prev": 27.482,
+              "prevClose": 1877000,
+              "prevAmountKrw": 90498400500,
+              "quotedAt": "2026-10-25T23:58:31.314Z",
+              "expectedPrice": 1810000,
+              "basePrice": 1877000,
+              "expectedChgPct": -3.57,
+              "expectedVolume": 190,
+              "phase": "311",
+              "expectedGapPct": -3.569525839104959,
+              "error": null
+            },
+            {
+              "code": "086790",
+              "name": "하나금융지주",
+              "market": "KOSPI",
+              "rsi14Prev": 27.581,
+              "prevClose": 116300,
+              "prevAmountKrw": 95109979400,
+              "quotedAt": "2026-10-25T23:58:32.137Z",
+              "expectedPrice": 115200,
+              "basePrice": 116300,
+              "expectedChgPct": -0.95,
+              "expectedVolume": 1975,
+              "phase": "311",
+              "expectedGapPct": -0.9458297506448887,
+              "error": null
+            },
+            {
+              "code": "082740",
+              "name": "한화엔진",
+              "market": "KOSPI",
+              "rsi14Prev": 27.802,
+              "prevClose": 32250,
+              "prevAmountKrw": 18280555225,
+              "quotedAt": "2026-10-25T23:58:34.189Z",
+              "expectedPrice": 31000,
+              "basePrice": 32250,
+              "expectedChgPct": -3.88,
+              "expectedVolume": 3429,
+              "phase": "311",
+              "expectedGapPct": -3.875968992248058,
+              "error": null
+            },
+            {
+              "code": "192080",
+              "name": "더블유게임즈",
+              "market": "KOSPI",
+              "rsi14Prev": 27.824,
+              "prevClose": 53100,
+              "prevAmountKrw": 2746408450,
+              "quotedAt": "2026-10-25T23:58:36.266Z",
+              "expectedPrice": 52500,
+              "basePrice": 53100,
+              "expectedChgPct": -1.13,
+              "expectedVolume": 36,
+              "phase": "311",
+              "expectedGapPct": -1.1299435028248594,
+              "error": null
+            },
+            {
+              "code": "011170",
+              "name": "롯데케미칼",
+              "market": "KOSPI",
+              "rsi14Prev": 27.849,
+              "prevClose": 48150,
+              "prevAmountKrw": 5661724950,
+              "quotedAt": "2026-10-25T23:58:38.357Z",
+              "expectedPrice": 46850,
+              "basePrice": 48150,
+              "expectedChgPct": -2.7,
+              "expectedVolume": 2178,
+              "phase": "311",
+              "expectedGapPct": -2.699896157840087,
+              "error": null
+            },
+            {
+              "code": "103140",
+              "name": "풍산",
+              "market": "KOSPI",
+              "rsi14Prev": 27.851,
+              "prevClose": 59500,
+              "prevAmountKrw": 4971840350,
+              "quotedAt": "2026-10-25T23:58:39.192Z",
+              "expectedPrice": 57000,
+              "basePrice": 59500,
+              "expectedChgPct": -4.2,
+              "expectedVolume": 2287,
+              "phase": "311",
+              "expectedGapPct": -4.201680672268903,
+              "error": null
+            },
+            {
+              "code": "033500",
+              "name": "동성화인텍",
+              "market": "KOSDAQ",
+              "rsi14Prev": 28.022,
+              "prevClose": 13030,
+              "prevAmountKrw": 2135312840,
+              "quotedAt": "2026-10-25T23:58:41.281Z",
+              "expectedPrice": 12850,
+              "basePrice": 13030,
+              "expectedChgPct": -1.38,
+              "expectedVolume": 698,
+              "phase": "311",
+              "expectedGapPct": -1.3814274750575617,
+              "error": null
+            }
+          ],
+          "decisionReason": "",
+          "finishedAt": "2026-10-25T23:58:41.831Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:quote:part1",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-25T23:59:16.805Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "quote",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "quote",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-26",
+          "part": 1,
+          "startedAt": "2026-10-25T23:58:42.143Z",
+          "watchlist": {
+            "basedOn": "2026-10-23",
+            "generatedAt": "2026-10-24T03:44:12.181128+09:00",
+            "size": 63,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": [
+            {
+              "code": "017800",
+              "name": "현대엘리베이터",
+              "market": "KOSPI",
+              "rsi14Prev": 28.048,
+              "prevClose": 65800,
+              "prevAmountKrw": 4565753550,
+              "quotedAt": "2026-10-25T23:58:42.630Z",
+              "expectedPrice": 64000,
+              "basePrice": 65800,
+              "expectedChgPct": -2.74,
+              "expectedVolume": 1188,
+              "phase": "311",
+              "expectedGapPct": -2.7355623100303927,
+              "error": null
+            },
+            {
+              "code": "071050",
+              "name": "한국금융지주",
+              "market": "KOSPI",
+              "rsi14Prev": 28.049,
+              "prevClose": 145200,
+              "prevAmountKrw": 12788909150,
+              "quotedAt": "2026-10-25T23:58:43.468Z",
+              "expectedPrice": 141200,
+              "basePrice": 145200,
+              "expectedChgPct": -2.75,
+              "expectedVolume": 231,
+              "phase": "311",
+              "expectedGapPct": -2.754820936639113,
+              "error": null
+            },
+            {
+              "code": "000210",
+              "name": "DL",
+              "market": "KOSPI",
+              "rsi14Prev": 28.088,
+              "prevClose": 42500,
+              "prevAmountKrw": 2808669050,
+              "quotedAt": "2026-10-25T23:58:44.302Z",
+              "expectedPrice": 41500,
+              "basePrice": 42500,
+              "expectedChgPct": -2.35,
+              "expectedVolume": 75,
+              "phase": "311",
+              "expectedGapPct": -2.352941176470591,
+              "error": null
+            },
+            {
+              "code": "376900",
+              "name": "로킷헬스케어",
+              "market": "KOSDAQ",
+              "rsi14Prev": 28.259,
+              "prevClose": 16910,
+              "prevAmountKrw": 7665325730,
+              "quotedAt": "2026-10-25T23:58:46.357Z",
+              "expectedPrice": 16000,
+              "basePrice": 16910,
+              "expectedChgPct": -5.38,
+              "expectedVolume": 1329,
+              "phase": "311",
+              "expectedGapPct": -5.381431105854528,
+              "error": null
+            },
+            {
+              "code": "139130",
+              "name": "iM금융지주",
+              "market": "KOSPI",
+              "rsi14Prev": 28.339,
+              "prevClose": 15750,
+              "prevAmountKrw": 8650098945,
+              "quotedAt": "2026-10-25T23:58:47.180Z",
+              "expectedPrice": 15570,
+              "basePrice": 15750,
+              "expectedChgPct": -1.14,
+              "expectedVolume": 17,
+              "phase": "311",
+              "expectedGapPct": -1.1428571428571455,
+              "error": null
+            },
+            {
+              "code": "016380",
+              "name": "KG스틸",
+              "market": "KOSPI",
+              "rsi14Prev": 28.42,
+              "prevClose": 5080,
+              "prevAmountKrw": 2153702580,
+              "quotedAt": "2026-10-25T23:58:49.239Z",
+              "expectedPrice": 5010,
+              "basePrice": 5080,
+              "expectedChgPct": -1.38,
+              "expectedVolume": 2837,
+              "phase": "311",
+              "expectedGapPct": -1.3779527559055094,
+              "error": null
+            },
+            {
+              "code": "078930",
+              "name": "GS",
+              "market": "KOSPI",
+              "rsi14Prev": 28.627,
+              "prevClose": 85600,
+              "prevAmountKrw": 57474435400,
+              "quotedAt": "2026-10-25T23:58:51.303Z",
+              "expectedPrice": 83500,
+              "basePrice": 85600,
+              "expectedChgPct": -2.45,
+              "expectedVolume": 212,
+              "phase": "311",
+              "expectedGapPct": -2.453271028037385,
+              "error": null
+            },
+            {
+              "code": "138930",
+              "name": "BNK금융지주",
+              "market": "KOSPI",
+              "rsi14Prev": 28.692,
+              "prevClose": 13670,
+              "prevAmountKrw": 15453901700,
+              "quotedAt": "2026-10-25T23:58:53.369Z",
+              "expectedPrice": 13510,
+              "basePrice": 13670,
+              "expectedChgPct": -1.17,
+              "expectedVolume": 622,
+              "phase": "311",
+              "expectedGapPct": -1.1704462326261877,
+              "error": null
+            },
+            {
+              "code": "128940",
+              "name": "한미약품",
+              "market": "KOSPI",
+              "rsi14Prev": 28.713,
+              "prevClose": 361500,
+              "prevAmountKrw": 21549788750,
+              "quotedAt": "2026-10-25T23:58:54.199Z",
+              "expectedPrice": 349500,
+              "basePrice": 361500,
+              "expectedChgPct": -3.32,
+              "expectedVolume": 688,
+              "phase": "311",
+              "expectedGapPct": -3.319502074688796,
+              "error": null
+            },
+            {
+              "code": "071970",
+              "name": "HD현대마린엔진",
+              "market": "KOSPI",
+              "rsi14Prev": 28.736,
+              "prevClose": 36150,
+              "prevAmountKrw": 6213738000,
+              "quotedAt": "2026-10-25T23:58:56.272Z",
+              "expectedPrice": 35000,
+              "basePrice": 36150,
+              "expectedChgPct": -3.18,
+              "expectedVolume": 909,
+              "phase": "311",
+              "expectedGapPct": -3.18118948824343,
+              "error": null
+            },
+            {
+              "code": "035720",
+              "name": "카카오",
+              "market": "KOSPI",
+              "rsi14Prev": 28.899,
+              "prevClose": 29950,
+              "prevAmountKrw": 42828280575,
+              "quotedAt": "2026-10-25T23:58:58.355Z",
+              "expectedPrice": 29100,
+              "basePrice": 29950,
+              "expectedChgPct": -2.84,
+              "expectedVolume": 19915,
+              "phase": "311",
+              "expectedGapPct": -2.8380634390651083,
+              "error": null
+            },
+            {
+              "code": "175330",
+              "name": "JB금융지주",
+              "market": "KOSPI",
+              "rsi14Prev": 28.982,
+              "prevClose": 25150,
+              "prevAmountKrw": 6825607550,
+              "quotedAt": "2026-10-25T23:58:59.191Z",
+              "expectedPrice": 25200,
+              "basePrice": 25150,
+              "expectedChgPct": 0.2,
+              "expectedVolume": 627,
+              "phase": "311",
+              "expectedGapPct": 0.1988071570576455,
+              "error": null
+            },
+            {
+              "code": "006260",
+              "name": "LS",
+              "market": "KOSPI",
+              "rsi14Prev": 29.225,
+              "prevClose": 216500,
+              "prevAmountKrw": 33787785750,
+              "quotedAt": "2026-10-25T23:59:01.272Z",
+              "expectedPrice": 210000,
+              "basePrice": 216500,
+              "expectedChgPct": -3,
+              "expectedVolume": 531,
+              "phase": "311",
+              "expectedGapPct": -3.002309468822173,
+              "error": null
+            },
+            {
+              "code": "316140",
+              "name": "우리금융지주",
+              "market": "KOSPI",
+              "rsi14Prev": 29.461,
+              "prevClose": 30100,
+              "prevAmountKrw": 49490390800,
+              "quotedAt": "2026-10-25T23:59:03.356Z",
+              "expectedPrice": 30000,
+              "basePrice": 30100,
+              "expectedChgPct": -0.33,
+              "expectedVolume": 9168,
+              "phase": "311",
+              "expectedGapPct": -0.33222591362126463,
+              "error": null
+            },
+            {
+              "code": "008770",
+              "name": "호텔신라",
+              "market": "KOSPI",
+              "rsi14Prev": 29.473,
+              "prevClose": 35900,
+              "prevAmountKrw": 3031920300,
+              "quotedAt": "2026-10-25T23:59:04.194Z",
+              "expectedPrice": 35300,
+              "basePrice": 35900,
+              "expectedChgPct": -1.67,
+              "expectedVolume": 984,
+              "phase": "311",
+              "expectedGapPct": -1.671309192200554,
+              "error": null
+            },
+            {
+              "code": "204320",
+              "name": "HL만도",
+              "market": "KOSPI",
+              "rsi14Prev": 29.636,
+              "prevClose": 37350,
+              "prevAmountKrw": 6521459250,
+              "quotedAt": "2026-10-25T23:59:06.276Z",
+              "expectedPrice": 36350,
+              "basePrice": 37350,
+              "expectedChgPct": -2.68,
+              "expectedVolume": 1698,
+              "phase": "311",
+              "expectedGapPct": -2.677376171352075,
+              "error": null
+            },
+            {
+              "code": "005380",
+              "name": "현대차",
+              "market": "KOSPI",
+              "rsi14Prev": 29.746,
+              "prevClose": 295500,
+              "prevAmountKrw": 155082713000,
+              "quotedAt": "2026-10-25T23:59:08.342Z",
+              "expectedPrice": 286500,
+              "basePrice": 295500,
+              "expectedChgPct": -3.05,
+              "expectedVolume": 10245,
+              "phase": "311",
+              "expectedGapPct": -3.0456852791878153,
+              "error": null
+            },
+            {
+              "code": "064850",
+              "name": "에프앤가이드",
+              "market": "KOSDAQ",
+              "rsi14Prev": 29.795,
+              "prevClose": 15100,
+              "prevAmountKrw": 4868701740,
+              "quotedAt": "2026-10-25T23:59:09.171Z",
+              "expectedPrice": 15300,
+              "basePrice": 15100,
+              "expectedChgPct": 1.32,
+              "expectedVolume": 342,
+              "phase": "311",
+              "expectedGapPct": 1.324503311258285,
+              "error": null
+            },
+            {
+              "code": "006800",
+              "name": "미래에셋증권",
+              "market": "KOSPI",
+              "rsi14Prev": 29.807,
+              "prevClose": 24400,
+              "prevAmountKrw": 21768769375,
+              "quotedAt": "2026-10-25T23:59:11.253Z",
+              "expectedPrice": 23900,
+              "basePrice": 24400,
+              "expectedChgPct": -2.05,
+              "expectedVolume": 12074,
+              "phase": "311",
+              "expectedGapPct": -2.049180327868849,
+              "error": null
+            },
+            {
+              "code": "025980",
+              "name": "아난티",
+              "market": "KOSDAQ",
+              "rsi14Prev": 29.836,
+              "prevClose": 3945,
+              "prevAmountKrw": 3428843633,
+              "quotedAt": "2026-10-25T23:59:13.308Z",
+              "expectedPrice": 4050,
+              "basePrice": 3945,
+              "expectedChgPct": 2.66,
+              "expectedVolume": 22695,
+              "phase": "311",
+              "expectedGapPct": 2.6615969581748944,
+              "error": null
+            },
+            {
+              "code": "079550",
+              "name": "LIG디펜스앤에어로스페이스",
+              "market": "KOSPI",
+              "rsi14Prev": 29.861,
+              "prevClose": 475500,
+              "prevAmountKrw": 51822382000,
+              "quotedAt": "2026-10-25T23:59:14.193Z",
+              "expectedPrice": 434000,
+              "basePrice": 475500,
+              "expectedChgPct": -8.73,
+              "expectedVolume": 840,
+              "phase": "311",
+              "expectedGapPct": -8.727655099894848,
+              "error": null
+            },
+            {
+              "code": "440110",
+              "name": "파두",
+              "market": "KOSDAQ",
+              "rsi14Prev": 29.87,
+              "prevClose": 46950,
+              "prevAmountKrw": 30850067925,
+              "quotedAt": "2026-10-25T23:59:16.252Z",
+              "expectedPrice": 46350,
+              "basePrice": 46950,
+              "expectedChgPct": -1.28,
+              "expectedVolume": 797,
+              "phase": "311",
+              "expectedGapPct": -1.2779552715655007,
+              "error": null
+            },
+            {
+              "code": "093370",
+              "name": "후성",
+              "market": "KOSPI",
+              "rsi14Prev": 29.892,
+              "prevClose": 10400,
+              "prevAmountKrw": 11745265275,
+              "quotedAt": null,
+              "expectedPrice": null,
+              "basePrice": null,
+              "expectedChgPct": null,
+              "expectedVolume": null,
+              "phase": "",
+              "expectedGapPct": null,
+              "error": "quote_deadline"
+            }
+          ],
+          "decisionReason": "",
+          "finishedAt": "2026-10-25T23:59:16.802Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:c30_buy:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-26T06:01:02.513Z",
+        "targetHm": 1500,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "c30_buy",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "c30_buy",
+          "strategy": "close30_dip",
+          "strategyVersion": "close30_dip_v1",
+          "date": "2026-10-26",
+          "code": "233740",
+          "rule": {
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "th": 0,
+            "version": "close30_dip_v1",
+            "budgetMultiple": 3
+          },
+          "ruleSource": "main-config",
+          "startedAt": "2026-10-26T06:00:48.040Z",
+          "quote": {
+            "price": 5000,
+            "chgRate": -4.85,
+            "open": 5080,
+            "at": "2026-10-26T06:00:51.325Z"
+          },
+          "sofarPct": -4.85,
+          "signal": true,
+          "order": {
+            "signalId": "close30:2026-10-26:233740:buy",
+            "strategy": "close30_dip",
+            "strategyVersion": "close30_dip_v1",
+            "date": "2026-10-26",
+            "side": "buy",
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "qty": 499,
+            "submittedAt": "2026-10-26T06:00:59.218Z",
+            "vts": {
+              "ok": true,
+              "env": "vts",
+              "priceType": "market",
+              "orderNo": "0000033454",
+              "msg": "모의투자 매수주문이 완료 되었습니다.",
+              "httpStatus": 200
+            },
+            "sizing": {
+              "qty": 499,
+              "planned": 1200,
+              "capped": true,
+              "cash": 4197989,
+              "note": "계좌 현금에 맞춰 1200→499주",
+              "lookup": [
+                {
+                  "ms": 5677,
+                  "limitMs": 6000
+                }
+              ]
+            }
+          },
+          "decisionReason": "price_vs_prev_close<0%",
+          "finishedAt": "2026-10-26T06:01:02.511Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:c30_sell:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-26T06:22:01.786Z",
+        "targetHm": 1521,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "c30_sell",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "c30_sell",
+          "strategy": "close30_dip",
+          "strategyVersion": "close30_dip_v1",
+          "date": "2026-10-26",
+          "code": "233740",
+          "startedAt": "2026-10-26T06:21:59.684Z",
+          "boughtQty": 499,
+          "alreadySoldQty": 0,
+          "order": {
+            "signalId": "close30:2026-10-26:233740:sell",
+            "strategy": "close30_dip",
+            "strategyVersion": "close30_dip_v1",
+            "date": "2026-10-26",
+            "side": "sell",
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "qty": 499,
+            "submittedAt": "2026-10-26T06:22:01.165Z",
+            "vts": {
+              "ok": true,
+              "env": "vts",
+              "priceType": "market",
+              "orderNo": "0000035317",
+              "msg": "모의투자 매도주문이 완료 되었습니다.",
+              "httpStatus": 200
+            }
+          },
+          "decisionReason": "close_exit",
+          "finishedAt": "2026-10-26T06:22:01.784Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:close:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-26T06:21:59.116Z",
+        "targetHm": 1521,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "close",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "close",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-26",
+          "startedAt": "2026-10-26T06:21:49.013Z",
+          "positions": [
+            {
+              "code": "214450",
+              "name": "파마리서치",
+              "buy": {
+                "qty": 9,
+                "avgPrice": 235500,
+                "orderNos": [
+                  "0000002062"
+                ],
+                "orderTimes": [
+                  "085920"
+                ]
+              },
+              "sell": {
+                "qty": 0,
+                "avgPrice": null,
+                "orderNos": [],
+                "orderTimes": []
+              },
+              "openQty": 9
+            },
+            {
+              "code": "079550",
+              "name": "LIG디펜스앤에어로스페이스",
+              "buy": {
+                "qty": 4,
+                "avgPrice": 439000,
+                "orderNos": [
+                  "0000002071"
+                ],
+                "orderTimes": [
+                  "085923"
+                ]
+              },
+              "sell": {
+                "qty": 0,
+                "avgPrice": null,
+                "orderNos": [],
+                "orderTimes": []
+              },
+              "openQty": 4
+            },
+            {
+              "code": "267260",
+              "name": "HD현대일렉트릭",
+              "buy": {
+                "qty": 4,
+                "avgPrice": 463500,
+                "orderNos": [
+                  "0000002076"
+                ],
+                "orderTimes": [
+                  "085926"
+                ]
+              },
+              "sell": {
+                "qty": 0,
+                "avgPrice": null,
+                "orderNos": [],
+                "orderTimes": []
+              },
+              "openQty": 4
+            }
+          ],
+          "orders": [
+            {
+              "signalId": "gapdown:2026-10-26:214450:sell",
+              "strategy": "opening_gapdown",
+              "strategyVersion": "opening_gapdown_v1",
+              "date": "2026-10-26",
+              "side": "sell",
+              "code": "214450",
+              "name": "파마리서치",
+              "qty": 9,
+              "submittedAt": "2026-10-26T06:21:51.208Z",
+              "vts": {
+                "ok": true,
+                "env": "vts",
+                "priceType": "market",
+                "orderNo": "0000035310",
+                "msg": "모의투자 매도주문이 완료 되었습니다.",
+                "httpStatus": 200
+              }
+            },
+            {
+              "signalId": "gapdown:2026-10-26:079550:sell",
+              "strategy": "opening_gapdown",
+              "strategyVersion": "opening_gapdown_v1",
+              "date": "2026-10-26",
+              "side": "sell",
+              "code": "079550",
+              "name": "LIG디펜스앤에어로스페이스",
+              "qty": 4,
+              "submittedAt": "2026-10-26T06:21:54.848Z",
+              "vts": {
+                "ok": true,
+                "env": "vts",
+                "priceType": "market",
+                "orderNo": "0000035313",
+                "msg": "모의투자 매도주문이 완료 되었습니다.",
+                "httpStatus": 200
+              }
+            },
+            {
+              "signalId": "gapdown:2026-10-26:267260:sell",
+              "strategy": "opening_gapdown",
+              "strategyVersion": "opening_gapdown_v1",
+              "date": "2026-10-26",
+              "side": "sell",
+              "code": "267260",
+              "name": "HD현대일렉트릭",
+              "qty": 4,
+              "submittedAt": "2026-10-26T06:21:57.960Z",
+              "vts": {
+                "ok": true,
+                "env": "vts",
+                "priceType": "market",
+                "orderNo": "0000035314",
+                "msg": "모의투자 매도주문이 완료 되었습니다.",
+                "httpStatus": 200
+              }
+            }
+          ],
+          "finishedAt": "2026-10-26T06:21:59.113Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:etf_buy:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-26T06:22:06.757Z",
+        "targetHm": 1521,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "etf_buy",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "etf_buy",
+          "strategy": "etf_dip_overnight",
+          "strategyVersion": "g_etf_th4.75",
+          "date": "2026-10-26",
+          "code": "233740",
+          "rule": {
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "dropMaxPct": -4.75,
+            "version": "g_etf_th4.75",
+            "budgetMultiple": 3
+          },
+          "ruleSource": "main-config",
+          "startedAt": "2026-10-26T06:22:02.491Z",
+          "quote": {
+            "expectedPrice": 4910,
+            "basePrice": 5255,
+            "expectedChgPct": -6.57,
+            "phase": "121",
+            "time": "152203"
+          },
+          "dropPct": -6.565176022835395,
+          "signal": true,
+          "order": {
+            "signalId": "etf_dip:2026-10-26:233740:buy",
+            "strategy": "etf_dip_overnight",
+            "strategyVersion": "g_etf_th4.75",
+            "date": "2026-10-26",
+            "side": "buy",
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "qty": 204,
+            "submittedAt": "2026-10-26T06:22:06.000Z",
+            "vts": {
+              "ok": true,
+              "env": "vts",
+              "priceType": "market",
+              "orderNo": "0000035331",
+              "msg": "모의투자 매수주문이 완료 되었습니다.",
+              "httpStatus": 200
+            },
+            "sizing": {
+              "qty": 204,
+              "planned": 1221,
+              "capped": true,
+              "cash": 1715106,
+              "note": "계좌 현금에 맞춰 1221→204주",
+              "lookup": [
+                {
+                  "ms": 1588,
+                  "limitMs": 6000
+                }
+              ]
+            }
+          },
+          "decisionReason": "expected_close_vs_base<=-4.75%",
+          "finishedAt": "2026-10-26T06:22:06.753Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:c30_reconcile:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-26T06:40:53.166Z",
+        "targetHm": 1540,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "c30_reconcile",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "c30_reconcile",
+          "strategy": "close30_dip",
+          "strategyVersion": "close30_dip_v1",
+          "date": "2026-10-26",
+          "code": "233740",
+          "fills": {
+            "buy": {
+              "qty": 499,
+              "avgPrice": 5000,
+              "orderNos": [
+                "0000033454"
+              ],
+              "orderTimes": [
+                "150102"
+              ]
+            },
+            "sell": {
+              "qty": 499,
+              "avgPrice": 4900,
+              "orderNos": [
+                "0000035317"
+              ],
+              "orderTimes": [
+                "152201"
+              ]
+            }
+          },
+          "finishedAt": "2026-10-26T06:40:53.164Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:etf_reconcile:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-26T06:40:52.392Z",
+        "targetHm": 1540,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "etf_reconcile",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "etf_reconcile",
+          "strategy": "etf_dip_overnight",
+          "strategyVersion": "etf_dip_overnight_v1",
+          "date": "2026-10-26",
+          "code": "233740",
+          "fills": {
+            "closeBuy": {
+              "qty": 204,
+              "avgPrice": 4900,
+              "orderNos": [
+                "0000035331"
+              ],
+              "orderTimes": [
+                "152206"
+              ]
+            },
+            "openSell": {
+              "qty": 176,
+              "avgPrice": 5080,
+              "orderNos": [
+                "0000001971"
+              ],
+              "orderTimes": [
+                "085738"
+              ]
+            }
+          },
+          "finishedAt": "2026-10-26T06:40:52.391Z"
+        }
+      },
+      {
+        "id": "2026-10-26:opening_gapdown:reconcile:all",
+        "date": "2026-10-26",
+        "capturedAt": "2026-10-26T06:40:51.220Z",
+        "targetHm": 1540,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "reconcile",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "reconcile",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-26",
+          "startedAt": "2026-10-26T06:40:49.599Z",
+          "positions": [
+            {
+              "code": "214450",
+              "name": "파마리서치",
+              "buy": {
+                "qty": 9,
+                "avgPrice": 235500,
+                "orderNos": [
+                  "0000002062"
+                ],
+                "orderTimes": [
+                  "085920"
+                ]
+              },
+              "sell": {
+                "qty": 9,
+                "avgPrice": 229500,
+                "orderNos": [
+                  "0000035310"
+                ],
+                "orderTimes": [
+                  "152151"
+                ]
+              },
+              "openQty": 0
+            },
+            {
+              "code": "079550",
+              "name": "LIG디펜스앤에어로스페이스",
+              "buy": {
+                "qty": 4,
+                "avgPrice": 439000,
+                "orderNos": [
+                  "0000002071"
+                ],
+                "orderTimes": [
+                  "085923"
+                ]
+              },
+              "sell": {
+                "qty": 4,
+                "avgPrice": 429000,
+                "orderNos": [
+                  "0000035313"
+                ],
+                "orderTimes": [
+                  "152155"
+                ]
+              },
+              "openQty": 0
+            },
+            {
+              "code": "267260",
+              "name": "HD현대일렉트릭",
+              "buy": {
+                "qty": 4,
+                "avgPrice": 463500,
+                "orderNos": [
+                  "0000002076"
+                ],
+                "orderTimes": [
+                  "085926"
+                ]
+              },
+              "sell": {
+                "qty": 4,
+                "avgPrice": 447000,
+                "orderNos": [
+                  "0000035314"
+                ],
+                "orderTimes": [
+                  "152158"
+                ]
+              },
+              "openQty": 0
+            }
+          ],
+          "orders": [],
+          "finishedAt": "2026-10-26T06:40:51.219Z"
+        }
+      }
+    ]
+  },
+  "archivedAt": "2026-10-27T01:17:48+09:00",
+  "source": "cloudflare-opening-scheduler-durable-ledger"
+}

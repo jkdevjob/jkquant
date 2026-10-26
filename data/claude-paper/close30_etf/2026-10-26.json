@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-26",
+  "strategy": "⑤ 코스닥150 레버리지 장 마감 30분 반등 (실험)",
+  "strategyVersion": "close30_dip_v1",
+  "params": {
+    "code": "233740",
+    "th": 0.0
+  },
+  "action": "trade",
+  "pnlPct": -2.080000000000002,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "KODEX 코스닥150레버리지",
+      "code": "233740",
+      "entryTime": "15:00",
+      "entryPrice": 5000,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 4900,
+      "qty": 1200,
+      "pnlPct": -2.080000000000002,
+      "vtsOk": true,
+      "signal": {
+        "at": "15:01:02",
+        "price": 5000,
+        "sofarPct": -4.85,
+        "th": 0,
+        "version": "close30_dip_v1",
+        "reason": "price_vs_prev_close<0%"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "15:00 전일 대비 -4.85% → 매수",
+  "liveVersion": "close30_dip_v1",
+  "recordedAt": "2026-10-27T01:18:57.114224+09:00"
+}
