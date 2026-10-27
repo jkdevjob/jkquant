@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-27",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": -0.9943303228754391,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "HD현대에너지솔루션",
+      "code": "322000",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 90000,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 84300,
+      "qty": 0,
+      "pnlPct": -6.896666666666669,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:31",
+        "expectedPrice": 88300,
+        "basePrice": 96300,
+        "expectedGapPct": -8.307372793354107,
+        "rsi14Prev": 29.413,
+        "qualified": 12,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "HD현대마린솔루션",
+      "code": "443060",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 169700,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 176700,
+      "qty": 0,
+      "pnlPct": 3.7181437831467337,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:31",
+        "expectedPrice": 160000,
+        "basePrice": 169600,
+        "expectedGapPct": -5.660377358490565,
+        "rsi14Prev": 24.937,
+        "qualified": 12,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "HD현대마린엔진",
+      "code": "071970",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 35250,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 35550,
+      "qty": 0,
+      "pnlPct": 0.1955319148936182,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:31",
+        "expectedPrice": 33800,
+        "basePrice": 34950,
+        "expectedGapPct": -3.290414878397707,
+        "rsi14Prev": 26.42,
+        "qualified": 12,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "메인 매매일(통과 12종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-10-28T00:33:33.675311+09:00"
+}
