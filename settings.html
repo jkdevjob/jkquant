@@ -23,7 +23,7 @@ main{padding:22px 0 70px}.hero{margin-bottom:14px}.hero h2{font-size:23px;margin
 </style>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js" data-guard="1"></script>
-<script src="/jk-ui.js?v=1.0.6" defer></script>
+<script src="/jk-ui.js?v=1.1.0" defer></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
@@ -45,7 +45,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">SETTINGS</div><h1>JK <span class="v">설정</span> <span style="font-size:12px;font-weight:400;color:var(--faint)">v1.7.0</span></h1></div>
+  <div class="brand"><div class="kicker">SETTINGS</div><h1>JK <span class="v">설정</span> <span style="font-size:12px;font-weight:400;color:var(--faint)">v1.7.1</span></h1></div>
   <div class="jkmenu">
     <button class="jkmenu-btn" aria-label="메뉴">☰</button>
     <div class="jkmenu-pop" hidden>
@@ -59,6 +59,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
       <a href="/ipo"><span class="mi">🎯</span>공모주</a>
       <a href="/realestate"><span class="mi">🏢</span>부동산</a>
       <a href="/job"><span class="mi">💼</span>JOB</a>
+      <a href="/workout"><span class="mi">⏱️</span>운동 타이머</a>
       <a href="/settings" class="cur"><span class="mi">⚙️</span>설정</a>
       <a href="/admin"><span class="mi">👤</span>관리자</a>
     </div>

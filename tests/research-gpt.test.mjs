@@ -71,8 +71,8 @@ async function hiddenMenuValues(src,html){
     assert.equal(d.api.menuAccess(approved,d.api.normalizeMenuConfig(old),'/scalping').allowed,false,'연구 소유자 제한 유지');
   }
 }
-test('11페이지 전체메뉴: 텐배거는 인증·대기 한도·옛 DB 설정과 무관하게 숨김, 기존 접근/다른 메뉴 유지',async()=>{
-  const pages=fs.readdirSync('.').filter(x=>x.endsWith('.html'));assert.equal(pages.length,11);
+test('12페이지 전체메뉴: 텐배거는 인증·대기 한도·옛 DB 설정과 무관하게 숨김, 기존 접근/다른 메뉴 유지',async()=>{
+  const pages=fs.readdirSync('.').filter(x=>x.endsWith('.html'));assert.equal(pages.length,12);
   for(const page of pages)await hiddenMenuValues(access,fs.readFileSync(page,'utf8'));
   await assert.rejects(()=>hiddenMenuValues(access.replace(',navHidden:true',''),ui),assert.AssertionError,'숨김 정책 제거 변이 차단');
   const css="return '.jkmenu-pop a[href=\"'+x.path+'\"]{display:none!important}';";

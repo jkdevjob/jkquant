@@ -24,6 +24,7 @@
     {path:'/ipo',label:'공모주',mode:'public',order:70},
     {path:'/realestate',label:'부동산',mode:'public',order:75},
     {path:'/job',label:'JOB',mode:'public',order:80},
+    {path:'/workout',label:'운동 타이머',mode:'public',order:82,after:'/job'},
     {path:'/settings',label:'설정',mode:'public',order:85},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
@@ -49,7 +50,7 @@
     try{ p=new URL(p, location.origin).pathname; }catch(e){}
     p=p.replace(/\/+$/,'')||'/';
     var map={'/index.html':'/','/plan.html':'/plan','/backtest.html':'/backtest','/scalping.html':'/scalping',
-             '/claude.html':'/claude','/tenbagger.html':'/tenbagger','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/settings.html':'/settings','/admin.html':'/admin'};
+             '/claude.html':'/claude','/tenbagger.html':'/tenbagger','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/workout.html':'/workout','/settings.html':'/settings','/admin.html':'/admin'};
     return map[p]||p;
   }
   function menuDefaults(){

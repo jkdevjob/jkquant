@@ -2,13 +2,13 @@ name: 검증
 
 # 배포 전에 반드시 초록이어야 한다.
 # PR 작업 중 매 커밋마다 검증을 재실행하지 않는다.
-# Draft PR에서 수정/정리를 끝낸 뒤 Ready for review로 전환할 때 1회 검증하고,
+# 완성된 일반 PR을 처음 열거나 Draft를 Ready for review로 전환할 때 1회 검증하고,
 # main 반영 후에는 최종 상태를 다시 1회 검증한다. 필요할 때만 수동 실행할 수 있다.
 on:
   push:
     branches: [main]
   pull_request:
-    types: [ready_for_review]
+    types: [opened, ready_for_review]
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   check:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,6 +26,9 @@ jobs:
 
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
+
+      - name: 운동 타이머 · 경계 시간 · 계정 저장 · 메뉴 및 변이 검사
+        run: node --test tests/workout.test.mjs
 
       - name: 종가 당일/익일 시가 · 모든 그림자 이력 · 시간적 오염방지 검사
         run: |
