@@ -1,0 +1,581 @@
+{
+  "schema": 1,
+  "date": "2026-10-28",
+  "preparedAt": "2026-10-27T22:11:08Z",
+  "mainSha": "53cf43bbdfbe14cb04590ec2ca086ff6002b7775",
+  "dataSha": "aee047180af4190398f2dbc47d35cb14c15cfc61",
+  "previousReportDate": "2026-10-27",
+  "previousReportCommit": "750674a4837dac394b2c930760ddda8e55e31a02",
+  "decision": "메인·운영 규칙·실주문·계좌·장부·main 코드·PR·배포 변경 없음. 집중 09:20 제한 가설은 표본 관문을 넘었지만 음의 기대값과 최악일 악화로 채택 보류. 새 그림자 버전 제안/생성 없음.",
+  "performanceScope": "10/1 이후의 비용 후 모의·연구 기록. baseline은 장중 장부/운영 재구성/일부 연구이관이 혼재하고, daily1-shadow는 설계종료9/30·전향시작10/1 고정 규칙 표본이다. 일/거래 수는 독립 검증 폴드가 아니며, 이번 검토의 opening/daytrading/SOXL 정식 WF OOS 완료는0구간이다.",
+  "baseline": {
+    "opening": {
+      "latestDate": "2026-10-27",
+      "dailyNetPct": -0.41872881200259787,
+      "trades": 76,
+      "recordDays": 11,
+      "averageDailyPct": -0.43653278458181854,
+      "profitFactor": 0.4698044769903651,
+      "mddPct": -5.407310304508983,
+      "worstDayPct": -2.5497220257425637,
+      "plus1Days": 0,
+      "plus5Weeks": 0,
+      "weekStart": "2026-10-26",
+      "weeklyPct": -0.027965292656173535,
+      "targetGapPp": 5.027965292656173,
+      "quality": "운영 재구성 포함; 27일 매수 원본13/24·VTS일치0/24; 일평균 분모=매매일"
+    },
+    "daytrading": {
+      "latestDate": "2026-10-27",
+      "dailyNetPct": -1.2499999999999971,
+      "trades": 49,
+      "recordDays": 18,
+      "averageDailyPct": -0.5386604340798596,
+      "profitFactor": 0.3758355575393759,
+      "mddPct": -9.974739080013439,
+      "worstDayPct": -1.2500000000000009,
+      "plus1Days": 0,
+      "plus5Weeks": 0,
+      "weekStart": "2026-10-26",
+      "weeklyPct": -2.4843749999999942,
+      "targetGapPp": 7.484374999999995,
+      "quality": "장중 모의장부 우선; 27일 EOD 재구성3/3일치·VTS0/3; 일평균 분모=API기록일"
+    },
+    "crypto": {
+      "latestCompletedDate": "2026-10-27",
+      "latestTradeDate": "2026-10-24",
+      "dailyNetPct": 0,
+      "noTrade": true,
+      "trades": 14,
+      "recordDays": 14,
+      "averageDailyPct": -0.1303505099141689,
+      "profitFactor": 0.4554080766896886,
+      "mddPct": -2.5030898896783116,
+      "worstDayPct": -0.6400000000000005,
+      "plus1Days": 0,
+      "plus5Weeks": 0,
+      "weekStart": "2026-10-26",
+      "weeklyPct": 0,
+      "targetGapPp": 5,
+      "quality": "26~27일무매매는완료API확인; 누적Durabletimeout으로CSV24일까지; 평균분모=매매일; 28일은미완료"
+    },
+    "soxl": {
+      "latestMarketDate": "2026-10-27",
+      "displayKstDate": "2026-10-28",
+      "dailyNetPct": 2.200000000000002,
+      "trades": 9,
+      "recordDays": 19,
+      "averageDailyPct": -0.28421052631579025,
+      "profitFactor": 0.44897959183673425,
+      "mddPct": -9.397870668170306,
+      "worstDayPct": -1.4000000000000121,
+      "plus1Days": 2,
+      "plus5Weeks": 0,
+      "weekStart": "2026-10-26",
+      "weeklyPct": 4.448399999999997,
+      "targetGapPp": 0.5516000000000032,
+      "quality": "완료장부우선; 연구CSV26일까지·27일재생검증미완료; 평균분모=API기록일"
+    }
+  },
+  "shadow": {
+    "opening": {
+      "version": "opening_gapdown_reclaim_v1",
+      "sourceTo": "2026-10-27",
+      "latestNetPct": 0,
+      "days": 16,
+      "trades": 13,
+      "avgDailyPct": -0.6177021458797889,
+      "profitFactor": 0.036188890158015456,
+      "mddPct": -9.477182552109497,
+      "worstTradeDayPct": -2.0264693123075346,
+      "plus1Days": 0,
+      "plus5Weeks": 0,
+      "weeklyPct": 0,
+      "targetGapPp": 5
+    },
+    "daytrading": {
+      "version": "day_rs_vwap_reclaim_v1",
+      "sourceTo": "2026-10-27",
+      "latestNetPct": -1.0499999999999934,
+      "days": 17,
+      "trades": 51,
+      "avgDailyPct": -0.24076038993534468,
+      "profitFactor": 0.6345419273118786,
+      "mddPct": -5.1174580081085,
+      "worstTradeDayPct": -1.0500000000000007,
+      "plus1Days": 3,
+      "plus5Weeks": 0,
+      "weeklyPct": -2.088974999999982,
+      "targetGapPp": 7.088974999999982
+    },
+    "crypto": {
+      "version": "btc_flush_reclaim_v1",
+      "sourceTo": "2026-10-26",
+      "latestNetPct": 0,
+      "days": 24,
+      "trades": 1,
+      "avgDailyPct": -0.01615821259388703,
+      "profitFactor": 0,
+      "mddPct": -0.38779710225328445,
+      "worstTradeDayPct": -0.3877971022532888,
+      "plus1Days": 0,
+      "plus5Weeks": 0,
+      "weeklyPct": 0,
+      "weeklyCoverage": "26일만;27일미수집",
+      "targetGapPp": 5
+    },
+    "soxl": {
+      "version": "soxl_power_hour_v1",
+      "sourceTo": "2026-10-26",
+      "latestNetPct": 0,
+      "days": 18,
+      "trades": 1,
+      "avgDailyPct": 0.07284276915062234,
+      "profitFactor": null,
+      "reportedProfitFactor": 999,
+      "profitFactorReason": "손실관측0건·999는상한표시",
+      "mddPct": 0,
+      "worstTradeDayPct": 1.3111698447112021,
+      "plus1Days": 1,
+      "plus5Weeks": 0,
+      "weeklyPct": 0,
+      "weeklyCoverage": "미국26일만;27일미수집",
+      "targetGapPp": 5
+    }
+  },
+  "newTrades": {
+    "opening": {
+      "date": "2026-10-27",
+      "paperTrades": 24,
+      "wins": 8,
+      "losses": 16,
+      "netDailyPct": -0.41872881200259787,
+      "liveBuySignalRecords": 13,
+      "liveSellEvents": 22,
+      "scans": 27,
+      "partialScans": 0,
+      "vtsCompleteMatches": 0,
+      "note": "24건 전체의 장중 매수원본은 남아 있지 않다. 원본 신호 누락을 재구성으로 대체하지 않음."
+    },
+    "daytrading": {
+      "date": "2026-10-27",
+      "strategyVersion": "daytrading_vwap_breakout_v1@baseline",
+      "trades": [
+        {
+          "name": "루닛",
+          "entry": "10:01",
+          "exit": "10:02",
+          "pnlPct": -1.25
+        },
+        {
+          "name": "비나텍",
+          "entry": "10:03",
+          "exit": "10:59",
+          "pnlPct": -1.25
+        },
+        {
+          "name": "테스",
+          "entry": "10:04",
+          "exit": "11:37",
+          "pnlPct": -1.25
+        }
+      ],
+      "netDailyPct": -1.25,
+      "slots": 3,
+      "archivedLiveEodExactMatches": 3,
+      "vtsCompleteMatches": 0
+    },
+    "shadowDaytrading": {
+      "date": "2026-10-27",
+      "trades": [
+        {
+          "name": "주성엔지니어링",
+          "entry": "10:56",
+          "exit": "11:03",
+          "pnlPct": -1.05
+        },
+        {
+          "name": "원익IPS",
+          "entry": "11:25",
+          "exit": "11:38",
+          "pnlPct": -1.05
+        },
+        {
+          "name": "이수페타시스",
+          "entry": "11:25",
+          "exit": "11:37",
+          "pnlPct": -1.05
+        }
+      ],
+      "netDailyPct": -1.05
+    },
+    "crypto": {
+      "completedDate": "2026-10-27",
+      "action": "no_trade",
+      "netDailyPct": 0,
+      "currentDate": "2026-10-28",
+      "current": "00:20 진입·01:20 청산 알림은 있으나 세션 미완료. 일손익과 누적에 미포함."
+    },
+    "soxl": {
+      "marketDate": "2026-10-27",
+      "displayKstDate": "2026-10-28",
+      "strategyVersion": "soxl_orb_v1@baseline",
+      "signalTimeEt": "11:10",
+      "entryTimeEt": "11:15",
+      "entryPrice": 98.2699966430664,
+      "exitTimeEt": "12:00",
+      "exitPrice": 100.6284765625,
+      "reason": "take_profit",
+      "roundTripFrictionPct": 0.2,
+      "pnlPct": 2.200000000000002,
+      "quality": "daily/history 공개API가 동일 완료 모의장부로 일치. 27일 연구 CSV 재생은 아직없음; 독립 체결/거래소 원천 검증 아님."
+    }
+  },
+  "focusedReview": {
+    "hypothesis": "시초가 진입을 09:20 KST까지로 제한하면 비용 후 손실이 줄어드는가?",
+    "predeclaredCriteria": {
+      "gapPct": [
+        2,
+        7
+      ],
+      "exitTime": "09:30 KST",
+      "fixedCostPct": 0.23,
+      "fallbackSlippage": "편도2.5호가. VTS완전일치7건으로 최소30건 미달이므로 실측비용으로 보정하지 않음.",
+      "marketRegime": "상승/하락/혼조의 신호시각 지수분봉으로 사전 구분해야 함. 이번 실행에는 동일시각 패널이 없어 국면별 검증 blocked.",
+      "capital": "각 날짜 같은 총자본; 실제 앱 dailyRisk의 시초가 체결종목 동일가중·무매매0 규약",
+      "sampleGate": "보관20일·기준50거래·후보30거래, 전체 거래당 개선0.10%p·최근20일0.05%p; 메인제안 전 선두7연속 및 위험/시간순검증 관문 유지",
+      "oos": "10/1후 시간순 자료만 별도 비교. 후보를 보고 고른 결과를 독립 OOS로 부르지 않음."
+    },
+    "method": "확인한 main의 scripts/nightly_scalping_research.py 원본 집계기를 scalping-data 불변 opening-history와 signal-outcomes로 재실행. 네 전략의 variants와 후보 core 수치가 저장 nightly와 일치했다. 신호·체결은 새로 만들지 않았고 별도 간이 엔진/임의 가격을 쓰지 않았다. 동일19보관일의 기존 거래는 main functions/api/scalping-history.js dailyRisk로만 집계했다.",
+    "baseline": {
+      "days": 19,
+      "trades": 76,
+      "averageDailyPct": -0.2527295068631581,
+      "averageTradePct": -0.34777006361345497,
+      "profitFactor": 0.4698044769903649,
+      "mddPct": -5.407310304508983,
+      "worstDayPct": -2.5497220257425637,
+      "weeklyPct": -0.027965292656173535
+    },
+    "candidate": {
+      "name": "entry_by_0920",
+      "days": 19,
+      "trades": 48,
+      "newTrades": 19,
+      "averageDailyPct": -0.10994860548036044,
+      "averageTradePct": -0.19874560369453328,
+      "profitFactor": 0.6541585566495133,
+      "mddPct": -3.1095129990355463,
+      "worstDayPct": -3.0691167192429005,
+      "weeklyPct": -0.07078403832454505
+    },
+    "result": "29→48건으로 최소 거래 수는 충족했으나, 일평균 음수·PF1미만·최악일 악화라 채택 보류. 새 신호엔진 시험/새 전향독립 표본은 아님.",
+    "secondaryExistingCandidate": {
+      "name": "combo_pb05_e0920",
+      "rule": "기존 재돌파 중 눌림0.3~0.5%,09:20까지진입·09:30청산",
+      "days": 19,
+      "trades": 37,
+      "averageDailyPct": 0.1696403952251987,
+      "profitFactor": 1.2468231960456675,
+      "mddPct": -0.3963993012607303,
+      "worstDayPct": -0.3963993012607399,
+      "leaderSessions": 1,
+      "requiredLeaderSessions": 7,
+      "decision": "기존 고정 그림자 관찰만 유지. 사후 순위와19일 집계를 새 독립검증으로 인정하거나 운영반영하지 않음."
+    },
+    "existingDaytradingGate": {
+      "name": "combo_slope15_e1400",
+      "rule": "기존 VWAP 기울기0.15 이상·14:00까지진입",
+      "leaderSessions": 7,
+      "requiredLeaderSessions": 7,
+      "eligibleDays": 19,
+      "daysNeededFirstFold": 25,
+      "trainDays": 20,
+      "testDays": 5,
+      "completedFolds": 0,
+      "candidateProfitFactor": 0.49925907353932936,
+      "baselineProfitFactor": 0.3164243779167646,
+      "decision": "선두 횟수만 충족. 기존 표본·검증·위험·점수 관문 미충족이므로 승격 보류."
+    },
+    "retiredNotRevived": [
+      {
+        "strategy": "opening",
+        "name": "amount_1.5",
+        "date": "2026-10-22",
+        "reason": "검증우위 음수·점수40미만 반복"
+      },
+      {
+        "strategy": "opening",
+        "name": "vol_1.5",
+        "date": "2026-10-23",
+        "reason": "검증우위 음수·점수40미만 반복"
+      },
+      {
+        "strategy": "daytrading",
+        "name": "stop_0.8",
+        "date": "2026-10-19",
+        "reason": "위험조건 반복 실패"
+      }
+    ],
+    "nextCondition": "원본 누락11건과 신호시각 시장국면 패널 확보 후 같은 기간·비용으로 대조. 데이는25유효일 이후 첫 WF를 기다림. 필터/표본/비용 기준 완화 없음."
+  },
+  "tenbagger": {
+    "initialAsOf": "2026-10-08",
+    "initialRegisteredAt": "2026-10-13T06:39:10.172275+00:00",
+    "strategyVersion": "1.0.0",
+    "asOf": "2026-10-26",
+    "generatedAt": "2026-10-27T15:57:35.001066+00:00",
+    "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+    "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+    "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+    "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5",
+    "upstreamCommit": "d911b38e892bfb01f00fbc11381adda64944f4c7",
+    "combinedSha256": "03f1c8f64b4625e7072c3029ca489237bd4a70643dd334f410ca2d8b36ffe6c7",
+    "hashChecks": {
+      "rules": true,
+      "engineAgainstMain": true,
+      "indicators": true,
+      "universeFilter": true,
+      "combinedInputMetadata": true,
+      "rawParquetRedownloaded": false
+    },
+    "newRegistrations": 1,
+    "newRegistration": {
+      "name": "미래에셋생명",
+      "pattern": "trend200",
+      "signalDate": "2026-10-26",
+      "registeredAt": "2026-10-27T15:57:35.001066+00:00",
+      "registeredDate": "2026-10-28",
+      "entryDate": null
+    },
+    "newEntries": 21,
+    "registrations": 125,
+    "uniqueSymbols": 117,
+    "entered": 122,
+    "waiting": 3,
+    "closedHold1260": 0,
+    "closedStopTrail": 19,
+    "newClosedHold1260": 0,
+    "newClosedStopTrail": 4,
+    "newClosedReturns": [
+      {
+        "name": "동국산업",
+        "pattern": "breakout252",
+        "netPct": -21.014815425634247
+      },
+      {
+        "name": "한국알콜",
+        "pattern": "breakout252",
+        "netPct": -13.99376603280601
+      },
+      {
+        "name": "넥스틸",
+        "pattern": "trend200",
+        "netPct": -20.276892690107506
+      },
+      {
+        "name": "대성하이텍",
+        "pattern": "trend200",
+        "netPct": -17.018198481277793
+      }
+    ],
+    "matured": {
+      "20": 0,
+      "60": 0,
+      "120": 0,
+      "252": 0,
+      "756": 0,
+      "1260": 0
+    },
+    "firstTouches": {
+      "2x": 0,
+      "5x": 0,
+      "10x": 0
+    },
+    "maxSessions": 8,
+    "observationNetRangePct": [
+      -33.18895035312946,
+      24.119444705195225
+    ],
+    "maxCloseMfePct": 25.366876310272545,
+    "worstCloseMaePct": -32.51748251748252,
+    "worstCloseMddPct": -32.51748251748252,
+    "revisionDates": 0,
+    "invalidEntryChronology": 0,
+    "missingSuspendedUnsettledFlags": 0,
+    "note": "누락/정지/폐지정산미확인 표시가 없다는 의미이며 숨은 결손의 부재를 보증하지 않음. 대기3건은 손익0%가 아님. 등록일/신호일을 모두 지난 첫거래가능종가만 반영.",
+    "limitations": "가격조건 탐색 가설. 재무 시점 패널·시장 대조·포트폴리오·배당·세금·호가·정수주·시장충격 미복원; 편도0.5% 비용 가정. 종목별 관찰을 계좌CAGR/시장초과수익으로 부르지 않음. 같은 종목의 여러 패턴·재등록은 독립표본이 아니다."
+  },
+  "claudeComparison": {
+    "generatedAt": "2026-10-28T04:39:41.745296+09:00",
+    "versions": {
+      "opening": "g_open_q7_k3_gap3",
+      "daytrading": "g_etf_th4.75",
+      "crypto": "g_coin_ma15_s99_hi7_eth",
+      "soxl": "g_soxl_r2lt30_ibs0.6_ma100_d5",
+      "closing30": "close30_dip_v1"
+    },
+    "daily": {
+      "date": "2026-10-27",
+      "openingPct": -0.9943303228754391,
+      "daytradingEtfPct": 4.153673469387752,
+      "closing30Pct": 0,
+      "crypto": "pending",
+      "us27": "unavailable_in_this_snapshot"
+    },
+    "duelDisplayed": {
+      "through": "2026-10-27",
+      "gptCumulativePct": -3.9635353800497763,
+      "claudeCumulativePct": -10.881868811980244,
+      "record": {
+        "gpt": 8,
+        "claude": 11,
+        "draw": 3
+      },
+      "decision": "같은 날짜·버전·비용·체결근거를 맞추기 전 우위 판단 보류"
+    },
+    "problems": [
+      "공개대결API branch treeHTTP403·연구API GitHubHTTP403",
+      "27일GPT시초가 운영 -0.418728812%지만 대결 표준0.25% 비용으로 재계산하면 +0.148120767%; 같은손익으로표시하면안됨",
+      "26일GPT표시누적이 전일-4.225%에서-3.698253143%로변경됨. 과거원천보완을새거래와구분",
+      "Claude 미국원천26일까지인04:39자료와GPT미국27일완료값을임의합산하지않음",
+      "코인/SOXL params.note에는 현 params와 다른 예전규칙 설명이 남음. 실제화면사용여부미확인"
+    ],
+    "etfCurrentTrade": {
+      "entryDate": "2026-10-26",
+      "exitDate": "2026-10-27",
+      "signalVersion": "g_etf_th4.75",
+      "displayVersion": "g_etf_th4.75",
+      "versionMatches": true
+    },
+    "tenbagger": {
+      "asOf": "2026-10-23",
+      "newEventsLatestRun": 0,
+      "revisions": 0,
+      "books": [
+        "usd10k",
+        "usd100k"
+      ],
+      "paperRetPctEach": 2.36,
+      "paperMddPctEach": -2.69,
+      "holdingsEach": 20,
+      "closedEach": 0,
+      "comparison": "GPT의26일개별종목관찰과동일기간/구조가아니라직접우위비교불가"
+    }
+  },
+  "closing30": {
+    "asOf": "2026-10-28",
+    "generatedAt": "2026-10-28T01:27:25.859987+09:00",
+    "archiveDays": 4,
+    "day": {
+      "closed": 4,
+      "unsettled": 5,
+      "observationDays": 2,
+      "averageTradePnlPct": -0.06079827591596622,
+      "profitFactor": 0.6047931214530321
+    },
+    "overnight": {
+      "closed": 0,
+      "unsettled": 12,
+      "averageTradePnlPct": null
+    },
+    "errors": 0,
+    "eligibleToPromote": false,
+    "note": "완료거래평균은일계좌수익률이아님. 미정산을손익0으로넣지않음."
+  },
+  "sourceTimes": {
+    "mainChecked": "53cf43bbdfbe14cb04590ec2ca086ff6002b7775",
+    "opening": "2026-10-27T14:33:56+09:00",
+    "daytrading": "2026-10-27T22:43:36.060351+09:00",
+    "crypto": "2026-10-27T14:11:42.054731+09:00",
+    "cryptoTo": "2026-10-26",
+    "soxl": "2026-10-26T20:23:58.527355-04:00",
+    "soxlTo": "2026-10-26",
+    "daily1": "2026-10-27T23:52:21.246894+09:00",
+    "nightly": "2026-10-28T01:27:24.958979+09:00",
+    "vts": "2026-10-27T23:50:13.618339+09:00",
+    "dailyApiGeneratedAt": "2026-10-27T21:59:40.644Z"
+  },
+  "uiAndNotifications": {
+    "uiVersion": "1.48.2",
+    "pushWorkerVersion": "2.9.1",
+    "observedScreen": "소유자만볼수있음·Google로그인벽",
+    "liveApi": "401 unauthorized",
+    "reportApi": "401 unauthorized",
+    "previousMorningReport": {
+      "date": "2026-10-27",
+      "pushSent": 3,
+      "pushEligible": 3,
+      "pushFailed": 0,
+      "telegram": "sent",
+      "tries": 1,
+      "complete": true,
+      "updatedAt": "2026-10-26T23:00:03.048Z"
+    },
+    "openingLatestSell": {
+      "pushSent": 3,
+      "pushEligible": 3,
+      "pushFailed": 0,
+      "telegram": null,
+      "telegramMeaning": "미확인;성공으로추정하지않음"
+    },
+    "daytradingLatestSell": {
+      "pushSent": 3,
+      "pushEligible": 3,
+      "pushFailed": 0,
+      "telegram": "sent"
+    },
+    "soxlLatestSell": {
+      "pushSent": 3,
+      "pushEligible": 3,
+      "pushFailed": 0,
+      "telegram": "sent"
+    },
+    "cryptoCurrentDateSell": {
+      "pushSent": 3,
+      "pushEligible": 3,
+      "pushFailed": 0,
+      "telegram": "sent",
+      "dailyResult": "세션미완료"
+    },
+    "actualDeviceDisplay": "unverified",
+    "ownerValuationAndPeriodReturnDenominators": "unverified",
+    "extraTestNotificationsSent": false
+  },
+  "tests": {
+    "nodeValueTestsPassed": 41,
+    "nodeValueTestsFailed": 0,
+    "nodeScope": "gpt-morning-report·scalping-live-results. 시간/KST/미국일·슬롯분모·현재/전일분리·null/0·ownergate·동의·중복방지/불명Telegram보존·UI이스케이프",
+    "tenbaggerUnitTestsPassed": 14,
+    "shadowScoreLifecycleGeneratorParity": "PASS",
+    "daily1StrategyValueScript": "PASS",
+    "nightlyOriginalAggregators": {
+      "opening": "variants+candidatecore exact",
+      "daytrading": "variants+candidatecore exact",
+      "crypto": "variants+candidatecore exact",
+      "soxl": "variants+candidatecore exact"
+    },
+    "limits": "수익성·실기기표시·실체결·인증후실계좌계산검증을의미하지않음"
+  },
+  "evidence": {
+    "baselineApi": [
+      "https://jkquant.pages.dev/api/scalping-daily-results",
+      "https://jkquant.pages.dev/api/scalping-history?strategy=opening&from=2026-10-01&to=2026-10-28",
+      "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-10-28",
+      "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-10-28",
+      "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-10-28"
+    ],
+    "rawData": [
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/daily1-shadow/latest.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/nightly-research/latest.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/opening-history/2026-10-27.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/daytrading-research/latest.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/crypto-research/latest.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/soxl-research/latest.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/vts-research/latest.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/tenbagger-forward/latest.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/claude-lab/latest.json",
+      "https://raw.githubusercontent.com/jkdevjob/jkquant/aee047180af4190398f2dbc47d35cb14c15cfc61/data/tenbagger-claude-forward/latest.json"
+    ]
+  }
+}
