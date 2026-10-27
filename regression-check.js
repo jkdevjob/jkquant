@@ -11909,7 +11909,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   }
   ok('자산플랜 햄버거는 jk-ui 공용 클릭 핸들러 하나만 쓴다 — 두 번 토글 금지',
      !/\$\("jkmenuBtn"\)\.addEventListener\("click"/.test(pl)
-     && /<script src="\/jk-ui\.js\?v=1\.0\.6" defer><\/script>/.test(pl));
+     && /<script src="\/jk-ui\.js\?v=1\.1\.0" defer><\/script>/.test(pl));
 
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
   {
@@ -12285,7 +12285,7 @@ console.log('\n[DANTA LOGIN] 소유자 확인 빠르게 · 토큰/서버 따로 
 console.log('\n[REAL ESTATE] 부동산 메뉴 · 클로드/지피티 탭');
 {
   const re=fs.readFileSync(__d+'/realestate.html','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
-  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html','tenbagger.html'];
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html','tenbagger.html','settings.html','workout.html'];
   ok('모든 페이지 메뉴에서 부동산이 공모주 바로 아래',
      pages.every(f=>/<a href="\/ipo"[^>]*><span class="mi">🎯<\/span>공모주<\/a>\s*\n\s*<a href="\/realestate"[^>]*><span class="mi">🏢<\/span>부동산<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('공용 메뉴 정책·관리자 메뉴 관리에 부동산(공모주 70 < 부동산 75 < JOB 80)',
@@ -12426,7 +12426,7 @@ console.log('\n[TENBAGGER] 텐배거 메뉴 · 클로드/지피티 탭 · 분석
 console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메뉴');
 {
   const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8');
-  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html','tenbagger.html'];
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html','tenbagger.html','settings.html','workout.html'];
   ok('공용 승인 로그인 브랜드는 JK 투자 — 퀀트 잔존 없음',
      /var head='<div class="jl">JK <b>투자<\/b><\/div>'/.test(acc)
      &&!/JK <b>퀀트<\/b>/.test(acc)&&!/\/\* JK 퀀트 — 이용 승인/.test(acc));
@@ -12438,9 +12438,9 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메
      /function mountMenus\(\)/.test(ui)&&/전체메뉴/.test(ui)&&/btn\.textContent='☰'/.test(ui)
      &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
      &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
-  ok('11개 페이지 모두 jk-ui 공용 UI와 같은 11개 메뉴 링크를 사용',
-     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.0\.6" defer><\/script>/.test(s)
-       &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
+  ok('12개 페이지 모두 jk-ui 공용 UI와 같은 공용 메뉴 링크를 사용',
+     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.1\.0" defer><\/script>/.test(s)
+       &&['/','/plan','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/workout','/admin'].every(p=>s.includes('href="'+p+'"'));}));
 }
 
 /* ════ 공모주 상세 — 상장 뒤에도 주간사·밴드·시장·경쟁률이 비지 않음 · 라벨/값 구분 ════ */

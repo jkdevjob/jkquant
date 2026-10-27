@@ -5,7 +5,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=req
 const ROOT=path.join(__dirname,'..');
 const ui=fs.readFileSync(path.join(ROOT,'jk-ui.js'),'utf8');
 const html=fs.readFileSync(process.argv[2]||path.join(ROOT,'index.html'),'utf8');
-const PAGES=['index.html','backtest.html','plan.html','admin.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','settings.html','tenbagger.html'];
+const PAGES=['index.html','backtest.html','plan.html','admin.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','settings.html','tenbagger.html','workout.html'];
 const results=[];let failed=0;
 function t(name,body){ try{ body(); results.push('PASS '+name); }catch(e){ failed++; results.push('FAIL '+name+' — '+(e&&e.message||e)); } }
 function fnOf(src,marker){const start=src.indexOf(marker);assert(start>=0,marker);let i=src.indexOf('{',start),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(start,i+1);}throw Error('unclosed '+marker);}
@@ -57,11 +57,11 @@ t('U2 자리 — 오른쪽 가장자리 · 화면 세로 가운데 · 모달(z-i
   assert(/#jkToTop\.on\{opacity:\.8;visibility:visible\}/.test(ui) && /opacity:0;visibility:hidden/.test(ui),'평소 숨김 · on 이면 보임');
   assert(/@media print\{#jkToTop\{display:none\}\}/.test(ui));
 });
-t('U3 모든 페이지(11개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
+t('U3 모든 페이지(12개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
   for(const f of PAGES){
     const s=fs.readFileSync(path.join(ROOT,f),'utf8');
-    assert.equal((s.match(/<script src="\/jk-ui\.js\?v=1\.0\.6" defer><\/script>/g)||[]).length,1,f+' 한 번');
-    assert(/<script src="\/jk-access\.js"[^>]*><\/script>\n<script src="\/jk-ui\.js\?v=1\.0\.6" defer><\/script>/.test(s),f+' jk-access 다음');
+    assert.equal((s.match(/<script src="\/jk-ui\.js\?v=1\.1\.0" defer><\/script>/g)||[]).length,1,f+' 한 번');
+    assert(/<script src="\/jk-access\.js"[^>]*><\/script>\n<script src="\/jk-ui\.js\?v=1\.1\.0" defer><\/script>/.test(s),f+' jk-access 다음');
   }
   const htmls=fs.readdirSync(ROOT).filter(f=>/\.html$/.test(f)).sort();
   assert.deepEqual(htmls,[...PAGES].sort(),'페이지가 늘면 여기에도 넣는다: '+htmls.join(','));
