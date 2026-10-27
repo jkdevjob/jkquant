@@ -4,6 +4,7 @@ Never places orders, never changes live rules on insufficient evidence.
 Uses only the day-stamped immutable paper ledger, never reconstructs buys after knowing closes.
 """
 from __future__ import annotations
+from nightly_scalping_research import shadow_score, evolve_lifecycle, factory_params
 import concurrent.futures
 import datetime as dt
 import json
@@ -60,7 +61,7 @@ def download(date):
 def flatten(day):
     if not day or not isinstance(day.get("events"),list):return []
     by={}
-    for e in day["events"]:
+    for e in sorted(day["events"],key=lambda e:{"signal":0,"buy":1,"sell":2}.get(e.get("stage"),3)):
         if e.get("stage") not in ("signal","buy","sell") or e.get("kind") not in ("day","overnight"):continue
         k=(e.get("kind"),e.get("variant"),e.get("code"))
         if not all(k):continue
@@ -77,24 +78,84 @@ def flatten(day):
     return list(by.values())
 
 def stats(rows,calendar_days):
-    closed=[x for x in rows if x["state"]=="closed" and isinstance(x.get("pnl"),(int,float))]
+    rows=[x for x in rows if x.get("date") in calendar_days]
+    closed=[x for x in rows if x["state"]=="closed" and isinstance(x.get("pnl"),(int,float)) and math.isfinite(x["pnl"])]
     values=[x["pnl"] for x in closed]
+    daily=[]
+    for date in sorted(calendar_days):
+        rs=[x for x in rows if x['date']==date]
+        if any(x['state']!='closed' for x in rs):continue
+        daily.append({'date':date,'returnPct':sum(x['pnl'] for x in rs)/3,'trades':len(rs)})
     equity=peak=1.0;mdd=0.0
-    for v in values:
-        equity*=max(0,1+v/100);peak=max(peak,equity);mdd=min(mdd,(equity/peak-1)*100)
+    for x in daily:
+        equity*=max(0,1+x['returnPct']/100);peak=max(peak,equity);mdd=min(mdd,(equity/peak-1)*100)
     gains=sum(v for v in values if v>0);loss=-sum(v for v in values if v<0)
-    first,second=[],[]
-    for x in closed:
-        # Date-ordered archival source; evaluate each half independently.
-        (first if x["date"]<=calendar_days[len(calendar_days)//2] else second).append(x["pnl"])
-    return {"trades":len(values),"observedDays":len(set(x["date"] for x in closed)),
+    split=max(1,len(daily)//2)
+    first=[x['returnPct'] for x in daily[:split]];second=[x['returnPct'] for x in daily[split:]]
+    return {"trades":len(values),"observedDays":len(daily),"daily":daily,
+      "compoundReturnPct":(equity-1)*100 if daily else None,
       "winRate":sum(v>0 for v in values)/len(values)*100 if values else None,
       "avgPnl":statistics.mean(values) if values else None,
+      "avgWin":statistics.mean([v for v in values if v>0]) if any(v>0 for v in values) else None,
+      "avgLoss":statistics.mean([v for v in values if v<0]) if any(v<0 for v in values) else None,
       "profitFactor":gains/loss if loss else (999 if gains else None),
-      "mddPct":mdd if values else None,"worst":min(values) if values else None,
+      "mddPct":mdd if daily else None,"worst":min(values) if values else None,
       "firstHalfAvg":statistics.mean(first) if first else None,
       "secondHalfAvg":statistics.mean(second) if second else None,
       "unsettled":len(rows)-len(closed)}
+
+NAMES=["baseline","dip_1","dip_2","dip_3","dip_volume","dip_vol2","momentum","up_1","up_volume","flat","all"]
+
+def research_section(kind,ledgers,previous,errors):
+    # No missing/partial signal day becomes a synthetic zero-return session.
+    target=1506 if kind=='day' else 1522
+    good=[]
+    for d in ledgers:
+        scans=[x for x in d.get('scans',[]) if x.get('targetHm')==target]
+        if scans and all(not x.get('partial') and not x.get('failed') and not x.get('quoteErrors') for x in scans):good.append(d)
+    rows=[x for d in good for x in flatten(d) if x['kind']==kind]
+    dates=sorted({d['date'] for d in good})
+    generated={x['name']:x for x in previous.get('generatedPool',[]) if x.get('name')}
+    names=list(dict.fromkeys(NAMES+list(generated)+[x['variant'] for x in rows if x['variant'].startswith('cf_g')]))
+    def observed(n):
+        if not n.startswith('cf_g'):return dates
+        created=generated.get(n,{}).get('createdAfter','9999-99-99')
+        return [d['date'] for d in good if d['date']>created and n in d.get('closingVariants',{}).get(kind,[])]
+    summaries={n:stats([x for x in rows if x['variant']==n],observed(n)) for n in names}
+    base={x['date']:x['returnPct'] for x in summaries['baseline']['daily']}
+    candidates=[]
+    for name in names[1:]:
+        x=summaries[name]
+        paired=[(d['date'],d['returnPct']-base[d['date']]) for d in x['daily'] if d['date'] in base]
+        split=max(1,len(paired)//2)
+        avg=lambda xs:statistics.mean(v for _,v in xs) if xs else 0
+        edge,valid,recent=avg(paired),avg(paired[split:]),avg(paired[-20:])
+        risk=x['mddPct'] is not None and x['mddPct']>=-15 and x['profitFactor'] is not None and x['profitFactor']>=1.1
+        ready=x['trades']>=30 and len(paired)>=20
+        review=ready and risk and edge>0 and valid>0 and recent>0 and x['firstHalfAvg'] is not None and x['firstHalfAvg']>0 and x['secondHalfAvg'] is not None and x['secondHalfAvg']>0 and not errors and x['unsettled']==0
+        score=shadow_score(edge,valid,recent,risk,x['trades'],30)
+        candidates.append({'name':name,'params':factory_params('closing30' if kind=='day' else 'closing_bet',int(name[4:])) if name.startswith('cf_g') else None,'summary':x,'trades':x['trades'],'allTrades':x['trades'],
+          'researchScore':score['score'],'sampleFactor':score['sampleFactor'],'scoreParts':score['parts'],
+          'sampleReady':ready,'allAvgEdgePct':edge,'validationAvgEdgePct':valid,'recentEdgePct':recent,
+          'holdoutTrades':sum(d['trades'] for d in x['daily'][split:]),
+          'mddOk':x['mddPct'] is not None and x['mddPct']>=-15,'profitFactorOk':x['profitFactor'] is not None and x['profitFactor']>=1.1,
+          'status':'review' if review else 'collecting','eligibleToPromote':review})
+    candidates.sort(key=lambda x:(x['trades']<=0,-x['researchScore'],-x['sampleFactor'],x['name']))
+    # Reuse the same retirement, reserve activation, weekly factory, leader
+    # streak and promotion rules as the other trading strategies.
+    evidence=max((d['date'] for d in good if any(x['date']==d['date'] and x['state']=='closed' for x in rows)),default='')
+    section={'status':'degraded' if errors else 'research' if rows else 'collecting','from':dates[0] if dates else None,'to':evidence or None,
+      'candidates':candidates,'baseline':summaries['baseline'],'source':'immutable-closing-ledgers','returnRule':'sum net trade pct / 3 fixed slots, entry-session dates'}
+    if errors:
+        section['to']=previous.get('lastEvidenceDate')
+    section['lifecycle']=evolve_lifecycle('closing30' if kind=='day' else 'closing_bet',section,previous)
+    return section
+
+
+def verified_main_day(d):
+    scans=[x for x in d.get('scans',[]) if x.get('targetHm')==1506]
+    rows=[x for x in flatten(d) if x['kind']=='day' and x['variant']==d.get('closingMains',{}).get('day','baseline')]
+    return bool(scans) and all(not x.get('partial') and not x.get('failed') and not x.get('quoteErrors') for x in scans) and all(x['state']=='closed' for x in rows)
 
 def main():
     now=dt.datetime.now(KST)
@@ -110,53 +171,38 @@ def main():
                 (RAW/(date+".json")).write_text(json.dumps(ledger,ensure_ascii=False),encoding="utf-8")
                 received+=1
     all_days=[]
-    for d in reversed(days):
-        path=RAW/(d+".json")
+    for path in sorted(RAW.glob("20??-??-??.json")):
+        d=path.stem
+        if d>now.date().isoformat():continue
         if path.is_file():
             try:all_days.append(json.loads(path.read_text(encoding="utf-8")))
             except Exception as e:errors.append({"date":d,"error":str(e)})
     all_rows=[x for d in all_days for x in flatten(d)]
-    variants=[]
-    for kind in ("day","overnight"):
-        names=["baseline","dip_1","dip_2","dip_3","dip_volume","dip_vol2","momentum","up_1","up_volume","flat","all"]
-        for name in names:
-            v=[x for x in all_rows if x["kind"]==kind and x["variant"]==name]
-            x=stats(v,sorted(days))
-            is_valid=(x["trades"]>=30 and x["observedDays"]>=20
-              and x["avgPnl"] is not None and x["avgPnl"]>0
-              and x["profitFactor"] is not None and x["profitFactor"]>=1.1
-              and x["firstHalfAvg"] is not None and x["firstHalfAvg"]>0
-              and x["secondHalfAvg"] is not None and x["secondHalfAvg"]>0
-              and x["mddPct"] is not None and x["mddPct"]>=-15)
-            variants.append({"name":name,"kind":kind,"summary":x,
-                "status":"candidate" if is_valid else "collecting",
-                "eligibleToPromote":bool(is_valid)})
     lifecycle_path=OUT/"lifecycle.json"
     try:lifecycle=json.loads(lifecycle_path.read_text(encoding="utf-8"))
     except Exception:lifecycle={"strategies":{}}
     strategies=lifecycle.setdefault("strategies",{})
-    previous=strategies.get("closing30") or {}
-    winners={}
-    for kind in ("day","overnight"):
-        best=max((v for v in variants if v["kind"]==kind and v["eligibleToPromote"]),
-          key=lambda v:v["summary"]["avgPnl"],default=None)
-        prior=previous.get(kind) or {}
-        leader=(best or {}).get("name")
-        research_date=max((x['date'] for x in all_rows if x['kind']==kind and x['state']=='closed'),default=now.date().isoformat())
-        streak=leader_streak(prior,leader,research_date)
-        winners[kind]={"date":research_date,"leader":leader,"leaderStreak":streak,
-          "reviewReady":bool(best and streak>=7),
-          "activeMain":"baseline", # live change requires separate protected promotion path
-          "reason":"7 연속 연구세션 1위 및 OOS 위험조건 필요"}
-    strategies["closing30"]={"day":winners["day"],"overnight":winners["overnight"],
-      "updatedAt":now.isoformat(),"paperOnly":True,"autoChange":False}
-    lifecycle_path.write_text(json.dumps(lifecycle,ensure_ascii=False,indent=2),encoding="utf-8")
+    try:combined=json.loads((OUT/'latest.json').read_text(encoding='utf-8'))
+    except Exception:combined={'schema':2,'date':now.date().isoformat(),'generatedAt':now.isoformat()}
+    variants=[];winners={}
+    for strategy,kind in [('closing30','day'),('closing_bet','overnight')]:
+        section=research_section(kind,all_days,strategies.get(strategy) or {},errors)
+        strategies[strategy]=section['lifecycle'];combined[strategy]=section
+        variants.append({'kind':kind,'name':'baseline','summary':section['baseline'],'status':'baseline'})
+        variants.extend({**v,'kind':kind} for v in section['candidates'])
+        winners[kind]=section['lifecycle']
+    lifecycle['updatedAt']=now.isoformat()
+    lifecycle_path.write_text(json.dumps(lifecycle,ensure_ascii=False,indent=2),encoding='utf-8')
+    for path in [OUT/'latest.json',OUT/(combined['date']+'.json')]:path.write_text(json.dumps(combined,ensure_ascii=False,indent=2),encoding='utf-8')
     report={"schema":1,"date":now.date().isoformat(),"generatedAt":now.isoformat(),"status":"degraded" if errors else "collecting" if not all_rows else "research",
       "mode":"close30-paper-shadow-nightly","archiveDays":len(all_days),"freshLedgers":received,"errors":errors[:12],
       "sourceRule":"Actual signal-time Durable Object evidence, no post-hoc signal reconstruction",
       "feesPct":FEE,"mainVariant":"baseline","variants":variants,
-      "candidates":[v for v in variants if v["eligibleToPromote"]],
-      "promotion":winners,"fullPaperTradeCount":len(all_rows)}
+      "candidates":[v for v in variants if v.get('eligibleToPromote')],
+      "promotion":winners,"fullPaperTradeCount":len(all_rows),
+      "operationalSessions":[{'date':d['date'],'mainVariant':d.get('closingMains',{}).get('day','baseline'),
+         'trades':[x for x in flatten(d) if x['kind']=='day' and x['variant']==d.get('closingMains',{}).get('day','baseline')]}
+        for d in all_days if verified_main_day(d)]}
     (OUT/"closing30.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
     return report
 

@@ -5,6 +5,7 @@ import {defaultPaperSettings,changePaperSettings} from "../../../functions/api/_
 import {openingOrderRefs,openingExecutionResult} from "../../../functions/api/_opening-execution.js";
 import {researchBroker} from "../../../functions/api/_research-broker.js";
 import {closingBrokerPlans,tenbaggerBrokerPlans,RESEARCH_BROKER_VERSION} from "../../../functions/api/_research-orders.js";
+import {closingVariant,closingMainVariant} from "../../../functions/api/_closing30.js";
 import { pushEvents, sendPush, vapidPublic, alertText, reportMsg } from "../../../functions/api/_claude_push.js";   // 단타(클로드) 매수·매도 알림(웹 알림 · 텔레그램 같은 사건)
 
 // Cloudflare Worker — jkquant opening scheduler
@@ -253,6 +254,14 @@ export class OpeningSignalStore extends DurableObject {
         schema:LEDGER_SCHEMA,date:String(b.date),mainVariant:String(b.mainVariant||"baseline"),createdAt:nowIso,updatedAt:nowIso,scans:[],events:[]
       };
       if(!ledger.mainVariant)ledger.mainVariant=String(b.mainVariant||"baseline");
+      if(b.closingMains){
+        ledger.closingMains=ledger.closingMains||{};
+        for(const kind of ['day','overnight'])if(b.closingMains[kind]&&!ledger.closingMains[kind]){
+          const started=ledger.events.some(e=>e.kind===kind)||(ledger.scans||[]).some(s=>s.targetHm===(kind==='day'?1506:1522));
+          ledger.closingMains[kind]=started?'baseline':String(b.closingMains[kind]);
+        }
+      }
+      if(b.closingVariants){ledger.closingVariants=ledger.closingVariants||{};for(const k of ['day','overnight'])if(Array.isArray(b.closingVariants[k])&&!ledger.closingVariants[k])ledger.closingVariants[k]=b.closingVariants[k];}
       if(String(ledger.date)!==String(b.date))return json({ok:false,error:"ledger date mismatch"},409);
 
       const scanId=String(b.scanId||[b.scheduledTime,b.targetHm,b.partial?"partial":"full"].join(":"));
@@ -290,14 +299,14 @@ export class OpeningSignalStore extends DurableObject {
 function store(env,date,kind=""){
   return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName(kind?kind+":"+String(date):String(date)));
 }
-function configStore(env){return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName("__gpt_opening_strategy_config__"));}
-async function readStrategyConfig(env){
-  const r=await configStore(env).fetch("https://opening-signal.internal/config");
+function configStore(env,strategy='opening'){return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName(strategy==='opening'?"__gpt_opening_strategy_config__":"__gpt_"+strategy+"_strategy_config__"));}
+async function readStrategyConfig(env,strategy='opening'){
+  const r=await configStore(env,strategy).fetch("https://opening-signal.internal/config");
   const j=await r.json().catch(()=>({}));
   return j.config||{schema:1,strategy:"opening",selectedVariant:"baseline",updatedAt:null};
 }
-async function writeStrategyConfig(env,b){
-  const r=await configStore(env).fetch("https://opening-signal.internal/config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});
+async function writeStrategyConfig(env,b,strategy='opening'){
+  const r=await configStore(env,strategy).fetch("https://opening-signal.internal/config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("config store HTTP "+r.status));
   return j.config;
@@ -675,19 +684,26 @@ function closingEvent(date,kind,variant,code,stage,price=null,meta={}){
     name:meta.name||code,stage,targetHm:meta.targetHm||null,
     createdAt:new Date().toISOString(),price:price??null,
     source:meta.source||"paper-only",pnl:meta.pnl??null,
-    signal:meta.signal||null,strategyParams:meta.strategyParams||null,priceAt:meta.priceAt||null,decisionVersion:"closing30_v1",
+    signal:meta.signal||null,strategyParams:meta.strategyParams||null,priceAt:meta.priceAt||null,decisionVersion:"closing30_v2",
     orderStatus:"paper_only_no_broker_order",state:stage==="signal"?"candidate":"paper_filled"};
 }
 async function closingApi(env,params){
   const q=new URLSearchParams(params);
-  const r=await fetch(baseUrl(env)+"/api/closing30-monitor?"+q.toString(),{
-    headers:{"x-monitor-key":env.MONITOR_KEY,"accept":"application/json"}});
-  const j=await r.json().catch(()=>({}));
-  if(!r.ok||!j.ok)throw Error(j.error||"closing monitor "+r.status);
-  return j;
+  // A transient source 5xx must not erase the only daily observation. This is
+  // strictly a GET retry before persistence, never an order or alert replay.
+  for(let attempt=0;attempt<2;attempt++){
+    let r;
+    try{r=await fetch(baseUrl(env)+"/api/closing30-monitor?"+q.toString(),{
+      headers:{"x-monitor-key":env.MONITOR_KEY,"accept":"application/json"}});}
+    catch(error){if(!attempt)continue;throw error;}
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ok)return j;
+    if(!attempt&&r.status>=500)continue;
+    throw Error(j.error||"closing monitor "+r.status);
+  }
 }
 async function closingAlert(env,date,e,stage){
-  if(e.variant!=="baseline")return;
+  if(e.variant!==String(e.mainVariant||"baseline"))return;
   const lines=[
     e.name+" ("+e.code+") · "+(e.kind==="day"?"종가 30분 당일청산":"종가 베팅 · 익일 시가청산"),
     "모의체결 "+Number(e.price).toLocaleString("ko-KR")+"원 · "+e.source,
@@ -718,10 +734,22 @@ async function runClosing30(route,controller,env){
   const today=kstParts(scheduled).date,hm=kstHm(scheduled);
   if(route==="closing_day_signal"||route==="closing_overnight_signal"){
     const kind=route==="closing_day_signal"?"day":"overnight";
-    const j=await closingApi(env,{op:"scan",kind,date:today});
+    const existing=await readLedger(env,today,'closing30');
+    const started=existing&&(existing.closingMains?.[kind]||existing.events?.some(e=>e.kind===kind)||existing.scans?.some(s=>s.targetHm===(kind==='day'?1506:1522)));
+    const config=started?null:await readStrategyConfig(env,kind==='day'?'closing30':'closing_bet');
+    const main=started?closingMainVariant(existing,kind):String(config.effectiveFrom&&today<config.effectiveFrom?config.previousVariant||'baseline':config.selectedVariant||'baseline');
+    if(!closingVariant(main))throw Error('unknown closing main');
+    let j;
+    try{j=await closingApi(env,{op:"scan",kind,date:today,mainVariant:main});}
+    catch(error){
+      await appendLedger(env,{date:today,mainVariant:'baseline',closingMains:{[kind]:main},
+        scanId:'closing:'+today+':'+route+':failed',scheduledTime:scheduled,capturedAt:new Date().toISOString(),targetHm:hm,
+        partial:true,failed:[{source:'closing-monitor',error:String(error.message||error).slice(0,180)}],okShards:0,quoteErrors:1,events:[]},'closing30');
+      throw error;
+    }
     const events=(j.signals||[]).map(x=>closingEvent(today,kind,x.variant,x.code,"signal",null,{
       name:x.name,source:"15시 완성봉 관측",targetHm:hm,signal:x.signal,strategyParams:x.strategyParams}));
-    const receipt=await appendLedger(env,{date:today,mainVariant:"baseline",scanId:"closing:"+today+":"+route,
+    const receipt=await appendLedger(env,{date:today,mainVariant:"baseline",closingMains:{[kind]:main},closingVariants:{[kind]:j.variants||[]},scanId:"closing:"+today+":"+route,
       scheduledTime:scheduled,capturedAt:new Date(now).toISOString(),targetHm:hm,
       partial:!!j.partial,failed:j.errors||[],okShards:1,quoteErrors:j.errors?.length||0,events},"closing30");
     console.log(JSON.stringify({type:route,date:today,signals:events.length,recorded:receipt.added,partial:j.partial}));
@@ -730,11 +758,11 @@ async function runClosing30(route,controller,env){
   const prior=route==="closing_overnight_exit"?await lastOpenDate(env,today):today;
   const ledger=await readLedger(env,prior,"closing30");
   if(!ledger){console.warn(JSON.stringify({type:"closing30_missing_signal_ledger",date:prior,route}));return;}
-  if((ledger.scans||[]).some(x=>x.partial))throw Error("partial input: do not fill unverified signals");
   const cases=route==="closing_day_entry"?[["day","signal","buy","day_entry"]]:
     route==="closing_settle"?[["day","buy","sell","day_exit"],["overnight","signal","buy","overnight_entry"]]:
     [["overnight","buy","sell","overnight_exit"]];
   for(const [kind,sourceStage,destStage,priceStage] of cases){
+    if((ledger.scans||[]).some(x=>x.partial&&(!x.targetHm||x.targetHm===(kind==='day'?1506:1522))))continue;
     const previous=closingEntries(ledger,kind,sourceStage),already=new Set(closingEntries(ledger,kind,destStage)
       .map(e=>closingKey(e.kind,e.variant,e.code,sourceStage)));
     const fresh=previous.filter(e=>!already.has(closingKey(e.kind,e.variant,e.code,sourceStage)));
@@ -761,7 +789,7 @@ async function runClosing30(route,controller,env){
       capturedAt:new Date(now).toISOString(),targetHm:hm,
       partial:false,okShards:1,quoteErrors:quotes.errors?.length||0,events},"closing30");
     // 이미 처리된 id는 저장소에서 중복 배제. 재호출 시 동일 event를 다시 알리지 않는다.
-    if(saved.added>0)for(const e of events.filter(e=>e.variant==="baseline"))await closingAlert(env,prior,e,destStage);
+    if(saved.added>0)for(const e of events.filter(e=>e.variant===closingMainVariant(ledger,kind)))await closingAlert(env,prior,{...e,mainVariant:closingMainVariant(ledger,kind)},destStage);
     if(route==='closing_day_entry')await runClosingBroker(env,'day','buy',today);
     console.log(JSON.stringify({type:route,kind,date:prior,events:events.length,stored:saved.added,priceErrors:quotes.errors?.length||0}));
   }
@@ -1215,11 +1243,14 @@ export default {
     }
     if(u.pathname==="/config"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const strategy=u.searchParams.get('strategy')||'opening';
+      if(!['opening','closing30','closing_bet'].includes(strategy))return json({ok:false,error:'unsupported strategy'},400);
       try{
-        if(request.method==="GET")return json({ok:true,config:await readStrategyConfig(env)});
+        if(request.method==="GET")return json({ok:true,config:{...await readStrategyConfig(env,strategy),strategy}});
         if(request.method==="POST"){
           const b=await request.json();
-          return json({ok:true,config:await writeStrategyConfig(env,b)});
+          if(strategy!=='opening'&&(!closingVariant(b.variant)||!/^\d{4}-\d{2}-\d{2}$/.test(String(b.effectiveFrom||''))))return json({ok:false,error:'invalid closing config'},400);
+          return json({ok:true,config:{...await writeStrategyConfig(env,b,strategy),strategy}});
         }
         return json({ok:false,error:"method not allowed"},405);
       }catch(e){return json({ok:false,error:String(e.message||e)},500);}

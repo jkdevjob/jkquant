@@ -7,7 +7,7 @@ import {generatedDayVariant} from "../functions/api/_daytrading.js";
 console.log("[shadow ranking] 최소 10개 + 순위/표본 보정 검사");
 
 for(const [kind,names] of Object.entries(CATALOG)){
-  assert.ok(names.length>=20,kind+" shadow catalog must be >=20");
+  assert.ok(names.length>=(kind.startsWith("closing")?10:20),kind+" shadow catalog minimum");
   assert.equal(new Set(names).size,names.length,kind+" shadow names must be unique");
 }
 

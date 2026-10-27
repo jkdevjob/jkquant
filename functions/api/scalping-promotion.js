@@ -9,6 +9,8 @@ const FIREBASE_API_KEY_FALLBACK="AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw";
 const DEFAULT_OWNERS=["jk82investing@gmail.com"];
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json";
 const WORKERS={
+  closing30:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"},
+  closing_bet:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"},
   opening:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"},
   daytrading:{env:"DAYTRADING_WORKER_URL",fallback:"https://jkquant-daytrading-scheduler.mumae4.workers.dev"},
   crypto:{env:"GLOBAL_INTRADAY_WORKER_URL",fallback:"https://jkquant-global-intraday-scheduler.mumae4.workers.dev"},
@@ -39,7 +41,7 @@ function workerUrl(env,strategy){
 }
 function configUrl(env,strategy){
   const base=workerUrl(env,strategy);
-  return (strategy==="crypto"||strategy==="soxl")?base+"/config?strategy="+encodeURIComponent(strategy):base+"/config";
+  return (strategy==="crypto"||strategy==="soxl"||strategy==="closing30"||strategy==="closing_bet")?base+"/config?strategy="+encodeURIComponent(strategy):base+"/config";
 }
 async function workerConfig(env,strategy,method="GET",body=null){
   const key=monitorKey(env);if(!key)throw new Error("monitor key missing");
@@ -70,7 +72,7 @@ export function effectiveFrom(strategy,now=Date.now()){
     const p=dateParts(now,"Asia/Seoul");
     return shiftDate(p.date,1);
   }
-  if(strategy==="opening"||strategy==="daytrading"){
+  if(strategy==="opening"||strategy==="daytrading"||strategy==="closing30"||strategy==="closing_bet"){
     const p=dateParts(now,"Asia/Seoul"),wd=!["Sat","Sun"].includes(p.weekday);
     return nextWeekday(p.date,wd&&p.hm<900);
   }

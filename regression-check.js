@@ -11159,8 +11159,8 @@ console.log('[SCALPING IMPROVEMENTS V2] 경로·엔진·비용·그림자·UI');
      !/data-strategy="reference"/.test(sc) && !/id="strategy_reference"/.test(sc)
      && /data-strategy="daily"/.test(sc) && /strategy-scoreline/.test(sc)
      && /기준전략 누적/.test(sc) && /필요승률/.test(sc) && /엣지/.test(sc));
-  ok('B-3 4전략 누적 비교 + B-4 구버전 접기 + B-5 폐기페이지 비노출',
-     /4전략 누적 상태/.test(sc) && /구버전·아카이브/.test(sc)
+  ok('B-3 종가 포함 6전략 누적 비교 + B-4 구버전 접기 + B-5 폐기페이지 비노출',
+     /6전략 누적 상태/.test(sc) && ['opening','daytrading','crypto','soxl','closing30','closing_bet'].every(k=>sc.includes("id=\"shadow_rank_"+k+"\"")) && /구버전·아카이브/.test(sc)
      && !/폐기된 과매도 반등 연구/.test(sc)
      && !/운영전략이 아니며 실제 매매 근거/.test(sc));
   ok('A-5 연구 문서 27~35 및 개선/연구파일 복원',

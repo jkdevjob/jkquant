@@ -1,3 +1,4 @@
+import {readClosingLedgers,closingResult} from './_closing30-results.js';
 import { krxDay } from "./_krx_calendar.js";
 
 // Cloudflare Pages Function — GET /api/scalping-daily-results
@@ -390,7 +391,7 @@ function unknownRow(date,error){
   return {date,marketDayUnknown:true,marketDayError:error||"개장일 확인 실패",finalized:false,source:"market-calendar"};
 }
 function placeholderFor(strategy,date,krStatus=null){
-  if(strategy==="opening"||strategy==="daytrading"){
+  if(strategy==="opening"||strategy==="daytrading"||strategy==="closing30"||strategy==="closing_bet"){
     if(krStatus&&krStatus.date===date){
       if(krStatus.open===false)return closedRow(date,"KIS/CTCA0903R");
       if(krStatus.open==null)return unknownRow(date,krStatus.error);
@@ -413,14 +414,14 @@ function pairKst(name,label,result,kstDate,krStatuses=null){
   const statusMap=new Map((Array.isArray(krStatuses)?krStatuses:[]).filter(Boolean).map(x=>[String(x.date),x]));
   const current=a.find(x=>String(x.date)===kstDate)||placeholderFor(name,kstDate,statusMap.get(kstDate)||null);
   const previous=a.find(x=>String(x.date)===prevDate)||
-    ((name==="opening"||name==="daytrading")&&(statusMap.get(prevDate)?.open===false||[0,6].includes(weekdayUtc(prevDate)))
+    ((name==="opening"||name==="daytrading"||name==="closing30"||name==="closing_bet")&&(statusMap.get(prevDate)?.open===false||[0,6].includes(weekdayUtc(prevDate)))
       ?placeholderFor(name,prevDate,statusMap.get(prevDate))
       :name==="soxl"&&!isNyseSessionDate(shiftIso(prevDate,-1))
         ?placeholderFor(name,prevDate,null)
       :missingClosedRow(prevDate,name,name==="crypto"?"전날 비트코인 마감 장부 누락 · 거래 여부 확인 필요":"전날 마감 자료 누락 · 거래 여부 확인 필요",name==="soxl"?shiftIso(prevDate,-1):null));
   // 과거 거래일에 뒤늦게 들어온 미완성 연구 CSV/서버 장부도 '대기'로 방치하지 않는다.
   // 거래가 없었다거나 0%였다고 추정하지 않고 미확정 원본임을 보여 준다.
-  const resolvedPrevious=(previous.pending||previous.incomplete||previous.finalized===false&&!previous.marketClosed)
+  const resolvedPrevious=(name!=="closing_bet"&&(previous.pending||previous.incomplete||previous.finalized===false&&!previous.marketClosed))
     ?{...previous,pending:false,unavailable:true,missingClose:true,returnPct:null,finalized:false,
       reason:"전날 마감 손익 미확정 · 원본 체결/세션 결과 대조 필요"}:previous;
   return {
@@ -439,11 +440,12 @@ export async function onRequestGet({request,env}){
     if(hit)return hit;
   }
   const kst=tzParts("Asia/Seoul"),prevKst=shiftIso(kst.date,-1);
-  const [opening,daytrading,crypto,soxl,krToday,krPrevious]=await Promise.all([
+  const [opening,daytrading,crypto,soxl,closing,krToday,krPrevious]=await Promise.all([
     safeSessions(w=>openingSessions(w)),
     safeSessions(w=>daytradingSessions(env,w)),
     safeSessions(w=>liveFirstSessions(env,"crypto","crypto-research/baseline-decisions.csv","crypto-research",w)),
     safeSessions(w=>liveFirstSessions(env,"soxl","soxl-research/baseline-decisions.csv","soxl-research",w)),
+    safeSessions(async()=>{const ls=await readClosingLedgers(env,{from:prevKst,to:kst.date,limit:2});return ls;}),
     krMarketDayStatus(request,kst.date),
     krMarketDayStatus(request,prevKst)
   ]);
@@ -453,13 +455,14 @@ export async function onRequestGet({request,env}){
     generatedAt:new Date().toISOString(),
     kstDate:kst.date,
     dateRule:"All displayed previous/current result dates use the Asia/Seoul calendar. SOXL U.S. market dates are shifted to the Korean calendar date containing the regular-session close.",
-    returnRule:"Opening uses the equal-weight average of executed baseline trades; Daytrading uses the sum of trade net PnL divided by 3 fixed capital slots; BTC/SOXL use one slot. No-trade session = 0%.",
+    returnRule:"Opening uses the equal-weight average of executed baseline trades; Daytrading uses the sum of trade net PnL divided by 3 fixed capital slots; BTC/SOXL use one slot; closing strategies use 3 fixed slots on the entry-session date. No-trade session = 0%.",
     sourceRule:"Stored paper ledgers are preferred; imported historical research is labelled separately. A research reconstruction never replaces an existing live no-trade result. Source failures and conflicts remain visible.",
     strategies:[
       pairKst("opening","시초가",opening,kst.date,krStatuses),
       pairKst("daytrading","데이트레이딩",daytrading,kst.date,krStatuses),
       pairKst("crypto","비트코인",crypto,kst.date),
-      pairKst("soxl","SOXL",soxl,kst.date)
+      pairKst("soxl","SOXL",soxl,kst.date),
+      ...[["closing30","종가 30분","day"],["closing_bet","개별 종목 종가 베팅","overnight"]].map(([name,label,kind])=>pairKst(name,label,{...closing,sessions:closing.sessions.map(l=>closingResult(l,kind))},kst.date,krStatuses))
     ]
   }),{headers:force?JH:FAST_H});
   if(!force)await edgePut(request,response);

@@ -1,3 +1,4 @@
+import {readClosingLedgers,closingDaily} from './_closing30-results.js';
 // GET /api/scalping-trend
 // Tiny precomputed payload for the Today cumulative-return chart.
 // Read-only. Research CSVs are precomputed; eight recent completed live ledgers override them.
@@ -37,6 +38,19 @@ export async function onRequestGet({env={}}={}){
       if(r.status==="fulfilled")j.strategies[name]=mergeTrendLedger(name,j.strategies[name]||{daily:[]},r.value);
       else j.sourceWarnings.push(name+" 최신 모의장부 조회 실패: "+String(r.reason?.message||r.reason));
     });
+    try{
+      const to=new Date(Date.now()+9*3600000).toISOString().slice(0,10);
+      const from=new Date(Date.parse(to+'T00:00:00Z')-39*86400000).toISOString().slice(0,10);
+      const ls=await readClosingLedgers(env,{from,to,limit:40});
+      for(const name of ['closing30','closing_bet']){
+        const daily=new Map((j.strategies[name]?.daily||[]).map(x=>[x.date,x]));
+        // A newer incomplete original removes an obsolete finalized projection.
+        for(const l of ls)daily.delete(l.date);
+        for(const x of closingDaily(ls,name))daily.set(x.date,x);
+        let eq=1;
+        j.strategies[name]={source:'closing30-durable-paper-ledger',daily:[...daily.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{eq*=1+x.returnPct/100;return {...x,cumulativePct:(eq-1)*100};})};
+      }
+    }catch(e){j.sourceWarnings.push('종가 원장 조회 실패: '+String(e.message||e));}
     if(j.strategies.soxl)j.strategies.soxl.daily=(j.strategies.soxl.daily||[]).map(x=>{
       const marketDate=x.marketDate||x.date;
       return {...x,marketDate,date:new Date(Date.parse(marketDate+"T00:00:00Z")+86400000).toISOString().slice(0,10)};

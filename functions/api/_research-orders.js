@@ -54,12 +54,12 @@ export function soxlBrokerPlans(ledger,now=Date.now()){
  });
 }
 export function closingBrokerPlans(ledger,kind,side,sessionDate,now=Date.now()){
- if(!ledger||(ledger.scans||[]).some(x=>x.partial))return [];
+ if(!ledger||(ledger.scans||[]).some(x=>x.partial&&(!x.targetHm||x.targetHm===(kind==='day'?1506:1522))))return [];
  const strategy=kind==='day'?'gpt_closing30':'gpt_closing_bet',stage=kind==='day'&&side==='sell'?'buy':'signal';
  const due=krAt(sessionDate,kind==='day'&&side==='buy'?1507:kind==='overnight'&&side==='sell'?856:1523);
- return (ledger.events||[]).filter(x=>x.kind===kind&&x.stage===stage&&x.variant==='baseline').map(x=>{
+ return (ledger.events||[]).filter(x=>x.kind===kind&&x.stage===stage&&x.variant===String(ledger.closingMains?.[kind]||'baseline')).map(x=>{
   const sourceId=[kind,x.variant,x.code].join(':');
-  return plan(strategy,{...ledger,mainVariant:'baseline'},{...x,id:sourceId},side,due,due+(kind==='overnight'&&side==='sell'?3:kind==='day'&&side==='buy'?2:4)*60000,{sessionDate,triggerAt:x.createdAt,source:{eventId:x.id,ledgerDate:ledger.date,kind,params:x.strategyParams,recordedAt:x.createdAt}});
+  return plan(strategy,{...ledger,mainVariant:String(ledger.closingMains?.[kind]||'baseline')},{...x,id:sourceId},side,due,due+(kind==='overnight'&&side==='sell'?3:kind==='day'&&side==='buy'?2:4)*60000,{sessionDate,triggerAt:x.createdAt,source:{eventId:x.id,ledgerDate:ledger.date,kind,params:x.strategyParams,recordedAt:x.createdAt}});
  });
 }
 export function tenbaggerBrokerPlans(data,previousSession,today,exitArm,now=Date.now()){

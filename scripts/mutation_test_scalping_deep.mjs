@@ -4,7 +4,7 @@ import {spawnSync} from 'node:child_process';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const base={global:read('worker/global-intraday-scheduler/src/index.js'),opening:read('worker/opening-scheduler/src/index.js'),
   ui:read('scalping.html'),daily:read('functions/api/scalping-daily-results.js'),alert:read('functions/api/scalping-alert.js'),history:read('functions/api/scalping-history.js')};
-const dataModule=(source,folder='functions/api/')=>'data:text/javascript;base64,'+Buffer.from(source.replace(/from\s+"(\.\.?\/[^"\n]+)"/g,(_all,ref)=>'from "'+new URL('../'+folder+ref,import.meta.url).href+'"')).toString('base64');
+const dataModule=(source,folder='functions/api/')=>'data:text/javascript;base64,'+Buffer.from(source.replace(/from\s+["'](\.\.?\/[^"'\n]+)["']/g,(_all,ref)=>'from "'+new URL('../'+folder+ref,import.meta.url).href+'"')).toString('base64');
 function runDeep(key,source){
   const env={...process.env,SCALPING_DEEP_MUTATION:'1'};
   const input={};

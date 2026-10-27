@@ -24,6 +24,7 @@ async function fixture(fn=onRequestGet,failCode=null){
    assert.equal(init.headers['x-monitor-key'],'fixture');
    return invoke(url.searchParams.toString());
   }
+  if(url.hostname==='raw.githubusercontent.com')return Response.json({strategies:{}});
   if(url.pathname==='/api/universe')return Response.json({universe:codes.map(code=>({code,name:'종목'+code}))});
   if(url.pathname==='/api/quote'){
    const code=url.searchParams.get('symbol');if(code===failCode)return Response.json({error:'source unavailable'},{status:502});
@@ -40,7 +41,7 @@ test('Top50 complete universe stays within 50 subrequests per invocation with th
  const {data,budgets}=await scan();assert.equal(data.ok,true);assert.equal(data.scanned,50);assert.equal(data.valid,50);assert.equal(data.partial,false);assert.equal(data.errors.length,0);
  assert.deepEqual(data.signals.filter(x=>x.variant==='baseline').map(x=>x.code),['000050','000049','000048']);
  assert.ok(data.signals.every(x=>x.signal.signalPrice===95)); // 15:30 future spike excluded.
- assert.ok(budgets.length>1);assert.ok(budgets.every(x=>x.count<=50));assert.equal(budgets[0].count,6);
+ assert.ok(budgets.length>1);assert.ok(budgets.every(x=>x.count<=50));assert.equal(budgets[0].count,7);
 });
 test('all 35 price lookups preserve official prices and times without hitting the request budget',async()=>{
  const x=await fixture();try{

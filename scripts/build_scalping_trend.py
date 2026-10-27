@@ -47,6 +47,20 @@ def read_daily(path: Path, pnl_col: str, mode: str):
         })
     return out
 
+def read_closing(kind):
+    from nightly_closing30_research import flatten
+    daily=[];eq=1.0
+    for path in sorted(Path('data/closing30').glob('20??-??-??.json')):
+        day=json.loads(path.read_text(encoding='utf-8'));target=1506 if kind=='day' else 1522
+        scans=[x for x in day.get('scans',[]) if x.get('targetHm')==target]
+        if not scans or any(x.get('partial') or x.get('failed') or x.get('quoteErrors') for x in scans):continue
+        main=day.get('closingMains',{}).get(kind,'baseline')
+        rows=[x for x in flatten(day) if x['kind']==kind and x['variant']==main]
+        if any(x['state']!='closed' for x in rows):continue
+        ret=sum(x['pnl'] for x in rows)/3;eq*=1+ret/100
+        daily.append({'date':day['date'],'returnPct':ret,'cumulativePct':(eq-1)*100,'trades':len(rows),'mainVariant':main,'source':'closing30-durable-paper-ledger'})
+    return daily
+
 def main():
     strategies = {}
     latest = ""
@@ -56,6 +70,10 @@ def main():
             latest = max(latest, daily[-1]["date"])
         strategies[name] = {"source": str(path).replace("\\", "/"), "daily": daily}
 
+    for name,kind in [('closing30','day'),('closing_bet','overnight')]:
+        daily=read_closing(kind)
+        strategies[name]={'source':'data/closing30 immutable paper ledgers','daily':daily}
+        if daily:latest=max(latest,daily[-1]['date'])
     payload = {
         "schema": 1,
         "latestCompletedDate": latest or None,

@@ -76,9 +76,9 @@ function tradeStats(days,by,cost){
   const daily=days.map(date=>({date,pnlPct:sideDay(by.get(date)||[],cost)}));
   return {...metrics(daily),trades:trades.length,wins,losses:nets.length-wins,winRate:nets.length?wins/nets.length*100:null};
 }
-export function buildDuel({claudeRecords,gptTrades,gptCoverage,start=DUEL_START}){
+export function buildDuel({claudeRecords,gptTrades,gptCoverage,start=DUEL_START,compareTabs=DUEL_TABS,aggregateTabs=DUEL_TABS,costTable=COSTS}){
   const tabs={};
-  for(const tab of DUEL_TABS){
+  for(const tab of compareTabs){
     const cr=claudeRecords[tab]||new Map();
     const cb=new Map([...cr.entries()].filter(([d])=>d>=start).map(([d,r])=>[d,r.trades||[]]));
     const gb=gptTrades[tab]||new Map();
@@ -89,8 +89,8 @@ export function buildDuel({claudeRecords,gptTrades,gptCoverage,start=DUEL_START}
     const pending=[...new Set([...cs,...gc])].filter(d=>!days.includes(d)).sort().map(date=>({date,missing:cs.has(date)?"GPT":"클로드"}));
     let cg=1,cc=1,gw=0,cw=0,draw=0;
     const rows=days.map(date=>{
-      const gp=sideDay(gb.get(date)||[],COSTS.gpt[tab]);
-      const cp=sideDay(cb.get(date)||[],COSTS.claude[tab]);
+      const gp=sideDay(gb.get(date)||[],costTable.gpt[tab]);
+      const cp=sideDay(cb.get(date)||[],costTable.claude[tab]);
       cg*=1+gp/100; cc*=1+cp/100;
       const w=winner(gp,cp); if(w==="gpt")gw++; else if(w==="claude")cw++; else draw++;
       return {
@@ -102,18 +102,18 @@ export function buildDuel({claudeRecords,gptTrades,gptCoverage,start=DUEL_START}
     tabs[tab]={
       days:rows,pending:pending.slice(-20),
       record:{gpt:gw,claude:cw,draw},
-      gpt:tradeStats(days,gb,COSTS.gpt[tab]),
-      claude:tradeStats(days,cb,COSTS.claude[tab]),
-      costPct:{gpt:COSTS.gpt[tab],claude:COSTS.claude[tab]}
+      gpt:tradeStats(days,gb,costTable.gpt[tab]),
+      claude:tradeStats(days,cb,costTable.claude[tab]),
+      costPct:{gpt:costTable.gpt[tab],claude:costTable.claude[tab]}
     };
   }
 
-  const dates=[...new Set(DUEL_TABS.flatMap(t=>tabs[t].days.map(r=>r.date)))].sort();
-  const maps=Object.fromEntries(DUEL_TABS.map(t=>[t,new Map(tabs[t].days.map(r=>[r.date,r]))]));
+  const dates=[...new Set(aggregateTabs.flatMap(t=>tabs[t].days.map(r=>r.date)))].sort();
+  const maps=Object.fromEntries(aggregateTabs.map(t=>[t,new Map(tabs[t].days.map(r=>[r.date,r]))]));
   let eg=1,ec=1,gw=0,cw=0,draw=0;
   const totalDays=dates.map(date=>{
     let gp=0,cp=0;
-    for(const tab of DUEL_TABS){
+    for(const tab of aggregateTabs){
       const r=maps[tab].get(date);
       if(r){gp+=TOTAL_WEIGHT*r.gpt.pnlPct;cp+=TOTAL_WEIGHT*r.claude.pnlPct;}
     }
@@ -125,7 +125,7 @@ export function buildDuel({claudeRecords,gptTrades,gptCoverage,start=DUEL_START}
   const cm=metrics(totalDays.map(r=>({date:r.date,pnlPct:r.claudePct})));
   return {
     start,rulesVersion:1,
-    costs:COSTS,totalWeight:TOTAL_WEIGHT,winEdgePct:WIN_EDGE_PCT,
+    costs:costTable,totalWeight:TOTAL_WEIGHT,winEdgePct:WIN_EDGE_PCT,
     tabs,
     total:{days:totalDays,record:{gpt:gw,claude:cw,draw},gpt:gm,claude:cm},
     latest:dates.length?dates[dates.length-1]:null

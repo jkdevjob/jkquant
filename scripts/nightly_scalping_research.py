@@ -52,7 +52,9 @@ OPENING_SHADOW_NAMES=[
     "pb_max_0.7","amount_1.8","entry_by_0910","gap_2_5","vol_1.8",
     "combo_pb07_amt15","combo_e0920_vol15","gap_25_55","stop_0.9_tp_1.8","combo_pb05_e0920",
 ]
+CLOSING_SHADOW_NAMES=["dip_1","dip_2","dip_3","dip_volume","dip_vol2","momentum","up_1","up_volume","flat","all"]
 CANDIDATE_POOLS={
+    "closing30":CLOSING_SHADOW_NAMES,"closing_bet":CLOSING_SHADOW_NAMES,
     "opening":OPENING_SHADOW_NAMES,
     "daytrading":["vol_2.0","lookback_30","vwap_slope_0.2","entry_by_1400","session_min_2",
                   "stop_0.8","tp_1.5","vol_1.2","lookback_10","max_trades_1",
@@ -75,6 +77,8 @@ FACTORY_INTERVAL_DAYS=7
 FACTORY_POOL_LIMIT=24
 
 FACTORY_AXES={
+    "closing30":{"side":["dip","up"],"threshold":[0,1,2,3],"volume":[0,1.5,2]},
+    "closing_bet":{"side":["dip","up"],"threshold":[0,1,2,3],"volume":[0,1.5,2]},
     "opening":{
         "pbMax":[0.4,0.5,0.6,0.7,0.8],
         "amountMult":[1.3,1.5,1.7,1.9,2.1],

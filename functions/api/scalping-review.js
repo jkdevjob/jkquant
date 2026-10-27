@@ -6,7 +6,7 @@ const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-s
 const DIR="https://api.github.com/repos/jkdevjob/jkquant/contents/data/nightly-research?ref=scalping-data";
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/";
 
-function n(v){const x=Number(v);return Number.isFinite(x)?x:null;}
+function n(v){if(v==null||v==='')return null;const x=Number(v);return Number.isFinite(x)?x:null;}
 function baseline(x){
   const a=x&&x.variants||[];
   return a.find(v=>v&&v.name==="baseline"||(v&&v.params&&v.params.name==="baseline"))||null;
@@ -16,6 +16,9 @@ function candidate(x){
   return a.find(v=>v&&v.status==="review")||a[0]||null;
 }
 function baseMetrics(strategy,x){
+  if(strategy==='closing30'||strategy==='closing_bet'){
+    const b=x?.baseline||{};return {trades:n(b.trades)||0,avgPnl:n(b.avgPnl),compoundReturnPct:n(b.compoundReturnPct),maxDrawdownPct:n(b.mddPct),profitFactor:n(b.profitFactor)};
+  }
   const b=baseline(x);
   if(!b)return {trades:0,avgPnl:null,compoundReturnPct:null,maxDrawdownPct:null,profitFactor:null};
   if(strategy==="opening"){
@@ -42,7 +45,7 @@ function candMetrics(strategy,x){
 }
 function flags(strategy,root,x,b,c){
   const out=[];
-  if(!x||x.status==="collecting")out.push("표본 수집 중");
+  if(!x||!x.status||x.status==="collecting")out.push("표본 수집 중");
   if(b.avgPnl!=null&&b.avgPnl<0)out.push("기준 기대값 음수");
   if(b.maxDrawdownPct!=null&&b.maxDrawdownPct<=-10)out.push("누적 낙폭 -10% 이하");
   if(c&&c.status==="review")out.push("그림자 교체 검토 후보");
@@ -67,8 +70,8 @@ async function getJson(url,required=true){
 export async function onRequestGet({request}){
   try{
     const u=new URL(request.url),strategy=(u.searchParams.get("strategy")||"").toLowerCase();
-    if(!["opening","daytrading","crypto","soxl"].includes(strategy)){
-      return new Response(JSON.stringify({ok:false,error:"strategy must be opening|daytrading|crypto|soxl"}),{status:400,headers:JH});
+    if(!["opening","daytrading","crypto","soxl","closing30","closing_bet"].includes(strategy)){
+      return new Response(JSON.stringify({ok:false,error:"strategy must be opening|daytrading|crypto|soxl|closing30|closing_bet"}),{status:400,headers:JH});
     }
     const limit=Math.min(14,Math.max(1,parseInt(u.searchParams.get("limit")||"7",10)||7));
     const list=await getJson(DIR);
@@ -94,7 +97,7 @@ export async function onRequestGet({request}){
     });
     return new Response(JSON.stringify({
       ok:true,strategy,records,
-      guardrail:"기준전략 자동변경 OFF · 충분한 prospective/OOS 표본 뒤 검토 후보만 표시"
+      guardrail:"7개 서로 다른 연구세션 연속 1위와 표본·검증·위험·점수 조건 통과 시 다음 새 세션 적용"
     }),{headers:JH});
   }catch(e){
     return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{status:502,headers:JH});

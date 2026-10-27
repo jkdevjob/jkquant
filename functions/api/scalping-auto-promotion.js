@@ -8,6 +8,8 @@ import { normalize } from "./scalping-shadow-ranking.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WORKERS={
+  closing30:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"},
+  closing_bet:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"},
   opening:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"},
   daytrading:{env:"DAYTRADING_WORKER_URL",fallback:"https://jkquant-daytrading-scheduler.mumae4.workers.dev"},
   crypto:{env:"GLOBAL_INTRADAY_WORKER_URL",fallback:"https://jkquant-global-intraday-scheduler.mumae4.workers.dev"},
@@ -18,7 +20,7 @@ function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:J
 function monitorKey(env){return String(env.DAYTRADING_MONITOR_KEY||env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim();}
 function authorized(request,env){const want=monitorKey(env),got=request.headers.get("x-monitor-key")||"";return !!want&&got===want;}
 function workerUrl(env,strategy){const d=WORKERS[strategy];return String(env[d.env]||d.fallback).replace(/\/$/,"");}
-function configUrl(env,strategy){const base=workerUrl(env,strategy);return (strategy==="crypto"||strategy==="soxl")?base+"/config?strategy="+encodeURIComponent(strategy):base+"/config";}
+function configUrl(env,strategy){const base=workerUrl(env,strategy);return (strategy==="crypto"||strategy==="soxl"||strategy==="closing30"||strategy==="closing_bet")?base+"/config?strategy="+encodeURIComponent(strategy):base+"/config";}
 async function workerConfig(env,strategy,method="GET",body=null){
   const key=monitorKey(env);if(!key)throw new Error("monitor key missing");
   const init={method,headers:{"Accept":"application/json","x-monitor-key":key}};
@@ -37,7 +39,7 @@ function weekday(date){return new Date(String(date)+"T12:00:00Z").getUTCDay();}
 function nextWeekday(date,includeToday){let d=includeToday?date:shiftDate(date,1);for(let i=0;i<8;i++){const w=weekday(d);if(w!==0&&w!==6)return d;d=shiftDate(d,1);}return d;}
 export function effectiveFrom(strategy,now=Date.now()){
   if(strategy==="crypto"){const p=dateParts(now,"Asia/Seoul");return shiftDate(p.date,1);}
-  if(strategy==="opening"||strategy==="daytrading"){
+  if(strategy==="opening"||strategy==="daytrading"||strategy==="closing30"||strategy==="closing_bet"){
     const p=dateParts(now,"Asia/Seoul"),wd=!["Sat","Sun"].includes(p.weekday);
     return nextWeekday(p.date,wd&&p.hm<900);
   }

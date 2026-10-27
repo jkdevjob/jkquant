@@ -231,7 +231,7 @@ test('value mutations fail for OFF bypass, lost durable intent, duplicate replay
  const noFx=await mutate('Math.floor(conf.budget/fx.rate/price)','Math.floor(conf.budget/price)'),usd=world('gpt_soxl',{now:Date.parse(DATE+'T10:00:00-04:00')});
  await using(usd,async()=>{await usd.call({...mainPlan(),strategy:'gpt_soxl',code:'SOXL',sourceId:'usd',dueAt:toIso(usd.now),expiresAt:toIso(usd.now+360000),exitDueAt:toIso(usd.now+5400000)},noFx.researchBroker);assert.equal(usd.orders[0].qty,66334,'mutant wrongly spends KRW as USD');});
  const plans=read('functions/api/_research-orders.js'),stale=await import('data:text/javascript;base64,'+Buffer.from(plans.replace('if(now<due||now>expires)','if(false)')).toString('base64'));assert.notEqual(validateBrokerPlan(mainPlan(),at(1006)),'');assert.equal(stale.validateBrokerPlan(mainPlan(),at(1006)),'');
- const model=read('functions/api/_trade-history.js').replaceAll("'./_opening-execution.js'",JSON.stringify(new URL('../functions/api/_opening-execution.js',import.meta.url).href));
+ const model=read('functions/api/_trade-history.js').replaceAll("'./_closing30.js'",JSON.stringify(new URL('../functions/api/_closing30.js',import.meta.url).href)).replaceAll("'./_opening-execution.js'",JSON.stringify(new URL('../functions/api/_opening-execution.js',import.meta.url).href));
  const bad=await import('data:text/javascript;base64,'+Buffer.from(model.replace("settlement:done?'fills_confirmed_fees_unknown':'unverified',pnl:null","settlement:'fills_confirmed_fees_unknown',pnl:0")).toString('base64'));
  const position={key:'p',date:DATE,plan:mainPlan(),operations:{buy:{status:'accepted'}},events:[]};assert.equal(brokerRecords([position])[0].broker.pnl,null);assert.equal(bad.brokerRecords([position])[0].broker.pnl,0);
 });

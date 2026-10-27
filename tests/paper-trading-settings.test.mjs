@@ -216,7 +216,7 @@ test('value mutants catch stale settings overwrite, mutable journal and archived
  const MW=await loadWorker(mutableSrc),h=world(MW),post=e=>h.store.get(date).fetch('https://internal/execution',{method:'POST',body:JSON.stringify(e)});
  const intent={id:'i',phase:'intent',date,at:'a',requests:openingOrderRefs(date,[signal])},result=openingExecutionResult(intent,{ok:true,enabled:false},200);
  await post(intent);await post(result);assert.notEqual((await post({...result,ordersOk:true})).status,409);
- const history=read('functions/api/_trade-history.js'),lostSrc=history.replace('broker:mergeOpeningBroker(old?.broker,x.broker)','broker:old?.broker||x.broker').replace("'./_opening-execution.js'",JSON.stringify(new URL('../functions/api/_opening-execution.js',import.meta.url).href));
+ const history=read('functions/api/_trade-history.js'),lostSrc=history.replace('broker:mergeOpeningBroker(old?.broker,x.broker)','broker:old?.broker||x.broker').replaceAll("'./_closing30.js'",JSON.stringify(new URL('../functions/api/_closing30.js',import.meta.url).href)).replace("'./_opening-execution.js'",JSON.stringify(new URL('../functions/api/_opening-execution.js',import.meta.url).href));
  const lost=await dataImport(lostSrc),old=world().ledger(),next={...old,executionEvents:[intent,result]};
  assert.equal(uniqueRecords([old,next].flatMap(openingRecords))[0].broker.buy,'not_submitted');assert.notEqual(lost.uniqueRecords([old,next].flatMap(openingRecords))[0].broker.buy,'not_submitted');
 });

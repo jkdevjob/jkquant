@@ -68,12 +68,18 @@ export async function onRequestPost({request,env}){
     if(sc)lines.push("개선안 관찰: "+sc.name+" · 홀드아웃 우위 "+pct(sc.holdoutAvgEdgePct)+" · WF OOS 우위 "+pct(sc.oosAvgEdgePct)+" · +1% 일수비율 "+pct(sc.holdoutTarget1PctDayRatePct)+" · "+sc.status);
     else lines.push("개선안 관찰: 표본 수집 중");
 
+    for(const [key,label] of [['closing30','종가 30분'],['closing_bet','개별 종목 종가 베팅']]){
+      const x=j[key]||{},b=x.baseline||{},c=topCandidate(x),l=x.lifecycle?.leader||{};
+      lines.push('', '['+label+']', '기준 '+Number(b.trades||0)+'건 · 평균 '+pct(b.avgPnl)+' · 3슬롯 누적 '+pct(b.compoundReturnPct)+' · MDD '+pct(b.mddPct));
+      lines.push('활성 그림자 '+Number(x.candidates?.length||0)+'개 · 1위 '+String(l.name||'표본 수집 중')+' · '+Number(l.consecutiveResearchSessions||0)+'/7 연구세션');
+      if(c)lines.push('개선 후보 '+c.name+' · 검증 우위 '+pct(c.validationAvgEdgePct)+' · '+c.status);
+    }
     lines.push("","[KIS VTS 체결검증]");
     lines.push("시초가 매칭 "+Number(ov.completeMatches||0)+"건 · 관측 마찰 "+pct(ov.avgObservedExecutionDragPct)+" · "+String(ov.calibrationStatus||"collecting"));
     lines.push("데이트레이딩 매칭 "+Number(dv.completeMatches||0)+"건 · 관측 마찰 "+pct(dv.avgObservedExecutionDragPct)+" · "+String(dv.calibrationStatus||"collecting"));
 
-    lines.push("","기준전략 자동변경: OFF");
-    lines.push("표본·일관성 기준을 넘으면 검토 후보만 올립니다.");
+    lines.push("","메인 승격: 7연속 연구세션 1위 + 표본·검증·위험 통과 시 다음 새 세션");
+    lines.push("매매 원본과 한투 모의체결은 별도로 보존합니다.");
     const id=await telegram(env,lines.join("\n"));
     return new Response(JSON.stringify({ok:true,messageId:id}),{headers:JH});
   }catch(e){

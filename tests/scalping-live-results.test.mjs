@@ -105,8 +105,8 @@ test('owner endpoint reads only immutable /events and /paper; isolates source fa
  };
  try{
   const r=await onRequestGet({request:new Request('https://test/api/scalping-live-results',{headers:{Authorization:'Bearer fixture'}}),env:{OWNER_EMAIL:'owner@test',DAYTRADING_MONITOR_KEY:'fixture',OPENING_MONITOR_KEY:'fixture'}});
-  const j=await r.json();assert.equal(j.strategies.length,4);assert.equal(j.strategies.find(x=>x.strategy==='crypto').current.state,'unavailable');assert.equal(j.strategies.find(x=>x.strategy==='opening').current.state,'no_signal');
-  for(const c of calls.slice(1)){assert.ok(['/events','/paper'].includes(new URL(c.url).pathname));assert.equal(c.opts.method,undefined);assert.equal(c.opts.headers['x-monitor-key'],'fixture');}
+  const j=await r.json();assert.equal(j.strategies.length,6);assert.equal(j.strategies.find(x=>x.strategy==='crypto').current.state,'unavailable');assert.equal(j.strategies.find(x=>x.strategy==='opening').current.state,'no_signal');
+  for(const c of calls.slice(1)){assert.ok(['/events','/paper','/closing-ledger'].includes(new URL(c.url).pathname));assert.equal(c.opts.method,undefined);assert.equal(c.opts.headers['x-monitor-key'],'fixture');}
  }finally{globalThis.fetch=old;Date.now=oldNow;}
 });
 const ui=fs.readFileSync(new URL('../scalping.html',import.meta.url),'utf8');
@@ -151,7 +151,7 @@ test('live card escapes source/position names, marks unknown and provisional, no
 test('mutants: missing numeric null guard, main variant filter and polling interval rejected by values',async()=>{
  const original=fs.readFileSync(new URL('../functions/api/scalping-live-results.js',import.meta.url),'utf8');
  const executable=original.replace(/^import .*;\n/gm,'').replace(/export async function/g,'async function').replace(/export \{[^}]*\};/g,'');
- const base={tzParts:(zone,t)=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(t));const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return {date:p.year+'-'+p.month+'-'+p.day,hm:Number(p.hour)*100+Number(p.minute)};},shiftIso:()=>'',isNyseSessionDate:()=>true,krxDay:()=>({closed:false}),Response,Date};
+ const base={CLOSING_LABELS:{closing30:'종가 30분',closing_bet:'종가 베팅'},tzParts:(zone,t)=>{const parts=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(t));const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));return {date:p.year+'-'+p.month+'-'+p.day,hm:Number(p.hour)*100+Number(p.minute)};},shiftIso:()=>'',isNyseSessionDate:()=>true,krxDay:()=>({closed:false}),Response,Date};
  for(const [mutate,verify] of [
   [s=>s.replace("v==null||v===''||",''),c=>assert.equal(c.summarizePaperLedger('daytrading',ledger([{status:'closed',pnl:null}]),now).returnPct,null)],
   [s=>s.replace('partial=!coverage.complete','partial=!openingScanOkay(latest)'),c=>{const l=scan();l.scans=l.scans.filter(s=>s.targetHm!==906);assert.equal(c.summarizeOpeningLedger(l,now).state,'unavailable');}],

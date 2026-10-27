@@ -1,3 +1,4 @@
+import {closingRows as flatten} from './_closing30.js';
 // Owner-only closing 30-min research history, read-only Durable Object ledger.
 // Includes every variant's signals and paper fills. No trade/order path.
 import {ownerAuthorized} from "./global-paper.js";
@@ -15,23 +16,6 @@ async function readDay(env,date){
  try{const r=await fetch(base+"/closing-ledger?date="+date,{headers:{"x-monitor-key":key,accept:"application/json"},signal:ac.signal});
  const j=await r.json();if(!r.ok||j.ok!==true)throw Error(j.error||String(r.status));return j.ledger||null;}
  finally{clearTimeout(timeout);}
-}
-function flatten(ledger){
- if(!ledger||!Array.isArray(ledger.events))return [];
- const map=new Map();
- for(const e of ledger.events){
-  if(!e||!["day","overnight"].includes(e.kind)||!e.variant||!e.code)continue;
-  const id=[e.date||ledger.date,e.kind,e.variant,e.code].join(":");
-  let x=map.get(id);
-  if(!x){x={id,date:e.date||ledger.date,kind:e.kind,variant:e.variant,code:e.code,name:e.name||e.code,
-    signalTime:null,entryTime:null,exitTime:null,entryPrice:null,exitPrice:null,
-    pnl:null,status:"signal",source:"server-paper-only",strategyVersion:e.decisionVersion||"closing30_v1"};map.set(id,x);}
-  if(e.stage==="signal"){x.signalTime=e.createdAt;x.signal=e.signal||null;}
-  if(e.stage==="buy"){x.entryTime=e.createdAt;x.entryPrice=numeric(e.price);x.status="open";}
-  if(e.stage==="sell"){x.exitTime=e.createdAt;x.exitPrice=numeric(e.price);x.pnl=numeric(e.pnl);
-    x.status=x.entryPrice>0&&x.exitPrice>0&&x.pnl!==null?"closed":"unverified";}
- }
- return [...map.values()];
 }
 export async function onRequestGet({request,env}){
  if(!await ownerAuthorized(request,env))return json({ok:false,error:"unauthorized"},401);

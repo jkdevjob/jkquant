@@ -1,3 +1,4 @@
+import {closingMainVariant} from './_closing30.js';
 // Shared read models for original paper evidence and separately labelled research.
 // Never infer a fill, a zero return or a parameter snapshot from a later strategy.
 import {openingBroker,openingOrderRefs,mergeOpeningBroker} from './_opening-execution.js';
@@ -80,7 +81,7 @@ export function closingRecords(ledger){
     const strategy=e.kind==='day'?'closing30':'closing_bet',key=[strategy,ledger.date,e.variant,e.code].join(':');
     let r=by.get(key);
     if(!r){r=record(strategy,{id:key,date:ledger.date,code:e.code,name:e.name,strategyVersion:e.decisionVersion,
-      strategyParams:e.strategyParams||e.signal?.strategyParams,capturedAt:e.createdAt,entryTime:null,status:'signal'},e.variant,'server-paper','baseline');by.set(key,r);}
+      strategyParams:e.strategyParams||e.signal?.strategyParams,capturedAt:e.createdAt,entryTime:null,status:'signal'},e.variant,'server-paper',closingMainVariant(ledger,e.kind));by.set(key,r);}
     r.events.push({id:e.id,stage:e.stage,at:e.createdAt,source:e.source,price:number(e.price)});
     if(e.stage==='signal'){r.signalTime=e.signal?.cutoffTime||e.createdAt;r.evidence=e.signal||null;}
     if(e.stage==='buy'){r.entryTime=e.priceAt||e.createdAt;r.entryPrice=number(e.price);r.status=r.entryPrice>0?'open':'unverified';}

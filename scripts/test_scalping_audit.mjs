@@ -64,6 +64,7 @@ try{
 
   const data={schema:1,strategies:{opening:{daily:[]},daytrading:{daily:[]},crypto:{daily:[]},soxl:{daily:[{date:'2026-10-01',returnPct:2,trades:1}]}}};
   globalThis.fetch=async url=>{
+    if(String(url).includes('/event-history'))return response({ok:true,ledgers:[],sourceWarnings:[]});
     if(String(url).includes('/paper-history')){
       assert.equal(new URL(url).searchParams.get('limit'),'8');
       const strategy=new URL(url).searchParams.get('strategy');

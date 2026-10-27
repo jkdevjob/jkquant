@@ -48,6 +48,16 @@ function gptTrades(rows){
   return m;
 }
 function datesFromCsv(rows){return new Set(rows.map(r=>String(r.date||"")).filter(Boolean));}
+export function closingComparison(claudeFiles,report){
+  const cr=new Map();
+  for(const file of claudeFiles)for(const e of file?.ledger?.events||[]){
+    if(e.id!=='close:close30'||e.payload?.status!=='closed')continue;
+    const p=e.payload;cr.set(p.date||file.date,{trades:normalizeTrades(p.trades)});
+  }
+  const sessions=report?.operationalSessions||[],gc=new Set(sessions.map(x=>x.date)),gb=new Map(sessions.map(x=>[x.date,normalizeTrades(x.trades).map(t=>({...t,slot:1/3}))]));
+  return buildDuel({claudeRecords:{closing30:cr},gptTrades:{closing30:gb},gptCoverage:{closing30:gc},
+    compareTabs:['closing30'],aggregateTabs:['closing30'],costTable:{gpt:{closing30:.25},claude:{closing30:.15}}}).tabs.closing30;
+}
 async function loadReport(){
   const paths=await tree();
   const claudePaths=paths.filter(p=>/^data\/claude-live\/20\d\d-\d\d-\d\d\.json$/.test(p)&&p.slice(-15,-5)>=DUEL_START);
@@ -68,7 +78,9 @@ async function loadReport(){
   const dayCoverage=new Set(paths.filter(p=>/^data\/daytrading-research\/20\d\d-\d\d-\d\d\.json$/.test(p)).map(p=>p.slice(-15,-5)));
   const gptCoverage={opening:openingCoverage,daytrading:dayCoverage,crypto:datesFromCsv(csv(crDec)),soxl:datesFromCsv(csv(sxDec))};
   const report=buildDuel({claudeRecords,gptTrades:gptTradesBy,gptCoverage,start:DUEL_START});
-  return {...report,generatedAt:new Date().toISOString(),sources:{
+  try{report.tabs.closing30=closingComparison(claudeFiles,await rawJson('nightly-research/closing30.json'));}
+  catch(e){report.tabs.closing30={days:[],pending:[],sourceWarning:String(e.message||e)};}
+  return {...report,closingComparisonRule:'종가 30분은 독립 비교 · 기존 4탭 25% 합계 유지 · 같은 날짜 완료 원본만',generatedAt:new Date().toISOString(),sources:{
     gpt:"scalping-data baseline live/paper archives",claude:"scalping-data data/claude-live close:* ledgers"
   }};
 }

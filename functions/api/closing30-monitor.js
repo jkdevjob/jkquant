@@ -1,7 +1,7 @@
 // GET /api/closing30-monitor?op=scan&kind=day|overnight, or ?op=prices&stage=...
 // Internal scheduled paper-only signal/pricing. No broker orders and no post-cutoff input in signal selection.
 import {minuteVolume} from "./_opening.js";
-import {closeHm,snapAt,closeFeature,chooseClosingSignals} from "./_closing30.js";
+import {CLOSE_VARIANTS,closingVariant,closeHm,snapAt,closeFeature,chooseClosingSignals} from "./_closing30.js";
 const JSON_H={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const respond=(obj,status=200)=>new Response(JSON.stringify(obj),{status,headers:JSON_H});
 function permitted(req,env){const key=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"");return !!key&&req.headers.get("x-monitor-key")===key;}
@@ -88,9 +88,24 @@ export async function onRequestGet({request,env}){
   },2);
   if(op==="feature-batch")return respond({ok:true,features:output,errors});
   // Universe source unavailable/partial: record degraded and never imply no-trade.
+  let variants=[...CLOSE_VARIANTS];
+  // Only forward observations after registration. Retired candidates remain
+  // observable so their old trades and post-retirement evidence are retained.
+  let factoryError=null;
+  try{
+   const r=await getJson('https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/lifecycle.json');
+   const life=r.strategies?.[kind==='day'?'closing30':'closing_bet']||{};
+   for(const x of life.generatedPool||[]){
+    const v=closingVariant(x.name);if(v&&/^\d{4}-\d{2}-\d{2}$/.test(String(x.createdAfter||''))&&x.createdAfter<date)variants.push(v);
+   }
+  }catch(e){factoryError=String(e.message||e);}
+  const main=String(u.searchParams.get('mainVariant')||'baseline'),mainRule=closingVariant(main);
+  if(!mainRule)return respond({ok:false,error:'unknown closing main'},400);
+  // A promoted generation remains tradable even after the bounded reserve pool rotates.
+  if(!variants.some(v=>v.id===main))variants.push(mainRule);
   const partial=errors.length>0||output.length===0;
   return respond({ok:true,date,kind,partial,errors,scanned:symbols.length,valid:output.length,
-   signals:chooseClosingSignals(output,kind,3),cutoff,source:"minute snapshot; no post-cutoff data"});
+   signals:chooseClosingSignals(output,kind,3,variants),variants:variants.map(v=>v.id),factoryError,cutoff,source:"minute snapshot; no post-cutoff data"});
  }
  if(op==="prices"||op==="price-batch"){
   const stage=u.searchParams.get("stage");
