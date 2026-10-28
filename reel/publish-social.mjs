@@ -303,5 +303,11 @@ if (!DRY && targets.includes("ig") && PLATFORMS.ig.keys.every((k) => process.env
 const left = queue.filter((q) => targets.some((p) => !done(q.id, p))).map((q) => `${q.id}(${q.date})`);
 report.push(`남은 항목: ${left.length ? left.join(", ") : "없음 — 다음 주 영상을 큐에 추가해야 함"}`);
 
+const code = failed ? 1 : !DRY && keySkips > 0 && keySkips === targets.length ? 2 : 0;
 console.log(`[${TODAY} KST]${DRY ? " (점검만)" : ""}\n` + report.join("\n"));
-process.exit(failed ? 1 : !DRY && keySkips > 0 && keySkips === targets.length ? 2 : 0);
+// 매 실행 결과를 남겨 예약 작업이 커밋 → 저장소에서 실행 여부를 확인할 수 있게
+if (!DRY) {
+  const now = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace("T", " ");
+  fs.writeFileSync(path.join(__dirname, "queue", "last_run.txt"), `${now} KST · exit ${code}\n${report.join("\n")}\n`);
+}
+process.exit(code);
