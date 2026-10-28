@@ -51,7 +51,6 @@
    왼쪽 입력칸에 아래 두 범위를 **띄어쓰기로 이어서** 입력 → **Authorize APIs** →
    `https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly`
    (readonly 는 같은 영상을 두 번 올리지 않도록 최근 업로드 제목을 확인하는 데만 쓴다) →
-  
    은퇴노트 유튜브 채널이 있는 구글 계정(브랜드 계정이면 그 채널)으로 로그인 →
    **Exchange authorization code for tokens** → 나온 **Refresh token** 을 `YT_REFRESH_TOKEN` 에.
 
