@@ -3,8 +3,8 @@
   "schemaVersion": 1,
   "strategyVersion": "1.0.0",
   "status": "prospective_experiment",
-  "generatedAt": "2026-10-28T02:29:38.320043+00:00",
-  "asOf": "2026-10-26",
+  "generatedAt": "2026-10-28T16:46:07.753435+00:00",
+  "asOf": "2026-10-27",
   "registeredAt": "2026-10-13T06:39:10.172275+00:00",
   "rules": {
     "version": "1.0.0",
@@ -47,66 +47,430 @@
   "source": {
     "provider": "KRX-via-FinanceData-marcap",
     "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
-    "asOf": "2026-10-26",
-    "cutoff": "2026-10-27",
+    "asOf": "2026-10-27",
+    "cutoff": "2026-10-28",
     "inputs": [
       {
-        "url": "https://raw.githubusercontent.com/FinanceData/marcap/d911b38e892bfb01f00fbc11381adda64944f4c7/data/marcap-2025.parquet",
+        "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
         "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
         "bytes": 25153419
       },
       {
-        "url": "https://raw.githubusercontent.com/FinanceData/marcap/d911b38e892bfb01f00fbc11381adda64944f4c7/data/marcap-2026.parquet",
-        "sha256": "48cc4eb03b5ce137d497dbbb1f66c481d33d977daf65557e6eb20b186f75c117",
-        "bytes": 20938274
+        "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+        "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+        "bytes": 21040305
       }
     ],
-    "combinedSha256": "03f1c8f64b4625e7072c3029ca489237bd4a70643dd334f410ca2d8b36ffe6c7",
-    "upstreamCommit": "d911b38e892bfb01f00fbc11381adda64944f4c7",
+    "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+    "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
     "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
     "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
     "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
   },
   "coverage": {
-    "currentRows": 2871,
-    "examined": 2287,
+    "currentRows": 2872,
+    "examined": 2286,
     "excluded": {
-      "low_prior_liquidity": 1469,
+      "low_prior_liquidity": 1472,
       "missing_latest_session": 177,
-      "outside_common_stock_or_watch_status": 511,
-      "not_traded": 31,
+      "outside_common_stock_or_watch_status": 512,
+      "not_traded": 32,
       "short_history": 41,
       "prior_spac_or_fund_history": 1
     },
-    "candidateSignals": 2
+    "candidateSignals": 28
   },
   "candidates": [
     {
-      "code": "085620",
-      "name": "미래에셋생명",
+      "code": "004710",
+      "name": "한솔테크닉스",
       "market": "KOSPI",
       "pattern": "trend200",
-      "signalDate": "2026-10-26",
-      "signalClose": 17080.0,
+      "signalDate": "2026-10-27",
+      "signalClose": 8300.0,
       "features": {
-        "ma200SlopePct": 5.923273625072434,
-        "distancePriorHighPct": -50.564399421128755,
-        "volumeRatio": 0.5318940540803558,
-        "prior20AmountWon": 2355573499.0
+        "ma200SlopePct": 5.7408426670467305,
+        "distancePriorHighPct": -46.31306597671412,
+        "volumeRatio": 1.234000311284077,
+        "prior20AmountWon": 10635246187.0
       }
     },
     {
-      "code": "412350",
-      "name": "레이저쎌",
+      "code": "006120",
+      "name": "SK디스커버리",
+      "market": "KOSPI",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-27",
+      "signalClose": 58900.0,
+      "features": {
+        "ma200SlopePct": 0.9893148564678711,
+        "distancePriorHighPct": -18.080667593880374,
+        "volumeRatio": 0.5637271110608781,
+        "prior20AmountWon": 2735687240.0
+      }
+    },
+    {
+      "code": "007810",
+      "name": "코리아써키트",
+      "market": "KOSPI",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 75300.0,
+      "features": {
+        "ma200SlopePct": 5.411882572563265,
+        "distancePriorHighPct": -46.93446088794926,
+        "volumeRatio": 1.2581060770106858,
+        "prior20AmountWon": 58025097565.0
+      }
+    },
+    {
+      "code": "029460",
+      "name": "케이씨",
+      "market": "KOSPI",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 36650.0,
+      "features": {
+        "ma200SlopePct": 4.887535544656485,
+        "distancePriorHighPct": -22.43386243386245,
+        "volumeRatio": 0.9436500307944452,
+        "prior20AmountWon": 1612227860.0
+      }
+    },
+    {
+      "code": "033640",
+      "name": "네패스",
       "market": "KOSDAQ",
       "pattern": "trend200",
-      "signalDate": "2026-10-26",
-      "signalClose": 5650.0,
+      "signalDate": "2026-10-27",
+      "signalClose": 24000.0,
       "features": {
-        "ma200SlopePct": 7.443522143092918,
-        "distancePriorHighPct": -59.87215909090913,
-        "volumeRatio": 1.0372361519829656,
-        "prior20AmountWon": 2433803185.3
+        "ma200SlopePct": 5.042256324876049,
+        "distancePriorHighPct": -38.38254172015403,
+        "volumeRatio": 1.0027177598196417,
+        "prior20AmountWon": 7334312398.75
+      }
+    },
+    {
+      "code": "034730",
+      "name": "SK",
+      "market": "KOSPI",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 497500.0,
+      "features": {
+        "ma200SlopePct": 5.642990888892507,
+        "distancePriorHighPct": -42.01631701631704,
+        "volumeRatio": 1.186771318704785,
+        "prior20AmountWon": 83243999304.3
+      }
+    },
+    {
+      "code": "039860",
+      "name": "나노엔텍",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 4820.0,
+      "features": {
+        "ma200SlopePct": 0.3733661965211743,
+        "distancePriorHighPct": -37.15775749674051,
+        "volumeRatio": 0.9164374359803448,
+        "prior20AmountWon": 4811783149.65
+      }
+    },
+    {
+      "code": "052710",
+      "name": "아모텍",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 15560.0,
+      "features": {
+        "ma200SlopePct": 7.130999194461318,
+        "distancePriorHighPct": -46.49796568585865,
+        "volumeRatio": 0.5568188925860076,
+        "prior20AmountWon": 12493686294.75
+      }
+    },
+    {
+      "code": "053800",
+      "name": "안랩",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-27",
+      "signalClose": 92700.0,
+      "features": {
+        "ma200SlopePct": 3.4010790771573207,
+        "distancePriorHighPct": 3.1145717463848532,
+        "volumeRatio": 1.785178813294737,
+        "prior20AmountWon": 20179734732.5
+      }
+    },
+    {
+      "code": "059090",
+      "name": "미코",
+      "market": "KOSDAQ",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-27",
+      "signalClose": 21950.0,
+      "features": {
+        "ma200SlopePct": 5.155122316993155,
+        "distancePriorHighPct": -21.326164874552,
+        "volumeRatio": 0.8212883509771753,
+        "prior20AmountWon": 10229259895.75
+      }
+    },
+    {
+      "code": "077500",
+      "name": "유니퀘스트",
+      "market": "KOSPI",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-27",
+      "signalClose": 11860.0,
+      "features": {
+        "ma200SlopePct": 6.067861851576817,
+        "distancePriorHighPct": 0.5937234944868308,
+        "volumeRatio": 2.140280387598302,
+        "prior20AmountWon": 6267616693.5
+      }
+    },
+    {
+      "code": "083450",
+      "name": "GST",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 43400.0,
+      "features": {
+        "ma200SlopePct": 5.95678081158546,
+        "distancePriorHighPct": -34.73684210526316,
+        "volumeRatio": 0.7724136958899387,
+        "prior20AmountWon": 7955836298.75
+      }
+    },
+    {
+      "code": "085910",
+      "name": "네오티스",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 20750.0,
+      "features": {
+        "ma200SlopePct": 6.2490779478529435,
+        "distancePriorHighPct": -38.518518518518476,
+        "volumeRatio": 1.13712847343367,
+        "prior20AmountWon": 6377180422.0
+      }
+    },
+    {
+      "code": "119850",
+      "name": "지엔씨에너지",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 36800.0,
+      "features": {
+        "ma200SlopePct": 3.7571249728000744,
+        "distancePriorHighPct": -35.66433566433565,
+        "volumeRatio": 1.3376002837599361,
+        "prior20AmountWon": 21521223865.0
+      }
+    },
+    {
+      "code": "122640",
+      "name": "예스티",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 27850.0,
+      "features": {
+        "ma200SlopePct": 5.080608915251306,
+        "distancePriorHighPct": -30.112923462986206,
+        "volumeRatio": 0.9475645544681974,
+        "prior20AmountWon": 10793728735.0
+      }
+    },
+    {
+      "code": "131970",
+      "name": "두산테스나",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 97100.0,
+      "features": {
+        "ma200SlopePct": 7.2607288376522305,
+        "distancePriorHighPct": -48.92162019989477,
+        "volumeRatio": 0.8304218803702648,
+        "prior20AmountWon": 56327126027.5
+      }
+    },
+    {
+      "code": "138360",
+      "name": "앤로보틱스",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 2170.0,
+      "features": {
+        "ma200SlopePct": 2.1181503860830952,
+        "distancePriorHighPct": -45.68210262828535,
+        "volumeRatio": 3.006456570791713,
+        "prior20AmountWon": 15319108627.15
+      }
+    },
+    {
+      "code": "144960",
+      "name": "뉴파워프라즈마",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-27",
+      "signalClose": 14580.0,
+      "features": {
+        "ma200SlopePct": 10.858413817977809,
+        "distancePriorHighPct": 4.142857142857137,
+        "volumeRatio": 1.7716316742236544,
+        "prior20AmountWon": 21301413260.75
+      }
+    },
+    {
+      "code": "192650",
+      "name": "드림텍",
+      "market": "KOSPI",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-27",
+      "signalClose": 7510.0,
+      "features": {
+        "ma200SlopePct": 1.4261714837530581,
+        "distancePriorHighPct": -22.176165803108827,
+        "volumeRatio": 1.495588710664834,
+        "prior20AmountWon": 8177279650.0
+      }
+    },
+    {
+      "code": "236200",
+      "name": "슈프리마",
+      "market": "KOSDAQ",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-27",
+      "signalClose": 55000.0,
+      "features": {
+        "ma200SlopePct": 4.057437921253415,
+        "distancePriorHighPct": -13.657770800627933,
+        "volumeRatio": 1.6329008298564944,
+        "prior20AmountWon": 1523023282.5
+      }
+    },
+    {
+      "code": "252990",
+      "name": "샘씨엔에스",
+      "market": "KOSDAQ",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-27",
+      "signalClose": 15960.0,
+      "features": {
+        "ma200SlopePct": 9.169773757236555,
+        "distancePriorHighPct": -20.79404466501238,
+        "volumeRatio": 1.5226558232477856,
+        "prior20AmountWon": 15944940017.0
+      }
+    },
+    {
+      "code": "265740",
+      "name": "엔에프씨",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 6810.0,
+      "features": {
+        "ma200SlopePct": 4.283866273194015,
+        "distancePriorHighPct": -27.553191489361684,
+        "volumeRatio": 0.979902122422062,
+        "prior20AmountWon": 2294035978.25
+      }
+    },
+    {
+      "code": "307180",
+      "name": "아이엘",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 5780.0,
+      "features": {
+        "ma200SlopePct": 4.868803963539303,
+        "distancePriorHighPct": -39.476439790575945,
+        "volumeRatio": 3.808618452707802,
+        "prior20AmountWon": 1246696094.6
+      }
+    },
+    {
+      "code": "356860",
+      "name": "티엘비",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 38150.0,
+      "features": {
+        "ma200SlopePct": 3.930141314699398,
+        "distancePriorHighPct": -39.336668543816764,
+        "volumeRatio": 0.686051229639394,
+        "prior20AmountWon": 28374615262.5
+      }
+    },
+    {
+      "code": "417500",
+      "name": "제이아이테크",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 3975.0,
+      "features": {
+        "ma200SlopePct": 2.5769389128886377,
+        "distancePriorHighPct": -32.854729729729634,
+        "volumeRatio": 0.2467694881177797,
+        "prior20AmountWon": 1328492349.35
+      }
+    },
+    {
+      "code": "420770",
+      "name": "기가비스",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 111600.0,
+      "features": {
+        "ma200SlopePct": 9.500670692618085,
+        "distancePriorHighPct": -41.93548387096768,
+        "volumeRatio": 1.7169551877196791,
+        "prior20AmountWon": 15539202137.5
+      }
+    },
+    {
+      "code": "425420",
+      "name": "티에프이",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-27",
+      "signalClose": 76200.0,
+      "features": {
+        "ma200SlopePct": 5.384692898018062,
+        "distancePriorHighPct": 2.419354838709631,
+        "volumeRatio": 3.1924035207937913,
+        "prior20AmountWon": 9959104035.0
+      }
+    },
+    {
+      "code": "452260",
+      "name": "한화갤러리아",
+      "market": "KOSPI",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 2430.0,
+      "features": {
+        "ma200SlopePct": 6.306122448979612,
+        "distancePriorHighPct": -33.241758241758255,
+        "volumeRatio": 0.36132360560646637,
+        "prior20AmountWon": 4146641011.25
       }
     }
   ],
@@ -153,8 +517,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -21.014815425634247,
+      "sessions": 9,
+      "netMarkPct": -17.29529149830954,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -183,7 +547,7 @@
       "maeClosePct": -20.22099447513811,
       "mddClosePct": -23.19148936170212,
       "entryPrice": 4525.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "005440",
@@ -227,8 +591,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -13.818678129865546,
+      "sessions": 9,
+      "netMarkPct": -12.623927826675141,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -244,20 +608,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.019308125502816,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -12.623927826675141,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 10970.0
         }
       },
       "mfeClosePct": 1.930812550281602,
       "maeClosePct": -12.952534191472242,
       "mddClosePct": -14.601420678768761,
       "entryPrice": 12430.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "017890",
@@ -301,8 +665,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -13.99376603280601,
+      "sessions": 9,
+      "netMarkPct": -10.523228345208324,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -331,7 +695,7 @@
       "maeClosePct": -13.129381771829197,
       "mddClosePct": -13.129381771829197,
       "entryPrice": 15690.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "058470",
@@ -375,8 +739,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -23.14087457449593,
+      "sessions": 9,
+      "netMarkPct": -20.014401675831362,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -405,7 +769,7 @@
       "maeClosePct": -22.368421052631582,
       "mddClosePct": -22.368421052631582,
       "entryPrice": 76000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "141000",
@@ -449,8 +813,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -24.584157000561323,
+      "sessions": 9,
+      "netMarkPct": -22.849661991374614,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -479,7 +843,7 @@
       "maeClosePct": -23.8262088297127,
       "mddClosePct": -25.54794520547946,
       "entryPrice": 14270.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "192080",
@@ -523,8 +887,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -7.689311449868075,
+      "sessions": 9,
+      "netMarkPct": -7.513146013703698,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -553,7 +917,7 @@
       "maeClosePct": -6.761565836298922,
       "mddClosePct": -6.927175843694489,
       "entryPrice": 56200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "217190",
@@ -597,8 +961,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -26.298527645746926,
+      "sessions": 9,
+      "netMarkPct": -18.265669623485014,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -627,7 +991,7 @@
       "maeClosePct": -25.55780933062882,
       "mddClosePct": -25.55780933062882,
       "entryPrice": 9860.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "295310",
@@ -671,7 +1035,7 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
+      "sessions": 9,
       "netMarkPct": -13.046477933905187,
       "dataStatus": "observing",
       "horizons": {},
@@ -701,7 +1065,7 @@
       "maeClosePct": -14.02157164869029,
       "mddClosePct": -14.414414414414411,
       "entryPrice": 64900.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "393890",
@@ -745,8 +1109,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -33.18895035312946,
+      "sessions": 9,
+      "netMarkPct": -30.765751661274066,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -775,7 +1139,7 @@
       "maeClosePct": -32.51748251748252,
       "mddClosePct": -32.51748251748252,
       "entryPrice": 11440.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "417200",
@@ -819,8 +1183,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -27.388243059884854,
+      "sessions": 9,
+      "netMarkPct": -24.651619054604133,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -849,7 +1213,7 @@
       "maeClosePct": -26.658476658476673,
       "mddClosePct": -26.658476658476673,
       "entryPrice": 16280.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "417840",
@@ -893,8 +1257,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -29.684908789386387,
+      "sessions": 9,
+      "netMarkPct": -25.760088446655583,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -923,7 +1287,7 @@
       "maeClosePct": -28.97822445561138,
       "mddClosePct": -28.97822445561138,
       "entryPrice": 17910.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "482630",
@@ -967,8 +1331,8 @@
         "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
       },
       "entryDate": "2026-10-14",
-      "sessions": 8,
-      "netMarkPct": -21.152547511748743,
+      "sessions": 9,
+      "netMarkPct": -11.827979217485996,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -997,7 +1361,7 @@
       "maeClosePct": -20.360110803324115,
       "mddClosePct": -20.360110803324115,
       "entryPrice": 14440.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "028670",
@@ -1041,8 +1405,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-16",
-      "sessions": 6,
-      "netMarkPct": -11.602700781805241,
+      "sessions": 7,
+      "netMarkPct": -13.812633262260121,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1060,18 +1424,18 @@
         "stop12_trail35": {
           "status": "open",
           "highGrowth": 1.0104166666666667,
-          "exitSignalDate": null,
+          "exitSignalDate": "2026-10-27",
           "exitDate": null,
           "netReturnPct": null,
-          "exitReason": null,
+          "exitReason": "close_stop12",
           "exitPrice": null
         }
       },
       "mfeClosePct": 1.041666666666674,
-      "maeClosePct": -10.71428571428571,
-      "mddClosePct": -11.634756995581741,
+      "maeClosePct": -12.94642857142857,
+      "mddClosePct": -13.8438880706922,
       "entryPrice": 6720.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "041960",
@@ -1115,8 +1479,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-16",
-      "sessions": 6,
-      "netMarkPct": -24.37627361348238,
+      "sessions": 7,
+      "netMarkPct": -24.284940610600113,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1145,7 +1509,7 @@
       "maeClosePct": -23.616236162361616,
       "mddClosePct": -23.616236162361616,
       "entryPrice": 10840.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "042510",
@@ -1189,8 +1553,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-16",
-      "sessions": 6,
-      "netMarkPct": -18.474850627246532,
+      "sessions": 7,
+      "netMarkPct": -15.253636125592118,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1219,7 +1583,7 @@
       "maeClosePct": -19.138755980861244,
       "mddClosePct": -19.138755980861244,
       "entryPrice": 20900.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "079650",
@@ -1263,8 +1627,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-16",
-      "sessions": 6,
-      "netMarkPct": -14.680644102030305,
+      "sessions": 7,
+      "netMarkPct": -7.159718220850886,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1280,20 +1644,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.012453300124533,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -7.159718220850886,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 7530.0
         }
       },
       "mfeClosePct": 1.245330012453305,
       "maeClosePct": -13.823163138231621,
       "mddClosePct": -14.883148831488313,
       "entryPrice": 8030.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "080580",
@@ -1337,8 +1701,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-16",
-      "sessions": 6,
-      "netMarkPct": -21.137416366443627,
+      "sessions": 7,
+      "netMarkPct": -8.164350660490626,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1367,7 +1731,7 @@
       "maeClosePct": -20.344827586206893,
       "mddClosePct": -20.344827586206893,
       "entryPrice": 29000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "162300",
@@ -1411,8 +1775,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-16",
-      "sessions": 6,
-      "netMarkPct": -8.599397029813504,
+      "sessions": 7,
+      "netMarkPct": -8.401880869964362,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1441,7 +1805,7 @@
       "maeClosePct": -7.680798004987521,
       "mddClosePct": -11.646778042959427,
       "entryPrice": 2005.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "251970",
@@ -1485,8 +1849,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-16",
-      "sessions": 6,
-      "netMarkPct": -4.744161381033118,
+      "sessions": 7,
+      "netMarkPct": -6.271587364719178,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1512,10 +1876,10 @@
         }
       },
       "mfeClosePct": 0.7012622720897532,
-      "maeClosePct": -3.7868162692847207,
-      "mddClosePct": -4.456824512534818,
+      "maeClosePct": -5.329593267882194,
+      "mddClosePct": -5.988857938718661,
       "entryPrice": 71300.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "005880",
@@ -1559,8 +1923,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -10.798932168426168,
+      "sessions": 6,
+      "netMarkPct": -10.46086639970878,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1589,7 +1953,7 @@
       "maeClosePct": -9.902439024390253,
       "mddClosePct": -9.902439024390253,
       "entryPrice": 2050.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "009450",
@@ -1633,8 +1997,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -6.8283785654379425,
+      "sessions": 6,
+      "netMarkPct": -6.34226575795328,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1663,7 +2027,7 @@
       "maeClosePct": -5.8919803600654745,
       "mddClosePct": -5.8919803600654745,
       "entryPrice": 61100.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "009450",
@@ -1707,8 +2071,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -6.8283785654379425,
+      "sessions": 6,
+      "netMarkPct": -6.34226575795328,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1737,7 +2101,7 @@
       "maeClosePct": -5.8919803600654745,
       "mddClosePct": -5.8919803600654745,
       "entryPrice": 61100.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "053800",
@@ -1781,8 +2145,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -8.523052938074581,
+      "sessions": 6,
+      "netMarkPct": 5.734575968085864,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1790,7 +2154,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0357142857142858,
+          "highGrowth": 1.0679723502304148,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -1799,7 +2163,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0357142857142858,
+          "highGrowth": 1.0679723502304148,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -1807,11 +2171,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 3.571428571428581,
+      "mfeClosePct": 6.797235023041481,
       "maeClosePct": -9.677419354838701,
       "mddClosePct": -12.791991101223577,
       "entryPrice": 86800.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "084670",
@@ -1855,8 +2219,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -11.649103563547103,
+      "sessions": 6,
+      "netMarkPct": -12.038886930178505,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1885,7 +2249,7 @@
       "maeClosePct": -17.191601049868776,
       "mddClosePct": -17.191601049868776,
       "entryPrice": 38100.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "092790",
@@ -1929,8 +2293,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -20.276892690107506,
+      "sessions": 6,
+      "netMarkPct": -18.422866938714655,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -1959,7 +2323,7 @@
       "maeClosePct": -19.475655430711612,
       "mddClosePct": -19.475655430711612,
       "entryPrice": 13350.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "129920",
@@ -2003,8 +2367,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -17.018198481277793,
+      "sessions": 6,
+      "netMarkPct": -11.677140612725811,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2033,7 +2397,7 @@
       "maeClosePct": -16.184210526315766,
       "mddClosePct": -16.184210526315766,
       "entryPrice": 7600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "340810",
@@ -2077,8 +2441,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -18.91389407131009,
+      "sessions": 6,
+      "netMarkPct": -18.78498134328357,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2107,7 +2471,7 @@
       "maeClosePct": -18.098958333333314,
       "mddClosePct": -18.098958333333314,
       "entryPrice": 3840.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "439090",
@@ -2151,8 +2515,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -3.7451630735212627,
+      "sessions": 6,
+      "netMarkPct": -2.4036322452776426,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2181,7 +2545,7 @@
       "maeClosePct": -2.777777777777768,
       "mddClosePct": -4.333333333333334,
       "entryPrice": 14760.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "452280",
@@ -2225,8 +2589,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -25.557105711887363,
+      "sessions": 6,
+      "netMarkPct": -23.752782238133264,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2242,20 +2606,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -23.752782238133264,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 13100.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -24.808935920047038,
       "mddClosePct": -24.808935920047038,
       "entryPrice": 17010.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "010580",
@@ -2299,7 +2663,7 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
+      "sessions": 6,
       "netMarkPct": -22.928057731146247,
       "dataStatus": "observing",
       "horizons": {},
@@ -2329,7 +2693,7 @@
       "maeClosePct": -22.153465346534663,
       "mddClosePct": -22.153465346534663,
       "entryPrice": 4040.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "012750",
@@ -2373,8 +2737,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -5.356924394421325,
+      "sessions": 6,
+      "netMarkPct": -3.328133920561116,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2403,7 +2767,7 @@
       "maeClosePct": -4.4057377049180335,
       "mddClosePct": -4.4057377049180335,
       "entryPrice": 97600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "033780",
@@ -2447,8 +2811,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -3.148421538088919,
+      "sessions": 6,
+      "netMarkPct": -4.276391218428799,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2474,10 +2838,10 @@
         }
       },
       "mfeClosePct": 0.46607975142414215,
-      "maeClosePct": -2.175038839979271,
-      "mddClosePct": -2.628865979381434,
+      "maeClosePct": -3.314344899016042,
+      "mddClosePct": -3.762886597938142,
       "entryPrice": 193100.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "051900",
@@ -2521,8 +2885,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -7.29534147444596,
+      "sessions": 6,
+      "netMarkPct": -7.475350520126634,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2548,10 +2912,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -6.363636363636371,
-      "mddClosePct": -6.363636363636371,
+      "maeClosePct": -6.545454545454554,
+      "mddClosePct": -6.545454545454554,
       "entryPrice": 275000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "282330",
@@ -2595,8 +2959,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": -6.831722008967677,
+      "sessions": 6,
+      "netMarkPct": -8.65568986313826,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2622,10 +2986,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -5.895357406042745,
-      "mddClosePct": -5.895357406042745,
+      "maeClosePct": -7.737656595431108,
+      "mddClosePct": -7.737656595431108,
       "entryPrice": 135700.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "396300",
@@ -2669,8 +3033,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-19",
-      "sessions": 5,
-      "netMarkPct": 1.6103692065986053,
+      "sessions": 6,
+      "netMarkPct": 3.455856681504743,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2699,7 +3063,7 @@
       "maeClosePct": 0.0,
       "mddClosePct": -17.324955116696593,
       "entryPrice": 9120.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "001210",
@@ -2743,7 +3107,7 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
+      "sessions": 4,
       "netMarkPct": -16.440245461804338,
       "dataStatus": "observing",
       "horizons": {},
@@ -2760,20 +3124,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -16.440245461804338,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 7520.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -15.600448933782275,
       "mddClosePct": -15.600448933782275,
       "entryPrice": 8910.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "001230",
@@ -2817,8 +3181,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -4.103029158007421,
+      "sessions": 4,
+      "netMarkPct": -4.654449272624217,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2844,10 +3208,10 @@
         }
       },
       "mfeClosePct": 0.05063291139240089,
-      "maeClosePct": -3.1392405063291107,
-      "mddClosePct": -3.1882591093117307,
+      "maeClosePct": -3.696202531645565,
+      "mddClosePct": -3.7449392712550544,
       "entryPrice": 1975.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "001230",
@@ -2891,8 +3255,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -4.103029158007421,
+      "sessions": 4,
+      "netMarkPct": -4.654449272624217,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2918,10 +3282,10 @@
         }
       },
       "mfeClosePct": 0.05063291139240089,
-      "maeClosePct": -3.1392405063291107,
-      "mddClosePct": -3.1882591093117307,
+      "maeClosePct": -3.696202531645565,
+      "mddClosePct": -3.7449392712550544,
       "entryPrice": 1975.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "001250",
@@ -2965,8 +3329,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -18.41990049751242,
+      "sessions": 4,
+      "netMarkPct": -16.519004975124364,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -2982,20 +3346,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -16.519004975124364,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 2635.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -17.599999999999994,
       "mddClosePct": -17.599999999999994,
       "entryPrice": 3125.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "018260",
@@ -3039,8 +3403,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": 4.655383133958013,
+      "sessions": 4,
+      "netMarkPct": 5.6380627877979705,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3048,7 +3412,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0595533498759304,
+          "highGrowth": 1.0669975186104217,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -3057,7 +3421,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0595533498759304,
+          "highGrowth": 1.0669975186104217,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -3065,11 +3429,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 5.955334987593042,
+      "mfeClosePct": 6.699751861042169,
       "maeClosePct": 0.0,
       "mddClosePct": -0.23419203747071515,
       "entryPrice": 201500.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "027040",
@@ -3113,8 +3477,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -6.12821167192169,
+      "sessions": 4,
+      "netMarkPct": -2.1418006492633257,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3143,7 +3507,7 @@
       "maeClosePct": -6.287920573634864,
       "mddClosePct": -6.287920573634864,
       "entryPrice": 1813.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "028050",
@@ -3187,8 +3551,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": 24.119444705195225,
+      "sessions": 4,
+      "netMarkPct": 29.100827101390326,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3196,7 +3560,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.2536687631027255,
+          "highGrowth": 1.3039832285115305,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -3205,7 +3569,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.2536687631027255,
+          "highGrowth": 1.3039832285115305,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -3213,11 +3577,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 25.366876310272545,
+      "mfeClosePct": 30.398322851153047,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 47700.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "029460",
@@ -3261,8 +3625,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -10.54577655202249,
+      "sessions": 4,
+      "netMarkPct": -1.398577763357145,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3291,7 +3655,7 @@
       "maeClosePct": -9.646739130434788,
       "mddClosePct": -9.646739130434788,
       "entryPrice": 36800.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "033160",
@@ -3335,8 +3699,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -13.714869361800265,
+      "sessions": 4,
+      "netMarkPct": -11.02665480544298,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3352,20 +3716,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -11.02665480544298,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 13570.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -12.847682119205306,
       "mddClosePct": -12.847682119205306,
       "entryPrice": 15100.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "039030",
@@ -3409,8 +3773,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -12.737475413629518,
+      "sessions": 4,
+      "netMarkPct": -9.053569362489888,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3439,7 +3803,7 @@
       "maeClosePct": -11.860465116279073,
       "mddClosePct": -11.860465116279073,
       "entryPrice": 430000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "052460",
@@ -3483,8 +3847,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -22.90916956718384,
+      "sessions": 4,
+      "netMarkPct": -21.082990842886996,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3513,7 +3877,7 @@
       "maeClosePct": -22.266139657444008,
       "mddClosePct": -22.266139657444008,
       "entryPrice": 7590.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "053260",
@@ -3557,8 +3921,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -11.071460146762135,
+      "sessions": 4,
+      "netMarkPct": -8.512365474726513,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3587,7 +3951,7 @@
       "maeClosePct": -10.177705977382868,
       "mddClosePct": -10.177705977382868,
       "entryPrice": 6190.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "064760",
@@ -3631,8 +3995,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -14.581421894854707,
+      "sessions": 4,
+      "netMarkPct": -8.70969826193706,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3648,20 +4012,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -8.70969826193706,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 213000.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -13.722943722943715,
       "mddClosePct": -13.722943722943715,
       "entryPrice": 231000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "067170",
@@ -3705,8 +4069,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -5.835268103924807,
+      "sessions": 4,
+      "netMarkPct": -4.075179657269201,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3735,7 +4099,7 @@
       "maeClosePct": -6.444444444444453,
       "mddClosePct": -6.444444444444453,
       "entryPrice": 2250.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "068270",
@@ -3779,8 +4143,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -4.802908534251793,
+      "sessions": 4,
+      "netMarkPct": -5.504360787157314,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3806,10 +4170,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -3.8461538461538325,
-      "mddClosePct": -3.8461538461538325,
+      "maeClosePct": -4.554655870445334,
+      "mddClosePct": -4.554655870445334,
       "entryPrice": 197600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "068270",
@@ -3853,8 +4217,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -4.802908534251793,
+      "sessions": 4,
+      "netMarkPct": -5.504360787157314,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3880,10 +4244,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -3.8461538461538325,
-      "mddClosePct": -3.8461538461538325,
+      "maeClosePct": -4.554655870445334,
+      "mddClosePct": -4.554655870445334,
       "entryPrice": 197600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "071200",
@@ -3927,8 +4291,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -1.9177180268276528,
+      "sessions": 4,
+      "netMarkPct": -3.486296383877441,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -3954,10 +4318,10 @@
         }
       },
       "mfeClosePct": 0.9319664492078328,
-      "maeClosePct": -0.9319664492078328,
-      "mddClosePct": -1.846722068328721,
+      "maeClosePct": -2.5163094128611396,
+      "mddClosePct": -3.4164358264081374,
       "entryPrice": 10730.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "077360",
@@ -4001,8 +4365,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -12.738472141457224,
+      "sessions": 4,
+      "netMarkPct": -10.424070125562658,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4031,7 +4395,7 @@
       "maeClosePct": -11.861471861471873,
       "mddClosePct": -11.861471861471873,
       "entryPrice": 11550.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "078340",
@@ -4075,8 +4439,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -6.478833378020077,
+      "sessions": 4,
+      "netMarkPct": -7.516310662257575,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4102,10 +4466,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -5.53892215568863,
-      "mddClosePct": -5.53892215568863,
+      "maeClosePct": -6.586826347305397,
+      "mddClosePct": -6.586826347305397,
       "entryPrice": 33400.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "084370",
@@ -4149,8 +4513,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -16.084690855628715,
+      "sessions": 4,
+      "netMarkPct": -9.126678209292226,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4166,20 +4530,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -9.126678209292226,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 108400.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -15.241320914479262,
       "mddClosePct": -15.241320914479262,
       "entryPrice": 118100.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "085910",
@@ -4223,8 +4587,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -1.7299504597901083,
+      "sessions": 4,
+      "netMarkPct": 8.926470510649299,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4232,7 +4596,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0763520678685048,
+          "highGrowth": 1.1002120890774125,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -4241,7 +4605,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0763520678685048,
+          "highGrowth": 1.1002120890774125,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -4249,11 +4613,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 7.635206786850479,
+      "mfeClosePct": 10.021208907741253,
       "maeClosePct": -0.7423117709437932,
       "mddClosePct": -7.783251231527089,
       "entryPrice": 18860.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "088350",
@@ -4297,8 +4661,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -8.222502781573004,
+      "sessions": 4,
+      "netMarkPct": -7.075284066342668,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4327,7 +4691,7 @@
       "maeClosePct": -7.300115874855151,
       "mddClosePct": -7.300115874855151,
       "entryPrice": 4315.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "089890",
@@ -4371,8 +4735,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -5.6133327531438955,
+      "sessions": 4,
+      "netMarkPct": 4.633537850108049,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4401,7 +4765,7 @@
       "maeClosePct": -4.664723032069973,
       "mddClosePct": -18.045112781954884,
       "entryPrice": 34300.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "090430",
@@ -4445,8 +4809,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -8.223264209923808,
+      "sessions": 4,
+      "netMarkPct": -9.245439469320038,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4472,10 +4836,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -7.3008849557521955,
-      "mddClosePct": -7.3008849557521955,
+      "maeClosePct": -8.333333333333314,
+      "mddClosePct": -8.333333333333314,
       "entryPrice": 135600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "092730",
@@ -4519,8 +4883,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -4.0346513048791,
+      "sessions": 4,
+      "netMarkPct": -3.1661866108056214,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4549,7 +4913,7 @@
       "maeClosePct": -3.0701754385964897,
       "mddClosePct": -5.353319057815842,
       "entryPrice": 22800.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "105560",
@@ -4593,8 +4957,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -9.255713958228762,
+      "sessions": 4,
+      "netMarkPct": -9.009126224419594,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4623,7 +4987,7 @@
       "maeClosePct": -8.3437110834371,
       "mddClosePct": -8.3437110834371,
       "entryPrice": 160600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "115440",
@@ -4667,8 +5031,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -10.063368502315996,
+      "sessions": 4,
+      "netMarkPct": -10.170054897924164,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4694,10 +5058,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -9.159482758620685,
-      "mddClosePct": -9.159482758620685,
+      "maeClosePct": -9.267241379310342,
+      "mddClosePct": -9.267241379310342,
       "entryPrice": 9280.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "122350",
@@ -4741,8 +5105,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -11.604866055515428,
+      "sessions": 4,
+      "netMarkPct": -8.33097220571971,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4771,7 +5135,7 @@
       "maeClosePct": -10.716472749540717,
       "mddClosePct": -10.716472749540717,
       "entryPrice": 1633.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "122640",
@@ -4815,8 +5179,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -16.84876272233604,
+      "sessions": 4,
+      "netMarkPct": -9.892530810002276,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4832,20 +5196,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -9.892530810002276,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 27850.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -16.013071895424847,
       "mddClosePct": -16.013071895424847,
       "entryPrice": 30600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "138080",
@@ -4889,8 +5253,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -16.480864569944643,
+      "sessions": 4,
+      "netMarkPct": -16.306866371132,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4906,20 +5270,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -16.306866371132,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 24050.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -15.64147627416519,
       "mddClosePct": -15.64147627416519,
       "entryPrice": 28450.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "144960",
@@ -4963,8 +5327,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -4.39402694344202,
+      "sessions": 4,
+      "netMarkPct": 5.441383295356683,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -4972,7 +5336,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0650109569028487,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -4981,7 +5345,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0650109569028487,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -4989,11 +5353,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 6.501095690284875,
       "maeClosePct": -3.4331628926223545,
       "mddClosePct": -3.4331628926223545,
       "entryPrice": 13690.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "149950",
@@ -5037,8 +5401,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -7.21664899545984,
+      "sessions": 4,
+      "netMarkPct": -7.757659788489235,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5064,10 +5428,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -6.284153005464477,
-      "mddClosePct": -6.284153005464477,
+      "maeClosePct": -6.830601092896171,
+      "mddClosePct": -6.830601092896171,
       "entryPrice": 10980.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "170920",
@@ -5111,8 +5475,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -12.208295538880176,
+      "sessions": 4,
+      "netMarkPct": -8.105879442566167,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5141,7 +5505,7 @@
       "maeClosePct": -11.325966850828728,
       "mddClosePct": -11.325966850828728,
       "entryPrice": 36200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "171090",
@@ -5185,8 +5549,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -2.062144367980423,
+      "sessions": 4,
+      "netMarkPct": -0.165043048231861,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5215,7 +5579,7 @@
       "maeClosePct": -2.754491017964067,
       "mddClosePct": -2.8235294117647025,
       "entryPrice": 83500.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "172670",
@@ -5259,8 +5623,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -12.509259868060562,
+      "sessions": 4,
+      "netMarkPct": -7.886120060490487,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5289,7 +5653,7 @@
       "maeClosePct": -11.629955947136562,
       "mddClosePct": -11.629955947136562,
       "entryPrice": 11350.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "204270",
@@ -5333,8 +5697,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -14.626144639123206,
+      "sessions": 4,
+      "netMarkPct": -11.182493330449194,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5350,20 +5714,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -11.182493330449194,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 18570.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -13.768115942028981,
       "mddClosePct": -13.768115942028981,
       "entryPrice": 20700.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "219130",
@@ -5407,8 +5771,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -5.70954750059226,
+      "sessions": 4,
+      "netMarkPct": 4.706258298760924,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5416,7 +5780,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0066445182724253,
+          "highGrowth": 1.0575858250276855,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -5425,7 +5789,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0066445182724253,
+          "highGrowth": 1.0575858250276855,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -5433,11 +5797,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.6644518272425293,
+      "mfeClosePct": 5.75858250276855,
       "maeClosePct": -4.761904761904756,
       "mddClosePct": -5.3905390539053855,
       "entryPrice": 90300.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "236200",
@@ -5481,8 +5845,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -5.802820430222988,
+      "sessions": 4,
+      "netMarkPct": -2.063423887755478,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5511,7 +5875,7 @@
       "maeClosePct": -4.856115107913683,
       "mddClosePct": -6.371681415929209,
       "entryPrice": 55600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "243840",
@@ -5555,8 +5919,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -13.739778345322062,
+      "sessions": 4,
+      "netMarkPct": -6.590282496465861,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5572,20 +5936,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.0,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -6.590282496465861,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 6010.0
         }
       },
       "mfeClosePct": 0.0,
       "maeClosePct": -12.872841444270023,
       "mddClosePct": -12.872841444270023,
       "entryPrice": 6370.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "252990",
@@ -5629,8 +5993,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -6.025017416017786,
+      "sessions": 4,
+      "netMarkPct": -2.0991695796112264,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5659,7 +6023,7 @@
       "maeClosePct": -6.133828996282531,
       "mddClosePct": -6.133828996282531,
       "entryPrice": 16140.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "253590",
@@ -5703,8 +6067,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -5.2559984885698015,
+      "sessions": 4,
+      "netMarkPct": 7.338938220290947,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5712,7 +6076,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0335443037974683,
+          "highGrowth": 1.0841772151898734,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -5721,7 +6085,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0335443037974683,
+          "highGrowth": 1.0841772151898734,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -5729,11 +6093,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 3.354430379746831,
+      "mfeClosePct": 8.417721518987342,
       "maeClosePct": -4.303797468354431,
       "mddClosePct": -7.409675443968156,
       "entryPrice": 15800.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "294870",
@@ -5777,8 +6141,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": 6.144756984309252,
+      "sessions": 4,
+      "netMarkPct": 13.99851703023347,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5786,7 +6150,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0721153846153848,
+          "highGrowth": 1.151442307692308,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -5795,7 +6159,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0721153846153848,
+          "highGrowth": 1.151442307692308,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -5803,11 +6167,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 7.21153846153848,
+      "mfeClosePct": 15.144230769230793,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 20800.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "306200",
@@ -5851,8 +6215,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -9.30784805172321,
+      "sessions": 4,
+      "netMarkPct": -10.281421937212553,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5878,10 +6242,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -8.39636913767019,
-      "mddClosePct": -8.39636913767019,
+      "maeClosePct": -9.379727685325257,
+      "mddClosePct": -9.379727685325257,
       "entryPrice": 132200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "323350",
@@ -5925,8 +6289,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -2.839838076697243,
+      "sessions": 4,
+      "netMarkPct": -4.915252927907043,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -5952,10 +6316,10 @@
         }
       },
       "mfeClosePct": 6.987577639751552,
-      "maeClosePct": -1.8633540372670843,
-      "mddClosePct": -8.272859216255446,
+      "maeClosePct": -3.95962732919255,
+      "mddClosePct": -10.232220609579102,
       "entryPrice": 12880.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "354320",
@@ -5999,8 +6363,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -15.953720494102697,
+      "sessions": 4,
+      "netMarkPct": -3.9250786565614315,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6016,20 +6380,20 @@
           "exitPrice": null
         },
         "stop12_trail35": {
-          "status": "open",
+          "status": "closed",
           "highGrowth": 1.102803738317757,
           "exitSignalDate": "2026-10-26",
-          "exitDate": null,
-          "netReturnPct": null,
+          "exitDate": "2026-10-27",
+          "netReturnPct": -3.9250786565614315,
           "exitReason": "close_stop12",
-          "exitPrice": null
+          "exitPrice": 62300.0
         }
       },
       "mfeClosePct": 10.280373831775691,
       "maeClosePct": -15.10903426791278,
       "mddClosePct": -23.0225988700565,
       "entryPrice": 64200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "460860",
@@ -6073,8 +6437,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-21",
-      "sessions": 3,
-      "netMarkPct": -6.512329990912291,
+      "sessions": 4,
+      "netMarkPct": -3.651505116317255,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6103,7 +6467,7 @@
       "maeClosePct": -5.572755417956654,
       "mddClosePct": -5.572755417956654,
       "entryPrice": 9690.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "000370",
@@ -6147,8 +6511,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -4.321592039801003,
+      "sessions": 3,
+      "netMarkPct": -3.687960199004958,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6177,7 +6541,7 @@
       "maeClosePct": -3.3600000000000074,
       "mddClosePct": -3.3600000000000074,
       "entryPrice": 6250.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "005830",
@@ -6221,8 +6585,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -4.910774827093811,
+      "sessions": 3,
+      "netMarkPct": -5.598676845595641,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6248,10 +6612,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -3.9551042223409993,
-      "mddClosePct": -3.9551042223409993,
+      "maeClosePct": -4.649919828968474,
+      "mddClosePct": -4.649919828968474,
       "entryPrice": 187100.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "006360",
@@ -6295,8 +6659,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -5.204420076488303,
+      "sessions": 3,
+      "netMarkPct": -3.3522861881070676,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6325,7 +6689,7 @@
       "maeClosePct": -4.2517006802721085,
       "mddClosePct": -4.576271186440673,
       "entryPrice": 29400.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "007390",
@@ -6369,8 +6733,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -8.546251791888004,
+      "sessions": 3,
+      "netMarkPct": -6.4486887595918585,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6399,7 +6763,7 @@
       "maeClosePct": -7.627118644067787,
       "mddClosePct": -7.627118644067787,
       "entryPrice": 23600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "010060",
@@ -6443,8 +6807,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -10.454411112753059,
+      "sessions": 3,
+      "netMarkPct": -11.483670755135211,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6470,10 +6834,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -9.554455445544551,
-      "mddClosePct": -9.554455445544551,
+      "maeClosePct": -10.594059405940593,
+      "mddClosePct": -10.594059405940593,
       "entryPrice": 202000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "018880",
@@ -6517,8 +6881,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -4.184446893051508,
+      "sessions": 3,
+      "netMarkPct": -2.058165548098434,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6547,7 +6911,7 @@
       "maeClosePct": -3.2214765100671117,
       "mddClosePct": -3.2214765100671117,
       "entryPrice": 3725.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "062040",
@@ -6591,8 +6955,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -9.136319552324634,
+      "sessions": 3,
+      "netMarkPct": -8.794726768686767,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6621,7 +6985,7 @@
       "maeClosePct": -8.223116733755042,
       "mddClosePct": -8.223116733755042,
       "entryPrice": 173900.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "093320",
@@ -6665,8 +7029,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -9.456370448706075,
+      "sessions": 3,
+      "netMarkPct": -12.855372516526199,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6692,10 +7056,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -8.54638422205991,
-      "mddClosePct": -8.54638422205991,
+      "maeClosePct": -11.979547114682255,
+      "mddClosePct": -11.979547114682255,
       "entryPrice": 136900.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "121600",
@@ -6739,8 +7103,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -5.928262467730072,
+      "sessions": 3,
+      "netMarkPct": -1.8455830811577756,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6769,7 +7133,7 @@
       "maeClosePct": -4.982817869415812,
       "mddClosePct": -4.982817869415812,
       "entryPrice": 58200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "122350",
@@ -6813,8 +7177,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -6.266718356270573,
+      "sessions": 3,
+      "netMarkPct": -2.7951153324287548,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6843,7 +7207,7 @@
       "maeClosePct": -5.3246753246753205,
       "mddClosePct": -5.3246753246753205,
       "entryPrice": 1540.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "161390",
@@ -6887,8 +7251,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -6.459585190928463,
+      "sessions": 3,
+      "netMarkPct": -8.70969826193705,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6914,10 +7278,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -5.519480519480513,
-      "mddClosePct": -5.519480519480513,
+      "maeClosePct": -7.792207792207783,
+      "mddClosePct": -7.792207792207783,
       "entryPrice": 61600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "161390",
@@ -6961,8 +7325,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -6.459585190928463,
+      "sessions": 3,
+      "netMarkPct": -8.70969826193705,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -6988,10 +7352,10 @@
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -5.519480519480513,
-      "mddClosePct": -5.519480519480513,
+      "maeClosePct": -7.792207792207783,
+      "mddClosePct": -7.792207792207783,
       "entryPrice": 61600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "307180",
@@ -7035,8 +7399,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -3.7970524734816324,
+      "sessions": 3,
+      "netMarkPct": 7.971463437529347,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7044,7 +7408,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.090566037735849,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7053,7 +7417,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.090566037735849,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7061,11 +7425,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 9.056603773584904,
       "maeClosePct": -2.8301886792452824,
       "mddClosePct": -2.8301886792452824,
       "entryPrice": 5300.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "323280",
@@ -7109,8 +7473,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -9.213584586718904,
+      "sessions": 3,
+      "netMarkPct": -1.1861541712287815,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7139,7 +7503,7 @@
       "maeClosePct": -8.301158301158296,
       "mddClosePct": -8.301158301158296,
       "entryPrice": 51800.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "336370",
@@ -7183,8 +7547,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -5.424509857002768,
+      "sessions": 3,
+      "netMarkPct": -3.14990946115854,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7213,7 +7577,7 @@
       "maeClosePct": -4.474002418379685,
       "mddClosePct": -4.474002418379685,
       "entryPrice": 8270.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "388790",
@@ -7257,7 +7621,7 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
+      "sessions": 3,
       "netMarkPct": 1.867769585805923,
       "dataStatus": "observing",
       "horizons": {},
@@ -7287,7 +7651,7 @@
       "maeClosePct": -1.4457831325301207,
       "mddClosePct": -1.4457831325301207,
       "entryPrice": 4150.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "419050",
@@ -7331,8 +7695,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -1.4181230599141004,
+      "sessions": 3,
+      "netMarkPct": 3.659055151592483,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7340,7 +7704,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.047008547008547,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7349,7 +7713,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.047008547008547,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7357,11 +7721,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 4.700854700854706,
       "maeClosePct": -3.6324786324786307,
       "mddClosePct": -3.6324786324786307,
       "entryPrice": 2340.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "457370",
@@ -7405,8 +7769,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-22",
-      "sessions": 2,
-      "netMarkPct": -8.05028595341052,
+      "sessions": 3,
+      "netMarkPct": -6.199725670711853,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7435,7 +7799,7 @@
       "maeClosePct": -7.126168224299068,
       "mddClosePct": -7.126168224299068,
       "entryPrice": 8560.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "007810",
@@ -7479,8 +7843,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-23",
-      "sessions": 1,
-      "netMarkPct": -3.0393753944143453,
+      "sessions": 2,
+      "netMarkPct": 9.95685290362347,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7488,7 +7852,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.1106194690265485,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7497,7 +7861,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.1106194690265485,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7505,11 +7869,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 11.061946902654851,
       "maeClosePct": -2.0648967551622377,
       "mddClosePct": -2.0648967551622377,
       "entryPrice": 67800.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "340450",
@@ -7553,8 +7917,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-23",
-      "sessions": 1,
-      "netMarkPct": -7.629378878801852,
+      "sessions": 2,
+      "netMarkPct": -14.876134789967688,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7572,18 +7936,18 @@
         "stop12_trail35": {
           "status": "open",
           "highGrowth": 1.0,
-          "exitSignalDate": null,
+          "exitSignalDate": "2026-10-27",
           "exitDate": null,
           "netReturnPct": null,
-          "exitReason": null,
+          "exitReason": "close_stop12",
           "exitPrice": null
         }
       },
       "mfeClosePct": 0.0,
-      "maeClosePct": -6.70103092783505,
-      "mddClosePct": -6.70103092783505,
+      "maeClosePct": -14.020618556701036,
+      "mddClosePct": -14.020618556701036,
       "entryPrice": 9700.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "000500",
@@ -7627,8 +7991,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 0.5314835514059757,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7636,7 +8000,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0154185022026432,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7645,7 +8009,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0154185022026432,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7653,11 +8017,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 1.541850220264318,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 227000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "003010",
@@ -7701,8 +8065,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 3.7194977493484993,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7710,7 +8074,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0476190476190477,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7719,7 +8083,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0476190476190477,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7727,11 +8091,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 4.761904761904767,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 7770.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "011560",
@@ -7775,8 +8139,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 1.306252969613797,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7784,7 +8148,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.023244062657908,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7793,7 +8157,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.023244062657908,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7801,11 +8165,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 2.3244062657908016,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 19790.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "013580",
@@ -7849,8 +8213,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 0.17432522427234254,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7858,7 +8222,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0118110236220472,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7867,7 +8231,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0118110236220472,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7875,11 +8239,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 1.1811023622047223,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 25400.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "034730",
@@ -7923,8 +8287,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 5.810902522831585,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -7932,7 +8296,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0687432867883995,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7941,7 +8305,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0687432867883995,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -7949,11 +8313,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 6.874328678839947,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 465500.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "043260",
@@ -7997,8 +8361,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 1.6202008823805514,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8006,7 +8370,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0264150943396226,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8015,7 +8379,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0264150943396226,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8023,11 +8387,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 2.6415094339622636,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 26500.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "053610",
@@ -8071,8 +8435,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 5.236057474863465,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8080,7 +8444,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.062937062937063,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8089,7 +8453,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.062937062937063,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8097,11 +8461,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 6.2937062937062915,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 57200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "059090",
@@ -8145,8 +8509,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 7.582138810896044,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8154,7 +8518,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0866336633663367,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8163,7 +8527,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0866336633663367,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8171,11 +8535,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 8.663366336633672,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 20200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "064400",
@@ -8219,8 +8583,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 1.1601854672217193,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8228,7 +8592,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.021768707482993,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8237,7 +8601,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.021768707482993,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8245,11 +8609,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 2.176870748299309,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 73500.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "066570",
@@ -8293,8 +8657,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": -0.04305396096440095,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8302,7 +8666,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0096153846153846,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8311,7 +8675,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0096153846153846,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8319,11 +8683,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 0.9615384615384581,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 156000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "098460",
@@ -8367,8 +8731,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 5.015991471215364,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8376,7 +8740,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0607142857142857,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8385,7 +8749,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0607142857142857,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8393,11 +8757,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 6.071428571428572,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 28000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "098460",
@@ -8441,8 +8805,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 5.015991471215364,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8450,7 +8814,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0607142857142857,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8459,7 +8823,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0607142857142857,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8467,11 +8831,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 6.071428571428572,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 28000.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "105740",
@@ -8515,8 +8879,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 0.8265938019195618,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8524,7 +8888,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0183992640294388,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8533,7 +8897,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0183992640294388,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8541,11 +8905,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 1.839926402943881,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 10870.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "122640",
@@ -8589,8 +8953,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 7.287492498596526,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8598,7 +8962,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.083657587548638,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8607,7 +8971,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.083657587548638,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8615,11 +8979,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 8.365758754863805,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 25700.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "134580",
@@ -8663,8 +9027,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 1.4050957334539538,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8672,7 +9036,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0242424242424242,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8681,7 +9045,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0242424242424242,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8689,11 +9053,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 2.4242424242424176,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 1650.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "229640",
@@ -8737,8 +9101,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 3.2062932569624225,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8746,7 +9110,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0424354243542435,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8755,7 +9119,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0424354243542435,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8763,11 +9127,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 4.243542435424352,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 54200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "412350",
@@ -8811,8 +9175,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 5.3132567252234475,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8820,7 +9184,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.063716814159292,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8829,7 +9193,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.063716814159292,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8837,11 +9201,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 6.371681415929209,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 5650.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "443060",
@@ -8885,8 +9249,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 3.149640946212351,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8894,7 +9258,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0418632075471699,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8903,7 +9267,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.0418632075471699,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8911,11 +9275,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 4.186320754716988,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 169600.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "028050",
@@ -8959,8 +9323,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 2.9784189420789087,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -8968,7 +9332,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.040133779264214,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8977,7 +9341,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.040133779264214,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -8985,11 +9349,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 4.013377926421402,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 59800.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "077500",
@@ -9033,8 +9397,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 9.840879791873181,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -9042,7 +9406,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.109448082319925,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -9051,7 +9415,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.109448082319925,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -9059,11 +9423,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 10.944808231992509,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 10690.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "126340",
@@ -9107,8 +9471,8 @@
         "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
       },
       "entryDate": "2026-10-26",
-      "sessions": 0,
-      "netMarkPct": -0.995024875621886,
+      "sessions": 1,
+      "netMarkPct": 4.665143275868733,
       "dataStatus": "observing",
       "horizons": {},
       "firstTouch": {},
@@ -9116,7 +9480,7 @@
       "arms": {
         "hold1260": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.057170542635659,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -9125,7 +9489,7 @@
         },
         "stop12_trail35": {
           "status": "open",
-          "highGrowth": 1.0,
+          "highGrowth": 1.057170542635659,
           "exitSignalDate": null,
           "exitDate": null,
           "netReturnPct": null,
@@ -9133,11 +9497,11 @@
           "exitPrice": null
         }
       },
-      "mfeClosePct": 0.0,
+      "mfeClosePct": 5.717054263565902,
       "maeClosePct": 0.0,
       "mddClosePct": 0.0,
       "entryPrice": 103200.0,
-      "lastObservedDate": "2026-10-26"
+      "lastObservedDate": "2026-10-27"
     },
     {
       "code": "083450",
@@ -9351,13 +9715,1220 @@
       },
       "entryPrice": null,
       "lastObservedDate": null
+    },
+    {
+      "code": "004710",
+      "name": "한솔테크닉스",
+      "market": "KOSPI",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 8300.0,
+      "features": {
+        "ma200SlopePct": 5.7408426670467305,
+        "distancePriorHighPct": -46.31306597671412,
+        "volumeRatio": 1.234000311284077,
+        "prior20AmountWon": 10635246187.0
+      },
+      "id": "1.0.0:2026-10-27:004710:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "006120",
+      "name": "SK디스커버리",
+      "market": "KOSPI",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-27",
+      "signalClose": 58900.0,
+      "features": {
+        "ma200SlopePct": 0.9893148564678711,
+        "distancePriorHighPct": -18.080667593880374,
+        "volumeRatio": 0.5637271110608781,
+        "prior20AmountWon": 2735687240.0
+      },
+      "id": "1.0.0:2026-10-27:006120:pullback50",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "029460",
+      "name": "케이씨",
+      "market": "KOSPI",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 36650.0,
+      "features": {
+        "ma200SlopePct": 4.887535544656485,
+        "distancePriorHighPct": -22.43386243386245,
+        "volumeRatio": 0.9436500307944452,
+        "prior20AmountWon": 1612227860.0
+      },
+      "id": "1.0.0:2026-10-27:029460:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "033640",
+      "name": "네패스",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 24000.0,
+      "features": {
+        "ma200SlopePct": 5.042256324876049,
+        "distancePriorHighPct": -38.38254172015403,
+        "volumeRatio": 1.0027177598196417,
+        "prior20AmountWon": 7334312398.75
+      },
+      "id": "1.0.0:2026-10-27:033640:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "039860",
+      "name": "나노엔텍",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 4820.0,
+      "features": {
+        "ma200SlopePct": 0.3733661965211743,
+        "distancePriorHighPct": -37.15775749674051,
+        "volumeRatio": 0.9164374359803448,
+        "prior20AmountWon": 4811783149.65
+      },
+      "id": "1.0.0:2026-10-27:039860:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "052710",
+      "name": "아모텍",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 15560.0,
+      "features": {
+        "ma200SlopePct": 7.130999194461318,
+        "distancePriorHighPct": -46.49796568585865,
+        "volumeRatio": 0.5568188925860076,
+        "prior20AmountWon": 12493686294.75
+      },
+      "id": "1.0.0:2026-10-27:052710:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "119850",
+      "name": "지엔씨에너지",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 36800.0,
+      "features": {
+        "ma200SlopePct": 3.7571249728000744,
+        "distancePriorHighPct": -35.66433566433565,
+        "volumeRatio": 1.3376002837599361,
+        "prior20AmountWon": 21521223865.0
+      },
+      "id": "1.0.0:2026-10-27:119850:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "131970",
+      "name": "두산테스나",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 97100.0,
+      "features": {
+        "ma200SlopePct": 7.2607288376522305,
+        "distancePriorHighPct": -48.92162019989477,
+        "volumeRatio": 0.8304218803702648,
+        "prior20AmountWon": 56327126027.5
+      },
+      "id": "1.0.0:2026-10-27:131970:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "138360",
+      "name": "앤로보틱스",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 2170.0,
+      "features": {
+        "ma200SlopePct": 2.1181503860830952,
+        "distancePriorHighPct": -45.68210262828535,
+        "volumeRatio": 3.006456570791713,
+        "prior20AmountWon": 15319108627.15
+      },
+      "id": "1.0.0:2026-10-27:138360:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "144960",
+      "name": "뉴파워프라즈마",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-27",
+      "signalClose": 14580.0,
+      "features": {
+        "ma200SlopePct": 10.858413817977809,
+        "distancePriorHighPct": 4.142857142857137,
+        "volumeRatio": 1.7716316742236544,
+        "prior20AmountWon": 21301413260.75
+      },
+      "id": "1.0.0:2026-10-27:144960:breakout252",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "192650",
+      "name": "드림텍",
+      "market": "KOSPI",
+      "pattern": "pullback50",
+      "signalDate": "2026-10-27",
+      "signalClose": 7510.0,
+      "features": {
+        "ma200SlopePct": 1.4261714837530581,
+        "distancePriorHighPct": -22.176165803108827,
+        "volumeRatio": 1.495588710664834,
+        "prior20AmountWon": 8177279650.0
+      },
+      "id": "1.0.0:2026-10-27:192650:pullback50",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "265740",
+      "name": "엔에프씨",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 6810.0,
+      "features": {
+        "ma200SlopePct": 4.283866273194015,
+        "distancePriorHighPct": -27.553191489361684,
+        "volumeRatio": 0.979902122422062,
+        "prior20AmountWon": 2294035978.25
+      },
+      "id": "1.0.0:2026-10-27:265740:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "356860",
+      "name": "티엘비",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 38150.0,
+      "features": {
+        "ma200SlopePct": 3.930141314699398,
+        "distancePriorHighPct": -39.336668543816764,
+        "volumeRatio": 0.686051229639394,
+        "prior20AmountWon": 28374615262.5
+      },
+      "id": "1.0.0:2026-10-27:356860:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "417500",
+      "name": "제이아이테크",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 3975.0,
+      "features": {
+        "ma200SlopePct": 2.5769389128886377,
+        "distancePriorHighPct": -32.854729729729634,
+        "volumeRatio": 0.2467694881177797,
+        "prior20AmountWon": 1328492349.35
+      },
+      "id": "1.0.0:2026-10-27:417500:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "420770",
+      "name": "기가비스",
+      "market": "KOSDAQ",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 111600.0,
+      "features": {
+        "ma200SlopePct": 9.500670692618085,
+        "distancePriorHighPct": -41.93548387096768,
+        "volumeRatio": 1.7169551877196791,
+        "prior20AmountWon": 15539202137.5
+      },
+      "id": "1.0.0:2026-10-27:420770:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "425420",
+      "name": "티에프이",
+      "market": "KOSDAQ",
+      "pattern": "breakout252",
+      "signalDate": "2026-10-27",
+      "signalClose": 76200.0,
+      "features": {
+        "ma200SlopePct": 5.384692898018062,
+        "distancePriorHighPct": 2.419354838709631,
+        "volumeRatio": 3.1924035207937913,
+        "prior20AmountWon": 9959104035.0
+      },
+      "id": "1.0.0:2026-10-27:425420:breakout252",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
+    },
+    {
+      "code": "452260",
+      "name": "한화갤러리아",
+      "market": "KOSPI",
+      "pattern": "trend200",
+      "signalDate": "2026-10-27",
+      "signalClose": 2430.0,
+      "features": {
+        "ma200SlopePct": 6.306122448979612,
+        "distancePriorHighPct": -33.241758241758255,
+        "volumeRatio": 0.36132360560646637,
+        "prior20AmountWon": 4146641011.25
+      },
+      "id": "1.0.0:2026-10-27:452260:trend200",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+      "registeredDate": "2026-10-29",
+      "sourceSnapshot": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-27",
+        "cutoff": "2026-10-28",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/f85e9eb41c9a319a4061a027978a0d2d6dd53e9f/data/marcap-2026.parquet",
+            "sha256": "7335446ec1f436990aeefb6c769ec0920873fdbfc62888587051e369d0a86f7f",
+            "bytes": 21040305
+          }
+        ],
+        "combinedSha256": "ed6408024dc6d2f6bba1adf667aa71551bd758d0e3919e621b6a3ba1fc99b64b",
+        "upstreamCommit": "f85e9eb41c9a319a4061a027978a0d2d6dd53e9f",
+        "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+      },
+      "entryDate": null,
+      "sessions": 0,
+      "netMarkPct": null,
+      "dataStatus": "registered_waiting_next_session",
+      "horizons": {},
+      "firstTouch": {},
+      "revisionDates": [],
+      "arms": {
+        "hold1260": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        },
+        "stop12_trail35": {
+          "status": "pending",
+          "highGrowth": 1.0,
+          "exitSignalDate": null,
+          "exitDate": null,
+          "netReturnPct": null,
+          "exitReason": null,
+          "exitPrice": null
+        }
+      },
+      "entryPrice": null,
+      "lastObservedDate": null
     }
   ],
   "patternStats": [
     {
       "pattern": "trend200",
-      "registrations": 76,
-      "uniqueStocks": 76,
+      "registrations": 89,
+      "uniqueStocks": 89,
       "entered": 74,
       "horizons": {
         "20": {
@@ -9397,15 +10968,15 @@
           "medianNetPct": null
         },
         "stop12_trail35": {
-          "closedN": 8,
-          "medianNetPct": -18.289390305050198
+          "closedN": 19,
+          "medianNetPct": -12.623927826675141
         }
       }
     },
     {
       "pattern": "breakout252",
-      "registrations": 21,
-      "uniqueStocks": 21,
+      "registrations": 23,
+      "uniqueStocks": 23,
       "entered": 20,
       "horizons": {
         "20": {
@@ -9445,15 +11016,15 @@
           "medianNetPct": null
         },
         "stop12_trail35": {
-          "closedN": 9,
-          "medianNetPct": -16.25745511791954
+          "closedN": 10,
+          "medianNetPct": -15.684489419513454
         }
       }
     },
     {
       "pattern": "pullback50",
-      "registrations": 28,
-      "uniqueStocks": 28,
+      "registrations": 30,
+      "uniqueStocks": 30,
       "entered": 28,
       "horizons": {
         "20": {
@@ -9493,15 +11064,15 @@
           "medianNetPct": null
         },
         "stop12_trail35": {
-          "closedN": 2,
-          "medianNetPct": -20.074363391786115
+          "closedN": 3,
+          "medianNetPct": -17.109115878938617
         }
       }
     }
   ],
-  "newRegistrations": 0,
+  "newRegistrations": 17,
   "entered": 122,
-  "closedArms": 19,
+  "closedArms": 32,
   "warnings": [
     "가격 조건만으로 고정한 탐색 가설이며 텐배거 예측력·수익성 미검증.",
     "KRX 종가 관찰 수익률. 실체결·배당·세금·호가·정수주·시장충격 및 포트폴리오 성과 아님. 비용은 편도 0.5% 가정.",
