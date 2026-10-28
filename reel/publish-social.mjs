@@ -17,6 +17,9 @@
 //   인스타:  IG_ACCESS_TOKEN (인스타그램 로그인 장기 토큰, instagram_business_content_publish)
 //            IG_USER_ID(선택, 없으면 me), IG_GRAPH_VERSION(선택, 기본 v23.0),
 //            MEDIA_BASE_URL(선택, 영상 공개 주소 앞부분 — 없으면 커밋 고정 jsDelivr 주소)
+//
+// 저장소 없이 실행: 이 파일과 queue/queue.json 만 내려받아 두고 실행하면(REPO_SHA 로 커밋 고정 권장)
+//   영상은 그 커밋에서 내려받고, 중복 게시는 계정의 최근 게시물로 막는다(유튜브는 youtube.readonly 필수).
 // 종료 코드: 0 게시했거나 오늘 올릴 것 없음 · 2 모든 플랫폼이 키가 없어 건너뜀 · 1 오류
 import fs from "fs";
 import path from "path";
@@ -27,6 +30,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const QUEUE = path.join(__dirname, "queue", "queue.json");
 const LOG = path.join(__dirname, "queue", "published.json");
 const REPO = "jkdevjob/jkquant";
+const BRANCH = "claude/instagram-reel-video-creation-wl16ee";
+// 저장소 체크아웃 안에서 도는지. 아니면 공개 주소에서 받아 쓰고, 기록은 커밋되지 않는다.
+const IN_REPO = (() => {
+  try { execFileSync("git", ["ls-files", "--error-unmatch", "queue/queue.json"], { cwd: __dirname, stdio: "ignore" }); return true; }
+  catch { return false; }
+})();
 
 // ── 인자 ──
 const argv = process.argv.slice(2);
@@ -176,10 +185,32 @@ async function uploadYouTube(item, token) {
 // ── 인스타그램 ──
 const IG = () => `https://graph.instagram.com/${process.env.IG_GRAPH_VERSION || "v23.0"}`;
 
+// 저장소 없이 돌 때 쓸 커밋(REPO_SHA 가 없으면 브랜치 최신 커밋)
+let remoteSha;
+async function repoSha() {
+  if (remoteSha) return remoteSha;
+  if (process.env.REPO_SHA) return (remoteSha = process.env.REPO_SHA);
+  const r = await fetch(`https://api.github.com/repos/${REPO}/commits/${BRANCH}`, { headers: { Accept: "application/vnd.github+json" } });
+  if (!r.ok) throw new Error(`브랜치 커밋 조회 실패(HTTP ${r.status})`);
+  return (remoteSha = (await r.json()).sha);
+}
+
+// 저장소 없이 돌 때 영상 파일을 그 커밋에서 내려받는다.
+async function ensureLocal(item) {
+  const file = path.join(__dirname, item.file);
+  if (IN_REPO || fs.existsSync(file)) return;
+  const url = `https://raw.githubusercontent.com/${REPO}/${await repoSha()}/reel/${item.file}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`영상 내려받기 실패(HTTP ${r.status}): ${url}`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, Buffer.from(await r.arrayBuffer()));
+}
+
 // 인스타 서버가 내려받을 공개 주소. 저장소가 공개라 커밋된 파일을 jsDelivr(커밋 고정)로 연다.
-function mediaUrl(item) {
+async function mediaUrl(item) {
   if (process.env.MEDIA_BASE_URL) return process.env.MEDIA_BASE_URL.replace(/\/$/, "") + "/" + item.file;
-  const rel = path.relative(path.join(__dirname, ".."), path.join(__dirname, item.file)).split(path.sep).join("/");
+  const rel = `reel/${item.file}`;
+  if (!IN_REPO) return `https://cdn.jsdelivr.net/gh/${REPO}@${await repoSha()}/${rel}`;
   const sha = execFileSync("git", ["log", "-1", "--format=%H", "--", rel], { cwd: path.join(__dirname, ".."), encoding: "utf8" }).trim();
   if (!sha) throw new Error(`${item.file} 이 아직 커밋되지 않아 공개 주소가 없음`);
   return `https://cdn.jsdelivr.net/gh/${REPO}@${sha}/${rel}`;
@@ -207,7 +238,7 @@ async function igExisting(item) {
 }
 
 async function publishInstagram(item) {
-  const videoUrl = mediaUrl(item);
+  const videoUrl = await mediaUrl(item);
   const head = await fetch(videoUrl, { method: "HEAD" });
   if (!head.ok) throw new Error(`영상 공개 주소 접근 실패(HTTP ${head.status}): ${videoUrl}`);
   const uid = process.env.IG_USER_ID || "me";
@@ -261,10 +292,11 @@ for (const p of targets) {
   if (!item) { report.push(`${P.name}: 오늘 올릴 항목 없음`); continue; }
   const missing = P.keys.filter((k) => !process.env[k]);
   if (DRY) {
+    try { await ensureLocal(item); } catch (e) { failed = true; report.push(`${P.name}: ${item.id} ${e.message}`); continue; }
     const problems = check(item);
     if (problems.length) { failed = true; report.push(`${P.name}: ${item.id} 점검 실패 — ${problems.join(" / ")}`); continue; }
     let extra = "";
-    if (p === "ig") { try { extra = ` · 공개 주소 ${mediaUrl(item)}`; } catch (e) { extra = ` · ${e.message}`; } }
+    if (p === "ig") { try { extra = ` · 공개 주소 ${await mediaUrl(item)}`; } catch (e) { extra = ` · ${e.message}`; } }
     report.push(`${P.name}: ${item.id}(${item.date}) 올릴 예정 · ${item.file}${extra}` + (missing.length ? ` · 키 없음: ${missing.join(", ")}` : " · 키 있음"));
     continue;
   }
@@ -281,6 +313,10 @@ for (const p of targets) {
       item = pick(p);
     }
     if (!item) { report.push(`${P.name}: 오늘 올릴 항목 없음`); continue; }
+    // 저장소 없이 돌면 기록이 남지 않으니, 계정 확인이 안 되면 올리지 않는다(매일 같은 영상이 올라가는 것 방지)
+    if (p === "yt" && ytGuardOff && !IN_REPO)
+      throw new Error("저장소 없이 실행 중이라 중복 확인이 필요한데 갱신 토큰에 youtube.readonly 범위가 없음 — SOCIAL_SETUP.md 2-5 대로 두 범위로 다시 발급");
+    await ensureLocal(item);
     const problems = check(item);
     if (problems.length) throw new Error(`점검 실패 — ${problems.join(" / ")}`);
     const res = p === "yt" ? await uploadYouTube(item, token) : await publishInstagram(item);
