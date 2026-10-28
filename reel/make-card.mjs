@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // 텍스트 카드 영상 생성 (9:16 mp4) — SPCL의 L(친밀감)·C(신뢰) 축용.
 //   node make-card.mjs --config cards.config.json
-// 카드 스펙: { theme:"navy"|"cream", kicker, lines:[...], slogan, handle, duration, out }
+//   node make-card.mjs --config cards.config.json --preview   (마지막 장면 PNG만)
+// 카드 스펙: { theme:"navy"|"cream", kicker, lines:[...], note, slogan, handle, duration, out }
+//   note: 슬로건 위 작은 주석(출처·기준). 없으면 비움.
 //   lines 안에서 **강조** 표시, "~작은줄" 앞의 ~는 작은 글씨.
 import { fileURLToPath } from "url";
 import path from "path";
@@ -24,6 +26,7 @@ async function makeCard(browser, spec){
     theme: spec.theme || "navy",
     kicker: spec.kicker || "은퇴노트",
     lines: spec.lines || [],
+    note: spec.note || "",
     slogan: spec.slogan || "늦지 않았습니다",
     handle: spec.handle || "@retire.note",
   };
@@ -32,11 +35,24 @@ async function makeCard(browser, spec){
   const htmlPath = path.join(__dirname, `.card_${Date.now()}.html`);
   fs.writeFileSync(htmlPath, injected);
 
-  const framesDir = fs.mkdtempSync(path.join(os.tmpdir(), "cardframes_"));
-  const total = Math.round(durationSec * fps);
   const page = await browser.newPage({ viewport:{width:1080,height:1920}, deviceScaleFactor:1 });
   await page.goto("file://" + htmlPath);
   await page.waitForFunction("window.__READY__ === true", null, { timeout: 20000 });
+
+  // --preview: 마지막 장면 한 장만 PNG로 저장(글자 넘침 확인용)
+  if (spec.preview){
+    const png = path.resolve((spec.out || `out/card_${Date.now()}.mp4`).replace(/\.mp4$/, ".png"));
+    fs.mkdirSync(path.dirname(png), { recursive:true });
+    await page.evaluate((t)=>window.renderAt(t), durationSec);
+    await page.screenshot({ path: png });
+    await page.close();
+    fs.rmSync(htmlPath,{force:true});
+    console.log(`✔ 미리보기 ${png}`);
+    return;
+  }
+
+  const framesDir = fs.mkdtempSync(path.join(os.tmpdir(), "cardframes_"));
+  const total = Math.round(durationSec * fps);
   process.stdout.write(`\n▶ 카드 "${DATA.kicker}" 프레임 ${total}장 `);
   for (let f=0; f<total; f++){
     await page.evaluate((t)=>window.renderAt(t), f/fps);
@@ -63,7 +79,8 @@ async function main(){
   const a = parseArgs(process.argv.slice(2));
   let specs;
   if (a.config){ const cfg=JSON.parse(fs.readFileSync(path.resolve(a.config),"utf8")); specs=Array.isArray(cfg)?cfg:cfg.cards||[cfg]; }
-  else { console.error("사용법: node make-card.mjs --config cards.config.json"); process.exit(1); }
+  else { console.error("사용법: node make-card.mjs --config cards.config.json [--preview]"); process.exit(1); }
+  if (a.preview) specs = specs.map(s => ({ ...s, preview:true }));
   const launchOpts = { args:["--no-sandbox"] };
   if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE) launchOpts.executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
   const browser = await chromium.launch(launchOpts);

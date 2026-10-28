@@ -21,12 +21,17 @@
           font-weight:400; font-size:46px; letter-spacing:2px; }
   .slogan { position:absolute; left:0; right:0; bottom:220px; text-align:center;
             font-weight:700; font-size:52px; letter-spacing:8px; }
+  /* 출처·기준 같은 작은 주석 */
+  .note   { position:absolute; left:108px; right:108px; bottom:330px; text-align:center;
+            font-weight:400; font-size:30px; line-height:1.5; letter-spacing:0; white-space:pre-line; }
 
   body.navy  .kicker { color:#d6b676; }
   body.navy  .line   { color:#f4f7fb; }
   body.navy  .accentword { color:#e2c584; }
   body.navy  .slogan { color:rgba(214,182,118,.9); }
   body.navy  .foot   { color:rgba(255,255,255,.6); }
+  body.navy  .note   { color:rgba(255,255,255,.5); }
+  body.cream .note   { color:#9a9184; }
   body.cream .kicker { color:#b0473a; }
   body.cream .line   { color:#1b1813; }
   body.cream .accentword { color:#b0473a; }
@@ -39,6 +44,7 @@
   <div id="stage">
     <div class="kicker rev" id="kicker"></div>
     <div id="lines"></div>
+    <div class="note rev" id="note"></div>
     <div class="slogan rev" id="slogan"></div>
     <div class="foot rev" id="foot"></div>
   </div>
@@ -62,11 +68,12 @@
     div.innerHTML = fmt(small ? ln.slice(1) : ln);
     linesBox.appendChild(div); els.push(div);
   });
+  document.getElementById("note").textContent = D.note || "";
   document.getElementById("slogan").textContent = D.slogan || "";
   document.getElementById("foot").textContent = D.handle || "";
 
-  // 등장 대상: 키커 → 각 줄 → 슬로건 → 핸들
-  const seq = [document.getElementById("kicker"), ...els,
+  // 등장 대상: 키커 → 각 줄 → 주석 → 슬로건 → 핸들
+  const seq = [document.getElementById("kicker"), ...els, document.getElementById("note"),
                document.getElementById("slogan"), document.getElementById("foot")];
   const START = 0.5, STAGGER = 0.5, DUR = 0.7;
   function ease(x){ return 1 - Math.pow(1 - Math.min(1,Math.max(0,x)), 3); }

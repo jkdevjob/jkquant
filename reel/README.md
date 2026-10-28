@@ -89,6 +89,18 @@ node make-reel.mjs --config reels.config.json
 - 사용 모델: `claude-opus-4-8` (적응형 사고 + 구조화 출력). **주어진 실제 수치만 사용**하도록 지시 — 허위 숫자 생성 방지
 - 키가 없으면 카피 단계만 건너뛰고 영상은 정상 생성됩니다
 
+## 자동 발행 (인스타 릴스 + 유튜브 쇼츠)
+
+```bash
+node publish-social.mjs --dry     # 오늘 무엇이 올라갈지·키 상태 확인
+node publish-social.mjs           # 오늘(한국 시간) 항목 게시
+```
+
+- 큐: `queue/queue.json` (영상은 `queue/` 아래에 커밋). 하루 한 편, 밀린 건 다음 날로.
+- 결과: `queue/published.json` 에 게시 주소 기록
+- 키 연결 방법: [`SOCIAL_SETUP.md`](SOCIAL_SETUP.md)
+- 텍스트 카드 영상: `node make-card.mjs --config week2.cards.json` (`--preview` 는 마지막 장면 PNG만)
+
 ## 구조
 
 ```
