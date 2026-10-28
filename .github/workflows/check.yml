@@ -28,7 +28,7 @@ jobs:
         with: { python-version: '3.12' }
 
       - name: 운동 타이머 · 경계 시간 · 계정 저장 · 메뉴 및 변이 검사
-        run: node --test tests/workout.test.mjs
+        run: node --test tests/workout.test.mjs tests/workout-audio.test.mjs
 
       - name: 종가 당일/익일 시가 · 모든 그림자 이력 · 시간적 오염방지 검사
         run: |
