@@ -1,4 +1,5 @@
 import {TimerEngine,DEFAULT_CONFIG,normalizeConfig,buildTimeline} from './workout-engine.mjs?v=1.0.0';
+import {WorkoutAudio} from './workout-audio.mjs?v=1.0.0';
 
 const $=id=>document.getElementById(id);
 const icons={
@@ -32,11 +33,12 @@ const presets=[
  {...clone(DEFAULT_CONFIG),name:'스트레칭 30:15',description:'운동 30초 · 휴식 15초',icon:'timer',prepare:10,rounds:6,cooldown:20,blocks:[{id:'work',label:'스트레칭',seconds:30,kind:'work'},{id:'rest',label:'휴식',seconds:15,kind:'rest'}]}
 ];
 let config=clone(DEFAULT_CONFIG),engine=new TimerEngine(config),mode='round',view='timer';
-let settings={sound:true,voice:false,haptic:false,wake:true},routines=[],history=[],accountReady=false,currentUid=null;
-let toastTimeout,editorAction=null,confirmAction=null,audio=null,wakeLock=null,lastCue='',lastIndex=-1,justStarted=false;
+let settings={sound:true,countdown:true,voice:false,haptic:false,wake:true},routines=[],history=[],accountReady=false,currentUid=null;
+let toastTimeout,editorAction=null,confirmAction=null,wakeLock=null,lastCue='',lastIndex=-1,justStarted=false;
 let sessionId=null,sessionStarted=0,finishedId=null,pendingHistory=null;
 let sw={running:false,base:0,anchor:0,laps:[]},saveTimer=null,unsavedConfig=false,autoSaveInFlight=false;
 const store=()=>window.JKWorkoutStorage;
+const soundPlayer=new WorkoutAudio(window,message=>toast(message));
 
 function mountIcons(root=document){root.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=svg(el.dataset.icon));}
 function toast(message){$('toast').textContent=message;$('toast').classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>$('toast').classList.remove('show'),3500);}
@@ -49,9 +51,9 @@ function confirm(title,description,label,action){confirmAction=action;$('confirm
 function switchView(next){view=['timer','routines','history','settings'].includes(next)?next:'timer';document.querySelectorAll('.view').forEach(el=>el.hidden=el.id!==`view-${view}`);document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('active',el.dataset.view===view));if(view==='routines')renderRoutines();if(view==='history')renderHistory();if(view==='settings')renderSettings();location.hash=view;window.scrollTo({top:0,behavior:'instant'});}
 function setMode(next){if(next===mode)return;const change=()=>{reset();mode=next;if(next!=='stopwatch'){config=normalizeConfig(next==='tabata'?presets[1]:config.mode==='tabata'?presets[0]:config);engine.configure(config);scheduleSave();}renderAll();};if(active())confirm('타이머를 바꿀까요?','진행 중인 타이머가 초기화됩니다.','변경',change);else change();}
 
-async function initAudio(){if(!settings.sound)return;try{const A=window.AudioContext||window.webkitAudioContext;if(!A)return;audio??=new A();if(audio.state==='suspended')await audio.resume();}catch{}}
-function beep(type='tick'){if(!settings.sound||!audio||audio.state!=='running')return;try{const t=audio.currentTime;const notes=type==='done'?[880,1108,1320]:[type==='phase'?1046:660];notes.forEach((hz,i)=>{const o=audio.createOscillator(),g=audio.createGain(),start=t+i*.16;o.type='sine';o.frequency.value=hz;g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(.20,start+.008);g.gain.exponentialRampToValueAtTime(.001,start+.12);o.connect(g);g.connect(audio.destination);o.start(start);o.stop(start+.14);});}catch{}}
-function announce(text){if(settings.voice&&'speechSynthesis'in window&&document.visibilityState==='visible'){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='ko-KR';u.rate=1.08;speechSynthesis.speak(u);}catch{}}$('live-phase').textContent=text;if(settings.haptic&&navigator.vibrate)navigator.vibrate(100);}
+function initAudio(options){soundPlayer.configure(settings);void soundPlayer.unlockFromGesture(options);}
+function beep(type='phase'){soundPlayer.configure(settings);return soundPlayer.boundary(type);}
+function announce(text){soundPlayer.announce(text);$('live-phase').textContent=text;if(settings.haptic&&navigator.vibrate)navigator.vibrate(100);}
 async function acquireWake(){if(!settings.wake||!('wakeLock'in navigator)||document.visibilityState!=='visible'||(!sw.running&&engine.status!=='running'))return;try{if(!wakeLock||wakeLock.released){const lock=await navigator.wakeLock.request('screen');if(!settings.wake||(!sw.running&&engine.status!=='running')){await lock.release();return;}wakeLock=lock;lock.addEventListener('release',()=>{if(wakeLock===lock)wakeLock=null;updateWakeLabel();});}updateWakeLabel();}catch{updateWakeLabel('화면 켜짐 유지 불가');}}
 function releaseWake(){try{wakeLock?.release();}catch{}wakeLock=null;updateWakeLabel();}
 function updateWakeLabel(error){$('wake-indicator').innerHTML=svg('screen')+' '+esc(error||(!settings.wake?'화면 유지 꺼짐':!('wakeLock'in navigator)?'화면 유지 미지원':wakeLock?'화면 켜짐 유지 중':'화면 켜짐 유지'));}
@@ -63,7 +65,7 @@ function applyConfig(next){config=normalizeConfig(next);mode=config.mode;engine.
 function row(label,description,value,kind,key){return `<div class="config-row" style="--row:var(--${kind})"><span class="dot"></span><div class="row-copy"><strong>${esc(label)}</strong><small>${esc(description)}</small></div><button class="row-value" data-edit="${esc(key)}" aria-label="${esc(label)} 설정">${esc(value)}${svg('chevron')}</button></div>`;}
 function renderConfig(){const colors={prepare:'prepare',rounds:'cooldown',cooldown:'cooldown'};let html=row('준비','시작하기 전 카운트다운',duration(config.prepare*1000),'prepare','prepare');for(const b of config.blocks)html+=row(b.label,b.kind==='rest'?'다음 라운드 전 쉬는 시간':'내 페이스로 운동하기',duration(b.seconds*1000),b.kind,b.id);html+=row('라운드','운동 + 휴식을 반복해요',String(config.rounds),'cooldown','rounds');html+=row('쿨다운','운동이 끝나면 천천히 마무리',duration(config.cooldown*1000),'cooldown','cooldown');$('config-rows').innerHTML=html;$('skip-last-rest').checked=config.skipLastRest;$('config-summary').textContent=`${config.rounds}라운드 · ${config.blocks.map(b=>b.label).join(' + ')} · 총 ${duration(engine.plan.total)}`;$('add-block-btn').disabled=config.blocks.length>=12;}
 function renderAll(){document.body.classList.toggle('stopwatch-mode',mode==='stopwatch');document.querySelectorAll('[data-mode]').forEach(el=>el.setAttribute('aria-selected',String(el.dataset.mode===mode)));$('config-panel').hidden=mode==='stopwatch';$('stopwatch-panel').hidden=mode!=='stopwatch';if(mode!=='stopwatch')renderConfig();renderLaps();renderSettings();renderSound();renderTick();}
-function renderSound(){$('sound-toggle').innerHTML=svg(settings.sound?'volume':'mute');$('sound-toggle').setAttribute('aria-label',settings.sound?'소리 끄기':'소리 켜기');$('sound-toggle').setAttribute('aria-pressed',String(settings.sound));}
+function renderSound(){soundPlayer.configure(settings);$('sound-toggle').innerHTML=svg(settings.sound?'volume':'mute');$('sound-toggle').setAttribute('aria-label',settings.sound?'소리 끄기':'소리 켜기');$('sound-toggle').setAttribute('aria-pressed',String(settings.sound));}
 function renderTick(){
   if(mode==='stopwatch'){renderStopwatch();return;}
   const s=engine.snapshot(),segment=s.segment,finished=s.status==='finished',running=s.status==='running';
@@ -81,15 +83,29 @@ function renderTick(){
   if(running&&document.visibilityState==='visible'){
     const second=Math.ceil(s.remaining/1000),cue=`${s.index}:${second}`;
     if(s.index!==lastIndex){lastIndex=s.index;if(!justStarted){beep('phase');announce(segment.label);}justStarted=false;}
-    if(second>0&&second<=3&&cue!==lastCue){lastCue=cue;beep();}
+    if(second>0&&second<=5&&cue!==lastCue){lastCue=cue;soundPlayer.countdown(second,cue);}
   }
   if(finished&&sessionId&&finishedId!==sessionId)finish(s);
 }
 function swElapsed(){return sw.base+(sw.running?Date.now()-sw.anchor:0);}
 function renderStopwatch(){const elapsed=swElapsed();$('timer-card').style.setProperty('--phase','var(--accent)');$('phase-label').textContent=sw.running?'페이스를 이어가세요':sw.base?'일시정지':'시작 준비';$('time-display').textContent=swTime(elapsed);$('round-display').innerHTML=`${sw.laps.length}개의 랩 기록`;$('ring-progress').style.strokeDashoffset=String(904.78*((elapsed%60000)/60000));$('status-pill').querySelector('span').textContent=sw.running?'IN PROGRESS':sw.base?'PAUSED':'READY';$('next-phase').innerHTML='<span class="tiny-dot"></span><span>나만의 속도로, 자유롭게.</span>';$('start-btn').innerHTML=svg(sw.running?'pause':'play')+`<span>${sw.running?'일시정지':sw.base?'계속하기':'측정 시작'}</span>`;$('skip-btn').disabled=!sw.running||sw.laps.length>=200;$('skip-btn').innerHTML=svg('plus');$('skip-btn').setAttribute('aria-label','랩 기록');$('total-caption').textContent='총 경과 시간';$('total-display').textContent=duration(Math.floor(elapsed/1000)*1000);$('overall-progress').style.width='0%';}
 function renderLaps(){$('lap-count').textContent=sw.laps.length+'개';if(!sw.laps.length){$('lap-list').innerHTML=`<div class="empty-small">${svg('timer')}<p>움직임의 순간을 기록하세요.</p><span>시작 후 랩 버튼을 누르면 기록됩니다.</span></div>`;return;}$('lap-list').innerHTML=sw.laps.map((lap,i)=>`<div class="lap-row"><span>랩 ${pad(i+1)}</span><strong>${swTime(lap-(sw.laps[i-1]||0))}</strong><small>${swTime(lap)}</small></div>`).reverse().join('');}
-function reset(){engine.reset();sw={running:false,base:0,anchor:0,laps:[]};sessionId=null;finishedId=null;lastIndex=-1;lastCue='';releaseWake();if('speechSynthesis'in window)speechSynthesis.cancel();renderAll();}
-async function toggleStart(){if(!needAccount())return;await initAudio();if(mode==='stopwatch'){if(sw.running){sw.base=swElapsed();sw.running=false;releaseWake();}else{sw.anchor=Date.now();sw.running=true;acquireWake();}renderTick();return;}if(engine.status==='running'){engine.pause();releaseWake();if('speechSynthesis'in window)speechSynthesis.cancel();}else{if(engine.status==='idle'||engine.status==='finished'){sessionId=newId();sessionStarted=Date.now();finishedId=null;lastIndex=-1;lastCue='';justStarted=true;}engine.start();acquireWake();const s=engine.snapshot();if(s.segment)announce(s.segment.label);}renderTick();}
+function reset(){engine.reset();sw={running:false,base:0,anchor:0,laps:[]};sessionId=null;finishedId=null;lastIndex=-1;lastCue='';releaseWake();soundPlayer.reset();renderAll();}
+function toggleStart(){
+ if(!needAccount())return;
+ if(mode==='stopwatch'){
+  if(sw.running){sw.base=swElapsed();sw.running=false;releaseWake();soundPlayer.stop();}
+  else{soundPlayer.stop();initAudio();sw.anchor=Date.now();sw.running=true;acquireWake();}
+  renderTick();return;
+ }
+ if(engine.status==='running'){engine.pause();releaseWake();soundPlayer.stop();}
+ else{
+  if(engine.status==='idle'||engine.status==='finished'){sessionId=newId();sessionStarted=Date.now();finishedId=null;lastIndex=-1;lastCue='';justStarted=true;soundPlayer.reset();}
+  else soundPlayer.stop();
+  initAudio();engine.start();acquireWake();const snapshot=engine.snapshot();if(snapshot.segment)announce(snapshot.segment.label);
+ }
+ renderTick();
+}
 async function finish(s){finishedId=sessionId;releaseWake();beep('done');announce('운동 완료. 수고하셨습니다.');pendingHistory={id:sessionId,name:config.name,mode:config.mode,rounds:config.rounds,plannedMs:s.total,activeMs:Math.round(s.activeMs),skipCount:s.skipCount,startedAt:sessionStarted,completedAt:Date.now()};$('done-summary').textContent=`${config.rounds}라운드 · 실제 진행 ${duration(s.activeMs)}${s.skipCount?' · 구간 건너뛰기 '+s.skipCount+'회':''}`;$('done-saved').textContent='운동 기록을 저장하는 중…';$('retry-history').hidden=true;const open=()=>{if(!$('done-dialog').open)$('done-dialog').showModal();};if($('confirm-dialog').open)$('confirm-dialog').close();if($('editor-dialog').open)$('editor-dialog').close();open();await saveHistory();}
 async function saveHistory(){if(!pendingHistory)return;const record=clone(pendingHistory),uid=currentUid;$('retry-history').hidden=true;try{await store().saveHistory(record);if(uid!==currentUid)return;if(!history.some(h=>h.id===record.id))history.unshift(record);pendingHistory=null;$('done-saved').textContent='JK 계정에 운동 기록을 저장했습니다.';}catch{if(uid!==currentUid)return;$('done-saved').textContent='기록 저장 실패 · 연결 후 다시 저장해 주세요.';$('retry-history').hidden=false;}if(view==='history')renderHistory();}
 
@@ -100,8 +116,14 @@ function saveRoutine(){if(mode==='stopwatch'){toast('라운드 또는 타바타 
 function loadRoutine(routine){const load=()=>{reset();applyConfig(routine);switchView('timer');toast(`${routine.name}을 불러왔습니다.`);};if(active())confirm('운동을 불러올까요?','진행 중인 타이머가 초기화됩니다.','불러오기',load);else load();}
 function renderRoutines(){if(!routines.length){$('routines-list').innerHTML=`<div class="empty-state" style="grid-column:1/-1">${svg('bookmark')}<h2>나만의 루틴을 만들어 보세요.</h2><p>타이머에서 운동을 구성한 뒤 저장하면 여기에 모입니다.</p><button class="button-primary" data-open-timer>운동 구성하기</button></div>`;return;}$('routines-list').innerHTML=routines.map(r=>`<article class="routine-card"><div class="routine-card-top">${svg(r.mode==='tabata'?'bolt':'repeat')}<button class="icon-btn" data-delete-routine="${esc(r.id)}" aria-label="${esc(r.name)} 삭제">${svg('trash')}</button></div><h3>${esc(r.name)}</h3><p>${r.rounds}라운드 · 총 ${duration(buildTimeline(r).total)}</p><div class="routine-card-actions"><button class="button-primary" data-load-routine="${esc(r.id)}">불러오기 ${svg('chevron')}</button></div></article>`).join('');}
 function renderHistory(){const activeMinutes=Math.floor(history.reduce((n,h)=>n+(h.activeMs||0),0)/60000),rounds=history.reduce((n,h)=>n+(h.rounds||0),0);$('history-stats').innerHTML=`<div class="stat-card"><span>저장된 운동</span><strong>${history.length}<small>회</small></strong></div><div class="stat-card"><span>누적 진행 시간</span><strong>${activeMinutes}<small>분</small></strong></div><div class="stat-card"><span>완료 라운드</span><strong>${rounds}<small>회</small></strong></div>`;if(!history.length){$('history-list').innerHTML=`<div class="empty-state">${svg('chart')}<h2>첫 라운드를 기다리고 있어요.</h2><p>라운드·타바타 운동을 완료하면 기록이 남습니다.</p><button class="button-primary" data-open-timer>타이머로 가기</button></div>`;return;}$('history-list').innerHTML=history.map(h=>`<article class="history-row"><span class="history-icon">${svg('check')}</span><div><h3>${esc(h.name)}</h3><p>${esc(new Date(h.completedAt).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}))} · ${h.rounds}라운드${h.skipCount?' · 건너뛰기 '+h.skipCount+'회':''}</p></div><strong>${duration(h.activeMs)}</strong></article>`).join('')+'<p class="subtle" style="text-align:center;margin-top:18px">최근 100개 기록 기준 · 구간 건너뛰기 시간과 일시정지는 진행 시간에서 제외</p>';}
-function renderSettings(){const options=[['sound','구간 알림 소리','구간 전환과 마지막 3초를 소리로 안내합니다.',true],['voice','한국어 음성 안내','구간 이름과 운동 완료를 읽어 줍니다.','speechSynthesis'in window],['haptic','진동 알림','지원하는 기기에서 구간 전환을 진동으로 알려 줍니다.',!!navigator.vibrate],['wake','화면 켜짐 유지','운동 중 화면이 꺼지지 않도록 요청합니다.','wakeLock'in navigator]];$('settings-rows').innerHTML=options.map(([key,label,desc,supported])=>`<div class="settings-row"><div class="settings-copy"><strong>${label}</strong><p>${desc}${supported?'':' (현재 브라우저 미지원)'}</p></div><button class="switch" role="switch" aria-label="${label}" aria-checked="${settings[key]}" data-setting="${key}" ${supported?'':'disabled'}></button></div>`).join('');updateWakeLabel();}
-async function toggleSetting(key){settings[key]=!settings[key];renderSettings();renderSound();if(key==='wake'){if(settings.wake)acquireWake();else releaseWake();}if(key==='voice'&&!settings.voice&&'speechSynthesis'in window)speechSynthesis.cancel();try{await savePatch({settings:clone(settings)});}catch(e){syncError(e);}}
+function renderSettings(){const options=[['sound','알림 소리','음성 카운트다운과 구간 전환 비프음을 켭니다.',true],['countdown','5초 음성 카운트다운','오 · 사 · 삼 · 이 · 일 → 구간이 끝나면 삐—', 'speechSynthesis'in window],['voice','구간 이름 음성 안내','구간 이름과 운동 완료를 읽어 줍니다.','speechSynthesis'in window],['haptic','진동 알림','지원하는 기기에서 구간 전환을 진동으로 알려 줍니다.',!!navigator.vibrate],['wake','화면 켜짐 유지','운동 중 화면이 꺼지지 않도록 요청합니다.','wakeLock'in navigator]];$('settings-rows').innerHTML=options.map(([key,label,desc,supported])=>`<div class="settings-row"><div class="settings-copy"><strong>${label}</strong><p>${desc}${supported?'':' (현재 브라우저 미지원)'}</p></div><button class="switch" role="switch" aria-label="${label}" aria-checked="${settings[key]}" data-setting="${key}" ${supported?'':'disabled'}></button></div>`).join('');updateWakeLabel();}
+async function toggleSetting(key){
+ settings[key]=!settings[key];renderSettings();renderSound();
+ if((key==='sound'||key==='countdown'||key==='voice')&&settings[key])initAudio();
+ if(key==='wake'){if(settings.wake)acquireWake();else releaseWake();}
+ if(key==='voice'&&!settings.voice)soundPlayer.stop();
+ try{await savePatch({settings:clone(settings)});}catch(e){syncError(e);}
+}
 
 document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>setMode(el.dataset.mode)));
 document.querySelectorAll('[data-view]').forEach(el=>el.addEventListener('click',()=>switchView(el.dataset.view)));
@@ -110,7 +132,7 @@ $('reset-btn').addEventListener('click',()=>{if(active())confirm('타이머를 �
 $('skip-btn').addEventListener('click',()=>{if(mode==='stopwatch'){if(sw.running&&sw.laps.length<200){sw.laps.push(swElapsed());renderLaps();}}else{engine.skip();renderTick();}});
 $('focus-btn').addEventListener('click',()=>{const on=document.body.classList.toggle('focus-mode');$('focus-btn').innerHTML=svg(on?'shrink':'expand');$('focus-btn').setAttribute('aria-label',on?'집중 화면 닫기':'집중 화면 열기');});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('focus-mode')){$('focus-btn').click();}});
-$('sound-toggle').addEventListener('click',async()=>{if(!settings.sound){const previous=settings.sound;settings.sound=true;await initAudio();beep('phase');settings.sound=previous;}await toggleSetting('sound');});
+$('sound-toggle').addEventListener('click',()=>toggleSetting('sound'));
 $('help-btn').addEventListener('click',()=>$('help-dialog').showModal());['help-close','help-done'].forEach(id=>$(id).addEventListener('click',()=>$('help-dialog').close()));
 ['editor-close','editor-cancel'].forEach(id=>$(id).addEventListener('click',()=>$('editor-dialog').close()));
 $('editor-form').addEventListener('submit',async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{const result=await editorAction?.();if(result!==false)$('editor-dialog').close();}catch{toast('설정을 적용하지 못했습니다.');}finally{button.disabled=false;}});
@@ -125,12 +147,12 @@ $('new-routine-btn').addEventListener('click',()=>loadRoutine(DEFAULT_CONFIG));
 $('routines-list').addEventListener('click',e=>{const b=e.target.closest('[data-load-routine],[data-delete-routine]');if(!b)return;const id=b.dataset.loadRoutine||b.dataset.deleteRoutine,r=routines.find(r=>r.id===id);if(!r)return;if(b.dataset.loadRoutine)loadRoutine(r);else confirm('저장한 운동을 삭제할까요?',r.name,'삭제',async()=>{const next=routines.filter(r=>r.id!==id);try{await savePatch({routines:next});routines=next;renderRoutines();toast('운동을 삭제했습니다.');}catch(e){syncError(e);}});});
 document.addEventListener('click',e=>{if(e.target.closest('[data-open-timer]'))switchView('timer');});
 $('settings-rows').addEventListener('click',e=>{const b=e.target.closest('[data-setting]');if(b)toggleSetting(b.dataset.setting);});
-$('test-sound-btn').addEventListener('click',async()=>{if(!settings.sound){toast('구간 알림 소리를 먼저 켜 주세요.');return;}await initAudio();beep('done');if(settings.voice)announce('준비. 운동을 시작합니다.');});
+$('test-sound-btn').addEventListener('click',()=>{if(!settings.sound){toast('알림 소리를 먼저 켜 주세요.');return;}if(active()){toast('운동을 초기화한 뒤 소리를 확인해 주세요.');return;}soundPlayer.configure(settings);soundPlayer.preview();toast('오 · 사 · 삼 · 이 · 일 · 삐— 소리를 확인해 보세요.');});
 $('sync-status').addEventListener('click',async()=>{if(active()){toast('운동을 초기화한 뒤 설정을 다시 불러올 수 있어요.');return;}if(unsavedConfig&&store()?.ready){await flushConfig();return;}try{await store()?.reload?.();}catch{toast('연결하지 못했습니다. 잠시 후 다시 시도해 주세요.');}});
 window.addEventListener('beforeunload',e=>{if(active()){e.preventDefault();e.returnValue='';}});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){lastIndex=engine.snapshot().index;lastCue=`${lastIndex}:${Math.ceil(engine.snapshot().remaining/1000)}`;renderTick();acquireWake();}else{if('speechSynthesis'in window)speechSynthesis.cancel();}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){lastIndex=engine.snapshot().index;lastCue=`${lastIndex}:${Math.ceil(engine.snapshot().remaining/1000)}`;renderTick();acquireWake();}else soundPlayer.stop();});
 window.addEventListener('hashchange',()=>{const next=location.hash.slice(1)||'timer';if(next!==view)switchView(next);});
-function receiveData(event){const data=event.detail;if(data.state==='signedout'||data.state==='loading'){if(currentUid!==data.uid){reset();config=clone(DEFAULT_CONFIG);engine.configure(config);settings={sound:true,voice:false,haptic:false,wake:true};routines=[];history=[];pendingHistory=null;currentUid=data.uid;accountReady=false;unsavedConfig=false;clearTimeout(saveTimer);for(const d of document.querySelectorAll('dialog[open]'))d.close();renderAll();}syncLabel('loading',data.state==='signedout'?'로그인 후 운동을 사용할 수 있어요.':'운동 설정을 불러오는 중…');return;}if(data.uid!==currentUid&&currentUid!==null)return;if(data.state==='error'){accountReady=true;syncLabel('error','설정 불러오기 실패 · 눌러서 다시 연결');return;}if(data.state==='ready'){currentUid=data.uid;accountReady=true;config=normalizeConfig(data.data?.config||DEFAULT_CONFIG);engine.configure(config);mode=config.mode;settings={...settings,...data.data?.settings};routines=(data.data?.routines||[]).slice(0,50).map(r=>({...normalizeConfig(r),id:String(r.id||newId())}));history=data.history||[];unsavedConfig=false;syncLabel('ready','JK 계정에 연결됨 · 변경 시 자동 저장');renderAll();if(view==='routines')renderRoutines();if(view==='history')renderHistory();}}
+function receiveData(event){const data=event.detail;if(data.state==='signedout'||data.state==='loading'){if(currentUid!==data.uid){reset();config=clone(DEFAULT_CONFIG);engine.configure(config);settings={sound:true,countdown:true,voice:false,haptic:false,wake:true};routines=[];history=[];pendingHistory=null;currentUid=data.uid;accountReady=false;unsavedConfig=false;clearTimeout(saveTimer);for(const d of document.querySelectorAll('dialog[open]'))d.close();renderAll();}syncLabel('loading',data.state==='signedout'?'로그인 후 운동을 사용할 수 있어요.':'운동 설정을 불러오는 중…');return;}if(data.uid!==currentUid&&currentUid!==null)return;if(data.state==='error'){accountReady=true;syncLabel('error','설정 불러오기 실패 · 눌러서 다시 연결');return;}if(data.state==='ready'){currentUid=data.uid;accountReady=true;config=normalizeConfig(data.data?.config||DEFAULT_CONFIG);engine.configure(config);mode=config.mode;settings={...settings,...data.data?.settings};routines=(data.data?.routines||[]).slice(0,50).map(r=>({...normalizeConfig(r),id:String(r.id||newId())}));history=data.history||[];unsavedConfig=false;syncLabel('ready','JK 계정에 연결됨 · 변경 시 자동 저장');renderAll();if(view==='routines')renderRoutines();if(view==='history')renderHistory();}}
 window.addEventListener('jk-workout-data',receiveData);
 mountIcons();renderAll();switchView(location.hash.slice(1)||'timer');
 if(window.JKWorkoutContext)receiveData({detail:window.JKWorkoutContext});
