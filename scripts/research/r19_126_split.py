@@ -16,10 +16,11 @@
   1단계: RSI[어제−1] ≤ 30 이고 RSI[어제] > 30.
   2단계(1단계 뒤): MACD 가 시그널을 아래에서 위로 넘음.
   3단계(2단계 뒤): 이틀 연속 종가가 구름 위(구름 위 = max(선행A, 선행B)).
-- 매도(근거가 사라지는 순서 · 1 → 2 → 6):
-  RSI 가 70 이상에서 70 아래로 → 1단계 몫을 판다.
-  MACD 가 시그널 아래로(데드크로스) → 남은 1단계 몫 + 2단계 몫을 판다.
-  3단계에 들어간 뒤 종가가 구름 아래(min(선행A, 선행B) 미만) → 전부 판다.
+- 매도(사용자 정정 10/28 — "매도 판단의 지표 순서는 달라": 근거(MACD, RSI, 구름대 이탈)가 사라질 때마다 1 · 2 · 6):
+  MACD 가 시그널 아래로(데드크로스) → 1단계 몫(1)을 판다.
+  RSI 가 기준선 아래로 꺾임 → 2단계 몫(2)을 판다. 요약에 기준값이 없어 70 하향(기본)과 50 하향 둘 다 계산한다.
+  3단계에 들어간 뒤 종가가 구름 아래(min(선행A, 선행B) 미만) → 남은 것(6) 전부 판다.
+  처음 해석(RSI 70 하향 → 1 · MACD → 1+2)은 비교용으로 sell="v1" 에 남긴다.
   손절: 1단계 때 정한 손절가(그 전 20거래일 최저가)에 닿으면 전부 판다.
 - 비중: 사이클 예산 B 의 1/9 · 2/9 · 6/9. 정수 주수(원금 1만$ · 10만$ 두 버전 — CLAUDE.md 규칙).
   변형 A(분할 원칙만): B = 그때 자산 전액.
@@ -121,7 +122,7 @@ class Book:
         self.real = 0.0
 
 
-def run(bars, start, end, cap, variant="A"):
+def run(bars, start, end, cap, variant="A", sell="v2", rsi_exit=70):
     o, h, l, c, rsi, macd, sig, top, bot = indicators(bars)
     dates = [b[0] for b in bars]
     idx = [i for i, d in enumerate(dates) if start <= d <= end and i >= 2]
@@ -143,12 +144,22 @@ def run(bars, start, end, cap, variant="A"):
             cnt["stop"] += 1
         if bk.sh > 0:
             sells = 0
-            if rsi[p] is not None and rsi[a] is not None and rsi[p] >= 70 > rsi[a]:
-                sells += lots[0]; lots[0] = 0
-                cnt["rsi70"] += 1
-            if macd[p] is not None and macd[a] is not None and sig[p] is not None and macd[p] >= sig[p] and macd[a] < sig[a]:
-                sells += lots[0] + lots[1]; lots[0] = lots[1] = 0
-                cnt["macdDead"] += 1
+            rsi_down = rsi[p] is not None and rsi[a] is not None and rsi[p] >= rsi_exit > rsi[a]
+            macd_dead = macd[p] is not None and macd[a] is not None and sig[p] is not None and macd[p] >= sig[p] and macd[a] < sig[a]
+            if sell == "v1":                                 # 처음 해석: RSI → 1 · MACD → 1+2
+                if rsi_down:
+                    sells += lots[0]; lots[0] = 0
+                    cnt["rsi70"] += 1
+                if macd_dead:
+                    sells += lots[0] + lots[1]; lots[0] = lots[1] = 0
+                    cnt["macdDead"] += 1
+            else:                                            # 사용자 정정(10/28): MACD → 1 · RSI → 2 · 구름 → 6
+                if macd_dead and lots[0]:
+                    sells += lots[0]; lots[0] = 0
+                    cnt["macdDead"] += 1
+                if rsi_down and lots[1]:
+                    sells += lots[1]; lots[1] = 0
+                    cnt["rsi70"] += 1
             if stage == 3 and bot[a] is not None and c[a] < bot[a]:
                 sells = bk.sh; lots = [0, 0, 0]
                 cnt["cloudBreak"] += 1
@@ -216,6 +227,8 @@ if __name__ == "__main__":
             s, e = periods[k], periods[k + 1]
             for cap in (10000, 100000):
                 for v in ("A", "B"):
-                    res[f"{t}|{s}|{cap}|126{v}"] = run(b, s, e, cap, v)
+                    res[f"{t}|{s}|{cap}|126{v}"] = run(b, s, e, cap, v)                       # 정정 매도 순서 · RSI 70 하향
+                    res[f"{t}|{s}|{cap}|126{v}r50"] = run(b, s, e, cap, v, rsi_exit=50)       # 정정 매도 순서 · RSI 50 하향
+                    res[f"{t}|{s}|{cap}|126{v}old"] = run(b, s, e, cap, v, sell="v1")          # 처음 해석(비교용)
                 res[f"{t}|{s}|{cap}|hold"] = hold(b, s, e, cap)
     print(json.dumps(res, ensure_ascii=False, indent=0))
