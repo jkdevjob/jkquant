@@ -216,6 +216,7 @@ async function refreshIgToken() {
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) return `인스타 토큰 연장 실패: ${j.error?.message || r.status}`;
   log.meta.ig_refreshed_at = new Date().toISOString();
+  saveLog();
   const days = Math.floor((j.expires_in || 0) / 86400);
   const changed = j.access_token !== process.env.IG_ACCESS_TOKEN;
   return `인스타 토큰 연장됨(만료까지 ${days}일)` + (changed ? " — 새 토큰 값이 발급됨: 만료 전에 메타 앱에서 토큰을 다시 받아 IG_ACCESS_TOKEN 교체 권장" : "");
@@ -257,7 +258,7 @@ for (const p of targets) {
 
 if (!DRY && targets.includes("ig") && PLATFORMS.ig.keys.every((k) => process.env[k])) {
   const msg = await refreshIgToken().catch((e) => `인스타 토큰 연장 오류: ${e.message}`);
-  if (msg) { report.push(msg); saveLog(); }
+  if (msg) report.push(msg);
 }
 
 // 남은 큐
