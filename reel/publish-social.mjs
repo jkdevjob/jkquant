@@ -115,8 +115,24 @@ async function googleToken() {
   return j.access_token;
 }
 
-async function uploadYouTube(item) {
-  const token = await googleToken();
+// 기록(published.json)이 푸시되지 못했어도 같은 영상을 두 번 올리지 않도록 채널 최근 업로드에서 제목을 찾는다.
+// youtube.readonly 범위가 없으면 확인을 건너뛴다.
+let ytGuardOff = false;
+async function ytExisting(token, item) {
+  const get = (u) => fetch(u, { headers: { Authorization: `Bearer ${token}` } });
+  const ch = await get("https://www.googleapis.com/youtube/v3/channels?part=contentDetails&mine=true");
+  if (!ch.ok) { ytGuardOff = true; return null; }
+  const uploads = (await ch.json()).items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  if (!uploads) return null;
+  const pl = await get(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=25&playlistId=${uploads}`);
+  if (!pl.ok) { ytGuardOff = true; return null; }
+  const hit = ((await pl.json()).items || []).find((v) => v.snippet?.title === item.yt_title);
+  if (!hit) return null;
+  const id = hit.snippet.resourceId?.videoId;
+  return { video_id: id, url: `https://www.youtube.com/shorts/${id}`, at: hit.snippet.publishedAt, recovered: true };
+}
+
+async function uploadYouTube(item, token) {
   const file = path.join(__dirname, item.file);
   const bytes = fs.readFileSync(file);
   const meta = {
@@ -182,6 +198,14 @@ async function igCall(method, url, params) {
   return j;
 }
 
+// 같은 이유로 인스타 최근 게시물에서 캡션 첫 줄이 같은 것을 찾는다.
+async function igExisting(item) {
+  const first = item.caption.split("\n")[0].trim();
+  const r = await igCall("GET", `${IG()}/${process.env.IG_USER_ID || "me"}/media`, { fields: "caption,permalink,timestamp", limit: "25" });
+  const hit = (r.data || []).find((m) => (m.caption || "").split("\n")[0].trim() === first);
+  return hit ? { media_id: hit.id, url: hit.permalink, at: hit.timestamp, recovered: true } : null;
+}
+
 async function publishInstagram(item) {
   const videoUrl = mediaUrl(item);
   const head = await fetch(videoUrl, { method: "HEAD" });
@@ -233,12 +257,12 @@ let keySkips = 0, failed = false;
 
 for (const p of targets) {
   const P = PLATFORMS[p];
-  const item = pick(p);
+  let item = pick(p);
   if (!item) { report.push(`${P.name}: 오늘 올릴 항목 없음`); continue; }
-  const problems = check(item);
-  if (problems.length) { failed = true; report.push(`${P.name}: ${item.id} 점검 실패 — ${problems.join(" / ")}`); continue; }
   const missing = P.keys.filter((k) => !process.env[k]);
   if (DRY) {
+    const problems = check(item);
+    if (problems.length) { failed = true; report.push(`${P.name}: ${item.id} 점검 실패 — ${problems.join(" / ")}`); continue; }
     let extra = "";
     if (p === "ig") { try { extra = ` · 공개 주소 ${mediaUrl(item)}`; } catch (e) { extra = ` · ${e.message}`; } }
     report.push(`${P.name}: ${item.id}(${item.date}) 올릴 예정 · ${item.file}${extra}` + (missing.length ? ` · 키 없음: ${missing.join(", ")}` : " · 키 있음"));
@@ -246,7 +270,20 @@ for (const p of targets) {
   }
   if (missing.length) { keySkips++; report.push(`${P.name}: 키 미설정으로 건너뜀(${missing.join(", ")})`); continue; }
   try {
-    const res = p === "yt" ? await uploadYouTube(item) : await publishInstagram(item);
+    const token = p === "yt" ? await googleToken() : null;
+    // 계정에 이미 올라가 있는데 기록만 빠진 항목은 기록을 되살리고 다음 항목으로
+    while (item) {
+      const prior = p === "yt" ? await ytExisting(token, item) : await igExisting(item);
+      if (!prior) break;
+      (log.items[item.id] ||= {})[p] = prior;
+      saveLog();
+      report.push(`${P.name}: ${item.id} 이미 올라가 있어 기록만 복구 → ${prior.url}`);
+      item = pick(p);
+    }
+    if (!item) { report.push(`${P.name}: 오늘 올릴 항목 없음`); continue; }
+    const problems = check(item);
+    if (problems.length) throw new Error(`점검 실패 — ${problems.join(" / ")}`);
+    const res = p === "yt" ? await uploadYouTube(item, token) : await publishInstagram(item);
     (log.items[item.id] ||= {})[p] = { ...res, at: new Date().toISOString() };
     saveLog();
     report.push(`${P.name}: ${item.id} 게시 완료 → ${res.url}` + (res.note ? ` (${res.note})` : ""));
@@ -255,6 +292,7 @@ for (const p of targets) {
     report.push(`${P.name}: ${item.id} 실패 — ${e.message}`);
   }
 }
+if (ytGuardOff) report.push("유튜브 중복 확인 생략(갱신 토큰에 youtube.readonly 범위 없음)");
 
 if (!DRY && targets.includes("ig") && PLATFORMS.ig.keys.every((k) => process.env[k])) {
   const msg = await refreshIgToken().catch((e) => `인스타 토큰 연장 오류: ${e.message}`);
