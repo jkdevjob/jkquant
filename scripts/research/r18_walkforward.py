@@ -160,6 +160,8 @@ def main():
             yearly[y] = round((eq - 1) * 100, 2)
         keep = lambda m: {k: (round(v, 3) if isinstance(v, float) else v) for k, v in m.items() if k in
                           ("days", "tradeDays", "tradeDaysPerYear", "totalPct", "cagrPct", "mddPct", "worstDayPct", "expectancyPct", "profitFactor", "tStat")}
+        if os.environ.get("R18_DUMP"):                              # R20: 시간순 재선정 일 손익을 따로 남긴다(탭 묶음 계산용)
+            Path(os.environ["R18_DUMP"] + f".{tab}.json").write_text(json.dumps(dict(cal=ocal, oos=oos)), encoding="utf-8")
         res[tab] = dict(variants=len(runs), firstTest=first_test, oosTo=ocal[-1], walkForward=keep(wf), mainSameYears=keep(mn),
                         mainFullPeriod=keep(full_main), yearly=yearly, picks=picks, bootstrap=boot)
         print(json.dumps({tab: res[tab]}, ensure_ascii=False, default=str), flush=True)
