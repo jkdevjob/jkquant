@@ -1,0 +1,199 @@
+{
+  "ok": true,
+  "date": "2026-10-28",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-28",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-28T06:40:51.256Z",
+    "updatedAt": "2026-10-28T15:05:51.788Z",
+    "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1793199947392,
+        "capturedAt": "2026-10-28T15:05:51.687Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:close30",
+        "scheduledTime": 1793169647392,
+        "capturedAt": "2026-10-28T06:40:52.725Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1793169647392,
+        "capturedAt": "2026-10-28T06:40:52.282Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1793169647392,
+        "capturedAt": "2026-10-28T06:40:51.247Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-10-28",
+        "capturedAt": "2026-10-28T15:05:51.687Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타",
+          "date": "2026-10-28",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 2,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "close:close30",
+        "date": "2026-10-28",
+        "capturedAt": "2026-10-28T06:40:52.725Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "close30",
+          "name": "⑤ 종가 30분 · 코스닥150 레버리지 장 마감 30분 반등(실험)",
+          "date": "2026-10-28",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "close30_dip_v1",
+          "params": {
+            "code": "233740",
+            "th": 0
+          },
+          "note": "15:00 전일 대비 +7.56% (기준 0% 미만 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-28",
+        "capturedAt": "2026-10-28T06:40:52.282Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-28",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_etf_th4.75",
+          "params": {
+            "code": "233740",
+            "th": -4.75
+          },
+          "note": "15:21 예상 하락 9.03% (기준 −4.75% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-28",
+        "capturedAt": "2026-10-28T06:40:51.247Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-28",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "measure": [],
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "watched": 65,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "note": "매매 없음 — no_expected_gap_down"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
