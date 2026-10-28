@@ -41,9 +41,12 @@ const server = http.createServer((req, res) => {
             imReverse = rev;
             const r = runIM(days, t, cap, 20, TGT[t], true);
             const yrs = days.length / 252;
+            const yearly = {}; let prevEnd = cap, curY = null, lastV = cap;     // 해마다 수익률 — 엔진 기록(10거래일 간격 · 사이클 끝)의 그해 마지막 값 기준
+            for (const [d, v] of (r.snap || [])) { const y = d.slice(0, 4); if (curY && y !== curY) { yearly[curY] = +((lastV / prevEnd - 1) * 100).toFixed(1); prevEnd = lastV; } curY = y; lastV = v; }
+            if (curY) yearly[curY] = +((r.final / prevEnd - 1) * 100).toFixed(1);
             res[`${t}|${periods[k]}|${cap}|mumae${rev ? 'Rev' : ''}`] = {
               final: +r.final.toFixed(2), ret: +r.ret.toFixed(2), cagr: +((Math.pow(r.final / cap, 1 / yrs) - 1) * 100).toFixed(2),
-              mdd: +r.mdd.toFixed(2), cycles: r.cycles, fees: +(r.fees || 0).toFixed(2), tax: +(r.tax || 0).toFixed(2), costOn: imCostOn };
+              mdd: +r.mdd.toFixed(2), cycles: r.cycles, fees: +(r.fees || 0).toFixed(2), tax: +(r.tax || 0).toFixed(2), costOn: imCostOn, yearly };
           }
         }
       }
