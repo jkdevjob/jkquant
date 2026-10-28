@@ -50,7 +50,7 @@
    오른쪽 위 톱니바퀴 → *Use your own OAuth credentials* 체크 → 4번의 ID/비밀 입력 →
    왼쪽 입력칸에 아래 두 범위를 **띄어쓰기로 이어서** 입력 → **Authorize APIs** →
    `https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly`
-   (readonly 는 같은 영상을 두 번 올리지 않도록 최근 업로드 제목을 확인하는 데만 쓴다) →
+   (**두 범위 모두 필수.** readonly 는 같은 영상을 두 번 올리지 않도록 최근 업로드 제목을 확인하는 데만 쓴다) →
    은퇴노트 유튜브 채널이 있는 구글 계정(브랜드 계정이면 그 채널)으로 로그인 →
    **Exchange authorization code for tokens** → 나온 **Refresh token** 을 `YT_REFRESH_TOKEN` 에.
 
@@ -63,9 +63,9 @@ cd reel && node publish-social.mjs --dry
 ```
 
 "키 있음"이 보이면 연결 끝. 실제 게시는 매일 예약 시간에 자동으로 된다.
-결과(게시 주소)는 `reel/queue/published.json` 에 남고, 예약 작업이 커밋한다.
-기록 커밋이 실패해도 다음 날 올리기 전에 계정의 최근 게시물(인스타 캡션 첫 줄, 유튜브 제목)을
-확인해서 같은 영상을 다시 올리지 않는다.
+결과(게시 주소·실패 이유)는 매일 실행 직후 **푸시 알림**으로 온다.
+예약 작업은 저장소 없이 이 브랜치의 최신 커밋에서 스크립트·큐·영상을 내려받아 돌고,
+올리기 전에 계정의 최근 게시물(인스타 캡션 첫 줄, 유튜브 제목)을 확인해서 같은 영상을 다시 올리지 않는다.
 
 ## 영상 추가
 

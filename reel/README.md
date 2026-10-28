@@ -97,7 +97,7 @@ node publish-social.mjs           # 오늘(한국 시간) 항목 게시
 ```
 
 - 큐: `queue/queue.json` (영상은 `queue/` 아래에 커밋). 하루 한 편, 밀린 건 다음 날로.
-- 결과: `queue/published.json` 에 게시 주소, `queue/last_run.txt` 에 마지막 실행 결과
+- 결과: 예약 실행은 푸시 알림으로 보고(저장소 안에서 직접 돌리면 `queue/published.json`·`queue/last_run.txt` 에도 기록)
 - 키 연결 방법: [`SOCIAL_SETUP.md`](SOCIAL_SETUP.md)
 - 텍스트 카드 영상: `node make-card.mjs --config week2.cards.json` (`--preview` 는 마지막 장면 PNG만)
 
