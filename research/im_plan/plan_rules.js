@@ -19,7 +19,7 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
       if((p.wkAll&&!isStart(lastK,wk))||(p.wkDn&&t<c&&!isStart(lastK,wk))||(p.moDn&&t<c&&!isStart(lastK,d=>d.slice(0,7)))) return Infinity;
       if((p.wkUp&&t>c&&!isStart(lastK,wk))||(p.moUp&&t>c&&!isStart(lastK,d=>d.slice(0,7)))||(p.qUp&&t>c&&!isStart(lastK,PER.q))) return Infinity;   // TECL 올릴 때만 주(wkUp)·월(moUp)·분기(qUp) 첫 거래일에
       return ((p.sbDn!=null&&t<c)?p.sbDn:(p.sbUp!=null&&t>c)?p.sbUp:p.sb)*p.tw; },   // TECL 비중: 내릴 때 sbDn · 올릴 때 sbUp (없으면 sb)
-    target(k,cur,st){ lastK=k; const s=rv[k]; let w=Math.min(1,(p.s0*p.s0)/(s*s));
+    target(k,cur,st){ lastK=k; const s=rv[k]; let w=Math.min(p.wMax??1,(p.s0*p.s0)/(s*s));   // wMax: TECL 슬리브 상한(기본 1) — 1 보다 크면 잔잔할 때만 더 싣는다
       const c=P.C[G][k], m=gm[k]; if(st.g===undefined) st.g=c>m; if(p.offN||p.offHard){   // 시간 확인: 이평×(1−gbOff) 아래가 offN 일 연속일 때만 나감 · offHard 아래로 떨어지면 바로 나감
         st.n=(c<m*(1-(p.gbOff??p.gb)))?(st.n||0)+1:0;
         if(c>m*(1+(p.gbOn??p.gb))) st.g=true; else if((p.offN&&st.n>=p.offN)||(p.offHard&&c<m*(1-p.offHard))) st.g=false; }
