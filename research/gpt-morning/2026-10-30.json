@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "date": "2026-10-30",
+  "preparedAt": "2026-10-29T22:16:58.079642+00:00",
+  "mainSha": "a070f4edf4143d676f325366084dd2c280688cb4",
+  "summary": "10/29 기준: 시초가0%·데이-0.250%·BTC+0.070%, 미국29일SOXL0%. 기준 유지. 눌림≤0.5%·09:20 후보는 실제분봉 PF0.804/일평균-0.011%로 보류. 텐배거 신규29·진입2·손절청산2, 성숙표본0. 전일보고 Push3/3·Telegram성공.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "verified",
+      "findings": "10/29 확정: 시초가 무매매0%, 데이 -0.250%, BTC +0.07016%; 미국29일 SOXL 무매매0%(KST30일). 10/30 국내·BTC는 미완료. 기준변경·새그림자 제안 없음. 신규 시험은 눌림≤0.5%·09:20 진입 후보의 원본 엔진 재생이며 기대값 음수라 보류. 검증은 원천/계약·표출 시험41/41 통과이며 수익성·기기확인 아님. 전일 보고 Push3/3·Telegram1회 성공. 종가30분은 누적4일8청산·7미정산, PF0.118/MDD-3.054%; overnight0청산·18미정산으로 미검증.",
+      "nextTest": "오늘 보고 workflow 검증/08시 예약을 실제 로그로 확인. 서버 예약과 실제 발송을 분리. 다음 연구는 같은 고정후보의 새 날짜 전향기록과 원본-라벨 차이를 대조하고 종가/익일시가 미정산을 확인.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/a070f4edf4143d676f325366084dd2c280688cb4/research/gpt-morning/README.md",
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/nightly-research/closing30.json"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "collecting",
+      "findings": "29일 기준 매매0·원본27분 감시/부분실패0·신호0·VTS주문0으로 무신호 확인. 누적82행은 과거 중복/원본누락 포함 재구성: 평균-0.470%(매매12일), PF0.434/MDD-5.553%/최악-2.550%, +1%0일·주간-0.865%(+5%차이5.865%p). 그림자29일 심텍1건 -1.424%→2슬롯 일손익-0.712%; OOS18일14건/평균-0.589%/PF0.034/MDD-10.122%. 집중후보 combo_pb05_e0920은 장부21일40건 평균+0.148%·PF1.207이나 실제분봉19일42건 -0.011%·PF0.804·MDD-2.309%·최악-2.309%. 첫20/5 검증구간 후보PF0.428; 선두3/7. 기대값·PF·독립검증 미달로 새버전 보류.",
+      "nextTest": "눌림0.3~0.5%·09:20까지, 손절1%/익절1.5%/09:30청산·고정0.23%+편도2.5호가 유지. 10/30 이후 신규 전향기록만 별도 평가. 원본-재구성 중복/누락·당시 유니버스·신호시각 지수국면·체결비용부터 대조. VTS7/30이라 비용보정 안함; 기준교체 없음.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/opening-history/2026-10-29.json",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/opening-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/a070f4edf4143d676f325366084dd2c280688cb4/scripts/backtest_opening_rebreak.py",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/nightly-research/latest.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "verified",
+      "findings": "29일 현대차 +1.75%, 기아/현대모비스 각각-1.25%→고정3슬롯 -0.250%. 검증은 장중모의장부와 재구성의 진입/청산/비용후손익 3/3 일치이며 증권사체결·수익성 검증 아님. 10/1후20기록일55건 평균-0.460%/PF0.452/MDD-9.975%/최악-1.250%, +1%0일·주간-1.999%(목표차이6.999%p). 그림자는 원익홀딩스/SK하이닉스 +1.35%, 고영-1.05%→+0.550%; OOS19일57건 평균-0.200%/PF0.690/MDD-5.355%, +1%3일·주간-1.797%. 유효연구21일·완료WF0/선두2/7로 교체보류. 첫 daily API장부시간초과, 후속 history는 정상.",
+      "nextTest": "동일 3슬롯·0.25%비용·10:15전 저장 모집단만 사용. 유효25일 도달 후 기존20학습/5검증 첫 WF를 실행하고 선두7회·양의 기대값/PF·위험관문을 유지. API 시간초과·로그인 안쪽 평가금액/분모는 별도 확인.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/daytrading-research/latest.json",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-10-29",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/nightly-research/latest.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "collecting",
+      "findings": "29일 완료1건 +0.07016%(왕복0.14%); 01:50→02:50 청산 알림 Push3/3·Telegram성공은 완료장부와 구분. full조회는시간초과/CSV28일 fallback이나120세션 trend는정상: 29일까지 확인27세션16거래·평균-0.0759%/거래평균-0.1281%/PF0.438/MDD-2.790%/최악-0.640%, +1%0일·주간-0.224%(목표차이5.224%p). 18·19일 누락은0으로 채우지 않음. 전일평균은24일까지14매매일이라 직접비교불가. 그림자는28일까지OOS26일1건·평균-0.0149%/PF0/MDD-0.388%, +1%0일·주간확인분0%. 29일실제분봉재생 미실행.",
+      "nextTest": "18·19일 원본장부를 복구하고 full/120세션 응답의 범위·시간초과를 대조. 29일 실제5분봉+완료장부 확보 후 같은 KST세션·0.14%비용으로 원본엔진 재생. Claude ETH/09시 경계와 GPT BTC/00시 경계를 합쳐 비교하지 않음.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&trend=1&from=2026-10-01&to=2026-10-29",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/crypto-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "collecting",
+      "findings": "미국29일 장마감 무매매0%는 KST30일 결과. 완료API21기록일9거래 평균-0.257%/PF0.449/MDD-9.398%/최악-1.400%, +1%2일·이번주+4.448%(+5%차이0.552%p). 연구CSV는미국28일까지로 신규익절 없음. 그림자28일0%, OOS20일2건 평균+0.071%/MDD0/최악매매일+0.108%, +1%1일·주간확인분+0.108%; 손실표본없어999를 실제PF로 쓰지 않음. 개선후보 stop_0.8_tp_1.6은 선두7회지만9거래·OOS0로 보류. Claude main/nextSignal 버전은 일치하나 basedOn미국28일, 오늘카드 GPT버전 빈칸/현재pending은 완료API와 차이.",
+      "nextTest": "미국29일 원본5분봉·연구CSV가 생성되면 완료모의장부와 무매매 사유를 대조. 미국장마감→KST표시일과 DST·버전 라벨 확인. 기존 0.20%비용·30건/시간순OOS/위험 관문을 유지하고 기준전략 변경 없음.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-10-29",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/claude-lab/latest.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "KRX28일 원천·30일02:01 KST생성. 신규등록29(등록일30일·28일수익소급금지), 신규관찰진입 GST/넥사다이내믹스2건(28일), 손절추적군 팬오션-15.728%/지씨지놈-13.855% 청산. 총171등록/156종목·진입124/대기47; hold1260청산0·stop군34. 최장10세션으로20/60/120/252/756/1260 성숙·2/5/10배도달 모두0. 종가MFE최대+34.591%, 최악MAE/MDD-32.517%. 규칙1.0.0/rulesSha5e690dd8… 유지, 현재main생성기·지표·필터해시 일치·원천수정표시0. entryDate없는observing18건은진입제외. 재무시점패널/시장대조없는가격가설이며 계좌CAGR/초과성과 아님. Claude는27일자료로시점차이.",
+      "nextTest": "미래에셋생명 등 entryDate없는observing18건의 대기라벨·시세지연을 검증. 등록 후 실제거래가능 종가·두 청산군·미정산/정지/폐지/원천수정 보존. 성숙 후 실패대조군·시장국면·공시접수시점·유동성·편도0.5%비용 검증을 별도버전 제안으로만 남김.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/9d5120827dc343708125dcd50bdc40d67fb85e68/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/a070f4edf4143d676f325366084dd2c280688cb4/data/tenbagger/gpt/forward-latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/a070f4edf4143d676f325366084dd2c280688cb4/TENBAGGER_FORWARD_RESEARCH.md"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "최신Claude lab04:52 KST와29일close원본 대조. ①minQ7에후보2로메인진입0(측정2건제외), ②g_etf_th4.75 종가진입신호는설정OFF/수량0·미청산, ③closed무거래0인데오늘카드pending잔존, ④현main/nextSignal버전일치·원천미국28일까지. 저장대결누적GPT-3.435%/Claude-10.882%(9승12패3무)는29일BTC확정값누락·과거재구성·고정비용·버전/세션차이가있어우위판정불가. 공개대결API branch tree HTTP403. 종가30분Claude관찰-0.556%도설정OFF/수량0으로실체결성과아님. 로그인안쪽평가금액/기간수익률·휴대폰표시는미확인.",
+      "nextTest": "동일날짜·버전유효시작·통화·자본슬롯·비용·세션경계로원본만대조. 빈버전/pending잔존·미청산신호와실체결0·중복/재구성분리부터확인. 공개API403복구와소유자화면접근후평가금액/동일기간분모검증. 실제주문·알림중복실행없음.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/claude-lab/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/claude-live/2026-10-29.json",
+        "https://jkquant.pages.dev/api/scalping-duel",
+        "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/tenbagger-claude-forward/latest.json"
+      ]
+    }
+  ]
+}

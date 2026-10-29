@@ -1,0 +1,2851 @@
+{
+  "schema": 1,
+  "date": "2026-10-30",
+  "preparedAt": "2026-10-29T22:16:58.079642+00:00",
+  "mainSha": "a070f4edf4143d676f325366084dd2c280688cb4",
+  "dataSha": "8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae",
+  "previousReportCommit": "089f6d88004031ec78fdc5f797880154ae7cd0be",
+  "previousReportDate": "2026-10-29",
+  "decision": "기준전략 유지·새 그림자버전 제안 보류. 실제주문/계좌/장부/main/PR/배포 변경 없음.",
+  "performanceScope": {
+    "start": "2026-10-01",
+    "dailyDate": "KR/BTC29일, SOXL미국29일=KST30일",
+    "netReturns": true,
+    "averageDenominators": "시초가API는매매기록12일, 데이20확인일, BTC27확인세션(18·19일결손), SOXL21확인세션. 무매매포함여부와평균분모가달라전략간단순비교금지.",
+    "baselineOos": "표의 기록일/거래 수는 독립OOS완료를 의미하지 않음. 시초가 원본연구의 첫20학습/5검증1구간은기존구간재검토(5일39건); 데이유효21일/완료WF0; BTC연구70/30holdout71건은과거구간포함으로10월전향성과와분리; SOXL기존후보OOS0건.",
+    "shadowOos": "daily1-shadow의designEnd9/30 이후고정규칙자료. 생성은사후연구재생이며증권사체결증거아님. 누락날짜를0으로채우지않음.",
+    "weekly": "10/26 주간; 모든기준/그림자의확인자료에서+5%달성0주. BTC18·19일결손으로전체역사완전성보장안함.",
+    "pf": "거래별비용후총이익/총손실; SOXL그림자손실0으로999센티널을실제PF로제시하지않음."
+  },
+  "baseline": {
+    "opening": {
+      "status": "ok",
+      "recordDays": 12,
+      "trades": 82,
+      "averageDailyPct": -0.4699339620653704,
+      "profitFactor": 0.434008575086321,
+      "mddPct": -5.55289488963393,
+      "worstDayPct": -2.5497220257425637,
+      "plus1Days": 0,
+      "weeklyPct": -0.8650780405254577,
+      "targetGapPp": 5.865078040525457,
+      "durableDbDays": 0,
+      "quality": "trade-day mean; historical reconstructed rows retain duplicate/source gaps",
+      "date": "2026-10-29",
+      "returnPct": 0,
+      "noTrade": true,
+      "finalized": true,
+      "source": "opening-operational-history",
+      "generatedAt": "2026-10-29T15:26:11+09:00",
+      "mainVariant": "baseline",
+      "dailyNetPct": 0,
+      "latestDate": "2026-10-29",
+      "plus5Weeks": 0
+    },
+    "daytrading": {
+      "status": "ok",
+      "recordDays": 20,
+      "trades": 55,
+      "averageDailyPct": -0.45979439067187367,
+      "profitFactor": 0.45211005770989987,
+      "mddPct": -9.974739080013439,
+      "worstDayPct": -1.2500000000000009,
+      "plus1Days": 0,
+      "weeklyPct": -1.9986252929687254,
+      "targetGapPp": 6.998625292968725,
+      "durableDbDays": 22,
+      "date": "2026-10-29",
+      "returnPct": -0.25,
+      "wins": 1,
+      "losses": 2,
+      "finalized": true,
+      "source": "daytrading-paper-live",
+      "generatedAt": "2026-10-29T06:35:03.951Z",
+      "mainVariant": "baseline",
+      "firstRequestWarning": "The operation was aborted; subsequent history returned ok with 22 durableDbDays",
+      "dailyNetPct": -0.25,
+      "latestDate": "2026-10-29",
+      "plus5Weeks": 0
+    },
+    "soxl": {
+      "status": "ok",
+      "recordDays": 21,
+      "trades": 9,
+      "averageDailyPct": -0.25714285714285784,
+      "profitFactor": 0.44897959183673425,
+      "mddPct": -9.397870668170306,
+      "worstDayPct": -1.4000000000000121,
+      "plus1Days": 2,
+      "weeklyPct": 4.448399999999997,
+      "targetGapPp": 0.5516000000000032,
+      "durableDbDays": 25,
+      "date": "2026-10-30",
+      "marketDate": "2026-10-29",
+      "returnPct": 0,
+      "noTrade": true,
+      "finalized": true,
+      "source": "global-paper-live",
+      "generatedAt": "2026-10-29T20:05:32.919Z",
+      "strategyVersion": "soxl_orb_v1@baseline",
+      "dailyNetPct": 0,
+      "latestDate": "2026-10-30",
+      "plus5Weeks": 0
+    },
+    "crypto": {
+      "latestDate": "2026-10-29",
+      "dailyNetPct": 0.07015955534662288,
+      "trades": 16,
+      "recordDays": 27,
+      "averageDailyPct": -0.07589355473764578,
+      "averageTradePct": -0.12807037361977724,
+      "profitFactor": 0.43787809962877355,
+      "mddPct": -2.790099728313755,
+      "worstDayPct": -0.6400000000000005,
+      "plus1Days": 0,
+      "plus5Weeks": 0,
+      "weeklyPct": -0.22442537369066207,
+      "targetGapPp": 5.2244253736906625,
+      "quality": "120-session trend endpoint recovered 27 confirmed sessions to Oct29; Oct18/19 absent, not zero-filled. One trade at most per day; PF from observed trade-return sessions; not independent OOS.",
+      "missingSessionDates": [
+        "2026-10-18",
+        "2026-10-19"
+      ]
+    }
+  },
+  "changeFromPrevious": {
+    "opening": {
+      "newTrades": 0,
+      "previousDailyPct": -0.8373469143844415,
+      "currentDailyPct": 0,
+      "previousWeeklyPct": -0.8650780405254577,
+      "currentWeeklyPct": -0.8650780405254577,
+      "note": "29 no-trade; older reconstruction/duplicate caveats retained."
+    },
+    "daytrading": {
+      "newTrades": 3,
+      "previousDailyPct": 0.7500000000000009,
+      "currentDailyPct": -0.25,
+      "previousWeeklyPct": -1.7530078124999848,
+      "currentWeeklyPct": -1.9986252929687254,
+      "note": "Latest observed session added; baseline fixed."
+    },
+    "soxl": {
+      "newTrades": 0,
+      "previousDailyPct": 0,
+      "currentDailyPct": 0,
+      "previousWeeklyPct": 4.448399999999997,
+      "currentWeeklyPct": 4.448399999999997,
+      "note": "Latest observed session added; baseline fixed."
+    },
+    "crypto": {
+      "newTrades": 2,
+      "previousDailyPct": -0.2943783944646937,
+      "currentDailyPct": 0.07015955534662288,
+      "previousWeeklyPct": -0.2943783944646937,
+      "currentWeeklyPct": -0.22442537369066207,
+      "note": "Prior cumulative metrics were through Oct24. Current recovered series through Oct29 adds the previously reported Oct28 trade and new Oct29 trade; only Oct29 is a new trade. Average denominator changed from14 trade-days to27 confirmed sessions."
+    }
+  },
+  "shadow": {
+    "opening": {
+      "version": "opening_gapdown_reclaim_v1",
+      "latestDate": "2026-10-29",
+      "dailyNetPct": -0.7118503937007877,
+      "weeklyThrough": "2026-10-29",
+      "weeklyPct": -0.7118503937007858,
+      "targetGapPp": 5.711850393700786,
+      "averageDailyPct": -0.5886158182098562,
+      "profitFactor": 0.03383975110382295,
+      "mddPct": -10.121569584501355,
+      "worstTradeDayPct": -2.0264693123075346,
+      "plus1Days": 0,
+      "plus5Weeks": 0,
+      "oosDays": 18,
+      "oosTrades": 14,
+      "latestTrades": [
+        {
+          "date": "2026-10-29",
+          "strategy": "opening",
+          "strategyVersion": "opening_gapdown_reclaim_v1",
+          "code": "222800",
+          "name": "심텍",
+          "rank": 66,
+          "signalTime": 924,
+          "entryTime": 925,
+          "entryPrice": 127000,
+          "gapPct": -2.1688613477924057,
+          "flushPct": -1.2668250197941378,
+          "signalVwap": 126610.76487925461,
+          "volumeRatio": 2.5141536138894134,
+          "decisionReason": "gapdown+first5_flush+open_vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 927,
+          "exitPrice": 125984,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.6237007874015748,
+          "pnlPct": -1.4237007874015755,
+          "reason": "stop"
+        }
+      ]
+    },
+    "daytrading": {
+      "version": "day_rs_vwap_reclaim_v1",
+      "latestDate": "2026-10-29",
+      "dailyNetPct": 0.5500000000000007,
+      "weeklyThrough": "2026-10-29",
+      "weeklyPct": -1.7965882015937518,
+      "targetGapPp": 6.796588201593751,
+      "averageDailyPct": -0.19962771731057172,
+      "profitFactor": 0.6903592416743715,
+      "mddPct": -5.354664363088224,
+      "worstTradeDayPct": -1.0500000000000007,
+      "plus1Days": 3,
+      "plus5Weeks": 0,
+      "oosDays": 19,
+      "oosTrades": 57,
+      "latestTrades": [
+        {
+          "date": "2026-10-29",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "030530",
+          "name": "원익홀딩스",
+          "rank": 50,
+          "signalTime": 1055,
+          "entryTime": 1056,
+          "entryPrice": 27850,
+          "sessionRetPct": 2.2018348623853212,
+          "marketRetPct": -2.68655655649912,
+          "relativeStrengthPctPoint": 4.888391418884441,
+          "signalVwap": 27846.97636854883,
+          "volumeRatio": 1.4849834746371604,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1125,
+          "exitPrice": 28295.600000000002,
+          "grossPnlPct": 1.6000000000000014,
+          "frictionPct": 0.25,
+          "pnlPct": 1.3500000000000014,
+          "reason": "take_profit"
+        },
+        {
+          "date": "2026-10-29",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "098460",
+          "name": "고영",
+          "rank": 68,
+          "signalTime": 1104,
+          "entryTime": 1105,
+          "entryPrice": 31350,
+          "sessionRetPct": 1.292407108239102,
+          "marketRetPct": -2.378823938914576,
+          "relativeStrengthPctPoint": 3.671231047153678,
+          "signalVwap": 31296.686535811743,
+          "volumeRatio": 3.135488265527277,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1113,
+          "exitPrice": 31099.2,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.25,
+          "pnlPct": -1.0500000000000007,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-10-29",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "000660",
+          "name": "SK하이닉스",
+          "rank": 1,
+          "signalTime": 1317,
+          "entryTime": 1318,
+          "entryPrice": 1525000,
+          "sessionRetPct": 1.2607830126078357,
+          "marketRetPct": -2.030839089226694,
+          "relativeStrengthPctPoint": 3.2916221018345295,
+          "signalVwap": 1524757.4238452062,
+          "volumeRatio": 3.626554405468646,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1416,
+          "exitPrice": 1549400,
+          "grossPnlPct": 1.6000000000000014,
+          "frictionPct": 0.25,
+          "pnlPct": 1.3500000000000014,
+          "reason": "take_profit"
+        }
+      ]
+    },
+    "crypto": {
+      "version": "btc_flush_reclaim_v1",
+      "latestDate": "2026-10-28",
+      "dailyNetPct": 0,
+      "weeklyThrough": "2026-10-28",
+      "weeklyPct": 0,
+      "targetGapPp": 5,
+      "averageDailyPct": -0.01491527316358803,
+      "profitFactor": 0,
+      "mddPct": -0.38779710225328445,
+      "worstTradeDayPct": -0.3877971022532888,
+      "plus1Days": 0,
+      "plus5Weeks": 0,
+      "oosDays": 26,
+      "oosTrades": 1,
+      "latestTrades": []
+    },
+    "soxl": {
+      "version": "soxl_power_hour_v1",
+      "latestDate": "2026-10-28",
+      "dailyNetPct": 0,
+      "weeklyThrough": "2026-10-28",
+      "weeklyPct": 0.10829476746774258,
+      "targetGapPp": 4.891705232532257,
+      "averageDailyPct": 0.07097323060894725,
+      "profitFactor": null,
+      "profitFactorNote": "No losing trades; 999 is a sentinel, not a measured PF",
+      "mddPct": 0,
+      "worstTradeDayPct": 0.10829476746774275,
+      "plus1Days": 1,
+      "plus5Weeks": 0,
+      "oosDays": 20,
+      "oosTrades": 2,
+      "latestTrades": []
+    }
+  },
+  "focusedReview": {
+    "plan": {
+      "hypothesis": "기존 후보 combo_pb05_e0920: 기준 재돌파에서 눌림 상한 0.5%, 진입 09:20까지로 제한하면 비용 후 일기대값·PF·낙폭이 개선되는가",
+      "registeredAt": "2026-10-29T22:05:58.786750+00:00",
+      "reason": "전일 보고에서 이미 추적된 고정 후보. 단독 시간제한 후보의 음수 기대값이 확인되어 기존 조합을 원본 엔진으로 대조",
+      "params": {
+        "pb_min": 0.3,
+        "pb_max": 0.5,
+        "entry_cutoff": 920,
+        "stop": 1,
+        "take_profit": 1.5,
+        "final_exit": 930
+      },
+      "cost": "원본 fixed0.23% + 편도2.5호가; VTS>=30 완전일치 시에만 기존 엔진 보정. 비용 무시/필터 완화 없음",
+      "capital": "동일 날짜·동일 총자본100 정규화, 원본 dailyRisk opening 동일가중/관찰된 무매매 0. 정수주 자금배분 검증 아님",
+      "frequency": "10/1이후 전체/최근20일, 신규29일/기존고정20학습5검증 첫 구간을 분리. 탈락표본 보존",
+      "regime": "같은 신호시각 지수분봉이 없으면 국면 검증 blocked. 사후 종가 국면 소급 지정 안함",
+      "oos": "원본 앱 actual minute archives와 실제 엔진 사용. 후보 설계에 이미 쓰인 기간은 독립 OOS라고 부르지 않음. 첫20일 학습/다음5일 검증은 기존 구간 재검토",
+      "gates": "20일·기준50건·후보30건; 전체 거래당 개선>=0.10%p/최근20일>=0.05%p; 양의 일기대값 PF>=1.10 MDD>=-15% 최악일>=-8%와 기준대비 악화 없음; 선두7회+기존WF 조건 유지",
+      "decision": "보류: 원본 분봉재생의 양의 일기대값/PF>=1.10 미달, 선두3/7, 신규 독립 OOS 없음. 보관장부 양수 성과를 개선 확정으로 쓰지 않음.",
+      "scope": "연구 보고만; 운영전략/주문/계좌/장부/PR/배포 변경 없음"
+    },
+    "originalBaselineSummaryExact": true,
+    "calibration": {
+      "source": "2.5tick-fallback",
+      "completeMatches": 7,
+      "observedRoundTripSlippagePct": -0.03902818104462342,
+      "minMatches": 30,
+      "fixedPct": 0.23,
+      "ticksPerSide": 2.5
+    },
+    "operationalArchive": {
+      "baseline": {
+        "days": 21,
+        "trades": 82,
+        "averageDailyPct": -0.26853369260878307,
+        "averageTradePct": -0.38359276001133197,
+        "profitFactor": 0.4340085750863209,
+        "mddPct": -5.55289488963393,
+        "worstDayPct": -2.5497220257425637,
+        "plus1Days": 0,
+        "weeklyPct": -0.8650780405254577,
+        "daily": [
+          {
+            "date": "2026-10-01",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -1.2669821043386493,
+            "trades": 4
+          },
+          {
+            "date": "2026-10-05",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.26802531163796095,
+            "trades": 7
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -2.5497220257425637,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": 0.15894560970601854,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-09",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": 0.90765642775882,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.9496904557179733,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.5247980925841813,
+            "trades": 11
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": 0.044550419342662205,
+            "trades": 21
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": 0.6725270758122779,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": 0.39240663900414363,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.41872881200259787,
+            "trades": 24
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.8373469143844415,
+            "trades": 6
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": 0,
+            "trades": 0
+          }
+        ]
+      },
+      "combo_pb05_e0920": {
+        "days": 21,
+        "trades": 40,
+        "averageDailyPct": 0.14826231760055478,
+        "averageTradePct": 0.07599361314399866,
+        "profitFactor": 1.2071088497964264,
+        "mddPct": -0.5056234540536386,
+        "worstDayPct": -0.39639930126073986,
+        "plus1Days": 1,
+        "weeklyPct": -0.5056234540536608,
+        "daily": [
+          {
+            "date": "2026-10-01",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-05",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": 0.058176659013705556,
+            "trades": 4
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": 1.8997192642787901,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-09",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": 0.551507649825515,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": 0.437636161609227,
+            "trades": 12
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": 0.6725270758122779,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.39639930126073986,
+            "trades": 16
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.10965883966712546,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": 0,
+            "trades": 0
+          }
+        ]
+      }
+    },
+    "actualEngineReplay": {
+      "baseline": {
+        "prospective": {
+          "days": 19,
+          "trades": 87,
+          "averageDailyPct": -0.3709365409230866,
+          "averageTradePct": -0.4604883491555447,
+          "profitFactor": 0.3636665292065782,
+          "mddPct": -6.871880346805604,
+          "worstDayPct": -2.5497220257425637,
+          "plus1Days": 0,
+          "weeklyPct": -0.9371668160583435,
+          "daily": [
+            {
+              "date": "2026-10-01",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-02",
+              "returnPct": -1.2669821043386493,
+              "trades": 4
+            },
+            {
+              "date": "2026-10-06",
+              "returnPct": -0.26802531163796095,
+              "trades": 7
+            },
+            {
+              "date": "2026-10-07",
+              "returnPct": -2.5497220257425637,
+              "trades": 2
+            },
+            {
+              "date": "2026-10-08",
+              "returnPct": 0.15894560970601854,
+              "trades": 3
+            },
+            {
+              "date": "2026-10-09",
+              "returnPct": -0.22999999999999898,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-13",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-14",
+              "returnPct": -1.9496904557179733,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-15",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-16",
+              "returnPct": -0.7233566748817388,
+              "trades": 9
+            },
+            {
+              "date": "2026-10-19",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-20",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-21",
+              "returnPct": 0.04455041934266225,
+              "trades": 21
+            },
+            {
+              "date": "2026-10-22",
+              "returnPct": 0.6725270758122779,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-23",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-26",
+              "returnPct": 0.39240663900414363,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-27",
+              "returnPct": -0.479562907118015,
+              "trades": 26
+            },
+            {
+              "date": "2026-10-28",
+              "returnPct": -0.8488845419668468,
+              "trades": 11
+            },
+            {
+              "date": "2026-10-29",
+              "returnPct": 0,
+              "trades": 0
+            }
+          ]
+        },
+        "firstChronologicalWindow": {
+          "days": 5,
+          "trades": 39,
+          "averageDailyPct": -0.05270274685368805,
+          "averageTradePct": -0.5318315854330072,
+          "profitFactor": 0.28122627841586023,
+          "mddPct": -1.3243765136973118,
+          "worstDayPct": -0.8488845419668468,
+          "plus1Days": 0,
+          "weeklyPct": -0.9371668160583435,
+          "daily": [
+            {
+              "date": "2026-10-22",
+              "returnPct": 0.6725270758122779,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-23",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-26",
+              "returnPct": 0.39240663900414363,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-27",
+              "returnPct": -0.479562907118015,
+              "trades": 26
+            },
+            {
+              "date": "2026-10-28",
+              "returnPct": -0.8488845419668468,
+              "trades": 11
+            }
+          ]
+        },
+        "newDay": {
+          "days": 1,
+          "trades": 0,
+          "averageDailyPct": 0,
+          "averageTradePct": null,
+          "profitFactor": null,
+          "mddPct": 0,
+          "worstDayPct": 0,
+          "plus1Days": 0,
+          "weeklyPct": 0,
+          "daily": [
+            {
+              "date": "2026-10-29",
+              "returnPct": 0,
+              "trades": 0
+            }
+          ]
+        }
+      },
+      "combo_pb05_e0920": {
+        "prospective": {
+          "days": 19,
+          "trades": 42,
+          "averageDailyPct": -0.010989152322414673,
+          "averageTradePct": -0.09125071527656149,
+          "profitFactor": 0.8035757805465295,
+          "mddPct": -2.3088516827329597,
+          "worstDayPct": -2.308851682732962,
+          "plus1Days": 1,
+          "weeklyPct": -0.5457853467789597,
+          "daily": [
+            {
+              "date": "2026-10-01",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-02",
+              "returnPct": -2.308851682732962,
+              "trades": 2
+            },
+            {
+              "date": "2026-10-06",
+              "returnPct": 0.05817665901370561,
+              "trades": 4
+            },
+            {
+              "date": "2026-10-07",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-08",
+              "returnPct": 1.8997192642787901,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-09",
+              "returnPct": -0.22999999999999898,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-13",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-14",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-15",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-16",
+              "returnPct": -0.1916478125187498,
+              "trades": 2
+            },
+            {
+              "date": "2026-10-19",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-20",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-21",
+              "returnPct": 0.43763616160922725,
+              "trades": 12
+            },
+            {
+              "date": "2026-10-22",
+              "returnPct": 0.6725270758122779,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-23",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-26",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-27",
+              "returnPct": -0.406609429837827,
+              "trades": 15
+            },
+            {
+              "date": "2026-10-28",
+              "returnPct": -0.13974412975034212,
+              "trades": 4
+            },
+            {
+              "date": "2026-10-29",
+              "returnPct": 0,
+              "trades": 0
+            }
+          ]
+        },
+        "firstChronologicalWindow": {
+          "days": 5,
+          "trades": 20,
+          "averageDailyPct": 0.025234703244821754,
+          "averageTradePct": -0.29927954453782485,
+          "profitFactor": 0.42756718175692104,
+          "mddPct": -0.5457853467789486,
+          "worstDayPct": -0.406609429837827,
+          "plus1Days": 0,
+          "weeklyPct": -0.5457853467789597,
+          "daily": [
+            {
+              "date": "2026-10-22",
+              "returnPct": 0.6725270758122779,
+              "trades": 1
+            },
+            {
+              "date": "2026-10-23",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-26",
+              "returnPct": 0,
+              "trades": 0
+            },
+            {
+              "date": "2026-10-27",
+              "returnPct": -0.406609429837827,
+              "trades": 15
+            },
+            {
+              "date": "2026-10-28",
+              "returnPct": -0.13974412975034212,
+              "trades": 4
+            }
+          ]
+        },
+        "newDay": {
+          "days": 1,
+          "trades": 0,
+          "averageDailyPct": 0,
+          "averageTradePct": null,
+          "profitFactor": null,
+          "mddPct": 0,
+          "worstDayPct": 0,
+          "plus1Days": 0,
+          "weeklyPct": 0,
+          "daily": [
+            {
+              "date": "2026-10-29",
+              "returnPct": 0,
+              "trades": 0
+            }
+          ]
+        }
+      }
+    },
+    "firstChronologicalWindow": {
+      "trainFrom": "2026-09-21",
+      "trainTo": "2026-10-21",
+      "testFrom": "2026-10-22",
+      "testTo": "2026-10-28",
+      "independentOos": false
+    },
+    "sourceDifference": "운영 원본·재구성 혼합 장부와 KIS 분봉재생은 다른 체결 집합. 각 원천 안의 동일기간·비용·자본 비교이며 신규 독립 OOS가 아님.",
+    "nextTest": "동일 고정 조건으로 10/30 이후 새 날짜만 별도 추적. 원본 신호-라벨·가격 차이와 당시 유니버스 시점을 먼저 대조하고, 시장국면·실측비용 및 최소20전향일/30건·7연속선두·WF·위험 관문을 그대로 적용. 기존 기준전략/그림자 버전 추가 없음.",
+    "originalArchiveCaveat": "분봉재생 Top100에는 당일 종가 거래대금으로 선정한 사후 유니버스 경고가 있다. 재생 결과는 실행 가능한 장중 모집단이나 실체결의 증거가 아니다.",
+    "originalEngineSha256": "e00fe0ec2fd04be0f93c0eee9918fe1a4c74363a8c6006f2e5f685eb97dd539b"
+  },
+  "tenbagger": {
+    "asOf": "2026-10-28",
+    "generatedAt": "2026-10-29T17:01:52.380382+00:00",
+    "registeredAt": "2026-10-13T06:39:10.172275+00:00",
+    "strategyVersion": "1.0.0",
+    "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+    "newRegistrations": 29,
+    "entered": 124,
+    "closedArms": 34,
+    "warnings": [
+      "가격 조건만으로 고정한 탐색 가설이며 텐배거 예측력·수익성 미검증.",
+      "KRX 종가 관찰 수익률. 실체결·배당·세금·호가·정수주·시장충격 및 포트폴리오 성과 아님. 비용은 편도 0.5% 가정.",
+      "정지·누락·폐지 정산 미확인은 보류로 보존하며 확정 수익/0%로 대체하지 않음.",
+      "재무·공시 시점·업종 및 시장지수 대조는 후속 검증. 세 가설과 두 청산군 비교에 다중검정 주의."
+    ],
+    "source": {
+      "provider": "KRX-via-FinanceData-marcap",
+      "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+      "asOf": "2026-10-28",
+      "cutoff": "2026-10-29",
+      "inputs": [
+        {
+          "url": "https://raw.githubusercontent.com/FinanceData/marcap/5eb83a8cbb800413364c328192c96abb0e51ed58/data/marcap-2025.parquet",
+          "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+          "bytes": 25153419
+        },
+        {
+          "url": "https://raw.githubusercontent.com/FinanceData/marcap/5eb83a8cbb800413364c328192c96abb0e51ed58/data/marcap-2026.parquet",
+          "sha256": "cf60b6de4e0adedb075586e5b6b3bd91479cc1bce8a9ed637f3ea403ae637c80",
+          "bytes": 21142053
+        }
+      ],
+      "combinedSha256": "99d0b1991401292290995c75a163d372daa5938c1f46e5737984c0822d79904c",
+      "upstreamCommit": "5eb83a8cbb800413364c328192c96abb0e51ed58",
+      "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+      "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+      "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+    },
+    "coverage": {
+      "currentRows": 2871,
+      "examined": 2286,
+      "excluded": {
+        "low_prior_liquidity": 1475,
+        "missing_latest_session": 178,
+        "outside_common_stock_or_watch_status": 511,
+        "not_traded": 32,
+        "short_history": 41,
+        "prior_spac_or_fund_history": 1
+      },
+      "candidateSignals": 48
+    },
+    "patternStats": [
+      {
+        "pattern": "trend200",
+        "registrations": 109,
+        "uniqueStocks": 109,
+        "entered": 75,
+        "horizons": {
+          "20": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "60": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "120": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "252": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "756": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "1260": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          }
+        },
+        "arms": {
+          "hold1260": {
+            "closedN": 0,
+            "medianNetPct": null
+          },
+          "stop12_trail35": {
+            "closedN": 19,
+            "medianNetPct": -12.623927826675141
+          }
+        }
+      },
+      {
+        "pattern": "breakout252",
+        "registrations": 29,
+        "uniqueStocks": 29,
+        "entered": 21,
+        "horizons": {
+          "20": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "60": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "120": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "252": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "756": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "1260": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          }
+        },
+        "arms": {
+          "hold1260": {
+            "closedN": 0,
+            "medianNetPct": null
+          },
+          "stop12_trail35": {
+            "closedN": 12,
+            "medianNetPct": -15.419715899880854
+          }
+        }
+      },
+      {
+        "pattern": "pullback50",
+        "registrations": 33,
+        "uniqueStocks": 33,
+        "entered": 28,
+        "horizons": {
+          "20": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "60": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "120": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "252": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "756": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "1260": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          }
+        },
+        "arms": {
+          "hold1260": {
+            "closedN": 0,
+            "medianNetPct": null
+          },
+          "stop12_trail35": {
+            "closedN": 3,
+            "medianNetPct": -17.109115878938617
+          }
+        }
+      }
+    ],
+    "totalRegistrations": 171,
+    "uniqueStocks": 156,
+    "enteredActual": 124,
+    "waiting": 47,
+    "newRegistered": [
+      {
+        "code": "000660",
+        "name": "SK하이닉스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "003160",
+        "name": "디아이",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "005930",
+        "name": "삼성전자",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "008060",
+        "name": "대덕",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "012030",
+        "name": "DB",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "032830",
+        "name": "삼성생명",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "036710",
+        "name": "심텍홀딩스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "039030",
+        "name": "이오테크닉스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "041960",
+        "name": "코미팜",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "064290",
+        "name": "인텍플러스",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "078340",
+        "name": "컴투스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "078930",
+        "name": "GS",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "080220",
+        "name": "제주반도체",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "089860",
+        "name": "롯데렌탈",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "092870",
+        "name": "엑시콘",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "093320",
+        "name": "케이아이엔엑스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "095610",
+        "name": "테스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "098120",
+        "name": "마이크로컨텍솔",
+        "pattern": "pullback50",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "105330",
+        "name": "케이엔더블유",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "117670",
+        "name": "알파칩스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "131290",
+        "name": "티에스이",
+        "pattern": "pullback50",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "163730",
+        "name": "핑거",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "170920",
+        "name": "엘티씨",
+        "pattern": "pullback50",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "180640",
+        "name": "한진칼",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "203650",
+        "name": "드림시큐리티",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "263860",
+        "name": "지니언스",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "402340",
+        "name": "SK스퀘어",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "403870",
+        "name": "HPSP",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      },
+      {
+        "code": "456010",
+        "name": "아이씨티케이",
+        "pattern": "trend200",
+        "signalDate": "2026-10-28",
+        "registeredAt": "2026-10-29T17:01:52.380382+00:00",
+        "registeredDate": "2026-10-30",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "registered_waiting_next_session"
+      }
+    ],
+    "newEntries": [
+      {
+        "code": "083450",
+        "name": "GST",
+        "pattern": "trend200",
+        "signalDate": "2026-10-23",
+        "registeredAt": "2026-10-26T16:52:29.480116+00:00",
+        "registeredDate": "2026-10-27",
+        "entryDate": "2026-10-28",
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "351320",
+        "name": "넥사다이내믹스",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-23",
+        "registeredAt": "2026-10-26T16:52:29.480116+00:00",
+        "registeredDate": "2026-10-27",
+        "entryDate": "2026-10-28",
+        "sessions": 0,
+        "dataStatus": "observing"
+      }
+    ],
+    "newClosedArms": [
+      {
+        "code": "028670",
+        "name": "팬오션",
+        "pattern": "breakout252",
+        "registeredDate": "2026-10-15",
+        "entryDate": "2026-10-16",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.0104166666666667,
+        "exitSignalDate": "2026-10-27",
+        "exitDate": "2026-10-28",
+        "netReturnPct": -15.727908078654341,
+        "exitReason": "close_stop12",
+        "exitPrice": 5720.0
+      },
+      {
+        "code": "340450",
+        "name": "지씨지놈",
+        "pattern": "breakout252",
+        "registeredDate": "2026-10-22",
+        "entryDate": "2026-10-23",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.0,
+        "exitSignalDate": "2026-10-27",
+        "exitDate": "2026-10-28",
+        "netReturnPct": -13.855464943324613,
+        "exitReason": "close_stop12",
+        "exitPrice": 8440.0
+      }
+    ],
+    "closedByArm": {
+      "hold1260": 0,
+      "stop12_trail35": 34
+    },
+    "maxSessions": 10,
+    "matureSamples": {
+      "20": 0,
+      "60": 0,
+      "120": 0,
+      "252": 0,
+      "756": 0,
+      "1260": 0
+    },
+    "firstTouch": {
+      "2": 0,
+      "5": 0,
+      "10": 0
+    },
+    "dataStatusCounts": {
+      "observing": 142,
+      "registered_waiting_next_session": 29
+    },
+    "entryMissingButObserving": [
+      {
+        "code": "085620",
+        "name": "미래에셋생명",
+        "pattern": "trend200",
+        "signalDate": "2026-10-26",
+        "registeredAt": "2026-10-27T15:57:35.001066+00:00",
+        "registeredDate": "2026-10-28",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "004710",
+        "name": "한솔테크닉스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "006120",
+        "name": "SK디스커버리",
+        "pattern": "pullback50",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "029460",
+        "name": "케이씨",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "033640",
+        "name": "네패스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "039860",
+        "name": "나노엔텍",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "052710",
+        "name": "아모텍",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "119850",
+        "name": "지엔씨에너지",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "131970",
+        "name": "두산테스나",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "138360",
+        "name": "앤로보틱스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "144960",
+        "name": "뉴파워프라즈마",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "192650",
+        "name": "드림텍",
+        "pattern": "pullback50",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "265740",
+        "name": "엔에프씨",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "356860",
+        "name": "티엘비",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "417500",
+        "name": "제이아이테크",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "420770",
+        "name": "기가비스",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "425420",
+        "name": "티에프이",
+        "pattern": "breakout252",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      },
+      {
+        "code": "452260",
+        "name": "한화갤러리아",
+        "pattern": "trend200",
+        "signalDate": "2026-10-27",
+        "registeredAt": "2026-10-28T16:46:07.753435+00:00",
+        "registeredDate": "2026-10-29",
+        "entryDate": null,
+        "sessions": 0,
+        "dataStatus": "observing"
+      }
+    ],
+    "sourceRevisionRecords": 0,
+    "extrema": {
+      "mfeClosePct": 34.59119496855345,
+      "maeClosePct": -32.51748251748252,
+      "mddClosePct": -32.51748251748252
+    },
+    "initialAsOf": "2026-10-08",
+    "initialRegisteredAt": "2026-10-13T06:39:10.172275+00:00",
+    "rulesUnchanged": true,
+    "rulesRecomputed": true,
+    "engineHashMatchesMain": true,
+    "sourceHashesUnchanged": false,
+    "prohibitedRetroactiveEntries": [],
+    "indicatorHashMatchesMain": true,
+    "filterHashMatchesMain": true,
+    "sourceHashChangeMeaning": "2026년 입력에 10/28 자료가 추가되며 원천 커밋/입력 해시가 변경됐다. revisionDates 표시는 0건이며, 해시 변경만으로 과거 가격 수정으로 판정하지 않는다. Parquet 원본 재연산은 이번 범위에서 수행하지 않음.",
+    "initialEngineChange": "최초 생성기 ba0d0863…에서 현재 9c75e0f2…로 달라졌지만 전일 대비 동일. 고정 규칙/지표/필터 해시는 유지. 현재 main 생성기·지표·필터를 해시로 대조했으며 최초~현재 생성기 전 이력 재현성 감사는 완료 주장하지 않음.",
+    "limitations": "종가 관찰·편도0.5% 비용 가정. 재무 시점 패널/공시시점/시장·유동성 대조군/배당/세금/호가/시장충격/정수주/자금배분 미복원. 종목별 관찰은 계좌 CAGR/시장지수 초과수익이 아님.",
+    "recordDataStatus": "명시된 정지·누락·폐지정산 미확인 상태는 0건이나 데이터 무결성 보장은 아니다. 모집단 필터의 최신 세션 누락178·거래없음32건은 보유/실패 기록 수와 다르다. entryDate 없는 observing18건은 진입과 성과에서 제외."
+  },
+  "claudeComparison": {
+    "generatedAt": "2026-10-30T04:52:28.734781+09:00",
+    "screenVersion": "2.24.1",
+    "baselineComparisonMeaning": "동일 source commit 최신 lab + 날짜별 close payload를 대조했지만 각 전략의 시장·세션 경계·버전 유효시작일·자본/체결 기준이 달라 승패 우위를 확정하지 않음. lab outOfSample은 현재 규칙의 연구재생이며 effectiveFrom 이후 실행성과와 분리.",
+    "mainVersions": {
+      "opening": {
+        "version": "g_open_q7_k3_gap3",
+        "effectiveFrom": "2026-10-13",
+        "params": {
+          "minQ": 7,
+          "topK": 3,
+          "gapMax": -3.0
+        }
+      },
+      "daytrading": {
+        "version": "g_etf_th4.75",
+        "effectiveFrom": "2026-10-24",
+        "params": {
+          "code": "233740",
+          "th": -4.75
+        }
+      },
+      "crypto": {
+        "version": "g_coin_ma15_s99_hi7_eth",
+        "effectiveFrom": "2026-10-14",
+        "params": {
+          "ma": 15,
+          "stopPct": 99.0,
+          "level": "prevhigh",
+          "k": 0.5,
+          "hiN": 7,
+          "lastEntryHour": null,
+          "tabSize": 0.8,
+          "markets": [
+            "KRW-ETH"
+          ]
+        }
+      },
+      "soxl": {
+        "version": "g_soxl_r2lt30_ibs0.6_ma100_d5",
+        "effectiveFrom": "2026-10-21",
+        "params": {
+          "rsiMax": 30.0,
+          "rsiN": 2,
+          "ibsMax": 0.6,
+          "downDays": 0,
+          "ma": 100,
+          "maxHoldDays": 5,
+          "tabSize": 0.5
+        }
+      },
+      "close30": {
+        "version": "close30_dip_v1",
+        "effectiveFrom": null,
+        "params": {
+          "code": "233740",
+          "th": 0.0
+        }
+      }
+    },
+    "sameSourceResearchOos": {
+      "opening": {
+        "days": 18,
+        "tradeDays": 5,
+        "tradeDaysPerYear": 69.44444444444444,
+        "plus1RateOfTradeDays": 20.0,
+        "lossDaysPerYear": 55.55555555555556,
+        "tStat": -0.16225599646274527,
+        "plus1Days": 1,
+        "plus1DaysPerYear": 13.88888888888889,
+        "plus5Weeks": 0,
+        "plus5WeeksPerYear": 0.0,
+        "weeklyAvgPct": -0.4480795957787498,
+        "totalPct": -2.220410208431467,
+        "lossDays": 4,
+        "lossDayAvgPct": -2.297156850105001,
+        "worstDayPct": -4.789202767086246,
+        "mddPct": -4.839362684937076,
+        "cagrPct": null,
+        "expectancyPct": -0.35435623984400977,
+        "profitFactor": 0.8071767281434155,
+        "gate": false
+      },
+      "daytrading": {
+        "days": 18,
+        "tradeDays": 6,
+        "tradeDaysPerYear": 83.33333333333334,
+        "plus1RateOfTradeDays": 50.0,
+        "lossDaysPerYear": 41.66666666666667,
+        "tStat": -0.24796038653581715,
+        "plus1Days": 3,
+        "plus1DaysPerYear": 41.66666666666667,
+        "plus5Weeks": 0,
+        "plus5WeeksPerYear": 0.0,
+        "weeklyAvgPct": -0.5814445610007324,
+        "totalPct": -2.8736110299185214,
+        "lossDays": 3,
+        "lossDayAvgPct": -3.782352312054183,
+        "worstDayPct": -5.953344947735195,
+        "mddPct": -6.901330631803592,
+        "cagrPct": null,
+        "expectancyPct": -0.414179715873972,
+        "profitFactor": 0.7809935819283675,
+        "gate": false
+      },
+      "close30": {
+        "days": 19,
+        "tradeDays": 12,
+        "tradeDaysPerYear": 157.89473684210526,
+        "plus1RateOfTradeDays": 25.0,
+        "lossDaysPerYear": 118.42105263157895,
+        "tStat": 0.057640871277989766,
+        "plus1Days": 3,
+        "plus1DaysPerYear": 39.473684210526315,
+        "plus5Weeks": 1,
+        "plus5WeeksPerYear": 13.157894736842106,
+        "weeklyAvgPct": 0.03676174849935876,
+        "totalPct": 0.1839439348019445,
+        "lossDays": 9,
+        "lossDayAvgPct": -0.8007292852590042,
+        "worstDayPct": -1.883707414829661,
+        "mddPct": -4.8453057738118925,
+        "cagrPct": null,
+        "expectancyPct": 0.028966981550631193,
+        "profitFactor": 1.0482343318503897,
+        "gate": true
+      },
+      "crypto": {
+        "days": 27,
+        "tradeDays": 1,
+        "tradeDaysPerYear": 13.518518518518519,
+        "plus1RateOfTradeDays": 0.0,
+        "lossDaysPerYear": 13.518518518518519,
+        "tStat": null,
+        "plus1Days": 0,
+        "plus1DaysPerYear": 0.0,
+        "plus5Weeks": 0,
+        "plus5WeeksPerYear": 0.0,
+        "weeklyAvgPct": -0.3991753815411503,
+        "totalPct": -1.9800062873350899,
+        "lossDays": 1,
+        "lossDayAvgPct": -1.9800062873350868,
+        "worstDayPct": -1.9800062873350868,
+        "mddPct": -1.9800062873350899,
+        "cagrPct": null,
+        "expectancyPct": -1.9800062873350868,
+        "profitFactor": 0.0,
+        "gate": false
+      },
+      "soxl": {
+        "days": 20,
+        "tradeDays": 0,
+        "tradeDaysPerYear": 0.0,
+        "plus1RateOfTradeDays": null,
+        "lossDaysPerYear": 0.0,
+        "tStat": null,
+        "plus1Days": 0,
+        "plus1DaysPerYear": 0.0,
+        "plus5Weeks": 0,
+        "plus5WeeksPerYear": 0.0,
+        "weeklyAvgPct": 0.0,
+        "totalPct": 0.0,
+        "lossDays": 0,
+        "lossDayAvgPct": 0.0,
+        "worstDayPct": 0.0,
+        "mddPct": 0.0,
+        "cagrPct": null,
+        "expectancyPct": null,
+        "profitFactor": null,
+        "gate": false
+      }
+    },
+    "dailyRows": [
+      {
+        "group": "시초가",
+        "side": "claude",
+        "name": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+        "version": "g_open_q7_k3_gap3",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": "no_trade",
+        "last": "pending",
+        "plan": "명단 43종목 · 08:56 예상갭 확인 (통과 7종목 이상일 때 매매)"
+      },
+      {
+        "group": "시초가",
+        "side": "gpt",
+        "name": "시초가 돌파",
+        "version": "opening_rebreak_v1",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": "no_trade",
+        "last": "pending",
+        "plan": null
+      },
+      {
+        "group": "데이트레이딩",
+        "side": "claude",
+        "name": "−4.75% 이하 마감",
+        "version": "g_etf_th4.75",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": "no_trade",
+        "last": "pending",
+        "plan": "15:21 예상 종가 −4.75% 이하면 종가 매수 → 다음 날 시가 매도"
+      },
+      {
+        "group": "데이트레이딩",
+        "side": "gpt",
+        "name": "데이트레이딩",
+        "version": "daytrading_vwap_breakout_v1",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": -0.25,
+        "last": "pending",
+        "plan": null
+      },
+      {
+        "group": "종가 30분",
+        "side": "claude",
+        "name": "⑤ 코스닥150 레버리지 장 마감 30분 반등 (실험)",
+        "version": "close30_dip_v1",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": -0.5558126195028639,
+        "last": "pending",
+        "plan": "15:00 에 전일 종가보다 내려 있으면 15:00 매수 → 15:30 종가 매도"
+      },
+      {
+        "group": "비트코인",
+        "side": "claude",
+        "name": "평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만",
+        "version": "g_coin_ma15_s99_hi7_eth",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": "pending",
+        "last": "pending",
+        "plan": "ETH 쉼"
+      },
+      {
+        "group": "비트코인",
+        "side": "gpt",
+        "name": "비트코인",
+        "version": "btc_midnight_orb_v2",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": "pending",
+        "last": "pending",
+        "plan": null
+      },
+      {
+        "group": "SOXL",
+        "side": "claude",
+        "name": "RSI(2) < 30 · 종가 위치(IBS) ≤ 0.6 · 100일 평균 위 · 최대 5일",
+        "version": "g_soxl_r2lt30_ibs0.6_ma100_d5",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": "no_trade",
+        "last": "pending",
+        "plan": "쉼 (과매도 신호 없음) · 자금 50%"
+      },
+      {
+        "group": "SOXL",
+        "side": "gpt",
+        "name": "SOXL",
+        "version": "",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": "no_trade",
+        "last": "pending",
+        "plan": null
+      },
+      {
+        "group": "전체",
+        "side": "claude",
+        "name": "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)",
+        "version": "account",
+        "prevDate": "2026-10-29",
+        "lastDate": "2026-10-30",
+        "prev": "pending",
+        "last": "pending",
+        "plan": null
+      }
+    ],
+    "newDay20261029": {
+      "opening": "메인 minQ7에 후보2건으로 진입0; 측정용 한화/LIG 2건은 주문꺼짐·수량0이며 메인성과에 넣지 않음.",
+      "daytrading": "g_etf_th4.75 종가 진입 신호1건, 설정OFF·수량0. 미청산 신호 관찰이며 29일 실현수익 또는 성공체결이 아님. 오늘 카드 no_trade와 신호/보유 구분 필요.",
+      "crypto": "close payload는 29일 closed/무거래0인데 lab 오늘카드에는29일 pending 잔존. 실제 메인은 ETH단독, 과거 BTC+ETH/00시마감 캡션과 업비트09시 세션을 구분해야 함.",
+      "soxl": "현재 main과 nextSignal 버전 g_soxl_r2lt30_ibs0.6_ma100_d5 일치. nextSignal의 basedOn은 미국28일까지라 US29 완료성과와 혼합하지 않음.",
+      "closing30": "29일 순손익 관찰 -0.5558126195%, 설정OFF/수량0. 실현금액0과 신호가격관찰수익을 별도 표시해야 함."
+    },
+    "duelDisplayed": {
+      "latest": "2026-10-29",
+      "record": {
+        "claude": 12,
+        "gpt": 9,
+        "draw": 3
+      },
+      "gptTotalPct": -3.4352208987149524,
+      "claudeTotalPct": -10.881868811980244,
+      "latestDay": {
+        "date": "2026-10-29",
+        "claudePct": 0.0,
+        "gptPct": -0.0625,
+        "winner": "claude",
+        "cumClaudePct": -10.881868811980244,
+        "cumGptPct": -3.4352208987149524
+      }
+    },
+    "duelQuality": "공개 API branch tree HTTP403 지속. 저장 대결은29일 GPT -0.0625%/Claude0으로29일 BTC +0.0701596%가 반영된 동일원천 합계가 아님. 과거 재구성·고정비용·모의설정OFF 신호관찰이 섞여 실체결/동등계좌 성과로 주장하지 않음.",
+    "tenbagger": {
+      "asOf": "2026-10-27",
+      "generatedAt": "2026-10-29T10:46:34+09:00",
+      "strategyVersion": "1.0.0",
+      "latestRunNewEvents": 0,
+      "revisions": 0,
+      "comparison": "전일과 같은27일 원천. GPT28일 원천과 동일시점 비교 불가; 가격관찰과 20종목 포트폴리오 성과는 같은 수익률이 아님. 변화없는 수치를 신규 발견으로 재보고하지 않음."
+    },
+    "currentStatus": "우위 판정 보류; 소유자 로그인 뒤 평가금액·기간수익률 계산범위/휴대폰 표시 미확인"
+  },
+  "closing30": {
+    "schema": 1,
+    "date": "2026-10-30",
+    "generatedAt": "2026-10-30T02:23:34.240402+09:00",
+    "status": "research",
+    "mode": "close30-paper-shadow-nightly",
+    "archiveDays": 6,
+    "freshLedgers": 5,
+    "errors": [],
+    "sourceRule": "Actual signal-time Durable Object evidence, no post-hoc signal reconstruction",
+    "feesPct": 0.23,
+    "mainVariant": "baseline",
+    "candidates": [],
+    "promotion": {
+      "day": {
+        "date": "2026-10-29",
+        "leader": null,
+        "leaderStreak": 0,
+        "reviewReady": false,
+        "activeMain": "baseline",
+        "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
+      },
+      "overnight": {
+        "date": "2026-10-30",
+        "leader": null,
+        "leaderStreak": 0,
+        "reviewReady": false,
+        "activeMain": "baseline",
+        "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
+      }
+    },
+    "fullPaperTradeCount": 298
+  },
+  "closing30Baseline": [
+    {
+      "name": "baseline",
+      "kind": "day",
+      "summary": {
+        "trades": 8,
+        "observedDays": 4,
+        "winRate": 37.5,
+        "avgPnl": -0.34756808071618495,
+        "profitFactor": 0.11804561394081725,
+        "mddPct": -3.053554641582823,
+        "worst": -0.8449116064565696,
+        "firstHalfAvg": null,
+        "secondHalfAvg": -0.34756808071618495,
+        "unsettled": 7
+      },
+      "status": "collecting",
+      "eligibleToPromote": false
+    },
+    {
+      "name": "baseline",
+      "kind": "overnight",
+      "summary": {
+        "trades": 0,
+        "observedDays": 0,
+        "winRate": null,
+        "avgPnl": null,
+        "profitFactor": null,
+        "mddPct": null,
+        "worst": null,
+        "firstHalfAvg": null,
+        "secondHalfAvg": null,
+        "unsettled": 18
+      },
+      "status": "collecting",
+      "eligibleToPromote": false
+    }
+  ],
+  "newTrades": {
+    "opening": {
+      "date": "2026-10-29",
+      "trades": 0,
+      "liveScans": 27,
+      "partialScans": 0,
+      "signalRecords": 0,
+      "vtsOrders": 0,
+      "replayTrades": 0
+    },
+    "daytrading": {
+      "date": "2026-10-29",
+      "netDailyPct": -0.25,
+      "livePaperComparison": {
+        "status": "available",
+        "date": "2026-10-29",
+        "liveUpdatedAt": "2026-10-29T06:35:03.951Z",
+        "liveTargetHm": 1510,
+        "liveTrades": 3,
+        "reconstructedTrades": 3,
+        "matched": 3,
+        "exactPathMatches": 3,
+        "avgAbsEntryDiffPct": 0.0,
+        "avgAbsExitDiffPct": 0.0,
+        "avgAbsPnlDiffPctPoint": 0.0,
+        "rows": [
+          {
+            "code": "005380",
+            "signalTime": 1322,
+            "liveOnly": false,
+            "reconstructedOnly": false,
+            "name": "현대차",
+            "liveStatus": "closed",
+            "liveEntryTime": 1323,
+            "liveEntryPrice": 296000,
+            "liveExitTime": 1325,
+            "liveExitPrice": 301920,
+            "liveReason": "take_profit",
+            "livePnl": 1.7500000000000018,
+            "reconstructedEntryTime": 1323,
+            "reconstructedEntryPrice": 296000.0,
+            "reconstructedExitTime": 1325,
+            "reconstructedExitPrice": 301920.0,
+            "reconstructedReason": "take_profit",
+            "reconstructedPnl": 1.7500000000000018,
+            "entryDiffPct": 0.0,
+            "exitDiffPct": 0.0,
+            "pnlDiffPctPoint": 0.0,
+            "exactPathMatch": true
+          },
+          {
+            "code": "000270",
+            "signalTime": 1341,
+            "liveOnly": false,
+            "reconstructedOnly": false,
+            "name": "기아",
+            "liveStatus": "closed",
+            "liveEntryTime": 1342,
+            "liveEntryPrice": 109200,
+            "liveExitTime": 1419,
+            "liveExitPrice": 108108,
+            "liveReason": "stop",
+            "livePnl": -1.2500000000000009,
+            "reconstructedEntryTime": 1342,
+            "reconstructedEntryPrice": 109200.0,
+            "reconstructedExitTime": 1419,
+            "reconstructedExitPrice": 108108.0,
+            "reconstructedReason": "stop",
+            "reconstructedPnl": -1.2500000000000009,
+            "entryDiffPct": 0.0,
+            "exitDiffPct": 0.0,
+            "pnlDiffPctPoint": 0.0,
+            "exactPathMatch": true
+          },
+          {
+            "code": "012330",
+            "signalTime": 1341,
+            "liveOnly": false,
+            "reconstructedOnly": false,
+            "name": "현대모비스",
+            "liveStatus": "closed",
+            "liveEntryTime": 1342,
+            "liveEntryPrice": 358000,
+            "liveExitTime": 1439,
+            "liveExitPrice": 354420,
+            "liveReason": "stop",
+            "livePnl": -1.2500000000000009,
+            "reconstructedEntryTime": 1342,
+            "reconstructedEntryPrice": 358000.0,
+            "reconstructedExitTime": 1439,
+            "reconstructedExitPrice": 354420.0,
+            "reconstructedReason": "stop",
+            "reconstructedPnl": -1.2500000000000009,
+            "entryDiffPct": 0.0,
+            "exitDiffPct": 0.0,
+            "pnlDiffPctPoint": 0.0,
+            "exactPathMatch": true
+          }
+        ],
+        "note": "Live ledger is archived evidence; canonical research remains the end-of-day KIS reconstruction."
+      },
+      "trades": [
+        {
+          "date": "2026-10-29",
+          "strategyVersion": "daytrading_vwap_breakout_v1",
+          "code": "005380",
+          "name": "현대차",
+          "signalTime": 1322,
+          "entryTime": 1323,
+          "entryPrice": 296000.0,
+          "exitTime": 1325,
+          "exitPrice": 301920.0,
+          "reason": "take_profit",
+          "pnl": 1.7500000000000018
+        },
+        {
+          "date": "2026-10-29",
+          "strategyVersion": "daytrading_vwap_breakout_v1",
+          "code": "012330",
+          "name": "현대모비스",
+          "signalTime": 1341,
+          "entryTime": 1342,
+          "entryPrice": 358000.0,
+          "exitTime": 1439,
+          "exitPrice": 354420.0,
+          "reason": "stop",
+          "pnl": -1.2500000000000009
+        },
+        {
+          "date": "2026-10-29",
+          "strategyVersion": "daytrading_vwap_breakout_v1",
+          "code": "000270",
+          "name": "기아",
+          "signalTime": 1341,
+          "entryTime": 1342,
+          "entryPrice": 109200.0,
+          "exitTime": 1419,
+          "exitPrice": 108108.0,
+          "reason": "stop",
+          "pnl": -1.2500000000000009
+        }
+      ]
+    },
+    "crypto": {
+      "date": "2026-10-29",
+      "netDailyPct": 0.07015955534662288,
+      "trades": 1,
+      "strategyVersion": "btc_midnight_orb_v2@baseline",
+      "signalReceipt": "01:50 entry /02:50 exit",
+      "replay": "blocked:29일실제5분봉·진입청산가격장부미확보;완료API손익은확인"
+    },
+    "soxl": {
+      "marketDate": "2026-10-29",
+      "displayKstDate": "2026-10-30",
+      "action": "no_trade",
+      "netDailyPct": 0,
+      "researchCsvThrough": "2026-10-28"
+    }
+  },
+  "sourceTimes": {
+    "opening": "2026-10-29T23:17:53.062021+09:00",
+    "daytrading": "2026-10-29T23:44:41.739877+09:00",
+    "crypto": "2026-10-29T14:53:18.252133+09:00",
+    "soxl": "2026-10-28T20:52:43.017221-04:00",
+    "shadow": "2026-10-30T00:29:40.799155+09:00",
+    "nightly": "2026-10-30T02:23:33.765084+09:00",
+    "tenbagger": "2026-10-29T17:01:52.380382+00:00",
+    "claude": "2026-10-30T04:52:28.734781+09:00"
+  },
+  "uiAndNotifications": {
+    "gptScreen": "owner sign-in gate; v1.48.2",
+    "claudeScreen": "owner sign-in gate; v2.24.1; tab labels observed",
+    "publicHealth": {
+      "ok": true,
+      "version": "2.9.1",
+      "url": "https://jkquant-presale-alert.mumae4.workers.dev/health"
+    },
+    "priorReportReceipt": {
+      "date": "2026-10-29",
+      "push": {
+        "sent": 3,
+        "eligible": 3,
+        "failed": 0,
+        "removed": 0
+      },
+      "telegram": {
+        "result": "sent",
+        "tries": 1
+      },
+      "complete": true,
+      "updatedAt": "2026-10-28T23:00:03.119Z"
+    },
+    "latestTradeReceiptSummary": {
+      "opening": "latest Push3/3; Telegram null, unknown",
+      "daytrading": "29일 청산 Push3/3·Telegram sent",
+      "crypto": "29일 01:50→02:50 청산 Push3/3·Telegram sent",
+      "soxl": "US27일 청산 Push3/3·Telegram sent; no new trade receipt",
+      "closing30": "29일 overnight baseline 진입 Push3/3·Telegram sent"
+    },
+    "publicShadowApi": {
+      "ok": true,
+      "generatedAt": "2026-10-30T00:29:40.799155+09:00",
+      "matchesFrozenSnapshotTimestamp": true
+    },
+    "publicDuelApi": {
+      "ok": false,
+      "error": "branch tree HTTP 403"
+    },
+    "actualPhoneDisplayVerified": false,
+    "valuationDenominatorVerified": false,
+    "directTestNotificationsSent": 0,
+    "transport": "Shell and search cannot retrieve public endpoints in this runtime; site testing via visible browser responses succeeded. Browser owner gates respected."
+  },
+  "apiObservations": {
+    "observedAt": "2026-10-29T22:07:05.600Z",
+    "method": "公開 read-only endpoints rendered in browser; sanitized extraction, not account data",
+    "dailyApi": {
+      "url": "https://jkquant.pages.dev/api/scalping-daily-results",
+      "kstDate": "2026-10-30",
+      "opening": {
+        "date": "2026-10-29",
+        "returnPct": 0,
+        "trades": 0,
+        "noTrade": true,
+        "finalized": true,
+        "source": "opening-operational-history",
+        "generatedAt": "2026-10-29T15:26:11+09:00",
+        "mainVariant": "baseline"
+      },
+      "daytrading": {
+        "date": "2026-10-29",
+        "returnPct": -0.25,
+        "trades": 3,
+        "wins": 1,
+        "losses": 2,
+        "finalized": true,
+        "source": "daytrading-paper-live",
+        "generatedAt": "2026-10-29T06:35:03.951Z",
+        "mainVariant": "baseline",
+        "firstRequestWarning": "The operation was aborted; subsequent history returned ok with 22 durableDbDays"
+      },
+      "crypto": {
+        "date": "2026-10-29",
+        "returnPct": 0.07015955534662288,
+        "trades": 1,
+        "wins": 1,
+        "losses": 0,
+        "finalized": true,
+        "source": "global-paper-live",
+        "generatedAt": "2026-10-29T14:59:36.061Z",
+        "strategyVersion": "btc_midnight_orb_v2@baseline"
+      },
+      "soxl": {
+        "date": "2026-10-30",
+        "marketDate": "2026-10-29",
+        "returnPct": 0,
+        "trades": 0,
+        "noTrade": true,
+        "finalized": true,
+        "source": "global-paper-live",
+        "generatedAt": "2026-10-29T20:05:32.919Z",
+        "strategyVersion": "soxl_orb_v1@baseline"
+      },
+      "unfinished": "KST 2026-10-30 opening/daytrading/crypto remain pending; SOXL US29 is finalized"
+    },
+    "historyApi": {
+      "opening": {
+        "status": "ok",
+        "recordDays": 12,
+        "trades": 82,
+        "averageDailyPct": -0.4699339620653704,
+        "profitFactor": 0.434008575086321,
+        "mddPct": -5.55289488963393,
+        "worstDayPct": -2.5497220257425637,
+        "plus1Days": 0,
+        "weeklyPct": -0.8650780405254577,
+        "targetGapPp": 5.865078040525457,
+        "durableDbDays": 0,
+        "quality": "trade-day mean; historical reconstructed rows retain duplicate/source gaps"
+      },
+      "daytrading": {
+        "status": "ok",
+        "recordDays": 20,
+        "trades": 55,
+        "averageDailyPct": -0.45979439067187367,
+        "profitFactor": 0.45211005770989987,
+        "mddPct": -9.974739080013439,
+        "worstDayPct": -1.2500000000000009,
+        "plus1Days": 0,
+        "weeklyPct": -1.9986252929687254,
+        "targetGapPp": 6.998625292968725,
+        "durableDbDays": 22
+      },
+      "cryptoFull": {
+        "status": "degraded",
+        "cumulativeThrough": "2026-10-28",
+        "recordDays": 15,
+        "trades": 15,
+        "averageDailyPct": -0.14128570221753725,
+        "profitFactor": 0.4186317365424274,
+        "mddPct": -2.790099728313755,
+        "worstDayPct": -0.6400000000000005,
+        "plus1Days": 0,
+        "weeklyPct": -0.2943783944646894,
+        "durableDbDays": 0,
+        "sourceWarnings": [
+          "장중 모의장부 조회 실패: The operation was aborted"
+        ]
+      },
+      "soxl": {
+        "status": "ok",
+        "recordDays": 21,
+        "trades": 9,
+        "averageDailyPct": -0.25714285714285784,
+        "profitFactor": 0.44897959183673425,
+        "mddPct": -9.397870668170306,
+        "worstDayPct": -1.4000000000000121,
+        "plus1Days": 2,
+        "weeklyPct": 4.448399999999997,
+        "targetGapPp": 0.5516000000000032,
+        "durableDbDays": 25
+      }
+    },
+    "cryptoTrend": {
+      "url": "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&trend=1&from=2026-10-01&to=2026-10-29",
+      "ok": true,
+      "durableDbDays": 119,
+      "status": "ok",
+      "sourceWarnings": [],
+      "dailySeries": [
+        {
+          "date": "2026-10-01",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-02",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-03",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-04",
+          "returnPct": -0.21715380480953772,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-05",
+          "returnPct": -0.3387075370632807,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-06",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-07",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-08",
+          "returnPct": 0.3248860763968754,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-09",
+          "returnPct": 0.5057891012031203,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-10",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-11",
+          "returnPct": -0.14,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-12",
+          "returnPct": 0.45468500278758717,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-13",
+          "returnPct": 0.11332999140648126,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-14",
+          "returnPct": -0.6400000000000005,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-15",
+          "returnPct": -0.5598092429949396,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-16",
+          "returnPct": 0.12736523711785586,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-17",
+          "returnPct": -0.17167277498755673,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-20",
+          "returnPct": -0.6400000000000005,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-21",
+          "returnPct": -0.16070561122063942,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-22",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-23",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-24",
+          "returnPct": -0.48291357663432943,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-25",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-26",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-27",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-28",
+          "returnPct": -0.2943783944646937,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-29",
+          "returnPct": 0.07015955534662288,
+          "trades": 1
+        }
+      ],
+      "missingSessionDates": [
+        "2026-10-18",
+        "2026-10-19"
+      ],
+      "quality": "27 confirmed sessions only. Missing sessions are not zero-filled. BTC has at most one trade per session, so confirmed nonzero one-slot daily returns equal its trade net returns. 29-day trade entry/exit prices not recovered."
+    }
+  },
+  "tests": {
+    "originalRollupChecks": {
+      "daytrading": {
+        "variantsExact": true,
+        "candidateCoresExact": true
+      },
+      "crypto": {
+        "variantsExact": true,
+        "candidateCoresExact": true
+      },
+      "soxl": {
+        "variantsExact": true,
+        "candidateCoresExact": true
+      }
+    },
+    "originalOpeningEngineBaselineExact": true,
+    "rawMinuteArchivesExactGitBlobChecks": 26,
+    "reportAndLiveUiTests": {
+      "files": [
+        "tests/gpt-morning-report.test.mjs",
+        "tests/scalping-live-results.test.mjs"
+      ],
+      "pass": 41,
+      "fail": 0,
+      "scope": "실제main코드의fixture·계약/중복/인증/날짜/표출시험.운영기기·수익성검증아님"
+    },
+    "schema": "입력schema1/7section;현mainnormalizer는호환종가section을8번째로추가하고workflow가실제야간원천으로보완.완료로그는별도확인"
+  },
+  "sourceProvenance": {
+    "minuteArchives": [
+      {
+        "path": "data/scalping/2026/2026-09-21.json.gz",
+        "date": "2026-09-21",
+        "rows": 100,
+        "blobSha": "c7827397028d730a7d9704fd5b6f1d4984860979"
+      },
+      {
+        "path": "data/scalping/2026/2026-09-22.json.gz",
+        "date": "2026-09-22",
+        "rows": 100,
+        "blobSha": "5f3e270ddbb36102de9b1da7c4806f33dcbc5421"
+      },
+      {
+        "path": "data/scalping/2026/2026-09-23.json.gz",
+        "date": "2026-09-23",
+        "rows": 100,
+        "blobSha": "1ea5dbd476dedbd353412c4202a6d3514007397f"
+      },
+      {
+        "path": "data/scalping/2026/2026-09-24.json.gz",
+        "date": "2026-09-24",
+        "rows": 100,
+        "blobSha": "f57871bc92baa1a5091e980defaa82ef575ff8d4"
+      },
+      {
+        "path": "data/scalping/2026/2026-09-25.json.gz",
+        "date": "2026-09-25",
+        "rows": 100,
+        "blobSha": "bed2289252898ebebbe722439c1a0bc9db7cde6f"
+      },
+      {
+        "path": "data/scalping/2026/2026-09-29.json.gz",
+        "date": "2026-09-29",
+        "rows": 100,
+        "blobSha": "bf78db5b301bd5b7483028921d12317ae509d5cd"
+      },
+      {
+        "path": "data/scalping/2026/2026-09-30.json.gz",
+        "date": "2026-09-30",
+        "rows": 100,
+        "blobSha": "634001a9d7d45e53af1262d1cd73e69ed09f7195"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-01.json.gz",
+        "date": "2026-10-01",
+        "rows": 100,
+        "blobSha": "6438463ee1a35b4435e7b9548f39a4f8125d4cf5"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-02.json.gz",
+        "date": "2026-10-02",
+        "rows": 100,
+        "blobSha": "aa37f41688833f2854d3b452e4c4a62a743289cb"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-06.json.gz",
+        "date": "2026-10-06",
+        "rows": 100,
+        "blobSha": "434a89616b083058ea92fc04da5e66972ef1dbae"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-07.json.gz",
+        "date": "2026-10-07",
+        "rows": 100,
+        "blobSha": "d9f6889b4ff34edb067b92cad3cf3f1b888c9f5d"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-08.json.gz",
+        "date": "2026-10-08",
+        "rows": 100,
+        "blobSha": "bd8923af50f39001914ba159532ed6ed036eb6fc"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-09.json.gz",
+        "date": "2026-10-09",
+        "rows": 100,
+        "blobSha": "357709fb41a12d7152d7f18f42e61d6948681f74"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-13.json.gz",
+        "date": "2026-10-13",
+        "rows": 100,
+        "blobSha": "c37fec9b4953565ad6a562789a005cd4a804836f"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-14.json.gz",
+        "date": "2026-10-14",
+        "rows": 100,
+        "blobSha": "25d430b9eeca29ae91244d6cbe9e5b1b8f06959f"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-15.json.gz",
+        "date": "2026-10-15",
+        "rows": 100,
+        "blobSha": "ecd4d7bdcb0f48f0bd958aa58ed8713f72f1c55f"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-16.json.gz",
+        "date": "2026-10-16",
+        "rows": 100,
+        "blobSha": "aa95238dda0493fcaeab2e3f988b8e8ad29d4096"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-19.json.gz",
+        "date": "2026-10-19",
+        "rows": 100,
+        "blobSha": "2d65b3373fe2f661fb1459399acd440789345b5d"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-20.json.gz",
+        "date": "2026-10-20",
+        "rows": 100,
+        "blobSha": "20ed37e0f544e8c8d512b048abdf8c5747b27236"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-21.json.gz",
+        "date": "2026-10-21",
+        "rows": 100,
+        "blobSha": "3771db21933f70127667e8ad4713d8d974593833"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-22.json.gz",
+        "date": "2026-10-22",
+        "rows": 100,
+        "blobSha": "694467617d93898d921d8fff76d801d6e1b7e722"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-23.json.gz",
+        "date": "2026-10-23",
+        "rows": 100,
+        "blobSha": "2522433bc43df9993c27a782a097c1efd62b28f0"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-26.json.gz",
+        "date": "2026-10-26",
+        "rows": 100,
+        "blobSha": "e53424454de36570e0b5740d2de44e30c20f8947"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-27.json.gz",
+        "date": "2026-10-27",
+        "rows": 100,
+        "blobSha": "a4e86af2cbcf40adff8a6a71ab927a9806192c29"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-28.json.gz",
+        "date": "2026-10-28",
+        "rows": 100,
+        "blobSha": "18f79a30fc01bdf29a8d8fd0bb28f9648cd5af40"
+      },
+      {
+        "path": "data/scalping/2026/2026-10-29.json.gz",
+        "date": "2026-10-29",
+        "rows": 100,
+        "blobSha": "85956ed2dd16f0fc175d51c5f3079de2cd295f46"
+      }
+    ],
+    "scripts": [
+      {
+        "path": "scripts/backtest_opening_rebreak.py",
+        "sha256": "e00fe0ec2fd04be0f93c0eee9918fe1a4c74363a8c6006f2e5f685eb97dd539b"
+      },
+      {
+        "path": "scripts/nightly_scalping_research.py",
+        "sha256": "3d4693304c017c918e9db983facffe5a7d500142250132451ca323d31e48cc97"
+      },
+      {
+        "path": "scripts/daily1_shadow_lab.py",
+        "sha256": "8b5fc36bdd73f746a2e7b8cb368c31a6e112df80a3bac0f744319984658234ed"
+      },
+      {
+        "path": "functions/api/scalping-history.js",
+        "sha256": "0cd7f468cdd5ee4c0b1a3b6df34526b9cbd2d15030bea48fe5af12c867b419df"
+      },
+      {
+        "path": "scripts/tenbagger_forward.py",
+        "sha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391"
+      }
+    ]
+  },
+  "evidence": [
+    "https://github.com/jkdevjob/jkquant/blob/a070f4edf4143d676f325366084dd2c280688cb4/research/gpt-morning/README.md",
+    "https://jkquant.pages.dev/api/scalping-daily-results",
+    "https://jkquant-presale-alert.mumae4.workers.dev/health",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/nightly-research/closing30.json",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/opening-history/2026-10-29.json",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/opening-research/latest.json",
+    "https://github.com/jkdevjob/jkquant/blob/a070f4edf4143d676f325366084dd2c280688cb4/scripts/backtest_opening_rebreak.py",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/nightly-research/latest.json",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/daytrading-research/latest.json",
+    "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-10-29",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/daily1-shadow/latest.json",
+    "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&trend=1&from=2026-10-01&to=2026-10-29",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/crypto-research/latest.json",
+    "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-10-29",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/soxl-research/latest.json",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/claude-lab/latest.json",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/tenbagger-forward/latest.json",
+    "https://github.com/jkdevjob/jkquant/blob/9d5120827dc343708125dcd50bdc40d67fb85e68/data/tenbagger-forward/latest.json",
+    "https://github.com/jkdevjob/jkquant/blob/a070f4edf4143d676f325366084dd2c280688cb4/data/tenbagger/gpt/forward-latest.json",
+    "https://github.com/jkdevjob/jkquant/blob/a070f4edf4143d676f325366084dd2c280688cb4/TENBAGGER_FORWARD_RESEARCH.md",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/claude-live/2026-10-29.json",
+    "https://jkquant.pages.dev/api/scalping-duel",
+    "https://github.com/jkdevjob/jkquant/blob/8f3ef4c98f5bf7d4c059a1c5a911e6aa04d2ccae/data/tenbagger-claude-forward/latest.json"
+  ]
+}
