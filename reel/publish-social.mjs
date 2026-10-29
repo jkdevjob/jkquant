@@ -8,9 +8,10 @@
 //         --id w2d1      날짜와 상관없이 이 항목(이미 올린 쪽은 건너뜀)
 //         --date 2026-11-02   오늘 날짜를 이 날로 간주
 //
-// 고르는 규칙: 날짜가 오늘 이하이면서 아직 안 올린 가장 오래된 항목 하나.
-//   키를 늦게 넣어도 밀린 영상이 하루 한 편씩 순서대로 나간다(한꺼번에 몰아 올리지 않음).
-//   오늘 이미 한 편 올렸으면 그 플랫폼은 쉰다.
+// 고르는 규칙(하루 한 편, 오늘 이미 올렸으면 그 플랫폼은 쉰다)
+//   1순위: 오늘 날짜의 이슈 영상(kind: "issue"). 이슈는 그날만 — 지나면 건너뛴다.
+//   2순위(예비): 날짜가 오늘 이하이면서 아직 안 올린 일반 영상 중 가장 오래된 것.
+//   키를 늦게 넣어도 밀린 일반 영상은 하루 한 편씩 순서대로 나간다(몰아 올리지 않음).
 //
 // 환경변수
 //   유튜브:  GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, YT_REFRESH_TOKEN (범위 youtube.upload)
@@ -72,7 +73,9 @@ function pick(p) {
     return done(it.id, p) ? null : it;
   }
   if (postedToday(p)) return null;
-  return queue.filter((q) => q.date <= TODAY && !done(q.id, p)).sort((a, b) => a.date.localeCompare(b.date))[0] || null;
+  const issue = queue.find((q) => q.kind === "issue" && q.date === TODAY && !done(q.id, p));
+  if (issue) return issue;
+  return queue.filter((q) => q.kind !== "issue" && q.date <= TODAY && !done(q.id, p)).sort((a, b) => a.date.localeCompare(b.date))[0] || null;
 }
 
 // ── 사전 점검(--dry 에서도 실행) ──
@@ -336,7 +339,7 @@ if (!DRY && targets.includes("ig") && PLATFORMS.ig.keys.every((k) => process.env
 }
 
 // 남은 큐
-const left = queue.filter((q) => targets.some((p) => !done(q.id, p))).map((q) => `${q.id}(${q.date})`);
+const left = queue.filter((q) => !(q.kind === "issue" && q.date < TODAY) && targets.some((p) => !done(q.id, p))).map((q) => `${q.id}(${q.date})`);
 report.push(`남은 항목: ${left.length ? left.join(", ") : "없음 — 다음 주 영상을 큐에 추가해야 함"}`);
 
 const code = failed ? 1 : !DRY && keySkips > 0 && keySkips === targets.length ? 2 : 0;
