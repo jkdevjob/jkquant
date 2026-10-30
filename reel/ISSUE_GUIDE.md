@@ -1,7 +1,7 @@
 # 매일 이슈 영상 제작 규칙
 
-매일 아침(06:37 KST) 예약 작업이 이 문서를 따라 **전날 가장 큰 경제 이슈**로 영상 한 편을 만들어
-발행 큐에 넣는다. 저녁 19:47 발행 작업이 인스타 릴스 + 유튜브 쇼츠로 올린다.
+매일 아침(06:37 KST) 예약 작업이 이 문서를 따라 **전날 가장 큰 경제 이슈**로 영상 한 편을 만들고
+Metricool 에 그날 20:00 게시로 예약한다(6-1).
 기준 예시: `queue/issues/2026-10-30.card.json` (미국 금리 동결, 인상 2표)
 
 ## 1. 주제 고르기
@@ -62,7 +62,22 @@
 - `date` 는 발행일(= 만드는 날). 이슈 영상은 **그날만** 올라가고 지나면 건너뛴다.
   이슈 영상이 없는 날에는 예비 영상(`kind` 없는 항목, 예: week2)이 대신 나간다.
 - 점검: `node publish-social.mjs --dry --id iYYYYMMDD` → 커밋·푸시
-  (브랜치 `claude/instagram-reel-video-creation-wl16ee`, main 금지). 발행 작업은 푸시된 최신 커밋을 쓴다.
+  (브랜치 `claude/instagram-reel-video-creation-wl16ee`, main 금지).
+
+## 6-1. 게시 예약 (Metricool)
+
+게시는 Metricool 커넥터로 **그날 20:00(Asia/Seoul)** 에 예약한다.
+
+- 브랜드: `blogId 7749250` (Metricool 브랜드 이름은 아직 raryan_family 로 보이지만 유튜브는 **은퇴노트 채널** `UCDkP-ixGx6r26fnfML_FAVA` 확인됨)
+- **현재 게시 대상: youtube 만.** 인스타는 이 브랜드에 retire.note 가 연결된 것을 확인한 뒤에 `instagram`(type REEL)을 추가한다.
+  다른 인스타 계정(raryan_family 등)으로 올라갈 수 있으니 확인 전에는 절대 넣지 않는다.
+- 영상 주소: 푸시한 커밋으로 고정한 jsDelivr 주소
+  `https://cdn.jsdelivr.net/gh/jkdevjob/jkquant@<커밋>/reel/<file>` (HEAD 200, video/mp4 확인 후 사용)
+- 넣는 값: text=캡션, youtubeData={title: yt_title, type: "short", privacy: "public", tags, category: "EDUCATION",
+  madeForKids: false, isAiGeneratedContent: false}, autoPublish true
+- 예약 전에 `getScheduledPosts` 로 그날 이미 예약된 게 있는지 보고 중복이면 넣지 않는다.
+- 예약하면 queue.json 의 그 항목에 `"metricool": {"uuid": "...", "networks": ["youtube"], "at": "YYYY-MM-DDT20:00+09:00"}` 를 적고 커밋한다.
+- 이슈 영상을 못 만든 날은 `metricool` 기록이 없는 예비 영상(kind 없는 항목) 중 맨 앞 것을 같은 방식으로 예약한다.
 
 ## 7. 명령
 
