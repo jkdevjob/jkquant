@@ -77,16 +77,18 @@ Metricool 에 그날 20:00 게시로 예약한다(6-1).
 
 게시는 Metricool 커넥터로 **그날 20:00(Asia/Seoul)** 에 예약한다.
 
-- 브랜드: `blogId 7749250` (Metricool 브랜드 이름은 아직 raryan_family 로 보이지만 유튜브는 **은퇴노트 채널** `UCDkP-ixGx6r26fnfML_FAVA` 확인됨)
-- **현재 게시 대상: youtube 만.** 인스타는 이 브랜드에 retire.note 가 연결된 것을 확인한 뒤에 `instagram`(type REEL)을 추가한다.
-  다른 인스타 계정(raryan_family 등)으로 올라갈 수 있으니 확인 전에는 절대 넣지 않는다.
+- 브랜드: `blogId 7749250` (Metricool 브랜드 이름은 아직 raryan_family 로 보이지만 연결 계정은 확인됨:
+  유튜브 **은퇴노트 채널** `UCDkP-ixGx6r26fnfML_FAVA`, 인스타 **retire.note**)
+- **게시 대상: youtube + instagram(type REEL).** 예약 전에 `getBrandSettings` 의 `networksData` 가
+  `instagramData: "retire.note"`, `youtubeData: "UCDkP-ixGx6r26fnfML_FAVA"` 인지 확인하고, 다르면 그 네트워크는 빼고 보고한다.
 - 영상 주소: 푸시한 커밋으로 고정한 jsDelivr 주소
   `https://cdn.jsdelivr.net/gh/jkdevjob/jkquant@<커밋>/reel/<file>` (HEAD 200, video/mp4 확인 후 사용)
 - 넣는 값: text=캡션, youtubeData={title: yt_title, type: "short", privacy: "public", tags, category: "EDUCATION",
-  madeForKids: false, isAiGeneratedContent: false}, autoPublish true
+  madeForKids: false, isAiGeneratedContent: false}, instagramData={type: "REEL", showReelOnFeed: true, isAiGenerated: false,
+  collaborators: []}, autoPublish true
   (노트 영상은 실제 장면을 꾸민 게 아니라 애니메이션이라 유튜브 AI 표시 대상이 아니다.)
 - 예약 전에 `getScheduledPosts` 로 그날 이미 예약된 게 있는지 보고 중복이면 넣지 않는다.
-- 예약하면 queue.json 의 그 항목에 `"metricool": {"id": "...", "uuid": "...", "networks": ["youtube"], "at": "YYYY-MM-DDT20:00+09:00"}` 를 적고 커밋한다.
+- 예약하면 queue.json 의 그 항목에 `"metricool": {"id": "...", "uuid": "...", "networks": ["youtube", "instagram"], "at": "YYYY-MM-DDT20:00+09:00"}` 를 적고 커밋한다.
 - 이슈 영상을 못 만든 날은 `metricool` 기록이 없는 예비 영상(kind 없는 항목) 중 맨 앞 것을 같은 방식으로 예약한다.
 
 ## 7. 명령
