@@ -1,0 +1,4117 @@
+{
+  "schema": 4,
+  "generatedAt": "2026-10-30T16:47:44.704359+09:00",
+  "from": "2026-09-23",
+  "to": "2026-10-30",
+  "archiveDays": 23,
+  "eligibleArchiveDays": 22,
+  "eligibleFrom": "2026-09-29",
+  "eligibleTo": "2026-10-30",
+  "baselineTradeCount": 64,
+  "comparisonStatus": "eligible",
+  "comparisonRule": "Primary comparison uses only snapshots saved by 10:15 KST; preliminary until >=20 eligible trading days and >=30 baseline trades.",
+  "strategyName": "VWAP 추세 돌파 v1",
+  "signalModel": "live-parity-close-volume",
+  "dataRule": "Around-10:00 intraday Top100 snapshot; snapshots after 10:15 are observation-only and excluded from primary comparison/walk-forward; next-minute-open paper entry.",
+  "dataQuality": {
+    "snapshotTarget": "09:55~10:05 KST",
+    "primaryMaxSnapshotHm": 1015,
+    "rawArchiveDays": 23,
+    "eligibleDays": 22,
+    "excludedDays": 1,
+    "excluded": [
+      {
+        "date": "2026-09-23",
+        "snapshotHm": 1056,
+        "reason": "late_snapshot"
+      }
+    ],
+    "note": "GitHub schedules can be delayed. Late snapshots remain archived but are not allowed to contaminate the primary strategy comparison."
+  },
+  "variants": [
+    {
+      "params": {
+        "name": "baseline",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 21.875,
+        "avgPnl": -0.6068384912548817,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -38.837663440312426,
+        "profitFactor": 0.36954469337266005,
+        "portfolioReturnPct": -12.221858222228033,
+        "portfolioMddPct": -12.221858222228033,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "vol_2.0",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 2.0,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 63,
+        "winRate": 23.809523809523807,
+        "avgPnl": -0.5561376399665356,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -35.036671317891745,
+        "profitFactor": 0.41165832986618406,
+        "portfolioReturnPct": -11.086228815806843,
+        "portfolioMddPct": -11.086228815806843,
+        "tradesPerDay": 2.8636363636363638,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.828366445916112,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.10052399338113505,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "lookback_30",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 30,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 26.5625,
+        "avgPnl": -0.4802359271523174,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -30.735099337748313,
+        "profitFactor": 0.47684937297449687,
+        "portfolioReturnPct": -9.813076782731923,
+        "portfolioMddPct": -9.813076782731923,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.17163355408388892,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "vwap_slope_0.2",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.2,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 60,
+        "winRate": 30.0,
+        "avgPnl": -0.3666704818697212,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -22.00022891218327,
+        "profitFactor": 0.5749990564488332,
+        "portfolioReturnPct": -7.136046182786648,
+        "portfolioMddPct": -8.504476111937498,
+        "tradesPerDay": 2.727272727272727,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.7328856440132904,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.10052399338113505,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 1.7500000000000018,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": 0.0,
+            "trades": 0
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "entry_by_1400",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1400,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 21.875,
+        "avgPnl": -0.6068384912548817,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -38.837663440312426,
+        "profitFactor": 0.36954469337266005,
+        "portfolioReturnPct": -12.221858222228033,
+        "portfolioMddPct": -12.221858222228033,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "session_min_2",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 2.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 26.5625,
+        "avgPnl": -0.45920680344462245,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -29.389235420455837,
+        "profitFactor": 0.48802930544739836,
+        "portfolioReturnPct": -9.41054395185461,
+        "portfolioMddPct": -9.41054395185461,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 1.7500000000000018,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.10052399338113505,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "stop_0.8",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 0.8,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 18.75,
+        "avgPnl": -0.5521109271523185,
+        "medianPnl": -1.0500000000000007,
+        "sumPnl": -35.33509933774838,
+        "profitFactor": 0.3528370084661476,
+        "portfolioReturnPct": -11.181099881004098,
+        "portfolioMddPct": -11.181099881004098,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.0500000000000007,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.050000000000008,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.8166666666666639,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.11666666666666654,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -1.0500000000000007,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.6950331125827786,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.11666666666667025,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.6999999999999967,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.0500000000000045,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.0500000000000007,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.0500000000000007,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.11666666666666654,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.11666666666666654,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.8166666666666713,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -1.0500000000000007,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.0500000000000045,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.0500000000000007,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.0500000000000007,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.049999999999997,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.8166666666666677,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.11666666666666654,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.7000000000000005,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "tp_1.5",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 28.125,
+        "avgPnl": -0.546875000000003,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -35.00000000000019,
+        "profitFactor": 0.3913043478260837,
+        "portfolioReturnPct": -11.077136590958258,
+        "portfolioMddPct": -11.077136590958258,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -0.4166666666666705,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.4166666666666636,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.4166666666666705,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.4166666666666705,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.41666666666665986,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.4166666666666705,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": 0.41666666666665986,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.4166666666666705,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.41666666666665986,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.4166666666666705,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -0.4166666666666705,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.41666666666665986,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.4166666666666705,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "vol_1.2",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.2,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 65,
+        "winRate": 23.076923076923077,
+        "avgPnl": -0.5843861436576665,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -37.98509933774832,
+        "profitFactor": 0.392238410596027,
+        "portfolioReturnPct": -11.974802250093319,
+        "portfolioMddPct": -11.974802250093319,
+        "tradesPerDay": 2.9545454545454546,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.17163355408388892,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "lookback_10",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 10,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 23.4375,
+        "avgPnl": -0.5669792393420582,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -36.286671317891724,
+        "profitFactor": 0.4031951784117978,
+        "portfolioReturnPct": -11.462026797784707,
+        "portfolioMddPct": -11.462026797784707,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.17163355408388892,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.10052399338113505,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "max_trades_1",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 1,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 22,
+        "winRate": 22.727272727272727,
+        "avgPnl": -0.5273892773892763,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -11.602564102564079,
+        "profitFactor": 0.42992125984252044,
+        "portfolioReturnPct": -11.134766516266248,
+        "portfolioMddPct": -13.07875340562703,
+        "tradesPerDay": 1.0,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": -1.2499999999999898,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": 1.7500000000000018,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.35256410256410664,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": 1.7500000000000018,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 1.7500000000000018,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999898,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999898,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 1.7500000000000018,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": 1.7500000000000018,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 1
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "vwap_slope_0.15",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.15,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 62,
+        "winRate": 29.03225806451613,
+        "avgPnl": -0.39254295871471656,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -24.337663440312426,
+        "profitFactor": 0.5501569316719506,
+        "portfolioReturnPct": -7.85159525207515,
+        "portfolioMddPct": -7.924687224974147,
+        "tradesPerDay": 2.8181818181818183,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "entry_by_1330",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1330,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 61,
+        "winRate": 22.950819672131146,
+        "avgPnl": -0.5752075973821709,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -35.087663440312426,
+        "profitFactor": 0.39349855992368565,
+        "portfolioReturnPct": -11.116643523868442,
+        "portfolioMddPct": -11.552888937164285,
+        "tradesPerDay": 2.772727272727273,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": 0.5833333333333339,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "session_max_6",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 6.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 63,
+        "winRate": 20.634920634920633,
+        "avgPnl": -0.6442486260367051,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -40.58766344031242,
+        "profitFactor": 0.34113678494394,
+        "portfolioReturnPct": -12.72795026721737,
+        "portfolioMddPct": -12.72795026721737,
+        "tradesPerDay": 2.8636363636363638,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": -0.2499999999999926,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "vol_1.8",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.8,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 63,
+        "winRate": 23.809523809523807,
+        "avgPnl": -0.5632555450436243,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -35.48509933774833,
+        "profitFactor": 0.4085816777041947,
+        "portfolioReturnPct": -11.219267305910218,
+        "portfolioMddPct": -11.219267305910218,
+        "tradesPerDay": 2.8636363636363638,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.828366445916112,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "lookback_15",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 15,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 25.0,
+        "avgPnl": -0.5271109271523177,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -33.73509933774833,
+        "profitFactor": 0.43774834437086135,
+        "portfolioReturnPct": -10.708232348163882,
+        "portfolioMddPct": -10.708232348163882,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.17163355408388892,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "combo_vol18_lb15",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 15,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.8,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 63,
+        "winRate": 23.809523809523807,
+        "avgPnl": -0.5418926257215213,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -34.13923542045584,
+        "profitFactor": 0.41795689612891934,
+        "portfolioReturnPct": -10.818025744769166,
+        "portfolioMddPct": -10.818025744769166,
+        "tradesPerDay": 2.8636363636363638,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.10052399338113505,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "combo_slope15_e1400",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1400,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.15,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 62,
+        "winRate": 29.03225806451613,
+        "avgPnl": -0.39254295871471656,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -24.337663440312426,
+        "profitFactor": 0.5501569316719506,
+        "portfolioReturnPct": -7.85159525207515,
+        "portfolioMddPct": -7.924687224974147,
+        "tradesPerDay": 2.8181818181818183,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "session_min_1_5",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.5,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 25.0,
+        "avgPnl": -0.5060818034446223,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -32.389235420455826,
+        "profitFactor": 0.44779281422227163,
+        "portfolioReturnPct": -10.309872948727506,
+        "portfolioMddPct": -10.309872948727506,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.10052399338113505,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "session_max_5",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 20,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 5.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.5,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 62,
+        "winRate": 22.58064516129032,
+        "avgPnl": -0.5860913458114904,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -36.337663440312404,
+        "profitFactor": 0.3851761934177076,
+        "portfolioReturnPct": -11.473780081184081,
+        "portfolioMddPct": -11.473780081184081,
+        "tradesPerDay": 2.8181818181818183,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": -0.2499999999999926,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "combo_lb30_vol12",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1430,
+        "lookback": 30,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.1,
+        "vol_mult": 1.2,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": ""
+      },
+      "summary": {
+        "days": 22,
+        "trades": 64,
+        "winRate": 26.5625,
+        "avgPnl": -0.4802359271523174,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -30.735099337748313,
+        "profitFactor": 0.47684937297449687,
+        "portfolioReturnPct": -9.813076782731923,
+        "portfolioMddPct": -9.813076782731923,
+        "tradesPerDay": 2.909090909090909,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.17163355408388892,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "cf_g0001",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1230,
+        "lookback": 10,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.05,
+        "vol_mult": 1.2,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": "2026-10-06"
+      },
+      "summary": {
+        "days": 22,
+        "trades": 51,
+        "winRate": 21.568627450980394,
+        "avgPnl": -0.6713869955748407,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -34.24073677431688,
+        "profitFactor": 0.31518526451366263,
+        "portfolioReturnPct": -10.845182201613168,
+        "portfolioMddPct": -10.845182201613168,
+        "tradesPerDay": 2.3181818181818183,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.6466396639663953,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.7018900343642626,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.5650492264416327,
+            "trades": 3
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "cf_g0002",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1230,
+        "lookback": 10,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.05,
+        "vol_mult": 1.4,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": "2026-10-13"
+      },
+      "summary": {
+        "days": 22,
+        "trades": 39,
+        "winRate": 20.51282051282051,
+        "avgPnl": -0.6936107123696841,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -27.050817782417678,
+        "profitFactor": 0.30191437980857616,
+        "portfolioReturnPct": -8.67296811973235,
+        "portfolioMddPct": -8.67296811973235,
+        "tradesPerDay": 1.7727272727272727,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.7018900343642626,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.5650492264416327,
+            "trades": 3
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "cf_g0003",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1230,
+        "lookback": 10,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.05,
+        "vol_mult": 1.6,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": "2026-10-20"
+      },
+      "summary": {
+        "days": 22,
+        "trades": 24,
+        "winRate": 20.833333333333336,
+        "avgPnl": -0.7262644651885163,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -17.43034716452439,
+        "profitFactor": 0.26609064570423635,
+        "portfolioReturnPct": -5.671877189334618,
+        "portfolioMddPct": -5.671877189334618,
+        "tradesPerDay": 1.0909090909090908,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.7450664950664985,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.5650492264416327,
+            "trades": 3
+          }
+        ]
+      }
+    },
+    {
+      "params": {
+        "name": "cf_g0004",
+        "top_n": 100,
+        "start_hm": 1000,
+        "entry_cutoff": 1230,
+        "lookback": 10,
+        "slope_n": 10,
+        "min_session_ret": 1.0,
+        "max_session_ret": 8.0,
+        "min_vwap_slope": 0.05,
+        "vol_mult": 1.8,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 1510,
+        "fee": 0.25,
+        "max_trades": 3,
+        "evaluation_start": "2026-10-27"
+      },
+      "summary": {
+        "days": 22,
+        "trades": 9,
+        "winRate": 22.22222222222222,
+        "avgPnl": -0.8533719071693774,
+        "medianPnl": -1.2500000000000009,
+        "sumPnl": -7.680347164524396,
+        "profitFactor": 0.12224603834006963,
+        "portfolioReturnPct": -2.5395819074282455,
+        "portfolioMddPct": -2.5395819074282455,
+        "tradesPerDay": 0.4090909090909091,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.7450664950664985,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.5650492264416327,
+            "trades": 3
+          }
+        ]
+      }
+    }
+  ],
+  "walkForward": {
+    "status": "collecting",
+    "trainDays": 20,
+    "testDays": 5,
+    "stepDays": 5,
+    "archiveDays": 22,
+    "daysNeededForFirstFold": 25,
+    "folds": [],
+    "oosVariants": []
+  },
+  "diagnostics": {
+    "timeBuckets": [
+      {
+        "group": "10:00~10:59",
+        "trades": 56,
+        "winRate": 23.214285714285715,
+        "avgPnl": -0.5685297042912932,
+        "avgMfe": 2.3432883926068167,
+        "avgMae": -2.315356887647174
+      },
+      {
+        "group": "11:00~12:59",
+        "trades": 3,
+        "winRate": 0.0,
+        "avgPnl": -1.2500000000000009,
+        "avgMfe": 0.829239896764015,
+        "avgMae": -3.212916637353939
+      },
+      {
+        "group": "13:00~13:59",
+        "trades": 5,
+        "winRate": 20.0,
+        "avgPnl": -0.6500000000000004,
+        "avgMfe": 1.5552174368686922,
+        "avgMae": -1.8235808161872114
+      }
+    ],
+    "marketRegimes": [
+      {
+        "group": "both_down",
+        "trades": 15,
+        "winRate": 20.0,
+        "avgPnl": -0.6500000000000004,
+        "avgMfe": 1.9181959697296873,
+        "avgMae": -2.5413066278421224
+      },
+      {
+        "group": "both_up",
+        "trades": 21,
+        "winRate": 33.33333333333333,
+        "avgPnl": -0.24999999999999895,
+        "avgMfe": 2.867234917724498,
+        "avgMae": -1.8821066816962753
+      },
+      {
+        "group": "mixed",
+        "trades": 28,
+        "winRate": 14.285714285714285,
+        "avgPnl": -0.8513451228683016,
+        "avgMfe": 1.8751101443734812,
+        "avgMae": -2.5275999988566435
+      }
+    ],
+    "volRatioBuckets": [
+      {
+        "group": "1.5~1.74",
+        "trades": 10,
+        "winRate": 40.0,
+        "avgPnl": 0.03974358974359182,
+        "avgMfe": 2.789524731599047,
+        "avgMae": -1.6198073293473325
+      },
+      {
+        "group": "1.75~2.49",
+        "trades": 16,
+        "winRate": 25.0,
+        "avgPnl": -0.6084437086092712,
+        "avgMfe": 1.8081210266061256,
+        "avgMae": -2.1464818799251955
+      },
+      {
+        "group": "2.5+",
+        "trades": 38,
+        "winRate": 15.789473684210526,
+        "avgPnl": -0.7763157894736844,
+        "avgMfe": 2.2279677136560196,
+        "avgMae": -2.5756541139200837
+      }
+    ],
+    "vwapSlopeBuckets": [
+      {
+        "group": "0.10~0.19",
+        "trades": 33,
+        "winRate": 18.181818181818183,
+        "avgPnl": -0.6773504273504272,
+        "avgMfe": 1.6882194659979977,
+        "avgMae": -2.2553198382513213
+      },
+      {
+        "group": "0.20~0.39",
+        "trades": 21,
+        "winRate": 28.57142857142857,
+        "avgPnl": -0.4754809208451584,
+        "avgMfe": 2.816358067696263,
+        "avgMae": -2.1862493553872495
+      },
+      {
+        "group": "0.40+",
+        "trades": 10,
+        "winRate": 20.0,
+        "avgPnl": -0.6500000000000004,
+        "avgMfe": 2.6633195061061787,
+        "avgMae": -2.807984857581378
+      }
+    ],
+    "sessionRetBuckets": [
+      {
+        "group": "1~1.99",
+        "trades": 16,
+        "winRate": 12.5,
+        "avgPnl": -0.8749999999999999,
+        "avgMfe": 1.6905604272332952,
+        "avgMae": -2.2343492179228175
+      },
+      {
+        "group": "2~3.99",
+        "trades": 24,
+        "winRate": 25.0,
+        "avgPnl": -0.5349026433463511,
+        "avgMfe": 1.9793276430289655,
+        "avgMae": -2.3013699291283642
+      },
+      {
+        "group": "4+",
+        "trades": 24,
+        "winRate": 25.0,
+        "avgPnl": -0.5000000000000002,
+        "avgMfe": 2.7889636080078897,
+        "avgMae": -2.3930905798080753
+      }
+    ],
+    "forwardPath": {
+      "fwd1mPct": {
+        "n": 64,
+        "avg": -0.0611082528908239,
+        "median": -0.11261389792462939
+      },
+      "fwd3mPct": {
+        "n": 64,
+        "avg": -0.1318329035920879,
+        "median": -0.15117960770134609
+      },
+      "fwd5mPct": {
+        "n": 64,
+        "avg": -0.08239581321345513,
+        "median": -0.17675147961032645
+      },
+      "fwd10mPct": {
+        "n": 64,
+        "avg": -0.010499889538306828,
+        "median": -0.1691640842584219
+      },
+      "fwd20mPct": {
+        "n": 64,
+        "avg": 0.17773801145466536,
+        "median": 0.04472271914132131
+      }
+    },
+    "avgMfe": 2.2107493259471442,
+    "avgMae": -2.3190099953318692
+  },
+  "latestDayTrades": [
+    {
+      "date": "2026-10-30",
+      "strategyVersion": "daytrading_vwap_breakout_v1",
+      "rank": 37,
+      "code": "489790",
+      "name": "한화비전",
+      "snapshotHm": 955,
+      "signalTime": 1234,
+      "entryTime": 1235,
+      "entryPrice": 51800.0,
+      "exitTime": 1243,
+      "exitPrice": 51282.0,
+      "reason": "stop",
+      "sessionRet": 5.06072874493928,
+      "vwap": 50385.931698393855,
+      "vwapSlope": 0.16186850573824962,
+      "priorHigh": 51600.0,
+      "breakoutPct": 0.5813953488372103,
+      "volRatio": 5.3132392419530605,
+      "decisionReason": "session+vwap+slope+breakout+volume_pass",
+      "evidence": {
+        "snapshotHm": 955,
+        "sessionBase": 49400.0,
+        "sessionRet": 5.06072874493928,
+        "minSessionRet": 1.0,
+        "maxSessionRet": 8.0,
+        "vwap": 50385.931698393855,
+        "vwapSlope": 0.16186850573824962,
+        "minVwapSlope": 0.1,
+        "priorHigh": 51600.0,
+        "lookback": 20,
+        "breakoutPct": 0.5813953488372103,
+        "volumeRatio": 5.3132392419530605,
+        "requiredVolumeRatio": 1.5,
+        "entryCutoff": 1430,
+        "stopPct": 1.0,
+        "takeProfitPct": 2.0,
+        "frictionPct": 0.25,
+        "finalExit": 1510
+      },
+      "timeBucket": "11:00~12:59",
+      "volRatioBucket": "2.5+",
+      "vwapSlopeBucket": "0.10~0.19",
+      "sessionRetBucket": "4+",
+      "marketRegime": "both_down",
+      "k200Ret": -2.049292311055251,
+      "kosdaq150Ret": -1.928600738613051,
+      "mfePct": 0.38610038610038533,
+      "mfeTime": 1235,
+      "maePct": -2.895752895752901,
+      "maeTime": 1302,
+      "fwd1mPct": 0.19305019305020377,
+      "fwd3mPct": -0.38610038610038533,
+      "fwd5mPct": -0.19305019305019266,
+      "fwd10mPct": -1.158301158301156,
+      "fwd20mPct": -2.5096525096525046,
+      "score": 0.7107668324890439,
+      "pnl": -1.2500000000000009,
+      "variant": "baseline"
+    },
+    {
+      "date": "2026-10-30",
+      "strategyVersion": "daytrading_vwap_breakout_v1",
+      "rank": 39,
+      "code": "207940",
+      "name": "삼성바이오로직스",
+      "snapshotHm": 955,
+      "signalTime": 1319,
+      "entryTime": 1320,
+      "entryPrice": 1444000.0,
+      "exitTime": 1503,
+      "exitPrice": 1429560.0,
+      "reason": "stop",
+      "sessionRet": 4.713560551123996,
+      "vwap": 1415771.817334248,
+      "vwapSlope": 0.11052219545002462,
+      "priorHigh": 1442000.0,
+      "breakoutPct": 0.1386962552011095,
+      "volRatio": 1.628032345013477,
+      "decisionReason": "session+vwap+slope+breakout+volume_pass",
+      "evidence": {
+        "snapshotHm": 955,
+        "sessionBase": 1379000.0,
+        "sessionRet": 4.713560551123996,
+        "minSessionRet": 1.0,
+        "maxSessionRet": 8.0,
+        "vwap": 1415771.817334248,
+        "vwapSlope": 0.11052219545002462,
+        "minVwapSlope": 0.1,
+        "priorHigh": 1442000.0,
+        "lookback": 20,
+        "breakoutPct": 0.1386962552011095,
+        "volumeRatio": 1.628032345013477,
+        "requiredVolumeRatio": 1.5,
+        "entryCutoff": 1430,
+        "stopPct": 1.0,
+        "takeProfitPct": 2.0,
+        "frictionPct": 0.25,
+        "finalExit": 1510
+      },
+      "timeBucket": "13:00~13:59",
+      "volRatioBucket": "1.5~1.74",
+      "vwapSlopeBucket": "0.10~0.19",
+      "sessionRetBucket": "4+",
+      "marketRegime": "both_down",
+      "k200Ret": -0.9945898682988119,
+      "kosdaq150Ret": -1.436192039392692,
+      "mfePct": 0.3462603878116255,
+      "mfeTime": 1422,
+      "maePct": -1.3850415512465353,
+      "maeTime": 1503,
+      "fwd1mPct": 0.13850415512466352,
+      "fwd3mPct": -0.31163434903047627,
+      "fwd5mPct": -0.20775623268698418,
+      "fwd10mPct": -0.27700831024930483,
+      "fwd20mPct": -0.27700831024930483,
+      "score": 0.0493129974217802,
+      "pnl": -1.2500000000000009,
+      "variant": "baseline"
+    }
+  ],
+  "latestObservedDay": {
+    "date": "2026-10-30",
+    "snapshotHm": 955,
+    "primaryEligible": true,
+    "trades": [
+      {
+        "date": "2026-10-30",
+        "strategyVersion": "daytrading_vwap_breakout_v1",
+        "rank": 37,
+        "code": "489790",
+        "name": "한화비전",
+        "snapshotHm": 955,
+        "signalTime": 1234,
+        "entryTime": 1235,
+        "entryPrice": 51800.0,
+        "exitTime": 1243,
+        "exitPrice": 51282.0,
+        "reason": "stop",
+        "sessionRet": 5.06072874493928,
+        "vwap": 50385.931698393855,
+        "vwapSlope": 0.16186850573824962,
+        "priorHigh": 51600.0,
+        "breakoutPct": 0.5813953488372103,
+        "volRatio": 5.3132392419530605,
+        "decisionReason": "session+vwap+slope+breakout+volume_pass",
+        "evidence": {
+          "snapshotHm": 955,
+          "sessionBase": 49400.0,
+          "sessionRet": 5.06072874493928,
+          "minSessionRet": 1.0,
+          "maxSessionRet": 8.0,
+          "vwap": 50385.931698393855,
+          "vwapSlope": 0.16186850573824962,
+          "minVwapSlope": 0.1,
+          "priorHigh": 51600.0,
+          "lookback": 20,
+          "breakoutPct": 0.5813953488372103,
+          "volumeRatio": 5.3132392419530605,
+          "requiredVolumeRatio": 1.5,
+          "entryCutoff": 1430,
+          "stopPct": 1.0,
+          "takeProfitPct": 2.0,
+          "frictionPct": 0.25,
+          "finalExit": 1510
+        },
+        "timeBucket": "11:00~12:59",
+        "volRatioBucket": "2.5+",
+        "vwapSlopeBucket": "0.10~0.19",
+        "sessionRetBucket": "4+",
+        "marketRegime": "both_down",
+        "k200Ret": -2.049292311055251,
+        "kosdaq150Ret": -1.928600738613051,
+        "mfePct": 0.38610038610038533,
+        "mfeTime": 1235,
+        "maePct": -2.895752895752901,
+        "maeTime": 1302,
+        "fwd1mPct": 0.19305019305020377,
+        "fwd3mPct": -0.38610038610038533,
+        "fwd5mPct": -0.19305019305019266,
+        "fwd10mPct": -1.158301158301156,
+        "fwd20mPct": -2.5096525096525046,
+        "score": 0.7107668324890439,
+        "pnl": -1.2500000000000009,
+        "variant": "baseline"
+      },
+      {
+        "date": "2026-10-30",
+        "strategyVersion": "daytrading_vwap_breakout_v1",
+        "rank": 39,
+        "code": "207940",
+        "name": "삼성바이오로직스",
+        "snapshotHm": 955,
+        "signalTime": 1319,
+        "entryTime": 1320,
+        "entryPrice": 1444000.0,
+        "exitTime": 1503,
+        "exitPrice": 1429560.0,
+        "reason": "stop",
+        "sessionRet": 4.713560551123996,
+        "vwap": 1415771.817334248,
+        "vwapSlope": 0.11052219545002462,
+        "priorHigh": 1442000.0,
+        "breakoutPct": 0.1386962552011095,
+        "volRatio": 1.628032345013477,
+        "decisionReason": "session+vwap+slope+breakout+volume_pass",
+        "evidence": {
+          "snapshotHm": 955,
+          "sessionBase": 1379000.0,
+          "sessionRet": 4.713560551123996,
+          "minSessionRet": 1.0,
+          "maxSessionRet": 8.0,
+          "vwap": 1415771.817334248,
+          "vwapSlope": 0.11052219545002462,
+          "minVwapSlope": 0.1,
+          "priorHigh": 1442000.0,
+          "lookback": 20,
+          "breakoutPct": 0.1386962552011095,
+          "volumeRatio": 1.628032345013477,
+          "requiredVolumeRatio": 1.5,
+          "entryCutoff": 1430,
+          "stopPct": 1.0,
+          "takeProfitPct": 2.0,
+          "frictionPct": 0.25,
+          "finalExit": 1510
+        },
+        "timeBucket": "13:00~13:59",
+        "volRatioBucket": "1.5~1.74",
+        "vwapSlopeBucket": "0.10~0.19",
+        "sessionRetBucket": "4+",
+        "marketRegime": "both_down",
+        "k200Ret": -0.9945898682988119,
+        "kosdaq150Ret": -1.436192039392692,
+        "mfePct": 0.3462603878116255,
+        "mfeTime": 1422,
+        "maePct": -1.3850415512465353,
+        "maeTime": 1503,
+        "fwd1mPct": 0.13850415512466352,
+        "fwd3mPct": -0.31163434903047627,
+        "fwd5mPct": -0.20775623268698418,
+        "fwd10mPct": -0.27700831024930483,
+        "fwd20mPct": -0.27700831024930483,
+        "score": 0.0493129974217802,
+        "pnl": -1.2500000000000009,
+        "variant": "baseline"
+      }
+    ]
+  },
+  "livePaperComparison": {
+    "status": "available",
+    "date": "2026-10-30",
+    "liveUpdatedAt": "2026-10-30T06:35:03.752Z",
+    "liveTargetHm": 1510,
+    "liveTrades": 2,
+    "reconstructedTrades": 2,
+    "matched": 2,
+    "exactPathMatches": 2,
+    "avgAbsEntryDiffPct": 0.0,
+    "avgAbsExitDiffPct": 0.0,
+    "avgAbsPnlDiffPctPoint": 0.0,
+    "rows": [
+      {
+        "code": "489790",
+        "signalTime": 1234,
+        "liveOnly": false,
+        "reconstructedOnly": false,
+        "name": "한화비전",
+        "liveStatus": "closed",
+        "liveEntryTime": 1235,
+        "liveEntryPrice": 51800,
+        "liveExitTime": 1243,
+        "liveExitPrice": 51282,
+        "liveReason": "stop",
+        "livePnl": -1.2500000000000009,
+        "reconstructedEntryTime": 1235,
+        "reconstructedEntryPrice": 51800.0,
+        "reconstructedExitTime": 1243,
+        "reconstructedExitPrice": 51282.0,
+        "reconstructedReason": "stop",
+        "reconstructedPnl": -1.2500000000000009,
+        "entryDiffPct": 0.0,
+        "exitDiffPct": 0.0,
+        "pnlDiffPctPoint": 0.0,
+        "exactPathMatch": true
+      },
+      {
+        "code": "207940",
+        "signalTime": 1319,
+        "liveOnly": false,
+        "reconstructedOnly": false,
+        "name": "삼성바이오로직스",
+        "liveStatus": "closed",
+        "liveEntryTime": 1320,
+        "liveEntryPrice": 1444000,
+        "liveExitTime": 1503,
+        "liveExitPrice": 1429560,
+        "liveReason": "stop",
+        "livePnl": -1.2500000000000009,
+        "reconstructedEntryTime": 1320,
+        "reconstructedEntryPrice": 1444000.0,
+        "reconstructedExitTime": 1503,
+        "reconstructedExitPrice": 1429560.0,
+        "reconstructedReason": "stop",
+        "reconstructedPnl": -1.2500000000000009,
+        "entryDiffPct": 0.0,
+        "exitDiffPct": 0.0,
+        "pnlDiffPctPoint": 0.0,
+        "exactPathMatch": true
+      }
+    ],
+    "note": "Live ledger is archived evidence; canonical research remains the end-of-day KIS reconstruction."
+  }
+}
