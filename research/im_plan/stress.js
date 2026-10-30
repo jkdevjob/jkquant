@@ -7,7 +7,7 @@ const toMap=eq=>{ const m={}; eq.forEach(([d,v])=>{ if(!String(d).endsWith('~'))
 const sum=(a,b,wa,wb)=>{ const m={}; Object.keys(b).forEach(d=>{ if(a[d]!=null) m[d]=a[d]*wa+b[d]*wb; }); return m; };
 function judge(m,s,e,cap){ const ds=Object.keys(m).sort(); const pre=ds.filter(d=>d<s); if(!pre.length) return null;
   const v0=m[pre[pre.length-1]]; if(v0<cap*0.02) return '(이미 파산 상태 — 원금의 2% 미만)';
-  const win=ds.filter(d=>d>=s&&d<=e&&d!==ds[ds.length-1]); if(!win.length) return null;   // 자료 마지막 날은 뺀다 — 그날 값에는 올해 실현이익 세금이 미리 빠져 있다(px · 진행 중 구간만 해당)
+  const win=ds.filter(d=>d>=s&&d<=e); if(!win.length) return null;   // 플랜 곡선은 endTax:false 로 만든다(끝날 세금 미리 빼기 없음 — 진행 중 구간 낙폭이 부풀지 않게)
   // 낙폭은 그때까지의 최고점(구간 전 포함) 기준. 회복 = 바닥 뒤 그 최고점을 다시 넘은 날.
   let pk=Math.max(...pre.map(d=>m[d])), dd=0, tro=null, pkAt=pk; for(const d of win){ pk=Math.max(pk,m[d]); const x=(pk-m[d])/pk; if(x>dd){ dd=x; tro=d; pkAt=pk; } }
   const ret=m[win[win.length-1]]/v0-1; const rec=tro?ds.find(d=>d>tro&&m[d]>=pkAt):null;
@@ -18,7 +18,7 @@ function judge(m,s,e,cap){ const ds=Object.keys(m).sort(); const pre=ds.filter(d
   for(const [lab,TK,P,R,G,from,W] of [
     ['실제','SOXL',prep(['TECL','TQQQ']),'TECL','TQQQ','2011-01-01',[['2015 반도체 약세','2015-06-01','2016-02-29'],['2018 4분기','2018-09-01','2018-12-31'],['2020 코로나','2020-02-15','2020-03-31'],['2022 약세장','2021-12-27','2022-12-31'],['2024-25 관세','2024-07-10','2025-04-30'],['2026-10 급락(진행 중)','2026-10-01','2026-12-31']]],
     ['합성','SYNSOXL_S',prep(['SYNTECL','SYNTQQQ']),'SYNTECL','SYNTQQQ','2000-01-01',[['2000-02 닷컴','2000-03-10','2002-10-31'],['2007-09 금융위기','2007-10-09','2009-03-31'],['2011 유럽','2011-07-01','2011-10-31'],['2018 4분기','2018-09-01','2018-12-31'],['2020 코로나','2020-02-15','2020-03-31'],['2022 약세장','2021-12-27','2022-12-31']]]]){
-    const plOf=p=>toMap(sim(P,Object.assign({cap:10000,from,fee:0.001,frac:lab==='합성'},mk(P,R,G,p))).eq);
+    const plOf=p=>toMap(sim(P,Object.assign({cap:10000,from,fee:0.001,frac:lab==='합성',endTax:false},mk(P,R,G,p))).eq);
     const pl=plOf({gsb:1e9}), pln=plOf({gbOn:0.01,gbOff:0.03,sbDn:0,sbUp:0.15,gReb:'y'});
     const d0=Object.keys(pl).sort()[0]; const imA=await runIM({cap:10000,tkr:TK,from:d0,autoTp:true});
     const C={'무매 익절 자동':imA,'지금 플랜(앱)':pl,'새 플랜(앱+연1회)':pln,'무매1/3+지금 플랜2/3':sum(imA,pl,1/3,2/3),'무매1/3+새 플랜2/3':sum(imA,pln,1/3,2/3)};

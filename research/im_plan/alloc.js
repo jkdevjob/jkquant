@@ -12,7 +12,7 @@ function mixYear(a,b,w){ // a,b: {d:v} 두 계좌, 매년 첫 거래일 비중 w
 const sum=(a,b)=>Object.keys(b).filter(d=>a[d]!=null).sort().map(d=>[d,a[d]+b[d]]);
 const toMap=eq=>{ const m={}; eq.forEach(([d,v])=>{ if(!String(d).endsWith('~')) m[d]=v; }); return m; };
 (async()=>{ const {pg,close}=await open([{sym:'SOXL'},{sym:'SYNSOXL_S'}]);
-  const runIM=(o)=>pg.evaluate(o=>{ const r=RUN(o); return r.eqs.map(x=>[x[0],x[1]]); },o);
+  const runIM=(o)=>pg.evaluate(o=>{ const r=RUN(o); const a=r.eqs.map(x=>[x[0],x[1]]); if(a.length) a[a.length-1][1]=r.final; return a; },o);   // 10-31: 마지막 점 = 엔진 최종값(그해 세금 미리 뺀 값) — 플랜(px)과 같은 기준
   for(const [lab,TK,P,R,G,starts,winY0] of [['실제','SOXL',prep(['TECL','TQQQ']),'TECL','TQQQ',[['2011~(전체)','2011-01-01'],['2022-01~(화면과 같은 4.8년)','2022-01-03']],2011],['합성','SYNSOXL_S',prep(['SYNTECL','SYNTQQQ']),'SYNTECL','SYNTQQQ',[['2000~(닷컴·2008 포함)','2000-01-03']],2000]]){
     const planOf=(cap,from,to,p)=>{ p=p||{}; const o=Object.assign({cap,from,to},mk(P,R,G,p)); if(p.fee!=null) o.fee=p.fee; if(lab==='합성') o.frac=true; return toMap(sim(P,o).eq); };
     const OP=JSON.parse(process.env.OLDPLAN||'{"gsb":1e9,"fee":0.001}');   // 지금 플랜(기본: 앱 그대로 — TQQQ 는 Guard 바뀔 때만 · 수수료 0.1%)

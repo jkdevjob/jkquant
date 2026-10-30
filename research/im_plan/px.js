@@ -30,7 +30,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n; cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'s',g/tot]); } }
     for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want>q[s]){ const n=Math.min(want-q[s],shares(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'b',g/tot]); } } }
     eq.push([d,cash+syms.reduce((a,s)=>a+q[s]*px[s],0)]); }
-  if(tax&&yearPnl>0) eq[eq.length-1][1]-=Math.max(0,yearPnl-DED)*0.22;
+  if(tax&&yearPnl>0&&o.endTax!==false) eq[eq.length-1][1]-=Math.max(0,yearPnl-DED)*0.22;   // 끝날 올해 실현이익 세금을 미리 뺀다(청산 가치) — 진행 중 구간 낙폭을 잴 때는 endTax:false
   return {eq,turn}; }
 function stats(eq,cap){ const a=eq[0][0], b=eq[eq.length-1][0], fin=eq[eq.length-1][1]; const yrs=(Date.parse(b)-Date.parse(a))/(365.25*864e5);
   let pk=0,m=0; eq.forEach(([,v])=>{ if(v>pk)pk=v; else m=Math.max(m,(pk-v)/pk); }); return {cagr:(Math.pow(Math.max(fin,1e-9)/cap,1/yrs)-1)*100, mdd:m*100, fin}; }
