@@ -1,12 +1,17 @@
 {
   "schema": 1,
-  "date": "2026-10-30",
-  "generatedAt": "2026-10-30T02:23:34.240402+09:00",
-  "status": "research",
+  "date": "2026-10-31",
+  "generatedAt": "2026-10-31T01:40:03.729099+09:00",
+  "status": "degraded",
   "mode": "close30-paper-shadow-nightly",
-  "archiveDays": 6,
-  "freshLedgers": 5,
-  "errors": [],
+  "archiveDays": 7,
+  "freshLedgers": 6,
+  "errors": [
+    {
+      "date": "2026-10-24",
+      "error": "curl HTTP/network failure (exit 28) | curl HTTP/network failure (exit 22)"
+    }
+  ],
   "sourceRule": "Actual signal-time Durable Object evidence, no post-hoc signal reconstruction",
   "feesPct": 0.23,
   "mainVariant": "baseline",
@@ -15,16 +20,16 @@
       "name": "baseline",
       "kind": "day",
       "summary": {
-        "trades": 8,
-        "observedDays": 4,
-        "winRate": 37.5,
-        "avgPnl": -0.34756808071618495,
-        "profitFactor": 0.11804561394081725,
+        "trades": 10,
+        "observedDays": 5,
+        "winRate": 50.0,
+        "avgPnl": -0.005326593959801068,
+        "profitFactor": 0.9831047024804365,
         "mddPct": -3.053554641582823,
         "worst": -0.8449116064565696,
         "firstHalfAvg": null,
-        "secondHalfAvg": -0.34756808071618495,
-        "unsettled": 7
+        "secondHalfAvg": -0.005326593959801068,
+        "unsettled": 8
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -33,16 +38,16 @@
       "name": "dip_1",
       "kind": "day",
       "summary": {
-        "trades": 9,
-        "observedDays": 4,
-        "winRate": 33.33333333333333,
-        "avgPnl": -0.243539380871102,
-        "profitFactor": 0.3520414916326492,
+        "trades": 11,
+        "observedDays": 5,
+        "winRate": 45.45454545454545,
+        "avgPnl": 0.048674934390141,
+        "profitFactor": 1.158282736434902,
         "mddPct": -2.513707732170789,
         "worst": -0.8449116064565696,
         "firstHalfAvg": null,
-        "secondHalfAvg": -0.243539380871102,
-        "unsettled": 6
+        "secondHalfAvg": 0.048674934390141,
+        "unsettled": 7
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -51,16 +56,16 @@
       "name": "dip_2",
       "kind": "day",
       "summary": {
-        "trades": 9,
-        "observedDays": 4,
-        "winRate": 44.44444444444444,
-        "avgPnl": 0.060746472550679824,
-        "profitFactor": 1.3186170050547954,
+        "trades": 11,
+        "observedDays": 5,
+        "winRate": 54.54545454545454,
+        "avgPnl": 0.2976360871897807,
+        "profitFactor": 2.908023191145809,
         "mddPct": -1.4789958932341474,
         "worst": -0.6591845493562207,
         "firstHalfAvg": null,
-        "secondHalfAvg": 0.060746472550679824,
-        "unsettled": 5
+        "secondHalfAvg": 0.2976360871897807,
+        "unsettled": 6
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -69,16 +74,16 @@
       "name": "dip_3",
       "kind": "day",
       "summary": {
-        "trades": 7,
-        "observedDays": 3,
-        "winRate": 42.857142857142854,
-        "avgPnl": 0.14870931565668105,
-        "profitFactor": 2.1388753499250597,
+        "trades": 9,
+        "observedDays": 4,
+        "winRate": 55.55555555555556,
+        "avgPnl": 0.4186937684142485,
+        "profitFactor": 5.122673907411727,
         "mddPct": -0.6767537424072434,
         "worst": -0.6591845493562207,
         "firstHalfAvg": null,
-        "secondHalfAvg": 0.14870931565668105,
-        "unsettled": 4
+        "secondHalfAvg": 0.4186937684142485,
+        "unsettled": 5
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -87,16 +92,16 @@
       "name": "dip_volume",
       "kind": "day",
       "summary": {
-        "trades": 5,
-        "observedDays": 3,
-        "winRate": 60.0,
-        "avgPnl": 0.28944473892886036,
-        "profitFactor": 2.7119685862250753,
+        "trades": 7,
+        "observedDays": 4,
+        "winRate": 71.42857142857143,
+        "avgPnl": 0.6448488745335926,
+        "profitFactor": 6.339690844647246,
         "mddPct": -0.8439411348747594,
         "worst": -0.6153564547206201,
         "firstHalfAvg": null,
-        "secondHalfAvg": 0.28944473892886036,
-        "unsettled": 3
+        "secondHalfAvg": 0.6448488745335926,
+        "unsettled": 4
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -105,15 +110,15 @@
       "name": "dip_vol2",
       "kind": "day",
       "summary": {
-        "trades": 2,
-        "observedDays": 1,
+        "trades": 3,
+        "observedDays": 2,
         "winRate": 100.0,
-        "avgPnl": 0.8920917624461757,
+        "avgPnl": 0.735926098711393,
         "profitFactor": 999,
         "mddPct": 0.0,
-        "worst": 0.7124083769633551,
+        "worst": 0.42359477124182776,
         "firstHalfAvg": null,
-        "secondHalfAvg": 0.8920917624461757,
+        "secondHalfAvg": 0.735926098711393,
         "unsettled": 0
       },
       "status": "collecting",
@@ -123,16 +128,16 @@
       "name": "momentum",
       "kind": "day",
       "summary": {
-        "trades": 11,
-        "observedDays": 4,
-        "winRate": 9.090909090909092,
-        "avgPnl": -0.42855907166890433,
-        "profitFactor": 0.1045201271416397,
+        "trades": 12,
+        "observedDays": 5,
+        "winRate": 16.666666666666664,
+        "avgPnl": -0.3840169616464767,
+        "profitFactor": 0.12464522657328045,
         "mddPct": -4.6270526908220315,
         "worst": -1.1390909090909038,
         "firstHalfAvg": null,
-        "secondHalfAvg": -0.42855907166890433,
-        "unsettled": 4
+        "secondHalfAvg": -0.3840169616464767,
+        "unsettled": 6
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -150,7 +155,7 @@
         "worst": -1.1390909090909038,
         "firstHalfAvg": null,
         "secondHalfAvg": -0.3987672692307034,
-        "unsettled": 3
+        "unsettled": 6
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -159,15 +164,15 @@
       "name": "up_volume",
       "kind": "day",
       "summary": {
-        "trades": 5,
-        "observedDays": 2,
-        "winRate": 0.0,
-        "avgPnl": -0.6062129543495507,
-        "profitFactor": 0.0,
+        "trades": 6,
+        "observedDays": 3,
+        "winRate": 16.666666666666664,
+        "avgPnl": -0.38263563441612986,
+        "profitFactor": 0.24257184211441932,
         "mddPct": -2.9971598621744477,
         "worst": -1.1169179600886956,
         "firstHalfAvg": null,
-        "secondHalfAvg": -0.6062129543495507,
+        "secondHalfAvg": -0.38263563441612986,
         "unsettled": 1
       },
       "status": "collecting",
@@ -177,16 +182,16 @@
       "name": "flat",
       "kind": "day",
       "summary": {
-        "trades": 10,
-        "observedDays": 4,
-        "winRate": 50.0,
-        "avgPnl": -0.036949016945570866,
-        "profitFactor": 0.656077941105522,
+        "trades": 12,
+        "observedDays": 5,
+        "winRate": 58.333333333333336,
+        "avgPnl": 0.14976587072381292,
+        "profitFactor": 2.672827832599719,
         "mddPct": -0.6372193288095129,
         "worst": -0.408359096313907,
         "firstHalfAvg": null,
-        "secondHalfAvg": -0.036949016945570866,
-        "unsettled": 4
+        "secondHalfAvg": 0.14976587072381292,
+        "unsettled": 5
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -195,16 +200,16 @@
       "name": "all",
       "kind": "day",
       "summary": {
-        "trades": 10,
-        "observedDays": 4,
-        "winRate": 20.0,
-        "avgPnl": -0.4409315834718206,
-        "profitFactor": 0.06572560592622065,
+        "trades": 12,
+        "observedDays": 5,
+        "winRate": 33.33333333333333,
+        "avgPnl": -0.14016976071556142,
+        "profitFactor": 0.6435990802141291,
         "mddPct": -4.409431548807696,
         "worst": -1.1390909090909038,
         "firstHalfAvg": null,
-        "secondHalfAvg": -0.4409315834718206,
-        "unsettled": 5
+        "secondHalfAvg": -0.14016976071556142,
+        "unsettled": 6
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -222,7 +227,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 18
+        "unsettled": 21
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -240,7 +245,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 18
+        "unsettled": 21
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -258,7 +263,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 18
+        "unsettled": 21
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -276,7 +281,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 14
+        "unsettled": 17
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -294,7 +299,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 11
+        "unsettled": 14
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -312,7 +317,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 9
+        "unsettled": 12
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -330,7 +335,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 18
+        "unsettled": 21
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -348,7 +353,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 17
+        "unsettled": 20
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -366,7 +371,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 11
+        "unsettled": 14
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -384,7 +389,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 17
+        "unsettled": 20
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -402,7 +407,7 @@
         "worst": null,
         "firstHalfAvg": null,
         "secondHalfAvg": null,
-        "unsettled": 18
+        "unsettled": 21
       },
       "status": "collecting",
       "eligibleToPromote": false
@@ -411,7 +416,7 @@
   "candidates": [],
   "promotion": {
     "day": {
-      "date": "2026-10-29",
+      "date": "2026-10-30",
       "leader": null,
       "leaderStreak": 0,
       "reviewReady": false,
@@ -419,7 +424,7 @@
       "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
     },
     "overnight": {
-      "date": "2026-10-30",
+      "date": "2026-10-31",
       "leader": null,
       "leaderStreak": 0,
       "reviewReady": false,
@@ -427,5 +432,5 @@
       "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
     }
   },
-  "fullPaperTradeCount": 298
+  "fullPaperTradeCount": 360
 }
