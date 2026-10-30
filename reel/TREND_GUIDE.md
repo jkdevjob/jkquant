@@ -15,6 +15,19 @@ cd reel && node trends/scan-youtube.mjs      # → trends/YYYY-MM-DD.md / .json
 - 인스타는 공개 데이터를 가져올 길이 없어서, Metricool 에 경쟁 계정을 넣어 두면 그 릴스도 같이 본다
   (`getAnalyticsDataByMetrics` 의 `IGCR01~10` — 경쟁 계정이 없으면 건너뛴다).
 
+## 1-1. 기법 학습 — 매일 다른 인기 영상 보기
+
+```
+cd reel && node trends/frames.mjs --n 6     # → trends/frames/YYYY-MM-DD/sheet.jpg (행 번호 = 목록 순서)
+```
+
+- 오늘 리포트에서 **아직 안 본** 인기 쇼츠 6편(광고 제외)의 첫 장면 + 중간 장면 3장을 한 장으로 붙인다.
+  본 영상은 `trends/seen.json` 에 쌓여서 다음 날엔 다른 영상을 본다. 이미지는 커밋하지 않는다.
+- sheet.jpg 를 직접 보고 기법을 적는다: 첫 장면에 무엇이 보이나(제목 띠·숫자·얼굴), 글자 크기·색, 화면이 바뀌는지/한 장으로 끝나는지,
+  질문→답 구조, 끝의 행동 요청 등.
+- `trends/LEARNINGS.md` 에 날짜별로 적고, 여러 날 반복해서 보이는 기법은 위쪽 표로 올린다.
+- **오늘 영상(동향·이슈 둘 다)에 1~2개 적용**하고 queue.json 항목에 `"techniques": [...]` 로 남긴다.
+
 ## 2. 분석 (리포트를 읽고 메모)
 
 - 빼고 본다: 증권사·운용사 공식 채널 광고, 특정 정치인 공격형 영상, 연예인 가십.
