@@ -23,7 +23,7 @@ const post=JSON.parse(fs.readFileSync(process.argv[2],'utf8')); const GO=process
     return {public:g('open_public'),comment:g('publish-option-comment'),sympathy:g('publish-option-sympathy'),search:g('publish-option-search'),setDefault:g('set-default'),notice:g('set-notice'),now:g('radio_time1'),
       cat:l.querySelector('button[class*="selectbox_button"]').innerText.trim(),topic:(l.innerText.match(/주제\n(.+)/)||[])[1],tags:[...l.querySelectorAll('span[id^="tag-item-"]')].map(x=>x.getAttribute('aria-label'))}});
   console.log(JSON.stringify(st));
-  const ok=st.public&&st.comment&&st.sympathy&&st.search&&!st.setDefault&&!st.notice&&st.now&&st.cat==='게시판'&&/비즈니스·경제/.test(st.topic||'')&&JSON.stringify(st.tags)===JSON.stringify(post.tags);
+  const ok=st.public&&st.comment&&st.sympathy&&st.search&&!st.setDefault&&!st.notice&&st.now&&['핫이슈 분석','경제','게시판'].includes(st.cat)&&/비즈니스·경제/.test(st.topic||'')&&JSON.stringify(st.tags)===JSON.stringify(post.tags);
   await p.screenshot({path:'pub_settings.png'});
   if(!ok){ console.log('SETTINGS MISMATCH — not publishing'); await b.close(); return; }
   if(!GO){ console.log('settings ok, stopped before publish'); await b.close(); return; }
