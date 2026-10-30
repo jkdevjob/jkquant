@@ -1,0 +1,377 @@
+{
+  "ok": true,
+  "date": "2026-10-30",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-30",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-30T06:40:58.446Z",
+    "updatedAt": "2026-10-30T15:05:50.989Z",
+    "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1793372747392,
+        "capturedAt": "2026-10-30T15:05:50.943Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:close30",
+        "scheduledTime": 1793342447392,
+        "capturedAt": "2026-10-30T06:41:02.273Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1793342447392,
+        "capturedAt": "2026-10-30T06:41:01.158Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1793342447392,
+        "capturedAt": "2026-10-30T06:40:58.311Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-10-30",
+        "capturedAt": "2026-10-30T15:05:50.943Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타",
+          "date": "2026-10-30",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 2,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "close:close30",
+        "date": "2026-10-30",
+        "capturedAt": "2026-10-30T06:41:02.273Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "close30",
+          "name": "⑤ 종가 30분 · 코스닥150 레버리지 장 마감 30분 반등(실험)",
+          "date": "2026-10-30",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "15:00",
+              "entryPrice": 4740,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 4785,
+              "qty": 0,
+              "notional": 0,
+              "pnlPct": 0.8666244725738448,
+              "pnlAmount": 0,
+              "reason": "종가 청산",
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "15:00:50",
+                "price": 4740,
+                "sofarPct": -8.93,
+                "th": 0,
+                "version": "close30_dip_v1",
+                "reason": "price_vs_prev_close<0%"
+              }
+            }
+          ],
+          "open": [],
+          "watched": 1,
+          "exits": 1,
+          "wins": 1,
+          "losses": 0,
+          "winRate": 100,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": 0.8666244725738448,
+          "candidates": 1,
+          "entries": 1,
+          "strategyVersion": "close30_dip_v1",
+          "params": {
+            "code": "233740",
+            "th": 0
+          },
+          "note": "15:00 전일 대비 -8.93% → 매수"
+        }
+      },
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-30",
+        "capturedAt": "2026-10-30T06:41:01.158Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-30",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "2026-10-29 15:30 종가",
+              "entryPrice": 5205,
+              "exitTime": "09:00 시가",
+              "exitPrice": 5005,
+              "qty": 0,
+              "notional": 0,
+              "pnlPct": -4.064582132564846,
+              "pnlAmount": 0,
+              "reason": "다음 날 시가 청산",
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "qty": 0,
+                "avg": null
+              },
+              "signal": {
+                "at": "15:21:51",
+                "expectedPrice": 5200,
+                "basePrice": 5545,
+                "dropPct": -6.2218214607754785,
+                "th": -4.75,
+                "version": "g_etf_th4.75",
+                "reason": "expected_close_vs_base<=-4.75%"
+              }
+            }
+          ],
+          "open": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "15:30 종가",
+              "entryPrice": 4785,
+              "qty": 0,
+              "pnlPct": 0,
+              "reason": "내일 09:00 시가 매도",
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "qty": 0,
+                "avg": null
+              },
+              "signal": {
+                "at": "15:21:53",
+                "expectedPrice": 4780,
+                "basePrice": 5205,
+                "dropPct": -8.165225744476468,
+                "th": -4.75,
+                "version": "g_etf_th4.75",
+                "reason": "expected_close_vs_base<=-4.75%"
+              }
+            }
+          ],
+          "watched": 1,
+          "exits": 1,
+          "wins": 0,
+          "losses": 1,
+          "winRate": 0,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": -4.064582132564846,
+          "candidates": 1,
+          "entries": 1,
+          "strategyVersion": "g_etf_th4.75",
+          "params": {
+            "code": "233740",
+            "th": -4.75
+          },
+          "note": "15:21 예상 하락 -8.17% → 종가 매수"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-30",
+        "capturedAt": "2026-10-30T06:40:58.311Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-30",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [
+            {
+              "name": "대우건설",
+              "code": "047040",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:11",
+                "expectedPrice": 10900,
+                "basePrice": 11620,
+                "expectedGapPct": -6.196213425129082,
+                "rsi14Prev": 24.694,
+                "qualified": 21,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 11300,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 10920,
+              "notional": 0,
+              "pnlPct": -3.858318584070795,
+              "pnlAmount": 0,
+              "reason": "종가 청산"
+            },
+            {
+              "name": "HD한국조선해양",
+              "code": "009540",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:11",
+                "expectedPrice": 223000,
+                "basePrice": 233000,
+                "expectedGapPct": -4.29184549356223,
+                "rsi14Prev": 22.312,
+                "qualified": 21,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 229000,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 231500,
+              "notional": 0,
+              "pnlPct": 0.20668122270742062,
+              "pnlAmount": 0,
+              "reason": "종가 청산"
+            },
+            {
+              "name": "태웅",
+              "code": "044490",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:11",
+                "expectedPrice": 22600,
+                "basePrice": 23600,
+                "expectedGapPct": -4.23728813559322,
+                "rsi14Prev": 28.797,
+                "qualified": 21,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 22850,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 22450,
+              "notional": 0,
+              "pnlPct": -2.637002188183803,
+              "pnlAmount": 0,
+              "reason": "종가 청산"
+            }
+          ],
+          "open": [],
+          "measure": [],
+          "exits": 3,
+          "wins": 1,
+          "losses": 2,
+          "winRate": 33.33333333333333,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": -2.0962131831823925,
+          "watched": 43,
+          "candidates": 21,
+          "entries": 3,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "note": "메인 매매일(통과 21종목)"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}

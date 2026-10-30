@@ -1,0 +1,83 @@
+{
+  "date": "2026-10-30",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": -2.0962131831823925,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "대우건설",
+      "code": "047040",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 11300,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 10920,
+      "qty": 0,
+      "pnlPct": -3.858318584070795,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:11",
+        "expectedPrice": 10900,
+        "basePrice": 11620,
+        "expectedGapPct": -6.196213425129082,
+        "rsi14Prev": 24.694,
+        "qualified": 21,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "HD한국조선해양",
+      "code": "009540",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 229000,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 231500,
+      "qty": 0,
+      "pnlPct": 0.20668122270742062,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:11",
+        "expectedPrice": 223000,
+        "basePrice": 233000,
+        "expectedGapPct": -4.29184549356223,
+        "rsi14Prev": 22.312,
+        "qualified": 21,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "태웅",
+      "code": "044490",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 22850,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 22450,
+      "qty": 0,
+      "pnlPct": -2.637002188183803,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:11",
+        "expectedPrice": 22600,
+        "basePrice": 23600,
+        "expectedGapPct": -4.23728813559322,
+        "rsi14Prev": 28.797,
+        "qualified": 21,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "메인 매매일(통과 21종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-10-31T01:13:12.542336+09:00"
+}
