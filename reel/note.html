@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<style>
+  @font-face { font-family:'Hand'; font-weight:400; font-display:block; src:url('fonts/Gaegu-Regular.ttf'); }
+  @font-face { font-family:'Hand'; font-weight:700; font-display:block; src:url('fonts/Gaegu-Bold.ttf'); }
+  @font-face { font-family:'Pen';  font-weight:400; font-display:block; src:url('fonts/NanumPenScript-Regular.ttf'); }
+  @font-face { font-family:'Sans'; font-weight:400; font-display:block; src:url('fonts/nanum-400.woff2'); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1080px; height:1920px; overflow:hidden; background:#2a211b; }
+
+  /* 책상 */
+  #desk { position:absolute; inset:-60px;
+          background:
+            repeating-linear-gradient(93deg, rgba(255,255,255,.018) 0 3px, transparent 3px 11px),
+            radial-gradient(ellipse at 40% 30%, #4a3a2e 0%, #33281f 55%, #221a14 100%); }
+  #cam { position:absolute; inset:0; transform-origin:50% 45%; }
+
+  /* 스프링 노트 */
+  #pad { position:absolute; left:46px; top:118px; width:988px; height:1760px; perspective:6000px; perspective-origin:50% 0%; }
+  .page { position:absolute; inset:0; transform-origin:50% 34px; backface-visibility:hidden;
+          background:#f7f2e7; border-radius:6px 6px 10px 10px;
+          box-shadow:0 34px 70px rgba(0,0,0,.45), 0 2px 0 rgba(0,0,0,.06); overflow:hidden; }
+  .page .grain { position:absolute; inset:0; opacity:.55; mix-blend-mode:multiply; }
+  .page .light { position:absolute; inset:0;
+          background:linear-gradient(180deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 30%, rgba(0,0,0,.05) 100%); }
+  .page .rules { position:absolute; left:0; right:0; top:206px; bottom:40px;
+          background:repeating-linear-gradient(180deg, transparent 0 86px, rgba(120,150,190,.32) 86px 88px); }
+  .page .margin { position:absolute; top:0; bottom:0; left:104px; width:2px; background:rgba(214,110,110,.45); }
+  .page .holes { position:absolute; left:0; right:0; top:22px; height:24px; }
+  .page .shade { position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; }
+  .stain { position:absolute; border-radius:50%; mix-blend-mode:multiply; pointer-events:none; }
+
+  .layer { position:absolute; inset:0; overflow:visible; }
+  svg.layer { width:100%; height:100%; }
+  .t { position:absolute; white-space:nowrap; line-height:1.15; transform-origin:0 60%; }
+  .f-bold { font-family:'Hand'; font-weight:700; }
+  .f-reg  { font-family:'Hand'; font-weight:400; }
+  .f-pen  { font-family:'Pen'; }
+  .f-sans { font-family:'Sans'; }
+  .c-ink  { color:#22304a; } .c-red { color:#c0392b; } .c-gray { color:#77797d; } .c-blue { color:#2c5aa0; }
+  .hl { position:absolute; border-radius:10px 4px 12px 6px; background:rgba(255,212,56,.62);
+        mix-blend-mode:multiply; transform-origin:0 50%; }
+  .sticky { position:absolute; background:linear-gradient(170deg,#fff0a0 0%,#ffe680 60%,#f7d965 100%);
+            box-shadow:0 18px 30px rgba(0,0,0,.22), 0 2px 3px rgba(0,0,0,.12); transform-origin:50% 0; }
+  .sticky::before { content:""; position:absolute; left:0; right:0; top:0; height:46px;
+                    background:linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,0)); }
+
+  #binding { position:absolute; left:46px; top:70px; width:988px; height:110px; pointer-events:none; }
+  #vignette { position:absolute; inset:0; pointer-events:none;
+              background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.35) 100%); }
+</style></head>
+<body>
+<div id="desk"></div>
+<div id="cam">
+  <div id="pad"></div>
+  <svg id="binding" viewBox="0 0 988 110"></svg>
+</div>
+<div id="vignette"></div>
+<script>
+(async function(){
+  const D = window.__DATA__;
+  const W = 988, H = 1760;
+  const COLORS = { ink:"#22304a", red:"#c0392b", gray:"#77797d", blue:"#2c5aa0" };
+
+  // ── 결정적 난수 ──
+  function rng(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  const ease = x => { x = Math.min(1, Math.max(0, x)); return x < .5 ? 2*x*x : 1 - Math.pow(-2*x + 2, 2) / 2; };
+  const clamp01 = x => Math.min(1, Math.max(0, x));
+  const NS = "http://www.w3.org/2000/svg";
+
+  // ── 손으로 그린 선(살짝 흔들리는 경로) ──
+  function smoothPath(pts){
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++){
+      const p0 = pts[i-1] || pts[i], p1 = pts[i], p2 = pts[i+1], p3 = pts[i+2] || p2;
+      const c1 = [p1[0] + (p2[0]-p0[0])/6, p1[1] + (p2[1]-p0[1])/6];
+      const c2 = [p2[0] - (p3[0]-p1[0])/6, p2[1] - (p3[1]-p1[1])/6];
+      d += ` C${c1[0].toFixed(1)},${c1[1].toFixed(1)} ${c2[0].toFixed(1)},${c2[1].toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+  }
+  function roughEllipse(cx, cy, rx, ry, R){
+    const pts = [], start = -2.3 + R()*0.4, turns = 1.12, n = 44;
+    for (let i = 0; i <= n; i++){
+      const a = start + (i/n) * Math.PI * 2 * turns;
+      const k = 1 + (R()-.5)*0.05 + (i/n)*0.07;
+      pts.push([cx + Math.cos(a)*rx*k, cy + Math.sin(a)*ry*k]);
+    }
+    return smoothPath(pts);
+  }
+  function roughLine(x1, y1, x2, y2, R, wob = 3, n = 8){
+    const pts = [];
+    for (let i = 0; i <= n; i++){
+      const f = i/n, w = (i === 0 || i === n) ? 0 : (R()-.5)*wob*2;
+      const nx = -(y2-y1), ny = (x2-x1), L = Math.hypot(nx, ny) || 1;
+      pts.push([x1 + (x2-x1)*f + nx/L*w, y1 + (y2-y1)*f + ny/L*w]);
+    }
+    return smoothPath(pts);
+  }
+  function roughBox(x, y, w, h, R){
+    const o = () => (R()-.5)*8;
+    const pts = [[x+o(), y+o()], [x+w*.5+o(), y+o()*.5], [x+w+o(), y+o()], [x+w+o()*.5, y+h*.5+o()],
+                 [x+w+o(), y+h+o()], [x+w*.5+o(), y+h+o()*.5], [x+o(), y+h+o()], [x+o()*.5, y+h*.5+o()], [x+o()+6, y+o()-4]];
+    return smoothPath(pts);
+  }
+  function curvedArrow(x1, y1, x2, y2, bend, R){
+    const mx = (x1+x2)/2, my = (y1+y2)/2, nx = -(y2-y1), ny = (x2-x1), L = Math.hypot(nx, ny) || 1;
+    const cx = mx + nx/L*bend, cy = my + ny/L*bend, pts = [];
+    for (let i = 0; i <= 10; i++){ const f = i/10;
+      pts.push([(1-f)*(1-f)*x1 + 2*(1-f)*f*cx + f*f*x2 + (i&&i<10?(R()-.5)*3:0), (1-f)*(1-f)*y1 + 2*(1-f)*f*cy + f*f*y2 + (i&&i<10?(R()-.5)*3:0)]); }
+    const ang = Math.atan2(y2-cy, x2-cx), hl = 30;
+    const head = `M${(x2-Math.cos(ang-0.45)*hl).toFixed(1)},${(y2-Math.sin(ang-0.45)*hl).toFixed(1)} L${x2},${y2} L${(x2-Math.cos(ang+0.45)*hl).toFixed(1)},${(y2-Math.sin(ang+0.45)*hl).toFixed(1)}`;
+    return { body: smoothPath(pts), head };
+  }
+
+  // ── 종이 결 ──
+  function grainCanvas(seed){
+    const c = document.createElement("canvas"); c.width = W; c.height = H; c.className = "grain";
+    const g = c.getContext("2d"), R = rng(seed);
+    for (let i = 0; i < 26000; i++){
+      const v = 150 + R()*60; g.fillStyle = `rgba(${v-10},${v-20},${v-40},${0.05 + R()*0.08})`;
+      g.fillRect(R()*W, R()*H, 1 + R()*1.6, 1 + R()*1.6);
+    }
+    for (let i = 0; i < 70; i++){ // 섬유
+      g.strokeStyle = `rgba(150,130,100,${0.04 + R()*0.05})`; g.lineWidth = 0.8;
+      const x = R()*W, y = R()*H; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (R()-.5)*60, y + (R()-.5)*20); g.stroke();
+    }
+    return c;
+  }
+  function coffeeStain(page, s){
+    const el = document.createElement("div"); el.className = "stain";
+    el.style.cssText += `left:${s.x}px;top:${s.y}px;width:${s.r*2}px;height:${s.r*1.92}px;opacity:${s.opacity ?? .2};` +
+      `background:radial-gradient(ellipse at 50% 50%, rgba(160,110,60,0) 60%, rgba(150,95,45,.55) 68%, rgba(150,95,45,.12) 74%, rgba(160,110,60,0) 80%),` +
+      `radial-gradient(ellipse at 46% 52%, rgba(170,120,70,.10) 0%, rgba(170,120,70,0) 62%);transform:rotate(${s.rot||-8}deg)`;
+    page.appendChild(el);
+  }
+
+  // ── 스프링 ──
+  (function binding(){
+    const svg = document.getElementById("binding");
+    for (let x = 40; x < W - 20; x += 62){
+      const ring = document.createElementNS(NS, "path");
+      ring.setAttribute("d", `M${x},64 C${x-4},30 ${x+26},18 ${x+30},50 L${x+30},70`);
+      ring.setAttribute("fill", "none"); ring.setAttribute("stroke", "#9aa0a6"); ring.setAttribute("stroke-width", "7");
+      ring.setAttribute("stroke-linecap", "round"); svg.appendChild(ring);
+      const hi = document.createElementNS(NS, "path");
+      hi.setAttribute("d", `M${x+3},58 C${x+1},36 ${x+20},26 ${x+25},42`);
+      hi.setAttribute("fill", "none"); hi.setAttribute("stroke", "rgba(255,255,255,.55)"); hi.setAttribute("stroke-width", "2");
+      svg.appendChild(hi);
+    }
+  })();
+
+  // ── 페이지 만들기 ──
+  const pad = document.getElementById("pad");
+  const pages = [], anim = [], audio = { writes: [], flips: [] };
+
+  function makeText(container, it, R){
+    const el = document.createElement("div");
+    el.className = `t f-${it.font || "bold"} c-${it.color || "ink"}`;
+    el.textContent = it.text;
+    el.style.fontSize = (it.size || 72) + "px";
+    el.style.left = (it.x ?? 0) + "px"; el.style.top = (it.y ?? 0) + "px";
+    const rot = it.rot ?? (R() - .5) * 1.4;
+    el.style.transform = `rotate(${rot}deg)`;
+    container.appendChild(el);
+    return el;
+  }
+
+  D.pages.forEach((pg, pi) => {
+    const page = document.createElement("div"); page.className = "page";
+    page.style.zIndex = String(100 - pi);
+    page.appendChild(grainCanvas(1000 + pi*17));
+    const rules = document.createElement("div"); rules.className = "rules"; page.appendChild(rules);
+    const margin = document.createElement("div"); margin.className = "margin"; page.appendChild(margin);
+    const holes = document.createElementNS(NS, "svg"); holes.setAttribute("class", "holes"); holes.setAttribute("viewBox", `0 0 ${W} 24`);
+    for (let x = 40; x < W - 20; x += 62){ const c = document.createElementNS(NS, "circle");
+      c.setAttribute("cx", x + 15); c.setAttribute("cy", 12); c.setAttribute("r", 9); c.setAttribute("fill", "#2a211b"); holes.appendChild(c); }
+    page.appendChild(holes);
+    (pg.stains || []).forEach(s => coffeeStain(page, s));
+    const light = document.createElement("div"); light.className = "light"; page.appendChild(light);
+
+    const under = document.createElementNS(NS, "svg"); under.setAttribute("class", "layer"); page.appendChild(under);
+    const hlLayer = document.createElement("div"); hlLayer.className = "layer"; page.appendChild(hlLayer);
+    const textLayer = document.createElement("div"); textLayer.className = "layer"; page.appendChild(textLayer);
+    const over = document.createElementNS(NS, "svg"); over.setAttribute("class", "layer"); over.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    page.appendChild(over);
+    const shade = document.createElement("div"); shade.className = "shade"; page.appendChild(shade);
+    pad.appendChild(page);
+    pages.push({ el: page, start: pg.start || 0, shade, textLayer, hlLayer, over, items: pg.items || [] });
+  });
+
+  await document.fonts.ready;
+  await new Promise(r => setTimeout(r, 50));
+
+  // 1차: 텍스트 배치(after 처리)
+  const byId = {};
+  pages.forEach((P, pi) => {
+    const R = rng(77 + pi*31);
+    P.items.forEach((it) => {
+      if (it.type === "sticky"){
+        const st = document.createElement("div"); st.className = "sticky";
+        st.style.cssText += `left:${it.x}px;top:${it.y}px;width:${it.w}px;height:${it.h}px;`;
+        P.textLayer.appendChild(st);
+        const sHl = document.createElement("div"); sHl.className = "layer"; st.appendChild(sHl);
+        const sTx = document.createElement("div"); sTx.className = "layer"; st.appendChild(sTx);
+        const sOv = document.createElementNS(NS, "svg"); sOv.setAttribute("class", "layer"); st.appendChild(sOv);
+        it._el = st; it._hl = sHl; it._tx = sTx; it._ov = sOv;
+        anim.push({ kind: "sticky", it, el: st });
+        (it.items || []).forEach(sub => {
+          if (sub.type === "text"){ sub._el = makeText(sTx, sub, R); if (sub.id) byId[sub.id] = { it: sub, host: it }; }
+        });
+        return;
+      }
+      if (it.type === "text"){ it._el = makeText(P.textLayer, it, R); if (it.id) byId[it.id] = { it, host: null }; }
+    });
+  });
+  // after: 앞 글자 바로 뒤에 이어 쓰기
+  const placeAfter = (it) => {
+    if (!it.after) return; const prev = byId[it.after].it._el;
+    it._el.style.left = (prev.offsetLeft + prev.offsetWidth + (it.gap ?? 22)) + "px";
+    if (it.y == null) it._el.style.top = prev.offsetTop + "px";
+  };
+  pages.forEach(P => P.items.forEach(it => { if (it.type === "text") placeAfter(it); if (it.type === "sticky") (it.items||[]).forEach(s => s.type === "text" && placeAfter(s)); }));
+
+  // 2차: 도형·형광펜 만들기
+  function addPath(svg, d, color, width){
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", d); p.setAttribute("fill", "none"); p.setAttribute("stroke", COLORS[color] || color);
+    p.setAttribute("stroke-width", width); p.setAttribute("stroke-linecap", "round"); p.setAttribute("stroke-linejoin", "round");
+    p.style.opacity = .92; svg.appendChild(p);
+    const L = p.getTotalLength(); p.style.strokeDasharray = `${L} ${L}`; p.style.strokeDashoffset = L; p.style.visibility = "hidden";
+    return { p, L };
+  }
+  const bbox = (el) => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight });
+
+  pages.forEach((P, pi) => {
+    const R = rng(500 + pi*13);
+    const handle = (it, ovSvg, hlLayer) => {
+      const T = it.target ? byId[it.target].it._el : null;
+      const b = T ? bbox(T) : null;
+      if (it.type === "text"){
+        if (it.dur > 0) audio.writes.push([it.at, it.at + it.dur]);
+        anim.push({ kind: it.fade ? "fade" : "text", it, el: it._el });
+      } else if (it.type === "circle"){
+        const pad = it.pad ?? 16;
+        const d = roughEllipse(b.x + b.w/2, b.y + b.h*0.55, b.w/2 + pad, b.h/2 + pad*0.7, R);
+        anim.push({ kind: "stroke", it, ...addPath(ovSvg, d, it.color || "red", it.width || 6) });
+        audio.writes.push([it.at, it.at + it.dur]);
+      } else if (it.type === "underline"){
+        const y = b.y + b.h*0.98;
+        anim.push({ kind: "stroke", it, ...addPath(ovSvg, roughLine(b.x - 4, y, b.x + b.w + 6, y + (R()-.5)*6, R, 3), it.color || "red", it.width || 6) });
+        audio.writes.push([it.at, it.at + it.dur]);
+      } else if (it.type === "box"){
+        anim.push({ kind: "stroke", it, ...addPath(ovSvg, roughBox(it.x, it.y, it.w, it.h, R), it.color || "ink", it.width || 5) });
+        audio.writes.push([it.at, it.at + it.dur]);
+      } else if (it.type === "arrow"){
+        const a = curvedArrow(it.x1, it.y1, it.x2, it.y2, it.bend ?? 18, R);
+        const body = addPath(ovSvg, a.body, it.color || "ink", it.width || 6);
+        const head = addPath(ovSvg, a.head, it.color || "ink", it.width || 6);
+        anim.push({ kind: "arrow", it, body, head });
+        audio.writes.push([it.at, it.at + it.dur]);
+      } else if (it.type === "highlight"){
+        const el = document.createElement("div"); el.className = "hl";
+        const padX = 10, top = b.y + b.h*0.38, h = b.h*0.52;
+        el.style.cssText += `left:${b.x - padX}px;top:${top}px;width:${b.w + padX*2}px;height:${h}px;`;
+        hlLayer.appendChild(el);
+        anim.push({ kind: "hl", it, el, rot: (R()-.5)*1.6 });
+      }
+    };
+    P.items.forEach(it => {
+      if (it.type === "sticky"){ (it.items || []).forEach(sub => handle(sub, it._ov, it._hl)); return; }
+      handle(it, P.over, P.hlLayer);
+    });
+    if (pi > 0) audio.flips.push(P.start);
+  });
+  // 스티커 붙이는 소리 대신 짧은 종이 소리로 처리
+  anim.filter(a => a.kind === "sticky").forEach(a => audio.flips.push(a.it.at));
+
+  window.__AUDIO__ = audio;
+  const FLIP = D.flip || 0.7;
+  const cam = document.getElementById("cam");
+
+  window.renderAt = function(t){
+    // 손에 든 카메라처럼 아주 약하게 흔들리고 천천히 다가감
+    const dur = D.duration || 20;
+    const s = 1.0 + 0.03 * (t / dur);
+    const dx = 2.4*Math.sin(t*0.71) + 1.6*Math.sin(t*1.37 + 1.3), dy = 2.2*Math.sin(t*0.93 + 2.1) + 1.2*Math.sin(t*1.9);
+    const r = 0.18*Math.sin(t*0.47 + .4);
+    cam.style.transform = `translate(${dx}px,${dy}px) rotate(${r}deg) scale(${s})`;
+
+    // 페이지 넘김: 아래쪽이 들리면서 위로 넘어감(넘긴 장은 display:none — 자식의 visibility 가 새어 나오지 않게)
+    pages.forEach((P, pi) => {
+      const next = pages[pi + 1];
+      if (!next){ P.el.style.transform = "none"; P.el.style.display = "block"; return; }
+      const p = ease((t - next.start) / FLIP);
+      if (t >= next.start + FLIP){ P.el.style.display = "none"; return; }
+      P.el.style.display = "block";
+      P.el.style.transform = p > 0 ? `rotateX(${(p*90).toFixed(2)}deg)` : "none";
+      P.shade.style.opacity = (p * 0.18).toFixed(3);
+      next.shade.style.opacity = p > 0 ? ((1 - p) * 0.22).toFixed(3) : "0";
+    });
+
+    anim.forEach(a => {
+      const it = a.it, dur = it.dur || 0, p = dur > 0 ? clamp01((t - it.at) / dur) : (t >= (it.at || 0) ? 1 : 0);
+      if (a.kind === "text"){
+        if (p <= 0){ a.el.style.visibility = "hidden"; return; }
+        a.el.style.visibility = "visible";
+        if (p >= 1){ a.el.style.webkitMaskImage = "none"; return; }
+        const q = p * 112;
+        a.el.style.webkitMaskImage = `linear-gradient(90deg,#000 ${(q-12).toFixed(1)}%,rgba(0,0,0,0) ${q.toFixed(1)}%)`;
+      } else if (a.kind === "fade"){
+        a.el.style.visibility = p > 0 ? "visible" : "hidden"; a.el.style.opacity = ease(p).toFixed(3);
+      } else if (a.kind === "stroke"){
+        a.p.style.visibility = p > 0 ? "visible" : "hidden"; a.p.style.strokeDashoffset = (a.L * (1 - ease(p))).toFixed(1);
+      } else if (a.kind === "arrow"){
+        const pb = clamp01(p / 0.8), ph = clamp01((p - 0.8) / 0.2);
+        a.body.p.style.visibility = pb > 0 ? "visible" : "hidden"; a.body.p.style.strokeDashoffset = (a.body.L * (1 - ease(pb))).toFixed(1);
+        a.head.p.style.visibility = ph > 0 ? "visible" : "hidden"; a.head.p.style.strokeDashoffset = (a.head.L * (1 - ease(ph))).toFixed(1);
+      } else if (a.kind === "hl"){
+        a.el.style.visibility = p > 0 ? "visible" : "hidden";
+        a.el.style.transform = `rotate(${a.rot}deg) scaleX(${ease(p).toFixed(3)})`;
+      } else if (a.kind === "sticky"){
+        const q = clamp01((t - it.at) / 0.38);
+        a.el.style.visibility = q > 0 ? "visible" : "hidden";
+        a.el.style.opacity = Math.min(1, q * 1.6).toFixed(3);
+        a.el.style.transform = `translateY(${((1 - ease(q)) * -46).toFixed(1)}px) rotate(${it.rot ?? -2}deg) scale(${(1.05 - 0.05*ease(q)).toFixed(3)})`;
+      }
+    });
+  };
+  window.renderAt(0);
+  window.__READY__ = true;
+})();
+</script>
+</body></html>
