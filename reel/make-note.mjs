@@ -72,7 +72,7 @@ async function main(){
       process.stdout.write(`▶ 노트 영상 프레임 ${total}장 (${framesDir}) `);
       for (let f = 0; f < total; f++){
         await page.evaluate(x => window.renderAt(x), f / fps);
-        await page.screenshot({ path: path.join(framesDir, `f_${String(f).padStart(5, "0")}.png`) });
+        await page.screenshot({ path: path.join(framesDir, `f_${String(f).padStart(5, "0")}.jpg`), type: "jpeg", quality: 92 });
         if (f % 30 === 0) process.stdout.write("·");
       }
     } else console.log(`▶ 프레임 재사용: ${framesDir}`);
@@ -85,7 +85,7 @@ async function main(){
       `[2:a]bandpass=f=900:width_type=h:w=1400,aeval='val(0)*(${flip})':c=same[flip];` +
       `[3:a]lowpass=f=500,volume=0.05[room];` +
       `[pen][flip][room]amix=inputs=3,volume=3,afade=t=in:d=0.3,afade=t=out:st=${(duration - 1).toFixed(2)}:d=1[aout]`;
-    const args = ["-y", "-framerate", String(fps), "-i", path.join(framesDir, "f_%05d.png"),
+    const args = ["-y", "-framerate", String(fps), "-i", path.join(framesDir, fs.existsSync(path.join(framesDir, "f_00000.jpg")) ? "f_%05d.jpg" : "f_%05d.png"),
       "-f", "lavfi", "-i", `anoisesrc=color=pink:amplitude=0.35:sample_rate=44100:seed=7:d=${duration}`,
       "-f", "lavfi", "-i", `anoisesrc=color=brown:amplitude=0.5:sample_rate=44100:seed=11:d=${duration}`,
       "-f", "lavfi", "-i", `anoisesrc=color=brown:amplitude=0.3:sample_rate=44100:seed=13:d=${duration}`,
