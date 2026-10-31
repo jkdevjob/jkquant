@@ -20,7 +20,9 @@ const V={ base:{}, autoNoY:{autoTp:true}, autoTp:{cashYield:true,autoTp:true}, m
   // 기본 조건 주변(10-30): 큰수 · 하방 LOC 줄 수 · 분할 — 익절 자동 · 이자 없음(앱 조건) 위에서
   aBig10:{autoTp:true,big:10}, aBig15:{autoTp:true,big:15}, aBig25:{autoTp:true,big:25}, aBig30:{autoTp:true,big:30},
   aRows0:{autoTp:true,rows:0}, aRows2:{autoTp:true,rows:2}, aRows4:{autoTp:true,rows:4}, aRows5:{autoTp:true,rows:5},
-  aDiv18:{autoTp:true,divs:18}, aDiv22:{autoTp:true,divs:22} };
+  aDiv18:{autoTp:true,divs:18}, aDiv22:{autoTp:true,divs:22},
+  // 연속 하락일에만 새 사이클(10-31 사용자 질문): 큰수 0.01% = 전일 종가 LOC(그날 하락해야 체결) · dnGate = 전일까지 연속 하락 조건
+  aDn1:{autoTp:true,big:0.01}, aDn2:{autoTp:true,big:0.01,sig:{dnGate:2}}, aDn3:{autoTp:true,big:0.01,sig:{dnGate:3}}, aBig1:{autoTp:true,big:1} };
 const MULT=[1.0003,1.001,1.003,1.01];
 const PAIRS=process.env.PAIRS?process.env.PAIRS.split(',').map(x=>x.split(':')):[].concat(MULT.map(m=>['base','base@'+m]), MULT.map(m=>['autoNoY','autoNoY@'+m]),
   [['autoTp','m1age20'],['autoTp','aNoM1'],['autoNoY','autoTp'],['autoNoY','rp50'],['autoNoY','rp100'],['autoNoY','rpW5']]);

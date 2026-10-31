@@ -56,6 +56,7 @@ const SETUP=`(()=>{
     const P=k=>k-1;  // 전일 확정 지표
     const sig=o.sig||{};
     if(sig.gateMA){ const m=maOf(sig.gateMA); __H.gate=(d)=>{ const k=P(idx[d]); return !(m[k]>0) || closes[k]>m[k]*(1+(sig.gateBand||0)); }; }
+    if(sig.dnGate){ __H.gate=(d)=>{ const k=P(idx[d]); let c=0; for(let j=k;j>0&&closes[j]<closes[j-1];j--) c++; return c>=sig.dnGate-1; }; }   // 새 사이클은 전일까지 (dnGate−1)일 연속 하락일 때만 — 큰수 0.01 과 같이 쓰면 그날도 하락(LOC)이어야 첫 매수
     if(sig.bearDivs){ const m=maOf(sig.bearMA||150); __H.divsAt=(d)=>{ const k=P(idx[d]); return (m[k]>0&&closes[k]<m[k])?sig.bearDivs:o.divs||20; }; }
     if(sig.volDivs){ const v=volOf(sig.volN||60); __H.divsAt=(d)=>{ const k=P(idx[d]); const x=v[k]; if(!(x>0)) return o.divs||20; return x>sig.volHi?sig.volDivs:(o.divs||20); }; }
     if(sig.bearTP){ const m=maOf(sig.bearMA||150); __H.tpAt=(d)=>{ const k=P(idx[d]); return (m[k]>0&&closes[k]<m[k])?sig.bearTP:(o.tgt||20); }; }
