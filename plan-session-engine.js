@@ -63,10 +63,16 @@ function mapDiv(rows){
   for(const x of rows||[]){if(!x||!x.date)continue;const a=+x.amount||+x.dividend||0;if(a>0)m.set(String(x.date),(m.get(String(x.date))||0)+a);}
   return m;
 }
+/* 날짜 축은 TECL·TQQQ 둘 다 있는 날이다. SGOV 는 날짜를 자르지 않는다.
+   예전엔 SGOV(2020-06 상장)까지 교집합에 넣어 그 앞 이력이 통째로 잘렸다 — SMA225·변동성·모멘텀 예열이
+   2020-06 부터 다시 시작해 2021-04 까지 신호가 없었고, 그 전에 시작한 세션은 1년 넘게 현금만 들었다
+   (2020-01 시작 5년 플랜: 2020년 수익 0% · 앞 16개월 무거래). 신호는 두 종목의 전 이력으로 예열한다.
+   SGOV 가 아직 없는 날은 null — 그날 남는 돈은 현금(이자 0)으로 둔다. 상장 뒤 빠진 날은 직전 값으로 잇는다. */
 function commonSeries(tecl,tqqq,sgov,endDate){
   const tm=mapRows(tecl),qm=mapRows(tqqq),sm=mapRows(sgov);
-  const dates=[...(tqqq||[])].map(x=>String(x.date||'')).filter(d=>d&&tm.has(d)&&qm.has(d)&&sm.has(d)&&(!endDate||d<=endDate)).sort();
-  return {dates,tecl:dates.map(d=>tm.get(d)),tqqq:dates.map(d=>qm.get(d)),sgov:dates.map(d=>sm.get(d))};
+  const dates=[...(tqqq||[])].map(x=>String(x.date||'')).filter(d=>d&&tm.has(d)&&qm.has(d)&&(!endDate||d<=endDate)).sort();
+  let lastS=null;
+  return {dates,tecl:dates.map(d=>tm.get(d)),tqqq:dates.map(d=>qm.get(d)),sgov:dates.map(d=>{if(sm.has(d))lastS=sm.get(d);return lastS;})};
 }
 function initialLedger(start,principal){
   return {base:{date:start,tecl:0,tqqq:0,sgov:0,cash:principal,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
@@ -97,14 +103,14 @@ function targetOrders(target,pos,px,cash,date,signalDate,ledger,seq){
   let nTrade=0,avail=Math.max(0,cash),n=seq;
   for(const sym of ['TECL','TQQQ','SGOV']){
     const dq=(target[sym]||0)-(pos[sym]||0);
-    if(dq<0){
+    if(dq<0&&px[sym]>0){
       const q=-dq,p=px[sym],f=alphaFee(q,p),gross=q*p;
       avail+=gross-f;pos[sym]-=q;nTrade++;addTrade(ledger,date,'sell',sym,q,p,f,n++,signalDate);
     }
   }
   for(const sym of ['TECL','TQQQ','SGOV']){
     const dq=(target[sym]||0)-(pos[sym]||0);
-    if(dq>0){
+    if(dq>0&&px[sym]>0){
       const p=px[sym],max=Math.floor(avail/(p*(1+FEE_RATE))),q=Math.max(0,Math.min(dq,max));
       if(q>0){const f=alphaFee(q,p),gross=q*p;avail-=gross+f;pos[sym]+=q;nTrade++;addTrade(ledger,date,'buy',sym,q,p,f,n++,signalDate);}
     }
@@ -144,9 +150,13 @@ function replay(opt){
     if(p>=0){
       const sp={TECL:S.tecl[p],TQQQ:S.tqqq[p],SGOV:S.sgov[p]};
       const ep={TECL:S.tecl[i],TQQQ:S.tqqq[i],SGOV:S.sgov[i]};
-      let total=pos.TECL*sp.TECL+pos.TQQQ*sp.TQQQ+pos.SGOV*sp.SGOV+cash;
+      let total=pos.TECL*sp.TECL+pos.TQQQ*sp.TQQQ+pos.SGOV*(sp.SGOV||0)+cash;
       if(!(total>0))total=inflow;
       let need=false,targetShares={...pos},meta={horizon};
+      // 남는 돈 → SGOV 주수. 상장 전(시세 null)이면 0 — 현금으로 둔다.
+      const sgQty=rest=>sp.SGOV>0?Math.max(0,Math.floor(Math.max(0,rest)/sp.SGOV)):0;
+      // SGOV 가 막 상장한 날(전일 확정 기준): 그동안 현금으로 둔 돈을 한 번 SGOV 로 옮긴다.
+      const sgNew=sp.SGOV>0&&!(p>0&&S.sgov[p-1]>0)&&cash>0;
 
       if(horizon===5){
         const D=DEFAULTS[5],sigma=realizedVol(S.tecl,p,D.ivsLook),mv=tma225[p];
@@ -157,11 +167,11 @@ function replay(opt){
           const up=mv*(1+D.guardBand),dn=mv*(1-D.guardBand),posOn=pos.TQQQ>0;
           const guard=sp.TQQQ>up?'ON':sp.TQQQ<dn?'OFF':(posOn?'ON':'OFF'),guardFlip=(guard==='ON')!==posOn;
           const first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-          need=teclHit||guardFlip||force||first;
+          need=teclHit||guardFlip||force||first||sgNew;
           if(need){
             const tt=(teclHit||force||first)?Math.max(0,Math.floor(total*D.teclWeight*w/sp.TECL)):pos.TECL;
             const tq=(guardFlip||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/sp.TQQQ)):0):pos.TQQQ;
-            const ts=Math.max(0,Math.floor(Math.max(0,total-tt*sp.TECL-tq*sp.TQQQ)/sp.SGOV));
+            const ts=sgQty(total-tt*sp.TECL-tq*sp.TQQQ);
             targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
           }
           meta={horizon,sigma,w,sleeveNow,guard,teclHit,guardFlip};
@@ -183,19 +193,19 @@ function replay(opt){
           }
         }
         const risk=bull?D.bullWeight:D.dipWeights[stage],curQ=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-        need=pos.TECL>0||Math.abs(curQ-risk)>.05||force||first;
+        need=pos.TECL>0||Math.abs(curQ-risk)>.05||force||first||sgNew;
         if(need){
           const tq=Math.max(0,Math.floor(total*risk/sp.TQQQ));
-          const ts=Math.max(0,Math.floor(Math.max(0,total-tq*sp.TQQQ)/sp.SGOV));
+          const ts=sgQty(total-tq*sp.TQQQ);
           targetShares={TECL:0,TQQQ:tq,SGOV:ts};
         }
         meta={horizon,bull,stage,risk,sma:mv,rsi:trsi[p],ath};
       }else if(horizon===15){
         const D=DEFAULTS[15],cur=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-        need=pos.TECL>0||cur<D.lo||cur>D.hi||force||first;
+        need=pos.TECL>0||cur<D.lo||cur>D.hi||force||first||sgNew;
         if(need){
           const tq=Math.max(0,Math.floor(total*D.center/sp.TQQQ));
-          const ts=Math.max(0,Math.floor(Math.max(0,total-tq*sp.TQQQ)/sp.SGOV));
+          const ts=sgQty(total-tq*sp.TQQQ);
           targetShares={TECL:0,TQQQ:tq,SGOV:ts};
         }
         meta={horizon,current:cur,center:D.center,lo:D.lo,hi:D.hi};
@@ -206,11 +216,11 @@ function replay(opt){
         let winner='SGOV';
         if(tm&&tm.ok&&qm&&qm.ok)winner=tm.score>=qm.score?'TECL':'TQQQ';else if(tm&&tm.ok)winner='TECL';else if(qm&&qm.ok)winner='TQQQ';
         const curT=pos.TECL*sp.TECL/Math.max(total,1),curQ=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-        need=force||first||(winner==='TECL'?(pos.TQQQ>0||Math.abs(curT-D.winnerWeight)>.05):(winner==='TQQQ'?(pos.TECL>0||Math.abs(curQ-D.winnerWeight)>.05):(pos.TECL>0||pos.TQQQ>0)));
+        need=force||first||sgNew||(winner==='TECL'?(pos.TQQQ>0||Math.abs(curT-D.winnerWeight)>.05):(winner==='TQQQ'?(pos.TECL>0||Math.abs(curQ-D.winnerWeight)>.05):(pos.TECL>0||pos.TQQQ>0)));
         if(need){
           const tt=winner==='TECL'?Math.max(0,Math.floor(total*D.winnerWeight/sp.TECL)):0;
           const tq=winner==='TQQQ'?Math.max(0,Math.floor(total*D.winnerWeight/sp.TQQQ)):0;
-          const ts=Math.max(0,Math.floor(Math.max(0,total-tt*sp.TECL-tq*sp.TQQQ)/sp.SGOV));
+          const ts=sgQty(total-tt*sp.TECL-tq*sp.TQQQ);
           targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
         }
         meta={horizon,winner,tecl:tm,tqqq:qm};
@@ -223,7 +233,7 @@ function replay(opt){
       lastDecision={date,signalDate:S.dates[p],need,meta,target:{...targetShares}};
     }
 
-    const total=pos.TECL*S.tecl[i]+pos.TQQQ*S.tqqq[i]+pos.SGOV*S.sgov[i]+cash;
+    const total=pos.TECL*S.tecl[i]+pos.TQQQ*S.tqqq[i]+pos.SGOV*(S.sgov[i]||0)+cash;
     nav.push({date,total,inflow,cash,tecl:pos.TECL,tqqq:pos.TQQQ,sgov:pos.SGOV,teclPx:S.tecl[i],tqqqPx:S.tqqq[i],sgovPx:S.sgov[i]});
   }
 
