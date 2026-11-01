@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "date": "2026-11-02",
+  "preparedAt": "2026-11-01T22:17:44.121515+00:00",
+  "mainSha": "719d661fc29c0252402e247e4b84b727a8b68081",
+  "summary": "11/1 BTC 무매매0%·새 확정거래0건. 시초가 후보28일 원본 매수·매도5쌍 중 손실2건의 집계 누락 확인: 원본 평균−0.190% 대 저장−0.110%. 기준 유지·새 버전 보류. BTC31일 전체288봉 재현 완료. 대결API429·BTC누적조회실패, 이번주는 미확정.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "verified",
+      "findings": "11/1 BTC 무매매 0%를 완료 API로 확인했다는 의미이며 실체결 검증은 아님. 국내·미국은 주말 휴장, 새 확정 거래 0건. 마지막 거래일 30일 시초가 0%·데이 −0.833%·SOXL 미국 30일 0%. 11/2 BTC 새벽 00:05→01:05 청산 알림은 있으나 세션 미확정으로 제외. 11/2~8 새 주의 완료 거래세션이 없어 주간값은 미확정이며 0%로 채우지 않음. 지난주 기준 시초가 −0.865/데이 −2.815/BTC −0.863/SOXL +4.448%; GPT 네 기준·+1% 그림자의 +5% 달성 주 0. 전일 보고 Push 3/3·Telegram 1회 성공. 종가30분 5일·10청산·PF0.983·MDD−3.054%/미정산8건, 익일시가21건 미정산 유지. 두 화면은 소유자 로그인 경계까지; 내부 평가·실기기 미확인.",
+      "nextTest": "11/2 장중 Top100·원본 신호·완료봉·청산을 연결. 종가 미정산은 다음 거래일 공식 시가/종가 대조. 오늘 08시 예약과 실제 전송을 구분. 직접 시험 알림·중복 요약·실주문 없음.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/nightly-research/closing30.json",
+        "https://jkquant.pages.dev/scalping?strategy=daily"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "collecting",
+      "findings": "신규 0건. 저장 기준 12매매일82건/평균−0.470%·PF0.434·MDD−5.553%·최악−2.550%·+1%일0·지난주−0.865%(차5.865%p). 그림자19일15건/평균−0.525%·PF0.091·MDD−10.122%·최악−2.026%·+1%일0·지난주−0.088%; 이번주 미확정. 오늘 원본 앱+분봉 감사: 고정 눌림0.3~0.5%·09:20 후보 27일 저장16/재생15건, 공통15건 일치; TIGER200IT는 야간 모집단 밖·매수 원본 없음. 28일 원본 매수·매도 5쌍 중 인텍플러스−0.391%·티에프이−0.230%가 결과 연결/집계에서 빠짐. 원본5쌍 평균−0.190% 대 저장3건−0.110%. 기준도 원본9쌍−0.629% 대 저장6행−0.837%(TIGER중복). 27일 삼성전자우 원본 청산가 잠정값도 확인. 원장 유지·승격 보류; 새 독립 OOS 아님.",
+      "nextTest": "비용0.23%+편도2.5호가·규칙 고정. 11/2 당시 모집단→매수→매도→signalRecords.outcome→집계 연결을 확인. 28일 누락2건은 원본 매도가 있어 결과 연결의 검증 대상으로 남김. 20일·후보30건·PF1.10·7선두·시간순WF/위험 관문 유지. 오늘07시에는 새 장중 자료가 없어 신규 전향 시험 blocked.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/719d661fc29c0252402e247e4b84b727a8b68081/functions/api/_opening.js",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/opening-history/2026-10-27.json",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/opening-history/2026-10-28.json",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/scalping/2026/2026-10-28.json.gz"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "no_change",
+      "findings": "주말 신규 0건. 마지막 30일 한화비전·삼성바이오로직스 각 −1.25%, 빈 슬롯 포함 3슬롯 −0.833% 유지. 누적21확인일57건/평균−0.478%·PF0.431·MDD−10.280%·최악−1.250%·+1%일0·지난주−2.815%(차7.815%p); 이번주 미확정. 그림자20일60건/평균−0.202%·PF0.688·MDD−5.355%·최악−1.050%·+1%일3·지난주−2.042%. 검토 표본에 도달했으나 양의 기대값·PF1.10 미달로 새 버전 제안 보류. 기준 연구22유효일·완료WF0·선두3/7. 동일 자료이므로 새 결과 아님. Claude ETF 익일시가와 보유 구간이 다르며 대결의 2거래 평균−1.250%는 운영 3슬롯과 분모가 다름.",
+      "nextTest": "25유효일에 원본20학습/5검증 첫 구간 실행. 비용0.25%·3슬롯·그림자 규칙 유지. 11/2 원본 모의장부와 재구성·증권사 체결을 구분하고 동일 자본의 대결 분모를 대조. 조건 완화·기준 변경 없음.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/daytrading-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/daily1-shadow/latest.json",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-11-01",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/claude-live/2026-10-30.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "verified",
+      "findings": "11/1 완료 API 무매매0%·새 확정거래0건 확인. 기존31일−0.640%를 오늘 KST00:00~23:55 전체288봉과 원본 엔진으로 재현했고 그림자 무매매도 일치했다는 의미; 새 수익·실체결 검증 아님. 누적 조회는 제한 trend 재시도도 timeout. 전일 확인29세션+11/1 완료0%의 30확인세션17건/평균−0.090%·PF0.372·MDD−3.344%·최악−0.640%·+1%일0·지난주−0.863%(차5.863%p). 18/19일 결손은 0보간하지 않음. 그림자31일까지29일1건/평균−0.013%·PF0·MDD/최악−0.388%·+1%일0·지난주0%. 연구70/30 holdout117일72건은 과거 포함·재분할 표본이며 새 독립 OOS 아님. 11/2 청산 알림은 일성과 제외, 이번주 미확정.",
+      "nextTest": "11/1 전체 KST288봉과 완료 원본 장부 수집 후 무매매 대조. 누적 API timeout·18/19일 결손 추적. 11/2는 세션 마감 후 정산하며 Claude09시 업비트 규칙/00시 표출·pending을 동일 세션으로 맞춘다. 비용0.14% 고정.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-11-01&trend=1",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/crypto/KRW-BTC/5m/2026-10-31.json.gz",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/crypto-research/latest.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "no_change",
+      "findings": "주말 휴장·기준/그림자 신규0건. 마지막 미국30일/KST31일 무매매0% 유지. 기준22세션9건/평균−0.245%·PF0.449·MDD−9.398%·최악−1.400%·+1%일2·지난주+4.448%(차0.552%p). 26/27일 기존 익절의 결과이며 오늘 수익 아님. 그림자22일2건/평균+0.065%·MDD0·최악 매매일+0.108%·+1%일1·지난주+0.108%; 손실 표본 없어 PF 미산출. 기준26보관세션·첫30학습/10검증에 필요한40세션 전·WF/OOS0. 후보 선두7회여도9건·OOS0으로 승격 보류. 이번주 미확정이며 다음 미국2일 거래는 KST3일 청산. Claude 일봉 보유 규칙과 직접 비교 불가.",
+      "nextTest": "미국11/1 DST 종료 뒤 다음 거래일 09:30ET=23:30KST·16시ET=익일06시의 날짜 표출을 대조. 왕복0.20%·당일청산·최소30건/40세션 관문 유지. 원본 신호·완료봉·운영 버전 라벨 확인.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/daily1-shadow/latest.json",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-11-01",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/claude-lab/latest.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "no_change",
+      "findings": "GPT 원천 KRX29일·31일01:46KST 생성으로 전일과 동일. 신규 등록·진입·두 청산군 추가 모두0이며 새 발견 아님. 총180등록163종목·진입125/대기55·hold1260청산0/손절추적34. 최장11세션, 20/60/120/252/756/1260 성숙 표본과2/5/10배 최초 도달은 모두0으로 미검증. 종가 MFE최대+34.591%·MAE/MDD최악−33.829% 유지. 초기시세8일/등록13일·버전1.0.0·규칙SHA5e690dd85f5b… 재계산 일치, 현main 생성기/지표/필터 해시도 일치. 등록 전 진입0·원천수정 표시0. 진입 없는 observing46건 제외. 명시 누락·정지·폐지정산 표시0은 무결성 보장 아님. Claude도29일 원천이나 장부/비용/모형이 다름. 가격 가설이며 재무 시점 패널·시장 대조 없음; 계좌 CAGR·초과수익 아님.",
+      "nextTest": "새 KRX 원천 발표 후 신호일·등록일을 모두 지난 첫 종가와 pending/observing 상태 대조. 20세션 성숙을 기다린다. 실패 대조군·시장 국면·공시 시점·유동성/비용 가설은 별도 버전 제안만 남기며 기록 소급·규칙 변경 없음.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/719d661fc29c0252402e247e4b84b727a8b68081/TENBAGGER_FORWARD_RESEARCH.md",
+        "https://github.com/jkdevjob/jkquant/blob/719d661fc29c0252402e247e4b84b727a8b68081/data/tenbagger/gpt/forward-latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/tenbagger-claude-forward/latest.json"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "공개 대결 API가 이번에는 ok=false·branch tree HTTP429이며 1회 재조회도 동일. 전일 정상에서 접근 저하. 우위 판정 보류; 이전 누적합계를 오늘값으로 복사하지 않음. Claude 연구는31일04:43 생성 그대로. 원본30일 시초가−2.096%/ETF익일시가−4.065%/종가30분+0.867%는 모의OFF·수량0의 신호가격 관찰. 연구 재생의 종가30분+0.760%와도 비용/체결가 범위가 다름. GPT 데이 2거래 평균−1.250%와 운영3슬롯−0.833%, 시초가 호가비용·원본결손, 코인09시 규칙/KST세션, pending·SOXL 빈 버전 이력이 남아 동일조건 누적 비교 불가. 오늘·4전략·텐배거의 원천 날짜/버전은 대조했으나 내부 평가금액·기간수익률·휴대폰 표시는 소유자 로그인 필요로 미확인.",
+      "nextTest": "429 회복 후 동일 청산일·KR/US/KST 세션·버전 적용일·호가/고정 비용·빈 슬롯 현금을 맞춰 대조. Claude31일 이후 완료 원본·BTC pending·SOXL 빈 버전 갱신 확인. 인증 우회·시험 알림·우위 주장 없음.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-duel",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/claude-lab/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/6599ac48ceda32f95f01a9a5eede0cb21ee2e59d/data/claude-live/2026-10-30.json",
+        "https://jkquant.pages.dev/claude"
+      ]
+    }
+  ]
+}
