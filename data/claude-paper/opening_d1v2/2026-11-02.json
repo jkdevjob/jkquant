@@ -1,0 +1,83 @@
+{
+  "date": "2026-11-02",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": 4.9496187111455745,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "벡트로보틱스",
+      "code": "457600",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 1707,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 1687,
+      "qty": 0,
+      "pnlPct": -1.5773930872876418,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:10",
+        "expectedPrice": 1656,
+        "basePrice": 1805,
+        "expectedGapPct": -8.254847645429365,
+        "rsi14Prev": 18.916,
+        "qualified": 44,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "SK이터닉스",
+      "code": "475150",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 35350,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 37750,
+      "qty": 0,
+      "pnlPct": 6.134922206506355,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:10",
+        "expectedPrice": 32950,
+        "basePrice": 35900,
+        "expectedGapPct": -8.217270194986071,
+        "rsi14Prev": 23.693,
+        "qualified": 44,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "대우건설",
+      "code": "047040",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 10550,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 11690,
+      "qty": 0,
+      "pnlPct": 10.29132701421801,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:10",
+        "expectedPrice": 10050,
+        "basePrice": 10920,
+        "expectedGapPct": -7.9670329670329725,
+        "rsi14Prev": 22.445,
+        "qualified": 44,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "메인 매매일(통과 44종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-11-03T04:46:18.033366+09:00"
+}
