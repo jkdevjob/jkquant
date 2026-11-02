@@ -1,5 +1,12 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-10-31 · 자산플랜 모의 엔진 예열 · v3.112.2
+
+- `node scripts/check-plan-warmup.cjs`: 5묶음 PASS · 변이 4/4 빨간불(날짜 축 SGOV 교집합 복귀 · 상장일 이동 제거 · 빠진 날 이음 제거 · 주수/주문 null 방어 제거). 옛 엔진에서는 W1(첫 체결 = 시작일)·W4 가 실패한다.
+- 실제 시세(TECL·TQQQ·SGOV 체결가 · 배당, ~2026-10-19)로 옛/새 엔진 대조: 2021-06 이후 시작 46/48건 장부·NAV 완전 동일. 2020-01-02 시작 5년 +476.1% → +808.2%(첫 체결 2021-04-22 → 2020-01-02).
+- `check-plan-signal-fill.cjs` 7묶음 · `check-plan-session-views.cjs` · `check-plan-session-settings.cjs` · `check-login-quote-paper.cjs` PASS.
+- 미확인: 운영 화면(모의 목록·플랜 페이지)에서 바뀐 값이 보이는지는 배포 뒤 로그인 화면에서만 확인된다.
+
 ## 2026-10-28 · 운동 타이머 오디오 · v1.0.1
 
 - `node --test tests/workout-audio.test.mjs tests/workout.test.mjs`: 30/30 PASS(오디오 새14개). 실제 renderTick을 반복 호출해 6→5→4→3→2→1 동안 “오 사 삼 이 일” 각1회, 0은 비프음으로 확인한다.
