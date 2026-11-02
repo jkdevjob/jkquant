@@ -45,7 +45,7 @@ Metricool 에 그날 20:00 게시로 예약한다(6-1).
 
 "AI가 만든 티"가 안 나게, **스프링 노트에 펜으로 정리해 가는 화면**으로 만든다(`make-note.mjs`).
 
-- 2페이지 이내, 20~25초. 1쪽 = 훅 + 오해 바로잡기 + 그림(박스·화살표), 2쪽 = 일정·조건 + 노란 스티커 "내 돈에는?".
+- 2페이지 이내, 35~45초(목소리 기준). 1쪽 = 훅 + 오해 바로잡기 + 그림(박스·화살표), 2쪽 = 일정·조건 + 노란 스티커 "내 돈에는?".
 - 글씨: `bold`(손글씨 굵게) 본문 / `pen`(펜글씨) 날짜·주석 / `sans` 는 핸들만.
   크기: 제목 110~124, 본문 62~84, 주석 46~52. **한 줄이 페이지 폭(약 850px)을 넘지 않게** — 넘치면 줄을 나눈다.
 - 강조는 한 페이지에 1~2개만: 빨간 동그라미(`circle`), 형광펜(`highlight`), 밑줄(`underline`).
@@ -53,6 +53,17 @@ Metricool 에 그날 20:00 게시로 예약한다(6-1).
 - 마지막에 펜글씨 서명 "늦지 않았습니다. — 은퇴노트" + `@retire.note`.
 - 렌더 전에 `--preview 0,1.5,<넘김 직전>,<넘김 중>,<끝>` 으로 장면을 보고 넘침·겹침·줄바꿈을 고친다.
 - 소리는 스크립트가 자동으로 넣는다(쓸 때 연필 사각거림, 페이지·스티커 소리). 음악은 넣지 않는다.
+
+### 4-1. 목소리(내레이션) — 11/2부터 기본
+
+- 노트 설정에 `voice` 를 넣으면 `tts/say.py` 가 줄마다 읽어서 넣는다(Microsoft Edge 신경망 음성, 키 없음, 처음 한 번 `edge-tts` 자동 설치).
+  기본 목소리 `ko-KR-HyunsuMultilingualNeural`, 속도 `+10%`. 예시: `queue/issues/2026-11-02.note.json`
+- 화면 시각은 목소리에 맞춘다: 항목 `at`·페이지 `start` 에 `"@줄id"`, `"@줄id+0.8"`, `"@줄id.end-0.3"`. `duration: "auto"`.
+  페이지 넘김은 앞 줄 끝 `+0.3`, 넘긴 뒤 첫 줄은 `gap` 0.9~1.0.
+- **대본은 말하듯이**: 짧은 문장, 쉼표로 숨 쉬기, "~거든요/~고요/~잖아요". 화면 글자를 그대로 읽지 않는다(화면은 요점, 말은 설명).
+- **숫자는 한글로 읽는 대로** 적는다: 3.48% → "삼 점 사팔 퍼센트", 10번 중 8번 → "열 번 중에 여덟 번", 216만 원 → "이백십육만 원",
+  IRP → "아이알피". (숫자 그대로 두면 어색하게 읽는다.)
+- 렌더 로그의 `🎙` 줄로 각 줄 길이를 보고, 겹침(⚠)이 없게 한다. 미리보기로 글자가 말보다 너무 늦거나 빠르지 않은지 본다.
 - 시세 이슈는 데이터 릴스(`make-reel.mjs`)를 써도 되지만, 기본은 노트 형식.
 
 ## 5. 캡션 — 사람이 쓴 것처럼
@@ -85,12 +96,16 @@ Metricool 에 그날 20:00 게시로 예약한다(6-1).
 - 영상 주소: 푸시한 커밋으로 고정한 jsDelivr 주소
   `https://cdn.jsdelivr.net/gh/jkdevjob/jkquant@<커밋>/reel/<file>` (HEAD 200, video/mp4 확인 후 사용)
 - 넣는 값: text=캡션, youtubeData={title: yt_title, type: "short", privacy: "public", tags, category: "EDUCATION",
-  madeForKids: false, isAiGeneratedContent: false}, instagramData={type: "REEL", showReelOnFeed: true, isAiGenerated: false,
-  collaborators: []}, autoPublish true
-  (노트 영상은 실제 장면을 꾸민 게 아니라 애니메이션이라 유튜브 AI 표시 대상이 아니다.)
+  madeForKids: false, isAiGeneratedContent: false}, instagramData={type: "REEL", showReelOnFeed: true,
+  isAiGenerated: **목소리를 넣었으면 true**(아니면 false), collaborators: []}, autoPublish true
+  (유튜브: 손글씨 애니메이션 + 특정인을 흉내 내지 않는 합성 내레이션이라 '실제처럼 보이는 합성물' 표시 대상이 아니다.
+   인스타: 실제 사람처럼 들리는 AI 음성은 'AI 정보' 표시 대상이라 켠다.)
 - 예약 전에 `getScheduledPosts` 로 그날 이미 예약된 게 있는지 보고 중복이면 넣지 않는다.
 - 예약하면 queue.json 의 그 항목에 `"metricool": {"id": "...", "uuid": "...", "networks": ["youtube", "instagram"], "at": "YYYY-MM-DDT20:00+09:00"}` 를 적고 커밋한다.
-- 이슈 영상을 못 만든 날은 `metricool` 기록이 없는 예비 영상(kind 없는 항목) 중 맨 앞 것을 같은 방식으로 예약한다.
+- 예비 영상(`kind: "buffer"`, 시기 안 타는 내용)은 **며칠 뒤 12:30 에 미리 예약해 둔다** — 아침 작업이 빠진 날에도 게시가 끊기지 않게.
+  아침 작업이 정상으로 돌면: 오늘 12:30 에 예비 영상이 잡혀 있고 새 동향 영상을 만들었으면, 그 예비 영상을
+  `updateScheduledPost` 로 맨 뒤 예비 영상 다음 날 12:30 으로 옮기고 queue.json 의 `metricool.at` 도 고친다.
+  예비가 2편 아래로 줄면 새로 만든다(`valid_until` 이 지난 예비는 지운다).
 
 ## 7. 명령
 

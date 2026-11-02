@@ -1,0 +1,434 @@
+{
+  "duration": "auto",
+  "fps": 30,
+  "flip": 0.7,
+  "tape": {
+    "text": "11/2 코스피 +2.24%",
+    "color": "mint"
+  },
+  "out": "queue/issues/2026-11-02_kospi-best-days.mp4",
+  "voice": {
+    "name": "ko-KR-HyunsuMultilingualNeural",
+    "rate": "+10%",
+    "lead": 0.35,
+    "gap": 0.28,
+    "tail": 2.0,
+    "lines": [
+      {
+        "id": "hook",
+        "text": "금요일에 코스피가 삼 점 사팔 퍼센트 빠졌잖아요."
+      },
+      {
+        "id": "up",
+        "text": "근데 바로 월요일엔, 이 점 이사 퍼센트 올랐어요."
+      },
+      {
+        "id": "miss",
+        "text": "겁나서 팔았다면, 이 반등은 못 탄 거죠."
+      },
+      {
+        "id": "count",
+        "text": "그래서 이천 년부터 작년까지, 이십육 년 치를 다 세어 봤어요.",
+        "gap": 0.4
+      },
+      {
+        "id": "best",
+        "text": "코스피가 가장 많이 오른 날 열 번 중에, 여덟 번은",
+        "gap": 0.9
+      },
+      {
+        "id": "best2",
+        "text": "삼 퍼센트 넘게 폭락한 날로부터, 일주일 안에 왔어요.",
+        "gap": 0.15
+      },
+      {
+        "id": "miss10",
+        "text": "이 열 번만 놓쳤어도, 네 배 가까이 될 돈이 두 배도 안 됐고요."
+      },
+      {
+        "id": "mine",
+        "text": "그래서 곧 쓸 돈은 미리 빼 두고, 오래 둘 돈은 흔들려도 버틸 수 있게 나눠 두는 게 먼저예요.",
+        "gap": 0.45
+      },
+      {
+        "id": "save",
+        "text": "저장해 두셨다가, 또 크게 빠지는 날 꺼내 보세요."
+      },
+      {
+        "id": "sig",
+        "text": "늦지 않았습니다.",
+        "gap": 0.4
+      }
+    ]
+  },
+  "pages": [
+    {
+      "start": 0,
+      "stains": [
+        {
+          "x": 700,
+          "y": 1480,
+          "r": 170,
+          "opacity": 0.18,
+          "rot": -10
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "h1",
+          "text": "폭락에 팔면",
+          "x": 128,
+          "y": 196,
+          "size": 120,
+          "font": "bold",
+          "color": "ink",
+          "at": 0,
+          "dur": 0,
+          "rot": -0.8
+        },
+        {
+          "type": "text",
+          "id": "h2",
+          "text": "놓치는 것",
+          "x": 132,
+          "y": 336,
+          "size": 120,
+          "font": "bold",
+          "color": "red",
+          "at": 0,
+          "dur": 0,
+          "rot": 0.5
+        },
+        {
+          "type": "circle",
+          "target": "h2",
+          "at": 0.3,
+          "dur": 0.8,
+          "color": "red",
+          "pad": 14,
+          "width": 7
+        },
+        {
+          "type": "text",
+          "id": "fri",
+          "text": "금 −3.48%",
+          "x": 140,
+          "y": 600,
+          "size": 72,
+          "font": "bold",
+          "color": "red",
+          "at": "@hook+0.5",
+          "dur": 0.9
+        },
+        {
+          "type": "arrow",
+          "x1": 495,
+          "y1": 648,
+          "x2": 570,
+          "y2": 648,
+          "bend": -18,
+          "at": "@up",
+          "dur": 0.35
+        },
+        {
+          "type": "text",
+          "id": "mon",
+          "text": "월 +2.24%",
+          "x": 590,
+          "y": 600,
+          "size": 72,
+          "font": "bold",
+          "color": "blue",
+          "at": "@up+0.6",
+          "dur": 0.8
+        },
+        {
+          "type": "underline",
+          "target": "mon",
+          "at": "@up.end-0.2",
+          "dur": 0.4,
+          "color": "blue",
+          "width": 5
+        },
+        {
+          "type": "text",
+          "id": "m1",
+          "text": "겁나서 팔았다면 이 반등은 못 탔어요",
+          "x": 150,
+          "y": 770,
+          "size": 60,
+          "font": "pen",
+          "color": "gray",
+          "at": "@miss",
+          "dur": 1.2
+        },
+        {
+          "type": "text",
+          "id": "c1",
+          "text": "2000~2025년",
+          "x": 140,
+          "y": 1010,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@count+0.3",
+          "dur": 0.7
+        },
+        {
+          "type": "text",
+          "id": "c2",
+          "text": "26년 치를 다 세어 보면…",
+          "x": 140,
+          "y": 1120,
+          "size": 76,
+          "font": "bold",
+          "color": "ink",
+          "at": "@count+1.4",
+          "dur": 1.1
+        },
+        {
+          "type": "underline",
+          "target": "c2",
+          "at": "@count.end-0.3",
+          "dur": 0.4,
+          "color": "blue",
+          "width": 5
+        }
+      ]
+    },
+    {
+      "start": "@count.end+0.3",
+      "stains": [
+        {
+          "x": -100,
+          "y": 1500,
+          "r": 160,
+          "opacity": 0.15,
+          "rot": 14
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "b1",
+          "text": "가장 많이 오른 날",
+          "x": 132,
+          "y": 196,
+          "size": 86,
+          "font": "bold",
+          "color": "ink",
+          "at": "@best",
+          "dur": 0.9,
+          "rot": -0.6
+        },
+        {
+          "type": "text",
+          "id": "b2a",
+          "text": "10번 중",
+          "x": 140,
+          "y": 318,
+          "size": 86,
+          "font": "bold",
+          "color": "ink",
+          "at": "@best+1.2",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "b2b",
+          "text": "8번",
+          "after": "b2a",
+          "gap": 30,
+          "size": 110,
+          "font": "bold",
+          "color": "red",
+          "at": "@best.end-0.4",
+          "dur": 0.4
+        },
+        {
+          "type": "circle",
+          "target": "b2b",
+          "at": "@best.end",
+          "dur": 0.5,
+          "color": "red",
+          "pad": 10,
+          "width": 6
+        },
+        {
+          "type": "text",
+          "id": "b3",
+          "text": "−3% 폭락 후 1주일 안에",
+          "x": 150,
+          "y": 466,
+          "size": 66,
+          "font": "bold",
+          "color": "ink",
+          "at": "@best2+0.1",
+          "dur": 1.2
+        },
+        {
+          "type": "text",
+          "id": "b4",
+          "text": "그 10번만 놓쳤다면?",
+          "x": 150,
+          "y": 600,
+          "size": 54,
+          "font": "pen",
+          "color": "gray",
+          "at": "@miss10",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "x1",
+          "text": "3.98배",
+          "x": 150,
+          "y": 690,
+          "size": 86,
+          "font": "bold",
+          "color": "ink",
+          "at": "@miss10+1.4",
+          "dur": 0.5
+        },
+        {
+          "type": "arrow",
+          "x1": 445,
+          "y1": 742,
+          "x2": 545,
+          "y2": 742,
+          "bend": -16,
+          "at": "@miss10+2.0",
+          "dur": 0.3
+        },
+        {
+          "type": "text",
+          "id": "x2",
+          "text": "1.88배",
+          "x": 570,
+          "y": 690,
+          "size": 86,
+          "font": "bold",
+          "color": "red",
+          "at": "@miss10+2.3",
+          "dur": 0.5
+        },
+        {
+          "type": "highlight",
+          "target": "x2",
+          "at": "@miss10.end-0.3",
+          "dur": 0.45
+        },
+        {
+          "type": "text",
+          "id": "fine",
+          "text": "(코스피 지수·배당 제외 · 과거가 미래를 보장하진 않아요)",
+          "x": 150,
+          "y": 812,
+          "size": 40,
+          "font": "pen",
+          "color": "gray",
+          "at": "@miss10.end",
+          "dur": 0.7
+        },
+        {
+          "type": "sticky",
+          "x": 150,
+          "y": 900,
+          "w": 760,
+          "h": 430,
+          "rot": -2.0,
+          "at": "@mine-0.2",
+          "items": [
+            {
+              "type": "text",
+              "id": "s1",
+              "text": "내 돈에는?",
+              "x": 46,
+              "y": 34,
+              "size": 78,
+              "font": "bold",
+              "color": "red",
+              "at": "@mine",
+              "dur": 0.5
+            },
+            {
+              "type": "text",
+              "id": "s2",
+              "text": "곧 쓸 돈은 미리 빼 두고",
+              "x": 46,
+              "y": 140,
+              "size": 58,
+              "font": "bold",
+              "color": "ink",
+              "at": "@mine+0.9",
+              "dur": 0.9
+            },
+            {
+              "type": "text",
+              "id": "s3",
+              "text": "오래 둘 돈은",
+              "x": 46,
+              "y": 212,
+              "size": 58,
+              "font": "bold",
+              "color": "ink",
+              "at": "@mine+2.4",
+              "dur": 0.5
+            },
+            {
+              "type": "text",
+              "id": "s4",
+              "text": "버틸 수 있게 나눠 두기",
+              "x": 46,
+              "y": 284,
+              "size": 58,
+              "font": "bold",
+              "color": "blue",
+              "at": "@mine+3.2",
+              "dur": 0.8
+            },
+            {
+              "type": "text",
+              "id": "s5",
+              "text": "저장해 두고 또 빠질 때 보기",
+              "x": 52,
+              "y": 364,
+              "size": 42,
+              "font": "pen",
+              "color": "gray",
+              "at": "@save",
+              "dur": 0.8
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "sig",
+          "text": "늦지 않았습니다. — 은퇴노트",
+          "x": 330,
+          "y": 1490,
+          "size": 60,
+          "font": "pen",
+          "color": "ink",
+          "at": "@sig",
+          "dur": 0.8,
+          "rot": -2.0
+        },
+        {
+          "type": "text",
+          "id": "handle",
+          "text": "@retire.note",
+          "x": 600,
+          "y": 1575,
+          "size": 36,
+          "font": "sans",
+          "color": "gray",
+          "at": "@sig+0.6",
+          "dur": 0.5,
+          "fade": true
+        }
+      ]
+    }
+  ]
+}

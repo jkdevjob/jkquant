@@ -1,0 +1,428 @@
+{
+  "duration": "auto",
+  "fps": 30,
+  "flip": 0.7,
+  "tape": {
+    "text": "퇴직금 · 자녀 · 증여세",
+    "color": "pink"
+  },
+  "out": "queue/issues/2026-11-02_retirement-money-to-kids.mp4",
+  "voice": {
+    "name": "ko-KR-HyunsuMultilingualNeural",
+    "rate": "+10%",
+    "lead": 0.35,
+    "gap": 0.28,
+    "tail": 2.0,
+    "lines": [
+      {
+        "id": "hook",
+        "text": "퇴직하고 나니까 자녀가 퇴직금 좀 달라고 하면, 어떻게 하시겠어요?"
+      },
+      {
+        "id": "tax",
+        "text": "일단 세금부터 보면요, 성인 자녀는 부모님께 받은 돈을 다 합쳐서 십 년에 오천만 원까지는 증여세가 없어요.",
+        "gap": 0.4
+      },
+      {
+        "id": "marry",
+        "text": "결혼하거나 아이를 낳을 땐 일억 원이 더 빠지고요."
+      },
+      {
+        "id": "but",
+        "text": "그런데 진짜 따져 볼 건 세금이 아니에요.",
+        "gap": 0.4
+      },
+      {
+        "id": "cost",
+        "text": "오십 대 이상이 생각하는 부부 최소 생활비가, 한 달에 이백십육만 원이거든요.",
+        "gap": 1.0
+      },
+      {
+        "id": "gap5",
+        "text": "회사를 나와서 국민연금 받기 전까지 오 년만 잡아도,"
+      },
+      {
+        "id": "total",
+        "text": "일억 삼천만 원 가까이 필요해요.",
+        "gap": 0.15
+      },
+      {
+        "id": "mine",
+        "text": "그래서 자녀를 돕더라도, 이 오 년 치 생활비는 먼저 떼어 두고 정하는 게 순서예요.",
+        "gap": 0.45
+      },
+      {
+        "id": "save",
+        "text": "저장해 두셨다가, 이런 얘기 나올 때 꺼내 보세요."
+      },
+      {
+        "id": "sig",
+        "text": "늦지 않았습니다.",
+        "gap": 0.4
+      }
+    ]
+  },
+  "pages": [
+    {
+      "start": 0,
+      "stains": [
+        {
+          "x": 690,
+          "y": 1500,
+          "r": 170,
+          "opacity": 0.18,
+          "rot": -6
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "h1",
+          "text": "퇴직금 달라는 자녀,",
+          "x": 128,
+          "y": 196,
+          "size": 100,
+          "font": "bold",
+          "color": "ink",
+          "at": 0,
+          "dur": 0,
+          "rot": -0.8
+        },
+        {
+          "type": "text",
+          "id": "h2",
+          "text": "주면 세금은?",
+          "x": 132,
+          "y": 330,
+          "size": 120,
+          "font": "bold",
+          "color": "red",
+          "at": 0,
+          "dur": 0,
+          "rot": 0.4
+        },
+        {
+          "type": "circle",
+          "target": "h2",
+          "at": 0.3,
+          "dur": 0.8,
+          "color": "red",
+          "pad": 14,
+          "width": 7
+        },
+        {
+          "type": "text",
+          "id": "t1",
+          "text": "성인 자녀",
+          "x": 150,
+          "y": 560,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@tax+1.6",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "t2a",
+          "text": "10년간",
+          "x": 150,
+          "y": 650,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@tax+4.4",
+          "dur": 0.4
+        },
+        {
+          "type": "text",
+          "id": "t2b",
+          "text": "5천만 원까지",
+          "after": "t2a",
+          "gap": 26,
+          "size": 86,
+          "font": "bold",
+          "color": "red",
+          "at": "@tax+5.0",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "t3",
+          "text": "증여세 0원",
+          "x": 150,
+          "y": 770,
+          "size": 86,
+          "font": "bold",
+          "color": "blue",
+          "at": "@tax.end-1.0",
+          "dur": 0.6
+        },
+        {
+          "type": "underline",
+          "target": "t3",
+          "at": "@tax.end-0.3",
+          "dur": 0.4,
+          "color": "blue",
+          "width": 5
+        },
+        {
+          "type": "text",
+          "id": "t4",
+          "text": "(부모님께 받은 걸 모두 합쳐서)",
+          "x": 150,
+          "y": 880,
+          "size": 46,
+          "font": "pen",
+          "color": "gray",
+          "at": "@tax.end",
+          "dur": 0.7
+        },
+        {
+          "type": "text",
+          "id": "m1",
+          "text": "결혼·출산 땐",
+          "x": 150,
+          "y": 990,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@marry",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "m2",
+          "text": "+1억 원",
+          "after": "m1",
+          "gap": 26,
+          "size": 86,
+          "font": "bold",
+          "color": "red",
+          "at": "@marry+1.3",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "m3",
+          "text": "(혼인신고 전후 2년·출생 후 2년, 합쳐서 1억)",
+          "x": 150,
+          "y": 1100,
+          "size": 40,
+          "font": "pen",
+          "color": "gray",
+          "at": "@marry.end",
+          "dur": 0.7
+        },
+        {
+          "type": "text",
+          "id": "but",
+          "text": "그런데 진짜 따져 볼 건…",
+          "x": 140,
+          "y": 1250,
+          "size": 76,
+          "font": "bold",
+          "color": "blue",
+          "at": "@but",
+          "dur": 1.0,
+          "rot": -0.8
+        },
+        {
+          "type": "underline",
+          "target": "but",
+          "at": "@but.end-0.2",
+          "dur": 0.4,
+          "color": "blue",
+          "width": 5
+        }
+      ]
+    },
+    {
+      "start": "@but.end+0.3",
+      "stains": [
+        {
+          "x": -110,
+          "y": 1480,
+          "r": 160,
+          "opacity": 0.15,
+          "rot": 12
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "p1",
+          "text": "부부 최소 생활비",
+          "x": 132,
+          "y": 196,
+          "size": 86,
+          "font": "bold",
+          "color": "ink",
+          "at": "@cost+0.4",
+          "dur": 0.9,
+          "rot": -0.6
+        },
+        {
+          "type": "text",
+          "id": "p2",
+          "text": "월 216만 원",
+          "x": 140,
+          "y": 318,
+          "size": 110,
+          "font": "bold",
+          "color": "red",
+          "at": "@cost.end-1.6",
+          "dur": 0.7
+        },
+        {
+          "type": "circle",
+          "target": "p2",
+          "at": "@cost.end-0.6",
+          "dur": 0.5,
+          "color": "red",
+          "pad": 20,
+          "width": 6
+        },
+        {
+          "type": "text",
+          "id": "p3",
+          "text": "(50세 이상 응답 · 국민노후보장패널 2024년 조사)",
+          "x": 150,
+          "y": 466,
+          "size": 40,
+          "font": "pen",
+          "color": "gray",
+          "at": "@cost.end",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "p4",
+          "text": "퇴직하고 연금 받기 전 5년만 잡아도",
+          "x": 150,
+          "y": 560,
+          "size": 54,
+          "font": "pen",
+          "color": "gray",
+          "at": "@gap5",
+          "dur": 1.1
+        },
+        {
+          "type": "text",
+          "id": "p5",
+          "text": "216만 원 × 60개월",
+          "x": 150,
+          "y": 650,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@gap5+1.4",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "p6",
+          "text": "≈ 1억 3천만 원",
+          "x": 150,
+          "y": 760,
+          "size": 96,
+          "font": "bold",
+          "color": "red",
+          "at": "@total",
+          "dur": 0.8
+        },
+        {
+          "type": "highlight",
+          "target": "p6",
+          "at": "@total.end",
+          "dur": 0.45
+        },
+        {
+          "type": "sticky",
+          "x": 150,
+          "y": 920,
+          "w": 760,
+          "h": 420,
+          "rot": -2.0,
+          "at": "@mine-0.2",
+          "items": [
+            {
+              "type": "text",
+              "id": "s1",
+              "text": "순서는?",
+              "x": 46,
+              "y": 34,
+              "size": 78,
+              "font": "bold",
+              "color": "red",
+              "at": "@mine",
+              "dur": 0.4
+            },
+            {
+              "type": "text",
+              "id": "s2",
+              "text": "① 5년 생활비 먼저 떼어 두고",
+              "x": 46,
+              "y": 150,
+              "size": 54,
+              "font": "bold",
+              "color": "ink",
+              "at": "@mine+1.6",
+              "dur": 1.0
+            },
+            {
+              "type": "text",
+              "id": "s3",
+              "text": "② 남는 돈으로 자녀 돕기",
+              "x": 46,
+              "y": 236,
+              "size": 54,
+              "font": "bold",
+              "color": "blue",
+              "at": "@mine+3.4",
+              "dur": 0.9
+            },
+            {
+              "type": "text",
+              "id": "s4",
+              "text": "저장해 두고 이런 얘기 나올 때 보기",
+              "x": 52,
+              "y": 340,
+              "size": 42,
+              "font": "pen",
+              "color": "gray",
+              "at": "@save",
+              "dur": 0.8
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "sig",
+          "text": "늦지 않았습니다. — 은퇴노트",
+          "x": 330,
+          "y": 1490,
+          "size": 60,
+          "font": "pen",
+          "color": "ink",
+          "at": "@sig",
+          "dur": 0.8,
+          "rot": -2.0
+        },
+        {
+          "type": "text",
+          "id": "handle",
+          "text": "@retire.note",
+          "x": 600,
+          "y": 1575,
+          "size": 36,
+          "font": "sans",
+          "color": "gray",
+          "at": "@sig+0.6",
+          "dur": 0.5,
+          "fade": true
+        }
+      ]
+    }
+  ]
+}

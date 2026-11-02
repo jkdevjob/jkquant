@@ -1,0 +1,378 @@
+{
+  "duration": "auto",
+  "fps": 30,
+  "flip": 0.7,
+  "tape": {
+    "text": "연금저축 · IRP · 연말",
+    "color": "orange"
+  },
+  "out": "queue/issues/b02_pension-tax-credit-yearend.mp4",
+  "voice": {
+    "name": "ko-KR-HyunsuMultilingualNeural",
+    "rate": "+10%",
+    "lead": 0.35,
+    "gap": 0.28,
+    "tail": 2.0,
+    "lines": [
+      {
+        "id": "hook",
+        "text": "연말까지 이거 안 넣으면, 최대 백사십팔만 원을 그냥 놓쳐요."
+      },
+      {
+        "id": "what",
+        "text": "연금저축이랑 아이알피에 넣은 돈은, 한 해 구백만 원까지 세액공제를 받거든요.",
+        "gap": 0.4
+      },
+      {
+        "id": "rate",
+        "text": "연봉 오천오백만 원 이하면 십육 점 오 퍼센트, 넘으면 십삼 점 이 퍼센트를 돌려받고요."
+      },
+      {
+        "id": "max",
+        "text": "그래서 구백만 원을 다 채우면, 최대 백사십팔만 오천 원이에요."
+      },
+      {
+        "id": "deadline",
+        "text": "기준은 십이월 삼십일일까지 들어간 돈이에요."
+      },
+      {
+        "id": "split",
+        "text": "연금저축만으로는 육백만 원까지라서, 나머지 삼백만 원은 아이알피로 채우는 경우가 많아요.",
+        "gap": 1.0
+      },
+      {
+        "id": "caution",
+        "text": "대신 중간에 해지하면, 공제받은 돈에 십육 점 오 퍼센트 세금이 붙어요."
+      },
+      {
+        "id": "mine",
+        "text": "그래서 오래 둘 수 있는 돈인지부터 확인하고 넣는 게 순서예요.",
+        "gap": 0.45
+      },
+      {
+        "id": "save",
+        "text": "저장해 두셨다가, 십이월 되기 전에 꺼내 보세요."
+      },
+      {
+        "id": "sig",
+        "text": "늦지 않았습니다.",
+        "gap": 0.4
+      }
+    ]
+  },
+  "pages": [
+    {
+      "start": 0,
+      "stains": [
+        {
+          "x": 690,
+          "y": 1500,
+          "r": 170,
+          "opacity": 0.18,
+          "rot": -4
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "h1",
+          "text": "연말까지 안 넣으면",
+          "x": 128,
+          "y": 196,
+          "size": 100,
+          "font": "bold",
+          "color": "ink",
+          "at": 0,
+          "dur": 0,
+          "rot": -0.8
+        },
+        {
+          "type": "text",
+          "id": "h2",
+          "text": "148만 원 놓쳐요",
+          "x": 132,
+          "y": 330,
+          "size": 116,
+          "font": "bold",
+          "color": "red",
+          "at": 0,
+          "dur": 0,
+          "rot": 0.4
+        },
+        {
+          "type": "circle",
+          "target": "h2",
+          "at": 0.3,
+          "dur": 0.8,
+          "color": "red",
+          "pad": 14,
+          "width": 7
+        },
+        {
+          "type": "text",
+          "id": "a1",
+          "text": "연금저축 + IRP",
+          "x": 150,
+          "y": 560,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@what+0.3",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "a2",
+          "text": "연 900만 원까지",
+          "x": 150,
+          "y": 655,
+          "size": 76,
+          "font": "bold",
+          "color": "red",
+          "at": "@what+2.6",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "a3",
+          "text": "세액공제",
+          "after": "a2",
+          "gap": 24,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@what.end-1.0",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "r1",
+          "text": "연봉 5,500만 원 이하 16.5%",
+          "x": 150,
+          "y": 780,
+          "size": 60,
+          "font": "bold",
+          "color": "ink",
+          "at": "@rate+0.6",
+          "dur": 1.1
+        },
+        {
+          "type": "text",
+          "id": "r2",
+          "text": "넘으면 13.2%",
+          "x": 150,
+          "y": 862,
+          "size": 60,
+          "font": "bold",
+          "color": "ink",
+          "at": "@rate.end-1.6",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "mx",
+          "text": "900만 × 16.5% = 148.5만 원",
+          "x": 150,
+          "y": 980,
+          "size": 64,
+          "font": "bold",
+          "color": "blue",
+          "at": "@max+0.8",
+          "dur": 1.2
+        },
+        {
+          "type": "highlight",
+          "target": "mx",
+          "at": "@max.end-0.2",
+          "dur": 0.45
+        },
+        {
+          "type": "text",
+          "id": "dl",
+          "text": "12월 31일 납입분까지",
+          "x": 150,
+          "y": 1110,
+          "size": 74,
+          "font": "bold",
+          "color": "red",
+          "at": "@deadline+0.2",
+          "dur": 0.9
+        },
+        {
+          "type": "underline",
+          "target": "dl",
+          "at": "@deadline.end-0.2",
+          "dur": 0.4,
+          "color": "red",
+          "width": 5
+        },
+        {
+          "type": "text",
+          "id": "f1",
+          "text": "(지방소득세 포함 · 종합소득자는 4,500만 원 기준)",
+          "x": 150,
+          "y": 1220,
+          "size": 38,
+          "font": "pen",
+          "color": "gray",
+          "at": "@deadline.end",
+          "dur": 0.6
+        }
+      ]
+    },
+    {
+      "start": "@deadline.end+0.3",
+      "stains": [
+        {
+          "x": -110,
+          "y": 1480,
+          "r": 160,
+          "opacity": 0.15,
+          "rot": 10
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "s1",
+          "text": "연금저축만은 600만 원",
+          "x": 132,
+          "y": 196,
+          "size": 80,
+          "font": "bold",
+          "color": "ink",
+          "at": "@split+0.3",
+          "dur": 1.0,
+          "rot": -0.6
+        },
+        {
+          "type": "text",
+          "id": "s2",
+          "text": "나머지 300만 원은 IRP",
+          "x": 140,
+          "y": 318,
+          "size": 80,
+          "font": "bold",
+          "color": "blue",
+          "at": "@split.end-2.2",
+          "dur": 1.0
+        },
+        {
+          "type": "text",
+          "id": "c1",
+          "text": "중간에 해지하면?",
+          "x": 150,
+          "y": 470,
+          "size": 54,
+          "font": "pen",
+          "color": "gray",
+          "at": "@caution+0.2",
+          "dur": 0.7
+        },
+        {
+          "type": "text",
+          "id": "c2",
+          "text": "공제받은 돈에 16.5% 세금",
+          "x": 150,
+          "y": 560,
+          "size": 64,
+          "font": "bold",
+          "color": "red",
+          "at": "@caution+1.6",
+          "dur": 1.0
+        },
+        {
+          "type": "highlight",
+          "target": "c2",
+          "at": "@caution.end-0.2",
+          "dur": 0.45
+        },
+        {
+          "type": "sticky",
+          "x": 150,
+          "y": 740,
+          "w": 760,
+          "h": 420,
+          "rot": -2.0,
+          "at": "@mine-0.2",
+          "items": [
+            {
+              "type": "text",
+              "id": "m1",
+              "text": "넣기 전에",
+              "x": 46,
+              "y": 34,
+              "size": 78,
+              "font": "bold",
+              "color": "red",
+              "at": "@mine",
+              "dur": 0.4
+            },
+            {
+              "type": "text",
+              "id": "m2",
+              "text": "오래 둘 수 있는 돈인지",
+              "x": 46,
+              "y": 150,
+              "size": 56,
+              "font": "bold",
+              "color": "ink",
+              "at": "@mine+0.8",
+              "dur": 0.9
+            },
+            {
+              "type": "text",
+              "id": "m3",
+              "text": "먼저 확인하기",
+              "x": 46,
+              "y": 236,
+              "size": 56,
+              "font": "bold",
+              "color": "blue",
+              "at": "@mine+2.4",
+              "dur": 0.6
+            },
+            {
+              "type": "text",
+              "id": "m4",
+              "text": "저장해 두고 12월 전에 보기",
+              "x": 52,
+              "y": 340,
+              "size": 42,
+              "font": "pen",
+              "color": "gray",
+              "at": "@save",
+              "dur": 0.8
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "sig",
+          "text": "늦지 않았습니다. — 은퇴노트",
+          "x": 330,
+          "y": 1490,
+          "size": 60,
+          "font": "pen",
+          "color": "ink",
+          "at": "@sig",
+          "dur": 0.8,
+          "rot": -2.0
+        },
+        {
+          "type": "text",
+          "id": "handle",
+          "text": "@retire.note",
+          "x": 600,
+          "y": 1575,
+          "size": 36,
+          "font": "sans",
+          "color": "gray",
+          "at": "@sig+0.6",
+          "dur": 0.5,
+          "fade": true
+        }
+      ]
+    }
+  ]
+}

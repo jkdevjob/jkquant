@@ -1,0 +1,413 @@
+{
+  "duration": "auto",
+  "fps": 30,
+  "flip": 0.7,
+  "tape": {
+    "text": "건보료 · 피부양자",
+    "color": "yellow"
+  },
+  "out": "queue/issues/b01_pension-health-insurance-line.mp4",
+  "voice": {
+    "name": "ko-KR-HyunsuMultilingualNeural",
+    "rate": "+10%",
+    "lead": 0.35,
+    "gap": 0.28,
+    "tail": 2.0,
+    "lines": [
+      {
+        "id": "hook",
+        "text": "국민연금 늦추면 더 받는다고 해서 미뤘는데, 건강보험료가 새로 나올 수 있어요."
+      },
+      {
+        "id": "rule",
+        "text": "자녀 밑에 피부양자로 있으려면, 연금 같은 소득이 한 해 이천만 원을 넘으면 안 되거든요.",
+        "gap": 0.4
+      },
+      {
+        "id": "month",
+        "text": "한 달로 치면 백육십칠만 원 정도예요."
+      },
+      {
+        "id": "spouse",
+        "text": "더 아픈 건, 한 사람이 이 선을 넘으면 소득 없는 배우자도 같이 빠진다는 거예요.",
+        "gap": 0.4
+      },
+      {
+        "id": "stat",
+        "text": "개편 뒤 일 년 반 동안, 이렇게 빠진 분이 이십팔만 명이 넘어요."
+      },
+      {
+        "id": "calc",
+        "text": "예를 들어 월 백이십오만 원 받을 분이 오 년 늦추면,",
+        "gap": 1.0
+      },
+      {
+        "id": "calc2",
+        "text": "삼십육 퍼센트가 붙어서 백칠십만 원. 선을 넘어요.",
+        "gap": 0.15
+      },
+      {
+        "id": "mine",
+        "text": "그래서 늦추기 전에, 늘어난 연금이 이 선을 넘는지 먼저 계산해 보세요.",
+        "gap": 0.45
+      },
+      {
+        "id": "save",
+        "text": "저장해 두셨다가, 연금 신청 전에 꺼내 보세요."
+      },
+      {
+        "id": "sig",
+        "text": "늦지 않았습니다.",
+        "gap": 0.4
+      }
+    ]
+  },
+  "pages": [
+    {
+      "start": 0,
+      "stains": [
+        {
+          "x": 700,
+          "y": 1490,
+          "r": 170,
+          "opacity": 0.18,
+          "rot": -12
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "h1",
+          "text": "국민연금 늦췄더니",
+          "x": 128,
+          "y": 196,
+          "size": 104,
+          "font": "bold",
+          "color": "ink",
+          "at": 0,
+          "dur": 0,
+          "rot": -0.8
+        },
+        {
+          "type": "text",
+          "id": "h2",
+          "text": "건보료가?",
+          "x": 132,
+          "y": 330,
+          "size": 120,
+          "font": "bold",
+          "color": "red",
+          "at": 0,
+          "dur": 0,
+          "rot": 0.4
+        },
+        {
+          "type": "circle",
+          "target": "h2",
+          "at": 0.3,
+          "dur": 0.8,
+          "color": "red",
+          "pad": 16,
+          "width": 7
+        },
+        {
+          "type": "text",
+          "id": "r1",
+          "text": "피부양자 조건",
+          "x": 150,
+          "y": 560,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@rule+1.2",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "r2a",
+          "text": "연 소득",
+          "x": 150,
+          "y": 650,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@rule+3.0",
+          "dur": 0.4
+        },
+        {
+          "type": "text",
+          "id": "r2b",
+          "text": "2천만 원 이하",
+          "after": "r2a",
+          "gap": 26,
+          "size": 86,
+          "font": "bold",
+          "color": "red",
+          "at": "@rule.end-1.4",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "r3",
+          "text": "= 월 약 167만 원",
+          "x": 150,
+          "y": 770,
+          "size": 80,
+          "font": "bold",
+          "color": "blue",
+          "at": "@month+0.5",
+          "dur": 0.8
+        },
+        {
+          "type": "underline",
+          "target": "r3",
+          "at": "@month.end-0.2",
+          "dur": 0.4,
+          "color": "blue",
+          "width": 5
+        },
+        {
+          "type": "text",
+          "id": "r4",
+          "text": "(국민연금 같은 공적연금은 전부 소득으로 잡혀요)",
+          "x": 150,
+          "y": 880,
+          "size": 40,
+          "font": "pen",
+          "color": "gray",
+          "at": "@month.end",
+          "dur": 0.7
+        },
+        {
+          "type": "text",
+          "id": "s1",
+          "text": "한 사람이 넘으면",
+          "x": 150,
+          "y": 990,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@spouse+1.6",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "s2",
+          "text": "배우자도 같이 탈락",
+          "x": 150,
+          "y": 1080,
+          "size": 80,
+          "font": "bold",
+          "color": "red",
+          "at": "@spouse.end-1.6",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "s3",
+          "text": "1년 반 동안 28만 명 넘게",
+          "x": 150,
+          "y": 1210,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@stat+1.2",
+          "dur": 1.0
+        },
+        {
+          "type": "text",
+          "id": "s4",
+          "text": "(2022.9~2024.2 공적연금 기준 탈락 · 건보공단 국회 제출 자료)",
+          "x": 150,
+          "y": 1300,
+          "size": 36,
+          "font": "pen",
+          "color": "gray",
+          "at": "@stat.end",
+          "dur": 0.6
+        }
+      ]
+    },
+    {
+      "start": "@stat.end+0.3",
+      "stains": [
+        {
+          "x": -110,
+          "y": 1480,
+          "r": 160,
+          "opacity": 0.15,
+          "rot": 12
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "c1",
+          "text": "월 125만 원 받을 분이",
+          "x": 132,
+          "y": 196,
+          "size": 80,
+          "font": "bold",
+          "color": "ink",
+          "at": "@calc+0.2",
+          "dur": 1.0,
+          "rot": -0.6
+        },
+        {
+          "type": "text",
+          "id": "c2",
+          "text": "5년 늦추면 +36%",
+          "x": 140,
+          "y": 318,
+          "size": 86,
+          "font": "bold",
+          "color": "blue",
+          "at": "@calc.end-1.2",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "c3a",
+          "text": "→",
+          "x": 140,
+          "y": 450,
+          "size": 96,
+          "font": "bold",
+          "color": "ink",
+          "at": "@calc2+0.8",
+          "dur": 0.2
+        },
+        {
+          "type": "text",
+          "id": "c3b",
+          "text": "월 170만 원",
+          "after": "c3a",
+          "gap": 44,
+          "size": 110,
+          "font": "bold",
+          "color": "red",
+          "at": "@calc2+1.0",
+          "dur": 0.7
+        },
+        {
+          "type": "circle",
+          "target": "c3b",
+          "at": "@calc2.end-0.4",
+          "dur": 0.5,
+          "color": "red",
+          "pad": 12,
+          "width": 6
+        },
+        {
+          "type": "text",
+          "id": "c4",
+          "text": "167만 원 선을 넘어요",
+          "x": 150,
+          "y": 600,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@calc2.end",
+          "dur": 0.7
+        },
+        {
+          "type": "text",
+          "id": "c5",
+          "text": "(1년 늦출 때마다 7.2% · 물가 인상분 빼고 단순 계산)",
+          "x": 150,
+          "y": 700,
+          "size": 40,
+          "font": "pen",
+          "color": "gray",
+          "at": "@calc2.end+0.6",
+          "dur": 0.6
+        },
+        {
+          "type": "sticky",
+          "x": 150,
+          "y": 830,
+          "w": 760,
+          "h": 420,
+          "rot": -2.0,
+          "at": "@mine-0.2",
+          "items": [
+            {
+              "type": "text",
+              "id": "m1",
+              "text": "늦추기 전에",
+              "x": 46,
+              "y": 34,
+              "size": 78,
+              "font": "bold",
+              "color": "red",
+              "at": "@mine",
+              "dur": 0.5
+            },
+            {
+              "type": "text",
+              "id": "m2",
+              "text": "늘어난 연금 + 다른 소득",
+              "x": 46,
+              "y": 150,
+              "size": 54,
+              "font": "bold",
+              "color": "ink",
+              "at": "@mine+1.4",
+              "dur": 0.9
+            },
+            {
+              "type": "text",
+              "id": "m3",
+              "text": "연 2천만 원 넘는지 계산",
+              "x": 46,
+              "y": 236,
+              "size": 54,
+              "font": "bold",
+              "color": "blue",
+              "at": "@mine+2.8",
+              "dur": 0.9
+            },
+            {
+              "type": "text",
+              "id": "m4",
+              "text": "저장해 두고 연금 신청 전에 보기",
+              "x": 52,
+              "y": 340,
+              "size": 42,
+              "font": "pen",
+              "color": "gray",
+              "at": "@save",
+              "dur": 0.8
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "sig",
+          "text": "늦지 않았습니다. — 은퇴노트",
+          "x": 330,
+          "y": 1490,
+          "size": 60,
+          "font": "pen",
+          "color": "ink",
+          "at": "@sig",
+          "dur": 0.8,
+          "rot": -2.0
+        },
+        {
+          "type": "text",
+          "id": "handle",
+          "text": "@retire.note",
+          "x": 600,
+          "y": 1575,
+          "size": 36,
+          "font": "sans",
+          "color": "gray",
+          "at": "@sig+0.6",
+          "dur": 0.5,
+          "fade": true
+        }
+      ]
+    }
+  ]
+}
