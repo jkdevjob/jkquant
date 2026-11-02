@@ -98,7 +98,7 @@ async function main(){
   fs.mkdirSync(path.dirname(outPath), { recursive:true });
 
   const tpl = fs.readFileSync(path.join(__dirname, "note.html"), "utf8");
-  const htmlPath = path.join(__dirname, `.note_${Date.now()}.html`);
+  const htmlPath = path.join(__dirname, `.note_${process.pid}_${Date.now()}.html`);
   fs.writeFileSync(htmlPath, tpl.replace("<script>", `<script>window.__DATA__=${JSON.stringify(spec)};</script>\n<script>`));
 
   const launchOpts = { args:["--no-sandbox"] };
