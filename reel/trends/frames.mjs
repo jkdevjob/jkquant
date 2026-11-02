@@ -18,7 +18,7 @@ const date = opt("date", new Date(Date.now() + 9 * 3600e3).toISOString().slice(0
 const N = +opt("n", 6);
 
 // 광고(운용사·증권사 상품 홍보)는 기법 참고에서 뺀다
-const AD = /광고|KODEX|KoAct|TIGER|ACE |SOL |RISE |ETF|증권|자산운용|이벤트|EVENT/i;
+const AD = /광고|Song\]|KODEX|KoAct|TIGER|ACE |SOL |RISE |ETF|증권|자산운용|이벤트|EVENT/i;
 
 const report = JSON.parse(fs.readFileSync(path.join(__dirname, `${date}.json`), "utf8"));
 const seenPath = path.join(__dirname, "seen.json");
