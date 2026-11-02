@@ -2160,7 +2160,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /onclick="refreshPaperViewButton\(\)"/.test(idx)
      && /const repaired=await paperRepairCommonStarts\(\)/.test(rvFast));
   ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
-     /const PAPER_VIEW_CACHE_VER=2;/.test(idx)
+     /const PAPER_VIEW_CACHE_VER=3;/.test(idx)
      && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
      && /x\.day===paperKstDate\(\)/.test(extractFn(idx,'function paperViewCacheFresh(x)'))
      && /if\(!force&&paperViewCacheFresh\(current\)\)return/.test(rvFast));
@@ -10717,6 +10717,11 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
 {
   const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-settings.cjs')],{encoding:'utf8'});
   ok('자산플랜 세션 설정 수정 · 모드 전환 장부 보존 · 저장 취소 격리',r.status===0,(r.stdout||'')+(r.stderr||''));
+}
+{ /* 2026-10-31 — SGOV 상장(2020-06) 전 시작 세션이 SMA225 예열을 못 해 1년 넘게 현금만 들던 버그 */
+  const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-warmup.cjs')],{encoding:'utf8',timeout:30000});
+  ok('자산플랜 모의 예열 — SGOV 상장 전 시작도 첫날 매매 · 상장일 현금→SGOV · 빠진 날 이음 + 변이 4종',
+     r.status===0&&(r.stdout||'').includes('PLAN WARMUP: 5 groups PASS · mutations 4/4 red'),(r.stdout||'')+(r.stderr||''));
 }
 
 /* ════════════════════════════════════════════════════════════════════

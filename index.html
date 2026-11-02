@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.112.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.112.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1701,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.112.1</b> · 2026-10-27</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.112.2</b> · 2026-10-31</div>
   </footer>
 </div>
 
@@ -8214,7 +8214,7 @@ function paperFxFallback(){
    - 평소 모의 페이지를 열 때는 저장된 표를 즉시 보여 주고 전 전략 재생을 다시 하지 않는다.
    - 하루가 바뀌었거나 원장이 바뀌면 백그라운드에서 한 번만 증분 갱신한다.
    - 전체 적용/오늘 갱신은 force=true로 명시적으로 다시 계산한다. */
-const PAPER_VIEW_CACHE_VER=2;   // 2: 세후 TR(atr) 칸 — 옛 저장 결과엔 없어 한 번 다시 센다 (2026-10-21)
+const PAPER_VIEW_CACHE_VER=3;   // 2: 세후 TR(atr) 칸 (2026-10-21) · 3: 자산플랜 모의 엔진 예열 수정 — SGOV 상장 전 시작 세션 값이 바뀌어 한 번 다시 센다 (2026-10-31)
 let _paperViewRefreshPromise=null;
 function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
 function paperViewSig(){
