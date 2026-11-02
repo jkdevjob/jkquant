@@ -6,7 +6,10 @@ const {open}=require('./imh'); const {prep,sim,stats,q}=require('./px'); const {
 const IM={none:{autoTp:true}, rp:{autoTp:true,cashYield:true,cashSpread:0.005}};
 const NEW={gbOn:0.01,gbOff:0.03,sbDn:0,sbUp:0.15,gReb:'y',fee:0.001};
 const PL={cur:{gsb:1e9,fee:0.001}, new:NEW, tw80:Object.assign({tw:0.80},NEW), wmax:Object.assign({wMax:1.43},NEW)};
-const CASES=[['지금 배분(무매+지금 플랜)','none','cur',1/3],['무매 RP + 지금 플랜','rp','cur',1/3],['무매 + 새 플랜','none','new',1/3],['무매 RP + 새 플랜','rp','new',1/3],
+// WTS='0,0.1,…' 이면 비중 곡선: 무매 비중마다 '지금 플랜' · '새 플랜' 짝(PLANK='cur,new') — 첫 줄(지금 배분)이 짝 점수 기준
+const CASES=process.env.WTS?(()=>{ const ws=process.env.WTS.split(',').map(Number), out=[['지금 배분(무매 33%+지금 플랜)','none','cur',1/3]];
+  for(const pk of (process.env.PLANK||'cur,new').split(',')) for(const w of ws){ if(w>=1&&out.some(x=>x[3]>=1)) continue; out.push([w>=1?'무매 100%':`무매 ${Math.round(w*100)}% + ${pk==='cur'?'지금':'새'} 플랜`, w>0?'none':null, w<1?pk:null, w]); }
+  return out; })():[['지금 배분(무매+지금 플랜)','none','cur',1/3],['무매 RP + 지금 플랜','rp','cur',1/3],['무매 + 새 플랜','none','new',1/3],['무매 RP + 새 플랜','rp','new',1/3],
   ['무매 RP + 새 플랜 tw0.80','rp','tw80',1/3],['무매 RP + 새 플랜 wMax1.43','rp','wmax',1/3],['새 플랜 100%',null,'new',0],['지금 플랜 100%',null,'cur',0],['무매 100%','none',null,1]];
 const f=x=>x.toFixed(1), toMap=eq=>{ const m={}; eq.forEach(([d,v])=>{ if(!String(d).endsWith('~')) m[d]=v; }); return m; };
 function comb(a,b){ if(!a) return b; if(!b) return a; const m={}; Object.keys(b).forEach(d=>{ if(a[d]!=null) m[d]=a[d]+b[d]; }); return m; }
