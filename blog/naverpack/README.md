@@ -11,6 +11,7 @@ GPT가 매일 새벽 5시께 `YYYYMMDD_hotissue.naverpack.zip` 하나를, 클로
 ## 규칙
 
 - 같은 폴더에 이미 오늘 날짜 `_hotissue-claude` 패키지가 있으면 새로 만들지 않고 그 링크만 알린다.
+- 밀린 날짜 몫을 나중에 만들 때는 파일 이름·`date` 를 그 날짜로 두고 `verify_pack.py --date YYYYMMDD` 로 검사한다.
 - 내가 올리지 않은 파일(GPT 패키지 등)은 지우거나 덮어쓰지 않는다.
 - 주제: blog/GUIDE.md '주제 고르기'를 따르되, **같은 날 GPT 패키지 주제와 지난 7일 네이버 글 주제는 피한다.**
   먼저 네이버 글 목록을 본다:

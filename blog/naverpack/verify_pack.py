@@ -1,6 +1,7 @@
 """네이버 업로더용 패키지(.naverpack.zip)를 검사한다.
 
-사용: python3 -I verify_pack.py <zip> [--nums '63억|15억|...']
+사용: python3 -I verify_pack.py <zip> [--nums '63억|15억|...'] [--date YYYYMMDD]
+--date 는 밀린 날짜 몫을 나중에 만들 때만 준다(기본: 오늘 한국 날짜).
 --nums 에 준 숫자(도표에 쓴 숫자)는 본문에도 있어야 한다.
 """
 import argparse, datetime, io, json, os, re, zipfile
@@ -9,6 +10,7 @@ from PIL import Image
 ap = argparse.ArgumentParser()
 ap.add_argument('zip')
 ap.add_argument('--nums', default='')
+ap.add_argument('--date', default='')
 a = ap.parse_args()
 
 errs = []
@@ -18,7 +20,7 @@ def ok(cond, msg):
 
 p = a.zip
 fn = os.path.basename(p)
-kst = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime('%Y%m%d')
+kst = a.date or datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=9))).strftime('%Y%m%d')
 ok(re.match(rf'^{kst}_hotissue[-a-z0-9]*\.naverpack\.zip$', fn) is not None, f'filename/date mismatch {fn} vs {kst}')
 ok(os.path.getsize(p) <= 100 * 1024 * 1024, 'zip >100MB')
 z = zipfile.ZipFile(p)
