@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f1320">
+<title>JK 투자 — 수영대회</title>
+<link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
+<script src="/jk-access.js" data-guard="1"></script>
+<script src="/jk-ui.js?v=1.1.0" defer></script>
+<style>
+:root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--line:#2a3354;--txt:#e8ecf7;--dim:#9aa6c9;--gold:#f5c451;--vio:#8b8cf0;--green:#36d399;--red:#f87b8c}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}a{color:inherit}button,input,select{font:inherit}
+.wrap{max-width:1180px;margin:auto;padding:0 16px}
+header{background:#101626;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}.htop{height:68px;display:flex;justify-content:space-between;align-items:center;gap:12px}.kicker{font-size:11px;letter-spacing:.1em;color:var(--vio);font-weight:800}.brand h1{margin:0;font-size:21px}.ver{font-size:11px;color:var(--dim);font-weight:400}.jkmenu{position:relative}.jkmenu-btn{background:var(--surf2);border:1px solid var(--line);border-radius:11px;width:44px;height:42px;color:var(--txt);font-size:21px}.jkmenu-pop{position:absolute;right:0;top:48px;z-index:70;background:var(--surf);border:1px solid var(--line);border-radius:12px;min-width:178px;max-height:75vh;overflow:auto;padding:8px;display:flex;flex-direction:column}.jkmenu-pop[hidden]{display:none}.jkmenu-pop a{padding:10px;text-decoration:none;color:var(--dim);font-weight:700}.jkmenu-pop a.cur{color:var(--gold)}.mi{display:inline-block;width:24px}
+main{padding:24px 0 65px}.hero{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;align-items:end;margin-bottom:14px}.hero h2{margin:0 0 2px;font-size:23px}.sub,.hint{color:var(--dim);font-size:12px}.stats{display:flex;gap:7px;flex-wrap:wrap}.stat{border:1px solid var(--line);padding:6px 10px;border-radius:12px;background:var(--surf);font-size:12px}.stat b{color:var(--gold)}
+.filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:13px;background:var(--surf);border:1px solid var(--line);border-radius:14px}.filters input,.filters select,.filters button{min-width:0;width:100%;height:42px;border:1px solid #34406a;background:var(--surf2);color:var(--txt);border-radius:9px;padding:0 11px;outline:none}.filters input:focus,.filters select:focus{border-color:var(--vio)}.filters .search{grid-column:span 2}.filters button{cursor:pointer;font-weight:700}.filters button:focus-visible{outline:2px solid var(--gold)}.quick{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}.quick button{border:1px solid var(--line);background:var(--surf);color:var(--dim);padding:8px 11px;border-radius:30px;cursor:pointer;font-weight:700}.quick button.active{background:#313558;color:#e8ecff;border-color:var(--vio)}
+.result{display:flex;justify-content:space-between;gap:8px;color:var(--dim);font-size:12px;margin:13px 0}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.card{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}.topline{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}.tag{border-radius:6px;padding:3px 7px;font-weight:750;font-size:11px;background:#2b3454;color:#cad5ef}.tag.open{color:var(--green);background:#123327}.tag.soon{color:var(--gold);background:#3b3020}.tag.unknown{color:#ffe0a0;background:#3b3020}.tag.closed{color:#b6bfd2;background:#293044}.card h3{font-size:17px;margin:0 0 10px;line-height:1.45;word-break:keep-all}.details{display:grid;grid-template-columns:66px minmax(0,1fr);gap:5px 10px;font-size:12.5px}.details dt{color:var(--dim)}.details dd{margin:0;min-width:0;overflow-wrap:anywhere}.focus{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}.focus span{font-weight:800;background:#222b45;color:#b5c1d9;border-radius:7px;padding:5px 9px;font-size:12px}.focus .yes{background:#123b30;color:var(--green)}.focus .no{background:#3b2029;color:var(--red)}
+.cardfoot{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.cardfoot a{color:var(--gold);font-weight:800;font-size:12px;text-decoration:none}.empty{grid-column:1/-1;padding:50px 20px;text-align:center;border:1px dashed #34406a;border-radius:13px;color:var(--dim)}.more{display:block;margin:18px auto 0;padding:10px 22px;background:var(--surf2);color:var(--txt);border:1px solid var(--line);border-radius:9px}.more[hidden]{display:none}.alert{padding:10px 12px;background:#342c22;border:1px solid #645130;color:#e4d2ae;border-radius:9px;margin:12px 0;font-size:12px}.alert[hidden]{display:none}
+@media(max-width:690px){.wrap{padding:0 11px}.filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px}.filters .search{grid-column:span 2}.cards{grid-template-columns:1fr}.hero h2{font-size:20px}.card{padding:13px}main{padding-top:16px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="htop"><div class="brand"><div class="kicker">JK 투자 · AQUATICS</div><h1>🏊 전국 수영대회 <span class="ver" id="swimVer">v1.0.0</span></h1></div>
+<div class="jkmenu" id="jkmenuWrap"><button class="jkmenu-btn" aria-label="전체메뉴">☰</button><div class="jkmenu-pop" id="jkmenuPop" hidden>
+<a href="/"><span class="mi">🏠</span>운영</a><a href="/plan"><span class="mi">🧭</span>자산플랜</a><a href="/backtest"><span class="mi">📊</span>백테</a><a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a><a href="/claude"><span class="mi">🤖</span>연구(클로드)</a><a href="/paper"><span class="mi">🧪</span>모의</a><a href="/tenbagger"><span class="mi">🔟</span>텐배거</a><a href="/ipo"><span class="mi">🎯</span>공모주</a><a href="/realestate"><span class="mi">🏢</span>부동산</a><a href="/job"><span class="mi">💼</span>JOB</a><a href="/swim" class="cur"><span class="mi">🏊</span>수영대회</a><a href="/workout"><span class="mi">⏱️</span>운동 타이머</a><a href="/admin"><span class="mi">👤</span>관리자</a>
+</div></div></div></div></header>
+<main><div class="wrap">
+<section class="hero"><div><h2>전국 수영대회 통합 검색</h2><div class="sub">전국 시·도 마스터즈 · 전문선수 · 학생부 · 경영 · 다이빙 · 수구 · 핀수영 · 오픈워터</div></div><div class="stats"><span class="stat">전체 <b id="total">0</b></span><span class="stat">검색 <b id="matched">0</b></span><span class="stat">접수중 <b id="opened">0</b></span><span class="stat">갱신 <b id="updated">확인중</b></span></div></section>
+<div id="warning" class="alert" hidden></div>
+<section class="filters" aria-label="대회 검색 필터">
+<input id="search" class="search" type="search" placeholder="대회명 · 수영장 · 주최 · 참가 자격 검색" aria-label="대회 검색">
+<select id="region" aria-label="지역"><option value="">전체 지역</option></select>
+<select id="kind" aria-label="대회 구분"><option value="">전체 구분</option><option value="masters">마스터즈·동호인</option><option value="elite">전문선수</option><option value="student">유소년·학생</option><option value="other">기타·미확정</option></select>
+<select id="sport" aria-label="경기 종목"><option value="">전체 종목</option><option value="경영">경영</option><option value="다이빙">다이빙</option><option value="수구">수구</option><option value="아티스틱">아티스틱</option><option value="핀수영">핀수영</option><option value="오픈워터">오픈워터</option><option value="기타">기타</option></select>
+<select id="status" aria-label="접수 상태"><option value="upcoming">개최 예정</option><option value="all">마감·종료 포함</option><option value="open">접수중</option><option value="soon">접수예정</option><option value="unknown">확인 필요</option><option value="closed">접수마감</option></select>
+<select id="event" aria-label="자유형 종목"><option value="">자유형 조건 전체</option><option value="50">자유형 50m 확정</option><option value="100">자유형 100m 확정</option><option value="both">50m·100m 모두 확정</option><option value="unknown">자유형 종목 미확정</option></select>
+<select id="eligibility" aria-label="참가 대상"><option value="">참가 대상 전체</option><option value="adult">성인 가능·예상</option><option value="registered">선수등록 조건</option><option value="unknown">참가 자격 미확정</option></select>
+<select id="sort" aria-label="정렬"><option value="date">개최일 빠른 순</option><option value="deadline">접수 마감 임박순</option><option value="recent">최근 변경순</option><option value="region">지역순</option><option value="name">대회명순</option></select>
+<button type="button" id="reset">필터 초기화</button>
+</section>
+<div class="quick" id="quick"><button data-quick="all" class="active">전체</button><button data-quick="masters">🏊 마스터즈</button><button data-quick="elite">🏅 전문대회</button><button data-quick="freestyle">⚡ 자유형 50·100</button><button data-quick="changed">🆕 최근 변경</button></div>
+<div class="result"><span id="resultText">대회 자료를 불러오는 중…</span><span>출전 가능 여부는 공식 요강으로 최종 확인</span></div>
+<section id="cards" class="cards" aria-live="polite"><div class="empty">데이터 로딩 중…</div></section><button id="more" class="more" hidden>더 보기</button>
+<p class="hint">정보 출처: 대한수영연맹·지역 연맹·대회 통합 플랫폼. 수집 결과는 원문 공고와 다를 수 있으며 '확인 필요'는 확정된 접수 안내가 아닙니다.</p>
+</div></main>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id), F=['search','region','kind','sport','status','event','eligibility','sort'];
+let all=[],view=[],shown=40,quick='all';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?d:'';
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const status=e=>{const t=today();if(e.end_date&&e.end_date<t)return 'ended';if(e.apply_open&&e.apply_close&&e.apply_open<=t&&t<=e.apply_close)return 'open';if(e.apply_open&&e.apply_open>t)return 'soon';if(e.apply_close&&e.apply_close<t)return 'closed';return 'unknown';};
+const sLabel={open:'접수중',soon:'접수예정',closed:'접수마감',ended:'대회종료',unknown:'접수 확인 필요'};
+const label={masters:'마스터즈·동호인',elite:'전문선수',student:'유소년·학생',other:'기타·미확정'};
+const yn=x=>x===true?'참가 가능':x===false?'불가':'미확정';
+const ynClass=x=>x===true?'yes':x===false?'no':'';
+const tDate=e=>e.start_date?e.start_date+(e.end_date&&e.end_date!==e.start_date?' ~ '+e.end_date:''):'미확정';
+const openUrl=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:''}catch{return ''}};
+function renderCards(){
+const count=Math.min(shown,view.length);
+$('cards').innerHTML=!count?'<div class="empty">조건에 맞는 대회가 없습니다. 필터를 바꾸거나 전체 보관분을 확인하세요.</div>':view.slice(0,count).map(e=>{
+ const st=status(e),link=openUrl(e.official_url),fallback=openUrl(e.source_url),href=link||fallback;
+ return '<article class="card"><div class="topline"><span class="tag '+st+'">'+sLabel[st]+'</span><span class="tag">'+esc(e.region||'지역 미확정')+'</span><span class="tag">'+esc(label[e.kind]||label.other)+'</span><span class="tag">'+esc(e.sport||'종목 확인 필요')+'</span></div>'+
+ '<h3>'+esc(e.title)+'</h3><dl class="details"><dt>개최일</dt><dd>'+esc(tDate(e))+'</dd><dt>장소</dt><dd>'+esc(e.venue||'확인 필요')+'</dd><dt>접수</dt><dd>'+esc((e.apply_open||'미확정')+' ~ '+(e.apply_close||'미확정'))+'</dd><dt>참가 자격</dt><dd>'+esc(e.eligibility||'공식 요강 확인 필요')+'</dd><dt>경기 종목</dt><dd>'+esc(e.events||'공식 요강 확인 필요')+'</dd><dt>확인 상태</dt><dd>'+esc(e.verification==='official'?'공식 공고':e.verification==='secondary'?'2차 자료 (원문 재확인 필요)':'정보 확인 필요')+'</dd></dl>'+
+ '<div class="focus"><span class="'+ynClass(e.free50)+'">자유형 50m '+yn(e.free50)+'</span><span class="'+ynClass(e.free100)+'">자유형 100m '+yn(e.free100)+'</span></div><div class="cardfoot"><span class="hint">변경 '+esc(e.last_changed||e.first_seen||'미확정')+'</span>'+(href?'<a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+(link?'공식 공고 ↗':'자료 확인 ↗')+'</a>':'<span class="hint">공식 링크 미확인</span>')+'</div></article>';
+}).join('');
+$('more').hidden=count>=view.length;
+$('resultText').textContent=view.length.toLocaleString()+'건 중 '+count.toLocaleString()+'건 표시';
+}
+function apply(){
+const q=$('search').value.trim().toLowerCase(),region=$('region').value,kind=$('kind').value,sport=$('sport').value,st=$('status').value,ev=$('event').value,elig=$('eligibility').value,sort=$('sort').value,t=today();
+view=all.filter(e=>{
+const s=status(e);
+if(q&&!([e.title,e.region,e.venue,e.eligibility,e.events,e.source].join(' ').toLowerCase().includes(q)))return false;
+if(region&&e.region!==region)return false;
+if(kind&&e.kind!==kind)return false;
+if(sport&&e.sport!==sport)return false;
+if(st==='upcoming'&&e.end_date&&e.end_date<t)return false;
+if(['open','soon','unknown','closed'].includes(st)&&s!==st)return false;
+if(ev==='50'&&e.free50!==true)return false;
+if(ev==='100'&&e.free100!==true)return false;
+if(ev==='both'&&!(e.free50===true&&e.free100===true))return false;
+if(ev==='unknown'&&(e.free50===true||e.free100===true))return false;
+if(elig==='adult'&&e.adult_possible!==true)return false;
+if(elig==='registered'&&!/선수등록|등록선수|경기인 등록|등록 완료/.test(e.eligibility||''))return false;
+if(elig==='unknown'&&e.eligibility&&e.eligibility!=='확인 필요')return false;
+if(quick==='freestyle'&&e.free50!==true&&e.free100!==true)return false;
+if(quick==='changed'&&(!e.last_changed||e.last_changed<t.slice(0,8)+'01'))return false;
+return true;
+});
+view.sort((a,b)=>sort==='deadline'?(a.apply_close||'9999').localeCompare(b.apply_close||'9999')||tDate(a).localeCompare(tDate(b)):sort==='recent'?(b.last_changed||'').localeCompare(a.last_changed||''):sort==='region'?(a.region||'').localeCompare(b.region||''):sort==='name'?a.title.localeCompare(b.title): (a.start_date||'9999').localeCompare(b.start_date||'9999'));
+shown=40;$('matched').textContent=view.length;renderCards();
+}
+F.forEach(id=>$(id).addEventListener(id==='search'?'input':'change',()=>{quick='all';document.querySelectorAll('#quick button').forEach(b=>b.classList.toggle('active',b.dataset.quick==='all'));apply()}));
+$('reset').addEventListener('click',()=>{F.forEach(id=>{if(id==='search')$(id).value='';else $(id).selectedIndex=0});$('status').value='upcoming';quick='all';document.querySelectorAll('#quick button').forEach(b=>b.classList.toggle('active',b.dataset.quick==='all'));apply()});
+$('quick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;quick=b.dataset.quick;document.querySelectorAll('#quick button').forEach(x=>x.classList.toggle('active',x===b));$('kind').value=quick==='masters'?'masters':quick==='elite'?'elite':'';if(quick==='freestyle'){$('event').value='';$('kind').value='';}if(quick==='changed')$('kind').value='';apply()});
+$('more').addEventListener('click',()=>{shown+=40;renderCards()});
+async function load(){try{
+const res=await fetch('/data/swim/competitions.json?t='+Date.now(),{cache:'no-store'});if(!res.ok)throw Error('HTTP '+res.status);
+const data=await res.json();all=Array.isArray(data.competitions)?data.competitions:[];
+all=all.filter(x=>x&&typeof x.title==='string');
+const regions=[...new Set(all.map(e=>e.region).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));$('region').innerHTML='<option value="">전체 지역</option>'+regions.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
+$('total').textContent=all.length;$('opened').textContent=all.filter(e=>status(e)==='open').length;
+$('updated').textContent=data.updated_at?String(data.updated_at).slice(0,16).replace('T',' '):'미확인';
+if(data.sources_failed?.length){$('warning').hidden=false;$('warning').textContent='일부 수집처 장애: '+data.sources_failed.join(', ')+'. 이전 데이터가 유지됩니다.'}
+if(!all.length){$('warning').hidden=false;$('warning').textContent='수집된 대회가 없습니다. 수집 로그와 공식 공고를 확인해 주세요.'}
+apply();
+}catch(err){$('warning').hidden=false;$('warning').textContent='자료를 읽지 못했습니다 ('+err.message+'). 새로고침하거나 잠시 뒤 다시 확인해 주세요.';$('cards').innerHTML='<div class="empty">대회 데이터 없음</div>';}
+}
+load();
+})();
+</script>
+</body></html>
