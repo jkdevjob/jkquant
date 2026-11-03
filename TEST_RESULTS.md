@@ -3,6 +3,7 @@
 ## 2026-11-03 · 모의 목록 재계산 화면 틈 · v3.113.1
 
 - `[37-틈]`: 실제 `paperFillAll`+`paperBreathe` 로 세션 8개(각 50ms) — 5ms 간격 감시 타이머의 가장 긴 멈춤 < 150ms · 8줄 · 탭/세션 복원. 변이(쉬는 틈 제거 = 옛 코드) ≥ 350ms 빨간불.
+- 공용 레이아웃 검사(`check-unified-layout.cjs`)가 main 직행 커밋 294619f(swim.html 추가) 뒤 '13 !== 12' 로 깨져 있었다 — 검사 목록에 swim.html 추가 · 개수 대신 이름으로 맞춰 빠진 페이지를 적게 함. 변이(목록에서 swim.html 빼기) 빨간불.
 - 회귀 2805 PASS. `check-login-quote-paper.cjs` · `check-paper-apply-navigation.cjs` 하네스에 새 함수 추가(재생 중 임시 선택 저장 차단 시험 그대로 PASS). 아이폰 실제 그리기는 사용자 화면 확인 필요.
 
 ## 2026-11-03 · 모의 목록 다시 그리기 · v3.112.3

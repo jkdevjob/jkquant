@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
-const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html','workout.html'];
+const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html','workout.html','swim.html'];
 const labels={'/':'운영','/paper':'모의투자','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/workout':'운동 타이머','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
 const ui=fs.readFileSync('jk-ui.js','utf8'),mobile=fs.readFileSync('jk-mobile.css','utf8');
 new vm.Script(ui,{filename:'jk-ui.js'});
@@ -39,7 +39,10 @@ for(const p of pages){
   assert(html.includes('class="wrap'),p+' wrap 존재');
   assert(html.includes('class="jkmenu'),p+' 공통 메뉴 존재');
 }
-assert.equal(fs.readdirSync('.').filter(x=>x.endsWith('.html')).length,12,'루트 12페이지');
+/* 루트의 모든 페이지가 위 검사 목록에 있어야 한다 — 개수(12)를 박아 두면 새 페이지(swim.html, 2026-11-03)가 들어올 때
+   '13 !== 12' 로만 깨지고 무엇이 빠졌는지 안 보였다. 이름으로 맞춰 빠진 페이지를 바로 적는다. */
+{ const root=fs.readdirSync('.').filter(x=>x.endsWith('.html')).sort(), missing=root.filter(x=>!pages.includes(x)), gone=pages.filter(x=>!root.includes(x));
+  assert.deepEqual([missing,gone],[[],[]],'검사 목록에 없는 루트 페이지: '+missing.join(',')+' · 목록에만 있는 페이지: '+gone.join(',')); }
 const admin=fs.readFileSync('admin.html','utf8');
 assert(admin.includes("src.filter(x=>x.path!=='/tenbagger')"),'관리자 메뉴관리에서 텐배거 제외');
 const index=fs.readFileSync('index.html','utf8');
@@ -50,4 +53,4 @@ assert(index.includes('달러 종목은 달러 + 원화 병기'),'표 설명 병
 assert.throws(()=>verify(ui.replace('--jk-desktop-width:1100px','--jk-desktop-width:1180px')),assert.AssertionError,'폭 회귀 차단');
 assert.throws(()=>verify(ui.replace("'/job':'JOB'","'/job':'채용'")),assert.AssertionError,'메뉴명 회귀 차단');
 assert.throws(()=>verify(ui.replace("kicker.textContent='JK 투자'","kicker.textContent='JK'")),assert.AssertionError,'브랜드 회귀 차단');
-console.log('ALL PASS unified UI: 12 pages · desktop 1100px · menu headers · admin menu · paper dual currency · 3 mutations');
+console.log('ALL PASS unified UI: '+pages.length+' pages · desktop 1100px · menu headers · admin menu · paper dual currency · 3 mutations');
