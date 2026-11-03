@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html','workout.html','swim.html'];
-const labels={'/':'운영','/paper':'모의투자','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/workout':'운동 타이머','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
+const labels={'/':'운영','/paper':'모의투자','/plan':'자산플랜','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/swim':'수영대회','/workout':'운동 타이머','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
 const ui=fs.readFileSync('jk-ui.js','utf8'),mobile=fs.readFileSync('jk-mobile.css','utf8');
 new vm.Script(ui,{filename:'jk-ui.js'});
 function verify(src=ui){

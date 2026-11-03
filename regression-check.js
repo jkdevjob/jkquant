@@ -4835,7 +4835,7 @@ console.log('\n[76] 버전 형식 (x.y.z)');
 {
   const SEMVER=/^v\d+\.\d+\.\d+$/;
   const pages=[['index.html',idx],['backtest.html',bt]];
-  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html','tenbagger.html']){
+  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html','tenbagger.html','swim.html']){
     const fp=__d+'/'+f;
     if(fs.existsSync(fp)) pages.push([f, fs.readFileSync(fp,'utf8')]);
   }

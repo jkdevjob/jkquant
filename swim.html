@@ -1,114 +1,306 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0f1320">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 수영대회</title>
-<link rel="manifest" href="/manifest.webmanifest"><link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
-<script src="/jk-money.js?v=1.0.0"></script><script src="/jk-access.js" data-guard="1"></script>
-<script src="/jk-ui.js?v=1.1.0" defer></script>
 <style>
-:root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--line:#2a3354;--txt:#e8ecf7;--dim:#9aa6c9;--gold:#f5c451;--vio:#8b8cf0;--green:#36d399;--red:#f87b8c}
-*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.55 -apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}a{color:inherit}button,input,select{font:inherit}
-.wrap{max-width:1180px;margin:auto;padding:0 16px}
-header{background:#101626;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}.htop{height:68px;display:flex;justify-content:space-between;align-items:center;gap:12px}.kicker{font-size:11px;letter-spacing:.1em;color:var(--vio);font-weight:800}.brand h1{margin:0;font-size:21px}.ver{font-size:11px;color:var(--dim);font-weight:400}.jkmenu{position:relative}.jkmenu-btn{background:var(--surf2);border:1px solid var(--line);border-radius:11px;width:44px;height:42px;color:var(--txt);font-size:21px}.jkmenu-pop{position:absolute;right:0;top:48px;z-index:70;background:var(--surf);border:1px solid var(--line);border-radius:12px;min-width:178px;max-height:75vh;overflow:auto;padding:8px;display:flex;flex-direction:column}.jkmenu-pop[hidden]{display:none}.jkmenu-pop a{padding:10px;text-decoration:none;color:var(--dim);font-weight:700}.jkmenu-pop a.cur{color:var(--gold)}.mi{display:inline-block;width:24px}
-main{padding:24px 0 65px}.hero{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;align-items:end;margin-bottom:14px}.hero h2{margin:0 0 2px;font-size:23px}.sub,.hint{color:var(--dim);font-size:12px}.stats{display:flex;gap:7px;flex-wrap:wrap}.stat{border:1px solid var(--line);padding:6px 10px;border-radius:12px;background:var(--surf);font-size:12px}.stat b{color:var(--gold)}
-.filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:13px;background:var(--surf);border:1px solid var(--line);border-radius:14px}.filters input,.filters select,.filters button{min-width:0;width:100%;height:42px;border:1px solid #34406a;background:var(--surf2);color:var(--txt);border-radius:9px;padding:0 11px;outline:none}.filters input:focus,.filters select:focus{border-color:var(--vio)}.filters .search{grid-column:span 2}.filters button{cursor:pointer;font-weight:700}.filters button:focus-visible{outline:2px solid var(--gold)}.quick{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}.quick button{border:1px solid var(--line);background:var(--surf);color:var(--dim);padding:8px 11px;border-radius:30px;cursor:pointer;font-weight:700}.quick button.active{background:#313558;color:#e8ecff;border-color:var(--vio)}
-.result{display:flex;justify-content:space-between;gap:8px;color:var(--dim);font-size:12px;margin:13px 0}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}.card{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}.topline{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}.tag{border-radius:6px;padding:3px 7px;font-weight:750;font-size:11px;background:#2b3454;color:#cad5ef}.tag.open{color:var(--green);background:#123327}.tag.soon{color:var(--gold);background:#3b3020}.tag.unknown{color:#ffe0a0;background:#3b3020}.tag.closed{color:#b6bfd2;background:#293044}.card h3{font-size:17px;margin:0 0 10px;line-height:1.45;word-break:keep-all}.details{display:grid;grid-template-columns:66px minmax(0,1fr);gap:5px 10px;font-size:12.5px}.details dt{color:var(--dim)}.details dd{margin:0;min-width:0;overflow-wrap:anywhere}.focus{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}.focus span{font-weight:800;background:#222b45;color:#b5c1d9;border-radius:7px;padding:5px 9px;font-size:12px}.focus .yes{background:#123b30;color:var(--green)}.focus .no{background:#3b2029;color:var(--red)}
-.cardfoot{margin-top:12px;padding-top:11px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.cardfoot a{color:var(--gold);font-weight:800;font-size:12px;text-decoration:none}.empty{grid-column:1/-1;padding:50px 20px;text-align:center;border:1px dashed #34406a;border-radius:13px;color:var(--dim)}.more{display:block;margin:18px auto 0;padding:10px 22px;background:var(--surf2);color:var(--txt);border:1px solid var(--line);border-radius:9px}.more[hidden]{display:none}.alert{padding:10px 12px;background:#342c22;border:1px solid #645130;color:#e4d2ae;border-radius:9px;margin:12px 0;font-size:12px}.alert[hidden]{display:none}
-@media(max-width:690px){.wrap{padding:0 11px}.filters{grid-template-columns:repeat(2,minmax(0,1fr));padding:10px}.filters .search{grid-column:span 2}.cards{grid-template-columns:1fr}.hero h2{font-size:20px}.card{padding:13px}main{padding-top:16px}}
+:root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;--text:#e8ecf7;--dim:#9aa6c9;--faint:#6f7ba0;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451;--sky:#7cc7ff}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}body{font-size:14px;line-height:1.55}a{color:inherit}button,input,select{font:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}header{border-bottom:1px solid var(--border);background:rgba(15,19,32,.96);position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
+.htop{height:64px;display:flex;align-items:center;justify-content:space-between}.brand .kicker{font-size:10px;letter-spacing:.12em;color:var(--accent);font-weight:900}.brand h1{font-size:19px;margin:1px 0 0}
+.jkmenu{position:relative}.jkmenu-btn{height:38px;width:44px;background:var(--surf2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:18px;font-weight:700}
+.jkmenu-pop{position:absolute;right:0;top:45px;z-index:100;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:166px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
+.jkmenu-pop[hidden]{display:none}.jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-weight:700}.jkmenu-pop a:hover,.jkmenu-pop a.cur{background:var(--surf2);color:var(--text)}.jkmenu-pop a.cur{color:var(--gold)}.mi{width:18px;text-align:center}
+main{padding:20px 0 80px}
+.hero{display:flex;gap:12px;justify-content:space-between;align-items:flex-end;margin-bottom:12px}.hero h2{font-size:22px;margin:0 0 3px}.sub{color:var(--dim);font-size:12px}
+.stats{display:flex;gap:7px;flex-wrap:wrap}.pill{border:1px solid var(--border);background:var(--surf);border-radius:999px;padding:6px 10px;color:var(--dim);font-size:12px;white-space:nowrap}.pill b{color:var(--text);font-variant-numeric:tabular-nums}.pill.g b{color:var(--green)}.pill.y b{color:var(--gold)}
+.health{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 12px;border:1px solid var(--border);background:var(--surf);border-radius:10px;font-size:12px;color:var(--dim);margin-bottom:10px}
+.health.bad{border-color:rgba(248,123,140,.45);color:#f3c2ca}.health button{background:none;border:0;color:var(--accent);font-weight:800;cursor:pointer;padding:4px 0;white-space:nowrap}
+.srclist{display:none;margin:-4px 0 12px;border:1px solid var(--border);border-radius:10px;overflow:hidden}.srclist.on{display:block}
+.srcrow{display:grid;grid-template-columns:minmax(0,1.6fr) 70px minmax(0,1.3fr);gap:8px;padding:8px 12px;border-top:1px solid var(--border);font-size:12px;align-items:center;background:var(--surf)}.srcrow:first-child{border-top:0}
+.srcrow .nm{font-weight:800}.srcrow .ok{color:var(--green);font-weight:800}.srcrow .ng{color:var(--red);font-weight:800}.srcrow .er{color:var(--faint);overflow-wrap:anywhere}
+.quick{display:flex;gap:7px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none}.quick::-webkit-scrollbar{display:none}
+.quick button{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:8px 13px;font-weight:800;font-size:12.5px;cursor:pointer}
+.quick button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.searchrow{display:flex;gap:8px;margin-bottom:8px}.searchrow input{flex:1;min-width:0;height:44px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:9px;padding:0 12px;outline:none}.searchrow input:focus{border-color:var(--accent)}
+.btn{height:44px;border:1px solid var(--border);background:var(--surf2);color:var(--text);border-radius:9px;padding:0 13px;font-weight:800;cursor:pointer;white-space:nowrap}
+.btn .cnt[hidden]{display:none}.btn .cnt{display:inline-block;min-width:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px}
+.filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:11px;margin-bottom:10px}
+.filters label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--faint);font-weight:700;min-width:0}
+.filters select{width:100%;height:42px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:0 9px;outline:none;min-width:0}.filters select:focus{border-color:var(--accent)}
+.filters .act{display:flex;align-items:flex-end}.filters .act .btn{width:100%;height:42px}
+.summary{display:flex;justify-content:space-between;gap:10px;align-items:center;margin:6px 0 10px;color:var(--dim);font-size:12px;flex-wrap:wrap}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:13px 14px;min-width:0;cursor:pointer;text-align:left;color:inherit;width:100%;display:block}.card:hover{border-color:var(--border2)}.card:focus-visible{outline:2px solid var(--gold)}
+.tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px}.tag{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--surf2);color:var(--dim);border:1px solid var(--border);font-weight:700;white-space:nowrap}
+.tag.open{color:#06281c;background:var(--green);border-color:var(--green)}.tag.soon{color:var(--gold);border-color:rgba(245,196,81,.45)}.tag.closed,.tag.ended{color:var(--faint)}.tag.unknown{color:#ffd9a0;border-color:rgba(255,190,110,.35)}
+.tag.cancelled,.tag.postponed{color:#fff;background:#b23a4c;border-color:#b23a4c}.tag.new{color:#0f1320;background:var(--gold);border-color:var(--gold)}.tag.chg{color:var(--sky);border-color:rgba(124,199,255,.4)}
+.tag.v-official{color:var(--green);border-color:rgba(54,211,153,.4)}.tag.v-secondary{color:#c7cde6}.tag.v-unverified{color:var(--red);border-color:rgba(248,123,140,.4)}
+.card h3{font-size:15.5px;margin:0 0 8px;line-height:1.42;word-break:keep-all;overflow-wrap:anywhere}
+.kv{display:grid;grid-template-columns:58px minmax(0,1fr);gap:3px 10px;font-size:12.5px}.kv dt{color:var(--faint)}.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.dd-strong{color:var(--text);font-weight:700}.dd-warn{color:#ffd9a0}
+.free{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.free span{font-size:12px;font-weight:800;border-radius:7px;padding:4px 9px;background:var(--surf2);color:var(--dim)}.free .yes{background:rgba(54,211,153,.15);color:var(--green)}.free .no{background:rgba(248,123,140,.12);color:var(--red)}
+.empty,.loading{grid-column:1/-1;padding:44px 18px;text-align:center;color:var(--dim);background:var(--surf);border:1px dashed var(--border2);border-radius:12px}
+.pager{display:flex;justify-content:center;gap:6px;margin:16px 0 4px;flex-wrap:wrap}.pager button{min-width:40px;height:40px;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:8px;font-weight:800;cursor:pointer}.pager button.on{background:var(--accent);border-color:var(--accent);color:#fff}.pager button:disabled{opacity:.4;cursor:default}
+.leads{margin-top:18px;border:1px solid var(--border);border-radius:12px;background:var(--surf)}.leads summary{padding:12px 14px;cursor:pointer;font-weight:800;color:var(--dim);font-size:13px}.leads ul{list-style:none;margin:0;padding:0 14px 12px}.leads li{padding:8px 0;border-top:1px solid var(--border);font-size:12.5px}.leads li a{color:var(--sky);text-decoration:none;font-weight:700}.leads li small{display:block;color:var(--faint);overflow-wrap:anywhere}
+.note{color:var(--faint);font-size:11.5px;margin-top:14px;line-height:1.7}
+.alert{padding:10px 12px;background:rgba(245,196,81,.08);border:1px solid rgba(245,196,81,.35);color:#f1dfb4;border-radius:9px;margin:0 0 10px;font-size:12px}.alert[hidden]{display:none}
+dialog#detail{width:min(720px,100%);max-height:88vh;max-height:88dvh;margin:auto;padding:0;border:1px solid var(--border2);border-radius:14px;background:var(--surf);color:var(--text)}
+dialog#detail::backdrop{background:rgba(5,8,16,.72)}
+.dhead{position:sticky;top:0;background:var(--surf);padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;z-index:2}
+.dhead h3{margin:0;font-size:17px;line-height:1.4;flex:1;word-break:keep-all;overflow-wrap:anywhere}.dclose{flex:0 0 auto;width:40px;height:40px;border-radius:9px;border:1px solid var(--border);background:var(--surf2);color:var(--text);font-size:18px;cursor:pointer}
+.dbody{padding:12px 16px 18px}.dbody .kv{grid-template-columns:86px minmax(0,1fr);gap:6px 12px;font-size:13px}
+.links{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}.links a{display:inline-flex;align-items:center;gap:5px;height:42px;padding:0 14px;border-radius:9px;background:var(--accent);color:#fff;font-weight:800;text-decoration:none}.links a.sec{background:var(--surf2);border:1px solid var(--border);color:var(--text)}
+.dsec{margin-top:14px}.dsec h4{margin:0 0 6px;font-size:12px;color:var(--faint);letter-spacing:.04em}.dsec ul{margin:0;padding-left:18px;font-size:12.5px;color:var(--dim)}.dsec li{margin:3px 0;overflow-wrap:anywhere}.dsec li a{color:var(--sky)}
+.warnbox{margin-top:12px;padding:9px 11px;border-radius:9px;background:rgba(245,196,81,.08);border:1px solid rgba(245,196,81,.3);font-size:12px;color:#f1dfb4}
+.ftoggle{display:none}
+@media(max-width:850px){.hero{flex-direction:column;align-items:flex-start}.filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.wrap{padding:0 11px}.cards{grid-template-columns:1fr}.ftoggle{display:inline-block}.filters{display:none}.filters.on{display:grid}.hero h2{font-size:19px}
+  dialog#detail{max-height:92dvh;margin:auto 0 0;border-radius:16px 16px 0 0;width:100%;max-width:100%}.dbody .kv{grid-template-columns:76px minmax(0,1fr)}.srcrow{grid-template-columns:minmax(0,1fr) 56px}.srcrow .er{grid-column:1/-1}}
 </style>
+<script src="/jk-money.js?v=1.0.0"></script>
+<script src="/jk-access.js" data-guard="1"></script>
+<script src="/jk-ui.js?v=1.1.0" defer></script>
+<script src="/swim-core.js?v=2.0.0"></script>
+<script type="module">
+/* 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다(판정은 jk-access.js 한 곳 · JOB·공모주와 같은 방식).
+   2026-11-03 이전 판은 data-guard 로 본문만 가리고 guard() 를 부르지 않아 화면이 끝까지 비어 있었다. */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDomain:"jk-invest.firebaseapp.com",projectId:"jk-invest",
+  storageBucket:"jk-invest.firebasestorage.app",messagingSenderId:"1024066323251",appId:"1:1024066323251:web:23d557527866205f01f446"});
+const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"")||(/Macintosh/i.test(navigator.userAgent||"")&&(navigator.maxTouchPoints||0)>1);
+const auth=getAuth(app),db=initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
+JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{});
+</script>
+<link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
+<link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/jk-invest-192.png?v=1.0.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="JK 투자">
 </head>
 <body>
-<header><div class="wrap"><div class="htop"><div class="brand"><div class="kicker">JK 투자 · AQUATICS</div><h1>🏊 전국 수영대회 <span class="ver" id="swimVer">v1.0.0</span></h1></div>
-<div class="jkmenu" id="jkmenuWrap"><button class="jkmenu-btn" aria-label="전체메뉴">☰</button><div class="jkmenu-pop" id="jkmenuPop" hidden>
-<a href="/"><span class="mi">🏠</span>운영</a><a href="/plan"><span class="mi">🧭</span>자산플랜</a><a href="/backtest"><span class="mi">📊</span>백테</a><a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a><a href="/claude"><span class="mi">🤖</span>연구(클로드)</a><a href="/paper"><span class="mi">🧪</span>모의</a><a href="/tenbagger"><span class="mi">🔟</span>텐배거</a><a href="/ipo"><span class="mi">🎯</span>공모주</a><a href="/realestate"><span class="mi">🏢</span>부동산</a><a href="/job"><span class="mi">💼</span>JOB</a><a href="/swim" class="cur"><span class="mi">🏊</span>수영대회</a><a href="/workout"><span class="mi">⏱️</span>운동 타이머</a><a href="/admin"><span class="mi">👤</span>관리자</a>
-</div></div></div></div></header>
+<header><div class="wrap"><div class="htop">
+  <div class="brand"><div class="kicker">JK 투자</div><h1>🏊 수영대회 <span style="font-size:12px;font-weight:400;color:var(--faint)" id="swimVer">v2.0.0</span></h1></div>
+  <div class="jkmenu" id="jkmenuWrap">
+    <button class="jkmenu-btn" aria-label="전체메뉴">☰</button>
+    <div class="jkmenu-pop" id="jkmenuPop" hidden>
+      <a href="/"><span class="mi">🏠</span>운영</a>
+      <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
+      <a href="/backtest"><span class="mi">📊</span>백테</a>
+      <a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a>
+      <a href="/claude"><span class="mi">🤖</span>연구(클로드)</a>
+      <a href="/paper"><span class="mi">🧪</span>모의</a>
+      <a href="/tenbagger"><span class="mi">🔟</span>텐배거</a>
+      <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+      <a href="/realestate"><span class="mi">🏢</span>부동산</a>
+      <a href="/job"><span class="mi">💼</span>JOB</a>
+      <a href="/swim" class="cur"><span class="mi">🏊</span>수영대회</a>
+      <a href="/workout"><span class="mi">⏱️</span>운동 타이머</a>
+      <a href="/settings"><span class="mi">⚙️</span>설정</a>
+      <a href="/admin"><span class="mi">👤</span>관리자</a>
+    </div>
+  </div>
+</div></div></header>
 <main><div class="wrap">
-<section class="hero"><div><h2>전국 수영대회 통합 검색</h2><div class="sub">전국 시·도 마스터즈 · 전문선수 · 학생부 · 경영 · 다이빙 · 수구 · 핀수영 · 오픈워터</div></div><div class="stats"><span class="stat">전체 <b id="total">0</b></span><span class="stat">검색 <b id="matched">0</b></span><span class="stat">접수중 <b id="opened">0</b></span><span class="stat">갱신 <b id="updated">확인중</b></span></div></section>
-<div id="warning" class="alert" hidden></div>
-<section class="filters" aria-label="대회 검색 필터">
-<input id="search" class="search" type="search" placeholder="대회명 · 수영장 · 주최 · 참가 자격 검색" aria-label="대회 검색">
-<select id="region" aria-label="지역"><option value="">전체 지역</option></select>
-<select id="kind" aria-label="대회 구분"><option value="">전체 구분</option><option value="masters">마스터즈·동호인</option><option value="elite">전문선수</option><option value="student">유소년·학생</option><option value="other">기타·미확정</option></select>
-<select id="sport" aria-label="경기 종목"><option value="">전체 종목</option><option value="경영">경영</option><option value="다이빙">다이빙</option><option value="수구">수구</option><option value="아티스틱">아티스틱</option><option value="핀수영">핀수영</option><option value="오픈워터">오픈워터</option><option value="기타">기타</option></select>
-<select id="status" aria-label="접수 상태"><option value="upcoming">개최 예정</option><option value="all">마감·종료 포함</option><option value="open">접수중</option><option value="soon">접수예정</option><option value="unknown">확인 필요</option><option value="closed">접수마감</option></select>
-<select id="event" aria-label="자유형 종목"><option value="">자유형 조건 전체</option><option value="50">자유형 50m 확정</option><option value="100">자유형 100m 확정</option><option value="both">50m·100m 모두 확정</option><option value="unknown">자유형 종목 미확정</option></select>
-<select id="eligibility" aria-label="참가 대상"><option value="">참가 대상 전체</option><option value="adult">성인 가능·예상</option><option value="registered">선수등록 조건</option><option value="unknown">참가 자격 미확정</option></select>
-<select id="sort" aria-label="정렬"><option value="date">개최일 빠른 순</option><option value="deadline">접수 마감 임박순</option><option value="recent">최근 변경순</option><option value="region">지역순</option><option value="name">대회명순</option></select>
-<button type="button" id="reset">필터 초기화</button>
-</section>
-<div class="quick" id="quick"><button data-quick="all" class="active">전체</button><button data-quick="masters">🏊 마스터즈</button><button data-quick="elite">🏅 전문대회</button><button data-quick="freestyle">⚡ 자유형 50·100</button><button data-quick="changed">🆕 최근 변경</button></div>
-<div class="result"><span id="resultText">대회 자료를 불러오는 중…</span><span>출전 가능 여부는 공식 요강으로 최종 확인</span></div>
-<section id="cards" class="cards" aria-live="polite"><div class="empty">데이터 로딩 중…</div></section><button id="more" class="more" hidden>더 보기</button>
-<p class="hint">정보 출처: 대한수영연맹·지역 연맹·대회 통합 플랫폼. 수집 결과는 원문 공고와 다를 수 있으며 '확인 필요'는 확정된 접수 안내가 아닙니다.</p>
+  <section class="hero">
+    <div><h2>전국 수영대회</h2><div class="sub">17개 시·도 · 마스터즈 · 전문선수 · 학생부 · 경영 · 다이빙 · 수구 · 아티스틱 · 핀수영 · 오픈워터</div></div>
+    <div class="stats" aria-label="요약">
+      <span class="pill">전체 <b id="stTotal">–</b></span><span class="pill">예정 <b id="stUp">–</b></span>
+      <span class="pill g">접수중 <b id="stOpen">–</b></span><span class="pill y" title="최근 7일 새로 수집된 대회">신규 <b id="stNew">–</b></span><span class="pill" title="최근 7일 일정·접수·장소 등이 바뀐 대회">변경 <b id="stChg">–</b></span>
+    </div>
+  </section>
+  <div class="health" id="health"><span id="healthText">수집 상태 확인 중…</span><button type="button" id="healthBtn" aria-expanded="false">수집처 보기</button></div>
+  <div class="srclist" id="srcList" aria-label="수집처 상태"></div>
+  <div id="warning" class="alert" hidden></div>
+  <div class="quick" id="quick" role="tablist" aria-label="빠른 검색">
+    <button type="button" data-quick="" class="on">전체 대회</button>
+    <button type="button" data-quick="masters">🏊 마스터즈</button>
+    <button type="button" data-quick="elite">🏅 전문선수</button>
+    <button type="button" data-quick="free">⚡ 자유형 50m·100m</button>
+    <button type="button" data-quick="open">📝 접수중</button>
+    <button type="button" data-quick="new">🆕 신규·변경</button>
+  </div>
+  <div class="searchrow">
+    <input id="q" type="search" placeholder="대회명 · 수영장 · 지역 검색" aria-label="대회명 및 장소 검색" autocomplete="off">
+    <button type="button" class="btn ftoggle" id="ftoggle" aria-expanded="false">필터<span class="cnt" id="fcount" hidden>0</span></button>
+  </div>
+  <section class="filters" id="filters" aria-label="검색 필터">
+    <label>시·도<select id="sido"><option value="">전국</option></select></label>
+    <label>시·군·구<select id="sigungu"><option value="">전체</option></select></label>
+    <label>대회 구분<select id="kind"><option value="">전체</option><option value="masters">마스터즈·동호인</option><option value="elite">전문선수</option><option value="student">학생부</option><option value="other">기타·미확정</option></select></label>
+    <label>경기 종목<select id="sport"><option value="">전체</option><option value="경영">경영</option><option value="다이빙">다이빙</option><option value="수구">수구</option><option value="아티스틱">아티스틱스위밍</option><option value="핀수영">핀수영</option><option value="오픈워터">오픈워터</option><option value="기타">기타</option></select></label>
+    <label>개최 기간<select id="period"><option value="upcoming">예정 전체</option><option value="month">이번 달</option><option value="next">다음 달</option><option value="3m">3개월 이내</option><option value="past">종료된 대회</option><option value="all">전체(이력 포함)</option></select></label>
+    <label>접수 상태<select id="status"><option value="">전체</option><option value="soon">접수예정</option><option value="open">접수중</option><option value="closed">마감</option><option value="unknown">미확정</option><option value="cancelled">취소·연기</option></select></label>
+    <label>참가 자격<select id="elig"><option value="">전체</option><option value="adult">성인(동호인) 가능</option><option value="student">학생 가능</option><option value="elite">전문선수 대회</option><option value="unknown">자격 미확정</option></select></label>
+    <label>자유형<select id="free"><option value="">전체</option><option value="50">50m 가능</option><option value="100">100m 가능</option><option value="both">50m·100m 모두 가능</option><option value="unknown">미확정</option></select></label>
+    <label>정렬<select id="sort"><option value="date">개최일 빠른 순</option><option value="date_desc">개최일 늦은 순</option><option value="deadline">접수 마감 임박순</option><option value="recent">최근 등록순</option><option value="changed">최근 변경순</option><option value="region">지역순</option><option value="name">대회명순</option></select></label>
+    <div class="act"><button type="button" class="btn" id="reset">초기화</button></div>
+  </section>
+  <div class="summary"><span id="resultText">대회 자료를 불러오는 중…</span><span id="updatedText"></span></div>
+  <section class="cards" id="cards" aria-live="polite"><div class="loading">불러오는 중…</div></section>
+  <nav class="pager" id="pager" aria-label="페이지"></nav>
+  <details class="leads" id="leadsBox" hidden><summary id="leadsSum">검색으로 찾은 미확정 공고 후보</summary><ul id="leads"></ul></details>
+  <p class="note">· 공식 확인 = 대한수영연맹·대한수중핀수영협회·시·도 연맹·공식 공고 원문에서 확인. 2차 자료 = 대회 통합 일정 사이트(원문 재확인 필요). 미확정 = 검색으로 찾은 후보.<br>
+  · 자유형 50m·100m '가능/불가'는 요강·공고에 종목이 적힌 경우에만 표시합니다. 적혀 있지 않으면 '미확정'입니다.<br>
+  · 전국의 모든 대회가 수집된다는 보장은 없습니다. 자동 수집처에 없는 지역 소규모 대회는 누락될 수 있으니 참가 전 공식 요강을 꼭 확인하세요.</p>
 </div></main>
+<dialog id="detail" aria-labelledby="dTitle"><div class="dhead"><h3 id="dTitle"></h3><button type="button" class="dclose" id="dClose" aria-label="닫기">✕</button></div><div class="dbody" id="dBody"></div></dialog>
 <script>
 (function(){
 'use strict';
-const $=id=>document.getElementById(id), F=['search','region','kind','sport','status','event','eligibility','sort'];
-let all=[],view=[],shown=40,quick='all';
+const C=window.SwimCore,$=id=>document.getElementById(id);
+const RAW='https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/swim/';
+const FIELDS=['sido','sigungu','kind','sport','period','status','elig','free','sort'];
+const PAGE=20;
+let all=[],baseline='',page=1,quick='',T=C.kstToday();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const iso=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?d:'';
-const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-const status=e=>{const t=today();if(e.end_date&&e.end_date<t)return 'ended';if(e.apply_open&&e.apply_close&&e.apply_open<=t&&t<=e.apply_close)return 'open';if(e.apply_open&&e.apply_open>t)return 'soon';if(e.apply_close&&e.apply_close<t)return 'closed';return 'unknown';};
-const sLabel={open:'접수중',soon:'접수예정',closed:'접수마감',ended:'대회종료',unknown:'접수 확인 필요'};
-const label={masters:'마스터즈·동호인',elite:'전문선수',student:'유소년·학생',other:'기타·미확정'};
-const yn=x=>x===true?'참가 가능':x===false?'불가':'미확정';
-const ynClass=x=>x===true?'yes':x===false?'no':'';
-const tDate=e=>e.start_date?e.start_date+(e.end_date&&e.end_date!==e.start_date?' ~ '+e.end_date:''):'미확정';
-const openUrl=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:''}catch{return ''}};
-function renderCards(){
-const count=Math.min(shown,view.length);
-$('cards').innerHTML=!count?'<div class="empty">조건에 맞는 대회가 없습니다. 필터를 바꾸거나 전체 보관분을 확인하세요.</div>':view.slice(0,count).map(e=>{
- const st=status(e),link=openUrl(e.official_url),fallback=openUrl(e.source_url),href=link||fallback;
- return '<article class="card"><div class="topline"><span class="tag '+st+'">'+sLabel[st]+'</span><span class="tag">'+esc(e.region||'지역 미확정')+'</span><span class="tag">'+esc(label[e.kind]||label.other)+'</span><span class="tag">'+esc(e.sport||'종목 확인 필요')+'</span></div>'+
- '<h3>'+esc(e.title)+'</h3><dl class="details"><dt>개최일</dt><dd>'+esc(tDate(e))+'</dd><dt>장소</dt><dd>'+esc(e.venue||'확인 필요')+'</dd><dt>접수</dt><dd>'+esc((e.apply_open||'미확정')+' ~ '+(e.apply_close||'미확정'))+'</dd><dt>참가 자격</dt><dd>'+esc(e.eligibility||'공식 요강 확인 필요')+'</dd><dt>경기 종목</dt><dd>'+esc(e.events||'공식 요강 확인 필요')+'</dd><dt>확인 상태</dt><dd>'+esc(e.verification==='official'?'공식 공고':e.verification==='secondary'?'2차 자료 (원문 재확인 필요)':'정보 확인 필요')+'</dd></dl>'+
- '<div class="focus"><span class="'+ynClass(e.free50)+'">자유형 50m '+yn(e.free50)+'</span><span class="'+ynClass(e.free100)+'">자유형 100m '+yn(e.free100)+'</span></div><div class="cardfoot"><span class="hint">변경 '+esc(e.last_changed||e.first_seen||'미확정')+'</span>'+(href?'<a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+(link?'공식 공고 ↗':'자료 확인 ↗')+'</a>':'<span class="hint">공식 링크 미확인</span>')+'</div></article>';
-}).join('');
-$('more').hidden=count>=view.length;
-$('resultText').textContent=view.length.toLocaleString()+'건 중 '+count.toLocaleString()+'건 표시';
+const safeUrl=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:''}catch(e){return ''}};
+const md=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?(+d.slice(5,7))+'/'+(+d.slice(8,10)):'';
+const ymd=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?d.replace(/-/g,'.'):'';
+const dow=d=>{try{return '일월화수목금토'[new Date(d+'T00:00:00Z').getUTCDay()]}catch(e){return ''}};
+function period(e){if(!e.start_date)return '미확정';const s=ymd(e.start_date)+'('+dow(e.start_date)+')';return e.end_date&&e.end_date!==e.start_date?s+' ~ '+md(e.end_date)+'('+dow(e.end_date)+')':s;}
+function applyText(e){
+  const st=C.applyStatus(e,T);
+  if(st==='cancelled'||st==='postponed')return C.STATUS_LABEL[st];
+  if(!e.apply_open&&!e.apply_close)return e.apply_closed?'마감(공식 안내)':'미확정';
+  return (e.apply_open?md(e.apply_open):'?')+' ~ '+(e.apply_close?md(e.apply_close):'?')+(e.apply_closed?' · 조기 마감':'');
 }
-function apply(){
-const q=$('search').value.trim().toLowerCase(),region=$('region').value,kind=$('kind').value,sport=$('sport').value,st=$('status').value,ev=$('event').value,elig=$('eligibility').value,sort=$('sort').value,t=today();
-view=all.filter(e=>{
-const s=status(e);
-if(q&&!([e.title,e.region,e.venue,e.eligibility,e.events,e.source].join(' ').toLowerCase().includes(q)))return false;
-if(region&&e.region!==region)return false;
-if(kind&&e.kind!==kind)return false;
-if(sport&&e.sport!==sport)return false;
-if(st==='upcoming'&&e.end_date&&e.end_date<t)return false;
-if(['open','soon','unknown','closed'].includes(st)&&s!==st)return false;
-if(ev==='50'&&e.free50!==true)return false;
-if(ev==='100'&&e.free100!==true)return false;
-if(ev==='both'&&!(e.free50===true&&e.free100===true))return false;
-if(ev==='unknown'&&(e.free50===true||e.free100===true))return false;
-if(elig==='adult'&&e.adult_possible!==true)return false;
-if(elig==='registered'&&!/선수등록|등록선수|경기인 등록|등록 완료/.test(e.eligibility||''))return false;
-if(elig==='unknown'&&e.eligibility&&e.eligibility!=='확인 필요')return false;
-if(quick==='freestyle'&&e.free50!==true&&e.free100!==true)return false;
-if(quick==='changed'&&(!e.last_changed||e.last_changed<t.slice(0,8)+'01'))return false;
-return true;
-});
-view.sort((a,b)=>sort==='deadline'?(a.apply_close||'9999').localeCompare(b.apply_close||'9999')||tDate(a).localeCompare(tDate(b)):sort==='recent'?(b.last_changed||'').localeCompare(a.last_changed||''):sort==='region'?(a.region||'').localeCompare(b.region||''):sort==='name'?a.title.localeCompare(b.title): (a.start_date||'9999').localeCompare(b.start_date||'9999'));
-shown=40;$('matched').textContent=view.length;renderCards();
+function dleft(e){if(!e.apply_close)return '';const n=Math.round((Date.parse(e.apply_close)-Date.parse(T))/864e5);return n>=0&&n<=7&&C.applyStatus(e,T)==='open'?(n===0?'오늘 마감':'D-'+n):'';}
+function freeChip(v,n){return '<span class="'+(v===true?'yes':v===false?'no':'')+'">자유형 '+n+'m '+C.freeLabel(v)+'</span>';}
+function card(e){
+  const st=C.applyStatus(e,T),kinds=(e.kinds&&e.kinds.length?e.kinds:[e.kind||'other']);
+  const tags=['<span class="tag '+st+'">'+C.STATUS_LABEL[st]+(dleft(e)?' · '+dleft(e):'')+'</span>'];
+  if(C.isNew(e,T,baseline))tags.push('<span class="tag new">신규</span>');else if(C.isChanged(e,T))tags.push('<span class="tag chg">변경</span>');
+  tags.push('<span class="tag">'+esc(e.region||'지역 미확인')+'</span>');
+  kinds.forEach(k=>tags.push('<span class="tag">'+esc(C.KIND_LABEL[k]||k)+'</span>'));
+  tags.push('<span class="tag">'+esc((e.sports||[e.sport]).join('·'))+'</span>');
+  tags.push('<span class="tag v-'+esc(e.verification)+'">'+esc(C.VERIFY_LABEL[e.verification]||'미확정')+'</span>');
+  return '<button type="button" class="card" data-id="'+esc(e.id)+'"><div class="tags">'+tags.join('')+'</div><h3>'+esc(e.title)+'</h3>'+
+    '<dl class="kv"><dt>개최일</dt><dd class="dd-strong">'+esc(period(e))+'</dd><dt>장소</dt><dd>'+esc(e.venue||'미확정')+(e.pool?' · '+esc(e.pool):'')+'</dd>'+
+    '<dt>접수</dt><dd>'+esc(applyText(e))+'</dd><dt>참가 자격</dt><dd'+(e.eligibility?'':' class="dd-warn"')+'>'+esc(e.eligibility||'요강 확인 필요(미확정)')+'</dd></dl>'+
+    '<div class="free">'+freeChip(e.free50,50)+freeChip(e.free100,100)+'</div></button>';
 }
-F.forEach(id=>$(id).addEventListener(id==='search'?'input':'change',()=>{quick='all';document.querySelectorAll('#quick button').forEach(b=>b.classList.toggle('active',b.dataset.quick==='all'));apply()}));
-$('reset').addEventListener('click',()=>{F.forEach(id=>{if(id==='search')$(id).value='';else $(id).selectedIndex=0});$('status').value='upcoming';quick='all';document.querySelectorAll('#quick button').forEach(b=>b.classList.toggle('active',b.dataset.quick==='all'));apply()});
-$('quick').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;quick=b.dataset.quick;document.querySelectorAll('#quick button').forEach(x=>x.classList.toggle('active',x===b));$('kind').value=quick==='masters'?'masters':quick==='elite'?'elite':'';if(quick==='freestyle'){$('event').value='';$('kind').value='';}if(quick==='changed')$('kind').value='';apply()});
-$('more').addEventListener('click',()=>{shown+=40;renderCards()});
-async function load(){try{
-const res=await fetch('/data/swim/competitions.json?t='+Date.now(),{cache:'no-store'});if(!res.ok)throw Error('HTTP '+res.status);
-const data=await res.json();all=Array.isArray(data.competitions)?data.competitions:[];
-all=all.filter(x=>x&&typeof x.title==='string');
-const regions=[...new Set(all.map(e=>e.region).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));$('region').innerHTML='<option value="">전체 지역</option>'+regions.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join('');
-$('total').textContent=all.length;$('opened').textContent=all.filter(e=>status(e)==='open').length;
-$('updated').textContent=data.updated_at?String(data.updated_at).slice(0,16).replace('T',' '):'미확인';
-if(data.sources_failed?.length){$('warning').hidden=false;$('warning').textContent='일부 수집처 장애: '+data.sources_failed.join(', ')+'. 이전 데이터가 유지됩니다.'}
-if(!all.length){$('warning').hidden=false;$('warning').textContent='수집된 대회가 없습니다. 수집 로그와 공식 공고를 확인해 주세요.'}
-apply();
-}catch(err){$('warning').hidden=false;$('warning').textContent='자료를 읽지 못했습니다 ('+err.message+'). 새로고침하거나 잠시 뒤 다시 확인해 주세요.';$('cards').innerHTML='<div class="empty">대회 데이터 없음</div>';}
+function filters(){const f={q:$('q').value.trim(),quick};FIELDS.forEach(k=>f[k]=$(k).value);return f;}
+function activeCount(f){return FIELDS.filter(k=>k!=='sort'&&f[k]&&!(k==='period'&&f[k]==='upcoming')).length;}
+function render(){
+  const f=filters(),list=C.sortList(all.filter(e=>C.matches(e,f,T,baseline)),f.sort,T),pg=C.paginate(list,page,PAGE);
+  page=pg.page;
+  $('cards').innerHTML=pg.items.length?pg.items.map(card).join(''):'<div class="empty">조건에 맞는 대회가 없습니다.<br>개최 기간을 \'전체(이력 포함)\'로 바꾸거나 필터를 초기화해 보세요.</div>';
+  $('resultText').textContent='검색 결과 '+list.length.toLocaleString()+'건'+(list.length?' · '+pg.from+'–'+pg.to+' 표시':'');
+  const n=activeCount(f);$('fcount').hidden=!n;$('fcount').textContent=n;
+  let h='';
+  if(pg.pages>1){
+    h+='<button type="button" data-p="'+(pg.page-1)+'"'+(pg.page<=1?' disabled':'')+' aria-label="이전">‹</button>';
+    const lo=Math.max(1,pg.page-2),hi=Math.min(pg.pages,lo+4);
+    for(let p=Math.max(1,hi-4);p<=hi;p++)h+='<button type="button" data-p="'+p+'"'+(p===pg.page?' class="on" aria-current="page"':'')+'>'+p+'</button>';
+    h+='<button type="button" data-p="'+(pg.page+1)+'"'+(pg.page>=pg.pages?' disabled':'')+' aria-label="다음">›</button>';
+  }
+  $('pager').innerHTML=h;
+}
+function fillSigungu(){
+  const r=C.regions(all),s=$('sido').value,cur=$('sigungu').value,list=s?(r[s]||[]):[];
+  $('sigungu').innerHTML='<option value="">전체</option>'+list.map(x=>'<option'+(x===cur?' selected':'')+'>'+esc(x)+'</option>').join('');
+  $('sigungu').disabled=!s;
+}
+function row(k,v,cls){return v?'<dt>'+k+'</dt><dd'+(cls?' class="'+cls+'"':'')+'>'+v+'</dd>':'';}
+function openDetail(id,push){
+  const e=all.find(x=>x.id===id);if(!e)return;
+  const st=C.applyStatus(e,T),off=safeUrl(e.official_url),ap=safeUrl(e.apply_url),kinds=(e.kinds||[e.kind]).map(k=>C.KIND_LABEL[k]||k).join(' · ');
+  $('dTitle').textContent=e.title;
+  let h='<div class="tags"><span class="tag '+st+'">'+C.STATUS_LABEL[st]+'</span><span class="tag v-'+esc(e.verification)+'">'+esc(C.VERIFY_LABEL[e.verification]||'')+'</span></div><dl class="kv">';
+  h+=row('대회 구분',esc(kinds))+row('경기 종목',esc((e.sports||[]).join(' · '))+(e.sports_inferred?' <span class="dd-warn">(공고에 종목 없음 — 일반 수영대회로 분류)</span>':''));
+  h+=row('개최일',esc(period(e)),'dd-strong')+row('지역',esc(e.region||'지역 미확인'))+row('장소',esc(e.venue||'미확정'))+row('수영장 규격',esc(e.pool||'미확정'),e.pool?'':'dd-warn');
+  h+=row('접수 기간',esc((e.apply_open?ymd(e.apply_open):'시작일 미확정')+' ~ '+(e.apply_close?ymd(e.apply_close):'마감일 미확정'))+(e.apply_closed?' · <b>공식 조기 마감</b>':''));
+  h+=row('접수 상태',esc(C.STATUS_LABEL[st]));
+  h+=row('참가 자격',esc(e.eligibility||'요강 확인 필요(미확정)'),e.eligibility?'':'dd-warn');
+  const flags=[];if(e.adult_ok===true)flags.push('성인 동호인 참가 가능');if(e.adult_ok===false)flags.push('일반 동호인 참가 불가(학생·등록선수 대회)');if(e.student_ok)flags.push('학생 참가 가능');if(e.registered===true)flags.push('선수등록 필요');if(e.registered===false)flags.push('비등록 선수 참가 가능');if(e.elite_only)flags.push('전문선수 대회');
+  h+=row('자격 요약',esc(flags.join(' · ')||'미확정'),flags.length?'':'dd-warn');
+  h+=row('참가비',esc(e.fee||'미확정'),e.fee?'':'dd-warn')+row('경기 종목(세부)',esc(e.events||'요강 확인 필요'),e.events?'':'dd-warn');
+  h+=row('자유형 50m',esc(C.freeLabel(e.free50)),e.free50===true?'dd-strong':e.free50==null?'dd-warn':'')+row('자유형 100m',esc(C.freeLabel(e.free100)),e.free100===true?'dd-strong':e.free100==null?'dd-warn':'');
+  if(e.free_evidence)h+=row('근거',esc(e.free_evidence));
+  h+=row('최초 수집',esc(ymd(e.first_seen)))+row('최종 변경',esc(ymd(e.last_changed)));
+  h+='</dl><div class="links">'+(off?'<a href="'+esc(off)+'" target="_blank" rel="noopener noreferrer">공식 공고 ↗</a>':'')+(ap?'<a href="'+esc(ap)+'" target="_blank" rel="noopener noreferrer">참가 신청 ↗</a>':'')+'</div>';
+  if(!off)h+='<div class="warnbox">공식 공고 원문 링크를 아직 찾지 못했습니다. 아래 출처에서 확인하세요.</div>';
+  const warn=(e.warnings||[]).slice();if(e.conflicts){if(e.conflicts.dates)warn.push('출처마다 개최일이 다름: '+e.conflicts.dates.join(' / '));if(e.conflicts.apply)warn.push('출처마다 접수 기간이 다름: '+e.conflicts.apply.join(' / '));if(e.conflicts.pool)warn.push('출처마다 수영장 규격이 다름: '+e.conflicts.pool.join(' / '));}
+  if(warn.length)h+='<div class="warnbox">'+warn.map(esc).join('<br>')+'</div>';
+  h+='<div class="dsec"><h4>출처</h4><ul>'+(e.sources||[]).map(s=>{const u=safeUrl(s.url);return '<li>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a>':esc(s.name))+' · '+esc(C.VERIFY_LABEL[s.tier]||s.tier)+(s.title&&s.title!==e.title?' — '+esc(s.title):'')+'</li>';}).join('')+'</ul></div>';
+  if((e.attachments||[]).length)h+='<div class="dsec"><h4>첨부(요강·신청서)</h4><ul>'+e.attachments.map(a=>{const u=safeUrl(a.url);return '<li>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(a.name)+'</a>':esc(a.name))+'</li>';}).join('')+'</ul></div>';
+  const ch=(e.changes||[]).filter(c=>c&&c.type!=='baseline');
+  if(ch.length)h+='<div class="dsec"><h4>변경 이력</h4><ul>'+ch.slice().reverse().map(c=>'<li>'+esc(ymd(c.date))+' · '+(c.type==='new'?'신규 등록':Object.entries(c.fields||{}).map(([k,v])=>esc(LABEL[k]||k)+' '+esc(fmt(v[0]))+' → '+esc(fmt(v[1]))).join(', '))+'</li>').join('')+'</ul></div>';
+  $('dBody').innerHTML=h;
+  const d=$('detail');if(!d.open){if(d.showModal)d.showModal();else d.setAttribute('open','');}
+  $('dBody').scrollTop=0;
+  if(push!==false){const u=new URL(location.href);u.searchParams.set('id',id);history.pushState({id},'',u);}
+}
+const LABEL={title:'대회명',start_date:'시작일',end_date:'종료일',venue:'장소',sido:'시·도',sigungu:'시·군·구',apply_open:'접수 시작',apply_close:'접수 마감',status:'상태',apply_closed:'조기 마감',events:'종목',free50:'자유형50',free100:'자유형100',fee:'참가비',eligibility:'자격',pool:'규격',official_url:'공식 링크',apply_url:'신청 링크',verification:'확인 상태'};
+const fmt=v=>v===true?'예':v===false?'아니오':v==null||v===''?'없음':String(v).slice(0,40);
+function closeDetail(push){const d=$('detail');if(d.open){if(d.close)d.close();else d.removeAttribute('open');}
+  if(push!==false&&new URL(location.href).searchParams.has('id')){const u=new URL(location.href);u.searchParams.delete('id');history.pushState({},'',u);}}
+function setQuick(v){quick=v;document.querySelectorAll('#quick button').forEach(b=>{const on=b.dataset.quick===v;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});page=1;render();}
+FIELDS.forEach(k=>$(k).addEventListener('change',()=>{if(k==='sido'){$('sigungu').value='';fillSigungu();}page=1;render();}));
+let qt;$('q').addEventListener('input',()=>{clearTimeout(qt);qt=setTimeout(()=>{page=1;render();},120);});
+$('quick').addEventListener('click',ev=>{const b=ev.target.closest('button');if(b)setQuick(b.dataset.quick);});
+$('reset').addEventListener('click',()=>{$('q').value='';FIELDS.forEach(k=>$(k).selectedIndex=0);fillSigungu();setQuick('');});
+$('ftoggle').addEventListener('click',()=>{const on=$('filters').classList.toggle('on');$('ftoggle').setAttribute('aria-expanded',on);});
+$('pager').addEventListener('click',ev=>{const b=ev.target.closest('button[data-p]');if(!b||b.disabled)return;page=+b.dataset.p;render();$('resultText').scrollIntoView({behavior:'smooth',block:'start'});});
+$('cards').addEventListener('click',ev=>{const c=ev.target.closest('.card');if(c)openDetail(c.dataset.id);});
+$('dClose').addEventListener('click',()=>closeDetail());
+$('detail').addEventListener('click',ev=>{if(ev.target===$('detail'))closeDetail();});
+$('detail').addEventListener('cancel',ev=>{ev.preventDefault();closeDetail();});
+window.addEventListener('popstate',()=>{const id=new URL(location.href).searchParams.get('id');if(id)openDetail(id,false);else closeDetail(false);});
+$('healthBtn').addEventListener('click',()=>{const on=$('srcList').classList.toggle('on');$('healthBtn').setAttribute('aria-expanded',on);$('healthBtn').textContent=on?'닫기':'수집처 보기';});
+const kst=s=>{if(!s)return '';const d=new Date(s);if(isNaN(d))return String(s).slice(0,16);return new Date(d.getTime()+9*36e5).toISOString().slice(0,16).replace('T',' ');};
+function renderHealth(src){
+  const list=(src&&src.sources)||[],main=list.filter(s=>s.tier!=='unverified'&&s.key!=='official_link'),bad=main.filter(s=>s.status!=='ok');
+  $('health').classList.toggle('bad',!!bad.length);
+  $('healthText').textContent=list.length?('자동 수집 '+(main.length-bad.length)+'/'+main.length+'곳 정상'+(bad.length?' · 실패: '+bad.map(s=>s.name.replace(/ (대회일정|공지사항)$/,'')).join(', '):'')+' · 마지막 수집 '+kst(src.updated_at)):'수집 상태 정보를 읽지 못했습니다';
+  $('srcList').innerHTML=list.map(s=>'<div class="srcrow"><span class="nm">'+(safeUrl(s.url)?'<a href="'+esc(safeUrl(s.url))+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a>':esc(s.name))+'</span><span class="'+(s.status==='ok'?'ok':'ng')+'">'+(s.status==='ok'?'정상 '+(s.count||0)+'건':s.status==='blocked'?'수집 금지':'실패')+'</span><span class="er">'+esc(s.status==='ok'?(s.warning||'성공 '+kst(s.last_success)):(s.error||'')+(s.last_success?' · 마지막 성공 '+kst(s.last_success):' · 성공 기록 없음'))+'</span></div>').join('');
+}
+function renderLeads(doc){
+  const L=((doc&&doc.leads)||[]).filter(x=>!x.matched_id);
+  if(!L.length)return;
+  $('leadsBox').hidden=false;$('leadsSum').textContent='검색으로 찾은 미확정 공고 후보 '+L.length+'건 (자동 수집처에 없는 대회 · 공식 확인 전)';
+  $('leads').innerHTML=L.slice(0,60).map(x=>{const u=safeUrl(x.url);return '<li>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(x.title)+'</a>':esc(x.title))+'<small>'+esc(x.host)+(x.official_host?' · 공식 기관 주소':' · 비공식(카페·블로그 등) — 확인 필요')+' · 발견 '+esc(ymd(x.first_seen))+(x.snippet?' · '+esc(x.snippet.slice(0,90)):'')+'</small></li>';}).join('');
+}
+/* 알림 링크(?id=)로 들어와도 로그인 승인 전에는 상세 창을 열지 않는다 — 창(top layer)의 배경막이 로그인 화면을 덮는다. */
+function whenApproved(fn){
+  const de=document.documentElement,ok=()=>!de.classList.contains('jk-guard')||de.classList.contains('jk-ok');
+  if(ok())return fn();
+  const mo=new MutationObserver(()=>{if(ok()){mo.disconnect();fn();}});
+  mo.observe(de,{attributes:true,attributeFilter:['class']});
+}
+async function fetchJson(name,stamp){
+  const get=u=>fetch(u+(u.includes('?')?'&':'?')+'ts='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json();});
+  const rs=await Promise.allSettled([get(RAW+name),get('/data/swim/'+name)]);
+  const ok=rs.filter(r=>r.status==='fulfilled').map(r=>r.value);
+  if(!ok.length)throw (rs[1].reason||rs[0].reason);
+  return ok.sort((a,b)=>String(b[stamp]||'').localeCompare(String(a[stamp]||'')))[0];   // 저장소 원본과 배포본 중 최신
+}
+async function load(){
+  try{
+    const [comp,src,leads]=await Promise.all([fetchJson('competitions.json','data_changed_at'),fetchJson('sources.json','updated_at').catch(()=>null),fetchJson('leads.json','baseline_date').catch(()=>null)]);
+    if(comp.schema_version!==2)throw Error('자료 형식이 예전 판입니다(새 수집 대기)');
+    all=(comp.competitions||[]).filter(x=>x&&x.id&&typeof x.title==='string');baseline=comp.baseline_date||'';
+    const r=C.regions(all);$('sido').innerHTML='<option value="">전국</option>'+Object.keys(r).map(s=>'<option>'+esc(s)+'</option>').join('');fillSigungu();
+    const s=C.stats(all,T,baseline);$('stTotal').textContent=s.total;$('stUp').textContent=s.upcoming;$('stOpen').textContent=s.open;$('stNew').textContent=s.fresh;$('stChg').textContent=s.changed;
+    $('updatedText').textContent='자료 갱신 '+kst(comp.data_changed_at)+(src?' · 확인 '+kst(src.updated_at):'');
+    renderHealth(src);renderLeads(leads);
+    if(!all.length){$('warning').hidden=false;$('warning').textContent='수집된 대회가 없습니다. 수집 상태를 확인해 주세요.';}
+    render();
+    const id=new URL(location.href).searchParams.get('id');if(id)whenApproved(()=>openDetail(id,false));
+  }catch(err){
+    $('warning').hidden=false;$('warning').textContent='대회 자료를 읽지 못했습니다('+err.message+'). 잠시 뒤 새로고침해 주세요.';
+    $('cards').innerHTML='<div class="empty">대회 자료 없음</div>';$('resultText').textContent='';
+  }
 }
 load();
 })();
 </script>
-</body></html>
+</body>
+</html>
