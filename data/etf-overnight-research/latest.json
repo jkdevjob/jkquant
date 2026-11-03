@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-03T12:34:21.665002+09:00",
+  "generatedAt": "2026-11-04T02:19:42.522193+09:00",
   "strategyVersion": "etf_dip_overnight_v1",
   "rule": {
     "code": "233740",
@@ -17,7 +17,7 @@
     "worstDay": -15.0
   },
   "from": "2018-04-02",
-  "to": "2026-11-02",
+  "to": "2026-11-03",
   "evaluationOrder": [
     "plus1DaysPerYear",
     "plus5WeeksPerYear",
@@ -50,14 +50,14 @@
       "gate": true
     },
     "outOfSample": {
-      "days": 21,
+      "days": 22,
       "tradeDays": 10,
-      "tradeDaysPerYear": 119.04761904761904,
+      "tradeDaysPerYear": 113.63636363636364,
       "plus1RateOfTradeDays": 30.0,
-      "lossDaysPerYear": 83.33333333333333,
+      "lossDaysPerYear": 79.54545454545455,
       "tStat": -1.644877161990947,
       "plus1Days": 3,
-      "plus1DaysPerYear": 35.714285714285715,
+      "plus1DaysPerYear": 34.09090909090909,
       "plus5Weeks": 0,
       "plus5WeeksPerYear": 0.0,
       "weeklyAvgPct": -3.7690786105091356,
@@ -96,14 +96,14 @@
       "gate": false
     },
     "outOfSample": {
-      "days": 21,
+      "days": 22,
       "tradeDays": 6,
-      "tradeDaysPerYear": 71.42857142857143,
+      "tradeDaysPerYear": 68.18181818181819,
       "plus1RateOfTradeDays": 16.666666666666664,
-      "lossDaysPerYear": 59.52380952380952,
+      "lossDaysPerYear": 56.81818181818182,
       "tStat": -0.5647982858507431,
       "plus1Days": 1,
-      "plus1DaysPerYear": 11.904761904761903,
+      "plus1DaysPerYear": 11.363636363636365,
       "plus5Weeks": 0,
       "plus5WeeksPerYear": 0.0,
       "weeklyAvgPct": -1.1807806044968783,
@@ -142,16 +142,16 @@
       "gate": true
     },
     "outOfSample": {
-      "days": 21,
+      "days": 22,
       "tradeDays": 11,
-      "tradeDaysPerYear": 130.95238095238093,
+      "tradeDaysPerYear": 125.00000000000001,
       "plus1RateOfTradeDays": 36.36363636363637,
-      "lossDaysPerYear": 83.33333333333333,
+      "lossDaysPerYear": 79.54545454545455,
       "tStat": -0.5488458642854026,
       "plus1Days": 4,
-      "plus1DaysPerYear": 47.61904761904761,
+      "plus1DaysPerYear": 45.45454545454546,
       "plus5Weeks": 1,
-      "plus5WeeksPerYear": 11.904761904761903,
+      "plus5WeeksPerYear": 11.363636363636365,
       "weeklyAvgPct": -1.4541659820924813,
       "totalPct": -8.413889358314265,
       "lossDays": 7,
@@ -297,7 +297,7 @@
     }
   ],
   "live": {
-    "trades": 10,
+    "trades": 11,
     "rows": [
       {
         "signalDate": "2026-10-07",
@@ -478,6 +478,24 @@
         "sellSlipPct": null,
         "realizedNetPct": null,
         "modelNetPct": -2.433343782654128
+      },
+      {
+        "signalDate": "2026-11-03",
+        "exitDate": null,
+        "strategyVersion": "etf_dip_overnight_v1",
+        "source": "kis-vts-live",
+        "expectedDropPct": -9.719438877755515,
+        "buyOrderOk": false,
+        "buyQty": 0,
+        "buyFill": null,
+        "actualClose": 4510.0,
+        "buySlipPct": null,
+        "sellQty": null,
+        "sellFill": null,
+        "actualNextOpen": null,
+        "sellSlipPct": null,
+        "realizedNetPct": null,
+        "modelNetPct": null
       }
     ]
   }
