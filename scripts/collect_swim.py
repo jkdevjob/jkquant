@@ -242,6 +242,47 @@ def scrape_korswim():
     if not out: raise ValueError("no official schedule entries")
     return out
 
+def scrape_myranking():
+    # Broad calendar: local club, student, registered-athlete, and long-distance meets.
+    url = "https://myranking.co.kr/index.php?page=schedule"
+    soup = get_soup(url)
+    lines = [clean(x) for x in soup.get_text("\n", strip=True).split("\n") if clean(x)]
+    found = []
+    seen = set()
+    for i, line in enumerate(lines):
+        # 11월 14 (토), 11월 14 — 11월 15, etc. Year is displayed in the site header.
+        m = re.match(r"^(\d{1,2})월\s*(\d{1,2})(?:\s*[—~-]\s*(\d{1,2})월\s*(\d{1,2}))?", line)
+        if not m: continue
+        try:
+            first = datetime(TODAY.year, int(m[1]), int(m[2])).date().isoformat()
+            last = datetime(TODAY.year, int(m[3]), int(m[4])).date().isoformat() if m[3] else first
+        except (ValueError,TypeError): continue
+        title = ""
+        for nxt in lines[i+1:i+5]:
+            if 6<len(nxt)<145 and re.search(
+                r"수영대회|수영선수권|대학수영|마스터즈|핀수영|수구|다이빙|아쿠아마라톤|장거리\s*수영|오픈워터",
+                nxt):
+                title=nxt;break
+        if not title:continue
+        if (title,first) in seen:continue
+        seen.add((title,first))
+        venue=""
+        for nxt in lines[i+2:i+9]:
+            if "location_on" in nxt:
+                venue=nxt.replace("location_on","").split("·")[0].strip()
+                break
+        item=base_item(title,venue,start=first,end=last,
+                       source="마이랭킹 전국 대회 일정",source_url=url)
+        if not item:continue
+        details=" ".join(lines[i+1:i+9])
+        if re.search(r"등록선수",details) and item["kind"]=="other":
+            item["kind"]="elite"
+        if re.search(r"학생부|유소년",details) and item["kind"]=="other":
+            item["kind"]="student"
+        found.append(item)
+    if not found:raise ValueError("no recognized nationwide calendar entries")
+    return found
+
 def scrape_whoisfast():
     # Independent nationwide masters calendar; names/venues are secondary evidence.
     # Parse lightweight visible text instead of assuming a fragile CSS class.
@@ -342,6 +383,7 @@ def refresh():
     results=[];failed=[]
     for name,fn in [("대회 통합 목록",scrape_swim_index),
                     ("전국 마스터즈 일정",scrape_whoisfast),
+                    ("마이랭킹 전국 일정",scrape_myranking),
                     ("대한수영연맹",scrape_korswim)]:
         try:
             batch=fn();results.extend(batch);print(f"{name}: {len(batch)} entries")
