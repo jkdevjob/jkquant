@@ -10,7 +10,16 @@ class SwimCollectorTests(unittest.TestCase):
     def test_scope(self):
         self.assertEqual(m.region_for("김천실내수영장"), "김천")
         self.assertEqual(m.region_for("한들문화센터 수영장"), "천안")
-        self.assertEqual(m.region_for("서울 잠실수영장"), "")
+        self.assertEqual(m.region_for("서울 잠실수영장"), "서울")
+        self.assertEqual(m.region_for("부산 사직실내수영장"), "부산")
+        self.assertEqual(m.region_for("제주 서귀포 수영대회"), "서귀포")
+        self.assertEqual(m.region_for("전북 완주군 근로자종합복지관"), "완주")
+        self.assertEqual(m.region_for("경기 수원수영장"), "수원")
+        self.assertEqual(m.region_for("외국 골드코스트 수영대회"), "")
+    def test_unknown_city_is_retained(self):
+        item=m.base_item("2026 전국 마스터즈 수영대회",venue="장소 미정",start="2026-12-12")
+        self.assertIsNotNone(item)
+        self.assertEqual(item["region"],"지역 미확인")
     def test_free_50m_not_a_venue(self):
         self.assertIsNone(m.freestyle("50m 장수로 · 자유형",50))
         self.assertTrue(m.freestyle("자유형 50m·100m",50))
