@@ -44,7 +44,7 @@ jobs:
           from pathlib import Path
           from bs4 import BeautifulSoup
           soup=BeautifulSoup(Path("swim.html").read_text(encoding="utf-8"),"html.parser")
-          js="\\n".join(x.get_text() for x in soup.find_all("script") if not x.get("src"))
+          js="\n".join(x.get_text() for x in soup.find_all("script") if not x.get("src"))
           Path("/tmp/swim-page.js").write_text(js,encoding="utf-8")
           PY
           node --check /tmp/swim-page.js
