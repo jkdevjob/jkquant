@@ -12,6 +12,7 @@
 - 알림(`scripts/swim_alerts.py` · `functions/api/swim-alert.js`): 새 대회·접수 시작·마감 임박·개최일/장소/접수 변경·취소/연기 → 텔레그램 한 묶음. 열쇠 중복 금지 · 첫 실행 기준선 · 링크는 /swim?id=.
 - 워크플로: 08:00 KST + 08:45 예비(그날 성공 시 건너뜀), 원문 캐시(actions/cache), 변경된 자료만 커밋, 전 수집처 실패·알림 실패 시 빨간불.
 - 검사: `test_swim_collect.py` 29 · `mutation_test_swim.py` 14종 · `tests/swim.test.mjs` 8 · 회귀 [76] 에 swim.html 버전 추가 · 모바일 레이아웃 검사에 swim.html 추가.
+- PR #569 · 9093de9. 병합 커밋 본문에 배포 건너뛰기 표시 글자가 들어가 배포가 돌지 않아 후속 문서 커밋으로 배포했다.
 
 ## 2026-11-03 · 모의 목록 재계산 중 화면이 안 그려지던 문제 · v3.113.1
 
