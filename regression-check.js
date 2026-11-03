@@ -12595,6 +12595,20 @@ console.log('\n[37-틈] 모의 전체 재생 — 세션 사이에 화면 그릴 
   }catch(e){ ok('[37-틈] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); } })());
 }
 
+/* [37-목록] 모바일에서도 모의 성과는 한 표(목록)로 본다 — 카드로 바꾸지 않는다
+   (2026-11-03 사용자: '목록형으로 서로 비교하면서 한눈에 보기 쉽게 다시 바꿔놔' — 9a8662f 모바일 카드 되돌림) */
+console.log('\n[37-목록] 모의 성과 — 모바일도 한 표(목록) · 카드 없음');
+{ const op=extractFn(idx,'async function openPaper()');
+  const css=(idx.match(/<style[\s\S]*?<\/style>/g)||[]).join('\n');
+  const check=(src,style)=>({table:/let h=`<div class="htable-wrap"><table class="htable narrow"><thead><tr>`/.test(src),
+    noCards:!/paperBuildMobileCards|paper-mobile-view/.test(src)&&!/#paper_body[^{]*\{display:none/.test(style)});
+  const a=check(op,css);
+  ok('[37-목록] openPaper 는 표 하나(htable-wrap › table)로 그리고 카드 목록을 만들지 않는다 · 모바일 CSS 가 표를 숨기지 않는다',a.table&&a.noCards,JSON.stringify(a));
+  const m=check(op.replace('let h=`<div class="htable-wrap">','let h=`<div class="paper-desktop-table"><div class="htable-wrap">')+'\nif(typeof paperBuildMobileCards===\'function\')paperBuildMobileCards(body);',
+                css+'\n@media(max-width:760px){#paper_body .paper-desktop-table{display:none!important}}');
+  ok('[37-목록] 변이: 카드판(9a8662f) 모양을 다시 넣으면 빨간불',!(m.table&&m.noCards),JSON.stringify(m));
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
