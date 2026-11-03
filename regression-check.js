@@ -1985,6 +1985,21 @@ console.log('[36] 분석 머리 — 여섯 탭 모두 달러·원화 병기 손�
   ok('적립·ASAP 분석도 회색 중복 원화를 다시 쓰지 않는다',generic&&!generic.includes("pre+'_pnl_krw'"));
 }
 
+console.log('[37-mobile] iPhone 모의성과 — sticky 1열 소실 방지 · 원본값 카드 패리티');
+{
+  const {spawnSync}=require('child_process');
+  const run=spawnSync(process.execPath,[path.join(__d,'scripts/check-paper-mobile-cards.cjs')],{encoding:'utf8',timeout:15000});
+  ok('모바일 성과카드는 실제 데스크톱 셀을 복제하고 모든 세션의 이름·3KPI·7상세·정렬을 유지',
+     run.status===0 && (run.stdout||'').includes('PAPER MOBILE CARD: 16 assertions groups PASS'),
+     String(run.stdout||'')+String(run.stderr||''));
+  ok('모바일에서는 WebKit sticky 표 대신 보이는 카드이며 PC에는 원래 정렬 테이블 유지',
+     /#paper_body \.paper-desktop-table\{display:none!important\}/.test(idx)
+     && /#paper_body \.paper-mobile-view\{display:block\}/.test(idx)
+     && /function paperSortTable\(key,th\)/.test(idx)
+     && /id="paper_tbody"/.test(idx)
+     && /v3\.112\.4/.test(idx));
+}
+
 console.log('[37] 모의 성과 표 — 세후 TR · TR · MDD · MAR · 평가 순 · 투입 · 기간은 맨 오른쪽');
 {
   const op=extractFn(idx,'async function openPaper()');
