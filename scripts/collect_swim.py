@@ -593,11 +593,26 @@ def kind_conflict(ta, tb):
     return bool(ka and kb and not (ka & kb))
 
 
+FEDERATION = {"kua": "fin", "korswim": "swim", "korswim_detail": "swim"}
+SWIM_FEDERATION_SOURCES = {"korswim", "korswim_detail", "seoulswim", "gswimming", "busanswim", "djswim"}
+
+
+def federations(x):
+    """관측(source) 또는 대회(sources 목록)의 주관 연맹. 대한수중핀수영협회 ↔ 대한수영연맹 대회는 서로 다른 대회다
+    (전국생활체육대축전처럼 같은 이름 아래 종목별로 날짜가 다르다)."""
+    if x.get("source"):
+        return {FEDERATION[x["source"]]} if x["source"] in FEDERATION else set()
+    return {FEDERATION[s["key"]] for s in x.get("sources") or [] if s.get("key") in FEDERATION}
+
+
 def same_meet(a, b):
     """두 관측(또는 대회)이 같은 대회인가. 이름이 달라도(약칭·주최 표기) 날짜·지역·종목으로 묶는다."""
     ua, ub = a.get("official_url") or "", b.get("official_url") or ""
     if ua and ua == ub and not ua.rstrip("/").endswith(("/11", "schedule")):
         return True
+    fa, fb = federations(a), federations(b)
+    if fa and fb and not (fa & fb):
+        return False
     ea, eb = edition(a.get("title")), edition(b.get("title"))
     if ea and eb and ea != eb:
         return False
@@ -656,15 +671,19 @@ def make_obs(source, tier, title, *, start="", end="", venue="", place="", url="
     if R.is_foreign(title, venue, place):
         return None
     sido, sigungu = R.resolve(place, venue, title)
-    sports, inferred = sports_for(title, events, extra_text, force=sport_force)
+    # 종목은 대회명과 '경기종목' 항목에서만 읽는다. 본문 안내문('핀수영·수구 종목 포함 등록 이력 금지')은 종목이 아니다.
+    sports, inferred = sports_for(title, events, force=sport_force)
+    if inferred and sports == ["기타"] and source in SWIM_FEDERATION_SOURCES:
+        sports = ["경영"]                        # 수영연맹 대회 일정에 종목 낱말이 없으면 경영(추정 표시는 유지)
     if free is None:
         f50, f100, ev = freestyle_flags(" ".join([events, extra_text]))
     else:
         f50, f100, ev = free
-    if "경영" not in sports and not inferred:
-        f50 = False if f50 is None else f50
-        f100 = False if f100 is None else f100
-        ev = ev or ("경영(자유형) 없는 종목: " + "·".join(sports))
+    by_discipline = False
+    if "경영" not in sports and not inferred and f50 is None and f100 is None:
+        f50 = f100 = False
+        by_discipline = True                      # 종목으로만 정한 '불가' — 합칠 때 대회 전체 종목으로 다시 정한다
+        ev = "경영(자유형) 없는 종목: " + "·".join(sports)
     if apply_open and apply_close and apply_open > apply_close:
         apply_open = ""
     if start and apply_close and apply_close > (end or start):
@@ -679,7 +698,8 @@ def make_obs(source, tier, title, *, start="", end="", venue="", place="", url="
         "eligibility": clean(eligibility)[:220], "events": clean(events)[:220], "fee": fee or "",
         "pool": pool or "", "status": status or status_from_title(title), "apply_closed": bool(apply_closed),
         "sports": sports, "sports_inferred": inferred, "kind_hint": kind_hint,
-        "free50": f50, "free100": f100, "free_evidence": ev, "attachments": attachments or [],
+        "free50": f50, "free100": f100, "free_evidence": ev, "free_by_discipline": by_discipline,
+        "attachments": attachments or [],
     }
 
 
@@ -1232,23 +1252,28 @@ def derive(rec):
             status = o["status"]
             break
     apply_closed = any(o.get("apply_closed") for o in obs if o["tier"] == "official")
+    # 종목: 공식 출처가 적은 종목이 있으면 그것만(2차 자료가 수구 대회에 '자유형/배영…'을 적은 사례), 없으면 2차 자료 합집합.
     sports, inferred = [], True
-    for o in obs:
-        if not o.get("sports_inferred"):
-            for s in o.get("sports") or []:
-                if s not in sports:
-                    sports.append(s)
-            inferred = False
+    explicit = [o for o in obs if not o.get("sports_inferred")]
+    official_explicit = [o for o in explicit if o["tier"] == "official"]
+    for o in (official_explicit or explicit):
+        for s in o.get("sports") or []:
+            if s not in sports:
+                sports.append(s)
+        inferred = False
     if not sports:
         sports = list(top.get("sports") or ["경영"])
     f50 = f100 = None
     ev = ""
     for o in obs:                                    # 원문에 '가능'이 있으면 가능, 목록으로 '없음'이 확인되면 불가
+        if o.get("free_by_discipline") or str(o.get("free_evidence", "")).startswith("경영(자유형) 없는 종목"):
+            continue                                 # 수집처 하나의 종목만 보고 정한 '불가'는 쓰지 않는다(아래에서 대회 전체로)
         if o.get("free50") is not None and f50 is None:
             f50, ev = o["free50"], ev or o.get("free_evidence", "")
         if o.get("free100") is not None and f100 is None:
             f100, ev = o["free100"], ev or o.get("free_evidence", "")
     if "경영" not in sports and not inferred:
+        ev = ev or ("경영(자유형) 없는 종목: " + "·".join(sports))
         f50 = False if f50 is None else f50
         f100 = False if f100 is None else f100
     elig = pick("eligibility")
@@ -1384,6 +1409,38 @@ def merge_batch(records, batch, source_key):
         records[rid]["derived"] = derive(records[rid]) or records[rid].get("derived")
         touched.add(rid)
     return touched
+
+
+def split_federations(records):
+    """예전 판단으로 한 기록에 섞인 대한수중핀수영협회 · 대한수영연맹 관측을 나눈다.
+    대한수영연맹 쪽이 원래 id 를 갖고, 핀수영 쪽은 새 id. 2차 자료 관측은 날짜가 더 가까운 쪽으로 간다."""
+    moved = []
+    for rid in list(records):
+        rec = records[rid]
+        groups = {}
+        for k, o in rec["obs"].items():
+            fed = FEDERATION.get(o["source"])
+            if fed:
+                groups.setdefault(fed, {})[k] = o
+        if len(groups) < 2:
+            continue
+        fin = dict(groups["fin"])
+        neutral = {k: o for k, o in rec["obs"].items() if not FEDERATION.get(o["source"])}
+        for k, o in neutral.items():
+            gf = min((gap_days(o, x) for x in fin.values() if gap_days(o, x) is not None), default=999)
+            gs = min((gap_days(o, x) for x in groups["swim"].values() if gap_days(o, x) is not None), default=999)
+            if gf < gs:
+                fin[k] = o
+        for k in fin:
+            rec["obs"].pop(k, None)
+        first = next(iter(groups["fin"].values()))
+        nid = new_id(first, records)
+        records[nid] = {"id": nid, "obs": fin, "first_seen": rec.get("first_seen", ""),
+                        "last_changed": rec.get("last_changed", ""), "history": list(rec.get("history", []))}
+        for r in (rid, nid):
+            records[r]["derived"] = derive(records[r])
+        moved.append((rid, nid))
+    return moved
 
 
 def collapse_duplicates(records):
@@ -1525,6 +1582,7 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
         rec["derived"] = derive(rec)
         if rec["derived"] is None:
             records.pop(rid)
+    split_federations(records)
     collapse_duplicates(records)
     if do_confirm:
         st = {"key": "official_link", "name": SOURCE_NAMES["official_link"], "tier": "official", "url": "",
