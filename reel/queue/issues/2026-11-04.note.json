@@ -1,0 +1,395 @@
+{
+  "duration": "auto",
+  "fps": 30,
+  "flip": 0.7,
+  "tape": {
+    "text": "11/3 국민연금연구원 보고서",
+    "color": "orange"
+  },
+  "out": "queue/issues/2026-11-04_pension-10y-vs-basic.mp4",
+  "voice": {
+    "name": "ko-KR-HyunsuMultilingualNeural",
+    "rate": "+10%",
+    "lead": 0.35,
+    "gap": 0.28,
+    "tail": 2.0,
+    "lines": [
+      {
+        "id": "hook",
+        "text": "국민연금 십 년만 채우면 된다고들 하잖아요. 그런데 어제 이런 연구 결과가 기사로 나왔어요."
+      },
+      {
+        "id": "p10",
+        "text": "평균 소득으로 딱 십 년 내면, 한 달에 삼십사만 삼천 원 정도래요.",
+        "gap": 0.4
+      },
+      {
+        "id": "basic",
+        "text": "그런데 올해 기초연금이 한 달 삼십사만 구천칠백 원이거든요."
+      },
+      {
+        "id": "diff",
+        "text": "꼬박 십 년을 냈는데, 육천칠백 원 적은 거예요."
+      },
+      {
+        "id": "but",
+        "text": "그럼 국민연금, 낼 필요 없을까요?",
+        "gap": 0.45
+      },
+      {
+        "id": "y20",
+        "text": "이십 년 넘게 낸 분들은 평균이 한 달 백십육만 원이에요.",
+        "gap": 1.0
+      },
+      {
+        "id": "point",
+        "text": "십 년은 받을 수 있는 최소선일 뿐이고, 오래 낼수록 커지는 구조예요."
+      },
+      {
+        "id": "mine",
+        "text": "그리고 예순이 넘어도, 예순다섯 전까지는 더 내서 기간을 늘릴 수 있어요. 임의계속가입이라고 해요.",
+        "gap": 0.45
+      },
+      {
+        "id": "save",
+        "text": "내 가입 기간, 공단 앱에서 한 번 확인해 보세요."
+      },
+      {
+        "id": "sig",
+        "text": "늦지 않았습니다.",
+        "gap": 0.4
+      }
+    ]
+  },
+  "pages": [
+    {
+      "start": 0,
+      "stains": [
+        {
+          "x": 690,
+          "y": 1500,
+          "r": 170,
+          "opacity": 0.18,
+          "rot": -6
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "h1",
+          "text": "\"10년만 채우면 된다\"",
+          "x": 128,
+          "y": 196,
+          "size": 96,
+          "font": "bold",
+          "color": "ink",
+          "at": 0,
+          "dur": 0,
+          "rot": -0.8
+        },
+        {
+          "type": "text",
+          "id": "h2",
+          "text": "기초연금보다 적다?",
+          "x": 132,
+          "y": 330,
+          "size": 104,
+          "font": "bold",
+          "color": "red",
+          "at": 0,
+          "dur": 0,
+          "rot": 0.4
+        },
+        {
+          "type": "circle",
+          "target": "h2",
+          "at": 0.3,
+          "dur": 0.8,
+          "color": "red",
+          "pad": 14,
+          "width": 7
+        },
+        {
+          "type": "text",
+          "id": "a1",
+          "text": "국민연금 10년",
+          "x": 150,
+          "y": 560,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@p10+0.6",
+          "dur": 0.7
+        },
+        {
+          "type": "text",
+          "id": "a2",
+          "text": "→ 월 34만 3천 원",
+          "size": 76,
+          "font": "bold",
+          "color": "blue",
+          "at": "@p10.end-1.6",
+          "dur": 0.8,
+          "x": 150,
+          "y": 645
+        },
+        {
+          "type": "text",
+          "id": "a3",
+          "text": "(평균소득 월 319만 원 기준)",
+          "x": 150,
+          "y": 740,
+          "size": 42,
+          "font": "pen",
+          "color": "gray",
+          "at": "@p10.end",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "b1",
+          "text": "기초연금",
+          "x": 150,
+          "y": 830,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@basic+0.6",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "b2",
+          "text": "→ 월 34만 9,700원",
+          "size": 76,
+          "font": "bold",
+          "color": "red",
+          "at": "@basic.end-1.8",
+          "dur": 0.8,
+          "x": 150,
+          "y": 915
+        },
+        {
+          "type": "text",
+          "id": "d1",
+          "text": "10년 내고도 6,700원 적어요",
+          "x": 150,
+          "y": 1040,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@diff+0.4",
+          "dur": 1.0
+        },
+        {
+          "type": "underline",
+          "target": "d1",
+          "at": "@diff.end-0.3",
+          "dur": 0.4,
+          "color": "red",
+          "width": 5
+        },
+        {
+          "type": "text",
+          "id": "src",
+          "text": "(국민연금연구원 「연금포럼」 11/3 · 기초연금은 올해 기준연금액)",
+          "x": 150,
+          "y": 1135,
+          "size": 36,
+          "font": "pen",
+          "color": "gray",
+          "at": "@diff.end",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "q",
+          "text": "그럼 낼 필요 없을까?",
+          "x": 140,
+          "y": 1250,
+          "size": 80,
+          "font": "bold",
+          "color": "blue",
+          "at": "@but",
+          "dur": 0.9,
+          "rot": -0.8
+        }
+      ]
+    },
+    {
+      "start": "@but.end+0.3",
+      "stains": [
+        {
+          "x": -110,
+          "y": 1480,
+          "r": 160,
+          "opacity": 0.15,
+          "rot": 12
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "c1",
+          "text": "20년 넘게 낸 분들",
+          "x": 132,
+          "y": 196,
+          "size": 84,
+          "font": "bold",
+          "color": "ink",
+          "at": "@y20+0.2",
+          "dur": 0.9,
+          "rot": -0.6
+        },
+        {
+          "type": "text",
+          "id": "c2",
+          "text": "평균 월 116만 원",
+          "x": 140,
+          "y": 330,
+          "size": 100,
+          "font": "bold",
+          "color": "red",
+          "at": "@y20.end-1.8",
+          "dur": 0.8
+        },
+        {
+          "type": "circle",
+          "target": "c2",
+          "at": "@y20.end-0.6",
+          "dur": 0.5,
+          "color": "red",
+          "pad": 16,
+          "width": 6
+        },
+        {
+          "type": "text",
+          "id": "c3",
+          "text": "(2026년 1월 수급자 통계)",
+          "x": 150,
+          "y": 470,
+          "size": 40,
+          "font": "pen",
+          "color": "gray",
+          "at": "@y20.end",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "p1",
+          "text": "10년은 '최소선'일 뿐",
+          "x": 150,
+          "y": 570,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@point+0.4",
+          "dur": 0.9
+        },
+        {
+          "type": "text",
+          "id": "p2",
+          "text": "오래 낼수록 커져요",
+          "x": 150,
+          "y": 670,
+          "size": 70,
+          "font": "bold",
+          "color": "blue",
+          "at": "@point.end-1.4",
+          "dur": 0.8
+        },
+        {
+          "type": "highlight",
+          "target": "p2",
+          "at": "@point.end-0.2",
+          "dur": 0.45
+        },
+        {
+          "type": "sticky",
+          "x": 150,
+          "y": 820,
+          "w": 760,
+          "h": 440,
+          "rot": -2.0,
+          "at": "@mine-0.2",
+          "items": [
+            {
+              "type": "text",
+              "id": "m1",
+              "text": "60 넘어도 늘릴 수 있어요",
+              "x": 46,
+              "y": 34,
+              "size": 62,
+              "font": "bold",
+              "color": "red",
+              "at": "@mine+0.2",
+              "dur": 0.9
+            },
+            {
+              "type": "text",
+              "id": "m2",
+              "text": "65세 전까지 계속 내기",
+              "x": 46,
+              "y": 150,
+              "size": 56,
+              "font": "bold",
+              "color": "ink",
+              "at": "@mine+2.0",
+              "dur": 0.8
+            },
+            {
+              "type": "text",
+              "id": "m3",
+              "text": "= 임의계속가입",
+              "x": 46,
+              "y": 236,
+              "size": 56,
+              "font": "bold",
+              "color": "blue",
+              "at": "@mine.end-1.6",
+              "dur": 0.6
+            },
+            {
+              "type": "text",
+              "id": "m4",
+              "text": "내 가입 기간, 공단 앱에서 확인하기",
+              "x": 52,
+              "y": 350,
+              "size": 42,
+              "font": "pen",
+              "color": "gray",
+              "at": "@save",
+              "dur": 0.8
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "sig",
+          "text": "늦지 않았습니다. — 은퇴노트",
+          "x": 330,
+          "y": 1490,
+          "size": 60,
+          "font": "pen",
+          "color": "ink",
+          "at": "@sig",
+          "dur": 0.8,
+          "rot": -2.0
+        },
+        {
+          "type": "text",
+          "id": "handle",
+          "text": "@retire.note",
+          "x": 600,
+          "y": 1575,
+          "size": 36,
+          "font": "sans",
+          "color": "gray",
+          "at": "@sig+0.6",
+          "dur": 0.5,
+          "fade": true
+        }
+      ]
+    }
+  ]
+}
