@@ -4835,7 +4835,7 @@ console.log('\n[76] 버전 형식 (x.y.z)');
 {
   const SEMVER=/^v\d+\.\d+\.\d+$/;
   const pages=[['index.html',idx],['backtest.html',bt]];
-  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html','tenbagger.html']){
+  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html','tenbagger.html','swim.html']){
     const fp=__d+'/'+f;
     if(fs.existsSync(fp)) pages.push([f, fs.readFileSync(fp,'utf8')]);
   }
@@ -12539,6 +12539,74 @@ console.log('\n[37-값] 모의 성과 표 — TR(단리 인출 포함) · MDD ·
        [A,B,P].every(c=>c&&c[c.length-1].t==='0.8년 299거래' && c[c.length-2].t==='투입 69222') && A[5].t==='$100177.88' && B[5].t==='$95457.13',
        [A,B,P].map(c=>c&&c.map(x=>x.t).join(' ¦ ')).join(' ‖ '));
   })());
+}
+
+/* [37-다시] 다시 그리기는 표를 비우지 않고 한 번에 바꾼다 (2026-11-03 사용자: 3줄 아래부터 이름 없는 줄이 상자 밖에 그려짐)
+   예전엔 '불러오는 중…' 한 줄로 먼저 비워 페이지가 1,585 → 844px 로 줄며 보던 자리가 맨 위로 튀었다(Chromium 실측). */
+console.log('\n[37-다시] 모의 성과 다시 그리기 — 표를 비우지 않고 한 번에 교체');
+{ const op=extractFn(idx,'async function openPaper()');
+  const runOpen=async(src,hasTable,args)=>{
+    const writes=[]; let html=hasTable?'<table><tbody id="paper_tbody"><tr><td>옛 표</td></tr></tbody></table>':'';
+    const body={get innerHTML(){return html;},set innerHTML(v){ html=v; writes.push(v); },querySelector:s=>(s==='#paper_tbody'&&html.includes('id="paper_tbody"'))?{}:null,insertAdjacentHTML(){} };
+    const modal={classList:{add(){},contains:()=>true}};
+    const r={tab:'inf',label:'무한매수법',name:'a',sym:'SOXL',opts:['20분할'],cur:'usd',inflow:1e4,inflowWon:1e7,total:2e4,price:30,yrs:2,spanDays:730,nTrade:9,cagr:41,mdd:{pct:40,nDay:500},out:{simple:false,saved:0,withdrawn:0},ret:100,retNow:100,retOut:0,atr:80,atrTax:1,atrFee:1};
+    const F=new Function('$','paperEnsureCommonWon','paperRepairLegacyStarts','paperRepairCommonStarts','syncPaperStart','paperViewCacheRead','paperViewCacheLast',
+      'paperViewCacheFresh','paperWonRate','paperTitle','paperKrwRet','paperDualMoney','paperInflowText','paperUsd','paperWon','paperFxLine','paperLoadTickerNames','liveFX','refreshPaperView',
+      'let paperStaleNote=false, paperNote="";\n'+src+'\nreturn openPaper;')(
+      id=>({paper_body:body,paperModal:modal})[id],async()=>{},async()=>0,async()=>0,()=>{},()=>({rows:[r]}),()=>null,()=>true,()=>1324,
+      x=>'<b>'+x.name+'</b>',()=>20,(x,v)=>'$'+(+v).toFixed(2),x=>'투입 '+x.inflow,v=>(+v).toFixed(2)+'$',v=>Math.round(v)+'원',()=>'',()=>{},1324,async()=>[r]);
+    await F(...args); return writes; };
+  const check=async src=>{
+    const re=await runOpen(src,true,[false,true]), first=await runOpen(src,false,[false,false]), btn=await runOpen(src,true,[true,false]);
+    return {redrawOne:re.length===1&&re[0].includes('id="paper_tbody"')&&!re.some(w=>w.includes('불러오는 중')),
+            firstPlaceholder:first.length===2&&first[0].includes('불러오는 중')&&first[1].includes('id="paper_tbody"'),
+            forceShowsWork:btn.length>=2&&btn[0].includes('다시 계산하는 중'), n:[re.length,first.length,btn.length].join('/')}; };
+  PENDING.push((async()=>{ try{
+    const a=await check(op);
+    ok('[37-다시] 표가 있는 채로 다시 그리면 교체는 1번 — 새 표로 바로(‘불러오는 중’ 없음)',a.redrawOne,a.n);
+    ok('[37-다시] 처음 열 때는 그대로 ‘불러오는 중’ 다음 표 · 전체 적용은 ‘다시 계산하는 중’ 먼저',a.firstPlaceholder&&a.forceShowsWork,a.n);
+    const mut=op.replace('if(body&&!_redraw){','if(body){');
+    const m=await check(mut);
+    ok('[37-다시] 변이: 다시 그리기 보호를 빼면(옛 코드) 빨간불',mut!==op&&!m.redrawOne&&m.firstPlaceholder,m.n);
+  }catch(e){ ok('[37-다시] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); } })());
+}
+
+/* [37-틈] 모의 전체 재생은 세션 사이에 화면 그릴 틈을 준다 (2026-11-03 사용자 아이폰 화면 두 장: 빈칸 · 이름 칸 누락 · 글자 반쯤 잘림)
+   시세가 이미 받아져 있으면 반복의 await 가 마이크로태스크로만 이어져 62세션 재생이 한 덩어리로 돌았다 — 그동안 Safari 는 못 그린다. */
+console.log('\n[37-틈] 모의 전체 재생 — 세션 사이에 화면 그릴 틈');
+{ const fill=extractFn(idx,'async function paperFillAll()'), br=extractFn(idx,'async function paperBreathe()');
+  const run=async(fillSrc)=>{
+    const N=8, sess=[...Array(N)].map((_,i)=>({id:'s'+i,paper:true,settings:{ticker:'SOXL'},hist:[]}));
+    const S={activeTab:'inf',inf:{active:'s0',sessions:sess}};
+    const busy=ms=>{ const t=performance.now(); while(performance.now()-t<ms){} };
+    const F=new Function('S','PAPER_TABS','lastQuote','paperPrefetchQuotes','loadPlanPaperData','replayPlanPaper','paperStatPlan','PAPER_CACHESYM','PAPER_LOADERS','divCashOn','warmDiv','paperAuto','vrSimForward','infSimForward','paperStart','paperStat','document',
+      'let _paperFilling=false,_fillQuoteCache=null,infQuoteCache=null,maQuoteData=null,ivsQuoteData=null,ivsQuote1=null,dcaQuoteData=null,asapQuoteData=null,infChartData,vrChartData,_paperSliceAt=0;\n'+br+'\n'+fillSrc+'\nreturn paperFillAll;')(
+      S,[['inf','무한매수법']],{inf:null},async()=>{},async()=>{},()=>{},()=>null,{inf:()=>'SOXL'},{inf:async()=>{}},()=>false,async()=>{},()=>{},()=>{},()=>{},()=>null,
+      (tab,s)=>{ busy(50); return {name:s.id,price:1}; },{hidden:false});
+    let gap=0,last=performance.now(); const iv=setInterval(()=>{ const t=performance.now(); gap=Math.max(gap,t-last); last=t; },5);
+    const rows=await F(); clearInterval(iv); gap=Math.max(gap,performance.now()-last);
+    return {gap:Math.round(gap),rows:(rows||[]).length,active:S.activeTab+'/'+S.inf.active}; };
+  PENDING.push((async()=>{ try{
+    const a=await run(fill);
+    ok('[37-틈] 세션 8개(각 50ms) 재생 — 가장 긴 멈춤 < 150ms · 8줄 · 끝나면 탭·세션 원래대로',a.gap<150&&a.rows===8&&a.active==='inf/s0',JSON.stringify(a));
+    const mut=fill.replace('        await paperBreathe();                 // 세션 사이 — 화면 그릴 틈\n','');
+    const m=await run(mut);
+    ok('[37-틈] 변이: 쉬는 틈을 빼면(옛 코드) 한 덩어리 ≥ 350ms — 빨간불',mut!==fill&&m.gap>=350,JSON.stringify(m));
+  }catch(e){ ok('[37-틈] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); } })());
+}
+
+/* [37-목록] 모바일에서도 모의 성과는 한 표(목록)로 본다 — 카드로 바꾸지 않는다
+   (2026-11-03 사용자: '목록형으로 서로 비교하면서 한눈에 보기 쉽게 다시 바꿔놔' — 9a8662f 모바일 카드 되돌림) */
+console.log('\n[37-목록] 모의 성과 — 모바일도 한 표(목록) · 카드 없음');
+{ const op=extractFn(idx,'async function openPaper()');
+  const css=(idx.match(/<style[\s\S]*?<\/style>/g)||[]).join('\n');
+  const check=(src,style)=>({table:/let h=`<div class="htable-wrap"><table class="htable narrow"><thead><tr>`/.test(src),
+    noCards:!/paperBuildMobileCards|paper-mobile-view/.test(src)&&!/#paper_body[^{]*\{display:none/.test(style)});
+  const a=check(op,css);
+  ok('[37-목록] openPaper 는 표 하나(htable-wrap › table)로 그리고 카드 목록을 만들지 않는다 · 모바일 CSS 가 표를 숨기지 않는다',a.table&&a.noCards,JSON.stringify(a));
+  const m=check(op.replace('let h=`<div class="htable-wrap">','let h=`<div class="paper-desktop-table"><div class="htable-wrap">')+'\nif(typeof paperBuildMobileCards===\'function\')paperBuildMobileCards(body);',
+                css+'\n@media(max-width:760px){#paper_body .paper-desktop-table{display:none!important}}');
+  ok('[37-목록] 변이: 카드판(9a8662f) 모양을 다시 넣으면 빨간불',!(m.table&&m.noCards),JSON.stringify(m));
 }
 
 Promise.all(PENDING).then(()=>{

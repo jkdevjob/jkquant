@@ -1,0 +1,144 @@
+name: 수영대회 매일 수집
+
+# 매일 08:00 KST 전국 수영대회 자동 수집 → 변경된 자료만 main 에 커밋 → 새 소식은 텔레그램으로.
+# GitHub 예약 실행은 늦거나 빠질 수 있어 08:45 에 한 번 더 깨우고, 그날 이미 성공했으면 건너뛴다.
+# 데이터 커밋은 [skip ci] 라 Cloudflare 배포가 돌지 않는다 — 화면(swim.html)은 저장소 원본(raw)을 함께 읽어 최신을 쓴다.
+on:
+  schedule:
+    - cron: "0 23 * * *"   # 08:00 KST
+    - cron: "45 23 * * *"  # 08:45 KST 예비(그날 성공했으면 건너뜀)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "오늘 이미 수집했어도 다시 수집"
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - "scripts/collect_swim.py"
+      - "scripts/swim_regions.py"
+      - "scripts/swim_alerts.py"
+      - ".github/workflows/swim-collect.yml"
+  pull_request:
+    paths:
+      - "scripts/collect_swim.py"
+      - "scripts/swim_regions.py"
+      - "scripts/swim_alerts.py"
+      - "scripts/test_swim_collect.py"
+      - "scripts/mutation_test_swim.py"
+      - ".github/workflows/swim-collect.yml"
+      - "swim.html"
+      - "swim-core.js"
+      - "tests/swim.test.mjs"
+      - "functions/api/swim-alert.js"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: swim-competition-collector
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install collector dependencies
+        run: pip install "requests>=2.32,<3" "beautifulsoup4>=4.12,<5" "pypdf>=4,<7" "ddgs>=9,<10"
+      - name: Validate collector, page and alerts
+        run: |
+          python -m py_compile scripts/collect_swim.py scripts/swim_regions.py scripts/swim_alerts.py scripts/test_swim_collect.py
+          python -m unittest discover -s scripts -p test_swim_collect.py
+          python scripts/mutation_test_swim.py
+          node --test tests/swim.test.mjs
+      - name: Skip if today's collection already succeeded
+        id: guard
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, datetime, zoneinfo
+          from pathlib import Path
+          today = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Seoul")).date().isoformat()
+          try:
+              st = json.loads(Path("data/swim/sources.json").read_text(encoding="utf-8"))
+              done = st.get("run", {}).get("started", "")[:10] == today and st["run"].get("ok_sources", 0) > 0
+          except Exception:
+              done = False
+          print("skip=" + ("true" if done else "false"))
+          PY
+          cat "$GITHUB_OUTPUT"
+      - name: Restore source cache (원문 · 요강 PDF 분석)
+        if: github.event_name != 'pull_request' && steps.guard.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: .swim-cache
+          key: swim-cache-${{ github.run_id }}
+          restore-keys: |
+            swim-cache-
+      - name: Collect competitions
+        id: collect
+        if: github.event_name != 'pull_request' && steps.guard.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set +e
+          python scripts/collect_swim.py
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "collector exit code: $code"
+          exit 0
+      - name: Telegram alerts (new · apply start/deadline · date/venue/apply change · cancel/postpone)
+        id: alerts
+        if: github.event_name != 'pull_request' && steps.guard.outputs.skip != 'true'
+        env:
+          AUTOTRADE_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        shell: bash
+        run: |
+          set +e
+          python scripts/swim_alerts.py
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Commit changed data only
+        if: github.event_name != 'pull_request' && steps.guard.outputs.skip != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          files="data/swim/competitions.json data/swim/state.json data/swim/changes.json data/swim/sources.json data/swim/leads.json data/swim/alerts.json"
+          git add $files 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No data change"
+            exit 0
+          fi
+          git config user.name "jkquant-swim-bot"
+          git config user.email "jkquant-swim-bot@users.noreply.github.com"
+          git commit -m "data: refresh swimming competitions [skip ci]"
+          for i in 1 2 3 4; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            sleep $((i * 4))
+          done
+          exit 1
+      - name: Fail when every source failed or alerts failed
+        if: github.event_name != 'pull_request' && steps.guard.outputs.skip != 'true'
+        shell: bash
+        run: |
+          if [ "${{ steps.collect.outputs.code }}" != "0" ]; then
+            echo "::error::모든 수집처가 실패했습니다(이전 자료 유지). data/swim/sources.json 오류를 확인하세요."
+            exit 1
+          fi
+          if [ "${{ steps.alerts.outputs.code }}" != "0" ]; then
+            echo "::error::텔레그램 알림 전송 실패 — 알림 기록은 그대로라 다음 실행에서 다시 보냅니다."
+            exit 1
+          fi
