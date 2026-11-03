@@ -278,7 +278,7 @@ await t('P6 모의 일괄 재생이 끝나면 탭별 시세 칸(무매 캐시·�
     PAPER_LOADERS:{inf:async()=>{ ctx.infQuoteCache={symbol:'TQQQ'}; ctx.ivsQuoteData={symbol:'X'}; },ma:async()=>{ ctx.maQuoteData={symbol:'TQQQ'}; ctx.dcaQuoteData={symbol:'Y'}; ctx.asapQuoteData={symbol:'Z'}; ctx.ivsQuote1={symbol:'W'}; }},
     divCashOn:()=>false,warmDiv:async()=>{},ivsX1Of:x=>x,paperAuto:()=>{},vrSimForward:()=>{},infSimForward:()=>{},paperStart:()=>'2025-01-02',
     paperStat:(tab,x)=>({tab,id:x.id}),console:{error(){}},Map,Promise};
-  vm.createContext(ctx); vm.runInContext(fn('async function paperFillAll()'),ctx);
+  vm.createContext(ctx); vm.runInContext(fn('async function paperBreathe()')+fn('async function paperFillAll()'),ctx);
   const rows=await ctx.paperFillAll(); assert.equal(rows.length,2);
   for(const [k,v] of [['inf','infQuoteCache'],['ma','maQuoteData'],['ivs','ivsQuoteData'],['ivs1','ivsQuote1'],['dca','dcaQuoteData'],['asap','asapQuoteData']])
     assert.equal(ctx[v],orig[k],v+' 되돌림');

@@ -12571,6 +12571,30 @@ console.log('\n[37-다시] 모의 성과 다시 그리기 — 표를 비우지 �
   }catch(e){ ok('[37-다시] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); } })());
 }
 
+/* [37-틈] 모의 전체 재생은 세션 사이에 화면 그릴 틈을 준다 (2026-11-03 사용자 아이폰 화면 두 장: 빈칸 · 이름 칸 누락 · 글자 반쯤 잘림)
+   시세가 이미 받아져 있으면 반복의 await 가 마이크로태스크로만 이어져 62세션 재생이 한 덩어리로 돌았다 — 그동안 Safari 는 못 그린다. */
+console.log('\n[37-틈] 모의 전체 재생 — 세션 사이에 화면 그릴 틈');
+{ const fill=extractFn(idx,'async function paperFillAll()'), br=extractFn(idx,'async function paperBreathe()');
+  const run=async(fillSrc)=>{
+    const N=8, sess=[...Array(N)].map((_,i)=>({id:'s'+i,paper:true,settings:{ticker:'SOXL'},hist:[]}));
+    const S={activeTab:'inf',inf:{active:'s0',sessions:sess}};
+    const busy=ms=>{ const t=performance.now(); while(performance.now()-t<ms){} };
+    const F=new Function('S','PAPER_TABS','lastQuote','paperPrefetchQuotes','loadPlanPaperData','replayPlanPaper','paperStatPlan','PAPER_CACHESYM','PAPER_LOADERS','divCashOn','warmDiv','paperAuto','vrSimForward','infSimForward','paperStart','paperStat','document',
+      'let _paperFilling=false,_fillQuoteCache=null,infQuoteCache=null,maQuoteData=null,ivsQuoteData=null,ivsQuote1=null,dcaQuoteData=null,asapQuoteData=null,infChartData,vrChartData,_paperSliceAt=0;\n'+br+'\n'+fillSrc+'\nreturn paperFillAll;')(
+      S,[['inf','무한매수법']],{inf:null},async()=>{},async()=>{},()=>{},()=>null,{inf:()=>'SOXL'},{inf:async()=>{}},()=>false,async()=>{},()=>{},()=>{},()=>{},()=>null,
+      (tab,s)=>{ busy(50); return {name:s.id,price:1}; },{hidden:false});
+    let gap=0,last=performance.now(); const iv=setInterval(()=>{ const t=performance.now(); gap=Math.max(gap,t-last); last=t; },5);
+    const rows=await F(); clearInterval(iv); gap=Math.max(gap,performance.now()-last);
+    return {gap:Math.round(gap),rows:(rows||[]).length,active:S.activeTab+'/'+S.inf.active}; };
+  PENDING.push((async()=>{ try{
+    const a=await run(fill);
+    ok('[37-틈] 세션 8개(각 50ms) 재생 — 가장 긴 멈춤 < 150ms · 8줄 · 끝나면 탭·세션 원래대로',a.gap<150&&a.rows===8&&a.active==='inf/s0',JSON.stringify(a));
+    const mut=fill.replace('        await paperBreathe();                 // 세션 사이 — 화면 그릴 틈\n','');
+    const m=await run(mut);
+    ok('[37-틈] 변이: 쉬는 틈을 빼면(옛 코드) 한 덩어리 ≥ 350ms — 빨간불',mut!==fill&&m.gap>=350,JSON.stringify(m));
+  }catch(e){ ok('[37-틈] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); } })());
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));

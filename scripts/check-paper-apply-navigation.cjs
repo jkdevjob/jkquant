@@ -46,7 +46,7 @@ async function application(failLoader=false){
  for(const t of tabs)c.PAPER_LOADERS[t]=async()=>{await c.pushRemoteNow();assert.equal(saved.length,0,'temporary replay selection must never reach DB');await Promise.resolve();if(failLoader&&t==='vr')throw Error('quote unavailable');};
  // paperFillAll 이 먼저 종목 시세를 병렬로 받아 둔다(perf(paper)) — 네트워크는 가짜로 둔다
  c.fetchDaily=async()=>null; c.fetchDailyDiv=async()=>null; c.ivsX1Of=()=>'';
- vm.runInContext(fn('async function pushRemoteNow()')+fn('async function paperPrefetchQuotes()')+fn('async function paperFillAll()')+fn('async function openPaper()')+fn('async function applyAllSimStart()'),c);
+ vm.runInContext(fn('async function pushRemoteNow()')+fn('async function paperPrefetchQuotes()')+fn('async function paperBreathe()')+fn('async function paperFillAll()')+fn('async function openPaper()')+fn('async function applyAllSimStart()'),c);
  c.refreshPaperView=async(force)=>{assert.equal(force,true);const rows=await c.paperFillAll();await c.pushRemoteNow();return rows;};
  await c.openPaper();assert.equal(saved.length,0,'normal paper open must not replay or write DB');
  assert.equal(S.activeTab,'ma');for(const t of tabs)assert.equal(S[t].active,t+'-live');
