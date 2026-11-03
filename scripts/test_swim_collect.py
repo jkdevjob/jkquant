@@ -304,6 +304,54 @@ class SameMeetTests(unittest.TestCase):
             self.assertFalse(m.same_meet(a, b), (a["title"], b["title"]))
 
 
+class MergeRuleTests(unittest.TestCase):
+    """2026-11-03 Actions 첫 수집에서 나온 실제 사례."""
+
+    def rec(self, *obs):
+        return {"id": "x", "obs": {f"{o['source']}:{i}": o for i, o in enumerate(obs)}}
+
+    def test_official_sports_win(self):
+        # 수구 선수권: 2차 자료가 종목을 '자유형/배영/평영/접영'으로 적었지만 공식은 수구
+        k = m.make_obs("korswim", "official", "제14회 회장배 전국 종별 수구 선수권대회", start="2026-06-10", venue="김천실내수영장")
+        sc = m.make_obs("swimming_co_kr", "secondary", "제14회 회장배 전국 종별 수구 선수권대회", start="2026-06-10",
+                        venue="김천실내수영장", events="자유형 / 배영 / 평영 / 접영")
+        d = m.derive(self.rec(k, sc))
+        self.assertEqual(d["sports"], ["수구"])
+        self.assertEqual((d["free50"], d["free100"]), (False, False))
+
+    def test_body_rules_are_not_sports(self):
+        # 부산 교육감배 원문의 '비등록선수 … 핀수영, 수구, 아티스틱스위밍 종목 포함'은 종목이 아니다
+        body = "비등록선수는 대한수영연맹에 등록한 사실이 없어야한다. 핀수영, 근대3종, 수구, 아티스틱스위밍 종목 포함"
+        ol = m.make_obs("official_link", "official", "제44회 교육감배 초·중학교 수영대회", start="2026-11-21",
+                        venue="사직실내수영장", extra_text=body)
+        self.assertTrue(ol["sports_inferred"])
+        sc = m.make_obs("swimming_co_kr", "secondary", "제44회 교육감배 초·중학교 수영대회", start="2026-11-21",
+                        venue="사직실내수영장", events="경영: 자유형·배영·평영·접영 / 다이빙: 1m 스프링보드")
+        d = m.derive(self.rec(ol, sc))
+        self.assertEqual(d["sports"], ["다이빙", "경영"])
+        self.assertEqual((d["free50"], d["free100"]), (None, None))
+
+    def test_federations_not_merged_and_split(self):
+        kua = m.make_obs("kua", "official", "2024 전국생활체육 대축전", start="2024-04-20", place="경상북도 김천시", sport_force="핀수영")
+        ks = m.make_obs("korswim", "official", "2024 전국생활체육대축전", start="2024-04-27", end="2024-04-28", venue="김천실내수영장")
+        sc = m.make_obs("swimming_co_kr", "secondary", "2024 전국생활체육 대축전", start="2024-04-20", place="경북 김천시")
+        self.assertEqual((ks["sports"], ks["sports_inferred"]), (["경영"], True))   # 수영연맹 일정 — 종목 낱말 없으면 경영(추정)
+        self.assertFalse(m.same_meet(kua, ks))
+        self.assertTrue(m.same_meet(kua, sc))
+        records = {"r1": {"id": "r1", "obs": {"kua:1": kua, "korswim:1": ks, "swimming_co_kr:1": sc}, "first_seen": "2026-11-03"}}
+        records["r1"]["derived"] = m.derive(records["r1"])
+        moved = m.split_federations(records)
+        self.assertEqual(len(moved), 1)
+        self.assertEqual(len(records), 2)
+        r1 = records["r1"]
+        self.assertEqual(set(o["source"] for o in r1["obs"].values()), {"korswim"})
+        self.assertEqual(r1["derived"]["start_date"], "2024-04-27")
+        other = records[moved[0][1]]
+        self.assertEqual(set(o["source"] for o in other["obs"].values()), {"kua", "swimming_co_kr"})
+        self.assertEqual(other["derived"]["start_date"], "2024-04-20")
+        self.assertEqual(m.collapse_duplicates(records), {})                 # 다시 합치지 않는다
+
+
 class RefreshTests(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
