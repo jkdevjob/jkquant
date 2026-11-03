@@ -20,6 +20,22 @@ class SwimCollectorTests(unittest.TestCase):
         self.assertEqual(m.kind_for("경북연맹 전국 마스터즈 대회",""),"masters")
         self.assertEqual(m.kind_for("국가대표 선발대회",""),"elite")
         self.assertEqual(m.kind_for("꿈나무 수영대회",""),"student")
+    def test_alias_and_reschedule_dedup(self):
+        a={"title":"제16회 흥타령배전국마스터즈수영대회","region":"천안","start_date":"2026-11-28","official_url":""}
+        b={"title":"제16회 천안 흥타령 마스터즈 수영대회","region":"천안","start_date":"2026-11-29","official_url":""}
+        self.assertTrue(m.same_meet(a,b))
+        b["start_date"]="2027-11-29"
+        self.assertFalse(m.same_meet(a,b))
+        b["start_date"]="2026-11-29"
+        b["region"]="김천"
+        self.assertFalse(m.same_meet(a,b))
+    def test_secondary_date_subset_keeps_two_day_event(self):
+        a=m.base_item("제16회 천안 흥타령 마스터즈수영대회","한들문화센터",start="2026-11-28",end="2026-11-29")
+        b=m.base_item("제16회 천안 흥타령 마스터즈수영대회","한들문화센터",start="2026-11-29",end="2026-11-29")
+        merged,diff=m.merge_entry(a,b)
+        self.assertEqual(merged["start_date"],"2026-11-28")
+        self.assertEqual(merged["end_date"],"2026-11-29")
+        self.assertEqual(diff,{})
     def test_preserves_missing_from_weak_source(self):
         old=m.base_item("제1회 대전 마스터즈 수영대회","한밭수영장",start="2026-12-01",source_url="https://www.korswim.co.kr/11/1",verification="official")
         old["eligibility"]="등록 선수만";old["free50"]=True;old["last_changed"]="2026-11-01"
