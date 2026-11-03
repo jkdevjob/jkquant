@@ -230,8 +230,8 @@ def event_family(title):
     return ""
 
 def normalized_title(title):
-    s=re.sub(r"제\\s*\\d+\\s*회","",clean(title))
-    s=re.sub(r"20\\d{2}\\s*년?","",s)
+    s=re.sub(r"제\s*\d+\s*회","",clean(title))
+    s=re.sub(r"20\d{2}\s*년?","",s)
     return re.sub(r"[^가-힣a-z0-9]","",s.lower())
 
 def same_meet(a,b):
