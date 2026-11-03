@@ -12541,6 +12541,36 @@ console.log('\n[37-값] 모의 성과 표 — TR(단리 인출 포함) · MDD ·
   })());
 }
 
+/* [37-다시] 다시 그리기는 표를 비우지 않고 한 번에 바꾼다 (2026-11-03 사용자: 3줄 아래부터 이름 없는 줄이 상자 밖에 그려짐)
+   예전엔 '불러오는 중…' 한 줄로 먼저 비워 페이지가 1,585 → 844px 로 줄며 보던 자리가 맨 위로 튀었다(Chromium 실측). */
+console.log('\n[37-다시] 모의 성과 다시 그리기 — 표를 비우지 않고 한 번에 교체');
+{ const op=extractFn(idx,'async function openPaper()');
+  const runOpen=async(src,hasTable,args)=>{
+    const writes=[]; let html=hasTable?'<table><tbody id="paper_tbody"><tr><td>옛 표</td></tr></tbody></table>':'';
+    const body={get innerHTML(){return html;},set innerHTML(v){ html=v; writes.push(v); },querySelector:s=>(s==='#paper_tbody'&&html.includes('id="paper_tbody"'))?{}:null,insertAdjacentHTML(){} };
+    const modal={classList:{add(){},contains:()=>true}};
+    const r={tab:'inf',label:'무한매수법',name:'a',sym:'SOXL',opts:['20분할'],cur:'usd',inflow:1e4,inflowWon:1e7,total:2e4,price:30,yrs:2,spanDays:730,nTrade:9,cagr:41,mdd:{pct:40,nDay:500},out:{simple:false,saved:0,withdrawn:0},ret:100,retNow:100,retOut:0,atr:80,atrTax:1,atrFee:1};
+    const F=new Function('$','paperEnsureCommonWon','paperRepairLegacyStarts','paperRepairCommonStarts','syncPaperStart','paperViewCacheRead','paperViewCacheLast',
+      'paperViewCacheFresh','paperWonRate','paperTitle','paperKrwRet','paperDualMoney','paperInflowText','paperUsd','paperWon','paperFxLine','paperLoadTickerNames','liveFX','refreshPaperView',
+      'let paperStaleNote=false, paperNote="";\n'+src+'\nreturn openPaper;')(
+      id=>({paper_body:body,paperModal:modal})[id],async()=>{},async()=>0,async()=>0,()=>{},()=>({rows:[r]}),()=>null,()=>true,()=>1324,
+      x=>'<b>'+x.name+'</b>',()=>20,(x,v)=>'$'+(+v).toFixed(2),x=>'투입 '+x.inflow,v=>(+v).toFixed(2)+'$',v=>Math.round(v)+'원',()=>'',()=>{},1324,async()=>[r]);
+    await F(...args); return writes; };
+  const check=async src=>{
+    const re=await runOpen(src,true,[false,true]), first=await runOpen(src,false,[false,false]), btn=await runOpen(src,true,[true,false]);
+    return {redrawOne:re.length===1&&re[0].includes('id="paper_tbody"')&&!re.some(w=>w.includes('불러오는 중')),
+            firstPlaceholder:first.length===2&&first[0].includes('불러오는 중')&&first[1].includes('id="paper_tbody"'),
+            forceShowsWork:btn.length>=2&&btn[0].includes('다시 계산하는 중'), n:[re.length,first.length,btn.length].join('/')}; };
+  PENDING.push((async()=>{ try{
+    const a=await check(op);
+    ok('[37-다시] 표가 있는 채로 다시 그리면 교체는 1번 — 새 표로 바로(‘불러오는 중’ 없음)',a.redrawOne,a.n);
+    ok('[37-다시] 처음 열 때는 그대로 ‘불러오는 중’ 다음 표 · 전체 적용은 ‘다시 계산하는 중’ 먼저',a.firstPlaceholder&&a.forceShowsWork,a.n);
+    const mut=op.replace('if(body&&!_redraw){','if(body){');
+    const m=await check(mut);
+    ok('[37-다시] 변이: 다시 그리기 보호를 빼면(옛 코드) 빨간불',mut!==op&&!m.redrawOne&&m.firstPlaceholder,m.n);
+  }catch(e){ ok('[37-다시] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); } })());
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
