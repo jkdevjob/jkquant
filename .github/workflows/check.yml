@@ -67,6 +67,13 @@ jobs:
       - name: 전 페이지 헤더·PC 자산플랜 폭·모의 통화 병기 검사
         run: node scripts/check-unified-layout.cjs
 
+      - name: 수영대회 수집기·화면·알림 값 시험 + 변이 시험
+        run: |
+          pip install --quiet "requests>=2.32,<3" "beautifulsoup4>=4.12,<5" "pypdf>=4,<7"
+          python -m unittest discover -s scripts -p test_swim_collect.py
+          python scripts/mutation_test_swim.py
+          node --test tests/swim.test.mjs
+
       - name: 달러·원화 병기 및 플랜 판단 근거 값·변이 검사
         run: |
           node scripts/check-dual-currency.cjs
