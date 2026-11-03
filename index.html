@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.113.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.113.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1701,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.113.0</b> · 2026-11-03</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.113.1</b> · 2026-11-03</div>
   </footer>
 </div>
 
@@ -8056,6 +8056,21 @@ const PAPER_CACHESYM={inf:()=>lastQuote.inf&&lastQuote.inf.symbol, vr:()=>lastQu
   ivs:()=>ivsQuoteData&&ivsQuoteData.symbol, ma:()=>maQuoteData&&maQuoteData.symbol,
   dca:()=>dcaQuoteData&&dcaQuoteData.symbol, asap:()=>asapQuoteData&&asapQuoteData.symbol};
 let _paperFilling=false;
+/* 재생 사이에 화면 그릴 틈을 준다. 시세가 이미 받아져 있으면 아래 재생 반복의 await 들은 마이크로태스크로만 이어져
+   62세션 재생이 한 덩어리로 돌았다(무매 1세션 = 데스크톱 86ms · 아이폰은 몇 배). 그동안 iPhone Safari 는 새로 보이는 영역을
+   못 그려 빈칸 · 고정 이름 칸 누락 · 글자 반쯤 잘림이 보였다(2026-11-03 사용자 화면 두 장). 40ms 넘게 돌았으면 다음 프레임까지 한 번 쉰다
+   — 화면이 숨겨져 있어 프레임이 안 오면 60ms 뒤에 그냥 간다. */
+let _paperSliceAt=0;
+async function paperBreathe(){
+  const now=()=>(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
+  if(now()-_paperSliceAt<40) return false;
+  if(typeof document==='undefined'||document.hidden) return false;   // 그릴 화면이 없거나 숨겨져 있으면 쉬지 않는다 — 백그라운드 타이머 지연에 묶이지 않게
+  await new Promise(res=>{ let done=false; const go=()=>{ if(!done){ done=true; res(); } };
+    if(typeof requestAnimationFrame==='function') requestAnimationFrame(()=>setTimeout(go,0));
+    setTimeout(go,60); });
+  _paperSliceAt=now();
+  return true;
+}
 /* 모의성과는 세션을 순차 재생해야 하지만 시세 네트워크까지 순차로 기다릴 이유는 없다.
    필요한 종목을 먼저 병렬로 받아 _memoQuote 캐시에 채우면 10개 세션이어도 네트워크 대기는
    '종목 수의 합'이 아니라 '가장 늦은 한 종목' 수준으로 줄어든다. */
@@ -8084,6 +8099,7 @@ async function paperPrefetchQuotes(){
 async function paperFillAll(){
   if(_paperFilling) return null;
   _paperFilling=true;
+  _paperSliceAt=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
   const prevTab=S.activeTab; const rows=[];
   /* 시세도 원래대로 돌려놔야 한다. lastQuote 는 전략마다 한 칸뿐인데 아래에서
      세션마다 갈아끼우므로, 다 돌고 나면 마지막 세션 종목이 남는다.
@@ -8105,6 +8121,7 @@ async function paperFillAll(){
       if(!targets.length) continue;
       const prevAct=box.active;
       for(const sess of targets){
+        await paperBreathe();                 // 세션 사이 — 화면 그릴 틈
         if(tab==='plan'){
           try{
             await loadPlanPaperData(false);replayPlanPaper(sess);
