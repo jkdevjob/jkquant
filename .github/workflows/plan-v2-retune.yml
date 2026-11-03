@@ -1,0 +1,19 @@
+name: JKQuant plan v2 retune research
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/plan5-v2-retune.cjs
+      - .github/workflows/plan-v2-retune.yml
+  workflow_dispatch:
+jobs:
+  retune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Research official plan v2
+        run: node scripts/plan5-v2-retune.cjs
