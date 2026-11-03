@@ -8578,7 +8578,7 @@ async function openPaper(){
     h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · <b>세후 TR</b> = 지금 다 팔고 세금·수수료를 낸 뒤 수익률(해마다 실현손익에 양도세 22% · 연 250만원 공제를 내고 그만큼 덜 굴린다 · 국내 종목은 국내 규약 · 장부에 수수료가 없는 무매·적립·ASAP 은 0.25% · 근사) · <b>TR</b>(토탈리턴) = 평가 ÷ 투입 − 1(세전 · 단리 인출·출금 포함 · 현재 + 인출) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다) · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · 기간 = 모의 시작일부터. <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
-    paperBuildMobileCards(body);
+    if(typeof paperBuildMobileCards==='function')paperBuildMobileCards(body);
     void paperLoadTickerNames(body);
   }
 }
