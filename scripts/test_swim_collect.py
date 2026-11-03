@@ -14,7 +14,7 @@ class SwimCollectorTests(unittest.TestCase):
     def test_free_50m_not_a_venue(self):
         self.assertIsNone(m.freestyle("50m 장수로 · 자유형",50))
         self.assertTrue(m.freestyle("자유형 50m·100m",50))
-        self.assertIsNone(m.freestyle("자유형 50m·100m",100))  # not explicitly tied; avoid false claim
+        self.assertTrue(m.freestyle("자유형 50m·100m",100))
         self.assertTrue(m.freestyle("자유형 50m / 자유형 100m",100))
     def test_type_classification(self):
         self.assertEqual(m.kind_for("경북연맹 전국 마스터즈 대회",""),"masters")
