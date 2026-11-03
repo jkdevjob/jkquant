@@ -83,7 +83,7 @@ def freestyle(events, distance):
     pattern = rf"(?:자유형|Free\s*style)\s*(?:[·:/,]\s*)?{distance}\s*m\b|{distance}\s*m\s*(?:자유형|Free\s*style)"
     if re.search(pattern, s, flags=re.I): return True
     # e.g. '자유형 50m·100m' explicitly lists both freestyle distances.
-    if distance == 100 and re.search(r"자유형\\s*50\\s*m\\s*(?:[·,/]|및)\\s*100\\s*m", s):
+    if distance == 100 and re.search(r"자유형\s*50\s*m\s*(?:[·,/]|및)\s*100\s*m", s):
         return True
     return None
 
