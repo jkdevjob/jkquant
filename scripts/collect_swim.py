@@ -24,12 +24,35 @@ CHANGES = ROOT / "data" / "swim" / "changes.json"
 TODAY = datetime.now(ZoneInfo("Asia/Seoul")).date()
 NOW = datetime.now(ZoneInfo("Asia/Seoul")).isoformat(timespec="seconds")
 UA = "JKQuantAquatics/1.0 (public scheduled competition lookup; contact via repository)"
-REGIONS = ("천안", "아산", "세종", "청주", "공주", "대전", "계룡", "논산",
-           "금산", "옥천", "보은", "영동", "김천", "증평", "괴산", "부여")
-VENUES = {"한밭수영장": "대전", "한들문화센터": "천안",
-          "김천실내수영장": "김천", "정부세종청사체육관": "세종",
-          "배미수영장": "아산", "청주실내수영장": "청주",
-          "공주대학교수영장": "공주"}
+# Whole Republic of Korea. A missing locality is '지역 미확인', never excluded.
+REGIONS = ("서울","인천","경기","부산","대구","광주","대전","울산","세종","강원",
+           "충북","충남","전북","전남","경북","경남","제주")
+CITY_ALIASES = {
+    "천안":"천안","아산":"아산","청주":"청주","공주":"공주","계룡":"계룡","논산":"논산","금산":"금산",
+    "옥천":"옥천","보은":"보은","영동":"영동","김천":"김천","증평":"증평","괴산":"괴산",
+    "부여":"부여","완주":"완주","전주":"전주","익산":"익산","군산":"군산","목포":"목포",
+    "여수":"여수","순천":"순천","포항":"포항","안동":"안동","구미":"구미","경산":"경산",
+    "창원":"창원","김해":"김해","진주":"진주","거제":"거제","양산":"양산","통영":"통영",
+    "양천":"서울","성북":"서울","송파":"서울","강남":"서울","성동":"서울","강서":"서울",
+    "잠실":"서울","서초":"서울","관악":"서울","노원":"서울","도봉":"서울","종로":"서울",
+    "수원":"수원","성남":"성남","안산":"안산","안양":"안양","파주":"파주",
+    "시흥":"시흥","광명":"광명","용인":"용인","평택":"평택","화성":"화성","부천":"부천",
+    "안성":"안성","오산":"오산","여주":"여주","포천":"포천","남양주":"남양주","김포":"김포",
+    "충주":"충주","제천":"제천","음성":"음성","강릉":"강릉","속초":"속초","춘천":"춘천",
+    "원주":"원주","동해":"동해","삼척":"삼척","제주":"제주","서귀포":"서귀포",
+    "울산":"울산","문수":"울산","대구":"대구","광주":"광주","부산":"부산",
+}
+PROVINCE_ALIASES = {"서울특별시":"서울","서울시":"서울","인천광역시":"인천","경기도":"경기",
+"부산광역시":"부산","대구광역시":"대구","광주광역시":"광주","대전광역시":"대전",
+"울산광역시":"울산","세종특별자치시":"세종","강원특별자치도":"강원","강원도":"강원",
+"충청북도":"충북","충청남도":"충남","전북특별자치도":"전북","전라북도":"전북",
+"전라남도":"전남","경상북도":"경북","경상남도":"경남","제주특별자치도":"제주",
+"충남":"충남","충북":"충북","경북":"경북","경남":"경남","전북":"전북","전남":"전남"}
+VENUES = {"한밭수영장":"대전","한들문화센터":"천안","김천실내수영장":"김천",
+"정부세종청사체육관":"세종","배미수영장":"아산","청주실내수영장":"청주",
+"공주대학교수영장":"공주","문수실내수영장":"울산","사직실내수영장":"부산",
+"남부대시립국제수영장":"광주","문학박태환수영장":"인천","잠실":"서울",
+"완산실내수영장":"전주","창원실내수영장":"창원","목포실내수영장":"목포"}
 OFFICIAL_HOSTS = ("korswim.co.kr", "djswimming.or.kr", "gbaquatics.co.kr",
                   "sjswim.or.kr", "cnswimming.or.kr", "cnsports.or.kr")
 FIELDS = ("title", "region", "venue", "start_date", "end_date", "apply_open", "apply_close",
@@ -51,11 +74,16 @@ def dates(x):
     return [date_norm(m.group(0)) for m in re.finditer(r"20\d{2}[.\-/]\s*\d{1,2}[.\-/]\s*\d{1,2}", str(x or ""))]
 
 def region_for(x):
-    s = clean(x)
-    for label in REGIONS:
-        if label in s: return label
-    for label, city in VENUES.items():
-        if label in s: return city
+    s=clean(x)
+    # Prioritize actual swimming pool locations over a competition's sponsor name.
+    for venue, city in VENUES.items():
+        if venue in s: return city
+    for city, result in sorted(CITY_ALIASES.items(), key=lambda kv: -len(kv[0])):
+        if city in s: return result
+    for province, result in sorted(PROVINCE_ALIASES.items(), key=lambda kv: -len(kv[0])):
+        if province in s: return result
+    for province in REGIONS:
+        if province in s: return province
     return ""
 
 def kind_for(title, target):
@@ -106,7 +134,8 @@ def uid(item):
 
 def base_item(title, venue="", region="", start="", end="", source="", source_url="", verification="secondary"):
     title = clean(title); venue = clean(venue); region = region or region_for(venue+" "+title)
-    if not title or not region: return None
+    if not title: return None
+    region = region or "지역 미확인"
     kind = kind_for(title, "")
     out = dict(title=title, region=region, venue=venue, start_date=start or "",
                end_date=end or start or "", apply_open="", apply_close="",
@@ -159,7 +188,6 @@ def scrape_swim_index():
         lines = extract_lines(card)
         venue = value_after(lines, "장소")
         region = region_for(" ".join(lines[:12]) + " " + venue + " " + title)
-        if not region: continue
         ds = dates(value_after(lines,"대회일"))
         item = base_item(title,venue,region,ds[0] if ds else "",ds[-1] if ds else "",
                          "전국 수영대회 통합 목록",url,"secondary")
@@ -214,6 +242,35 @@ def scrape_korswim():
     if not out: raise ValueError("no official schedule entries")
     return out
 
+def scrape_whoisfast():
+    # Independent nationwide masters calendar; names/venues are secondary evidence.
+    # Parse lightweight visible text instead of assuming a fragile CSS class.
+    url=f"https://whoisfast.com/meets?year={TODAY.year}"
+    soup=get_soup(url)
+    lines=[clean(x) for x in soup.get_text("\n",strip=True).split("\n") if clean(x)]
+    out=[]
+    for i,line in enumerate(lines):
+        if not re.match(r"^20\d{2}[.]\d{1,2}[.]\d{1,2}(?:\s*~\s*20\d{2}[.]\d{1,2}[.]\d{1,2})?",line):
+            continue
+        ds=dates(line)
+        if not ds: continue
+        title=""
+        for x in lines[i+1:i+5]:
+            if re.search(r"수영대회|마스터즈|생활체육|연맹회장배|도지사배|시장배|수영\s*대회",x) and len(x)<130:
+                title=re.sub(r"\s*예정\s*$","",x).strip()
+                break
+        if not title:continue
+        venue=""
+        for x in lines[i+2:i+7]:
+            if "수영장" in x or "스포츠센터" in x or "체육관" in x:
+                venue=x.split("·")[0].strip()
+                break
+        item=base_item(title,venue,start=ds[0],end=ds[-1],
+                       source="Whoisfast 전국 마스터즈 일정",source_url=url)
+        if item:out.append(item)
+    if not out: raise ValueError("no recognized nationwide masters entries")
+    return out
+
 def read_json(path, default):
     try:return json.loads(path.read_text(encoding="utf-8"))
     except (FileNotFoundError,ValueError):return default
@@ -235,7 +292,9 @@ def normalized_title(title):
     return re.sub(r"[^가-힣a-z0-9]","",s.lower())
 
 def same_meet(a,b):
-    if a.get("region")!=b.get("region"):return False
+    # A new authoritative announcement may resolve an initially unknown city.
+    if a.get("region")!=b.get("region") and "지역 미확인" not in (a.get("region"),b.get("region")):
+        return False
     a_date,b_date=a.get("start_date") or "",b.get("start_date") or ""
     if not (a_date and b_date) or a_date[:4]!=b_date[:4]:return False
     try:
@@ -261,6 +320,8 @@ def merge_entry(old,new):
                 new["end_date"]=old["end_date"]
     for field in FIELDS:
         val=new.get(field)
+        if field=="region" and val=="지역 미확인" and item.get("region")!="지역 미확인":
+            continue
         if filled(val) and (prefer_new or not filled(item.get(field))):
             item[field]=val
     # Even an official schedule with no eligibility details must not erase known secondary details.
@@ -279,7 +340,9 @@ def refresh():
     entries={x["id"]:x for x in previous.get("competitions",[]) if isinstance(x,dict) and x.get("id")}
     changes=read_json(CHANGES,{"changes":[]}).get("changes",[])
     results=[];failed=[]
-    for name,fn in [("전국 수영대회 목록",scrape_swim_index),("대한수영연맹",scrape_korswim)]:
+    for name,fn in [("대회 통합 목록",scrape_swim_index),
+                    ("전국 마스터즈 일정",scrape_whoisfast),
+                    ("대한수영연맹",scrape_korswim)]:
         try:
             batch=fn();results.extend(batch);print(f"{name}: {len(batch)} entries")
         except Exception as exc:
@@ -305,7 +368,7 @@ def refresh():
                                 "type":"updated","fields":sorted(diff)})
     # Archives are retained; missing from current sources is NOT a cancellation.
     values=sorted(entries.values(),key=lambda e:(e.get("start_date") or "9999",e["title"]))
-    payload={"schema_version":1,"updated_at":NOW,"range":"천안~김천","sources_failed":failed,
+    payload={"schema_version":1,"updated_at":NOW,"range":"대한민국 전국","sources_failed":failed,
              "competitions":values}
     DATA.parent.mkdir(parents=True,exist_ok=True)
     DATA.write_text(json.dumps(payload,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
