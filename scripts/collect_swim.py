@@ -221,10 +221,44 @@ def read_json(path, default):
 def filled(x):
     return x not in (None,"",[],{},"확인 필요","공식요강 확인")
 
+def event_family(title):
+    s=clean(title).replace(" ","")
+    if "흥타령" in s:return "흥타령"
+    if ("경북" in s or "경상북도" in s) and "연맹회장배" in s:return "경북연맹회장배"
+    if ("충남" in s or "충청남도" in s) and "도지사배" in s:return "충남도지사배"
+    if "온통행복한대전" in s:return "대전전국마스터즈"
+    return ""
+
+def normalized_title(title):
+    s=re.sub(r"제\\s*\\d+\\s*회","",clean(title))
+    s=re.sub(r"20\\d{2}\\s*년?","",s)
+    return re.sub(r"[^가-힣a-z0-9]","",s.lower())
+
+def same_meet(a,b):
+    if a.get("region")!=b.get("region"):return False
+    a_date,b_date=a.get("start_date") or "",b.get("start_date") or ""
+    if not (a_date and b_date) or a_date[:4]!=b_date[:4]:return False
+    try:
+        days=abs((datetime.fromisoformat(a_date)-datetime.fromisoformat(b_date)).days)
+    except ValueError:return False
+    f1,f2=event_family(a["title"]),event_family(b["title"])
+    a_url,b_url=a.get("official_url"),b.get("official_url")
+    if a_url and b_url and a_url==b_url:return True
+    if f1 and f1==f2 and days<=14:return True
+    return normalized_title(a["title"])==normalized_title(b["title"]) and days<=45
+
 def merge_entry(old,new):
     item=dict(old)
     # Official new data may override the index; otherwise absence must not erase good fields.
     prefer_new = new.get("verification")=="official" or old.get("verification")!="official"
+    # If a secondary index describes only the Sunday of a two-day meet,
+    # keep the wider published date interval instead of shrinking it.
+    if old.get("verification")=="secondary" and new.get("verification")=="secondary":
+        if old.get("start_date") and old.get("end_date") and new.get("start_date") and new.get("end_date"):
+            if old["start_date"]<=new["start_date"]<=new["end_date"]<=old["end_date"]:
+                new=dict(new)
+                new["start_date"]=old["start_date"]
+                new["end_date"]=old["end_date"]
     for field in FIELDS:
         val=new.get(field)
         if filled(val) and (prefer_new or not filled(item.get(field))):
@@ -256,6 +290,10 @@ def refresh():
     count_new=count_changed=0
     # Secondary first, official second so detailed primary URLs are preferred.
     for fresh in sorted(results,key=lambda r:r.get("verification")=="official"):
+        if fresh["id"] not in entries:
+            match=next((known_id for known_id,known in entries.items() if same_meet(known,fresh)),None)
+            if match:
+                fresh["id"]=match
         if fresh["id"] not in entries:
             entries[fresh["id"]]=fresh;count_new+=1
             changes.append({"id":fresh["id"],"title":fresh["title"],"date":TODAY.isoformat(),"type":"new"})
