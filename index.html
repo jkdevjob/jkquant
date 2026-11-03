@@ -468,6 +468,39 @@ html.had-user #authgate .bootwait{display:block}
 .htable.narrow tr.paper-row-compact td{padding-top:1px;padding-bottom:1px}
 .htable.narrow tr.paper-row-compact .slink{padding-top:1px;padding-bottom:1px;line-height:17px}
 .htable.narrow tr.paper-row-compact .cw{line-height:1.12}
+
+/* 모의 성과 모바일: iOS WebKit의 overflow-x+sticky table-cell 조합은
+   긴 표에서 첫 칸의 글자가 세로 스크롤 중 사라질 수 있다.
+   모바일에서는 같은 원본 테이블 셀을 복제한 카드로 표시해
+   숫자/세금 계산을 이중 구현하지 않는다. PC에서는 기존 표 유지. */
+.paper-mobile-view{display:none}
+.paper-mobile-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:8px 0 10px}
+.paper-mobile-toolbar label{color:var(--dim);font-size:12px;font-weight:700}
+.paper-mobile-toolbar select{max-width:205px;min-width:0;padding:7px 9px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;font-size:12px}
+.paper-mobile-list{display:grid;gap:9px}
+.paper-mobile-card{min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:11px;padding:11px}
+.paper-mobile-name{min-width:0;color:var(--ink);font-size:12px;line-height:1.4;margin-bottom:10px}
+.paper-mobile-name .pcell{min-width:0!important;width:100%;overflow-wrap:anywhere;word-break:keep-all}
+.paper-mobile-name .cw{white-space:normal!important;font-size:11px;line-height:1.35;margin-top:3px}
+.paper-mobile-name .paper-title{width:100%;max-width:100%}
+.paper-mobile-name .paper-ticker-name{max-width:60%}
+.paper-mobile-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.paper-mobile-kpi{min-width:0;background:var(--panel2);border-radius:8px;padding:9px 6px 7px}
+.paper-mobile-kpi .k{display:block;font-size:10px;font-weight:700;color:var(--faint)}
+.paper-mobile-kpi .v{margin-top:3px;display:block;font-size:16px;font-weight:800;line-height:1.3;white-space:normal;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.paper-mobile-kpi .v .cw{display:block;font-size:9.5px;line-height:1.35;font-weight:500;white-space:normal;color:var(--dim)}
+.paper-mobile-pending{padding:10px;color:var(--gold);font-size:12px}
+.paper-mobile-details{margin-top:7px;border-top:1px solid var(--line);padding-top:6px}
+.paper-mobile-details summary{list-style:revert;color:var(--vio);font-size:11px;font-weight:750;cursor:pointer;padding:4px 0;user-select:none}
+.paper-mobile-extra{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:6px}
+.paper-mobile-extra-item{min-width:0;border-radius:7px;background:var(--panel2);padding:8px 7px;overflow-wrap:anywhere}
+.paper-mobile-extra-item .k{display:block;color:var(--faint);font-size:10px}
+.paper-mobile-extra-item .v{display:block;color:var(--ink);font-size:12px;font-weight:700;line-height:1.4;margin-top:3px;word-break:break-word}
+.paper-mobile-extra-item .v .cw{white-space:normal;font-size:10px;line-height:1.4}
+@media(max-width:760px){
+  #paper_body .paper-desktop-table{display:none!important}
+  #paper_body .paper-mobile-view{display:block}
+}
 /* 고정 전략 열의 가로·세로 경계를 본문 셀과 연결 — 가로줄은 칸의 아래 테두리(본문 칸과 같은 1px 한 줄)가 그대로 보인다.
    예전엔 그 위에 1px 그림자 줄을 또 그려 고정 칸만 2px 로 굵고 1px 위에서 시작해 계단처럼 보였다(2026-10-12 사용자). */
 .htable-wrap table.htable.narrow tr>:first-child{
@@ -593,7 +626,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.112.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.112.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1734,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.112.3</b> · 2026-11-03</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.112.4</b> · 2026-11-03</div>
   </footer>
 </div>
 
@@ -8285,6 +8318,85 @@ async function refreshPaperViewButton(){
   if(rows)await openPaper(false,true);
 }
 
+
+/* 모바일 카드는 동일 테이블 행의 실제 셀을 복제한다.
+   세후 TR/원화/MDD/인출 등 계산식의 두 번째 사본을 만들지 않는다. */
+function paperBuildMobileCards(root){
+  const desktop=root&&root.querySelector('.paper-desktop-table');
+  const table=desktop&&desktop.querySelector('table.htable.narrow');
+  if(!table||!table.tBodies.length)return;
+  const old=root.querySelector('.paper-mobile-view');
+  if(old)old.remove();
+  const view=document.createElement('section');
+  view.className='paper-mobile-view';
+  view.setAttribute('aria-label','모의투자 성과 모바일 목록');
+  const toolbar=document.createElement('div');toolbar.className='paper-mobile-toolbar';
+  const label=document.createElement('label');label.textContent='전략별 성과 '+table.tBodies[0].rows.length+'건';
+  const select=document.createElement('select');select.setAttribute('aria-label','모의 성과 정렬');
+  select.innerHTML='<option value="default">기본 순서</option>'
+    +'<option value="atr">세후 TR 높은 순</option>'
+    +'<option value="ret">TR 높은 순</option>'
+    +'<option value="mdd">MDD 작은 순</option>'
+    +'<option value="cagr">CAGR 높은 순</option>'
+    +'<option value="name">전략명 가나다순</option>';
+  select.addEventListener('change',()=>paperSortCards(select.value));
+  toolbar.append(label,select);view.appendChild(toolbar);
+  const list=document.createElement('div');list.className='paper-mobile-list';list.id='paper_mobile_list';
+  const detailNames=['MAR','평가','현재','인출','연 CAGR','투입','기간'];
+  Array.from(table.tBodies[0].rows).forEach((tr,i)=>{
+    const cells=Array.from(tr.cells),card=document.createElement('article');
+    card.className='paper-mobile-card';
+    for(const key of Object.keys(tr.dataset))card.dataset[key]=tr.dataset[key];
+    card.dataset.order=String(i);
+    const first=document.createElement('div');first.className='paper-mobile-name';
+    const pcell=cells[0]&&cells[0].querySelector('.pcell');
+    if(pcell)first.appendChild(pcell.cloneNode(true));
+    else first.textContent=cells[0]?.textContent||'전략 정보 없음';
+    card.appendChild(first);
+    if(cells.length===11){
+      const metrics=document.createElement('div');metrics.className='paper-mobile-kpis';
+      ['세후 TR','TR','MDD'].forEach((name,k)=>{
+        const box=document.createElement('div');box.className='paper-mobile-kpi';
+        const label=document.createElement('span');label.className='k';label.textContent=name;
+        const val=document.createElement('span');val.className='v';val.innerHTML=cells[k+1].innerHTML;
+        if(cells[k+1].style.color)val.style.color=cells[k+1].style.color;
+        box.append(label,val);metrics.appendChild(box);
+      });
+      card.appendChild(metrics);
+      const details=document.createElement('details');details.className='paper-mobile-details';
+      const summary=document.createElement('summary');summary.textContent='평가금액 · CAGR · 거래내역 더 보기';
+      details.appendChild(summary);
+      const extra=document.createElement('div');extra.className='paper-mobile-extra';
+      detailNames.forEach((name,k)=>{
+        const it=document.createElement('div');it.className='paper-mobile-extra-item';
+        const label=document.createElement('span');label.className='k';label.textContent=name;
+        const val=document.createElement('span');val.className='v';val.innerHTML=cells[k+4].innerHTML;
+        it.append(label,val);extra.appendChild(it);
+      });
+      details.appendChild(extra);card.appendChild(details);
+    }else{
+      const pending=document.createElement('div');pending.className='paper-mobile-pending';
+      pending.textContent=cells[1]?.textContent||'시세 계산 중';card.appendChild(pending);
+    }
+    list.appendChild(card);
+  });
+  view.appendChild(list);desktop.insertAdjacentElement('afterend',view);
+}
+function paperSortCards(key){
+  const list=document.getElementById('paper_mobile_list');
+  if(!list)return;
+  const cards=Array.from(list.children);
+  cards.sort((a,b)=>{
+    if(key==='default')return Number(a.dataset.order)-Number(b.dataset.order);
+    const av=a.dataset[key]??'',bv=b.dataset[key]??'';
+    const missing=x=>x===''||x==='undefined'||x==='NaN';
+    if(missing(av)||missing(bv))return missing(av)===missing(bv)?0:missing(av)?1:-1;
+    if(key==='name')return String(av).localeCompare(String(bv),'ko');
+    return Number(bv)-Number(av);
+  });
+  list.replaceChildren(...cards);
+}
+
 let paperSortKey='', paperSortDir=1;
 function paperSortTable(key,th){
   const tb=$('paper_tbody'); if(!tb) return;
@@ -8383,7 +8495,7 @@ async function openPaper(){
       : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
-    let h=`<div class="htable-wrap"><table class="htable narrow"><thead><tr>`
+    let h=`<div class="paper-desktop-table"><div class="htable-wrap"><table class="htable narrow"><thead><tr>`
       /* 칸 순서 TR · MDD · MAR · 평가 — 폰에서 스크롤 없이 보이는 자리에 수익률과 위험을 둔다. 기간은 맨 뒤(2026-10-21 사용자 요청).
          TR(토탈리턴) = (평가금 + 잔금 + 나간 돈) ÷ 원금 − 1 — 단리 인출·출금까지 넣는다(예전 이름 '최종', 값은 그대로). */
       + `<th style="cursor:pointer" onclick="paperSortTable('name',this)">전략 · 세션</th>`
@@ -8459,13 +8571,14 @@ async function openPaper(){
         // 투입·기간은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과·위험(세후 TR·TR·MDD·MAR·평가)이다
         + `<td style="color:var(--dim)">${paperInflowText(r)}</td>`
         + `<td>${per}<span class="cw">${r.nTrade}거래</span></td></tr>`; });
-    h+=`</tbody></table></div>`;
+    h+=`</tbody></table></div></div>`;
     h=paperFxLine(rows)+h;
     if(paperStaleNote) h=`<p class="note" id="paper_stale_note" style="color:var(--vio)">🔄 지난번 계산 결과입니다 — 오늘 기준으로 다시 계산하는 중… (끝나면 자동으로 바뀝니다)</p>`+h;
     if(!cur && rows.some(r=>!(r.price>0)&&!r.pending)) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 새로고침하면 다시 받습니다.</p>`;
     h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · <b>세후 TR</b> = 지금 다 팔고 세금·수수료를 낸 뒤 수익률(해마다 실현손익에 양도세 22% · 연 250만원 공제를 내고 그만큼 덜 굴린다 · 국내 종목은 국내 규약 · 장부에 수수료가 없는 무매·적립·ASAP 은 0.25% · 근사) · <b>TR</b>(토탈리턴) = 평가 ÷ 투입 − 1(세전 · 단리 인출·출금 포함 · 현재 + 인출) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다) · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · 기간 = 모의 시작일부터. <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
+    paperBuildMobileCards(body);
     void paperLoadTickerNames(body);
   }
 }
