@@ -10,7 +10,7 @@ assert(b>0&&e>b,'cannot locate actual mobile renderer source');
 const code=html.slice(b,e);new Function(code);
 assert.match(html,/class="paper-desktop-table"><div class="htable-wrap"><table class="htable narrow"/);
 assert.match(html,/@media\(max-width:760px\)\{[\s\S]*?#paper_body \.paper-desktop-table\{display:none!important\}[\s\S]*?#paper_body \.paper-mobile-view\{display:block\}/);
-assert.match(html,/body\.innerHTML=h;\s*paperBuildMobileCards\(body\);\s*void paperLoadTickerNames\(body\);/);
+assert.match(html,/body\.innerHTML=h;\s*if\(typeof paperBuildMobileCards==='function'\)paperBuildMobileCards\(body\);\s*void paperLoadTickerNames\(body\);/);
 class Fake {
   constructor(tag='div'){
     this.tagName=tag.toUpperCase();this.children=[];this.className='';this.dataset={};
