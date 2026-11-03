@@ -26,6 +26,7 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
       else if(c>m*(1+(p.gbOn??p.gb))) st.g=true; else if(c<m*(1-offB(k))) st.g=false;   // 들어갈 때(gbOn)·나올 때(gbOff) 밴드를 따로 줄 수 있다
       if(p.full&&!st.g) w=0;                       // 변형: Guard OFF 면 TECL 도 끔
       if(p.offMul!=null&&!st.g) w*=p.offMul;       // 변형: Guard OFF 동안 TECL 목표에 offMul 곱함(일부만 줄임)
+      st.od=st.g?0:(st.od||0)+1; if(p.offLongN&&!st.g&&st.od>p.offLongN) w*=(p.offLongK??0.5);   // 변형(11-04): Guard OFF 가 offLongN 신호일 넘게 이어지면 TECL 목표 × offLongK — 긴 하락장만 줄이기
       if(rm&&P.C[R][k]<rm[k]) w=Math.min(w,p.rFloor??0);   // 변형: TECL 자체 추세
       const t={}; t[R]=p.tw*w; if(rvDn&&rvDn[k]>0){ const wd=Math.min(w,Math.min(1,(p.s0*p.s0)/(rvDn[k]*rvDn[k]))); if(p.tw*wd<(cur[R]||0)) t[R]=p.tw*wd; } t[GA]=st.g?p.gw*((p.gs0&&gvT[k]>0)?Math.min(1,p.gs0*p.gs0/(gvT[k]*gvT[k])):1):0;
       if(p.offAsset) t[p.offAsset]=st.g?0:(p.offW??p.gw);   // 변형(11-03): Guard OFF 동안 TQQQ 몫(gw)을 SGOV(현금) 대신 offAsset(IEF·TLT·GLD·QQQ 등)으로 — 매매 시점·밴드는 TQQQ 와 같은 규칙(Guard 바뀔 때 · gReb)
