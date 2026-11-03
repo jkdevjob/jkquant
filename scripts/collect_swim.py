@@ -82,6 +82,9 @@ def freestyle(events, distance):
     s = clean(events).replace("ｍ", "m").replace("M", "m")
     pattern = rf"(?:자유형|Free\s*style)\s*(?:[·:/,]\s*)?{distance}\s*m\b|{distance}\s*m\s*(?:자유형|Free\s*style)"
     if re.search(pattern, s, flags=re.I): return True
+    # e.g. '자유형 50m·100m' explicitly lists both freestyle distances.
+    if distance == 100 and re.search(r"자유형\\s*50\\s*m\\s*(?:[·,/]|및)\\s*100\\s*m", s):
+        return True
     return None
 
 def adult_possible(title, eligibility):
@@ -111,6 +114,9 @@ def base_item(title, venue="", region="", start="", end="", source="", source_ur
                kind=kind, sport=sport_for(title,""), official_url=source_url if is_official(source_url) else "",
                source_url=source_url, source=source, verification=verification,
                first_seen=TODAY.isoformat(), last_seen=TODAY.isoformat(), last_changed=TODAY.isoformat())
+    if out["sport"] in ("다이빙","수구","아티스틱","오픈워터","핀수영"):
+        out["free50"] = False
+        out["free100"] = False
     out["id"] = uid(out)
     return out
 
@@ -166,8 +172,12 @@ def scrape_swim_index():
         item["kind"]=kind_for(title,item["eligibility"])
         item["sport"]=sport_for(title,item["events"])
         item["adult_possible"]=adult_possible(title,item["eligibility"])
-        item["free50"]=freestyle(item["events"],50)
-        item["free100"]=freestyle(item["events"],100)
+        if item["sport"] == "경영":
+            item["free50"]=freestyle(item["events"],50)
+            item["free100"]=freestyle(item["events"],100)
+        elif item["sport"] in ("다이빙","수구","아티스틱","오픈워터","핀수영"):
+            item["free50"]=False
+            item["free100"]=False
         for a in card.find_all("a",href=True):
             if "공식요강" in a.get_text(" ",strip=True):
                 target=urljoin(url,a["href"])
