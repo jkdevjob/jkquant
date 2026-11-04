@@ -214,9 +214,12 @@ await t('P3 전체 적용은 도는 갱신이 끝난 뒤에 기록을 비운다'
   const iClear=ap.indexOf('x.hist=[]; x.simStart=ns;');
   assert(iWait>0 && iClear>iWait && ap.indexOf('if(!confirm(msg)) return;')<iWait);
 });
-await t('P2 첫 화면: 저장 결과의 서명이 안 맞으면 지난 결과를 "갱신 중"으로 보인다 — 그 자리 시세로 센 가짜 값(시세 못 받음·평단 대체)을 안 보인다',async()=>{
+await t('P2 첫 화면: 오늘 결과가 없으면 목록을 비우고 "조회 중" — 지난 결과·그 자리 시세로 센 가짜 값을 먼저 안 보인다 · 재계산 실패 때만 지난 결과를 실패 안내와 함께',async()=>{
   const op=fn('async function openPaper()');
-  assert(/const last=cache\?null:paperViewCacheLast\(\);/.test(op) && /paperStaleNote=true/.test(op) && /지난번 계산 결과입니다/.test(op));
+  // 2026-11-04 사용자: '바로 결과 표출 못하고 오래 걸리면 목록을 비우고 조회중 표출' — 예전엔 지난 결과를 '갱신 중'으로 먼저 보였다
+  const iLoad=op.indexOf('if(body) body.innerHTML=paperLoadingHtml();'), iLast=op.indexOf('const last=cache?null:paperViewCacheLast();');
+  assert(iLoad>0 && iLast>iLoad && op.slice(iLoad,iLast).includes('return;'),'조회 중을 먼저 · 지난 결과는 그 뒤(다시 그리기·실패 대체)에서만');
+  assert(/paperStaleNote=true/.test(op) && /지난번 계산 결과입니다/.test(op));
   const L=new Function('S','PAPER_VIEW_CACHE_VER',fn('function paperViewCacheLast()')+'\nreturn paperViewCacheLast;');
   assert.equal(L({paperViewCache:{ver:1,sig:'old',rows:[{price:1}]}},1)().sig,'old'); assert.equal(L({paperViewCache:{ver:1,rows:[]}},1)(),null);
   const sum=new Function('PAPER_TABS','S','paperStat',fn('function paperSummary()')+'\nreturn paperSummary;')(
@@ -436,7 +439,8 @@ await t('P8 모의 표는 계산이 끝나면 바로 다시 그린다 — 클라
   await p; assert.deepEqual(order,['cache','draw','saved'],'캐시 → 그리기 → 저장 순서');
   // openPaper 배선: 계산 직후 그리기(onRows) · 같이 기다린 경우 끝날 때 한 번 · 두 번 그리지 않음 · 실패면 안내
   const op=fn('async function openPaper()');
-  assert(/const redraw=r=>\{ if\(drawn\|\|!r\)return; drawn=true;/.test(op) && /refreshPaperView\(false,redraw\)\.then\(redraw,e=>\{ console\.error\('paper refresh',e\); paperStaleFail\(\); \}\)/.test(op),'openPaper 배선');
+  assert(/const redraw=r=>\{ if\(drawn\|\|!r\)return; drawn=true;/.test(op) && /refreshPaperView\(false,redraw\)\.then\(redraw,fallback\)/.test(op)
+     && /const fallback=async e=>\{ console\.error\('paper refresh',e\); if\(drawn\) return; drawn=true;[\s\S]*?await openPaper\(false,true\);[\s\S]*?paperStaleFail\(\)/.test(op),'openPaper 배선');
   const note={style:{},textContent:'🔄 지난번 계산 결과입니다 — 오늘 기준으로 다시 계산하는 중…'};
   const fail=new Function('$',fn('function paperStaleFail()')+'\nreturn paperStaleFail;')(id=>id==='paper_stale_note'?note:null);
   assert.equal(fail(),true); assert(/재계산에 실패했습니다/.test(note.textContent) && !/다시 계산하는 중/.test(note.textContent),note.textContent);

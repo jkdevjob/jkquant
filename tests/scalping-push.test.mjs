@@ -178,8 +178,8 @@ test("Cloudflare 무료 Cron 한 개로 IPO 08:10 KST와 기존 :07/:37 수집�
     return paths;
   }
   assert.deepEqual(run("2026-10-07T23:10:00Z"),["/check-ipo"]);
-  assert.deepEqual(run("2026-10-07T23:07:00Z"),["/gpt-morning-arm","/check","/check-jobs"]);
-  assert.deepEqual(run("2026-10-07T23:37:00Z"),["/gpt-morning-arm","/check","/check-jobs"]);
+  assert.deepEqual(run("2026-10-07T23:07:00Z"),["/gpt-morning-arm","/check","/check-jobs","/check-swim"]);   // 수영대회 신규·변경(2026-11-04)
+  assert.deepEqual(run("2026-10-07T23:37:00Z"),["/gpt-morning-arm","/check","/check-jobs","/check-swim"]);   // 수영대회 신규·변경(2026-11-04)
   assert.deepEqual(run("2026-10-08T00:10:00Z"),[]);
 });
 

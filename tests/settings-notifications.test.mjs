@@ -11,7 +11,7 @@ const worker="https://alerts.example";
 const names={
   gpt:"연구(지피티) · 전체 탭",
   ipo:"공모주·청약 일정",presale:"대전·세종 신규분양",
-  research:"연구 결과 · 무매·플랜·클로드 텐배거",job:"대전·세종 JOB 신규공고"
+  research:"연구 결과 · 무매·플랜·클로드 텐배거",job:"대전·세종 JOB 신규공고",swim:"전국 수영대회 신규·변경"
 };
 const response=body=>new Response(JSON.stringify(body),{headers:{"content-type":"application/json"}});
 const row=(html,topic)=>html.split('<div class="alert-item">').find(x=>x.includes('data-topic="'+topic+'"'))||"";
@@ -56,7 +56,7 @@ async function harness(code=source,initial=[],{legacy=false,admin=false}={}){
     h.adminBindings=h.adminBindings||[];h.adminBindings.push({email:user.email,endpoint:s.endpoint,on});return true;
   }};
   const context={document:{getElementById:id=>id==="notificationSettings"?host:id==='approvalRequestSettings'?adminBox:null,
-    querySelectorAll:()=>["/scalping","/ipo","/realestate","/job"].map(href=>({getAttribute:()=>href}))},
+    querySelectorAll:()=>["/scalping","/ipo","/realestate","/job","/swim"].map(href=>({getAttribute:()=>href}))},
     navigator:{userAgent:"iPhone",standalone:true,serviceWorker:{register:async()=>reg,ready:Promise.resolve(reg),controller:{postMessage}}},
     window:{PushManager:{},Notification:{},matchMedia:()=>({matches:true}),addEventListener(){},JKAccess:access,
       jkAuth:{currentUser:{email:admin?'jk82investing@gmail.com':'member@example.com'}}},JKAccess:access,Notification:{permission:"granted"},
@@ -99,7 +99,7 @@ async function checkFailedWrite(code=source){
 }
 
 test("연구 알림: 서버 저장·ON 표시·버튼·페인트가 성공 팝업보다 먼저",()=>checkEnable());
-test("설정 목록의 모든 5개 항목: 안내 이름 일치, undefined 없음",async()=>{
+test("설정 목록의 모든 6개 항목(수영대회 포함): 안내 이름 일치, undefined 없음",async()=>{
   for(const [topic,name] of Object.entries(names)){
     const h=await harness(),a=await h.enable(topic);
     assert.equal(a.message,name+" 알림을 켰습니다.");assert.doesNotMatch(a.message,/undefined/);

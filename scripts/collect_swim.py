@@ -6,7 +6,7 @@
   (같은 걸 두 군데서 세지 않는다 — 화면이 쓰는 값은 derive() 한 곳에서만 나온다).
 - 수집처가 실패하면 그 수집처의 이전 관측값을 그대로 둔다(수집 실패 ≠ 대회 취소 · 기존 데이터 유지).
 - 공식 출처(대한수영연맹·대한수중핀수영협회·시도 연맹·공식 공고 원문)를 2차 자료(통합 일정 사이트)보다 앞에 둔다.
-- 근거가 없는 값은 비워 둔다(None/''). 자유형 50·100m 는 요강 원문에 적힌 경우에만 '가능/불가'로 정한다.
+- 근거가 없는 값은 비워 둔다(None/'').
 - robots.txt 가 막은 사이트는 수집하지 않는다(마이랭킹은 검색엔진 외 수집 금지라 v2 에서 뺐다).
 
 파일
@@ -79,7 +79,7 @@ UNOFFICIAL_HOSTS = ("cafe.naver.com", "blog.naver.com", "m.blog.naver.com", "caf
                     "instagram.com", "facebook.com", "youtube.com", "swimming.co.kr", "whoisfast.com",
                     "myranking.co.kr", "band.us")
 TRACKED = ("title", "start_date", "end_date", "venue", "sido", "sigungu", "apply_open", "apply_close",
-           "status", "apply_closed", "events", "free50", "free100", "fee", "eligibility", "pool",
+           "status", "apply_closed", "events", "fee", "eligibility", "pool",
            "official_url", "apply_url", "verification")
 
 
@@ -436,59 +436,6 @@ def sports_for(*texts, force=None):
     return ["기타"], True
 
 
-def _dists(txt):
-    return {int(x) for x in re.findall(r"(?<!\d)(\d{2,4})(?!\d)", txt) if int(x) in (25, 50, 100, 200, 400, 800, 1500)}
-
-
-def freestyle(text):
-    """요강·공고 글에서 자유형 거리. (거리집합, 목록으로 확인됐는지, 근거)."""
-    s = clean(text).replace("ｍ", "m").replace("M", "m").replace("미터", "m")
-    s = re.sub(r"[ㆍ･・•]", "·", s)
-    s = re.sub(r"평\s+영", "평영", re.sub(r"배\s+영", "배영", re.sub(r"접\s+영", "접영", s)))
-    s = re.sub(r"자\s*유\s*형", "자유형", s)
-    found, listed, ev = set(), False, ""
-    for m in re.finditer(r"자유형\s*[:：(\[]?\s*((?:\d{2,4}\s*m?\s*(?:[·,/、]|및|와)\s*)*\d{2,4})\s*m(?![a-z])", s):
-        ds = _dists(m.group(1))
-        found |= ds
-        if len(ds) >= 2:
-            listed = True
-        ev = ev or s[max(0, m.start() - 10):m.end() + 10]
-    for m in re.finditer(r"(?<!\d)(\d{2,4})\s*m\s*자유형", s):
-        found |= _dists(m.group(1))
-        ev = ev or s[max(0, m.start() - 10):m.end() + 10]
-    # 표: '구 분 [발차기] 자유형 평영 배영 접영 개인혼영 | 학생부 남 50·100m 50·100m …' — 머리줄에서 자유형 칸 위치를 찾고
-    #     각 줄의 그 칸만 읽는다(빈칸은 '*'·'-'·'×'). 머리줄 앞 칸(발차기 등)을 세지 않으면 열이 어긋난다.
-    s2 = re.sub(r"개인\s*혼영", "개인혼영", s)
-    for m in re.finditer(r"((?:(?:발차기|킥판|자유형|평영|배영|접영|개인혼영|혼영)\s+){1,7}(?:발차기|킥판|자유형|평영|배영|접영|개인혼영|혼영))", s2):
-        cols = m.group(1).split()
-        if "자유형" not in cols or len(cols) < 2:
-            continue
-        idx, ncol = cols.index("자유형"), len(cols)
-        tail = s2[m.end():m.end() + 600]
-        tokens = [a or b for a, b in re.findall(r"(?<![\d·])(\d{2,4}(?:\s*·\s*\d{2,4})*)\s*m(?![a-z])|(?<!\S)([*×X\-–])(?=\s|[가-힣]|$)", tail)]
-        if len(tokens) < ncol:
-            continue
-        rows = [tokens[i:i + ncol] for i in range(0, len(tokens) - len(tokens) % ncol, ncol)]
-        got = set()
-        for row in rows[:10]:
-            if row[idx] not in ("*", "×", "X", "-", "–"):
-                got |= _dists(row[idx])
-        if got:
-            found |= got
-            listed = True
-            ev = ev or ("요강 표(자유형 칸): " + " / ".join(r[idx] for r in rows[:6]))
-    return found, listed, clean(ev)[:140]
-
-
-def freestyle_flags(text):
-    found, listed, ev = freestyle(text)
-    if not found:
-        return None, None, ""
-    f50 = True if 50 in found else (False if listed else None)
-    f100 = True if 100 in found else (False if listed else None)
-    return f50, f100, ev
-
-
 def status_from_title(t):
     t = clean(t)
     if re.search(r"(?:대회|개최)\s*(?:전면\s*)?취소|취소\s*(?:안내|공지|알림)|\[\s*취소\s*\]|\(\s*취소\s*\)", t):
@@ -662,7 +609,7 @@ def is_official_url(url):
 
 def make_obs(source, tier, title, *, start="", end="", venue="", place="", url="", official_url="",
              apply_open="", apply_close="", eligibility="", events="", fee="", pool="", status="",
-             apply_closed=False, apply_url="", sport_force=None, kind_hint="", free=None, attachments=None,
+             apply_closed=False, apply_url="", sport_force=None, kind_hint="", attachments=None,
              extra_text=""):
     title = tidy_title(title)
     if not title or NON_SWIM.search(title) and not re.search(r"수영\s*대회", title):
@@ -675,15 +622,6 @@ def make_obs(source, tier, title, *, start="", end="", venue="", place="", url="
     sports, inferred = sports_for(title, events, force=sport_force)
     if inferred and sports == ["기타"] and source in SWIM_FEDERATION_SOURCES:
         sports = ["경영"]                        # 수영연맹 대회 일정에 종목 낱말이 없으면 경영(추정 표시는 유지)
-    if free is None:
-        f50, f100, ev = freestyle_flags(" ".join([events, extra_text]))
-    else:
-        f50, f100, ev = free
-    by_discipline = False
-    if "경영" not in sports and not inferred and f50 is None and f100 is None:
-        f50 = f100 = False
-        by_discipline = True                      # 종목으로만 정한 '불가' — 합칠 때 대회 전체 종목으로 다시 정한다
-        ev = "경영(자유형) 없는 종목: " + "·".join(sports)
     if apply_open and apply_close and apply_open > apply_close:
         apply_open = ""
     if start and apply_close and apply_close > (end or start):
@@ -694,11 +632,12 @@ def make_obs(source, tier, title, *, start="", end="", venue="", place="", url="
         "source": source, "tier": tier, "title": title, "start_date": start or "", "end_date": end or start or "",
         "venue": venue, "place": place, "sido": sido, "sigungu": sigungu, "url": url,
         "official_url": official_url if is_official_url(official_url) else "",
+        # 공식 기관 주소가 아닌 요강 링크(연맹 네이버 카페 등)도 버리지 않는다 — 자동으로 못 읽어도 사람은 눌러서 본다.
+        "guide_url": official_url if official_url.startswith("http") and not is_official_url(official_url) else "",
         "apply_open": apply_open or "", "apply_close": apply_close or "", "apply_url": apply_url or "",
         "eligibility": clean(eligibility)[:220], "events": clean(events)[:220], "fee": fee or "",
         "pool": pool or "", "status": status or status_from_title(title), "apply_closed": bool(apply_closed),
         "sports": sports, "sports_inferred": inferred, "kind_hint": kind_hint,
-        "free50": f50, "free100": f100, "free_evidence": ev, "free_by_discipline": by_discipline,
         "attachments": attachments or [],
     }
 
@@ -790,13 +729,10 @@ def korswim_detail(f, url, state):
     if not (nf["start_date"]):
         return None
     events = nf["events"]
-    f50, f100, ev = freestyle_flags(full)
-    if ev and pdfs and ev in clean(pdf_text):
-        ev = "공식 요강 PDF — " + ev
     return make_obs("korswim_detail", "official", title, start=nf["start_date"], end=nf["end_date"],
                     venue=nf["venue"], url=url, official_url=url, apply_open=nf["apply_open"],
                     apply_close=nf["apply_close"], eligibility=elig, events=events, fee=fee, pool=nf["pool"],
-                    apply_url=apply_url, free=(f50, f100, ev), attachments=attachments[:8],
+                    apply_url=apply_url, attachments=attachments[:8],
                     extra_text=nf["events"] + " " + clean(pdf_text)[:4000],
                     kind_hint="elite" if "전국수영대회" in title else "")
 
@@ -949,14 +885,11 @@ def scrape_board(f, state, cfg, detail_limit=12):
         if nf["start_date"] and (nf["end_date"] or nf["start_date"]) >= today().isoformat():
             for att in [a for a in atts if a["name"].lower().endswith(".pdf") and "요강" in a["name"]][:2]:
                 pdf_text += " " + analyze_pdf(f, att["url"], state)
-        f50, f100, ev = freestyle_flags(nf["events"] + " " + c.get("body", "")[:3000] + " " + pdf_text)
-        if ev and pdf_text and ev in clean(pdf_text):
-            ev = "공식 요강 PDF — " + ev
         fee = nf["fee"] or fee_text((re.search(r"참\s*가\s*비\s*[:：]?\s*([^※]{2,60}?원)", clean(pdf_text)) or [None, ""])[1])
         obs = make_obs(cfg["key"], "official", title, start=nf["start_date"], end=nf["end_date"], venue=nf["venue"],
                        url=href, official_url=href, apply_open=nf["apply_open"], apply_close=nf["apply_close"],
                        eligibility=nf["eligibility"], events=nf["events"], fee=fee, pool=nf["pool"],
-                       status=st, apply_closed=closed, free=(f50, f100, ev), attachments=atts[:8],
+                       status=st, apply_closed=closed, attachments=atts[:8],
                        extra_text=nf["events"] + " " + c.get("body", "")[:1500])
         if obs:
             obs["notice_title"] = t
@@ -1263,19 +1196,6 @@ def derive(rec):
         inferred = False
     if not sports:
         sports = list(top.get("sports") or ["경영"])
-    f50 = f100 = None
-    ev = ""
-    for o in obs:                                    # 원문에 '가능'이 있으면 가능, 목록으로 '없음'이 확인되면 불가
-        if o.get("free_by_discipline") or str(o.get("free_evidence", "")).startswith("경영(자유형) 없는 종목"):
-            continue                                 # 수집처 하나의 종목만 보고 정한 '불가'는 쓰지 않는다(아래에서 대회 전체로)
-        if o.get("free50") is not None and f50 is None:
-            f50, ev = o["free50"], ev or o.get("free_evidence", "")
-        if o.get("free100") is not None and f100 is None:
-            f100, ev = o["free100"], ev or o.get("free_evidence", "")
-    if "경영" not in sports and not inferred:
-        ev = ev or ("경영(자유형) 없는 종목: " + "·".join(sports))
-        f50 = False if f50 is None else f50
-        f100 = False if f100 is None else f100
     elig = pick("eligibility")
     events = pick("events")
     kinds = []
@@ -1327,6 +1247,14 @@ def derive(rec):
         for a in o.get("attachments") or []:
             if a not in attachments:
                 attachments.append(a)
+    guide_links = []
+    for o in obs:
+        u = o.get("guide_url") or ""
+        if u and u not in [g["url"] for g in guide_links]:
+            guide_links.append({"url": u, "host": host_of(u), "source": SOURCE_NAMES.get(o["source"], o["source"])})
+    if guide_links and verification != "official":
+        warnings.append("요강 원문이 " + ", ".join(sorted({g["host"] for g in guide_links})) +
+                        " 에 있어 접수 기간 · 참가비 · 종목을 자동으로 읽지 못함(사이트가 자동 수집 금지) — 요강 링크에서 확인")
     return {
         "title": title, "aliases": sorted({t for t in titles if t != title})[:6],
         "kind": kinds[0], "kinds": kinds, "sports": sports, "sport": sports[0], "sports_inferred": inferred,
@@ -1337,10 +1265,10 @@ def derive(rec):
         "status": status or "scheduled",
         "eligibility": elig, "adult_ok": adult, "student_ok": student, "registered": registered,
         "elite_only": elite_only, "amateur_ok": (False if elite_only or kinds == ["student"] else (True if "masters" in kinds else None)),
-        "events": events, "fee": pick("fee"), "free50": f50, "free100": f100, "free_evidence": ev,
+        "events": events, "fee": pick("fee"),
         "apply_url": pick("apply_url"), "official_url": official_url,
         "verification": verification, "sources": sources, "conflicts": conflicts, "warnings": warnings,
-        "attachments": attachments[:8],
+        "attachments": attachments[:8], "guide_links": guide_links[:4],
     }
 
 
@@ -1503,8 +1431,9 @@ def write_json(path, obj):
     return False
 
 
-def public_record(rid, rec):
+def public_record(rid, rec, related=None):
     d = dict(rec["derived"])
+    d["related"] = related or []
     d["id"] = rid
     d["first_seen"] = rec.get("first_seen", "")
     d["last_changed"] = rec.get("last_changed", rec.get("first_seen", ""))
@@ -1552,6 +1481,10 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
         baseline = t
         migrated_note = f"v1 → v2 전환: 이전 {len(prev_public.get('competitions', []))}건 중 마이랭킹 출처 {dropped}건 제외(robots.txt 수집 금지)"
     records = state["records"]
+    for rec in records.values():                      # 자유형 50·100 판정 삭제(2026-11-04) — 예전 관측값에 남은 항목을 지운다
+        for o in rec.get("obs", {}).values():
+            for k in ("free50", "free100", "free_evidence", "free_by_discipline"):
+                o.pop(k, None)
     # 판 전환 첫 실행은 전부 '기준선'이다(옛 값과 비교한 가짜 변경 · 신규를 만들지 않는다).
     before = {} if migrated_note else {rid: dict(rec.get("derived") or {}) for rid, rec in records.items()}
     f = fetcher or Fetcher()
@@ -1619,6 +1552,13 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
         ld["matched_id"] = best if score >= 0.9 else ""
     cutoff = (today() - timedelta(days=150)).isoformat()
     leads = sorted([x for x in leads if x.get("first_seen", "") >= cutoff], key=lambda x: x["first_seen"], reverse=True)[:400]
+    related = {}
+    for ld in sorted(leads, key=lambda x: (not x.get("official_host"), x.get("url", ""))):
+        if ld.get("matched_id"):
+            related.setdefault(ld["matched_id"], [])
+            if len(related[ld["matched_id"]]) < 5:
+                related[ld["matched_id"]].append({"title": ld["title"], "url": ld["url"], "host": ld.get("host", ""),
+                                                  "official_host": bool(ld.get("official_host"))})
     # 변경 감지
     n_new = n_changed = 0
     for rid, rec in records.items():
@@ -1644,7 +1584,7 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
     if migrated_note:
         changes.append({"date": t, "type": "migration", "note": migrated_note, "count": len(records)})
     ok = [s for s in statuses if s["status"] == "ok" and s["key"] not in ("search_lead", "official_link")]
-    pub = sorted((public_record(rid, rec) for rid, rec in records.items()),
+    pub = sorted((public_record(rid, rec, related.get(rid)) for rid, rec in records.items()),
                  key=lambda e: (e["start_date"], e["title"]))
     payload = {"schema_version": SCHEMA, "range": "대한민국 전국 17개 시·도", "baseline_date": baseline,
                "data_changed_at": prev_public.get("data_changed_at", ""), "count": len(pub), "competitions": pub}

@@ -158,7 +158,6 @@ class ParserTests(unittest.TestCase):
         ow = next(o for o in lst if "마스터즈 대회" in o["title"])
         self.assertEqual((ow["start_date"], ow["sido"], ow["sigungu"], ow["tier"]), ("2026-11-29", "제주", "서귀포시", "official"))
         self.assertEqual(ow["sports"], ["오픈워터"])
-        self.assertEqual((ow["free50"], ow["free100"]), (False, False))   # 오픈워터만 — 자유형 50/100 없음
         det = next(o for o in obs if o["source"] == "korswim_detail")
         self.assertEqual((det["apply_open"], det["apply_close"]), ("2026-10-31", "2026-11-13"))
         self.assertIn("동호인", det["eligibility"])
@@ -194,7 +193,6 @@ class ParserTests(unittest.TestCase):
         bs = obs[1]
         self.assertEqual(bs["sido"], "부산")                                # '경상 부산' 묶음 표기
         self.assertEqual(bs["sports"], ["다이빙", "경영"])
-        self.assertIsNone(bs["free50"])                                     # 영법만 있고 거리 없음 → 미확정
 
     def test_swimming_co_kr_structure_change(self):
         with self.assertRaises(m.StructureError):
@@ -211,6 +209,12 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(gb["pool"], "")                                    # whoisfast 는 모든 대회를 '50m 장수로'로 표시
         self.assertTrue(gb["official_url"].startswith("https://gbaquatics.co.kr/"))
         self.assertEqual(obs[1]["official_url"], "")                         # 네이버 카페는 공식 공고가 아니다
+        # 그래도 요강 링크는 버리지 않는다(2026-11-04 사용자: 전북도지사배 요강이 whoisfast 에 있는데 왜 없나)
+        self.assertEqual(obs[1]["guide_url"], "https://cafe.naver.com/ArticleRead.nhn?clubid=1&articleid=310")
+        self.assertEqual(obs[0]["guide_url"], "")                            # 공식 주소는 official_url 로만
+        d = m.derive({"id": "x", "obs": {"whoisfast:1": obs[1]}})
+        self.assertEqual(d["guide_links"][0]["host"], "cafe.naver.com")
+        self.assertTrue(any("자동으로 읽지 못함" in w for w in d["warnings"]))
 
     def test_kua_embedded_json(self):
         obs = m.scrape_kua(fetcher({"https://www.kua.or.kr/competition-info/schedule": KUA}), {}, max_pages=1)
@@ -230,33 +234,13 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(len(obs), 2, titles)                               # 결과·상장 안내는 대회 공고가 아니다
         sb = next(o for o in obs if "성북" in o["title"])
         self.assertEqual((sb["start_date"], sb["sido"], sb["sigungu"]), ("2026-11-08", "서울", "성북구"))
-        self.assertEqual((sb["free50"], sb["free100"]), (True, True))
+        self.assertEqual(sb["sports"], ["경영"])
         self.assertTrue(sb["fee"].startswith("개인 20,000원"))
         gn = next(o for o in obs if "강남" in o["title"])
         self.assertEqual(gn["status"], "cancelled")
 
 
-class FreestyleTests(unittest.TestCase):
-    def test_explicit_and_table(self):
-        self.assertEqual(m.freestyle_flags("자유형 50m·100m")[:2], (True, True))
-        self.assertEqual(m.freestyle_flags("자유형 50m / 배영 50m")[:2], (True, None))
-        self.assertEqual(m.freestyle_flags("100m 자유형 결승")[:2], (None, True))
-        pdf = "4. 참가종목 가. 개인경기 구 분 자유형 평 영 배 영 접 영 개인혼영 학생부 남 50·100m 50·100m 50·100m 50·100m 200m 여 50·100m 50·100m 50·100m 50·100m 200m"
-        self.assertEqual(m.freestyle_flags(pdf)[:2], (True, True))
-        self.assertEqual(m.freestyle_flags("자유형 400m, 800m, 1500m")[:2], (False, False))   # 거리 목록에 50·100 없음
-        # 머리줄 앞 칸(발차기)과 빈칸('*')을 세어 자유형 칸만 읽는다(양천구청장배 요강 표 형식)
-        kick = "구 분 개 인 전 발차기 자유형 배영 평영 접영 유아부(5세) 남 25M 25M * * * 성인부 남 * 100M 50M 50M 50M"
-        self.assertEqual(m.freestyle_flags(kick)[:2], (False, True))
-        yc = ("구 분 개 인 전 발차기 자유형 배영 평영 접영 유아부(5세) 남 25M 25M * * *여 유년부(6세,7세) 남 * 25M 25M * *여 "
-              "초등부(4,5,6학년) 남 * 50M 50M 50M 50M여 성인부 남 * 50M 50M 50M 50M여")
-        self.assertEqual(m.freestyle_flags(yc)[:2], (True, False))
-
-    def test_not_freestyle(self):
-        self.assertEqual(m.freestyle_flags("50m 장수로 · 자유형")[:2], (None, None))     # 수영장 규격 ≠ 종목
-        self.assertEqual(m.freestyle_flags("경영: 자유형·배영·평영")[:2], (None, None))
-        o = m.make_obs("x", "official", "2027년 수영(다이빙) 국가대표 선발대회", start="2026-11-12", venue="김천실내수영장")
-        self.assertEqual((o["free50"], o["free100"]), (False, False))
-
+class SportTests(unittest.TestCase):
     def test_negated_discipline(self):
         sp, inferred = m.sports_for("제31회 대전 전국마스터즈수영대회", "기 간 : 2026. 12. 5(토) - 12. 6(일), 2일간 / 다이빙 미개최")
         self.assertEqual(sp, ["경영"])
@@ -317,7 +301,6 @@ class MergeRuleTests(unittest.TestCase):
                         venue="김천실내수영장", events="자유형 / 배영 / 평영 / 접영")
         d = m.derive(self.rec(k, sc))
         self.assertEqual(d["sports"], ["수구"])
-        self.assertEqual((d["free50"], d["free100"]), (False, False))
 
     def test_body_rules_are_not_sports(self):
         # 부산 교육감배 원문의 '비등록선수 … 핀수영, 수구, 아티스틱스위밍 종목 포함'은 종목이 아니다
@@ -329,7 +312,6 @@ class MergeRuleTests(unittest.TestCase):
                         venue="사직실내수영장", events="경영: 자유형·배영·평영·접영 / 다이빙: 1m 스프링보드")
         d = m.derive(self.rec(ol, sc))
         self.assertEqual(d["sports"], ["다이빙", "경영"])
-        self.assertEqual((d["free50"], d["free100"]), (None, None))
 
     def test_federations_not_merged_and_split(self):
         kua = m.make_obs("kua", "official", "2024 전국생활체육 대축전", start="2024-04-20", place="경상북도 김천시", sport_force="핀수영")
@@ -427,6 +409,16 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(before, (self.tmp / "competitions.json").read_bytes())
         self.assertIn("구조 변경 의심", next(x for x in self.load("sources.json")["sources"] if x["key"] == "swimming_co_kr")["error"])
 
+    def test_related_search_links_attached(self):
+        (self.tmp / "leads.json").write_text(json.dumps({"leads": [
+            {"url": "https://blog.naver.com/x/1", "title": "[대회정보] 2026 전북특별자치도지사배 마스터즈 수영대회", "host": "blog.naver.com",
+             "first_seen": "2026-11-03", "official_host": False},
+            {"url": "https://other.example/2", "title": "2026 다른 수영대회", "host": "other.example", "first_seen": "2026-11-03"}]},
+            ensure_ascii=False), encoding="utf-8")
+        self.run_with({"whoisfast": [dict(title="2026년 전북특별자치도지사배 마스터즈수영대회", start="2026-11-22", place="전북 전주시")]})
+        c = next(x for x in self.load("competitions.json")["competitions"] if "전북" in x["title"])
+        self.assertEqual([r["url"] for r in c["related"]], ["https://blog.naver.com/x/1"])
+
     def test_official_overrides_secondary_and_cancel(self):
         self.run_with({"swimming_co_kr": [dict(title="제1회 강남구청장배 수영대회", start="2026-11-22", place="서울 강남구")]})
         os.environ["SWIM_TODAY"] = "2026-11-04"
@@ -522,15 +514,12 @@ class PublishedDataTests(unittest.TestCase):
                 self.assertIn(c["sigungu"], R.SIGUNGU[c["sido"]])
             self.assertIn(c["kind"], ("masters", "elite", "student", "other"))
             self.assertIn(c["verification"], ("official", "secondary", "unverified"))
-            self.assertIn(c["free50"], (True, False, None))
-            self.assertIn(c["free100"], (True, False, None))
+            self.assertNotIn("free50", c)                                   # 자유형 50·100 기능 삭제(2026-11-04 사용자)
             self.assertIn(c["status"], ("scheduled", "cancelled", "postponed"))
             if c["apply_open"] and c["apply_close"]:
                 self.assertLessEqual(c["apply_open"], c["apply_close"])
             for s in c["sources"]:
                 self.assertNotIn("myranking", s["url"])                     # robots.txt 수집 금지 사이트
-            if c["free50"] is True or c["free100"] is True:
-                self.assertTrue(c["free_evidence"], c["title"])            # '가능'에는 근거가 있어야 한다
             if c["verification"] == "official":
                 self.assertTrue(any(s["tier"] == "official" for s in c["sources"]))
 
