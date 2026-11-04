@@ -1,0 +1,431 @@
+{
+  "duration": "auto",
+  "fps": 30,
+  "flip": 0.7,
+  "tape": {
+    "text": "유족연금 · 부부 연금",
+    "color": "yellow"
+  },
+  "out": "queue/issues/2026-11-05_survivor-pension-30pct.mp4",
+  "voice": {
+    "name": "ko-KR-HyunsuMultilingualNeural",
+    "rate": "+10%",
+    "lead": 0.35,
+    "gap": 0.28,
+    "tail": 2.0,
+    "lines": [
+      {
+        "id": "hook",
+        "text": "배우자가 먼저 떠나면, 배우자 연금이랑 내 연금, 둘 다 받을 수 있을까요?"
+      },
+      {
+        "id": "rule",
+        "text": "부부가 둘 다 국민연금을 받고 있었다면, 하나를 골라야 해요.",
+        "gap": 0.4
+      },
+      {
+        "id": "own",
+        "text": "내 연금을 고르면, 유족연금은 삼십 퍼센트만 더 붙고요,"
+      },
+      {
+        "id": "surv",
+        "text": "유족연금을 고르면, 내 연금은 안 나와요.",
+        "gap": 0.15
+      },
+      {
+        "id": "ex",
+        "text": "예를 들어 내 연금이 육십만 원, 유족연금이 오십만 원이면, 받는 건 칠십오만 원이에요.",
+        "gap": 0.4
+      },
+      {
+        "id": "ex2",
+        "text": "공무원연금이었다면 팔십오만 원이고요."
+      },
+      {
+        "id": "rate",
+        "text": "유족연금 자체도, 가입 기간에 따라 사십에서 육십 퍼센트만 나와요.",
+        "gap": 1.0
+      },
+      {
+        "id": "avg",
+        "text": "그래서 올해 국민연금 유족연금 평균은 한 달 삼십구만 삼천 원, 공무원연금의 사분의 일도 안 돼요."
+      },
+      {
+        "id": "plan",
+        "text": "삼십 퍼센트를 오십 퍼센트로 올리자는 안은 나와 있지만, 아직 바뀐 건 없어요."
+      },
+      {
+        "id": "tip",
+        "text": "그래서 부부 노후 생활비는, 한 사람만 남았을 때를 따로 계산해 둬야 해요.",
+        "gap": 0.45
+      },
+      {
+        "id": "save",
+        "text": "저장해 두셨다가 배우자랑 같이 보세요."
+      },
+      {
+        "id": "sig",
+        "text": "늦지 않았습니다.",
+        "gap": 0.4
+      }
+    ]
+  },
+  "pages": [
+    {
+      "start": 0,
+      "stains": [
+        {
+          "x": 690,
+          "y": 1500,
+          "r": 170,
+          "opacity": 0.18,
+          "rot": -7
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "h1",
+          "text": "배우자 연금 + 내 연금",
+          "x": 128,
+          "y": 196,
+          "size": 88,
+          "font": "bold",
+          "color": "ink",
+          "at": 0,
+          "dur": 0,
+          "rot": -0.8
+        },
+        {
+          "type": "text",
+          "id": "h2",
+          "text": "둘 다 받을까?",
+          "x": 132,
+          "y": 330,
+          "size": 116,
+          "font": "bold",
+          "color": "red",
+          "at": 0,
+          "dur": 0,
+          "rot": 0.4
+        },
+        {
+          "type": "circle",
+          "target": "h2",
+          "at": 0.3,
+          "dur": 0.8,
+          "color": "red",
+          "pad": 14,
+          "width": 7
+        },
+        {
+          "type": "text",
+          "id": "r1",
+          "text": "둘 중 하나를 골라야 해요",
+          "x": 150,
+          "y": 560,
+          "size": 66,
+          "font": "bold",
+          "color": "ink",
+          "at": "@rule+1.4",
+          "dur": 1.0
+        },
+        {
+          "type": "text",
+          "id": "o1",
+          "text": "① 내 연금 + 유족연금 30%",
+          "x": 150,
+          "y": 670,
+          "size": 64,
+          "font": "bold",
+          "color": "blue",
+          "at": "@own+0.3",
+          "dur": 1.1
+        },
+        {
+          "type": "text",
+          "id": "o2",
+          "text": "② 유족연금만 (내 연금 0원)",
+          "x": 150,
+          "y": 770,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@surv+0.2",
+          "dur": 1.1
+        },
+        {
+          "type": "text",
+          "id": "e1",
+          "text": "내 연금 60만 + 유족 50만이면",
+          "x": 150,
+          "y": 910,
+          "size": 60,
+          "font": "pen",
+          "color": "gray",
+          "at": "@ex+0.4",
+          "dur": 1.2
+        },
+        {
+          "type": "text",
+          "id": "e2a",
+          "text": "국민연금",
+          "x": 150,
+          "y": 1000,
+          "size": 66,
+          "font": "bold",
+          "color": "ink",
+          "at": "@ex.end-1.6",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "e2b",
+          "text": "75만 원",
+          "after": "e2a",
+          "gap": 30,
+          "size": 92,
+          "font": "bold",
+          "color": "red",
+          "at": "@ex.end-1.0",
+          "dur": 0.5
+        },
+        {
+          "type": "circle",
+          "target": "e2b",
+          "at": "@ex.end-0.4",
+          "dur": 0.5,
+          "color": "red",
+          "pad": 12,
+          "width": 6
+        },
+        {
+          "type": "text",
+          "id": "e3a",
+          "text": "공무원연금",
+          "x": 150,
+          "y": 1120,
+          "size": 66,
+          "font": "bold",
+          "color": "ink",
+          "at": "@ex2+0.2",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "e3b",
+          "text": "85만 원",
+          "after": "e3a",
+          "gap": 30,
+          "size": 80,
+          "font": "bold",
+          "color": "blue",
+          "at": "@ex2.end-0.9",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "src1",
+          "text": "(중복 지급 국민연금 30% · 공무원·군인연금 50%)",
+          "x": 150,
+          "y": 1230,
+          "size": 38,
+          "font": "pen",
+          "color": "gray",
+          "at": "@ex2.end",
+          "dur": 0.6
+        }
+      ]
+    },
+    {
+      "start": "@ex2.end+0.3",
+      "stains": [
+        {
+          "x": -110,
+          "y": 1480,
+          "r": 160,
+          "opacity": 0.15,
+          "rot": 12
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "p1",
+          "text": "유족연금 자체도",
+          "x": 132,
+          "y": 196,
+          "size": 80,
+          "font": "bold",
+          "color": "ink",
+          "at": "@rate+0.2",
+          "dur": 0.8,
+          "rot": -0.6
+        },
+        {
+          "type": "text",
+          "id": "p2",
+          "text": "가입 기간 따라 40~60%",
+          "x": 140,
+          "y": 310,
+          "size": 76,
+          "font": "bold",
+          "color": "blue",
+          "at": "@rate.end-2.2",
+          "dur": 1.0
+        },
+        {
+          "type": "text",
+          "id": "a1",
+          "text": "올해 평균",
+          "x": 150,
+          "y": 450,
+          "size": 60,
+          "font": "bold",
+          "color": "ink",
+          "at": "@avg+1.0",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "a2",
+          "text": "월 39만 3천 원",
+          "after": "a1",
+          "gap": 28,
+          "size": 74,
+          "font": "bold",
+          "color": "red",
+          "at": "@avg+2.6",
+          "dur": 0.8
+        },
+        {
+          "type": "highlight",
+          "target": "a2",
+          "at": "@avg.end-1.0",
+          "dur": 0.45
+        },
+        {
+          "type": "text",
+          "id": "a3",
+          "text": "(공무원연금 167만 3천 원의 1/4도 안 돼요 · 2026.6 기준)",
+          "x": 150,
+          "y": 550,
+          "size": 38,
+          "font": "pen",
+          "color": "gray",
+          "at": "@avg.end",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "pl",
+          "text": "30% → 50% 안은 아직 '안'",
+          "x": 150,
+          "y": 650,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@plan+0.6",
+          "dur": 1.0
+        },
+        {
+          "type": "sticky",
+          "x": 150,
+          "y": 800,
+          "w": 760,
+          "h": 430,
+          "rot": -2.0,
+          "at": "@tip-0.2",
+          "items": [
+            {
+              "type": "text",
+              "id": "m1",
+              "text": "부부 노후 계산할 때",
+              "x": 46,
+              "y": 34,
+              "size": 66,
+              "font": "bold",
+              "color": "red",
+              "at": "@tip",
+              "dur": 0.7
+            },
+            {
+              "type": "text",
+              "id": "m2",
+              "text": "둘이 받는 연금 합 말고",
+              "x": 46,
+              "y": 150,
+              "size": 54,
+              "font": "bold",
+              "color": "ink",
+              "at": "@tip+1.6",
+              "dur": 0.8
+            },
+            {
+              "type": "text",
+              "id": "m3",
+              "text": "'한 사람 남았을 때'도 따로",
+              "x": 46,
+              "y": 236,
+              "size": 54,
+              "font": "bold",
+              "color": "blue",
+              "at": "@tip+3.0",
+              "dur": 0.9
+            },
+            {
+              "type": "text",
+              "id": "m4",
+              "text": "저장해 두고 배우자랑 같이 보기",
+              "x": 52,
+              "y": 344,
+              "size": 42,
+              "font": "pen",
+              "color": "gray",
+              "at": "@save",
+              "dur": 0.8
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "src2",
+          "text": "(국회 입법조사처·허종식 의원실 분석, 한국일보 2026.10.14)",
+          "x": 150,
+          "y": 1300,
+          "size": 34,
+          "font": "pen",
+          "color": "gray",
+          "at": "@save.end",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "sig",
+          "text": "늦지 않았습니다. — 은퇴노트",
+          "x": 330,
+          "y": 1490,
+          "size": 60,
+          "font": "pen",
+          "color": "ink",
+          "at": "@sig",
+          "dur": 0.8,
+          "rot": -2.0
+        },
+        {
+          "type": "text",
+          "id": "handle",
+          "text": "@retire.note",
+          "x": 600,
+          "y": 1575,
+          "size": 36,
+          "font": "sans",
+          "color": "gray",
+          "at": "@sig+0.6",
+          "dur": 0.5,
+          "fade": true
+        }
+      ]
+    }
+  ]
+}
