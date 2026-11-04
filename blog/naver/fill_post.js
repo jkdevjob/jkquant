@@ -80,6 +80,6 @@ async function pasteConfirmed(p,f,html,ci,expectAdd){
       console.log('section pasted',texts.length,'paras into comp',ci);
     }
   }
-  await p.screenshot({path:path.join(imgDir,'filled.png')});
+  await p.screenshot({path:'filled.png'}); // 실행 폴더에 남긴다(저장소 밖)
   await b.close();
 })().catch(e=>{console.error('ERR',e.message);process.exit(1);});
