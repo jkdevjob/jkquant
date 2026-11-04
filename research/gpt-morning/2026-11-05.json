@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "date": "2026-11-05",
+  "preparedAt": "2026-11-04T22:20:00.278259+00:00",
+  "mainSha": "80f3d8b5ef54718ad7931b6fef1e88e0c76d754c",
+  "summary": "11/4 시초가−2.224%·데이−0.250%·BTC−0.332%, 미국11/4 SOXL0%. 원본 불일치로 승격보류. 별도 야간작업은 시초가후보를11/5용 메인에 이미 선택한 기록 확인(본 검토 변경없음). 텐배거 신규등록18·진입55·청산9, 성숙0.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "verified",
+      "findings": "11/4 완료 API 확인: 시초가 −2.224%(1건), 데이 −0.250%(3건), BTC −0.332%(1건). SOXL 미국11/3 −1.400%, 미국11/4(KST11/5) 무매매0%. 확인 의미는 공개 모의기록 대조이며 실체결·수익성 검증 아님. 오늘 BTC는 세션 미확정. 이전 GitHub 보고는11/2. 별도 야간 로그가 시초가 후보를11/5용 메인에 already-selected로 기록했으나 본 검토는 승격 보류. 기준전략 통계는11/4까지. 종가30분7일15청산/PF0.807/MDD−3.054%·미정산12건, 익일시가30건 미정산. 전일 보고 Telegram성공·푸시0대상; 소유자 화면/실기기는 미확인.",
+      "nextTest": "오늘08시 예약과 실제 전송 영수증을 구분한다. 시초가11/5 새 세션의 실제 잠금 버전·라벨을 읽기 전용으로 대조하고, 원본 불일치 해소 전 기준·후보 우위 확정 금지. 종가 미정산은 공식 종가/다음 시가를 연결한다. 별도 시험알림·직접 중복발송 없음.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/nightly-research/closing30.json",
+        "https://github.com/jkdevjob/jkquant/actions/runs/41888484851"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "blocked",
+      "findings": "11/2 이후 저장5건 추가. 11/4 KODEX AI전력핵심설비 −2.224%, 원본/저장 일치. 저장 누적15매매일87건: 평균−0.541%·PF0.470·MDD−7.894%·최악−2.550%·+1%일0. 이번주 저장−2.479%(목표차7.479%p)는 미검증. 고정 눌림0.3~0.5%/09:20 후보가7선두이나 승격 보류. 원본 앱 감사:11/2 원본−0.788% 대 저장−1.159%;11/3 기준 한진칼 원본청산 null인데 저장+1.328%, 대한항공도 가격 차이. 후보 새3일 원본 평균−0.014%·PF0.986·누적−0.113%로 PF1.10 미달. 원본1분봉은10/30 이후 없음. +1% 그림자도19일15건(10/30)에서 갱신 중단. 야간작업의11/5 후보선택은 본 검토 권고와 다름.",
+      "nextTest": "당시 Top100·원본1분봉→매수/매도→outcome 연결 확보 후 같은기간/자본으로 재생.11/3 한진칼 청산가 확정과11/2·3 가격차이 규명 우선.0.23%+편도2.5호가·20일/후보30건·PF1.10·양의기대값·위험·7선두·시간순WF 관문 유지. 저장장부/운영설정 자동수정 없음.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/opening-history/2026-11-02.json",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/opening-history/2026-11-03.json",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/opening-history/2026-11-04.json",
+        "https://github.com/jkdevjob/jkquant/blob/80f3d8b5ef54718ad7931b6fef1e88e0c76d754c/functions/api/scalping-live-results.js"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "verified",
+      "findings": "11/4 OCI홀딩스·한화솔루션 각각−1.25%, 삼성SDI+1.75% → 3슬롯−0.250%. 확인 의미는 원본 앱 신호3/3·실제 분봉 재생·모의장부/재구성3/3 일치이며 증권사 실체결 검증 아님. 누적24일66건/평균−0.472%·PF0.436·MDD−11.453%·최악−1.250%·+1%일0·이번주−1.308%(차6.308%p). +1% 그림자23일69건/평균−0.195%·PF0.695·MDD−5.495%·최악−1.05%·+1%일3·이번주−0.445%. 첫20학습/5검증 도달: 기준5일14건/PF0.426/기간−2.375%; 선두 session_min_2도 PF0.883·기간−0.397%로 보류.",
+      "nextTest": "다음 서로 겹치지 않는5일 검증을 고정 규칙으로 누적한다. 비용0.25%·3슬롯·09:55~10:05 모집단을 유지하고 늦은 스냅샷 제외. +1% 그림자 검토 표본 도달과 양의 기대값/수익성 통과를 구분. 원본 장부와 재구성의 일치성을 계속 확인.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/daytrading-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/daytrading/2026/2026-11-04.json.gz",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/daily1-shadow/latest.json",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-11-04"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "collecting",
+      "findings": "11/4 완료 API −0.332%(1건).11/2 −0.272%·3일−0.640%는 원본 연구엔진으로 각각 KST288봉 재현; 운영 누적 조회는 full/trend 모두 timeout으로 원본 모의장부 대조 미완료. 전일확인30+새3세션 합산33일20건/평균−0.119%·PF0.289·MDD−4.543%·최악−0.640%·+1%일0·이번주 혼합기록−1.240%(차6.240%p).10/18·19 결손 0보간 없음. +1% 그림자11/3까지32일1건/평균−0.012%·PF0·MDD/최악−0.388%·+1%일0·이번주0%. 연구 holdout117일71건은 과거포함 재분할 표본으로 새 독립OOS 아님. 오늘 새벽 청산알림은 일성과 제외.",
+      "nextTest": "11/2·3 운영 모의원장 조회를 회복해 재생값과 대조.11/4 원천은08:55까지만 있으므로 완전한KST288봉 수집 후 재생한다.11/5는 세션 마감 뒤 정산. 비용0.14% 고정, Claude09시 규칙과 KST 표시 세션·closed/pending을 맞춘다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-11-04",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/crypto/KRW-BTC/5m/2026-11-03.json.gz",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/crypto-research/latest.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "blocked",
+      "findings": "미국11/2 운영+2.200%·3일−1.400%·4일0%. 운영우선 누적25세션11건/평균−0.184%·PF0.589·MDD−9.398%·최악−1.400%·+1%일3·이번주+0.769%(차4.231%p). 재구성은2일−1.400%·3일무매매로 운영과 불일치;3일실제78봉·원본 연구엔진에서도 무매매 재현. 저장 재구성으로 운영 장부를 대체하지 않음. +1% 그림자미국3일까지24일2건/평균+0.059%·MDD0·최악매매일+0.108%·+1%일1·이번주0%; 손실표본 없어 PF미산출. 기준연구28세션/WF0·OOS0. 후보7선두여도10건·OOS0으로 승격보류.",
+      "nextTest": "미국11/2·3 당시 신호봉/전일 캐시/완료봉 범위와 Yahoo 보관 원천을 연결해 신호시각 차이 규명.0.20%비용·당일청산·30건/40세션 관문 유지.09:30ET=23:30KST·16시ET=익일06시 날짜 표출 대조. Telegramunknown은 재발송하지 않음.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-11-04",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/soxl/SOXL/5m/2026-11-03.json.gz",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "GPT원천11/3·11/5 03:10KST 생성. 이전확인10/29 대비 신규등록18·관찰진입55·손절추적청산9건(−19.231~−7.816%). 총198등록170종목/180진입18대기·보유군청산0/손절추적누적43. 최장14세션으로20/60/120/252/756/1260성숙·2/5/10배최초도달 모두0: 미검증. 종가MFE최대+36.060%·최악MAE−36.449%/MDD−42.373%. 초기시세10/8·등록10/13·버전1.0.0·규칙SHA5e690dd85f5b…·현main코드해시 일치. 수정표시/등록전진입0; 무진입observing15건 제외. 신규18건은11/4·5등록이라 과거수익 소급없음. 명시누락/정지/폐지정산 표시0은 무결성 보장 아님. 가격가설·재무시점패널/시장대조 없음; 계좌CAGR/초과수익 아님.",
+      "nextTest": "새등록의 신호일·등록일을 모두 지난 첫 종가를 확인하고 무진입observing 상태를 대조.20세션 성숙을 기다린다. 실패 대조군·시장국면·공시시점·유동성/비용 가설은 별도 버전 검증 제안만 남기며 기존기록·규칙 소급수정 없음.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/80f3d8b5ef54718ad7931b6fef1e88e0c76d754c/TENBAGGER_FORWARD_RESEARCH.md",
+        "https://github.com/jkdevjob/jkquant/blob/80f3d8b5ef54718ad7931b6fef1e88e0c76d754c/data/tenbagger/gpt/forward-latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/tenbagger-claude-forward/latest.json"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "공개 대결API branch tree HTTP403으로 우위판정 보류. Claude11/5 05:57 생성·11/4 원본: 시초가/종가30분 무매매, ETF익일시가+2.852%(1건·모의OFF/수량0 신호가격관찰), 코인closed무매매인데 review에는pending 잔존. SOXL은미국11/3 무매매·모형 g_soxl_r2lt30_ibs0.6_ma100_d5. GPT시초가원본/저장 청산차이·데이3슬롯/거래평균·코인09시규칙/표시세션·SOXL장중/일봉보유 차이로 동일조건 누적 비교 불가. Claude저장OOS22/22/33/24일은 각각의 적용일/재생구간이며 GPT와 같은 독립OOS가 아님. 텐배거원천도 GPT11/3·Claude11/2로 다름. 두연구화면은로그인경계까지만 확인; 내부평가금액·기간수익률·휴대폰표시는미확인.",
+      "nextTest": "403회복 후 동일 청산일·세션·운영버전 적용일·고정/호가비용·빈슬롯 현금으로 맞춰 비교한다. Claude11/4 crypto closed와pending 잔존, GPT11/5 선택버전과 메인/그림자 표시를 대조. 인증우회·우위주장·시험알림 없음.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-duel",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/claude-lab/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/99d8fe8646525be5ad8954550fc3c779ee852924/data/claude-live/2026-11-04.json",
+        "https://jkquant.pages.dev/claude"
+      ]
+    }
+  ]
+}
