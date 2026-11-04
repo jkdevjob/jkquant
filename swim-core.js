@@ -54,7 +54,7 @@
   }
   const text=e=>[e.title,(e.aliases||[]).join(' '),e.region,e.venue,e.eligibility,e.events].join(' ').toLowerCase();
 
-  /* f: {q,sido,sigungu,kind,sport,period,status,elig,free,quick} — 모두 함께 적용 */
+  /* f: {q,sido,sigungu,kind,sport,period,status,elig,quick} — 모두 함께 적용 */
   function matches(e,f,t,baseline){
     f=f||{};
     const st=applyStatus(e,t);
@@ -74,14 +74,9 @@
     if(f.elig==='student'&&e.student_ok!==true)return false;
     if(f.elig==='elite'&&!kinds.includes('elite'))return false;
     if(f.elig==='unknown'&&e.adult_ok!=null)return false;
-    if(f.free==='50'&&e.free50!==true)return false;
-    if(f.free==='100'&&e.free100!==true)return false;
-    if(f.free==='both'&&!(e.free50===true&&e.free100===true))return false;
-    if(f.free==='unknown'&&!(e.free50==null||e.free100==null))return false;
     switch(f.quick){
       case 'masters':if(!kinds.includes('masters'))return false;break;
       case 'elite':if(!kinds.includes('elite'))return false;break;
-      case 'free':if(!(e.free50===true&&e.free100===true))return false;break;
       case 'open':if(st!=='open')return false;break;
       case 'new':if(!(isNew(e,t,baseline)||isChanged(e,t)))return false;break;
     }
@@ -124,7 +119,6 @@
     size=size||20;const pages=Math.max(1,Math.ceil(list.length/size));const p=Math.min(Math.max(1,page|0),pages);
     return {page:p,pages,items:list.slice((p-1)*size,p*size),from:list.length?(p-1)*size+1:0,to:Math.min(p*size,list.length)};
   }
-  function freeLabel(v){return v===true?'가능':v===false?'불가':'미확정';}
-  return {kstToday,addDays,addMonths,applyStatus,matches,sortList,stats,regions,paginate,inPeriod,isNew,isChanged,freeLabel,
+  return {kstToday,addDays,addMonths,applyStatus,matches,sortList,stats,regions,paginate,inPeriod,isNew,isChanged,
           STATUS_LABEL,KIND_LABEL,VERIFY_LABEL};
 });

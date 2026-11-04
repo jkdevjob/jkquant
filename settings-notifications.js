@@ -107,7 +107,9 @@ const NOTIFY_DEFS=[
   {topic:"research",href:"/scalping",icon:"🔬",name:"연구 결과 · 무매·플랜·클로드 텐배거",
    desc:"무매·5년 플랜 연구 결과와 클로드 텐배거 모의 매수·매도 알림입니다. 지피티 텐배거는 연구(지피티) 전체 탭 설정에서 관리합니다."},
   {topic:"job",href:"/job",icon:"💼",name:"대전·세종 JOB 신규공고",
-   desc:"30분마다 채용공고를 확인하고 새 공고가 있을 때만 알려줍니다."}
+   desc:"30분마다 채용공고를 확인하고 새 공고가 있을 때만 알려줍니다."},
+  {topic:"swim",href:"/swim",icon:"🏊",name:"전국 수영대회 신규·변경",
+   desc:"매일 아침 수집 뒤 새 대회와 개최일·장소·접수 기간 변경, 대회 취소·연기가 있을 때만 알려줍니다. 알림을 누르면 그 대회 상세로 이동합니다."}
 ];
 function notificationMenuOrder(){
   const menu=[...document.querySelectorAll(".jkmenu-pop a[href]")].map(a=>(a.getAttribute("href")||"").replace(/\.html$/,""));

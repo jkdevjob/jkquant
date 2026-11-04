@@ -41,7 +41,6 @@ main{padding:20px 0 80px}
 .card h3{font-size:15.5px;margin:0 0 8px;line-height:1.42;word-break:keep-all;overflow-wrap:anywhere}
 .kv{display:grid;grid-template-columns:58px minmax(0,1fr);gap:3px 10px;font-size:12.5px}.kv dt{color:var(--faint)}.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .dd-strong{color:var(--text);font-weight:700}.dd-warn{color:#ffd9a0}
-.free{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.free span{font-size:12px;font-weight:800;border-radius:7px;padding:4px 9px;background:var(--surf2);color:var(--dim)}.free .yes{background:rgba(54,211,153,.15);color:var(--green)}.free .no{background:rgba(248,123,140,.12);color:var(--red)}
 .empty,.loading{grid-column:1/-1;padding:44px 18px;text-align:center;color:var(--dim);background:var(--surf);border:1px dashed var(--border2);border-radius:12px}
 .pager{display:flex;justify-content:center;gap:6px;margin:16px 0 4px;flex-wrap:wrap}.pager button{min-width:40px;height:40px;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:8px;font-weight:800;cursor:pointer}.pager button.on{background:var(--accent);border-color:var(--accent);color:#fff}.pager button:disabled{opacity:.4;cursor:default}
 .leads{margin-top:18px;border:1px solid var(--border);border-radius:12px;background:var(--surf)}.leads summary{padding:12px 14px;cursor:pointer;font-weight:800;color:var(--dim);font-size:13px}.leads ul{list-style:none;margin:0;padding:0 14px 12px}.leads li{padding:8px 0;border-top:1px solid var(--border);font-size:12.5px}.leads li a{color:var(--sky);text-decoration:none;font-weight:700}.leads li small{display:block;color:var(--faint);overflow-wrap:anywhere}
@@ -86,7 +85,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK 투자</div><h1>🏊 수영대회 <span style="font-size:12px;font-weight:400;color:var(--faint)" id="swimVer">v2.0.1</span></h1></div>
+  <div class="brand"><div class="kicker">JK 투자</div><h1>🏊 수영대회 <span style="font-size:12px;font-weight:400;color:var(--faint)" id="swimVer">v2.1.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="전체메뉴">☰</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -122,7 +121,6 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
     <button type="button" data-quick="" class="on">전체 대회</button>
     <button type="button" data-quick="masters">🏊 마스터즈</button>
     <button type="button" data-quick="elite">🏅 전문선수</button>
-    <button type="button" data-quick="free">⚡ 자유형 50m·100m</button>
     <button type="button" data-quick="open">📝 접수중</button>
     <button type="button" data-quick="new">🆕 신규·변경</button>
   </div>
@@ -138,7 +136,6 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
     <label>개최 기간<select id="period"><option value="upcoming">예정 전체</option><option value="month">이번 달</option><option value="next">다음 달</option><option value="3m">3개월 이내</option><option value="past">종료된 대회</option><option value="all">전체(이력 포함)</option></select></label>
     <label>접수 상태<select id="status"><option value="">전체</option><option value="soon">접수예정</option><option value="open">접수중</option><option value="closed">마감</option><option value="unknown">미확정</option><option value="cancelled">취소·연기</option></select></label>
     <label>참가 자격<select id="elig"><option value="">전체</option><option value="adult">성인(동호인) 가능</option><option value="student">학생 가능</option><option value="elite">전문선수 대회</option><option value="unknown">자격 미확정</option></select></label>
-    <label>자유형<select id="free"><option value="">전체</option><option value="50">50m 가능</option><option value="100">100m 가능</option><option value="both">50m·100m 모두 가능</option><option value="unknown">미확정</option></select></label>
     <label>정렬<select id="sort"><option value="date">개최일 빠른 순</option><option value="date_desc">개최일 늦은 순</option><option value="deadline">접수 마감 임박순</option><option value="recent">최근 등록순</option><option value="changed">최근 변경순</option><option value="region">지역순</option><option value="name">대회명순</option></select></label>
     <div class="act"><button type="button" class="btn" id="reset">초기화</button></div>
   </section>
@@ -147,7 +144,6 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
   <nav class="pager" id="pager" aria-label="페이지"></nav>
   <details class="leads" id="leadsBox" hidden><summary id="leadsSum">검색으로 찾은 미확정 공고 후보</summary><ul id="leads"></ul></details>
   <p class="note">· 공식 확인 = 대한수영연맹·대한수중핀수영협회·시·도 연맹·공식 공고 원문에서 확인. 2차 자료 = 대회 통합 일정 사이트(원문 재확인 필요). 미확정 = 검색으로 찾은 후보.<br>
-  · 자유형 50m·100m '가능/불가'는 요강·공고에 종목이 적힌 경우에만 표시합니다. 적혀 있지 않으면 '미확정'입니다.<br>
   · 전국의 모든 대회가 수집된다는 보장은 없습니다. 자동 수집처에 없는 지역 소규모 대회는 누락될 수 있으니 참가 전 공식 요강을 꼭 확인하세요.</p>
 </div></main>
 <dialog id="detail" aria-labelledby="dTitle"><div class="dhead"><h3 id="dTitle"></h3><button type="button" class="dclose" id="dClose" aria-label="닫기">✕</button></div><div class="dbody" id="dBody"></div></dialog>
@@ -156,7 +152,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 'use strict';
 const C=window.SwimCore,$=id=>document.getElementById(id);
 const RAW='https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/swim/';
-const FIELDS=['sido','sigungu','kind','sport','period','status','elig','free','sort'];
+const FIELDS=['sido','sigungu','kind','sport','period','status','elig','sort'];
 const PAGE=20;
 let all=[],baseline='',page=1,quick='',T=C.kstToday();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -172,7 +168,6 @@ function applyText(e){
   return (e.apply_open?md(e.apply_open):'?')+' ~ '+(e.apply_close?md(e.apply_close):'?')+(e.apply_closed?' · 조기 마감':'');
 }
 function dleft(e){if(!e.apply_close)return '';const n=Math.round((Date.parse(e.apply_close)-Date.parse(T))/864e5);return n>=0&&n<=7&&C.applyStatus(e,T)==='open'?(n===0?'오늘 마감':'D-'+n):'';}
-function freeChip(v,n){return '<span class="'+(v===true?'yes':v===false?'no':'')+'">자유형 '+n+'m '+C.freeLabel(v)+'</span>';}
 function card(e){
   const st=C.applyStatus(e,T),kinds=(e.kinds&&e.kinds.length?e.kinds:[e.kind||'other']);
   const tags=['<span class="tag '+st+'">'+C.STATUS_LABEL[st]+(dleft(e)?' · '+dleft(e):'')+'</span>'];
@@ -183,8 +178,7 @@ function card(e){
   tags.push('<span class="tag v-'+esc(e.verification)+'">'+esc(C.VERIFY_LABEL[e.verification]||'미확정')+'</span>');
   return '<button type="button" class="card" data-id="'+esc(e.id)+'"><div class="tags">'+tags.join('')+'</div><h3>'+esc(e.title)+'</h3>'+
     '<dl class="kv"><dt>개최일</dt><dd class="dd-strong">'+esc(period(e))+'</dd><dt>장소</dt><dd>'+esc(e.venue||'미확정')+(e.pool?' · '+esc(e.pool):'')+'</dd>'+
-    '<dt>접수</dt><dd>'+esc(applyText(e))+'</dd><dt>참가 자격</dt><dd'+(e.eligibility?'':' class="dd-warn"')+'>'+esc(e.eligibility||'요강 확인 필요(미확정)')+'</dd></dl>'+
-    '<div class="free">'+freeChip(e.free50,50)+freeChip(e.free100,100)+'</div></button>';
+    '<dt>접수</dt><dd>'+esc(applyText(e))+'</dd><dt>참가 자격</dt><dd'+(e.eligibility?'':' class="dd-warn"')+'>'+esc(e.eligibility||'요강 확인 필요(미확정)')+'</dd></dl></button>';
 }
 function filters(){const f={q:$('q').value.trim(),quick};FIELDS.forEach(k=>f[k]=$(k).value);return f;}
 function activeCount(f){return FIELDS.filter(k=>k!=='sort'&&f[k]&&!(k==='period'&&f[k]==='upcoming')).length;}
@@ -222,8 +216,6 @@ function openDetail(id,push){
   const flags=[];if(e.adult_ok===true)flags.push('성인 동호인 참가 가능');if(e.adult_ok===false)flags.push('일반 동호인 참가 불가(학생·등록선수 대회)');if(e.student_ok)flags.push('학생 참가 가능');if(e.registered===true)flags.push('선수등록 필요');if(e.registered===false)flags.push('비등록 선수 참가 가능');if(e.elite_only)flags.push('전문선수 대회');
   h+=row('자격 요약',esc(flags.join(' · ')||'미확정'),flags.length?'':'dd-warn');
   h+=row('참가비',esc(e.fee||'미확정'),e.fee?'':'dd-warn')+row('경기 종목(세부)',esc(e.events||'요강 확인 필요'),e.events?'':'dd-warn');
-  h+=row('자유형 50m',esc(C.freeLabel(e.free50)),e.free50===true?'dd-strong':e.free50==null?'dd-warn':'')+row('자유형 100m',esc(C.freeLabel(e.free100)),e.free100===true?'dd-strong':e.free100==null?'dd-warn':'');
-  if(e.free_evidence)h+=row('근거',esc(e.free_evidence));
   h+=row('최초 수집',esc(ymd(e.first_seen)))+row('최종 변경',esc(ymd(e.last_changed)));
   h+='</dl><div class="links">'+(off?'<a href="'+esc(off)+'" target="_blank" rel="noopener noreferrer">공식 공고 ↗</a>':'')+(ap?'<a href="'+esc(ap)+'" target="_blank" rel="noopener noreferrer">참가 신청 ↗</a>':'')+'</div>';
   if(!off)h+='<div class="warnbox">공식 공고 원문 링크를 아직 찾지 못했습니다. 아래 출처에서 확인하세요.</div>';
@@ -231,14 +223,15 @@ function openDetail(id,push){
   if(warn.length)h+='<div class="warnbox">'+warn.map(esc).join('<br>')+'</div>';
   h+='<div class="dsec"><h4>출처</h4><ul>'+(e.sources||[]).map(s=>{const u=safeUrl(s.url);return '<li>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a>':esc(s.name))+' · '+esc(C.VERIFY_LABEL[s.tier]||s.tier)+(s.title&&s.title!==e.title?' — '+esc(s.title):'')+'</li>';}).join('')+'</ul></div>';
   if((e.attachments||[]).length)h+='<div class="dsec"><h4>첨부(요강·신청서)</h4><ul>'+e.attachments.map(a=>{const u=safeUrl(a.url);return '<li>'+(u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(a.name)+'</a>':esc(a.name))+'</li>';}).join('')+'</ul></div>';
-  const ch=(e.changes||[]).filter(c=>c&&c.type!=='baseline');
-  if(ch.length)h+='<div class="dsec"><h4>변경 이력</h4><ul>'+ch.slice().reverse().map(c=>'<li>'+esc(ymd(c.date))+' · '+(c.type==='new'?'신규 등록':Object.entries(c.fields||{}).map(([k,v])=>esc(LABEL[k]||k)+' '+esc(fmt(v[0]))+' → '+esc(fmt(v[1]))).join(', '))+'</li>').join('')+'</ul></div>';
+  const shownFields=c=>Object.entries(c.fields||{}).filter(([k])=>LABEL[k]);   // 없어진 항목(예: 예전 자유형 판정) 이력은 보이지 않는다
+  const ch=(e.changes||[]).filter(c=>c&&c.type!=='baseline'&&(c.type==='new'||shownFields(c).length));
+  if(ch.length)h+='<div class="dsec"><h4>변경 이력</h4><ul>'+ch.slice().reverse().map(c=>'<li>'+esc(ymd(c.date))+' · '+(c.type==='new'?'신규 등록':shownFields(c).map(([k,v])=>esc(LABEL[k]||k)+' '+esc(fmt(v[0]))+' → '+esc(fmt(v[1]))).join(', '))+'</li>').join('')+'</ul></div>';
   $('dBody').innerHTML=h;
   const d=$('detail');if(!d.open){if(d.showModal)d.showModal();else d.setAttribute('open','');}
   $('dBody').scrollTop=0;
   if(push!==false){const u=new URL(location.href);u.searchParams.set('id',id);history.pushState({id},'',u);}
 }
-const LABEL={title:'대회명',start_date:'시작일',end_date:'종료일',venue:'장소',sido:'시·도',sigungu:'시·군·구',apply_open:'접수 시작',apply_close:'접수 마감',status:'상태',apply_closed:'조기 마감',events:'종목',free50:'자유형50',free100:'자유형100',fee:'참가비',eligibility:'자격',pool:'규격',official_url:'공식 링크',apply_url:'신청 링크',verification:'확인 상태'};
+const LABEL={title:'대회명',start_date:'시작일',end_date:'종료일',venue:'장소',sido:'시·도',sigungu:'시·군·구',apply_open:'접수 시작',apply_close:'접수 마감',status:'상태',apply_closed:'조기 마감',events:'종목',fee:'참가비',eligibility:'자격',pool:'규격',official_url:'공식 링크',apply_url:'신청 링크',verification:'확인 상태'};
 const fmt=v=>v===true?'예':v===false?'아니오':v==null||v===''?'없음':String(v).slice(0,40);
 function closeDetail(push){const d=$('detail');if(d.open){if(d.close)d.close();else d.removeAttribute('open');}
   if(push!==false&&new URL(location.href).searchParams.has('id')){const u=new URL(location.href);u.searchParams.delete('id');history.pushState({},'',u);}}
