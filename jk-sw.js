@@ -8,7 +8,7 @@ const SHOWN_KEY="/__jk_push_shown";
 const REQUEST_SHOWN_KEY="/__jk_approval_requests_shown";
 const GPT_TOPICS=new Set(["opening","daytrading","crypto","soxl","closing30","tenbagger_gpt"]);
 const LEGACY_GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
-const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
+const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt","swim",...GPT_TOPICS]);
 
 async function getConfig(){
   const r=await fetch(CONFIG+"?ts="+Date.now(),{cache:"no-store"});

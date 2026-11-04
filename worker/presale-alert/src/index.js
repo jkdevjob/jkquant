@@ -8,11 +8,12 @@ const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
 const JOB_APP=BASE_APP+"/job";
 const IPO_APP=BASE_APP+"/ipo";
+const SWIM_APP=BASE_APP+"/swim";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
 const TRADE_TOPICS=new Set(RESEARCH_TRADE_TOPICS);
 const GPT_TOPICS=new Set([...TRADE_TOPICS,"tenbagger_gpt"]);
 const LEGACY_GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
-const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt",...GPT_TOPICS]);
+const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt","swim",...GPT_TOPICS]);
 /* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
 const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
 const RESEARCH_STUDIES={im_plan:{name:"무매·5년 플랜 연구",url:RESEARCH_APP},
@@ -257,6 +258,45 @@ async function ipoFeed(base){
     if(!Array.isArray(j.items))throw new Error("IPO feed missing items");
     return j.items;
   }finally{clearTimeout(timer)}
+}
+
+/* 전국 수영대회 — 매일 수집(GitHub Actions)이 저장소에 올린 대회 목록. 끝나지 않은 대회만 본다.
+   같은 대회의 '변경'은 개최일 · 장소 · 접수 기간 · 취소/연기 · 조기 마감이 바뀐 것만(설명 글자 고침은 알리지 않는다). */
+export function swimSignature(c){
+  return [c.start_date,c.end_date,c.venue,c.apply_open,c.apply_close,c.status,c.apply_closed?"closed":""].map(x=>String(x||"")).join("|");
+}
+export function swimItems(doc,today){
+  const out=[];
+  for(const c of (doc&&Array.isArray(doc.competitions)?doc.competitions:[])){
+    const id=clean(c&&c.id,40);if(!/^[0-9a-f]{12,16}\d*$/.test(id))continue;
+    const end=clean(c.end_date||c.start_date,10);if(!end||end<today)continue;
+    out.push({id,title:clean(c.title,140),region:clean(c.region,40),venue:clean(c.venue,80),
+      start:clean(c.start_date,10),end,status:clean(c.status,20),sig:swimSignature(c),appUrl:SWIM_APP+"?id="+id});
+  }
+  return out.sort((a,b)=>a.start.localeCompare(b.start)||a.title.localeCompare(b.title,"ko"));
+}
+export function swimChanges(items,seen){
+  const fresh=[],changed=[];
+  for(const x of items){
+    if(!(x.id in seen))fresh.push(x);
+    else if(seen[x.id]!==x.sig)changed.push(x);
+  }
+  return {fresh,changed};
+}
+async function swimFeed(baseUrl){
+  const urls=["https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/swim/competitions.json?ts="+Date.now(),
+    baseUrl+"/data/swim/competitions.json?ts="+Date.now()];
+  let best=null,lastError="";
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{headers:{"accept":"application/json","user-agent":"JKQuant-Swim-Push/1.0"},cf:{cacheTtl:0,cacheEverything:false}});
+      if(!r.ok){lastError="HTTP "+r.status;continue}
+      const j=await r.json();
+      if(j&&j.schema_version===2&&Array.isArray(j.competitions)&&(!best||String(j.data_changed_at||"")>String(best.data_changed_at||"")))best=j;
+    }catch(e){lastError=String(e&&e.message||e)}
+  }
+  if(!best)throw new Error("swim data fetch failed "+lastError);
+  return best;
 }
 
 async function jobFeed(baseUrl){
@@ -655,6 +695,10 @@ export class PresaleAlertStore{
       id:"test-research-"+Date.now(),type:"research",title:"🔬 매일 연구 웹알림 테스트",
       body:"무매·5년 플랜·클로드 텐배거 연구 알림이 정상 연결되었습니다.",
       url:RESEARCH_APP,createdAt:new Date().toISOString()
+    }:topic==="swim"?{
+      id:"test-swim-"+Date.now(),type:"swim",title:"🏊 수영대회 웹알림 테스트",
+      body:"전국 수영대회 신규·변경 알림이 정상 연결되었습니다.",
+      url:SWIM_APP,createdAt:new Date().toISOString()
     }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
       body:"대전·세종 신규 채용공고 알림이 정상 연결되었습니다.",
@@ -822,6 +866,31 @@ export class PresaleAlertStore{
     const delivery=await this.notifyAll("job");
     return json(request,{ok:true,items:items.length,newCount:fresh.length,alert,delivery});
   }
+  async checkSwim(request,doc){
+    const today=kstDate(0),items=swimItems(doc||await swimFeed(this.env.BASE_URL||BASE_APP),today);
+    const key="seen:swim",seen=await this.state.storage.get(key);
+    const next=Object.assign({},seen&&typeof seen==="object"?seen:{});
+    for(const x of items)next[x.id]=x.sig;
+    await this.state.storage.put("lastCheck:swim",new Date().toISOString());
+    if(!seen||typeof seen!=="object"){               // 첫 확인은 기준선만 — 이미 있던 대회를 '새 대회'로 쏟아내지 않는다
+      await this.state.storage.put(key,next);
+      return json(request,{ok:true,baseline:true,items:items.length,newCount:0,changedCount:0});
+    }
+    const {fresh,changed}=swimChanges(items,seen);
+    await this.state.storage.put(key,next);
+    if(!fresh.length&&!changed.length)return json(request,{ok:true,items:items.length,newCount:0,changedCount:0});
+    const top=fresh[0]||changed[0],more=fresh.length+changed.length-1;
+    const md=d=>d?(+d.slice(5,7))+"/"+(+d.slice(8,10)):"";
+    const parts=[fresh.length?"신규 "+fresh.length:"",changed.length?"변경 "+changed.length:""].filter(Boolean).join(" · ");
+    const body=(fresh[0]?"🆕 ":"✏️ ")+top.title+" · "+md(top.start)+(top.end&&top.end!==top.start?"~"+md(top.end):"")+
+      (top.region?" "+top.region:"")+(top.status==="cancelled"?" · 대회 취소":top.status==="postponed"?" · 대회 연기":"")+(more>0?" 외 "+more+"건":"");
+    const alert={id:"swim:"+today+":"+await hashText(items.map(x=>x.id+"="+x.sig).join(",")),type:"swim",
+      title:"🏊 전국 수영대회 "+parts,body,url:top.appUrl,
+      newItems:fresh.slice(0,10),changedItems:changed.slice(0,10),createdAt:new Date().toISOString()};
+    await this.recordAlert(alert);
+    const delivery=await this.notifyAll("swim");
+    return json(request,{ok:true,items:items.length,newCount:fresh.length,changedCount:changed.length,alert,delivery});
+  }
   async checkIPO(request){
     const today=kstDate(0),stored=await this.state.storage.get("lastSent:ipo");
     if(stored===today)return json(request,{ok:true,skipped:true,reason:"이미 오늘 IPO 브리핑 발송",date:today});
@@ -905,7 +974,8 @@ export class PresaleAlertStore{
         for(const t of VALID_TOPICS)if(this.subscribedTo(s,t))counts[t]++;
         if(!this.subscribedTo(s,"gpt")&&this.topicsOf(s).some(t=>GPT_TOPICS.has(t)))counts.gpt++;
       }
-      const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null,research:await this.state.storage.get("lastCheck:research")||null};
+      const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null,research:await this.state.storage.get("lastCheck:research")||null,
+        swim:await this.state.storage.get("lastCheck:swim")||null};
       const lastDeliveries={},lastTelegramDeliveries={};
       for(const t of TRADE_TOPICS){
         lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
@@ -916,7 +986,7 @@ export class PresaleAlertStore{
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
       const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
       const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.9.1",topicSchemaVersion:2,subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.10.0",topicSchemaVersion:2,subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,lastTelegramDeliveries,
         telegramSignalDedup:{version:1,store:"durable-object",unknownRetry:false},gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }
@@ -955,6 +1025,7 @@ export class PresaleAlertStore{
     }
     if(path==="/check"&&request.method==="POST")return this.checkPresale(request);
     if(path==="/check-jobs"&&request.method==="POST")return this.checkJobs(request);
+    if(path==="/check-swim"&&request.method==="POST")return this.checkSwim(request);
     if(path==="/check-ipo"&&request.method==="POST")return this.checkIPO(request);
     if(path==="/ipo-daily"&&request.method==="GET")return this.ipoDaily(request);
     if(path==="/research-note"&&request.method==="POST")return this.researchNote(request);
@@ -982,7 +1053,8 @@ export default{
     ctx.waitUntil(Promise.allSettled([
       stub.fetch(new Request('https://internal/gpt-morning-arm',{method:'POST',headers:{'x-monitor-key':env.MONITOR_KEY||''}})),
       stub.fetch(new Request("https://internal/check",{method:"POST"})),
-      stub.fetch(new Request("https://internal/check-jobs",{method:"POST"}))
+      stub.fetch(new Request("https://internal/check-jobs",{method:"POST"})),
+      stub.fetch(new Request("https://internal/check-swim",{method:"POST"}))
     ]));
   }
 };
