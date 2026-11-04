@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-04T11:31:11.791477+09:00",
+  "generatedAt": "2026-11-05T02:30:15.348493+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -83,6 +83,12 @@
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-11-03.csv",
       "rows": 2875,
       "lastDate": "2026-11-03",
+      "status": "provisional"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-11-04.csv",
+      "rows": 2876,
+      "lastDate": "2026-11-04",
       "status": "provisional"
     }
   ],
@@ -2272,9 +2278,9 @@
     }
   },
   "live": {
-    "trades": 52,
-    "days": 19,
-    "actualGapQualifiesRate": 50.0,
+    "trades": 53,
+    "days": 20,
+    "actualGapQualifiesRate": 49.056603773584904,
     "openVsExpectedPct": {
       "n": 46,
       "mean": 4.623163240661507
@@ -2302,35 +2308,6 @@
     "note": "buySlip = 매수체결가/시가-1, sellSlip = 1-매도체결가/종가 (양수 = 비용). 판정은 realizedNet 누적으로 한다."
   },
   "liveTrades": [
-    {
-      "date": "2026-10-19",
-      "code": "439960",
-      "name": "코스모로보틱스",
-      "strategyVersion": "opening_gapdown_v1",
-      "source": "kis-vts-live",
-      "expectedPrice": 5100,
-      "expectedGapPct": -8.92857142857143,
-      "actualOpen": 5340.0,
-      "actualClose": 5880.0,
-      "actualGapPct": -4.642857142857137,
-      "actualGapQualifies": true,
-      "openVsExpectedPct": 4.705882352941182,
-      "expectedGapPct0856": null,
-      "openVsExpected0856Pct": null,
-      "buyOrderOk": true,
-      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
-      "sellOrderOk": true,
-      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
-      "buyQty": 392,
-      "buyFill": 5340,
-      "sellQty": 392,
-      "sellFill": 5880,
-      "buySlipPct": 0.0,
-      "sellSlipPct": -0.0,
-      "realizedGrossPct": 10.1123595505618,
-      "realizedNetPct": 9.8823595505618,
-      "modelNet0tPct": 9.8823595505618
-    },
     {
       "date": "2026-10-19",
       "code": "475150",
@@ -3171,12 +3148,41 @@
       "realizedGrossPct": null,
       "realizedNetPct": null,
       "modelNet0tPct": null
+    },
+    {
+      "date": "2026-11-04",
+      "code": "214370",
+      "name": "케어젠",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 25200,
+      "expectedGapPct": -6.666666666666665,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "expectedGapPct0856": -7.222222222222219,
+      "openVsExpected0856Pct": null,
+      "buyOrderOk": false,
+      "buyOrderMsg": null,
+      "sellOrderOk": false,
+      "sellOrderMsg": null,
+      "buyQty": null,
+      "buyFill": null,
+      "sellQty": null,
+      "sellFill": null,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": null,
+      "realizedNetPct": null,
+      "modelNet0tPct": null
     }
   ],
   "watchlist": {
-    "basedOn": "2026-11-03",
+    "basedOn": "2026-11-04",
     "basedOnStatus": "provisional_snapshot",
-    "size": 40
+    "size": 25
   },
   "finalDataThrough": "2026-11-02"
 }
