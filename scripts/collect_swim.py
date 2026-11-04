@@ -632,6 +632,8 @@ def make_obs(source, tier, title, *, start="", end="", venue="", place="", url="
         "source": source, "tier": tier, "title": title, "start_date": start or "", "end_date": end or start or "",
         "venue": venue, "place": place, "sido": sido, "sigungu": sigungu, "url": url,
         "official_url": official_url if is_official_url(official_url) else "",
+        # 공식 기관 주소가 아닌 요강 링크(연맹 네이버 카페 등)도 버리지 않는다 — 자동으로 못 읽어도 사람은 눌러서 본다.
+        "guide_url": official_url if official_url.startswith("http") and not is_official_url(official_url) else "",
         "apply_open": apply_open or "", "apply_close": apply_close or "", "apply_url": apply_url or "",
         "eligibility": clean(eligibility)[:220], "events": clean(events)[:220], "fee": fee or "",
         "pool": pool or "", "status": status or status_from_title(title), "apply_closed": bool(apply_closed),
@@ -1245,6 +1247,14 @@ def derive(rec):
         for a in o.get("attachments") or []:
             if a not in attachments:
                 attachments.append(a)
+    guide_links = []
+    for o in obs:
+        u = o.get("guide_url") or ""
+        if u and u not in [g["url"] for g in guide_links]:
+            guide_links.append({"url": u, "host": host_of(u), "source": SOURCE_NAMES.get(o["source"], o["source"])})
+    if guide_links and verification != "official":
+        warnings.append("요강 원문이 " + ", ".join(sorted({g["host"] for g in guide_links})) +
+                        " 에 있어 접수 기간 · 참가비 · 종목을 자동으로 읽지 못함(사이트가 자동 수집 금지) — 요강 링크에서 확인")
     return {
         "title": title, "aliases": sorted({t for t in titles if t != title})[:6],
         "kind": kinds[0], "kinds": kinds, "sports": sports, "sport": sports[0], "sports_inferred": inferred,
@@ -1258,7 +1268,7 @@ def derive(rec):
         "events": events, "fee": pick("fee"),
         "apply_url": pick("apply_url"), "official_url": official_url,
         "verification": verification, "sources": sources, "conflicts": conflicts, "warnings": warnings,
-        "attachments": attachments[:8],
+        "attachments": attachments[:8], "guide_links": guide_links[:4],
     }
 
 
@@ -1421,8 +1431,9 @@ def write_json(path, obj):
     return False
 
 
-def public_record(rid, rec):
+def public_record(rid, rec, related=None):
     d = dict(rec["derived"])
+    d["related"] = related or []
     d["id"] = rid
     d["first_seen"] = rec.get("first_seen", "")
     d["last_changed"] = rec.get("last_changed", rec.get("first_seen", ""))
@@ -1541,6 +1552,13 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
         ld["matched_id"] = best if score >= 0.9 else ""
     cutoff = (today() - timedelta(days=150)).isoformat()
     leads = sorted([x for x in leads if x.get("first_seen", "") >= cutoff], key=lambda x: x["first_seen"], reverse=True)[:400]
+    related = {}
+    for ld in sorted(leads, key=lambda x: (not x.get("official_host"), x.get("url", ""))):
+        if ld.get("matched_id"):
+            related.setdefault(ld["matched_id"], [])
+            if len(related[ld["matched_id"]]) < 5:
+                related[ld["matched_id"]].append({"title": ld["title"], "url": ld["url"], "host": ld.get("host", ""),
+                                                  "official_host": bool(ld.get("official_host"))})
     # 변경 감지
     n_new = n_changed = 0
     for rid, rec in records.items():
@@ -1566,7 +1584,7 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
     if migrated_note:
         changes.append({"date": t, "type": "migration", "note": migrated_note, "count": len(records)})
     ok = [s for s in statuses if s["status"] == "ok" and s["key"] not in ("search_lead", "official_link")]
-    pub = sorted((public_record(rid, rec) for rid, rec in records.items()),
+    pub = sorted((public_record(rid, rec, related.get(rid)) for rid, rec in records.items()),
                  key=lambda e: (e["start_date"], e["title"]))
     payload = {"schema_version": SCHEMA, "range": "대한민국 전국 17개 시·도", "baseline_date": baseline,
                "data_changed_at": prev_public.get("data_changed_at", ""), "count": len(pub), "competitions": pub}

@@ -109,6 +109,8 @@ test('페이지 — 빠른 검색 5종 · 필터 · 정렬 7종 · 버전 · 공
   assert.match(html, /id="swimVer">v\d+\.\d+\.\d+<\/span>/);
   assert.ok(html.includes('/swim-core.js?v='));
   assert.ok(html.includes("searchParams.get('id')"), '알림 링크 ?id= 로 상세 바로 열기');
+  assert.match(html, /\(e\.guide_links\|\|\[\]\)/, '공식 주소가 아닌 요강 링크(연맹 카페 등)도 상세에 버튼으로');
+  assert.match(html, /\(e\.related\|\|\[\]\)/, '검색으로 찾은 관련 글을 상세에');
   assert.match(html, /if\(id\)whenApproved\(\(\)=>openDetail\(id,false\)\)/, '승인 전에는 상세 창(배경막)이 로그인 화면을 덮지 않게');
   assert.ok(html.includes('https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/swim/'), '[skip ci] 데이터 커밋도 바로 보이게 저장소 원본을 읽는다');
   const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');

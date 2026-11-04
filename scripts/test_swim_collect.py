@@ -209,6 +209,12 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(gb["pool"], "")                                    # whoisfast 는 모든 대회를 '50m 장수로'로 표시
         self.assertTrue(gb["official_url"].startswith("https://gbaquatics.co.kr/"))
         self.assertEqual(obs[1]["official_url"], "")                         # 네이버 카페는 공식 공고가 아니다
+        # 그래도 요강 링크는 버리지 않는다(2026-11-04 사용자: 전북도지사배 요강이 whoisfast 에 있는데 왜 없나)
+        self.assertEqual(obs[1]["guide_url"], "https://cafe.naver.com/ArticleRead.nhn?clubid=1&articleid=310")
+        self.assertEqual(obs[0]["guide_url"], "")                            # 공식 주소는 official_url 로만
+        d = m.derive({"id": "x", "obs": {"whoisfast:1": obs[1]}})
+        self.assertEqual(d["guide_links"][0]["host"], "cafe.naver.com")
+        self.assertTrue(any("자동으로 읽지 못함" in w for w in d["warnings"]))
 
     def test_kua_embedded_json(self):
         obs = m.scrape_kua(fetcher({"https://www.kua.or.kr/competition-info/schedule": KUA}), {}, max_pages=1)
@@ -402,6 +408,16 @@ class RefreshTests(unittest.TestCase):
         self.assertEqual(s["ok_sources"], 0)
         self.assertEqual(before, (self.tmp / "competitions.json").read_bytes())
         self.assertIn("구조 변경 의심", next(x for x in self.load("sources.json")["sources"] if x["key"] == "swimming_co_kr")["error"])
+
+    def test_related_search_links_attached(self):
+        (self.tmp / "leads.json").write_text(json.dumps({"leads": [
+            {"url": "https://blog.naver.com/x/1", "title": "[대회정보] 2026 전북특별자치도지사배 마스터즈 수영대회", "host": "blog.naver.com",
+             "first_seen": "2026-11-03", "official_host": False},
+            {"url": "https://other.example/2", "title": "2026 다른 수영대회", "host": "other.example", "first_seen": "2026-11-03"}]},
+            ensure_ascii=False), encoding="utf-8")
+        self.run_with({"whoisfast": [dict(title="2026년 전북특별자치도지사배 마스터즈수영대회", start="2026-11-22", place="전북 전주시")]})
+        c = next(x for x in self.load("competitions.json")["competitions"] if "전북" in x["title"])
+        self.assertEqual([r["url"] for r in c["related"]], ["https://blog.naver.com/x/1"])
 
     def test_official_overrides_secondary_and_cancel(self):
         self.run_with({"swimming_co_kr": [dict(title="제1회 강남구청장배 수영대회", start="2026-11-22", place="서울 강남구")]})
