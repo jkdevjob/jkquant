@@ -1,12 +1,18 @@
 name: 수영대회 매일 수집
 
-# 매일 08:00 KST 전국 수영대회 자동 수집 → 변경된 자료만 main 에 커밋 → 새 소식은 텔레그램으로.
-# GitHub 예약 실행은 늦거나 빠질 수 있어 08:45 에 한 번 더 깨우고, 그날 이미 성공했으면 건너뛴다.
+# 매일 아침(목표 08:00 KST) 전국 수영대회 자동 수집 → 변경된 자료만 main 에 커밋 → 새 소식은 텔레그램으로.
+# GitHub 예약 실행은 늦거나 빠진다 — 2026-11-04 에는 '0 23'(08:00)·'45 23'(08:45)가 01:00 KST 넘어서도 한 번도 안 돌았고,
+# 같은 저장소 JOB 알림(23:40 UTC 예약)은 4시간 넘게 늦게 돌았다. 붐비는 정각(:00)을 피하고 오전에 여러 번 깨운다.
+# 그날 이미 성공했으면 맨 앞 단계에서 바로 끝낸다(설치·검사 없이 수십 초).
 # 데이터 커밋은 [skip ci] 라 Cloudflare 배포가 돌지 않는다 — 화면(swim.html)은 저장소 원본(raw)을 함께 읽어 최신을 쓴다.
 on:
   schedule:
-    - cron: "0 23 * * *"   # 08:00 KST
-    - cron: "45 23 * * *"  # 08:45 KST 예비(그날 성공했으면 건너뜀)
+    - cron: "53 22 * * *"  # 07:53 KST
+    - cron: "17 23 * * *"  # 08:17 KST 예비
+    - cron: "41 23 * * *"  # 08:41 KST 예비
+    - cron: "13 1 * * *"   # 10:13 KST 예비
+    - cron: "29 3 * * *"   # 12:29 KST 예비
+    - cron: "37 6 * * *"   # 15:37 KST 예비(그날 한 번도 성공 못 했을 때만 수집)
   workflow_dispatch:
     inputs:
       force:
@@ -48,27 +54,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: Install collector dependencies
-        run: pip install "requests>=2.32,<3" "beautifulsoup4>=4.12,<5" "pypdf>=4,<7" "ddgs>=9,<10"
-      - name: Validate collector, page and alerts
-        run: |
-          python -m py_compile scripts/collect_swim.py scripts/swim_regions.py scripts/swim_alerts.py scripts/test_swim_collect.py
-          python -m unittest discover -s scripts -p test_swim_collect.py
-          python scripts/mutation_test_swim.py
-          node --test tests/swim.test.mjs
       - name: Skip if today's collection already succeeded
         id: guard
         if: github.event_name == 'schedule'
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY' >> "$GITHUB_OUTPUT"
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
           import json, datetime, zoneinfo
           from pathlib import Path
           today = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Seoul")).date().isoformat()
@@ -80,6 +72,24 @@ jobs:
           print("skip=" + ("true" if done else "false"))
           PY
           cat "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v5
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.skip != 'true'
+        with:
+          node-version: "22"
+      - name: Install collector dependencies
+        if: steps.guard.outputs.skip != 'true'
+        run: pip install "requests>=2.32,<3" "beautifulsoup4>=4.12,<5" "pypdf>=4,<7" "ddgs>=9,<10"
+      - name: Validate collector, page and alerts
+        if: steps.guard.outputs.skip != 'true'
+        run: |
+          python -m py_compile scripts/collect_swim.py scripts/swim_regions.py scripts/swim_alerts.py scripts/test_swim_collect.py
+          python -m unittest discover -s scripts -p test_swim_collect.py
+          python scripts/mutation_test_swim.py
+          node --test tests/swim.test.mjs
       - name: Restore source cache (원문 · 요강 PDF 분석)
         if: github.event_name != 'pull_request' && steps.guard.outputs.skip != 'true'
         uses: actions/cache@v4
