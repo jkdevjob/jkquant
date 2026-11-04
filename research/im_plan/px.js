@@ -18,7 +18,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
   for(let k=i0;k<=i1;k++){ const d=dates[k];
     if(irx[d]!=null) lastIrx=irx[d];
     if(prevDate&&cash>0){ const gap=Math.max(1,Math.round((Date.parse(d)-Date.parse(prevDate))/864e5)); cash+=cash*Math.max(0,lastIrx/100-0.0009)*(tax?(1-0.154):1)*gap/365; }
-    prevDate=d; const y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ if(tax&&yearPnl>0) cash-=Math.max(0,yearPnl-DED)*0.22; yearPnl=0; yr=y; }
+    prevDate=d; const y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ const _t=(tax&&yearPnl>0)?Math.max(0,yearPnl-DED)*0.22:0; cash-=_t; if(o.ylog) o.ylog.push([yr,yearPnl,_t,d]); yearPnl=0; yr=y; }   // o.ylog: 해마다 [해, 실현손익, 세금, 낸 날](11-05)
     const kp=k-1; const pp={}; syms.forEach(s=>pp[s]=C[s][kp]); const tot=cash+syms.reduce((a,s)=>a+q[s]*pp[s],0);
     const cur={}; syms.forEach(s=>cur[s]=q[s]*pp[s]/tot);
     const tgt=o.target(kp,cur,st);
@@ -30,7 +30,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n; cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'s',g/tot]); } }
     for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want>q[s]){ const n=Math.min(want-q[s],shares(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'b',g/tot]); } } }
     eq.push([d,cash+syms.reduce((a,s)=>a+q[s]*px[s],0)]); }
-  if(tax&&yearPnl>0&&o.endTax!==false) eq[eq.length-1][1]-=Math.max(0,yearPnl-DED)*0.22;   // 끝날 올해 실현이익 세금을 미리 뺀다(청산 가치) — 진행 중 구간 낙폭을 잴 때는 endTax:false
+  { const _t=(tax&&yearPnl>0&&o.endTax!==false)?Math.max(0,yearPnl-DED)*0.22:0; eq[eq.length-1][1]-=_t; if(o.ylog) o.ylog.push([yr,yearPnl,_t,eq[eq.length-1][0]]); }   // 끝날 올해 실현이익 세금을 미리 뺀다(청산 가치) — 진행 중 구간 낙폭을 잴 때는 endTax:false
   return {eq,turn}; }
 function stats(eq,cap){ const a=eq[0][0], b=eq[eq.length-1][0], fin=eq[eq.length-1][1]; const yrs=(Date.parse(b)-Date.parse(a))/(365.25*864e5);
   let pk=0,m=0; eq.forEach(([,v])=>{ if(v>pk)pk=v; else m=Math.max(m,(pk-v)/pk); }); return {cagr:(Math.pow(Math.max(fin,1e-9)/cap,1/yrs)-1)*100, mdd:m*100, fin}; }

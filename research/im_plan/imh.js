@@ -36,6 +36,7 @@ const SETUP=`(()=>{
   inj('if(tp!==curTP){ curTP=tp; starBase=tp;','if(tp!==curTP){ curTP=tp; starBase=(__H.m1&&__H.m1.all)?targetPct:tp;');
   inj('const buys=(__m1pause&&!flat0)','if(__H.m1&&__H.m1.slope20){ starSlope=((__H.m1.slope20==="all"||__m1x)?targetPct:starBase)*0.1*20/divs; }\\n    const buys=(__m1pause&&!flat0)');
   inj('const buyLimit=prevC*(1+bigPct/100);','const buyLimit=prevC*(1+((__H.bigAt&&__H.bigAt(d)!=null)?__H.bigAt(d):bigPct)/100);');
+  inj('const taxUsd=capGainTax(yearPnl, tkr);','const taxUsd=capGainTax(yearPnl, tkr); if(__H.yp) __H.yp.push([curYear,yearPnl,taxUsd]);');   // 11-05: 해마다 실현손익·세금 기록(o.yp) — 계좌 합산 공제 계산용 · 마지막 해는 여러 번 정산될 수 있어 해마다 더해 쓴다
   window.__H={eqs:[]};
   (0,eval)(src);
   window.RUN=function(o){
@@ -48,7 +49,7 @@ const SETUP=`(()=>{
     const IRX=window.__IRX||{}; const irxDates=Object.keys(IRX).sort();
     let lastIrx=0, li=0; const irxAt=d=>{ while(li<irxDates.length&&irxDates[li]<=d){ lastIrx=IRX[irxDates[li]]; li++; } return lastIrx; };
     let prevD=null;
-    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows;
+    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; if(o.yp) __H.yp=[];
     if(o.sgov){ let pd=null; __H.sgRate=(d)=>{ const r=irxAt(d); const gap=pd?Math.max(1,Math.round((Date.parse(d)-Date.parse(pd))/864e5)):1; pd=d; return Math.max(0,(r/100-(o.sgov.spread??0.0009)))*(1-0.154)*gap/365; }; __H.sg={mode:o.sgov.mode,k:o.sgov.k||10,fee:o.sgov.fee!=null?o.sgov.fee:0.0026,S:0,fees:0,yld:0,n:0,wk:null}; }
     const _A0=Object.assign({},IM_AUTOTP), _M0=Object.assign({},IM_AUTOTP_M1); window.__imAutoTP0=window.__imAutoTP0||imAutoTP; imAutoTP=window.__imAutoTP0;
     if(o.auto){ Object.assign(IM_AUTOTP,o.auto.A||{}); Object.assign(IM_AUTOTP_M1,o.auto.M||{}); if(o.auto.noWeak) imAutoTP=(b,d)=>{ const P=window.__imAutoTP0(b,d); if(P) P.tp=P.hot?IM_AUTOTP.lo:IM_AUTOTP.hi; return P; }; }
@@ -81,7 +82,7 @@ const SETUP=`(()=>{
     imCostOn=o.cost!==false; imReverse=!!o.reverse;
     const r=runIMx(days,tkr,o.cap||10000,o.divs||20,o.tgt||20,o.compound!==false,o.big);
     Object.assign(IM_AUTOTP,_A0); Object.assign(IM_AUTOTP_M1,_M0); imAutoTP=window.__imAutoTP0;
-    return {trace:o.trace?{tr:__H.tr,m1d:__H.m1d,cyc:__H.cyc}:null, sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, first:days[0], last:days[days.length-1], n:days.length};
+    return {trace:o.trace?{tr:__H.tr,m1d:__H.m1d,cyc:__H.cyc}:null, sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, yp:__H.yp||null, first:days[0], last:days[days.length-1], n:days.length};
   };
 })()`;
 function stats(r,cap){ const yrs=(Date.parse(r.last)-Date.parse(r.first))/(365.25*864e5); const cagr=(Math.pow(r.final/cap,1/yrs)-1)*100;
