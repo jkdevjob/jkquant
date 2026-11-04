@@ -1,26 +1,39 @@
 {
-  "updatedAt": "2026-11-04T12:34:09+09:00",
+  "updatedAt": "2026-11-04T20:44:27+09:00",
   "rangeDays": 180,
   "cutoffDate": "2026-05-08",
   "historyCount": 0,
   "sourceStatuses": {
     "잡코리아": {
       "ok": true,
-      "count": 471,
+      "count": 469,
       "failed_pages": 0,
       "mode": "직접"
     },
     "사람인": {
-      "ok": true,
-      "count": 371,
-      "failed_pages": 0,
+      "ok": false,
+      "count": 0,
+      "failed_pages": 32,
       "max_pages": 8,
-      "errors": [],
+      "errors": [
+        "대전 Java p1: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=1&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x719d95ee5010>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))",
+        "대전 Java p2: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=2&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x719d95ee7440>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))",
+        "세종 Java p1: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EC%84%B8%EC%A2%85+Java&recruitPage=1&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x719d95ee7140>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))"
+      ],
       "mode": "직접"
     },
     "고용24": {
       "ok": true,
-      "count": 4,
+      "count": 8,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "점핏": {
+      "ok": true,
+      "count": 6,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
@@ -36,27 +49,27 @@
       "errors": [],
       "mode": "검색"
     },
-    "인크루트": {
-      "ok": true,
-      "count": 1,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "점핏": {
-      "ok": true,
-      "count": 7,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
     "원티드": {
       "ok": true,
-      "count": 4,
+      "count": 2,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "인크루트": {
+      "ok": true,
+      "count": 2,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "링크드인": {
+      "ok": true,
+      "count": 0,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
@@ -64,6 +77,24 @@
       "mode": "검색"
     },
     "로켓펀치": {
+      "ok": true,
+      "count": 2,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "알바몬": {
+      "ok": true,
+      "count": 5,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "알바천국": {
       "ok": true,
       "count": 0,
       "successful_queries": 8,
@@ -80,37 +111,47 @@
       "degraded": false,
       "errors": [],
       "mode": "검색"
-    },
-    "알바천국": {
-      "ok": true,
-      "count": 0,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "알바몬": {
-      "ok": true,
-      "count": 6,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "링크드인": {
-      "ok": true,
-      "count": 0,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
     }
   },
-  "count": 691,
+  "count": 697,
   "jobs": [
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50307106",
+      "title": "지능형 영상 분석 SW Backend 개발자 모집",
+      "company": "㈜원모어시큐리티",
+      "body": "신입 지원 가능 스크랩 지능형 영상 분석 SW Backend 개발자 모집 ㈜원모어시큐리티 세종 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자 즉시 지원 신입·경력2년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50307106",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "세종"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "신입·경력",
+      "education": "초대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2027-01-03",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-04",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-04",
+      "lastSeen": "2026-11-04",
+      "lastChecked": "2026-11-04"
+    },
     {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50299659",
       "title": "[수원] OO기업 세종 FCB 신공장 TC구축(java/중급,고급)",
@@ -150,6 +191,163 @@
       "lastChecked": "2026-11-04"
     },
     {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50307047",
+      "title": "[대전] LG엔솔연구소 초급 React SI",
+      "company": "㈜포에스시스템",
+      "body": "오늘 뜬 따끈한 공고 스크랩 [대전] LG엔솔연구소 초급 React SI ㈜포에스시스템 대전 유성구 솔루션·SI·CRM·ERP, 웹개발자, 소프트웨어개발자 즉시 지원 경력3년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50307047",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "프리랜서",
+        "인턴"
+      ],
+      "career": "경력 3년↑",
+      "education": "학력무관",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-12-04",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-04",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-04",
+      "lastSeen": "2026-11-04",
+      "lastChecked": "2026-11-04"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50303937",
+      "title": "[대전/IT] 보안 AI 연구인력 채용(신입/경력 무관)",
+      "company": "㈜필상",
+      "body": "오늘 뜬 따끈한 공고 스크랩 [대전/IT] 보안 AI 연구인력 채용(신입/경력 무관) ㈜필상 대전 유성구 정보보안, 보안엔지니어 즉시 지원 신입·경력",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50303937",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "신입·경력",
+      "education": "대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2027-01-03",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-04",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-04",
+      "lastSeen": "2026-11-04",
+      "lastChecked": "2026-11-04"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50303557",
+      "title": "[대전 상주] 공공기관 AI 시스템 구축 타코웍스 솔루션 FDE 채용",
+      "company": "하이퍼엑스",
+      "body": "오늘 뜬 따끈한 공고 스크랩 [대전 상주] 공공기관 AI 시스템 구축 타코웍스 솔루션 FDE 채용 하이퍼엑스 대전 유성구 외 7 솔루션·SI·CRM·ERP, 백엔드개발자, 시스템엔지니어, AI/ML엔지니어 월급 600~850만원 즉시 지원 경력5년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50303557",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "salary500"
+      ],
+      "employmentTypes": [
+        "계약직",
+        "인턴"
+      ],
+      "career": "경력 5년↑",
+      "education": "대졸↑",
+      "salary": {
+        "monthly": 600.0,
+        "annual": 7200.0,
+        "label": "월 600만원 이상 기준"
+      },
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-12-04",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-04",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-04",
+      "lastSeen": "2026-11-04",
+      "lastChecked": "2026-11-04"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50306637",
+      "title": "[경력 2년 이상] 머신비전·물류자동화 SW 개발자 모집",
+      "company": "가치소프트",
+      "body": "오늘 뜬 따끈한 공고 스크랩 [경력 2년 이상] 머신비전·물류자동화 SW 개발자 모집 가치소프트 세종 솔루션·SI·CRM·ERP, 소프트웨어개발자 연봉 3,500만원~ 즉시 지원 경력2년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50306637",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "세종"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "경력 2년↑",
+      "education": "고졸↑",
+      "salary": {
+        "monthly": 291.6666666666667,
+        "annual": 3500.0,
+        "label": "연 3,500만원 (월 환산 292만원)"
+      },
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2027-01-03",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-04",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-04",
+      "lastSeen": "2026-11-04",
+      "lastChecked": "2026-11-04"
+    },
+    {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50300130",
       "title": "[ 초긴급,, TC(Tool Communication) & JAVA I.F - 수원,세종,베트남]",
       "company": "㈜아이티사람들",
@@ -176,6 +374,43 @@
       "postedDate": "",
       "dateSource": "수집일",
       "deadline": "2026-11-07",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-04",
+      "status": "closed",
+      "missCount": 1,
+      "closedAt": "2026-11-04",
+      "closeReason": "HTTP 404",
+      "firstSeen": "2026-11-04",
+      "lastSeen": "2026-11-04",
+      "lastChecked": "2026-11-04"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50303125",
+      "title": "[ 초긴급,, JAVA I.F & TC구축 경험자 - 수원,세종,베트남 ]",
+      "company": "㈜아이티사람들",
+      "body": "오늘 뜬 따끈한 공고 스크랩 [ 초긴급,, JAVA I.F & TC구축 경험자 - 수원,세종,베트남 ] ㈜아이티사람들 경기 수원시 솔루션·SI·CRM·ERP, 백엔드개발자, 프론트엔드개발자, 웹개발자 즉시 지원 경력5년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50303125",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "세종"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "계약직",
+        "인턴"
+      ],
+      "career": "경력 5년↑",
+      "education": "초대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-11-09",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-04",
       "status": "active",
@@ -253,10 +488,10 @@
       "deadline": "2026-11-04",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-04",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-04",
       "lastSeen": "2026-11-04",
       "lastChecked": "2026-11-04"
@@ -3383,10 +3618,10 @@
       "deadline": "2026-11-27",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-04",
-      "status": "active",
-      "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "status": "closed",
+      "missCount": 1,
+      "closedAt": "2026-11-04",
+      "closeReason": "HTTP 404",
       "firstSeen": "2026-10-28",
       "lastSeen": "2026-11-04",
       "lastChecked": "2026-11-04"
@@ -6809,10 +7044,10 @@
       "deadline": "2026-11-13",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-04",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "SSLError",
       "firstSeen": "2026-10-21",
       "lastSeen": "2026-10-27",
       "lastChecked": "2026-11-04"
@@ -7782,10 +8017,10 @@
       "deadline": "",
       "deadlineSource": "",
       "deadlineCheckedAt": "",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-16",
       "lastSeen": "2026-10-26",
       "lastChecked": "2026-11-04"
@@ -8333,7 +8568,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-11-11",
+      "deadline": "2026-12-04",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-04",
       "status": "active",
@@ -8744,7 +8979,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-11-11",
+      "deadline": "2026-12-04",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-04",
       "status": "active",
@@ -8781,7 +9016,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-11-11",
+      "deadline": "2026-12-04",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-04",
       "status": "active",
@@ -8818,7 +9053,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-11-11",
+      "deadline": "2026-12-04",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-04",
       "status": "active",
@@ -8892,7 +9127,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-11-11",
+      "deadline": "2026-12-04",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-04",
       "status": "active",
@@ -8929,7 +9164,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-11-11",
+      "deadline": "2026-12-04",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-04",
       "status": "active",
@@ -11529,10 +11764,10 @@
       "deadline": "",
       "deadlineSource": "",
       "deadlineCheckedAt": "",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-10",
       "lastSeen": "2026-10-29",
       "lastChecked": "2026-11-04"
@@ -11992,10 +12227,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-04",
-      "status": "active",
+      "status": "closed",
       "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "closedAt": "2026-11-04",
+      "closeReason": "원문 마감 표시",
       "firstSeen": "2026-10-08",
       "lastSeen": "2026-11-04",
       "lastChecked": "2026-11-04"
@@ -20298,10 +20533,10 @@
       "deadline": "2026-11-30",
       "deadlineSource": "D-day",
       "deadlineCheckedAt": "2026-11-04",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-11-04",
       "lastChecked": "2026-11-04"
