@@ -15,6 +15,8 @@ cd reel && node trends/scan-youtube.mjs      # → trends/YYYY-MM-DD.md / .json
 - 인스타는 공개 데이터를 가져올 길이 없어서, Metricool 에 경쟁 계정을 넣어 두면 그 릴스도 같이 본다
   (`getAnalyticsDataByMetrics` 의 `IGCR01~10` — 경쟁 계정이 없으면 건너뛴다).
 
+- 궁금증: `node trends/curious.mjs` → `trends/curious-YYYY-MM-DD.md` (자동완성 질문·급상승 검색어). 동향 영상 주제는 인기 영상 주제와 이 질문이 겹치는 것을 우선한다.
+
 ## 1-1. 기법 학습 — 매일 다른 인기 영상 보기
 
 ```
