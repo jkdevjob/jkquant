@@ -1,0 +1,395 @@
+{
+  "duration": "auto",
+  "fps": 30,
+  "flip": 0.7,
+  "tape": {
+    "text": "퇴직금 · IRP · 세금",
+    "color": "pink"
+  },
+  "out": "queue/issues/b03_severance-pension-tax-cut.mp4",
+  "voice": {
+    "name": "ko-KR-HyunsuMultilingualNeural",
+    "rate": "+10%",
+    "lead": 0.35,
+    "gap": 0.28,
+    "tail": 2.0,
+    "lines": [
+      {
+        "id": "hook",
+        "text": "퇴직금, 한 번에 받는 게 속 편하다고들 하죠. 그런데 받는 방법에 따라 세금이 달라져요."
+      },
+      {
+        "id": "irp",
+        "text": "퇴직금을 아이알피 계좌로 받아 두고, 쉰다섯 넘어서 연금으로 나눠 받으면요,",
+        "gap": 0.4
+      },
+      {
+        "id": "cut30",
+        "text": "퇴직소득세를 삼십 퍼센트 덜 내요.",
+        "gap": 0.15
+      },
+      {
+        "id": "cut40",
+        "text": "십일 년째부터는 사십 퍼센트, 이십일 년째부터는 오십 퍼센트까지 줄고요."
+      },
+      {
+        "id": "ex",
+        "text": "예를 들어 퇴직소득세가 천만 원이라면,",
+        "gap": 1.0
+      },
+      {
+        "id": "ex2",
+        "text": "한 번에 받으면 천만 원을 다 내지만, 연금으로 나눠 받으면 칠백만 원이에요.",
+        "gap": 0.15
+      },
+      {
+        "id": "caveat",
+        "text": "대신 한 해에 꺼낼 수 있는 한도가 있어서, 그 안에서 나눠 받아야 감면돼요."
+      },
+      {
+        "id": "mine",
+        "text": "그래서 퇴직금 받기 전에, 아이알피로 받아서 나눠 받을지부터 정해 두는 게 순서예요.",
+        "gap": 0.45
+      },
+      {
+        "id": "save",
+        "text": "저장해 두셨다가, 퇴직 전에 꺼내 보세요."
+      },
+      {
+        "id": "sig",
+        "text": "늦지 않았습니다.",
+        "gap": 0.4
+      }
+    ]
+  },
+  "pages": [
+    {
+      "start": 0,
+      "stains": [
+        {
+          "x": 690,
+          "y": 1500,
+          "r": 170,
+          "opacity": 0.18,
+          "rot": -9
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "h1",
+          "text": "\"퇴직금은 한 번에\"",
+          "x": 128,
+          "y": 196,
+          "size": 100,
+          "font": "bold",
+          "color": "ink",
+          "at": 0,
+          "dur": 0,
+          "rot": -0.8
+        },
+        {
+          "type": "text",
+          "id": "h2",
+          "text": "세금이 달라요",
+          "x": 132,
+          "y": 330,
+          "size": 116,
+          "font": "bold",
+          "color": "red",
+          "at": 0,
+          "dur": 0,
+          "rot": 0.4
+        },
+        {
+          "type": "circle",
+          "target": "h2",
+          "at": 0.3,
+          "dur": 0.8,
+          "color": "red",
+          "pad": 14,
+          "width": 7
+        },
+        {
+          "type": "text",
+          "id": "i1",
+          "text": "IRP로 받아서",
+          "x": 150,
+          "y": 570,
+          "size": 64,
+          "font": "bold",
+          "color": "ink",
+          "at": "@irp+0.6",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "i2",
+          "text": "55세 넘어 연금으로",
+          "x": 150,
+          "y": 660,
+          "size": 72,
+          "font": "bold",
+          "color": "blue",
+          "at": "@irp.end-2.2",
+          "dur": 0.9
+        },
+        {
+          "type": "text",
+          "id": "c1",
+          "text": "퇴직소득세",
+          "x": 150,
+          "y": 800,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@cut30",
+          "dur": 0.5
+        },
+        {
+          "type": "text",
+          "id": "c2",
+          "text": "−30%",
+          "after": "c1",
+          "gap": 32,
+          "size": 104,
+          "font": "bold",
+          "color": "red",
+          "at": "@cut30.end-1.0",
+          "dur": 0.4
+        },
+        {
+          "type": "circle",
+          "target": "c2",
+          "at": "@cut30.end-0.4",
+          "dur": 0.5,
+          "color": "red",
+          "pad": 12,
+          "width": 6
+        },
+        {
+          "type": "text",
+          "id": "c3",
+          "text": "11년째부터 −40%",
+          "x": 150,
+          "y": 940,
+          "size": 66,
+          "font": "bold",
+          "color": "ink",
+          "at": "@cut40+0.4",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "c4",
+          "text": "21년째부터 −50%",
+          "x": 150,
+          "y": 1030,
+          "size": 66,
+          "font": "bold",
+          "color": "blue",
+          "at": "@cut40.end-2.0",
+          "dur": 0.8
+        },
+        {
+          "type": "underline",
+          "target": "c4",
+          "at": "@cut40.end-0.3",
+          "dur": 0.4,
+          "color": "blue",
+          "width": 5
+        },
+        {
+          "type": "text",
+          "id": "src",
+          "text": "(연금으로 받은 해 기준 · 2026년 세법)",
+          "x": 150,
+          "y": 1130,
+          "size": 40,
+          "font": "pen",
+          "color": "gray",
+          "at": "@cut40.end",
+          "dur": 0.6
+        }
+      ]
+    },
+    {
+      "start": "@cut40.end+0.3",
+      "stains": [
+        {
+          "x": -110,
+          "y": 1480,
+          "r": 160,
+          "opacity": 0.15,
+          "rot": 12
+        }
+      ],
+      "items": [
+        {
+          "type": "text",
+          "id": "e1",
+          "text": "퇴직소득세 1,000만 원이면",
+          "x": 132,
+          "y": 196,
+          "size": 70,
+          "font": "bold",
+          "color": "ink",
+          "at": "@ex+0.2",
+          "dur": 1.0,
+          "rot": -0.6
+        },
+        {
+          "type": "text",
+          "id": "e2",
+          "text": "한 번에: 1,000만 원",
+          "x": 150,
+          "y": 330,
+          "size": 72,
+          "font": "bold",
+          "color": "ink",
+          "at": "@ex2+0.4",
+          "dur": 0.8
+        },
+        {
+          "type": "text",
+          "id": "e3",
+          "text": "연금으로: 700만 원",
+          "x": 150,
+          "y": 440,
+          "size": 80,
+          "font": "bold",
+          "color": "red",
+          "at": "@ex2.end-1.6",
+          "dur": 0.8
+        },
+        {
+          "type": "highlight",
+          "target": "e3",
+          "at": "@ex2.end-0.3",
+          "dur": 0.45
+        },
+        {
+          "type": "text",
+          "id": "e4",
+          "text": "(10년 안에 나눠 받는 경우 · 단순 예시)",
+          "x": 150,
+          "y": 550,
+          "size": 40,
+          "font": "pen",
+          "color": "gray",
+          "at": "@ex2.end",
+          "dur": 0.6
+        },
+        {
+          "type": "text",
+          "id": "k1",
+          "text": "1년에 꺼낼 한도 안에서",
+          "x": 150,
+          "y": 650,
+          "size": 60,
+          "font": "bold",
+          "color": "ink",
+          "at": "@caveat+1.2",
+          "dur": 0.9
+        },
+        {
+          "type": "text",
+          "id": "k2",
+          "text": "나눠 받아야 감면",
+          "x": 150,
+          "y": 740,
+          "size": 64,
+          "font": "bold",
+          "color": "blue",
+          "at": "@caveat.end-1.4",
+          "dur": 0.7
+        },
+        {
+          "type": "sticky",
+          "x": 150,
+          "y": 880,
+          "w": 760,
+          "h": 420,
+          "rot": -2.0,
+          "at": "@mine-0.2",
+          "items": [
+            {
+              "type": "text",
+              "id": "m1",
+              "text": "퇴직 전에",
+              "x": 46,
+              "y": 34,
+              "size": 78,
+              "font": "bold",
+              "color": "red",
+              "at": "@mine",
+              "dur": 0.4
+            },
+            {
+              "type": "text",
+              "id": "m2",
+              "text": "IRP로 받을지 먼저 정하기",
+              "x": 46,
+              "y": 150,
+              "size": 54,
+              "font": "bold",
+              "color": "ink",
+              "at": "@mine+1.4",
+              "dur": 0.9
+            },
+            {
+              "type": "text",
+              "id": "m3",
+              "text": "한도 안에서 나눠 받기",
+              "x": 46,
+              "y": 236,
+              "size": 54,
+              "font": "bold",
+              "color": "blue",
+              "at": "@mine+3.2",
+              "dur": 0.8
+            },
+            {
+              "type": "text",
+              "id": "m4",
+              "text": "저장해 두고 퇴직 전에 보기",
+              "x": 52,
+              "y": 340,
+              "size": 42,
+              "font": "pen",
+              "color": "gray",
+              "at": "@save",
+              "dur": 0.8
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "sig",
+          "text": "늦지 않았습니다. — 은퇴노트",
+          "x": 330,
+          "y": 1490,
+          "size": 60,
+          "font": "pen",
+          "color": "ink",
+          "at": "@sig",
+          "dur": 0.8,
+          "rot": -2.0
+        },
+        {
+          "type": "text",
+          "id": "handle",
+          "text": "@retire.note",
+          "x": 600,
+          "y": 1575,
+          "size": 36,
+          "font": "sans",
+          "color": "gray",
+          "at": "@sig+0.6",
+          "dur": 0.5,
+          "fade": true
+        }
+      ]
+    }
+  ]
+}

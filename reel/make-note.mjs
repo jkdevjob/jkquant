@@ -124,13 +124,17 @@ async function main(){
     const audio = await page.evaluate(() => window.__AUDIO__);
     const total = Math.round(duration * fps);
     // --frames <폴더>: 이미 찍어 둔 프레임을 다시 쓰고 소리·인코딩만 다시 한다
-    const reuse = typeof a.frames === "string" && fs.existsSync(a.frames) && fs.readdirSync(a.frames).length >= total;
-    const framesDir = reuse ? a.frames : fs.mkdtempSync(path.join(os.tmpdir(), "noteframes_"));
+    // 찍다 만 폴더를 주면 없는 장면만 이어서 찍는다(세션이 끊겨도 처음부터 다시 안 함)
+    const given = typeof a.frames === "string" && fs.existsSync(a.frames);
+    const reuse = given && fs.readdirSync(a.frames).length >= total;
+    const framesDir = given ? a.frames : fs.mkdtempSync(path.join(os.tmpdir(), "noteframes_"));
     if (!reuse){
       process.stdout.write(`▶ 노트 영상 프레임 ${total}장 (${framesDir}) `);
       for (let f = 0; f < total; f++){
+        const file = path.join(framesDir, `f_${String(f).padStart(5, "0")}.jpg`);
+        if (given && fs.existsSync(file) && fs.statSync(file).size > 0) continue;
         await page.evaluate(x => window.renderAt(x), f / fps);
-        await page.screenshot({ path: path.join(framesDir, `f_${String(f).padStart(5, "0")}.jpg`), type: "jpeg", quality: 92 });
+        await page.screenshot({ path: file, type: "jpeg", quality: 92 });
         if (f % 30 === 0) process.stdout.write("·");
       }
     } else console.log(`▶ 프레임 재사용: ${framesDir}`);
