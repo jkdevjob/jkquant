@@ -12,6 +12,8 @@ const [,,code]=process.argv;
   await p.waitForTimeout(5000);
   for (const t of ['등록안함','나중에 하기','다음에 하기']) { const l=p.getByText(t,{exact:true}); if(await l.count()){ await l.first().click(); await p.waitForTimeout(3000); console.log('clicked',t);} }
   console.log('after login URL',p.url());
+  const err=await p.evaluate(()=>[...document.querySelectorAll('[class*=error_message],[id*=err]')].map(e=>e.innerText.trim()).filter(Boolean)[0]||'');
+  if(err){ console.log('LOGIN_FAILED:',err); await p.close(); await b.close(); process.exit(3); }
   await ctx.storageState({path:'state.json'});
   await p.goto('https://blog.naver.com/MyBlog.naver',{waitUntil:'domcontentloaded'}).catch(e=>console.log('nav err',e.message));
   await p.waitForTimeout(4000);
