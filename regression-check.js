@@ -12609,6 +12609,43 @@ console.log('\n[37-목록] 모의 성과 — 모바일도 한 표(목록) · 카
   ok('[37-목록] 변이: 카드판(9a8662f) 모양을 다시 넣으면 빨간불',!(m.table&&m.noCards),JSON.stringify(m));
 }
 
+/* [37-조회] 첫 진입에 오늘 결과가 없으면 목록을 비우고 '조회 중' — 계산이 끝나면 목록 · 실패 때만 지난 결과 + 실패 안내
+   (2026-11-04 사용자: '모의투자 처음 접근했을때 바로 결과 표출 못하고 오래 걸리면 목록을 비우고 조회중 표출해') */
+console.log('\n[37-조회] 모의 성과 첫 진입 — 오늘 결과 없으면 목록 비우고 조회 중');
+{ const op=extractFn(idx,'async function openPaper()'), lh=extractFn(idx,'function paperLoadingHtml()'), lp=extractFn(idx,'function paperLoadingProgress(done,total)'), sf=extractFn(idx,'function paperStaleFail()');
+  const tick=ms=>new Promise(r=>setTimeout(r,ms));
+  const runOpen=async(src,{fresh,fail})=>{
+    let html=''; const snaps=[];
+    const el={}; const body={get innerHTML(){return html;},set innerHTML(v){ html=v; },querySelector:s=>((s==='#paper_tbody'&&html.includes('id="paper_tbody"'))||(s==='#paper_loading'&&html.includes('id="paper_loading"')))?{}:null,
+      insertAdjacentHTML(pos,x){ html=x+html; }};
+    const $=id=>id==='paper_body'?body:id==='paperModal'?{classList:{add(){},contains:()=>true}}:id==='paper_loading_n'?el:id==='paper_stale_note'?(html.includes('id="paper_stale_note"')?{style:{},set textContent(v){ html=html.replace(/(<p class="note" id="paper_stale_note"[^>]*>)[^<]*/,'$1'+v); }}:null):null;
+    const mk=n=>({tab:'inf',label:'무한매수법',name:n,sym:'SOXL',opts:['20분할'],cur:'usd',inflow:1e4,inflowWon:1e7,total:2e4,price:30,yrs:2,spanDays:730,nTrade:9,cagr:41,mdd:{pct:40,nDay:500},out:{simple:false,saved:0,withdrawn:0},ret:100,retNow:100,retOut:0,atr:80,atrTax:1,atrFee:1});
+    const today=[mk('오늘1'),mk('오늘2'),mk('오늘3')], last=[mk('지난1')];
+    let isFresh=fresh;
+    const refresh=async(force,onRows)=>{ await tick(30); if(fail) throw new Error('quote'); isFresh=true; if(onRows) onRows(today); return today; };
+    const F=new Function('$','paperEnsureCommonWon','paperRepairLegacyStarts','paperRepairCommonStarts','syncPaperStart','paperViewCacheRead','paperViewCacheLast',
+      'paperViewCacheFresh','paperWonRate','paperTitle','paperKrwRet','paperDualMoney','paperInflowText','paperUsd','paperWon','paperFxLine','paperLoadTickerNames','liveFX','refreshPaperView','paperSummary','console',
+      'let paperStaleNote=false, paperNote="";\n'+lh+'\n'+lp+'\n'+sf+'\n'+src+'\nreturn openPaper;')(
+      $,async()=>{},async()=>0,async()=>0,()=>{},()=>isFresh?{rows:today}:null,()=>({rows:last}),()=>isFresh,()=>1324,
+      x=>'<b>'+x.name+'</b>',()=>20,(x,v)=>'$'+(+v).toFixed(2),x=>'투입 '+x.inflow,v=>(+v).toFixed(2)+'$',v=>Math.round(v)+'원',()=>'',()=>{},1324,refresh,()=>[mk('덜된1')],{error(){}});
+    await F(false,false); snaps.push(html); await tick(120); snaps.push(html); return snaps; };
+  const has=(h,s)=>h.includes(s);
+  const check=async src=>{
+    const a=await runOpen(src,{fresh:false,fail:false}), b=await runOpen(src,{fresh:false,fail:true}), c=await runOpen(src,{fresh:true,fail:false});
+    return {first:has(a[0],'id="paper_loading"')&&!has(a[0],'id="paper_tbody"')&&!has(a[0],'지난1')&&!has(a[0],'덜된1'),
+            done:has(a[1],'id="paper_tbody"')&&has(a[1],'오늘3')&&!has(a[1],'id="paper_loading"'),
+            fail:has(b[1],'id="paper_tbody"')&&has(b[1],'지난1')&&has(b[1],'재계산에 실패했습니다'),
+            freshNow:has(c[0],'id="paper_tbody"')&&has(c[0],'오늘1')&&!has(c[0],'id="paper_loading"')}; };
+  PENDING.push((async()=>{ try{
+    const r=await check(op);
+    ok('[37-조회] 첫 진입·오늘 결과 없음 — 목록 비우고 조회 중(지난 결과·덜 된 줄 안 보임) → 계산 끝나면 오늘 목록',r.first&&r.done,JSON.stringify(r));
+    ok('[37-조회] 재계산 실패 때만 지난 결과 + 재계산 실패 안내 · 오늘 결과가 있으면 바로 목록',r.fail&&r.freshNow,JSON.stringify(r));
+    const mut=op.replace('      if(body) body.innerHTML=paperLoadingHtml();\n','').replace('      setTimeout(()=>{ refreshPaperView(false,redraw).then(redraw,fallback); },0);\n      return;\n','      setTimeout(()=>{ refreshPaperView(false,redraw).then(redraw,fallback); },0);\n');
+    const m=await check(mut);
+    ok('[37-조회] 변이: 조회 중 없이 지난 결과를 먼저 그리면(옛 코드) 빨간불',mut!==op&&!m.first,JSON.stringify(m));
+  }catch(e){ ok('[37-조회] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); } })());
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));

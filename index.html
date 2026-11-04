@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.114.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.114.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1701,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.114.2</b> · 2026-11-03</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.114.3</b> · 2026-11-04</div>
   </footer>
 </div>
 
@@ -8101,6 +8101,8 @@ async function paperFillAll(){
   _paperFilling=true;
   _paperSliceAt=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
   const prevTab=S.activeTab; const rows=[];
+  const _total=PAPER_TABS.reduce((a,[t])=>a+((S[t]&&S[t].sessions)||[]).filter(x=>x&&x.paper).length,0); let _done=0;
+  const _tick=()=>{ _done++; if(typeof paperLoadingProgress==='function') paperLoadingProgress(_done,_total); };
   /* 시세도 원래대로 돌려놔야 한다. lastQuote 는 전략마다 한 칸뿐인데 아래에서
      세션마다 갈아끼우므로, 다 돌고 나면 마지막 세션 종목이 남는다.
      그 상태로 openPaper 가 refreshAll 을 부르면 보고 있던 세션을 남의 종가로 그린다 —
@@ -8127,6 +8129,7 @@ async function paperFillAll(){
             await loadPlanPaperData(false);replayPlanPaper(sess);
             const r=paperStatPlan(sess);if(r){r.label=label;rows.push(r);}
           }catch(e){console.error('paperFill',tab,e);}
+          _tick();
           continue;
         }
         S.activeTab=tab; box.active=sess.id;
@@ -8143,6 +8146,7 @@ async function paperFillAll(){
           // 적립 탭은 세션마다 방식이 다르다 — 표에서 적립/거치가 구분돼야 비교가 된다
           if(r){ r.label=(tab==='dca' && (sess.settings||{}).mode==='lump') ? '거치(일시금)' : label; rows.push(r); }
         }catch(e){ console.error('paperFill',tab,e); }
+        _tick();
       }
       box.active=prevAct;
     }
@@ -8329,6 +8333,12 @@ function paperSortTable(key,th){
   });
 }
 let paperStaleNote=false;
+/* 첫 진입 '조회 중' 화면 — 목록 자리를 비우고 몇 번째 세션을 계산하는지 보인다 */
+function paperLoadingHtml(){
+  return '<div id="paper_loading"><p class="lead">🔄 모의 결과를 조회 중입니다… <b id="paper_loading_n" style="color:var(--vio)"></b></p>'
+    +'<p class="note" style="color:var(--faint)">오늘 기준으로 모의 세션을 모두 다시 계산합니다 — 끝나면 목록이 바로 나옵니다.</p></div>';
+}
+function paperLoadingProgress(done,total){ const n=$('paper_loading_n'); if(n) n.textContent=done+' / '+total+' 세션'; }
 /* 백그라운드 재계산이 실패했을 때 — '다시 계산하는 중' 이 영영 남지 않게 실패라고 바꿔 적는다 */
 function paperStaleFail(){
   const n=$('paper_stale_note'); if(!n) return false;
@@ -8344,7 +8354,7 @@ async function openPaper(){
      예전엔 먼저 '불러오는 중…' 한 줄로 비웠다 — 내려 보던 중이면 페이지가 1,585 → 844px 로 줄며 보던 자리가 맨 위로 튀었고
      (Chromium 실측 741 → 0), iPhone Safari 는 줄었다 늘어난 표의 상자 테두리·고정 칸(전략 이름)을 옛 크기로 남겨
      3줄 아래부터 이름 없는 줄이 상자 밖에 그려졌다(2026-11-03 사용자 화면). */
-  const _redraw=skipAutoRefresh&&!forceRecalc&&!!(body&&body.querySelector&&body.querySelector('#paper_tbody'));
+  const _redraw=skipAutoRefresh&&!forceRecalc&&!!(body&&body.querySelector&&(body.querySelector('#paper_tbody')||body.querySelector('#paper_loading')));
   if(body&&!_redraw){ body.innerHTML=forceRecalc
     ? '<p class="lead">전체 적용 결과를 다시 계산하는 중… <span style="color:var(--faint)">이때만 전 전략 시세·재생을 다시 확인합니다.</span></p>'
     : '<p class="lead">저장된 모의 결과를 불러오는 중…</p>'; }
@@ -8365,19 +8375,26 @@ async function openPaper(){
     /* 원장이 그 뒤 바뀌어 저장 결과의 서명이 안 맞으면, 지난 결과를 '갱신 중'으로 먼저 보이고 뒤에서 다시 계산한다.
        예전엔 여기서 paperSummary() 로 그 자리 시세를 썼는데, 시세를 아직 안 받은 탭은 전부 '시세를 못 받았습니다',
        VR 은 남의 종목/평단으로 센 엉뚱한 수익률(+18.8% ↔ 실제 +102.4%)이 30초쯤 보였다. */
+    /* 환율은 표 렌더를 막지 않고 뒤에서 갱신한다. */
+    if(typeof loadFX==='function')setTimeout(()=>{void loadFX();},0);
+    if(!skipAutoRefresh&&!paperViewCacheFresh(cache)){
+      /* 오늘 결과가 아직 없다(하루 첫 진입 · 원장이 바뀜) — 바로 보일 결과가 없으면 목록을 비우고 '조회 중'(몇 번째 세션인지)을 보인다.
+         지난 결과·그 자리 시세로 센 덜 된 줄을 먼저 보이지 않는다(2026-11-04 사용자: '바로 결과 표출 못하고 오래 걸리면 목록을 비우고 조회중 표출').
+         계산이 끝나는 즉시(onRows) 그린다 — 이미 돌던 갱신을 같이 기다리는 경우엔 onRows 가 안 불리므로 끝날 때 한 번 더 본다(두 번 그리지 않는다).
+         실패하면 그때만 지난 결과를 '재계산 실패' 안내와 함께 보인다. */
+      if(body) body.innerHTML=paperLoadingHtml();
+      let drawn=false;
+      const redraw=r=>{ if(drawn||!r)return; drawn=true; if($('paperModal').classList.contains('on'))openPaper(false,true); };
+      const fallback=async e=>{ console.error('paper refresh',e); if(drawn) return; drawn=true;
+        if(!$('paperModal').classList.contains('on')) return;
+        await openPaper(false,true);
+        if(!paperStaleFail()){ const b=$('paper_body'); if(b) b.insertAdjacentHTML('afterbegin','<p class="note" id="paper_fail_note" style="color:var(--gold)">⚠ 오늘 기준 재계산에 실패했습니다 — 새로고침하면 다시 시도합니다.</p>'); } };
+      setTimeout(()=>{ refreshPaperView(false,redraw).then(redraw,fallback); },0);
+      return;
+    }
     const last=cache?null:paperViewCacheLast();
     if(last){ rows=JSON.parse(JSON.stringify(last.rows)); paperStaleNote=true; }
     else rows=cache&&cache.rows ? JSON.parse(JSON.stringify(cache.rows)) : paperSummary();
-    if(!skipAutoRefresh&&!paperViewCacheFresh(cache)){
-      /* 하루가 바뀐 첫 진입만 백그라운드 증분 갱신. 화면 표시를 막지 않는다.
-         계산이 끝나는 즉시(onRows) 다시 그린다 — 이미 돌던 갱신을 같이 기다리는 경우엔 onRows 가 안 불리므로
-         끝날 때 한 번 더 본다(두 번 그리지는 않는다). 실패하면 '다시 계산하는 중' 을 그대로 두지 않고 실패라고 적는다. */
-      let drawn=false;
-      const redraw=r=>{ if(drawn||!r)return; drawn=true; if($('paperModal').classList.contains('on'))openPaper(false,true); };
-      setTimeout(()=>{ refreshPaperView(false,redraw).then(redraw,e=>{ console.error('paper refresh',e); paperStaleFail(); }); },0);
-    }
-    /* 환율은 표 렌더를 막지 않고 뒤에서 갱신한다. */
-    if(typeof loadFX==='function')setTimeout(()=>{void loadFX();},0);
   }
   rows=rows||[];
   /* 원화 금액은 현재 환율로 그린다 — 아직 안 왔으면 잠깐(최대 4초) 기다린다. 그래도 없으면 마지막 실제 환율로 */
