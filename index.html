@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.115.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.115.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1701,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.115.2</b> · 2026-11-05</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.115.3</b> · 2026-11-06</div>
   </footer>
 </div>
 
@@ -9557,7 +9557,6 @@ function sheetInfHTML(today){
   const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   // 원금 소진(T≥분할)이거나 배정액이 1주 값에 못 미치면 매수를 추천하지 않는다 — 소진 상태에서
   // 최소 1주를 강제하면 있지도 않은 회차를 사라고 권하게 된다. 소진이면 방어(쿼터매도)를 권한다.
-  const recoBuyQty = (!B1.spent && recoPrice>0) ? Math.floor((half&&c.avg>0?buy1/2:buy1)/recoPrice) : 0;
   let recoLine;
   if(c.reverseActive){
     /* 리버스 — 주문표와 같은 판정(imRevOrders) (제11차 1). 예전엔 여기서도 일반모드 추천(원금 소진 → 별지점 쿼터매도)을 띄워
@@ -9578,13 +9577,16 @@ function sheetInfHTML(today){
     // 쿼터매도는 별지점 그대로(매수만 −0.01) — 주문표의 '쿼터매도 (¼·별지점)'과 같은 가격이어야 한다.
     recoKind='쿼터매도'; recoQty=Math.max(1,Math.floor(c.qty/4)); recoPrice=imStarPx(c.avg,starPct(st.ticker,st.div,c.T,c.tp),curOf(st));
     recoLine=`원금 소진(T=${fmtT(c.T)}≥${st.div}) · 별지점 ${wn(recoPrice)} × ${recoQty}주 방어`;
-  }else if(recoBuyQty>=1){
-    recoQty=recoBuyQty;
-    recoLine = c.avg>0 ? `매수 ${wn(recoPrice)} × ${recoQty}주` : `첫 매수 ${wn(lastClose)} 근처 × ${recoQty}주`;
   }else{
-    recoKind='매수 없음'; recoQty=0;
-    recoLine = B1.spent ? `원금 소진 (T=${fmtT(c.T)} > ${st.div-1}) · 잔금 ${wn(c.bal)} 대기`
-                        : `배정액이 1주 값에 못 미침 · 잔금 ${wn(c.bal)} 대기`;
+    const g=B1.spent?null:infSuggest('1회매수'), b=g&&g.buyFill;
+    if(b&&b.qty>0){
+      recoKind=b.kind; recoQty=b.qty; recoPrice=g.close;
+      recoLine=`${g.closeDate} LOC 체결 예상 · ${wn(recoPrice)} × ${recoQty}주 (본 주문 ${b.mainQty} + 하방 ${b.extraQty})`;
+    }else{
+      recoKind='매수 없음'; recoQty=0;
+      recoLine = B1.spent ? `원금 소진 (T=${fmtT(c.T)} > ${st.div-1}) · 잔금 ${wn(c.bal)} 대기`
+                          : '확정 종가 조건을 만족한 매수 주문이 없습니다 · 실제 체결은 아래에서 직접 입력하세요';
+    }
   }
   let h='';
   // 추천이 '매수 없음'이면 기록할 거래가 없으므로 '이대로 기록' 버튼을 내린다 (유효한 거래종류가 아님).
@@ -9628,10 +9630,30 @@ function fieldPriceQty(prefix,colorLabel,sym){
      <div class="field"><label>수량 (주)</label><input id="${prefix}_qty" type="number" inputmode="numeric" oninput="sheetTprev()"></div>
    </div>`;
 }
-/* 기록 시트 자동 채움 — 종가와 계좌 상태를 이미 아니까 체결가·수량을 미리 넣어준다.
-   LOC 주문은 종가에 체결되고, 익절 지정가는 목표가에 체결된다(주문표·모의체결과 같은 규약). */
+/* 기록할 날의 장 시작 전 장부. 같은 날 매도/매수를 먼저 기록했어도 아침 주문을 바꾸지 않는다.
+   읽는 동안만 과거 상태를 계산하며 사용자 원장은 저장하거나 수정하지 않는다. */
+function infRecordState(date){
+  const sess=curStrat(), hist=sess.hist, asOf=_infReplayAsOf, resume=_infResume;
+  sess.hist=hist.filter(h=>h.date<date);
+  _infReplayAsOf=date; _infResume=null;
+  try{ return computeInf(); }
+  finally{ sess.hist=hist; _infReplayAsOf=asOf; _infResume=resume; }
+}
+/* 주문표와 같은 고정 LOC 주문 중 종가 조건을 만족한 수량만 합산한다.
+   종가가 내려갔다고 buy1/종가로 주문에 없던 주수를 만들면 안 된다. */
+function infRecordBuy(c, close, prevClose){
+  const st=c.st, B=imBuy1(c), first=!(c.avg>0), half=!first&&c.T<st.div/2;
+  const star=imStarPx(c.avg,starPct(st.ticker,st.div,c.T,c.tp),curOf(st));
+  const plan=(B.spent||c.reverseActive||(first&&!(prevClose>0)))?[]:imBuyOrders({first, half, buy1:B.amt, bal:c.bal,
+    firstPrice:prevClose*(1+imBigPct(st)/100), starPrice:imBuyPx(star), avg:c.avg,
+    rows:imRowsOf(st), fee:0, cur:curOf(st)});
+  const hit=plan.filter(o=>close<=o.price), mains=hit.filter(o=>!o.ladder);
+  const mainQty=mains.reduce((s,o)=>s+o.q,0), extraQty=hit.filter(o=>o.ladder).reduce((s,o)=>s+o.q,0);
+  const dT=mains.length?mains.reduce((s,o)=>s+o.dT,0):(extraQty>0?1:0);
+  return {qty:mainQty+extraQty, mainQty, extraQty, kind:dT===0.5?'절반매수':'1회매수', plan};
+}
+/* 기록 시트 자동 채움 — LOC 체결가는 확정 종가, 수량은 장 전에 만든 주문 그대로다. */
 function infSuggest(kind){
-  const c=computeInf(), st=c.st;
   const Q=quoteOf('inf');
   // LOC는 '종가' 체결이다. 예전엔 실시간가를 먼저 썼는데, 그러면 장중엔 현재가가,
   // 마감 직후엔 아직 확정 안 된 값이 체결가로 박혔다(확정 종가 105.91인 날 105.75로 채워진 건).
@@ -9640,16 +9662,19 @@ function infSuggest(kind){
   const SL=infSettledLast();
   const close=SL?+SL.close:0, closeDate=SL?SL.date:null;
   if(!(close>0)) return null;
+  const c=infRecordState(closeDate), st=c.st;
+  const prior=((Q&&Q.days)||[]).filter(d=>d.date<closeDate&&d.close>0), prevClose=prior.length?+prior[prior.length-1].close:0;
+  const buyFill=infRecordBuy(c,close,prevClose);
   const B=imBuy1(c), buy1=B.spent?0:B.amt;
   const star=imStarPx(c.avg,starPct(st.ticker,st.div,c.T,c.tp),curOf(st));   // 이번 사이클 익절% 기준 (익절 자동 · 실험)
   let eff=c.tp;
   if(st.tgtDyn===true){ const m=imMomNow(); if(m!=null) eff=imTgtOf(c.tp,m); }
   const tgt=c.avg>0?c.avg*(1+eff/100):0;
   const qSell=Math.floor(c.qty/4), sellDiv=st.div>=40?20:10;
-  const buyAt=(amt)=>({price:close, qty:Math.floor((amt||0)/close)});      // LOC = 종가 체결
+  const buyAt=(k)=>({price:close, qty:k===buyFill.kind?buyFill.qty:0});
   const S={
-    '1회매수':  buyAt(buy1),
-    '절반매수':  buyAt(buy1/2),
+    '1회매수':  buyAt('1회매수'),
+    '절반매수':  buyAt('절반매수'),
     '쿼터매도':  {price:close, qty:Math.min(qSell,c.qty)},                  // 별지점 LOC = 종가 체결
     '지정가매도':{price:tgt,   qty:Math.max(0,c.qty-qSell)},                // 익절 지정가 = 목표가 체결
     '리버스매도':{price:close, qty:c.qty>0?Math.min(c.qty,Math.floor(c.qty/sellDiv)):0},   // 내림 0주면 0 (원문)
@@ -9657,10 +9682,10 @@ function infSuggest(kind){
   };
   if(isCx(kind)){
     const bk=kind.includes('1회매수')?'1회매수':'절반매수';
-    return {sell:S['지정가매도'], buy:S[bk], close, closeDate, buy1, star, tgt, quarter:c.bal/4};
+    return {sell:S['지정가매도'], buy:S[bk], buyFill, close, closeDate, buy1, star, tgt, quarter:c.bal/4};
   }
   const r=S[kind]; if(!r) return null;
-  return {...r, close, closeDate, buy1, star, tgt, quarter:c.bal/4};
+  return {...r, buyFill, close, closeDate, buy1, star, tgt, quarter:c.bal/4};
 }
 function sheetSelInf(kind){
   shKind=kind;
@@ -9714,7 +9739,13 @@ function sheetSelInf(kind){
       const hint=$('sh_autonote');
       if(hint){ const bits=[`${g.closeDate?g.closeDate.slice(5).replace('-','/')+' ':''}종가 ${wn(g.close)}`];
         if(kind==='리버스매수') bits.push(`쿼터매수 = 잔금÷4 ${wn(g.quarter)}`);
-        else if(kind.includes('매수')&&g.buy1>0) bits.push(`1회매수금 ${wn(g.buy1)}`);
+        else if(kind.includes('매수')){
+          if(g.buy1>0) bits.push(`1회매수금 ${wn(g.buy1)}`);
+          const b=g.buyFill;
+          if(b&&b.qty>0) bits.push(`LOC 체결 예상: 본 주문 ${b.mainQty}주 + 하방 ${b.extraQty}주 = ${b.qty}주 (${b.kind})`);
+          else bits.push('종가 조건을 만족한 매수 주문 없음 · 수량은 직접 확인');
+          if(b&&b.qty>0&&!kind.includes(b.kind)) bits.push(`선택한 거래 종류와 다릅니다 · ${b.kind}를 선택하거나 실제 체결을 직접 입력하세요`);
+        }
         if(kind==='지정가매도'||isCx(kind)) bits.push(`익절가 ${wn(g.tgt)}`);
         if(kind==='쿼터매도'){
           const _c0=computeInf(),_q=Math.max(0,Math.floor((_c0.qty||0)/4));

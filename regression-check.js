@@ -8614,8 +8614,14 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
     extractFn(pl,'function calcInfState(sess)'), extractFn(pl,'function imOrders(sess,price,rows)'),
     'return {imOrders, calcInfState};'].join('\n'))();
   const sheetF=new Function('computeInf','starPct','wn', `
-    const infSettledLast=()=>({close:10}), inputNum=()=>0, curOf=()=>'usd';
+    const infSettledLast=()=>({close:10,date:'2026-01-05'}), inputNum=()=>0, curOf=()=>'usd';
+    const quoteOf=()=>({symbol:'SOXL',days:[{date:'2026-01-02',close:10},{date:'2026-01-05',close:10}]}), isCx=k=>k.includes('+');
+    const IM_BIG_DEFAULT=20, IM_ROWS_DEFAULT=3;
     ${fnOf(idx,['function kindOptHTML(name,tval,cls,reco)','function fmtT(t)','function imBuy1(c)'])}
+    ${fnOf(idx,['function infRecordState(date)','function infRecordBuy(c, close, prevClose)','function infSuggest(kind)',
+      'function imBuyOrders(o)','function imRowsOf(st)','function imBigPct(st)','function imStarPx(avg, pct, cur)',
+      'function imBuyPx(star)','function imTickRound(p, cur)','function vrTick(p, cur)','function vrTickDn(p, cur)',
+      'function imRevBuyQty(balance, buyPrice)'])}
     ${extractFn(idx,'function sheetInfHTML(today)')}
     return sheetInfHTML;`)(computeInf, starPct, v=>'$'+(+v).toFixed(2));
   const rowBars=(n,start,px)=>{ const out=[]; const d0=new Date(start+'T00:00:00Z');
@@ -12647,6 +12653,8 @@ console.log('\n[37-조회] 모의 성과 첫 진입 — 오늘 결과 없으면 
 }
 
 Promise.all(PENDING).then(()=>{
+  const rec=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-inf-record-quantity.cjs'),IDX],{encoding:'utf8'});
+  ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
   console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
