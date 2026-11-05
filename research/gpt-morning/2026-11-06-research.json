@@ -1,0 +1,5025 @@
+{
+  "schema": 1,
+  "date": "2026-11-06",
+  "preparedAt": "2026-11-05T22:14:31.133036+00:00",
+  "mainSha": "fbd4ef01438916378bc8b62c2cf4008701cc7173",
+  "summary": "11/5 데이−0.716%·BTC−0.230%, 미국11/5 SOXL0%. 시초가 저장−2.202%와 원본−1.958% 불일치. 최소상승2% 후보는 새날−1.250%로 보류. 텐배거 신규등록14·손절추적청산14, 성숙0. 운영·주문 변경없음.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "collecting",
+      "findings": "11/5 저장 시초가−2.202%(원본 이벤트−1.958%와 불일치)·데이−0.716%·BTC−0.230%; 미국11/5 SOXL무매매0%. 오늘 국내·BTC 세션은 미확정. 10/1 이후 확인 GPT 기준·그림자 +5% 달성 주0. 시초가 메인은 별도 야간작업이 combo_pb05_e0920으로 변경한 원본 잠금 확인, 본 검토 변경없음. 종가30분8일/18청산 PF1.188·MDD−3.054%, 미정산12; 익일시가33미정산. 11/5 전체 보고 영수증 푸시1/1·Telegram성공; 오늘은 제출 전. 화면은 소유자 로그인 경계만 확인.",
+      "nextTest": "시초가 원본→결과 종목 불일치를 우선 복원. 당일 미확정 세션과 미국일자를 구분하고 종가 미정산을 공식 종가/다음 시가로 연결. 오늘 예약과 실제08시 전송을 별도 확인.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://github.com/jkdevjob/jkquant/blob/afeeae79ddaccb3a109035ca32ca3aa5e0edccac/research/gpt-morning/2026-11-05-research.json",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/nightly-research/closing30.json",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "blocked",
+      "findings": "11/5 API 저장−2.202%(현대차·SK바이오팜)와 원본 앱 집계−1.958%(루닛·SK바이오팜)가 다름. 원본27/27 감시·2청산, 후보/고정baseline 이벤트 동일. 실제 메인combo_pb05_e0920 확인. 10/1 이후 저장 운영통계16매매일/89건: 일평균−0.645%·PF0.438·MDD−9.922%·최악−2.550%·+1%일0·주간−4.626%(+5%까지9.626%p). 원본불일치·버전혼합으로 누적/주간은 미검증. 저장 WF5일/39건은 기존자료 재검토이며 신규 독립OOS 아님. 1분봉10/30까지만 있어 새 날 전체 신호재생 blocked.",
+      "nextTest": "11/5 루닛 원본매수/청산이 현대차 결과로 바뀐 경로와 signalId 연결을 복원. 당시Top100·완료1분봉·원본 이벤트가 있어야 동일엔진 재생 가능. 가격/모집단 대체 금지, 기준·비용·승격관문 유지.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/opening-history/2026-11-05.json",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/opening-history/baseline-trades.csv",
+        "https://github.com/jkdevjob/jkquant/blob/fbd4ef01438916378bc8b62c2cf4008701cc7173/functions/api/scalping-live-results.js",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/opening-research/latest.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "verified",
+      "findings": "검증완료는11/5 실제09:55 Top100 원천·원본앱 신호·연구엔진·장중장부의 기준3/3·기존후보3/3 일치이며 수익성확정 아님. 기준SK바이오팜−1.25·NAVER+0.351·OCI−1.25→3슬롯−0.716%. 누적25일/69건 일평균−0.482%·PF0.425·MDD−12.088%·최악−1.25%·+1%일0·주간−2.015%(차7.015%p). 기존WF5일/14건 PF0.426. 집중후보session_min_2 새날−1.25%/PF0; 기존WF+새날6일/17건도 PF0.642·일평균−0.274%라 보류. +1%그림자24일/72건 PF0.721·일평균−0.175%, 검토표본 충족했지만 기대값/PF 미달.",
+      "nextTest": "최소상승2% 조건을 바꾸지 않고11/6 당시모집단·완료봉·3슬롯·같은0.25%비용으로 누적. 하락국면 밖에서도 동일 검증, +0.10%p 비용스트레스 병행. 양의기대값/PF1.10/표본/시간순WF/위험관문 전 새버전 제안·운영 반영 보류.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/daytrading/2026/2026-11-05.json.gz",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/daytrading-live/2026/2026-11-05.json",
+        "https://github.com/jkdevjob/jkquant/blob/fbd4ef01438916378bc8b62c2cf4008701cc7173/functions/api/_daytrading.js",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "collecting",
+      "findings": "11/5 완료API 시간청산1건−0.230%(총−0.090%−비용0.14%). 11/6은 미확정 제외. 전일확인/재생33세션+완료API의34일/21건: 일평균−0.122%·PF0.277·MDD−4.762%·최악−0.640%·+1%일0·주간−1.466%(차6.466%p). 누적운영원장 timeout→연구CSV 대체(11/4까지);10/18·19결손은0으로 채우지 않음. 과거포함 재분할holdout118일/72건은 신규독립OOS 아님. +1%그림자33일/1건·일평균−0.0118%·PF0·MDD−0.388%·주간0%, 거래표본부족.",
+      "nextTest": "누적운영원장 복구 후11/5 완료값과 대조. 11/5 전체288봉이 보관되면 고정btc_midnight_orb_v2 재생, 부분08:55분봉을 완전세션으로 쓰지 않음. ETH09시세션인 Claude와 KST일자/자금/버전 혼합 금지.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-11-05",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/crypto-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/crypto-research/baseline-trades.csv"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "collecting",
+      "findings": "미국11/5(한국11/6표시) 운영 완료API 무매매0%·신규0건. 연구재구성은 미국11/4까지로 하루 차이. 운영26미국세션/11건: 일평균−0.177%·PF0.589·MDD−9.398%·최악−1.4%·+1%일3·주간+0.769%(차4.231%p). 11/2운영+2.2%/재구성−1.4%,11/3운영−1.4%/재구성무매매 차이 보존. 연구29/40세션,WF/OOS0건. +1%그림자25일/2건·일평균+0.0568%·MDD0·+1%일1·주간0%; PF999는 손실표본없음 표시이며 우수성근거 아님.",
+      "nextTest": "미국11/5 완전78봉·당시신호·원장으로 원본엔진 재생. DST 종료 후09:30~16:00 ET=23:30~익일06:00 KST와 보고일을 구분. 운영/재구성 불일치 해소와40세션 첫WF 전에는 보류.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-11-05",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "KRX11/4 원천·11/6 03:11 KST 생성. 전일대비 등록14·관찰진입0·손절추적군청산14(−17.120~−7.345%), 보유군청산0. 총212등록/180종목·180진입/32대기, 청산누적0/57. 최장15세션;20/60/120/252/756/1260 성숙과2/5/10배최초도달 모두0. 종가MFE최대+37.317%(전일+36.060),MAE최악−36.449%·MDD−42.373%. 버전1.0.0·규칙SHA유지. 현재코드/지표/필터 해시일치; 초기생성기hash와현재는다름(영향전체감사미완료). 신규14는11/6등록으로 과거수익 소급금지. 무진입observing18제외. 수정표시0이나 전체원천 재감사 아님. 가격탐색가설·재무시점패널/시장대조 없음;계좌CAGR/초과수익 미검증.",
+      "nextTest": "다음 KRX종가가 등록일 이후인지 확인하여18기존대기+14신규의 진입을 감시. 첫20세션 평가를 기다리며 실패청산군을 같은신호일·패턴·유동성/국면으로 묶어 대조군·공시접수시점 패널을 별도버전 연구계획으로 준비. 기존규칙/관측수익 덮어쓰기 금지.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/fbd4ef01438916378bc8b62c2cf4008701cc7173/data/tenbagger/gpt/forward-latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/fbd4ef01438916378bc8b62c2cf4008701cc7173/TENBAGGER_FORWARD_RESEARCH.md",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/tenbagger-forward/snapshots/1.0.0-2026-11-03.json"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "공개대결API branch tree HTTP403. 11/5 Claude원본:시초가무매매(4<7),ETF 익일시가용 종가매수신호·오늘실현0건,ETH무매매(원본closed/review pending잔존),SOXL무매매. 종가30분 원본−0.454%인데 연구재구성recent+0.643%로 부호차이. GPT시초가메인combo/고정baseline·원본불일치,데이3슬롯과거래평균·비용/보유시간/09시코인세션 차이로 우위판정불가. Claude텐배거11/3 vs GPT11/4 원천. 수량0신호관찰을 계좌체결수익으로 부르지 않음. 양쪽 화면로그인경계만 확인;내부평가금액/동일기간수익률/실제휴대폰표시 미확인.",
+      "nextTest": "11/5 Claude15:00 실제4130→종가4115와 재구성60분봉의 신호/비용차이 규명. 대결API 복구 후 공통날짜·각당시버전·고정자본·동일비용으로 원본완료거래만 대조. 보유미정산/미진입0/조회실패를 구분.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/claude-live/2026-11-05.json",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/claude-lab/latest.json",
+        "https://jkquant.pages.dev/api/scalping-duel",
+        "https://github.com/jkdevjob/jkquant/blob/6635466fbf8b3b130e4ca1f9671ad5d784d16218/data/tenbagger-claude-forward/latest.json"
+      ]
+    }
+  ],
+  "dataSha": "6635466fbf8b3b130e4ca1f9671ad5d784d16218",
+  "initialMainSha": "575a81e3abffc449fb20dba446f3f50d33f02fb9",
+  "previousReportCommit": "afeeae79ddaccb3a109035ca32ca3aa5e0edccac",
+  "previousReportDate": "2026-11-05",
+  "decision": "새 그림자 버전 제안 보류. 현재운영은 변경하지 않음. 별도야간이 선택한시초가후보는 실제11/5메인잠금 확인; 연구검증승인과 구분.",
+  "mainRecheck": {
+    "sha": "fbd4ef01438916378bc8b62c2cf4008701cc7173",
+    "changedOnly": [
+      "data/job_archive.json",
+      "data/job_history.json"
+    ],
+    "researchRulesAndTestedSourcesUnchanged": true,
+    "initialInspectedMainSha": "575a81e3abffc449fb20dba446f3f50d33f02fb9",
+    "checkedAt": "2026-11-05T22:13:16.130Z"
+  },
+  "performanceScope": {
+    "start": "2026-10-01",
+    "weeklyStart": "2026-11-02",
+    "weeklyEnd": "2026-11-08",
+    "weeklyRule": "확인세션 일손익 복리. 시초가버전혼합/원본불일치, BTC혼합·결손은 별도미검증표시. 현재미완료를0으로채우지 않음.",
+    "averageDailyDenominators": "시초가 저장16매매일,데이25확인세션3슬롯,BTC34확인/재생세션,SOXL26미국세션. 같은분모로순위비교불가.",
+    "profitFactorDefinition": "완료 모의거래 순이익합/순손실 절댓값합. SOXL그림자999는무손실표본을뜻하며 유한PF주장아님.",
+    "costs": "시초가0.23%+편도2.5호가(VTS완전일치7<30),데이0.25%,BTC수수료0.10%+슬리피지0.04%,SOXL0.20%,텐배거편도0.5%. 실거래 비용 검증 아님.",
+    "confirmedGptBaselinePlus5Weeks": 0,
+    "confirmedDaily1ShadowPlus5Weeks": 0
+  },
+  "baseline": {
+    "opening": {
+      "days": 16,
+      "trades": 89,
+      "averageDailyPct": -0.6446600885965901,
+      "profitFactor": 0.4376692242131916,
+      "mddPct": -9.921582877255709,
+      "totalPct": -9.921582877255709,
+      "worstDayPct": -2.5497220257425637,
+      "plus1Days": 0,
+      "weekPct": -4.625539324383466,
+      "weekGapPp": 9.625539324383466,
+      "dailySeries": [
+        {
+          "date": "2026-10-02",
+          "returnPct": -1.2669821043386493,
+          "trades": 4
+        },
+        {
+          "date": "2026-10-06",
+          "returnPct": -0.26802531163796095,
+          "trades": 7
+        },
+        {
+          "date": "2026-10-07",
+          "returnPct": -2.5497220257425637,
+          "trades": 2
+        },
+        {
+          "date": "2026-10-08",
+          "returnPct": 0.15894560970601848,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-12",
+          "returnPct": 0.90765642775882,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-14",
+          "returnPct": -1.9496904557179733,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-16",
+          "returnPct": -0.5247980925841813,
+          "trades": 11
+        },
+        {
+          "date": "2026-10-21",
+          "returnPct": 0.044550419342662295,
+          "trades": 21
+        },
+        {
+          "date": "2026-10-22",
+          "returnPct": 0.6725270758122779,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-26",
+          "returnPct": 0.39240663900414363,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-27",
+          "returnPct": -0.418728812002598,
+          "trades": 24
+        },
+        {
+          "date": "2026-10-28",
+          "returnPct": -0.8373469143844413,
+          "trades": 6
+        },
+        {
+          "date": "2026-11-02",
+          "returnPct": -1.159368029739777,
+          "trades": 1
+        },
+        {
+          "date": "2026-11-03",
+          "returnPct": 0.9094693525346808,
+          "trades": 3
+        },
+        {
+          "date": "2026-11-04",
+          "returnPct": -2.2239232814280263,
+          "trades": 1
+        },
+        {
+          "date": "2026-11-05",
+          "returnPct": -2.2015319141278735,
+          "trades": 2
+        }
+      ],
+      "quality": "원본 불일치·11/5 메인 변경을 포함한 저장 운영 통계. 고정 baseline 성과/확정 주간 아님.",
+      "dailyOriginalEventPct": -1.9584276104533362,
+      "changeSincePreviousAvailable": {
+        "averageDailyPct": -0.10379145503541887,
+        "profitFactor": -0.03183808881177558,
+        "mddPct": -2.0277465889927635,
+        "plus1Days": 0
+      },
+      "plus5Weeks": 0,
+      "dailyDate": "2026-11-05",
+      "dailyStoredPct": -2.2015319141278735,
+      "currentMain": "combo_pb05_e0920",
+      "fixedBaseline": "opening_rebreak_v1@baseline",
+      "weeklyVerified": false,
+      "independentOos": "새 원본1분봉/당시모집단 부재로 blocked; 저장WF5일/39건은 기존자료 재검토"
+    },
+    "crypto": {
+      "days": 34,
+      "trades": 21,
+      "averageDailyPct": -0.12244686030952948,
+      "profitFactor": 0.27714912795407926,
+      "mddPct": -4.76188600706503,
+      "totalPct": -4.093816916459203,
+      "worstDayPct": -0.6400000000000005,
+      "plus1Days": 0,
+      "weekPct": -1.4664536715970122,
+      "weekGapPp": 6.466453671597012,
+      "dailySeries": [
+        {
+          "date": "2026-10-01",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-02",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-03",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-04",
+          "returnPct": -0.21715380480953772,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-05",
+          "returnPct": -0.3387075370632807,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-06",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-07",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-08",
+          "returnPct": 0.3248860763968754,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-09",
+          "returnPct": 0.5057891012031203,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-10",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-11",
+          "returnPct": -0.14,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-12",
+          "returnPct": 0.45468500278758717,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-13",
+          "returnPct": 0.11332999140648126,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-14",
+          "returnPct": -0.6400000000000005,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-15",
+          "returnPct": -0.5598092429949396,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-16",
+          "returnPct": 0.12736523711785586,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-17",
+          "returnPct": -0.17167277498755673,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-20",
+          "returnPct": -0.6400000000000005,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-21",
+          "returnPct": -0.16070561122063942,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-22",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-23",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-24",
+          "returnPct": -0.48291357663432943,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-25",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-26",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-27",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-28",
+          "returnPct": -0.2943783944646937,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-29",
+          "returnPct": 0.07015955534662288,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-30",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-31",
+          "returnPct": -0.6400000000000005,
+          "trades": 1
+        },
+        {
+          "date": "2026-11-01",
+          "returnPct": 0,
+          "trades": 0
+        },
+        {
+          "date": "2026-11-02",
+          "returnPct": -0.27196144430844826,
+          "trades": 1
+        },
+        {
+          "date": "2026-11-03",
+          "returnPct": -0.6400000000000005,
+          "trades": 1
+        },
+        {
+          "date": "2026-11-04",
+          "returnPct": -0.332350019617793,
+          "trades": 1
+        },
+        {
+          "date": "2026-11-05",
+          "returnPct": -0.2297558086813244,
+          "trades": 1
+        }
+      ],
+      "quality": "전일 33확인/재생세션+11/5 완료API. 누적운영원장 timeout·10/18,19 결손. 전체 실시간 전향원장 검증 아님.",
+      "changeSincePreviousAvailable": {
+        "averageDailyPct": -0.0032517863142968173,
+        "profitFactor": -0.011515483676361793,
+        "mddPct": -0.2193189971127154,
+        "plus1Days": 0
+      },
+      "plus5Weeks": 0,
+      "dailyDate": "2026-11-05",
+      "dailyNetPct": -0.2297558086813244,
+      "holdoutDays": 118,
+      "holdoutTrades": 72,
+      "holdoutScope": "과거포함 재분할70/30 holdout; 새 독립OOS 아님",
+      "missingSessionDates": [
+        "2026-10-18",
+        "2026-10-19"
+      ],
+      "weeklyVerified": false
+    },
+    "daytrading": {
+      "url": "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-11-05",
+      "status": "ok",
+      "days": 25,
+      "trades": 69,
+      "averageDailyPct": -0.482137531983185,
+      "profitFactor": 0.4246803544922731,
+      "mddPct": -12.087743771980197,
+      "worstDayPct": -1.2500000000000009,
+      "plus1Days": 0,
+      "weekPct": -2.014601571857111,
+      "weekGapPp": 7.014601571857111,
+      "sourceWarnings": [],
+      "durableDbDays": 27,
+      "changeSincePreviousAvailable": {
+        "averageDailyPct": -0.009761427702047798,
+        "profitFactor": -0.011779719508180242,
+        "mddPct": -0.6343583928394949,
+        "plus1Days": 0
+      },
+      "plus5Weeks": 0,
+      "dailyDate": "2026-11-05",
+      "dailyNetPct": -0.7164117968323334,
+      "walkForwardOosDays": 5,
+      "walkForwardOosTrades": 14,
+      "walkForwardFolds": 1
+    },
+    "soxl": {
+      "url": "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-11-05",
+      "status": "ok",
+      "days": 26,
+      "trades": 11,
+      "averageDailyPct": -0.17692307692307702,
+      "profitFactor": 0.5892857142857145,
+      "mddPct": -9.397870668170306,
+      "worstDayPct": -1.4000000000000121,
+      "plus1Days": 3,
+      "weekPct": 0.7692000000000032,
+      "weekGapPp": 4.230799999999997,
+      "sourceWarnings": [],
+      "durableDbDays": 30,
+      "changeSincePreviousAvailable": {
+        "averageDailyPct": 0.007076923076923064,
+        "profitFactor": 1.1102230246251565e-16,
+        "mddPct": 0.0,
+        "plus1Days": 0
+      },
+      "plus5Weeks": 0,
+      "dailyDate": "2026-11-05",
+      "dailyKstDisplayDate": "2026-11-06",
+      "dailyNetPct": 0,
+      "walkForwardOosDays": 0,
+      "walkForwardOosTrades": 0,
+      "validResearchSessions": 29,
+      "firstFoldRequires": 40,
+      "weeklyVerified": true
+    }
+  },
+  "shadow": {
+    "opening": {
+      "version": "opening_gapdown_reclaim_v1",
+      "status": "collecting",
+      "sourceDate": "2026-10-30",
+      "days": 19,
+      "trades": 15,
+      "tradeDays": 10,
+      "winRatePct": 13.333333333333334,
+      "avgTradePnlPct": -1.3289230494418396,
+      "avgDailyReturnPct": -0.5245748879375682,
+      "plus1Days": 0,
+      "plus1DayRatePct": 0.0,
+      "plus5Weeks": 0,
+      "weeklyAvgPct": -1.9889585786740716,
+      "lossDayAvgPct": -1.1772316364197124,
+      "worstDayPct": -2.0264693123075346,
+      "profitFactor": 0.0911215031298272,
+      "compoundReturnPct": -9.556987566993602,
+      "maxDrawdownPct": -10.121569584501355,
+      "daily": [
+        {
+          "date": "2026-10-01",
+          "returnPct": -0.9703734061930732,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-02",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-06",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-07",
+          "returnPct": -0.9866981132075475,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-08",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-13",
+          "returnPct": -0.30561491736847024,
+          "trades": 2
+        },
+        {
+          "date": "2026-10-14",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-15",
+          "returnPct": -2.0264693123075346,
+          "trades": 2
+        },
+        {
+          "date": "2026-10-16",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-19",
+          "returnPct": -1.6772369167447205,
+          "trades": 2
+        },
+        {
+          "date": "2026-10-20",
+          "returnPct": -1.5757241349777384,
+          "trades": 2
+        },
+        {
+          "date": "2026-10-21",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-22",
+          "returnPct": -0.7190816326530616,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-23",
+          "returnPct": -1.622035900624477,
+          "trades": 2
+        },
+        {
+          "date": "2026-10-26",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-27",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-28",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-29",
+          "returnPct": -0.7118503937007877,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-30",
+          "returnPct": 0.6281618569636143,
+          "trades": 1
+        }
+      ],
+      "plus1DaysPerYear": 0.0,
+      "plus5WeeksPerYear": 0.0,
+      "weekPct": null,
+      "weekGapPp": null,
+      "profitFactorMeaning": "순이익합/순손실합 절댓값",
+      "note": "고정규칙의 원천 재생 표본. 독립전향검증/증권사 체결증거 아님."
+    },
+    "daytrading": {
+      "version": "day_rs_vwap_reclaim_v1",
+      "status": "needs_revision",
+      "sourceDate": "2026-11-05",
+      "days": 24,
+      "trades": 72,
+      "tradeDays": 24,
+      "winRatePct": 36.11111111111111,
+      "avgTradePnlPct": -0.1752632487846,
+      "avgDailyReturnPct": -0.17526324878459998,
+      "plus1Days": 3,
+      "plus1DayRatePct": 12.5,
+      "plus5Weeks": 0,
+      "weeklyAvgPct": -0.7112777232447187,
+      "lossDayAvgPct": -0.6090102875328948,
+      "worstDayPct": -1.0500000000000007,
+      "profitFactor": 0.7206704079744944,
+      "compoundReturnPct": -4.192494804736535,
+      "maxDrawdownPct": -5.49453433945748,
+      "daily": [
+        {
+          "date": "2026-10-01",
+          "returnPct": 0.5500000000000007,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-02",
+          "returnPct": -0.6537325038880213,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-06",
+          "returnPct": 1.2102482591583439,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-07",
+          "returnPct": -1.0499999999999934,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-08",
+          "returnPct": -0.8739130434782599,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-12",
+          "returnPct": -1.049999999999997,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-13",
+          "returnPct": -0.2500000000000037,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-14",
+          "returnPct": -0.25,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-15",
+          "returnPct": -0.25,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-16",
+          "returnPct": -0.7304294848148261,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-19",
+          "returnPct": 1.3500000000000014,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-20",
+          "returnPct": -0.04509985587811475,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-21",
+          "returnPct": 1.3500000000000014,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-22",
+          "returnPct": -0.25,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-23",
+          "returnPct": -1.049999999999997,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-26",
+          "returnPct": -1.0500000000000007,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-27",
+          "returnPct": -1.0499999999999934,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-28",
+          "returnPct": -0.2500000000000037,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-29",
+          "returnPct": 0.5500000000000007,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-30",
+          "returnPct": -0.25,
+          "trades": 3
+        },
+        {
+          "date": "2026-11-02",
+          "returnPct": 0.8634986586403217,
+          "trades": 3
+        },
+        {
+          "date": "2026-11-03",
+          "returnPct": -1.0500000000000007,
+          "trades": 3
+        },
+        {
+          "date": "2026-11-04",
+          "returnPct": -0.25,
+          "trades": 3
+        },
+        {
+          "date": "2026-11-05",
+          "returnPct": 0.27310999943014175,
+          "trades": 3
+        }
+      ],
+      "plus1DaysPerYear": 31.25,
+      "plus5WeeksPerYear": 0.0,
+      "weekPct": -0.17318471333543917,
+      "weekGapPp": 5.17318471333544,
+      "profitFactorMeaning": "순이익합/순손실합 절댓값",
+      "note": "고정규칙의 원천 재생 표본. 독립전향검증/증권사 체결증거 아님."
+    },
+    "crypto": {
+      "version": "btc_flush_reclaim_v1",
+      "status": "collecting",
+      "sourceDate": "2026-11-04",
+      "days": 33,
+      "trades": 1,
+      "tradeDays": 1,
+      "winRatePct": 0.0,
+      "avgTradePnlPct": -0.3877971022532888,
+      "avgDailyReturnPct": -0.01175142734100875,
+      "plus1Days": 0,
+      "plus1DayRatePct": 0.0,
+      "plus5Weeks": 0,
+      "weeklyAvgPct": -0.06473753368892998,
+      "lossDayAvgPct": -0.3877971022532888,
+      "worstDayPct": -0.3877971022532888,
+      "profitFactor": 0.0,
+      "compoundReturnPct": -0.38779710225328445,
+      "maxDrawdownPct": -0.38779710225328445,
+      "daily": [
+        {
+          "date": "2026-10-01",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-02",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-03",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-04",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-05",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-06",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-07",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-08",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-09",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-10",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-11",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-12",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-13",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-14",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-15",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-16",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-17",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-20",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-21",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-22",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-23",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-24",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-25",
+          "returnPct": -0.3877971022532888,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-26",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-27",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-28",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-29",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-30",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-31",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-11-01",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-11-02",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-11-03",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-11-04",
+          "returnPct": 0.0,
+          "trades": 0
+        }
+      ],
+      "plus1DaysPerYear": 0.0,
+      "plus5WeeksPerYear": 0.0,
+      "weekPct": 0.0,
+      "weekGapPp": 5.0,
+      "profitFactorMeaning": "순이익합/순손실합 절댓값",
+      "note": "고정규칙의 원천 재생 표본. 독립전향검증/증권사 체결증거 아님."
+    },
+    "soxl": {
+      "version": "soxl_power_hour_v1",
+      "status": "collecting",
+      "sourceDate": "2026-11-04",
+      "days": 25,
+      "trades": 2,
+      "tradeDays": 2,
+      "winRatePct": 100.0,
+      "avgTradePnlPct": 0.7097323060894725,
+      "avgDailyReturnPct": 0.0567785844871578,
+      "plus1Days": 1,
+      "plus1DayRatePct": 4.0,
+      "plus5Weeks": 0,
+      "weeklyAvgPct": 0.23542412006822833,
+      "lossDayAvgPct": 0.0,
+      "worstDayPct": 0.10829476746774275,
+      "profitFactor": 999.0,
+      "compoundReturnPct": 1.4208845405133896,
+      "maxDrawdownPct": 0.0,
+      "daily": [
+        {
+          "date": "2026-10-01",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-02",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-05",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-06",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-07",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-08",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-09",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-12",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-13",
+          "returnPct": 1.3111698447112021,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-14",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-15",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-16",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-19",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-20",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-21",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-22",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-23",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-26",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-27",
+          "returnPct": 0.10829476746774275,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-28",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-29",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-10-30",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-11-02",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-11-03",
+          "returnPct": 0.0,
+          "trades": 0
+        },
+        {
+          "date": "2026-11-04",
+          "returnPct": 0.0,
+          "trades": 0
+        }
+      ],
+      "plus1DaysPerYear": 10.0,
+      "plus5WeeksPerYear": 0.0,
+      "weekPct": 0.0,
+      "weekGapPp": 5.0,
+      "profitFactorMeaning": "손실 표본 없음",
+      "note": "고정규칙의 원천 재생 표본. 독립전향검증/증권사 체결증거 아님."
+    }
+  },
+  "newTrades": {
+    "openingStored": [
+      {
+        "code": "005380",
+        "name": "현대차",
+        "variant": "combo_pb05_e0920",
+        "entryTime": 907,
+        "entryPrice": 305000,
+        "exitTime": 920,
+        "exitPrice": 301500,
+        "pnl": -2.197213114754095,
+        "friction": {
+          "fixedPct": 0.23,
+          "slippagePct": 0.819672131147541,
+          "totalPct": 1.049672131147541,
+          "source": "2.5tick-fallback",
+          "completeMatches": 7,
+          "minMatches": 30,
+          "ticksPerSide": 2.5,
+          "tickSize": 500
+        }
+      },
+      {
+        "code": "326030",
+        "name": "SK바이오팜",
+        "variant": "combo_pb05_e0920",
+        "entryTime": 917,
+        "entryPrice": 91100,
+        "exitTime": 922,
+        "exitPrice": 89800,
+        "pnl": -2.205850713501652,
+        "friction": {
+          "fixedPct": 0.23,
+          "slippagePct": 0.5488474204171241,
+          "totalPct": 0.7788474204171241,
+          "source": "2.5tick-fallback",
+          "completeMatches": 7,
+          "minMatches": 30,
+          "ticksPerSide": 2.5,
+          "tickSize": 100
+        }
+      }
+    ],
+    "openingOriginalEvents": [
+      {
+        "stage": "buy",
+        "variant": "baseline",
+        "code": "328130",
+        "name": "루닛",
+        "capturedAt": "2026-11-05T00:18:31.667Z",
+        "signal": {
+          "entryTime": 916,
+          "entryPrice": 15530,
+          "exitTime": null,
+          "exitPrice": null,
+          "pnl": null,
+          "strategyVersion": "opening_rebreak_v1",
+          "strategyParams": {
+            "obs": 3,
+            "gapMin": 2,
+            "gapMax": 7,
+            "minRise": 0.5,
+            "pbMin": 0.3,
+            "pbMax": 1,
+            "volMult": 1,
+            "amountMult": 1.2,
+            "entryCutoff": 930,
+            "stop": 1,
+            "takeProfit": 1.5,
+            "finalExit": 930
+          },
+          "evidence": {
+            "source": "Naver 1m close/volume + daily open/prevClose",
+            "gapPct": 2.581995812979754,
+            "gapMin": 2,
+            "gapMax": 7,
+            "firstHigh": 15420,
+            "peak": 15440,
+            "pullbackPct": 0.3238341968911917,
+            "pullbackMin": 0.3,
+            "pullbackMax": 1,
+            "rebreakClose": 15530,
+            "volumeRatio": 1.9269900113273608,
+            "requiredVolumeRatio": 1,
+            "amountRatio": 1.9445194851146141,
+            "requiredAmountRatio": 1.2,
+            "entryCutoff": 930,
+            "stopPct": 1,
+            "takeProfitPct": 1.5,
+            "frictionPct": 0.5519575016097875,
+            "frictionModel": {
+              "fixedPct": 0.23,
+              "slippagePct": 0.3219575016097875,
+              "totalPct": 0.5519575016097875,
+              "source": "2.5tick-fallback",
+              "completeMatches": 7,
+              "minMatches": 30,
+              "ticksPerSide": 2.5,
+              "tickSize": 10
+            },
+            "finalExit": 930
+          }
+        }
+      },
+      {
+        "stage": "buy",
+        "variant": "combo_pb05_e0920",
+        "code": "328130",
+        "name": "루닛",
+        "capturedAt": "2026-11-05T00:18:31.667Z",
+        "signal": {
+          "entryTime": 916,
+          "entryPrice": 15530,
+          "exitTime": null,
+          "exitPrice": null,
+          "pnl": null,
+          "strategyVersion": "opening_rebreak_v1",
+          "strategyParams": {
+            "obs": 3,
+            "gapMin": 2,
+            "gapMax": 7,
+            "minRise": 0.5,
+            "pbMin": 0.3,
+            "pbMax": 0.5,
+            "volMult": 1,
+            "amountMult": 1.2,
+            "entryCutoff": 920,
+            "stop": 1,
+            "takeProfit": 1.5,
+            "finalExit": 930
+          },
+          "evidence": {
+            "source": "Naver 1m close/volume + daily open/prevClose",
+            "gapPct": 2.581995812979754,
+            "gapMin": 2,
+            "gapMax": 7,
+            "firstHigh": 15420,
+            "peak": 15440,
+            "pullbackPct": 0.3238341968911917,
+            "pullbackMin": 0.3,
+            "pullbackMax": 0.5,
+            "rebreakClose": 15530,
+            "volumeRatio": 1.9269900113273608,
+            "requiredVolumeRatio": 1,
+            "amountRatio": 1.9445194851146141,
+            "requiredAmountRatio": 1.2,
+            "entryCutoff": 920,
+            "stopPct": 1,
+            "takeProfitPct": 1.5,
+            "frictionPct": 0.5519575016097875,
+            "frictionModel": {
+              "fixedPct": 0.23,
+              "slippagePct": 0.3219575016097875,
+              "totalPct": 0.5519575016097875,
+              "source": "2.5tick-fallback",
+              "completeMatches": 7,
+              "minMatches": 30,
+              "ticksPerSide": 2.5,
+              "tickSize": 10
+            },
+            "finalExit": 930
+          }
+        }
+      },
+      {
+        "stage": "buy",
+        "variant": "baseline",
+        "code": "326030",
+        "name": "SK바이오팜",
+        "capturedAt": "2026-11-05T00:19:20.680Z",
+        "signal": {
+          "entryTime": 917,
+          "entryPrice": 91100,
+          "exitTime": null,
+          "exitPrice": null,
+          "pnl": null,
+          "strategyVersion": "opening_rebreak_v1",
+          "strategyParams": {
+            "obs": 3,
+            "gapMin": 2,
+            "gapMax": 7,
+            "minRise": 0.5,
+            "pbMin": 0.3,
+            "pbMax": 1,
+            "volMult": 1,
+            "amountMult": 1.2,
+            "entryCutoff": 930,
+            "stop": 1,
+            "takeProfit": 1.5,
+            "finalExit": 930
+          },
+          "evidence": {
+            "source": "Naver 1m close/volume + daily open/prevClose",
+            "gapPct": 3.0674846625766916,
+            "gapMin": 2,
+            "gapMax": 7,
+            "firstHigh": 87500,
+            "peak": 89700,
+            "pullbackPct": 0.8918617614269788,
+            "pullbackMin": 0.3,
+            "pullbackMax": 1,
+            "rebreakClose": 91100,
+            "volumeRatio": 1.9374725435642115,
+            "requiredVolumeRatio": 1,
+            "amountRatio": 1.9854189957109074,
+            "requiredAmountRatio": 1.2,
+            "entryCutoff": 930,
+            "stopPct": 1,
+            "takeProfitPct": 1.5,
+            "frictionPct": 0.7788474204171241,
+            "frictionModel": {
+              "fixedPct": 0.23,
+              "slippagePct": 0.5488474204171241,
+              "totalPct": 0.7788474204171241,
+              "source": "2.5tick-fallback",
+              "completeMatches": 7,
+              "minMatches": 30,
+              "ticksPerSide": 2.5,
+              "tickSize": 100
+            },
+            "finalExit": 930
+          }
+        }
+      },
+      {
+        "stage": "buy",
+        "variant": "combo_pb05_e0920",
+        "code": "326030",
+        "name": "SK바이오팜",
+        "capturedAt": "2026-11-05T00:19:20.680Z",
+        "signal": {
+          "entryTime": 917,
+          "entryPrice": 91100,
+          "exitTime": null,
+          "exitPrice": null,
+          "pnl": null,
+          "strategyVersion": "opening_rebreak_v1",
+          "strategyParams": {
+            "obs": 3,
+            "gapMin": 2,
+            "gapMax": 7,
+            "minRise": 0.5,
+            "pbMin": 0.3,
+            "pbMax": 0.5,
+            "volMult": 1,
+            "amountMult": 1.2,
+            "entryCutoff": 920,
+            "stop": 1,
+            "takeProfit": 1.5,
+            "finalExit": 930
+          },
+          "evidence": {
+            "source": "Naver 1m close/volume + daily open/prevClose",
+            "gapPct": 3.0674846625766916,
+            "gapMin": 2,
+            "gapMax": 7,
+            "firstHigh": 87500,
+            "peak": 89700,
+            "pullbackPct": 0.39018952062430323,
+            "pullbackMin": 0.3,
+            "pullbackMax": 0.5,
+            "rebreakClose": 91100,
+            "volumeRatio": 1.9706583258862078,
+            "requiredVolumeRatio": 1,
+            "amountRatio": 2.010958206213497,
+            "requiredAmountRatio": 1.2,
+            "entryCutoff": 920,
+            "stopPct": 1,
+            "takeProfitPct": 1.5,
+            "frictionPct": 0.7788474204171241,
+            "frictionModel": {
+              "fixedPct": 0.23,
+              "slippagePct": 0.5488474204171241,
+              "totalPct": 0.7788474204171241,
+              "source": "2.5tick-fallback",
+              "completeMatches": 7,
+              "minMatches": 30,
+              "ticksPerSide": 2.5,
+              "tickSize": 100
+            },
+            "finalExit": 930
+          }
+        }
+      },
+      {
+        "stage": "sell",
+        "variant": "baseline",
+        "code": "328130",
+        "name": "루닛",
+        "capturedAt": "2026-11-05T00:22:22.512Z",
+        "signal": {
+          "entryTime": 916,
+          "entryPrice": 15530,
+          "exitTime": 920,
+          "exitPrice": 15350,
+          "pnl": -1.7110045074050204,
+          "strategyVersion": "opening_rebreak_v1",
+          "strategyParams": {
+            "obs": 3,
+            "gapMin": 2,
+            "gapMax": 7,
+            "minRise": 0.5,
+            "pbMin": 0.3,
+            "pbMax": 1,
+            "volMult": 1,
+            "amountMult": 1.2,
+            "entryCutoff": 930,
+            "stop": 1,
+            "takeProfit": 1.5,
+            "finalExit": 930
+          },
+          "evidence": {
+            "source": "Naver 1m close/volume + daily open/prevClose",
+            "gapPct": 2.581995812979754,
+            "gapMin": 2,
+            "gapMax": 7,
+            "firstHigh": 15420,
+            "peak": 15440,
+            "pullbackPct": 0.3238341968911917,
+            "pullbackMin": 0.3,
+            "pullbackMax": 1,
+            "rebreakClose": 15530,
+            "volumeRatio": 1.9269900113273608,
+            "requiredVolumeRatio": 1,
+            "amountRatio": 1.9445194851146141,
+            "requiredAmountRatio": 1.2,
+            "entryCutoff": 930,
+            "stopPct": 1,
+            "takeProfitPct": 1.5,
+            "frictionPct": 0.5519575016097875,
+            "frictionModel": {
+              "fixedPct": 0.23,
+              "slippagePct": 0.3219575016097875,
+              "totalPct": 0.5519575016097875,
+              "source": "2.5tick-fallback",
+              "completeMatches": 7,
+              "minMatches": 30,
+              "ticksPerSide": 2.5,
+              "tickSize": 10
+            },
+            "finalExit": 930
+          }
+        }
+      },
+      {
+        "stage": "sell",
+        "variant": "combo_pb05_e0920",
+        "code": "328130",
+        "name": "루닛",
+        "capturedAt": "2026-11-05T00:22:22.512Z",
+        "signal": {
+          "entryTime": 916,
+          "entryPrice": 15530,
+          "exitTime": 920,
+          "exitPrice": 15350,
+          "pnl": -1.7110045074050204,
+          "strategyVersion": "opening_rebreak_v1",
+          "strategyParams": {
+            "obs": 3,
+            "gapMin": 2,
+            "gapMax": 7,
+            "minRise": 0.5,
+            "pbMin": 0.3,
+            "pbMax": 0.5,
+            "volMult": 1,
+            "amountMult": 1.2,
+            "entryCutoff": 920,
+            "stop": 1,
+            "takeProfit": 1.5,
+            "finalExit": 930
+          },
+          "evidence": {
+            "source": "Naver 1m close/volume + daily open/prevClose",
+            "gapPct": 2.581995812979754,
+            "gapMin": 2,
+            "gapMax": 7,
+            "firstHigh": 15420,
+            "peak": 15440,
+            "pullbackPct": 0.3238341968911917,
+            "pullbackMin": 0.3,
+            "pullbackMax": 0.5,
+            "rebreakClose": 15530,
+            "volumeRatio": 1.9269900113273608,
+            "requiredVolumeRatio": 1,
+            "amountRatio": 1.9445194851146141,
+            "requiredAmountRatio": 1.2,
+            "entryCutoff": 920,
+            "stopPct": 1,
+            "takeProfitPct": 1.5,
+            "frictionPct": 0.5519575016097875,
+            "frictionModel": {
+              "fixedPct": 0.23,
+              "slippagePct": 0.3219575016097875,
+              "totalPct": 0.5519575016097875,
+              "source": "2.5tick-fallback",
+              "completeMatches": 7,
+              "minMatches": 30,
+              "ticksPerSide": 2.5,
+              "tickSize": 10
+            },
+            "finalExit": 930
+          }
+        }
+      },
+      {
+        "stage": "sell",
+        "variant": "baseline",
+        "code": "326030",
+        "name": "SK바이오팜",
+        "capturedAt": "2026-11-05T00:24:24.245Z",
+        "signal": {
+          "entryTime": 917,
+          "entryPrice": 91100,
+          "exitTime": 922,
+          "exitPrice": 89800,
+          "pnl": -2.205850713501652,
+          "strategyVersion": "opening_rebreak_v1",
+          "strategyParams": {
+            "obs": 3,
+            "gapMin": 2,
+            "gapMax": 7,
+            "minRise": 0.5,
+            "pbMin": 0.3,
+            "pbMax": 1,
+            "volMult": 1,
+            "amountMult": 1.2,
+            "entryCutoff": 930,
+            "stop": 1,
+            "takeProfit": 1.5,
+            "finalExit": 930
+          },
+          "evidence": {
+            "source": "Naver 1m close/volume + daily open/prevClose",
+            "gapPct": 3.0674846625766916,
+            "gapMin": 2,
+            "gapMax": 7,
+            "firstHigh": 87500,
+            "peak": 89700,
+            "pullbackPct": 0.8918617614269788,
+            "pullbackMin": 0.3,
+            "pullbackMax": 1,
+            "rebreakClose": 91100,
+            "volumeRatio": 1.9374725435642115,
+            "requiredVolumeRatio": 1,
+            "amountRatio": 1.9854189957109074,
+            "requiredAmountRatio": 1.2,
+            "entryCutoff": 930,
+            "stopPct": 1,
+            "takeProfitPct": 1.5,
+            "frictionPct": 0.7788474204171241,
+            "frictionModel": {
+              "fixedPct": 0.23,
+              "slippagePct": 0.5488474204171241,
+              "totalPct": 0.7788474204171241,
+              "source": "2.5tick-fallback",
+              "completeMatches": 7,
+              "minMatches": 30,
+              "ticksPerSide": 2.5,
+              "tickSize": 100
+            },
+            "finalExit": 930
+          }
+        }
+      },
+      {
+        "stage": "sell",
+        "variant": "combo_pb05_e0920",
+        "code": "326030",
+        "name": "SK바이오팜",
+        "capturedAt": "2026-11-05T00:24:24.245Z",
+        "signal": {
+          "entryTime": 917,
+          "entryPrice": 91100,
+          "exitTime": 922,
+          "exitPrice": 89800,
+          "pnl": -2.205850713501652,
+          "strategyVersion": "opening_rebreak_v1",
+          "strategyParams": {
+            "obs": 3,
+            "gapMin": 2,
+            "gapMax": 7,
+            "minRise": 0.5,
+            "pbMin": 0.3,
+            "pbMax": 0.5,
+            "volMult": 1,
+            "amountMult": 1.2,
+            "entryCutoff": 920,
+            "stop": 1,
+            "takeProfit": 1.5,
+            "finalExit": 930
+          },
+          "evidence": {
+            "source": "Naver 1m close/volume + daily open/prevClose",
+            "gapPct": 3.0674846625766916,
+            "gapMin": 2,
+            "gapMax": 7,
+            "firstHigh": 87500,
+            "peak": 89700,
+            "pullbackPct": 0.39018952062430323,
+            "pullbackMin": 0.3,
+            "pullbackMax": 0.5,
+            "rebreakClose": 91100,
+            "volumeRatio": 1.9706583258862078,
+            "requiredVolumeRatio": 1,
+            "amountRatio": 2.010958206213497,
+            "requiredAmountRatio": 1.2,
+            "entryCutoff": 920,
+            "stopPct": 1,
+            "takeProfitPct": 1.5,
+            "frictionPct": 0.7788474204171241,
+            "frictionModel": {
+              "fixedPct": 0.23,
+              "slippagePct": 0.5488474204171241,
+              "totalPct": 0.7788474204171241,
+              "source": "2.5tick-fallback",
+              "completeMatches": 7,
+              "minMatches": 30,
+              "ticksPerSide": 2.5,
+              "tickSize": 100
+            },
+            "finalExit": 930
+          }
+        }
+      }
+    ],
+    "daytradingOriginalReplay": [
+      {
+        "date": "2026-11-05",
+        "strategyVersion": "daytrading_vwap_breakout_v1",
+        "rank": 51,
+        "code": "326030",
+        "name": "SK바이오팜",
+        "snapshotHm": 955,
+        "signalTime": 1016,
+        "entryTime": 1017,
+        "entryPrice": 91400.0,
+        "exitTime": 1044,
+        "exitPrice": 90486.0,
+        "reason": "stop",
+        "sessionRet": 5.780346820809257,
+        "vwap": 89870.75691107861,
+        "vwapSlope": 0.10110430511072188,
+        "priorHigh": 91300.0,
+        "breakoutPct": 0.21905805038335835,
+        "volRatio": 1.6396724294813467,
+        "decisionReason": "session+vwap+slope+breakout+volume_pass",
+        "evidence": {
+          "snapshotHm": 955,
+          "sessionBase": 86500.0,
+          "sessionRet": 5.780346820809257,
+          "minSessionRet": 1.0,
+          "maxSessionRet": 8.0,
+          "vwap": 89870.75691107861,
+          "vwapSlope": 0.10110430511072188,
+          "minVwapSlope": 0.1,
+          "priorHigh": 91300.0,
+          "lookback": 20,
+          "breakoutPct": 0.21905805038335835,
+          "volumeRatio": 1.6396724294813467,
+          "requiredVolumeRatio": 1.5,
+          "entryCutoff": 1430,
+          "stopPct": 1.0,
+          "takeProfitPct": 2.0,
+          "frictionPct": 0.25,
+          "finalExit": 1510
+        },
+        "timeBucket": "10:00~10:59",
+        "volRatioBucket": "1.5~1.74",
+        "vwapSlopeBucket": "0.10~0.19",
+        "sessionRetBucket": "4+",
+        "marketRegime": "both_down",
+        "k200Ret": -3.208556149732622,
+        "kosdaq150Ret": -5.12929207291225,
+        "mfePct": 1.969365426695835,
+        "mfeTime": 1111,
+        "maePct": -2.0787746170678356,
+        "maeTime": 1458,
+        "fwd1mPct": 0.3282275711159688,
+        "fwd3mPct": 0.9846827133479286,
+        "fwd5mPct": 0.2188183807439792,
+        "fwd10mPct": 0.875273522975939,
+        "fwd20mPct": 0.1094091903719896,
+        "score": 0.06666224311846822,
+        "pnl": -1.2500000000000009,
+        "variant": "baseline"
+      },
+      {
+        "date": "2026-11-05",
+        "strategyVersion": "daytrading_vwap_breakout_v1",
+        "rank": 24,
+        "code": "035420",
+        "name": "NAVER",
+        "snapshotHm": 955,
+        "signalTime": 1105,
+        "entryTime": 1106,
+        "entryPrice": 183100.0,
+        "exitTime": 1510,
+        "exitPrice": 184200.0,
+        "reason": "time_exit",
+        "sessionRet": 1.327433628318575,
+        "vwap": 180578.53061005508,
+        "vwapSlope": 0.10141162680024074,
+        "priorHigh": 182400.0,
+        "breakoutPct": 0.43859649122806044,
+        "volRatio": 4.750588764364076,
+        "decisionReason": "session+vwap+slope+breakout+volume_pass",
+        "evidence": {
+          "snapshotHm": 955,
+          "sessionBase": 180800.0,
+          "sessionRet": 1.327433628318575,
+          "minSessionRet": 1.0,
+          "maxSessionRet": 8.0,
+          "vwap": 180578.53061005508,
+          "vwapSlope": 0.10141162680024074,
+          "minVwapSlope": 0.1,
+          "priorHigh": 182400.0,
+          "lookback": 20,
+          "breakoutPct": 0.43859649122806044,
+          "volumeRatio": 4.750588764364076,
+          "requiredVolumeRatio": 1.5,
+          "entryCutoff": 1430,
+          "stopPct": 1.0,
+          "takeProfitPct": 2.0,
+          "frictionPct": 0.25,
+          "finalExit": 1510
+        },
+        "timeBucket": "11:00~12:59",
+        "volRatioBucket": "2.5+",
+        "vwapSlopeBucket": "0.10~0.19",
+        "sessionRetBucket": "1~1.99",
+        "marketRegime": "both_down",
+        "k200Ret": -1.7351234497667511,
+        "kosdaq150Ret": -4.366256888512076,
+        "mfePct": 1.5838339705079196,
+        "mfeTime": 1244,
+        "maePct": -0.2730748225013624,
+        "maeTime": 1108,
+        "fwd1mPct": -0.16384489350081965,
+        "fwd3mPct": -0.10922992900054274,
+        "fwd5mPct": 0.05461496450027692,
+        "fwd10mPct": 0.0,
+        "fwd20mPct": 0.1365374112506812,
+        "score": 0.3514447068427296,
+        "pnl": 0.3507646095030017,
+        "variant": "baseline"
+      },
+      {
+        "date": "2026-11-05",
+        "strategyVersion": "daytrading_vwap_breakout_v1",
+        "rank": 31,
+        "code": "010060",
+        "name": "OCI홀딩스",
+        "snapshotHm": 955,
+        "signalTime": 1126,
+        "entryTime": 1127,
+        "entryPrice": 210500.0,
+        "exitTime": 1129,
+        "exitPrice": 208395.0,
+        "reason": "stop",
+        "sessionRet": 1.4457831325301207,
+        "vwap": 203975.0032317139,
+        "vwapSlope": 0.17499631201889354,
+        "priorHigh": 208500.0,
+        "breakoutPct": 0.9592326139088669,
+        "volRatio": 7.115169964485033,
+        "decisionReason": "session+vwap+slope+breakout+volume_pass",
+        "evidence": {
+          "snapshotHm": 955,
+          "sessionBase": 207500.0,
+          "sessionRet": 1.4457831325301207,
+          "minSessionRet": 1.0,
+          "maxSessionRet": 8.0,
+          "vwap": 203975.0032317139,
+          "vwapSlope": 0.17499631201889354,
+          "minVwapSlope": 0.1,
+          "priorHigh": 208500.0,
+          "lookback": 20,
+          "breakoutPct": 0.9592326139088669,
+          "volumeRatio": 7.115169964485033,
+          "requiredVolumeRatio": 1.5,
+          "entryCutoff": 1430,
+          "stopPct": 1.0,
+          "takeProfitPct": 2.0,
+          "frictionPct": 0.25,
+          "finalExit": 1510
+        },
+        "timeBucket": "11:00~12:59",
+        "volRatioBucket": "2.5+",
+        "vwapSlopeBucket": "0.10~0.19",
+        "sessionRetBucket": "1~1.99",
+        "marketRegime": "both_down",
+        "k200Ret": -1.103652292638524,
+        "kosdaq150Ret": -3.1793132683340386,
+        "mfePct": 0.23752969121140222,
+        "mfeTime": 1242,
+        "maePct": -4.513064133016631,
+        "maeTime": 1456,
+        "fwd1mPct": -0.7125890736342066,
+        "fwd3mPct": -1.187648456057011,
+        "fwd5mPct": -0.7125890736342066,
+        "fwd10mPct": -0.9501187648456089,
+        "fwd20mPct": -0.47505938242280443,
+        "score": 1.6156673729923539,
+        "pnl": -1.2500000000000009,
+        "variant": "baseline"
+      }
+    ],
+    "focusedCandidateReplay": [
+      {
+        "date": "2026-11-05",
+        "strategyVersion": "daytrading_vwap_breakout_v1",
+        "rank": 51,
+        "code": "326030",
+        "name": "SK바이오팜",
+        "snapshotHm": 955,
+        "signalTime": 1016,
+        "entryTime": 1017,
+        "entryPrice": 91400.0,
+        "exitTime": 1044,
+        "exitPrice": 90486.0,
+        "reason": "stop",
+        "sessionRet": 5.780346820809257,
+        "vwap": 89870.75691107861,
+        "vwapSlope": 0.10110430511072188,
+        "priorHigh": 91300.0,
+        "breakoutPct": 0.21905805038335835,
+        "volRatio": 1.6396724294813467,
+        "decisionReason": "session+vwap+slope+breakout+volume_pass",
+        "evidence": {
+          "snapshotHm": 955,
+          "sessionBase": 86500.0,
+          "sessionRet": 5.780346820809257,
+          "minSessionRet": 2.0,
+          "maxSessionRet": 8.0,
+          "vwap": 89870.75691107861,
+          "vwapSlope": 0.10110430511072188,
+          "minVwapSlope": 0.1,
+          "priorHigh": 91300.0,
+          "lookback": 20,
+          "breakoutPct": 0.21905805038335835,
+          "volumeRatio": 1.6396724294813467,
+          "requiredVolumeRatio": 1.5,
+          "entryCutoff": 1430,
+          "stopPct": 1.0,
+          "takeProfitPct": 2.0,
+          "frictionPct": 0.25,
+          "finalExit": 1510
+        },
+        "timeBucket": "10:00~10:59",
+        "volRatioBucket": "1.5~1.74",
+        "vwapSlopeBucket": "0.10~0.19",
+        "sessionRetBucket": "4+",
+        "marketRegime": "both_down",
+        "k200Ret": -3.208556149732622,
+        "kosdaq150Ret": -5.12929207291225,
+        "mfePct": 1.969365426695835,
+        "mfeTime": 1111,
+        "maePct": -2.0787746170678356,
+        "maeTime": 1458,
+        "fwd1mPct": 0.3282275711159688,
+        "fwd3mPct": 0.9846827133479286,
+        "fwd5mPct": 0.2188183807439792,
+        "fwd10mPct": 0.875273522975939,
+        "fwd20mPct": 0.1094091903719896,
+        "score": 0.06666224311846822,
+        "pnl": -1.2500000000000009,
+        "variant": "session_min_2"
+      },
+      {
+        "date": "2026-11-05",
+        "strategyVersion": "daytrading_vwap_breakout_v1",
+        "rank": 12,
+        "code": "009830",
+        "name": "한화솔루션",
+        "snapshotHm": 955,
+        "signalTime": 1144,
+        "entryTime": 1145,
+        "entryPrice": 28300.0,
+        "exitTime": 1148,
+        "exitPrice": 28017.0,
+        "reason": "stop",
+        "sessionRet": 4.227941176470584,
+        "vwap": 27328.372737539983,
+        "vwapSlope": 0.11931601428998295,
+        "priorHigh": 28150.0,
+        "breakoutPct": 0.7104795737122638,
+        "volRatio": 1.978764826175869,
+        "decisionReason": "session+vwap+slope+breakout+volume_pass",
+        "evidence": {
+          "snapshotHm": 955,
+          "sessionBase": 27200.0,
+          "sessionRet": 4.227941176470584,
+          "minSessionRet": 2.0,
+          "maxSessionRet": 8.0,
+          "vwap": 27328.372737539983,
+          "vwapSlope": 0.11931601428998295,
+          "minVwapSlope": 0.1,
+          "priorHigh": 28150.0,
+          "lookback": 20,
+          "breakoutPct": 0.7104795737122638,
+          "volumeRatio": 1.978764826175869,
+          "requiredVolumeRatio": 1.5,
+          "entryCutoff": 1430,
+          "stopPct": 1.0,
+          "takeProfitPct": 2.0,
+          "frictionPct": 0.25,
+          "finalExit": 1510
+        },
+        "timeBucket": "11:00~12:59",
+        "volRatioBucket": "1.75~2.49",
+        "vwapSlopeBucket": "0.10~0.19",
+        "sessionRetBucket": "4+",
+        "marketRegime": "both_down",
+        "k200Ret": -1.3880987598134054,
+        "kosdaq150Ret": -3.6456125476897028,
+        "mfePct": 1.0600706713780994,
+        "mfeTime": 1241,
+        "maePct": -6.0070671378091856,
+        "maeTime": 1458,
+        "fwd1mPct": 0.35335689045936647,
+        "fwd3mPct": -0.8833922261484051,
+        "fwd5mPct": -1.0600706713780883,
+        "fwd10mPct": -0.7950530035335635,
+        "fwd20mPct": -1.7667844522968212,
+        "score": 0.25478847065817334,
+        "pnl": -1.2500000000000009,
+        "variant": "session_min_2"
+      },
+      {
+        "date": "2026-11-05",
+        "strategyVersion": "daytrading_vwap_breakout_v1",
+        "rank": 23,
+        "code": "180640",
+        "name": "한진칼",
+        "snapshotHm": 955,
+        "signalTime": 1402,
+        "entryTime": 1403,
+        "entryPrice": 194800.0,
+        "exitTime": 1406,
+        "exitPrice": 192852.0,
+        "reason": "stop",
+        "sessionRet": 2.6343519494204326,
+        "vwap": 187536.369045026,
+        "vwapSlope": 0.15102835553522098,
+        "priorHigh": 194400.0,
+        "breakoutPct": 0.2057613168724215,
+        "volRatio": 5.807640824208377,
+        "decisionReason": "session+vwap+slope+breakout+volume_pass",
+        "evidence": {
+          "snapshotHm": 955,
+          "sessionBase": 189800.0,
+          "sessionRet": 2.6343519494204326,
+          "minSessionRet": 2.0,
+          "maxSessionRet": 8.0,
+          "vwap": 187536.369045026,
+          "vwapSlope": 0.15102835553522098,
+          "minVwapSlope": 0.1,
+          "priorHigh": 194400.0,
+          "lookback": 20,
+          "breakoutPct": 0.2057613168724215,
+          "volumeRatio": 5.807640824208377,
+          "requiredVolumeRatio": 1.5,
+          "entryCutoff": 1430,
+          "stopPct": 1.0,
+          "takeProfitPct": 2.0,
+          "frictionPct": 0.25,
+          "finalExit": 1510
+        },
+        "timeBucket": "14:00+",
+        "volRatioBucket": "2.5+",
+        "vwapSlopeBucket": "0.10~0.19",
+        "sessionRetBucket": "2~3.99",
+        "marketRegime": "both_down",
+        "k200Ret": -3.3906018887245426,
+        "kosdaq150Ret": -5.12929207291225,
+        "mfePct": 0.4106776180698102,
+        "mfeTime": 1444,
+        "maePct": -3.3880903490759784,
+        "maeTime": 1503,
+        "fwd1mPct": 0.2053388090349051,
+        "fwd3mPct": -1.2320328542094416,
+        "fwd5mPct": -0.6160164271047264,
+        "fwd10mPct": -0.9753593429158158,
+        "fwd20mPct": -1.3347022587268942,
+        "score": 0.2986014613469622,
+        "pnl": -1.2500000000000009,
+        "variant": "session_min_2"
+      }
+    ],
+    "daily1Shadow": [
+      {
+        "date": "2026-11-05",
+        "strategy": "daytrading",
+        "strategyVersion": "day_rs_vwap_reclaim_v1",
+        "code": "086790",
+        "name": "하나금융지주",
+        "rank": 59,
+        "signalTime": 1007,
+        "entryTime": 1008,
+        "entryPrice": 123400.0,
+        "sessionRetPct": 1.4802631578947345,
+        "marketRetPct": -2.964785937890035,
+        "relativeStrengthPctPoint": 4.4450490957847695,
+        "signalVwap": 123237.18853997781,
+        "volumeRatio": 1.2492968837889527,
+        "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+        "sample": "outOfSample",
+        "exitTime": 1019,
+        "exitPrice": 122412.8,
+        "grossPnlPct": -0.8000000000000007,
+        "frictionPct": 0.25,
+        "pnlPct": -1.0500000000000007,
+        "reason": "stop"
+      },
+      {
+        "date": "2026-11-05",
+        "strategy": "daytrading",
+        "strategyVersion": "day_rs_vwap_reclaim_v1",
+        "code": "316140",
+        "name": "우리금융지주",
+        "rank": 56,
+        "signalTime": 1026,
+        "entryTime": 1027,
+        "entryPrice": 32150.0,
+        "sessionRetPct": 1.7405063291139333,
+        "marketRetPct": -3.598069982279034,
+        "relativeStrengthPctPoint": 5.338576311392967,
+        "signalVwap": 32129.777064697217,
+        "volumeRatio": 2.0021685521555983,
+        "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+        "sample": "outOfSample",
+        "exitTime": 1126,
+        "exitPrice": 32500.0,
+        "grossPnlPct": 1.0886469673405896,
+        "frictionPct": 0.25,
+        "pnlPct": 0.8386469673405896,
+        "reason": "time_exit"
+      },
+      {
+        "date": "2026-11-05",
+        "strategy": "daytrading",
+        "strategyVersion": "day_rs_vwap_reclaim_v1",
+        "code": "128940",
+        "name": "한미약품",
+        "rank": 34,
+        "signalTime": 1029,
+        "entryTime": 1030,
+        "entryPrice": 468500.0,
+        "sessionRetPct": 1.0787486515641875,
+        "marketRetPct": -3.7576676758589502,
+        "relativeStrengthPctPoint": 4.836416327423137,
+        "signalVwap": 467209.6514205118,
+        "volumeRatio": 2.793417922283902,
+        "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+        "sample": "outOfSample",
+        "exitTime": 1129,
+        "exitPrice": 474500.0,
+        "grossPnlPct": 1.2806830309498363,
+        "frictionPct": 0.25,
+        "pnlPct": 1.0306830309498363,
+        "reason": "time_exit"
+      }
+    ],
+    "cryptoLatestOperational": {
+      "date": "2026-11-05",
+      "entryTimeKst": "00:10",
+      "exitTimeKst": "01:05",
+      "entryPrice": 108071000,
+      "exitPrice": 107974000,
+      "grossPnlPct": -0.08975580868132438,
+      "frictionPct": 0.14,
+      "pnlPct": -0.2297558086813244,
+      "reason": "time_exit",
+      "source": "global-paper-live completed API; research partial08:55bars match trade path but not full-session replay"
+    },
+    "soxl": [],
+    "currentSessionExcluded": "11/6 국내·BTC는 미확정;SOXL 미국11/5는완료0%"
+  },
+  "focusedReview": {
+    "plan": {
+      "registeredAt": "2026-11-05T22:05:07.803Z",
+      "hypothesis": "기존 데이 후보 session_min_2(당일 상승률 최소 2%)가 기존 WF 다음 신규일 11/5에서도 약한 반등 진입을 줄여 동일 3슬롯 기준의 비용 후 일손익·PF·MDD를 개선하는지 검증한다. 11/4까지 WF는 기준 PF0.426/후보0.883로 미달. 신규일을 본 뒤 조건을 조정하지 않는다.",
+      "dates": "완료 WF 10/29~11/4(이미 관측)와 다음 신규일11/5를 별도로 평가. 새 날1일은 독립 검증완료 아님.",
+      "costs": "왕복0.25% 동일; 진입은 완료봉 후 다음1분봉 시가; 동봉손절우선, 3슬롯/최대3건. 비용+0.10%p 스트레스는 민감도일 뿐 실제비용 아님.",
+      "regimes": "11/5 실제09:55 Top100 모집단·시장ETF분봉, 신호시점 k200/kosdaq150 국면을 사용. 사후 종가Top100/임의시세 사용금지.",
+      "rules": "기준과 min_session_ret만1→2. 다른손절1/익절2/진입14:30/청산15:10/거래량1.5/VWAP기울기0.1 그대로.",
+      "frequency": "빈 슬롯을 포함한3슬롯, 모든 신호와 탈락·무매매 보존. 좋은날/종목 선택금지.",
+      "gate": "20전향일·후보30건·PF≥1.10·양의일기대값·기준대비MDD/최악일악화없음·완료시간순WF·7선두. 신규1일로 승격 불가. baseline/운영 변경없음."
+    },
+    "testedAt": "2026-11-05T22:13:17.908643+00:00",
+    "engines": [
+      "current main functions/api/_daytrading.js daySignal/dayVariant",
+      "current main scripts/backtest_daytrading.py trades_for_variant/summary",
+      "current main scripts/daily1_shadow_lab.py day_candidate/metrics"
+    ],
+    "rawSource": {
+      "path": "data/daytrading/2026/2026-11-05.json.gz",
+      "gitBlobSha": "a2042797610f1f54838d91f806a4651771d0c9ce",
+      "snapshotHm": 955,
+      "snapshotAt": "2026-11-05T00:55:45.201Z",
+      "collectedAt": "2026-11-05T17:25:39.462206+09:00",
+      "universeCount": 100,
+      "errors": []
+    },
+    "newDayReplay": {
+      "baseline": {
+        "trades": [
+          {
+            "date": "2026-11-05",
+            "strategyVersion": "daytrading_vwap_breakout_v1",
+            "rank": 51,
+            "code": "326030",
+            "name": "SK바이오팜",
+            "snapshotHm": 955,
+            "signalTime": 1016,
+            "entryTime": 1017,
+            "entryPrice": 91400.0,
+            "exitTime": 1044,
+            "exitPrice": 90486.0,
+            "reason": "stop",
+            "sessionRet": 5.780346820809257,
+            "vwap": 89870.75691107861,
+            "vwapSlope": 0.10110430511072188,
+            "priorHigh": 91300.0,
+            "breakoutPct": 0.21905805038335835,
+            "volRatio": 1.6396724294813467,
+            "decisionReason": "session+vwap+slope+breakout+volume_pass",
+            "evidence": {
+              "snapshotHm": 955,
+              "sessionBase": 86500.0,
+              "sessionRet": 5.780346820809257,
+              "minSessionRet": 1.0,
+              "maxSessionRet": 8.0,
+              "vwap": 89870.75691107861,
+              "vwapSlope": 0.10110430511072188,
+              "minVwapSlope": 0.1,
+              "priorHigh": 91300.0,
+              "lookback": 20,
+              "breakoutPct": 0.21905805038335835,
+              "volumeRatio": 1.6396724294813467,
+              "requiredVolumeRatio": 1.5,
+              "entryCutoff": 1430,
+              "stopPct": 1.0,
+              "takeProfitPct": 2.0,
+              "frictionPct": 0.25,
+              "finalExit": 1510
+            },
+            "timeBucket": "10:00~10:59",
+            "volRatioBucket": "1.5~1.74",
+            "vwapSlopeBucket": "0.10~0.19",
+            "sessionRetBucket": "4+",
+            "marketRegime": "both_down",
+            "k200Ret": -3.208556149732622,
+            "kosdaq150Ret": -5.12929207291225,
+            "mfePct": 1.969365426695835,
+            "mfeTime": 1111,
+            "maePct": -2.0787746170678356,
+            "maeTime": 1458,
+            "fwd1mPct": 0.3282275711159688,
+            "fwd3mPct": 0.9846827133479286,
+            "fwd5mPct": 0.2188183807439792,
+            "fwd10mPct": 0.875273522975939,
+            "fwd20mPct": 0.1094091903719896,
+            "score": 0.06666224311846822,
+            "pnl": -1.2500000000000009,
+            "variant": "baseline"
+          },
+          {
+            "date": "2026-11-05",
+            "strategyVersion": "daytrading_vwap_breakout_v1",
+            "rank": 24,
+            "code": "035420",
+            "name": "NAVER",
+            "snapshotHm": 955,
+            "signalTime": 1105,
+            "entryTime": 1106,
+            "entryPrice": 183100.0,
+            "exitTime": 1510,
+            "exitPrice": 184200.0,
+            "reason": "time_exit",
+            "sessionRet": 1.327433628318575,
+            "vwap": 180578.53061005508,
+            "vwapSlope": 0.10141162680024074,
+            "priorHigh": 182400.0,
+            "breakoutPct": 0.43859649122806044,
+            "volRatio": 4.750588764364076,
+            "decisionReason": "session+vwap+slope+breakout+volume_pass",
+            "evidence": {
+              "snapshotHm": 955,
+              "sessionBase": 180800.0,
+              "sessionRet": 1.327433628318575,
+              "minSessionRet": 1.0,
+              "maxSessionRet": 8.0,
+              "vwap": 180578.53061005508,
+              "vwapSlope": 0.10141162680024074,
+              "minVwapSlope": 0.1,
+              "priorHigh": 182400.0,
+              "lookback": 20,
+              "breakoutPct": 0.43859649122806044,
+              "volumeRatio": 4.750588764364076,
+              "requiredVolumeRatio": 1.5,
+              "entryCutoff": 1430,
+              "stopPct": 1.0,
+              "takeProfitPct": 2.0,
+              "frictionPct": 0.25,
+              "finalExit": 1510
+            },
+            "timeBucket": "11:00~12:59",
+            "volRatioBucket": "2.5+",
+            "vwapSlopeBucket": "0.10~0.19",
+            "sessionRetBucket": "1~1.99",
+            "marketRegime": "both_down",
+            "k200Ret": -1.7351234497667511,
+            "kosdaq150Ret": -4.366256888512076,
+            "mfePct": 1.5838339705079196,
+            "mfeTime": 1244,
+            "maePct": -0.2730748225013624,
+            "maeTime": 1108,
+            "fwd1mPct": -0.16384489350081965,
+            "fwd3mPct": -0.10922992900054274,
+            "fwd5mPct": 0.05461496450027692,
+            "fwd10mPct": 0.0,
+            "fwd20mPct": 0.1365374112506812,
+            "score": 0.3514447068427296,
+            "pnl": 0.3507646095030017,
+            "variant": "baseline"
+          },
+          {
+            "date": "2026-11-05",
+            "strategyVersion": "daytrading_vwap_breakout_v1",
+            "rank": 31,
+            "code": "010060",
+            "name": "OCI홀딩스",
+            "snapshotHm": 955,
+            "signalTime": 1126,
+            "entryTime": 1127,
+            "entryPrice": 210500.0,
+            "exitTime": 1129,
+            "exitPrice": 208395.0,
+            "reason": "stop",
+            "sessionRet": 1.4457831325301207,
+            "vwap": 203975.0032317139,
+            "vwapSlope": 0.17499631201889354,
+            "priorHigh": 208500.0,
+            "breakoutPct": 0.9592326139088669,
+            "volRatio": 7.115169964485033,
+            "decisionReason": "session+vwap+slope+breakout+volume_pass",
+            "evidence": {
+              "snapshotHm": 955,
+              "sessionBase": 207500.0,
+              "sessionRet": 1.4457831325301207,
+              "minSessionRet": 1.0,
+              "maxSessionRet": 8.0,
+              "vwap": 203975.0032317139,
+              "vwapSlope": 0.17499631201889354,
+              "minVwapSlope": 0.1,
+              "priorHigh": 208500.0,
+              "lookback": 20,
+              "breakoutPct": 0.9592326139088669,
+              "volumeRatio": 7.115169964485033,
+              "requiredVolumeRatio": 1.5,
+              "entryCutoff": 1430,
+              "stopPct": 1.0,
+              "takeProfitPct": 2.0,
+              "frictionPct": 0.25,
+              "finalExit": 1510
+            },
+            "timeBucket": "11:00~12:59",
+            "volRatioBucket": "2.5+",
+            "vwapSlopeBucket": "0.10~0.19",
+            "sessionRetBucket": "1~1.99",
+            "marketRegime": "both_down",
+            "k200Ret": -1.103652292638524,
+            "kosdaq150Ret": -3.1793132683340386,
+            "mfePct": 0.23752969121140222,
+            "mfeTime": 1242,
+            "maePct": -4.513064133016631,
+            "maeTime": 1456,
+            "fwd1mPct": -0.7125890736342066,
+            "fwd3mPct": -1.187648456057011,
+            "fwd5mPct": -0.7125890736342066,
+            "fwd10mPct": -0.9501187648456089,
+            "fwd20mPct": -0.47505938242280443,
+            "score": 1.6156673729923539,
+            "pnl": -1.2500000000000009,
+            "variant": "baseline"
+          }
+        ],
+        "summary": {
+          "days": 1,
+          "trades": 3,
+          "winRate": 33.33333333333333,
+          "avgPnl": -0.7164117968323334,
+          "medianPnl": -1.2500000000000009,
+          "sumPnl": -2.149235390497,
+          "profitFactor": 0.1403058438012006,
+          "portfolioReturnPct": -0.716411796832328,
+          "portfolioMddPct": -0.716411796832328,
+          "tradesPerDay": 3.0,
+          "daily": [
+            {
+              "date": "2026-11-05",
+              "returnPct": -0.7164117968323334,
+              "trades": 3
+            }
+          ]
+        }
+      },
+      "session_min_2": {
+        "trades": [
+          {
+            "date": "2026-11-05",
+            "strategyVersion": "daytrading_vwap_breakout_v1",
+            "rank": 51,
+            "code": "326030",
+            "name": "SK바이오팜",
+            "snapshotHm": 955,
+            "signalTime": 1016,
+            "entryTime": 1017,
+            "entryPrice": 91400.0,
+            "exitTime": 1044,
+            "exitPrice": 90486.0,
+            "reason": "stop",
+            "sessionRet": 5.780346820809257,
+            "vwap": 89870.75691107861,
+            "vwapSlope": 0.10110430511072188,
+            "priorHigh": 91300.0,
+            "breakoutPct": 0.21905805038335835,
+            "volRatio": 1.6396724294813467,
+            "decisionReason": "session+vwap+slope+breakout+volume_pass",
+            "evidence": {
+              "snapshotHm": 955,
+              "sessionBase": 86500.0,
+              "sessionRet": 5.780346820809257,
+              "minSessionRet": 2.0,
+              "maxSessionRet": 8.0,
+              "vwap": 89870.75691107861,
+              "vwapSlope": 0.10110430511072188,
+              "minVwapSlope": 0.1,
+              "priorHigh": 91300.0,
+              "lookback": 20,
+              "breakoutPct": 0.21905805038335835,
+              "volumeRatio": 1.6396724294813467,
+              "requiredVolumeRatio": 1.5,
+              "entryCutoff": 1430,
+              "stopPct": 1.0,
+              "takeProfitPct": 2.0,
+              "frictionPct": 0.25,
+              "finalExit": 1510
+            },
+            "timeBucket": "10:00~10:59",
+            "volRatioBucket": "1.5~1.74",
+            "vwapSlopeBucket": "0.10~0.19",
+            "sessionRetBucket": "4+",
+            "marketRegime": "both_down",
+            "k200Ret": -3.208556149732622,
+            "kosdaq150Ret": -5.12929207291225,
+            "mfePct": 1.969365426695835,
+            "mfeTime": 1111,
+            "maePct": -2.0787746170678356,
+            "maeTime": 1458,
+            "fwd1mPct": 0.3282275711159688,
+            "fwd3mPct": 0.9846827133479286,
+            "fwd5mPct": 0.2188183807439792,
+            "fwd10mPct": 0.875273522975939,
+            "fwd20mPct": 0.1094091903719896,
+            "score": 0.06666224311846822,
+            "pnl": -1.2500000000000009,
+            "variant": "session_min_2"
+          },
+          {
+            "date": "2026-11-05",
+            "strategyVersion": "daytrading_vwap_breakout_v1",
+            "rank": 12,
+            "code": "009830",
+            "name": "한화솔루션",
+            "snapshotHm": 955,
+            "signalTime": 1144,
+            "entryTime": 1145,
+            "entryPrice": 28300.0,
+            "exitTime": 1148,
+            "exitPrice": 28017.0,
+            "reason": "stop",
+            "sessionRet": 4.227941176470584,
+            "vwap": 27328.372737539983,
+            "vwapSlope": 0.11931601428998295,
+            "priorHigh": 28150.0,
+            "breakoutPct": 0.7104795737122638,
+            "volRatio": 1.978764826175869,
+            "decisionReason": "session+vwap+slope+breakout+volume_pass",
+            "evidence": {
+              "snapshotHm": 955,
+              "sessionBase": 27200.0,
+              "sessionRet": 4.227941176470584,
+              "minSessionRet": 2.0,
+              "maxSessionRet": 8.0,
+              "vwap": 27328.372737539983,
+              "vwapSlope": 0.11931601428998295,
+              "minVwapSlope": 0.1,
+              "priorHigh": 28150.0,
+              "lookback": 20,
+              "breakoutPct": 0.7104795737122638,
+              "volumeRatio": 1.978764826175869,
+              "requiredVolumeRatio": 1.5,
+              "entryCutoff": 1430,
+              "stopPct": 1.0,
+              "takeProfitPct": 2.0,
+              "frictionPct": 0.25,
+              "finalExit": 1510
+            },
+            "timeBucket": "11:00~12:59",
+            "volRatioBucket": "1.75~2.49",
+            "vwapSlopeBucket": "0.10~0.19",
+            "sessionRetBucket": "4+",
+            "marketRegime": "both_down",
+            "k200Ret": -1.3880987598134054,
+            "kosdaq150Ret": -3.6456125476897028,
+            "mfePct": 1.0600706713780994,
+            "mfeTime": 1241,
+            "maePct": -6.0070671378091856,
+            "maeTime": 1458,
+            "fwd1mPct": 0.35335689045936647,
+            "fwd3mPct": -0.8833922261484051,
+            "fwd5mPct": -1.0600706713780883,
+            "fwd10mPct": -0.7950530035335635,
+            "fwd20mPct": -1.7667844522968212,
+            "score": 0.25478847065817334,
+            "pnl": -1.2500000000000009,
+            "variant": "session_min_2"
+          },
+          {
+            "date": "2026-11-05",
+            "strategyVersion": "daytrading_vwap_breakout_v1",
+            "rank": 23,
+            "code": "180640",
+            "name": "한진칼",
+            "snapshotHm": 955,
+            "signalTime": 1402,
+            "entryTime": 1403,
+            "entryPrice": 194800.0,
+            "exitTime": 1406,
+            "exitPrice": 192852.0,
+            "reason": "stop",
+            "sessionRet": 2.6343519494204326,
+            "vwap": 187536.369045026,
+            "vwapSlope": 0.15102835553522098,
+            "priorHigh": 194400.0,
+            "breakoutPct": 0.2057613168724215,
+            "volRatio": 5.807640824208377,
+            "decisionReason": "session+vwap+slope+breakout+volume_pass",
+            "evidence": {
+              "snapshotHm": 955,
+              "sessionBase": 189800.0,
+              "sessionRet": 2.6343519494204326,
+              "minSessionRet": 2.0,
+              "maxSessionRet": 8.0,
+              "vwap": 187536.369045026,
+              "vwapSlope": 0.15102835553522098,
+              "minVwapSlope": 0.1,
+              "priorHigh": 194400.0,
+              "lookback": 20,
+              "breakoutPct": 0.2057613168724215,
+              "volumeRatio": 5.807640824208377,
+              "requiredVolumeRatio": 1.5,
+              "entryCutoff": 1430,
+              "stopPct": 1.0,
+              "takeProfitPct": 2.0,
+              "frictionPct": 0.25,
+              "finalExit": 1510
+            },
+            "timeBucket": "14:00+",
+            "volRatioBucket": "2.5+",
+            "vwapSlopeBucket": "0.10~0.19",
+            "sessionRetBucket": "2~3.99",
+            "marketRegime": "both_down",
+            "k200Ret": -3.3906018887245426,
+            "kosdaq150Ret": -5.12929207291225,
+            "mfePct": 0.4106776180698102,
+            "mfeTime": 1444,
+            "maePct": -3.3880903490759784,
+            "maeTime": 1503,
+            "fwd1mPct": 0.2053388090349051,
+            "fwd3mPct": -1.2320328542094416,
+            "fwd5mPct": -0.6160164271047264,
+            "fwd10mPct": -0.9753593429158158,
+            "fwd20mPct": -1.3347022587268942,
+            "score": 0.2986014613469622,
+            "pnl": -1.2500000000000009,
+            "variant": "session_min_2"
+          }
+        ],
+        "summary": {
+          "days": 1,
+          "trades": 3,
+          "winRate": 0.0,
+          "avgPnl": -1.2500000000000009,
+          "medianPnl": -1.2500000000000009,
+          "sumPnl": -3.7500000000000027,
+          "profitFactor": 0.0,
+          "portfolioReturnPct": -1.2499999999999956,
+          "portfolioMddPct": -1.2499999999999956,
+          "tradesPerDay": 3.0,
+          "daily": [
+            {
+              "date": "2026-11-05",
+              "returnPct": -1.2500000000000009,
+              "trades": 3
+            }
+          ]
+        }
+      },
+      "daily1Shadow": {
+        "trades": [
+          {
+            "date": "2026-11-05",
+            "strategy": "daytrading",
+            "strategyVersion": "day_rs_vwap_reclaim_v1",
+            "code": "086790",
+            "name": "하나금융지주",
+            "rank": 59,
+            "signalTime": 1007,
+            "entryTime": 1008,
+            "entryPrice": 123400.0,
+            "sessionRetPct": 1.4802631578947345,
+            "marketRetPct": -2.964785937890035,
+            "relativeStrengthPctPoint": 4.4450490957847695,
+            "signalVwap": 123237.18853997781,
+            "volumeRatio": 1.2492968837889527,
+            "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+            "sample": "outOfSample",
+            "exitTime": 1019,
+            "exitPrice": 122412.8,
+            "grossPnlPct": -0.8000000000000007,
+            "frictionPct": 0.25,
+            "pnlPct": -1.0500000000000007,
+            "reason": "stop"
+          },
+          {
+            "date": "2026-11-05",
+            "strategy": "daytrading",
+            "strategyVersion": "day_rs_vwap_reclaim_v1",
+            "code": "316140",
+            "name": "우리금융지주",
+            "rank": 56,
+            "signalTime": 1026,
+            "entryTime": 1027,
+            "entryPrice": 32150.0,
+            "sessionRetPct": 1.7405063291139333,
+            "marketRetPct": -3.598069982279034,
+            "relativeStrengthPctPoint": 5.338576311392967,
+            "signalVwap": 32129.777064697217,
+            "volumeRatio": 2.0021685521555983,
+            "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+            "sample": "outOfSample",
+            "exitTime": 1126,
+            "exitPrice": 32500.0,
+            "grossPnlPct": 1.0886469673405896,
+            "frictionPct": 0.25,
+            "pnlPct": 0.8386469673405896,
+            "reason": "time_exit"
+          },
+          {
+            "date": "2026-11-05",
+            "strategy": "daytrading",
+            "strategyVersion": "day_rs_vwap_reclaim_v1",
+            "code": "128940",
+            "name": "한미약품",
+            "rank": 34,
+            "signalTime": 1029,
+            "entryTime": 1030,
+            "entryPrice": 468500.0,
+            "sessionRetPct": 1.0787486515641875,
+            "marketRetPct": -3.7576676758589502,
+            "relativeStrengthPctPoint": 4.836416327423137,
+            "signalVwap": 467209.6514205118,
+            "volumeRatio": 2.793417922283902,
+            "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+            "sample": "outOfSample",
+            "exitTime": 1129,
+            "exitPrice": 474500.0,
+            "grossPnlPct": 1.2806830309498363,
+            "frictionPct": 0.25,
+            "pnlPct": 1.0306830309498363,
+            "reason": "time_exit"
+          }
+        ],
+        "metrics": {
+          "days": 1,
+          "trades": 3,
+          "tradeDays": 1,
+          "winRatePct": 66.66666666666666,
+          "avgTradePnlPct": 0.27310999943014175,
+          "avgDailyReturnPct": 0.27310999943014175,
+          "plus1Days": 0,
+          "plus1DayRatePct": 0.0,
+          "plus5Weeks": 0,
+          "weeklyAvgPct": 0.27310999943013226,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.27310999943014175,
+          "profitFactor": 1.7803142840861188,
+          "compoundReturnPct": 0.27310999943013226,
+          "maxDrawdownPct": 0.0,
+          "daily": [
+            {
+              "date": "2026-11-05",
+              "returnPct": 0.27310999943014175,
+              "trades": 3
+            }
+          ]
+        }
+      }
+    },
+    "originalAppAndLiveChecks": {
+      "baseline": [
+        {
+          "code": "326030",
+          "signalTime": 1016,
+          "appSignalTime": 1016,
+          "appSignalMatches": true,
+          "liveTradeMatches": true,
+          "liveStatus": "closed",
+          "pnl": -1.2500000000000009
+        },
+        {
+          "code": "035420",
+          "signalTime": 1105,
+          "appSignalTime": 1105,
+          "appSignalMatches": true,
+          "liveTradeMatches": true,
+          "liveStatus": "closed",
+          "pnl": 0.3507646095030017
+        },
+        {
+          "code": "010060",
+          "signalTime": 1126,
+          "appSignalTime": 1126,
+          "appSignalMatches": true,
+          "liveTradeMatches": true,
+          "liveStatus": "closed",
+          "pnl": -1.2500000000000009
+        }
+      ],
+      "session_min_2": [
+        {
+          "code": "326030",
+          "signalTime": 1016,
+          "appSignalTime": 1016,
+          "appSignalMatches": true,
+          "liveTradeMatches": true,
+          "liveStatus": "closed",
+          "pnl": -1.2500000000000009
+        },
+        {
+          "code": "009830",
+          "signalTime": 1144,
+          "appSignalTime": 1144,
+          "appSignalMatches": true,
+          "liveTradeMatches": true,
+          "liveStatus": "closed",
+          "pnl": -1.2500000000000009
+        },
+        {
+          "code": "180640",
+          "signalTime": 1402,
+          "appSignalTime": 1402,
+          "appSignalMatches": true,
+          "liveTradeMatches": true,
+          "liveStatus": "closed",
+          "pnl": -1.2500000000000009
+        }
+      ]
+    },
+    "priorFiveDayWfPlusOneNewDay": {
+      "baseline": {
+        "days": 6,
+        "trades": 17,
+        "averageDailyPct": -0.5179250810236921,
+        "profitFactor": 0.3784899027715699,
+        "mddPct": -3.074068692361387,
+        "worstDayPct": -1.2500000000000009,
+        "totalPct": -3.074068692361387,
+        "daily": [
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-11-02",
+            "returnPct": 0.19219464402351547,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-03",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-04",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": -0.7164117968323334,
+            "trades": 3
+          }
+        ],
+        "newDateCostStressPlus010Pp": -0.8164117968323333,
+        "interpretation": "기존5일 WF+후속1일의 확장 재검토. 새로운 독립WF 아님."
+      },
+      "session_min_2": {
+        "days": 6,
+        "trades": 17,
+        "averageDailyPct": -0.2735231148849691,
+        "profitFactor": 0.6419333768778588,
+        "mddPct": -1.6424793263764559,
+        "worstDayPct": -1.2500000000000009,
+        "totalPct": -1.6424793263764559,
+        "daily": [
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-11-02",
+            "returnPct": 0.19219464402351547,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-03",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-04",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          }
+        ],
+        "newDateCostStressPlus010Pp": -1.350000000000001,
+        "interpretation": "기존5일 WF+후속1일의 확장 재검토. 새로운 독립WF 아님."
+      }
+    },
+    "sampleMeaning": "기존완료WF5일+후속1일17건을사후확장한 재검토. 새 독립WF 또는검증완료 아님. 신규일은조건등록후첫관측1일.",
+    "hypothesisResult": "최소상승2%가새날손익을개선한다는가설은11/5에서불충족:기준−0.716%,후보−1.25%,둘다하락시장. 확장6일후보PF0.642·음의기대값. 기준완화/선택적날짜제외금지. 새버전제안보류.",
+    "newShadowVersionProposal": null,
+    "nextTest": "최소상승2% 조건을 바꾸지 않고11/6 당시모집단·완료봉·3슬롯·같은0.25%비용으로 누적. 하락국면 밖에서도 동일 검증, +0.10%p 비용스트레스 병행. 양의기대값/PF1.10/표본/시간순WF/위험관문 전 새버전 제안·운영 반영 보류.",
+    "openingDataIntegrity": {
+      "originalAppSummary": {
+        "baseline": {
+          "date": "2026-11-05",
+          "marketDate": null,
+          "live": true,
+          "finalized": false,
+          "source": "opening-signal-live",
+          "returnPct": -1.9584276104533362,
+          "realizedReturnPct": -1.9584276104533362,
+          "trades": 2,
+          "open": 0,
+          "pendingTrades": 0,
+          "closed": 2,
+          "wins": 0,
+          "losses": 2,
+          "noTrade": false,
+          "updatedAt": "2026-11-05T00:32:37.230Z",
+          "stale": false,
+          "reason": "09:30까지 감시한 원본 신호 · 감시 종료",
+          "positions": [
+            {
+              "name": "루닛",
+              "entryTime": 916,
+              "status": "closed",
+              "pnl": -1.7110045074050204,
+              "exitTime": 920
+            },
+            {
+              "name": "SK바이오팜",
+              "entryTime": 917,
+              "status": "closed",
+              "pnl": -2.205850713501652,
+              "exitTime": 922
+            }
+          ],
+          "pnlBasis": "strategy-paper",
+          "mainVariant": "baseline",
+          "unverified": 0,
+          "scanCoverage": {
+            "throughHm": 930,
+            "expected": 27,
+            "observed": 27,
+            "missingTargets": [],
+            "failedTargets": [],
+            "complete": true
+          },
+          "state": "closed"
+        },
+        "combo_pb05_e0920": {
+          "date": "2026-11-05",
+          "marketDate": null,
+          "live": true,
+          "finalized": false,
+          "source": "opening-signal-live",
+          "returnPct": -1.9584276104533362,
+          "realizedReturnPct": -1.9584276104533362,
+          "trades": 2,
+          "open": 0,
+          "pendingTrades": 0,
+          "closed": 2,
+          "wins": 0,
+          "losses": 2,
+          "noTrade": false,
+          "updatedAt": "2026-11-05T00:32:37.230Z",
+          "stale": false,
+          "reason": "09:30까지 감시한 원본 신호 · 감시 종료",
+          "positions": [
+            {
+              "name": "루닛",
+              "entryTime": 916,
+              "status": "closed",
+              "pnl": -1.7110045074050204,
+              "exitTime": 920
+            },
+            {
+              "name": "SK바이오팜",
+              "entryTime": 917,
+              "status": "closed",
+              "pnl": -2.205850713501652,
+              "exitTime": 922
+            }
+          ],
+          "pnlBasis": "strategy-paper",
+          "mainVariant": "combo_pb05_e0920",
+          "unverified": 0,
+          "scanCoverage": {
+            "throughHm": 930,
+            "expected": 27,
+            "observed": 27,
+            "missingTargets": [],
+            "failedTargets": [],
+            "complete": true
+          },
+          "state": "closed"
+        }
+      },
+      "storedReturnPct": -2.2015319141278735,
+      "originalEventReturnPct": -1.9584276104533362,
+      "differencePp": -0.24310430367453728,
+      "storedNames": [
+        "현대차",
+        "SK바이오팜"
+      ],
+      "originalNames": [
+        "루닛",
+        "SK바이오팜"
+      ],
+      "result": "원본/결과연결불일치.신호완전성/저장성과승격검증blocked.",
+      "rawSignalReplay": "새날opening분봉은없음(보관마지막10/30),다른시세로대체하지않음."
+    }
+  },
+  "tenbagger": {
+    "asOf": "2026-11-04",
+    "generatedAt": "2026-11-05T18:11:13.651759+00:00",
+    "registeredAt": "2026-10-13T06:39:10.172275+00:00",
+    "strategyVersion": "1.0.0",
+    "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+    "initial": {
+      "asOf": "2026-10-08",
+      "generatedAt": "2026-10-13T06:39:10.172275+00:00",
+      "registeredAt": "2026-10-13T06:39:10.172275+00:00",
+      "strategyVersion": "1.0.0",
+      "rulesSha256": "5e690dd85f5b196542f699360afbd2b5ce9f2a2dcb08642ff846c38f87c4d465",
+      "source": {
+        "provider": "KRX-via-FinanceData-marcap",
+        "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+        "asOf": "2026-10-08",
+        "cutoff": "2026-10-12",
+        "inputs": [
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/677c523eb42c127eb68ee7d5b75b5ec316760b20/data/marcap-2025.parquet",
+            "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+            "bytes": 25153419
+          },
+          {
+            "url": "https://raw.githubusercontent.com/FinanceData/marcap/677c523eb42c127eb68ee7d5b75b5ec316760b20/data/marcap-2026.parquet",
+            "sha256": "0ff9a9b3e01362f31ef95b2342ff92187042c562e34a3fe3eaf86e8baf298515",
+            "bytes": 19811091
+          }
+        ],
+        "combinedSha256": "765972fe30f69a4853cc2d4c5381fdc99ca192a0003409f76076871dbde7ad84",
+        "engineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+        "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+        "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5",
+        "upstreamCommit": "677c523eb42c127eb68ee7d5b75b5ec316760b20"
+      }
+    },
+    "source": {
+      "provider": "KRX-via-FinanceData-marcap",
+      "priceBasis": "KRX close/reference-price chain, cash dividends excluded",
+      "asOf": "2026-11-04",
+      "cutoff": "2026-11-05",
+      "inputs": [
+        {
+          "url": "https://raw.githubusercontent.com/FinanceData/marcap/e74582029f29dfe111320f25af3faec31e7c42e3/data/marcap-2025.parquet",
+          "sha256": "2bfd93c217eb74263bc5020b23fa6debb6b02531c11eaccc2826639bc191559e",
+          "bytes": 25153419
+        },
+        {
+          "url": "https://raw.githubusercontent.com/FinanceData/marcap/e74582029f29dfe111320f25af3faec31e7c42e3/data/marcap-2026.parquet",
+          "sha256": "257d97b9f85a87bf95797db9bf1d0a3ce6423cb80e5290cc6c98904accb071fc",
+          "bytes": 21655871
+        }
+      ],
+      "combinedSha256": "c4f2ed09fe133f1241578cae92bf4944afb7172f145804accebb633390a4c6e6",
+      "upstreamCommit": "e74582029f29dfe111320f25af3faec31e7c42e3",
+      "engineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+      "indicatorsSha256": "464609cd30e084e425bdaf188e88d00774850f8bd059062458d6cfcef6683408",
+      "universeFilterSha256": "33c25c7a189a797bddfa725804c211b700f5d7b85979071ee238f810ccd8c4c5"
+    },
+    "priorSourceAsOf": "2026-11-03",
+    "totalRegistrations": 212,
+    "uniqueStocks": 180,
+    "entered": 180,
+    "pending": 32,
+    "newRegistrations": [
+      {
+        "id": "1.0.0:2026-11-04:002960:pullback50",
+        "code": "002960",
+        "name": "한국쉘석유",
+        "pattern": "pullback50",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:006110:trend200",
+        "code": "006110",
+        "name": "삼아알미늄",
+        "pattern": "trend200",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:007070:trend200",
+        "code": "007070",
+        "name": "GS리테일",
+        "pattern": "trend200",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:007070:pullback50",
+        "code": "007070",
+        "name": "GS리테일",
+        "pattern": "pullback50",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:008930:pullback50",
+        "code": "008930",
+        "name": "한미사이언스",
+        "pattern": "pullback50",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:024850:trend200",
+        "code": "024850",
+        "name": "HLB이노베이션",
+        "pattern": "trend200",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:033790:trend200",
+        "code": "033790",
+        "name": "피노",
+        "pattern": "trend200",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:064290:pullback50",
+        "code": "064290",
+        "name": "인텍플러스",
+        "pattern": "pullback50",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:096770:trend200",
+        "code": "096770",
+        "name": "SK이노베이션",
+        "pattern": "trend200",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:104700:breakout252",
+        "code": "104700",
+        "name": "한국철강",
+        "pattern": "breakout252",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:192650:trend200",
+        "code": "192650",
+        "name": "드림텍",
+        "pattern": "trend200",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:355690:pullback50",
+        "code": "355690",
+        "name": "에이텀",
+        "pattern": "pullback50",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:382800:trend200",
+        "code": "382800",
+        "name": "지앤비에스 에코",
+        "pattern": "trend200",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      },
+      {
+        "id": "1.0.0:2026-11-04:417840:trend200",
+        "code": "417840",
+        "name": "저스템",
+        "pattern": "trend200",
+        "signalDate": "2026-11-04",
+        "registeredAt": "2026-11-05T18:11:13.651759+00:00",
+        "registeredDate": "2026-11-06"
+      }
+    ],
+    "newEntries": [],
+    "newClosedArms": [
+      {
+        "id": "1.0.0:2026-10-15:396300:breakout252",
+        "name": "HT로보틱스",
+        "pattern": "breakout252",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.2214912280701755,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -12.61074015885486,
+        "exitReason": "close_stop12",
+        "exitPrice": 8050
+      },
+      {
+        "id": "1.0.0:2026-10-16:039030:pullback50",
+        "name": "이오테크닉스",
+        "pattern": "pullback50",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -15.500404951984258,
+        "exitReason": "close_stop12",
+        "exitPrice": 367000
+      },
+      {
+        "id": "1.0.0:2026-10-16:053260:pullback50",
+        "name": "금강철강",
+        "pattern": "pullback50",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -14.110385069804444,
+        "exitReason": "close_stop12",
+        "exitPrice": 5370
+      },
+      {
+        "id": "1.0.0:2026-10-16:067170:trend200",
+        "name": "오텍",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -13.007628524046421,
+        "exitReason": "close_stop12",
+        "exitPrice": 1977
+      },
+      {
+        "id": "1.0.0:2026-10-16:089890:trend200",
+        "name": "코세스",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.163265306122449,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -7.345198207214654,
+        "exitReason": "close_stop12",
+        "exitPrice": 32100
+      },
+      {
+        "id": "1.0.0:2026-10-16:171090:trend200",
+        "name": "선익시스템",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.0179640718562877,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -17.12038609348465,
+        "exitReason": "close_stop12",
+        "exitPrice": 69900
+      },
+      {
+        "id": "1.0.0:2026-10-16:323350:trend200",
+        "name": "다원넥스뷰",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.0698757763975155,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -9.296684280461031,
+        "exitReason": "close_stop12",
+        "exitPrice": 11800
+      },
+      {
+        "id": "1.0.0:2026-10-19:307180:trend200",
+        "name": "아이엘",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.090566037735849,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -11.269126067774327,
+        "exitReason": "close_stop12",
+        "exitPrice": 4750
+      },
+      {
+        "id": "1.0.0:2026-10-19:336370:trend200",
+        "name": "솔루스첨단소재",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -9.614563217768456,
+        "exitReason": "close_stop12",
+        "exitPrice": 7550
+      },
+      {
+        "id": "1.0.0:2026-10-21:229640:trend200",
+        "name": "LS에코에너지",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.0424354243542435,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -14.146977290668417,
+        "exitReason": "close_stop12",
+        "exitPrice": 47000
+      },
+      {
+        "id": "1.0.0:2026-10-22:126340:trend200",
+        "name": "비나텍",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1.058139534883721,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -7.710478614678539,
+        "exitReason": "close_stop12",
+        "exitPrice": 96200
+      },
+      {
+        "id": "1.0.0:2026-10-27:420770:trend200",
+        "name": "기가비스",
+        "pattern": "trend200",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -11.960092013053004,
+        "exitReason": "close_stop12",
+        "exitPrice": 82700
+      },
+      {
+        "id": "1.0.0:2026-10-27:425420:breakout252",
+        "name": "티에프이",
+        "pattern": "breakout252",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -9.740651217299678,
+        "exitReason": "close_stop12",
+        "exitPrice": 80500
+      },
+      {
+        "id": "1.0.0:2026-10-28:003160:breakout252",
+        "name": "디아이",
+        "pattern": "breakout252",
+        "arm": "stop12_trail35",
+        "status": "closed",
+        "highGrowth": 1,
+        "exitSignalDate": "2026-11-03",
+        "exitDate": "2026-11-04",
+        "netReturnPct": -15.845771144278597,
+        "exitReason": "close_stop12",
+        "exitPrice": 34850
+      }
+    ],
+    "maxSessions": 15,
+    "horizons": {
+      "20": 0,
+      "60": 0,
+      "120": 0,
+      "252": 0,
+      "756": 0,
+      "1260": 0
+    },
+    "firstTouches": {
+      "2": 0,
+      "5": 0,
+      "10": 0
+    },
+    "closeMetrics": {
+      "mfeMax": 37.31656184486369,
+      "maeMin": -36.448598130841134,
+      "mddMin": -42.372881355932215
+    },
+    "arms": {
+      "hold1260": {
+        "closedN": 0,
+        "openN": 180,
+        "states": [
+          "open"
+        ]
+      },
+      "stop12_trail35": {
+        "closedN": 57,
+        "openN": 123,
+        "states": [
+          "closed",
+          "open"
+        ]
+      }
+    },
+    "coverage": {
+      "currentRows": 2876,
+      "examined": 2286,
+      "excluded": {
+        "low_prior_liquidity": 1494,
+        "missing_latest_session": 181,
+        "outside_common_stock_or_watch_status": 514,
+        "not_traded": 30,
+        "short_history": 45,
+        "prior_spac_or_fund_history": 1
+      },
+      "candidateSignals": 25
+    },
+    "dataStatuses": {
+      "observing": 198,
+      "registered_waiting_next_session": 14
+    },
+    "revisionFlags": [],
+    "noEntryObserving": 18,
+    "invalidTiming": [],
+    "patternStats": [
+      {
+        "pattern": "trend200",
+        "registrations": 128,
+        "uniqueStocks": 128,
+        "entered": 112,
+        "horizons": {
+          "20": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "60": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "120": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "252": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "756": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "1260": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          }
+        },
+        "arms": {
+          "hold1260": {
+            "closedN": 0,
+            "medianNetPct": null
+          },
+          "stop12_trail35": {
+            "closedN": 35,
+            "medianNetPct": -11.960092013053004
+          }
+        }
+      },
+      {
+        "pattern": "breakout252",
+        "registrations": 34,
+        "uniqueStocks": 34,
+        "entered": 32,
+        "horizons": {
+          "20": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "60": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "120": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "252": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "756": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "1260": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          }
+        },
+        "arms": {
+          "hold1260": {
+            "closedN": 0,
+            "medianNetPct": null
+          },
+          "stop12_trail35": {
+            "closedN": 16,
+            "medianNetPct": -15.419715899880854
+          }
+        }
+      },
+      {
+        "pattern": "pullback50",
+        "registrations": 50,
+        "uniqueStocks": 50,
+        "entered": 36,
+        "horizons": {
+          "20": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "60": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "120": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "252": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "756": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          },
+          "1260": {
+            "n": 0,
+            "medianNetPct": null,
+            "negativeN": 0
+          }
+        },
+        "arms": {
+          "hold1260": {
+            "closedN": 0,
+            "medianNetPct": null
+          },
+          "stop12_trail35": {
+            "closedN": 6,
+            "medianNetPct": -15.970325206894298
+          }
+        }
+      }
+    ],
+    "hashChecks": {
+      "rules": true,
+      "engine": true,
+      "indicators": true,
+      "universeFilter": true
+    },
+    "initialRulesEqual": true,
+    "lastUpdateNewRegistrations": 14,
+    "registrationsSincePreviousAvailable": 14,
+    "entriesSincePreviousAvailable": 0,
+    "closedArmsSincePreviousAvailable": 14,
+    "sourceAuditLimit": "기록된 원천commit/SHA256·코드/규칙 해시를 확인. 2025/2026 parquet 전체를 이번에 재다운로드/재해시하지 않음. 수정표시0은 원천전체 무수정 보증아님.",
+    "explicitMissingSuspendedDelistingUnsettledFlags": {
+      "recordLevelExplicitFlags": 0,
+      "meaning": "현재 개별 상태표시가 없다는 의미이며 정지/폐지/정산완료 전체 검증 아님. 모집단 missing_latest_session181/not_traded30 제외와 무진입observing18은 보존."
+    },
+    "limitations": "가격조건만 탐색가설. 재무시점패널/시장대조·포트폴리오검증 없음. 등록일전·미진입 수익은제외. 종목관찰을 계좌CAGR/지수초과수익으로 해석금지.",
+    "nextHypothesis": "새 필터를 즉시 추가하지 않음. 최초20세션 도달 뒤 동일신호일/패턴/유동성 매칭 실패대조군·시장국면·공시접수시점·비용을 별도버전 가설로 사전등록.",
+    "hashEvolution": {
+      "initialEngineSha256": "ba0d08631ab00020081455206c80bcd5a3abb6a471aa1b802a04c8eced8616c5",
+      "currentEngineSha256": "9c75e0f21197ceaf60eeb0d5eb982a78a7be3ace630eb0f52f6184cb4165e391",
+      "initialAndCurrentEngineEqual": false,
+      "rulesEqual": true,
+      "currentMainCodeMatchesRecordedCurrentEngine": true,
+      "initialSemanticAuditStatus": "미완료:문서의구현시작main에는해당스크립트가없어404. 초기생성기해시가일치하는커밋복원후의미변경과기존기록영향을추가감사해야함."
+    }
+  },
+  "claudeComparison": {
+    "researchGeneratedAt": "2026-11-06T06:15:12.442310+09:00",
+    "status": "blocked",
+    "sameDateCapitalCostVersionComparisonVerified": false,
+    "tabs": {
+      "opening": {
+        "currentVersion": {
+          "tab": "opening",
+          "version": "g_open_q7_k3_gap3",
+          "name": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+          "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 7개 이상인 날, 갭 깊은 3종목 · 갭 -3% 이하만 시가 매수 → 종가 매도",
+          "effectiveFrom": "2026-10-13",
+          "promotedAt": "2026-10-12T01:28:34.342167+00:00",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          }
+        },
+        "storedOutOfSample": {
+          "days": 23,
+          "tradeDays": 7,
+          "tradeDaysPerYear": 76.08695652173913,
+          "plus1RateOfTradeDays": 28.57142857142857,
+          "lossDaysPerYear": 54.34782608695652,
+          "tStat": -0.06901301812091223,
+          "plus1Days": 2,
+          "plus1DaysPerYear": 21.73913043478261,
+          "plus5Weeks": 1,
+          "plus5WeeksPerYear": 10.869565217391305,
+          "weeklyAvgPct": -0.27575871038179045,
+          "totalPct": -1.643187684661429,
+          "lossDays": 5,
+          "lossDayAvgPct": -2.7905624824965796,
+          "worstDayPct": -4.789202767086246,
+          "mddPct": -9.372991505284833,
+          "cagrPct": null,
+          "expectancyPct": -0.1305129346834436,
+          "profitFactor": 0.9345228391398167,
+          "gate": false
+        },
+        "recentFrom20261001": [
+          {
+            "date": "2026-10-13",
+            "pnlPct": -0.0969328679153032
+          },
+          {
+            "date": "2026-10-15",
+            "pnlPct": -4.249808751192529
+          },
+          {
+            "date": "2026-10-19",
+            "pnlPct": 7.416846201199955
+          },
+          {
+            "date": "2026-10-23",
+            "pnlPct": -4.789202767086246
+          },
+          {
+            "date": "2026-10-26",
+            "pnlPct": -0.05268301422592551
+          },
+          {
+            "date": "2026-10-30",
+            "pnlPct": -4.764185012062894
+          },
+          {
+            "date": "2026-11-02",
+            "pnlPct": 5.6223756684988375
+          }
+        ],
+        "latestOperationalObservation": {
+          "date": "2026-11-05",
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "realizedPct": 0,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "basis": "orders",
+          "note": "메인 매매일 아님(통과 4<7) — 측정용 주문은 전략 손익에 안 셈",
+          "trades": [],
+          "scope": "수량0의 신호가격 관찰. 계좌 체결성과 아님."
+        }
+      },
+      "daytrading": {
+        "currentVersion": {
+          "tab": "daytrading",
+          "version": "g_etf_th4.75",
+          "name": "−4.75% 이하 마감",
+          "rule": "KODEX 코스닥150레버리지가 −4.75% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도",
+          "effectiveFrom": "2026-10-24",
+          "promotedAt": "2026-10-22T15:55:18.167145+00:00",
+          "params": {
+            "code": "233740",
+            "th": -4.75
+          }
+        },
+        "storedOutOfSample": {
+          "days": 23,
+          "tradeDays": 9,
+          "tradeDaysPerYear": 97.82608695652173,
+          "plus1RateOfTradeDays": 44.44444444444444,
+          "lossDaysPerYear": 54.34782608695652,
+          "tStat": -0.5482747163282176,
+          "plus1Days": 4,
+          "plus1DaysPerYear": 43.47826086956522,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0,
+          "weeklyAvgPct": -1.1131059617085048,
+          "totalPct": -6.495520400733112,
+          "lossDays": 5,
+          "lossDayAvgPct": -3.5689965702763047,
+          "worstDayPct": -5.953344947735195,
+          "mddPct": -9.088748725071415,
+          "cagrPct": null,
+          "expectancyPct": -0.6811689822416179,
+          "profitFactor": 0.6564568937257371,
+          "gate": false
+        },
+        "recentFrom20261001": [
+          {
+            "date": "2026-10-08",
+            "pnlPct": -1.007995110024451
+          },
+          {
+            "date": "2026-10-13",
+            "pnlPct": -5.953344947735195
+          },
+          {
+            "date": "2026-10-16",
+            "pnlPct": 1.7621146953404927
+          },
+          {
+            "date": "2026-10-21",
+            "pnlPct": 2.9461904761904716
+          },
+          {
+            "date": "2026-10-23",
+            "pnlPct": -4.385716878402903
+          },
+          {
+            "date": "2026-10-27",
+            "pnlPct": 4.153673469387752
+          },
+          {
+            "date": "2026-10-30",
+            "pnlPct": -4.064582132564846
+          },
+          {
+            "date": "2026-11-02",
+            "pnlPct": -2.433343782654128
+          },
+          {
+            "date": "2026-11-04",
+            "pnlPct": 2.852483370288245
+          }
+        ],
+        "latestOperationalObservation": {
+          "date": "2026-11-05",
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "realizedPct": 0,
+          "strategyVersion": "g_etf_th4.75",
+          "basis": "orders",
+          "note": "15:21 예상 하락 -11.86% → 종가 매수",
+          "trades": [],
+          "scope": "수량0의 신호가격 관찰. 계좌 체결성과 아님."
+        }
+      },
+      "close30": {
+        "currentVersion": {
+          "tab": "close30",
+          "version": "close30_dip_v1",
+          "name": "⑤ 코스닥150 레버리지 장 마감 30분 반등 (실험)",
+          "rule": "KODEX 코스닥150레버리지가 15:00 에 전일 종가보다 내려 있으면 15:00 매수 → 15:30 종가 매도(당일 청산). R14(10/22) 사후 발견이라 실험 — 앞으로 쌓아 확인",
+          "effectiveFrom": null,
+          "params": {
+            "code": "233740",
+            "th": 0
+          }
+        },
+        "storedOutOfSample": {
+          "days": 24,
+          "tradeDays": 15,
+          "tradeDaysPerYear": 156.25,
+          "plus1RateOfTradeDays": 20,
+          "lossDaysPerYear": 104.16666666666667,
+          "tStat": 0.2753245371924263,
+          "plus1Days": 3,
+          "plus1DaysPerYear": 31.25,
+          "plus5Weeks": 1,
+          "plus5WeeksPerYear": 10.416666666666666,
+          "weeklyAvgPct": 0.2497899318986585,
+          "totalPct": 1.5081300726496494,
+          "lossDays": 10,
+          "lossDayAvgPct": -0.7291995939836581,
+          "worstDayPct": -1.883707414829661,
+          "mddPct": -4.8453057738118925,
+          "cagrPct": null,
+          "expectancyPct": 0.11104477369141533,
+          "profitFactor": 1.228424647944683,
+          "gate": true
+        },
+        "recentFrom20261001": [
+          {
+            "date": "2026-10-02",
+            "pnlPct": -0.061113876789047915
+          },
+          {
+            "date": "2026-10-07",
+            "pnlPct": -1.14850060459492
+          },
+          {
+            "date": "2026-10-08",
+            "pnlPct": -0.37267912772585676
+          },
+          {
+            "date": "2026-10-12",
+            "pnlPct": -0.6878947368421049
+          },
+          {
+            "date": "2026-10-13",
+            "pnlPct": 1.974373177842568
+          },
+          {
+            "date": "2026-10-14",
+            "pnlPct": 1.0643396226415092
+          },
+          {
+            "date": "2026-10-15",
+            "pnlPct": 4.515454545454535
+          },
+          {
+            "date": "2026-10-20",
+            "pnlPct": -0.4957070279424234
+          },
+          {
+            "date": "2026-10-22",
+            "pnlPct": -0.8850855085508498
+          },
+          {
+            "date": "2026-10-23",
+            "pnlPct": -0.926226415094345
+          },
+          {
+            "date": "2026-10-26",
+            "pnlPct": -1.883707414829661
+          },
+          {
+            "date": "2026-10-29",
+            "pnlPct": -0.745648854961829
+          },
+          {
+            "date": "2026-10-30",
+            "pnlPct": 0.7603055848261224
+          },
+          {
+            "date": "2026-11-03",
+            "pnlPct": -0.08543237250554324
+          },
+          {
+            "date": "2026-11-05",
+            "pnlPct": 0.6431946144430765
+          }
+        ],
+        "latestOperationalObservation": {
+          "date": "2026-11-05",
+          "status": "closed",
+          "settled": true,
+          "dayPct": -0.4537288135593258,
+          "realizedPct": 0,
+          "strategyVersion": "close30_dip_v1",
+          "basis": "orders",
+          "note": "15:00 전일 대비 -11.75% → 매수",
+          "trades": [
+            {
+              "code": "233740",
+              "name": "KODEX 코스닥150레버리지",
+              "entryTime": "15:00",
+              "entryPrice": 4130,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 4115,
+              "pnlPct": -0.4537288135593258,
+              "qty": 0
+            }
+          ],
+          "scope": "수량0의 신호가격 관찰. 계좌 체결성과 아님."
+        }
+      },
+      "crypto": {
+        "currentVersion": {
+          "tab": "crypto",
+          "version": "g_coin_ma15_s99_hi7_eth",
+          "name": "평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만",
+          "rule": "어제 종가 > 15일 평균인 날, 최근 7일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · ETH 만 · 탭 자금 80%",
+          "effectiveFrom": "2026-10-14",
+          "promotedAt": "2026-10-12T19:18:16.240298+00:00",
+          "params": {
+            "ma": 15,
+            "stopPct": 99,
+            "level": "prevhigh",
+            "k": 0.5,
+            "hiN": 7,
+            "lastEntryHour": null,
+            "tabSize": 0.8,
+            "markets": [
+              "KRW-ETH"
+            ]
+          }
+        },
+        "storedOutOfSample": {
+          "days": 34,
+          "tradeDays": 1,
+          "tradeDaysPerYear": 10.735294117647058,
+          "plus1RateOfTradeDays": 0,
+          "lossDaysPerYear": 10.735294117647058,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0,
+          "weeklyAvgPct": -0.3327569768913685,
+          "totalPct": -1.9800062873350899,
+          "lossDays": 1,
+          "lossDayAvgPct": -1.9800062873350868,
+          "worstDayPct": -1.9800062873350868,
+          "mddPct": -1.9800062873350899,
+          "cagrPct": null,
+          "expectancyPct": -1.9800062873350868,
+          "profitFactor": 0,
+          "gate": false
+        },
+        "recentFrom20261001": [
+          {
+            "date": "2026-10-02",
+            "pnlPct": -1.9800062873350868
+          }
+        ],
+        "latestOperationalObservation": {
+          "date": "2026-11-05",
+          "status": "closed",
+          "realizedPct": 0,
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "trades": [],
+          "scope": "수량0의 신호가격 관찰. 계좌 체결성과 아님."
+        }
+      },
+      "soxl": {
+        "currentVersion": {
+          "tab": "soxl",
+          "version": "g_soxl_r2lt30_ibs0.6_ma100_d5",
+          "name": "RSI(2) < 30 · 종가 위치(IBS) ≤ 0.6 · 100일 평균 위 · 최대 5일",
+          "rule": "확정 종가 RSI(2) < 30 · 종가 위치(IBS) ≤ 0.6 · 100일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+          "effectiveFrom": "2026-10-21",
+          "promotedAt": "2026-10-19T16:39:58.086942+00:00",
+          "params": {
+            "rsiMax": 30,
+            "rsiN": 2,
+            "ibsMax": 0.6,
+            "downDays": 0,
+            "ma": 100,
+            "maxHoldDays": 5,
+            "tabSize": 0.5
+          }
+        },
+        "storedOutOfSample": {
+          "days": 26,
+          "tradeDays": 0,
+          "tradeDaysPerYear": 0,
+          "plus1RateOfTradeDays": null,
+          "lossDaysPerYear": 0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0,
+          "weeklyAvgPct": 0,
+          "totalPct": 0,
+          "lossDays": 0,
+          "lossDayAvgPct": 0,
+          "worstDayPct": 0,
+          "mddPct": 0,
+          "cagrPct": null,
+          "expectancyPct": null,
+          "profitFactor": null,
+          "gate": false
+        },
+        "recentFrom20261001": [],
+        "latestOperationalObservation": {
+          "date": "2026-11-05",
+          "status": "closed",
+          "realizedPct": 0,
+          "strategyVersion": "g_soxl_r2lt30_ibs0.6_ma100_d5",
+          "note": "신호 없음(RSI(2) 43 ≥ 30 · 100일 평균 아래) — 쉼",
+          "trades": [],
+          "scope": "수량0의 신호가격 관찰. 계좌 체결성과 아님."
+        }
+      }
+    },
+    "week": {
+      "weekStart": "2026-11-02",
+      "weekEnd": "2026-11-08",
+      "asOf": "2026-11-06",
+      "account": {
+        "days": 3,
+        "plus1Days": 0,
+        "weekPct": 1.21046958327915,
+        "through": "2026-11-04",
+        "daily": [
+          {
+            "date": "2026-11-02",
+            "pnlPct": 0.377441239273717
+          },
+          {
+            "date": "2026-11-03",
+            "pnlPct": -0.02562971175166297
+          },
+          {
+            "date": "2026-11-04",
+            "pnlPct": 0.8557450110864734
+          }
+        ],
+        "hit5": false
+      },
+      "parts": {
+        "opening_d1v2": {
+          "days": 4,
+          "tradeDays": 1,
+          "plus1Days": 1,
+          "weekPct": 4.949618711145565,
+          "contribPct": 0.7424428066718362,
+          "through": "2026-11-05"
+        },
+        "daytrading_etf": {
+          "days": 4,
+          "tradeDays": 2,
+          "plus1Days": 1,
+          "weekPct": 0.3497288608919735,
+          "contribPct": 0.4907434436883542,
+          "through": "2026-11-05"
+        },
+        "close30_etf": {
+          "days": 4,
+          "tradeDays": 2,
+          "plus1Days": 0,
+          "weekPct": -0.5387735547747075,
+          "contribPct": -0.16174835581946073,
+          "through": "2026-11-05"
+        },
+        "coin_bo_btc": {
+          "days": 0,
+          "tradeDays": 0,
+          "plus1Days": 0,
+          "weekPct": 0,
+          "contribPct": 0,
+          "through": null
+        },
+        "coin_bo_eth": {
+          "days": 3,
+          "tradeDays": 0,
+          "plus1Days": 0,
+          "weekPct": 0,
+          "contribPct": 0,
+          "through": "2026-11-04"
+        },
+        "us_soxl": {
+          "days": 4,
+          "tradeDays": 0,
+          "plus1Days": 0,
+          "weekPct": 0,
+          "contribPct": 0,
+          "through": "2026-11-05"
+        }
+      },
+      "note": "장부에 확정된 날만. 코인 하루는 09시 기준, 미국은 한국 날짜(다음 날 아침)로 센다. 기여도는 계좌 비중을 곱한 단순합."
+    },
+    "tenbagger": {
+      "asOf": "2026-11-03",
+      "generatedAt": "2026-11-05T11:21:08+09:00",
+      "strategyVersion": "1.0.0",
+      "scope": "GPT11/4·Claude11/3으로 원천 기준일 다름. 별도 모델·자금배분으로 종목 관찰수익과 직접비교불가."
+    },
+    "displayIssues": [
+      "공개 대결 API branch tree HTTP403. 실제 화면은 소유자 로그인 경계만 확인. 내부 평가금액·같은 기간 수익률·휴대폰 표시는 미확인.",
+      "11/5 Claude 종가30분 원본 -0.453729% vs 연구 recent +0.643195%로 부호 차이. 15:00 원본가격과 60분봉 재구성의 차이를 같은 비용으로 재검증해야 함.",
+      "Claude BTC 탭 실제 ETH 규칙·09시세션. 00시closed 원본무매매인데 today review는pending 잔존.",
+      "Claude ETF 11/5 마감자료는 다음날 시가청산용 매수 신호 있음. 실현무매매를 미진입으로 해석하지 않음.",
+      "GPT 시초가11/5 current main combo와 고정baseline을 분리. 저장거래의 현대차가 원본이벤트 루닛과 다름.",
+      "GPT 데이는 고정3슬롯; 대결의 거래평균·비용0.25% 고정 시초가와 운영 호가비용·세션차이를 섞지 않음."
+    ]
+  },
+  "closing30": {
+    "schema": 1,
+    "date": "2026-11-06",
+    "generatedAt": "2026-11-06T03:40:40.179537+09:00",
+    "status": "research",
+    "mode": "close30-paper-shadow-nightly",
+    "archiveDays": 11,
+    "freshLedgers": 10,
+    "errors": [],
+    "sourceRule": "Actual signal-time Durable Object evidence, no post-hoc signal reconstruction",
+    "feesPct": 0.23,
+    "mainVariant": "baseline",
+    "variants": [
+      {
+        "name": "baseline",
+        "kind": "day",
+        "summary": {
+          "trades": 18,
+          "observedDays": 8,
+          "winRate": 50.0,
+          "avgPnl": 0.04281580669985231,
+          "profitFactor": 1.188478892955438,
+          "mddPct": -3.053554641582823,
+          "worst": -0.8449116064565696,
+          "firstHalfAvg": null,
+          "secondHalfAvg": 0.04281580669985231,
+          "unsettled": 12
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_1",
+        "kind": "day",
+        "summary": {
+          "trades": 19,
+          "observedDays": 8,
+          "winRate": 47.368421052631575,
+          "avgPnl": 0.030067315656439678,
+          "profitFactor": 1.1118605158659938,
+          "mddPct": -2.513707732170789,
+          "worst": -1.0832423208191142,
+          "firstHalfAvg": null,
+          "secondHalfAvg": 0.030067315656439678,
+          "unsettled": 11
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_2",
+        "kind": "day",
+        "summary": {
+          "trades": 18,
+          "observedDays": 8,
+          "winRate": 55.55555555555556,
+          "avgPnl": 0.18750594624829897,
+          "profitFactor": 2.000027933458452,
+          "mddPct": -1.5381457087207173,
+          "worst": -1.0832423208191142,
+          "firstHalfAvg": null,
+          "secondHalfAvg": 0.18750594624829897,
+          "unsettled": 10
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_3",
+        "kind": "day",
+        "summary": {
+          "trades": 15,
+          "observedDays": 7,
+          "winRate": 60.0,
+          "avgPnl": 0.2886159364387533,
+          "profitFactor": 3.0486201617747755,
+          "mddPct": -1.0832423208191,
+          "worst": -1.0832423208191142,
+          "firstHalfAvg": null,
+          "secondHalfAvg": 0.2886159364387533,
+          "unsettled": 9
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_volume",
+        "kind": "day",
+        "summary": {
+          "trades": 12,
+          "observedDays": 7,
+          "winRate": 75.0,
+          "avgPnl": 0.47973153040646277,
+          "profitFactor": 5.410508178835203,
+          "mddPct": -0.8439411348747594,
+          "worst": -0.6153564547206201,
+          "firstHalfAvg": null,
+          "secondHalfAvg": 0.47973153040646277,
+          "unsettled": 7
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_vol2",
+        "kind": "day",
+        "summary": {
+          "trades": 4,
+          "observedDays": 3,
+          "winRate": 75.0,
+          "avgPnl": 0.5348976484671999,
+          "profitFactor": 32.37795412934915,
+          "mddPct": -0.06818770226537652,
+          "worst": -0.06818770226537965,
+          "firstHalfAvg": null,
+          "secondHalfAvg": 0.5348976484671999,
+          "unsettled": 0
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "momentum",
+        "kind": "day",
+        "summary": {
+          "trades": 20,
+          "observedDays": 8,
+          "winRate": 40.0,
+          "avgPnl": -0.25197048398322464,
+          "profitFactor": 0.2767565648810722,
+          "mddPct": -6.145728088161972,
+          "worst": -1.1390909090909038,
+          "firstHalfAvg": null,
+          "secondHalfAvg": -0.25197048398322464,
+          "unsettled": 10
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "up_1",
+        "kind": "day",
+        "summary": {
+          "trades": 16,
+          "observedDays": 7,
+          "winRate": 31.25,
+          "avgPnl": -0.3271914005353382,
+          "profitFactor": 0.22393534953707253,
+          "mddPct": -6.334776714384516,
+          "worst": -1.1390909090909038,
+          "firstHalfAvg": null,
+          "secondHalfAvg": -0.3271914005353382,
+          "unsettled": 13
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "up_volume",
+        "kind": "day",
+        "summary": {
+          "trades": 9,
+          "observedDays": 5,
+          "winRate": 33.33333333333333,
+          "avgPnl": -0.2595219891265525,
+          "profitFactor": 0.35356125297458246,
+          "mddPct": -2.9971598621744477,
+          "worst": -1.1169179600886956,
+          "firstHalfAvg": null,
+          "secondHalfAvg": -0.2595219891265525,
+          "unsettled": 3
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "flat",
+        "kind": "day",
+        "summary": {
+          "trades": 21,
+          "observedDays": 8,
+          "winRate": 57.14285714285714,
+          "avgPnl": 0.07001965750164313,
+          "profitFactor": 1.543293948100907,
+          "mddPct": -1.2974751919148098,
+          "worst": -0.8272696245733822,
+          "firstHalfAvg": null,
+          "secondHalfAvg": 0.07001965750164313,
+          "unsettled": 8
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "all",
+        "kind": "day",
+        "summary": {
+          "trades": 19,
+          "observedDays": 8,
+          "winRate": 42.10526315789473,
+          "avgPnl": -0.09164250644933877,
+          "profitFactor": 0.733715157839295,
+          "mddPct": -4.409431548807696,
+          "worst": -1.1390909090909038,
+          "firstHalfAvg": null,
+          "secondHalfAvg": -0.09164250644933877,
+          "unsettled": 11
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "baseline",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 33
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_1",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 33
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_2",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 32
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_3",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 27
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_volume",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 21
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "dip_vol2",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 17
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "momentum",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 33
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "up_1",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 32
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "up_volume",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 25
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "flat",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 32
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      },
+      {
+        "name": "all",
+        "kind": "overnight",
+        "summary": {
+          "trades": 0,
+          "observedDays": 0,
+          "winRate": null,
+          "avgPnl": null,
+          "profitFactor": null,
+          "mddPct": null,
+          "worst": null,
+          "firstHalfAvg": null,
+          "secondHalfAvg": null,
+          "unsettled": 33
+        },
+        "status": "collecting",
+        "eligibleToPromote": false
+      }
+    ],
+    "candidates": [],
+    "promotion": {
+      "day": {
+        "date": "2026-11-05",
+        "leader": null,
+        "leaderStreak": 0,
+        "reviewReady": false,
+        "activeMain": "baseline",
+        "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
+      },
+      "overnight": {
+        "date": "2026-11-06",
+        "leader": null,
+        "leaderStreak": 0,
+        "reviewReady": false,
+        "activeMain": "baseline",
+        "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
+      }
+    },
+    "fullPaperTradeCount": 583
+  },
+  "sourceTimes": {
+    "opening": {
+      "generatedAt": "2026-10-30T23:09:00.404813+09:00",
+      "to": "2026-10-30"
+    },
+    "daytrading": {
+      "generatedAt": "2026-11-05T17:27:09.617420+09:00",
+      "to": "2026-11-05"
+    },
+    "crypto": {
+      "generatedAt": "2026-11-05T15:53:59.279241+09:00",
+      "to": "2026-11-04"
+    },
+    "soxl": {
+      "generatedAt": "2026-11-04T20:26:57.410746-05:00",
+      "to": "2026-11-04"
+    },
+    "shadow": {
+      "generatedAt": "2026-11-06T01:42:49.809927+09:00",
+      "latestSourceDates": {
+        "opening": "2026-10-30",
+        "daytrading": "2026-11-05",
+        "crypto": "2026-11-04",
+        "soxl": "2026-11-04"
+      }
+    },
+    "tenbagger": {
+      "asOf": "2026-11-04",
+      "generatedAt": "2026-11-05T18:11:13.651759+00:00"
+    },
+    "claude": {
+      "generatedAt": "2026-11-06T06:15:12.442310+09:00"
+    }
+  },
+  "uiAndNotifications": {
+    "observedAt": "2026-11-05T22:04:18.533Z",
+    "dailyApi": {
+      "url": "https://jkquant.pages.dev/api/scalping-daily-results",
+      "generatedAt": "2026-11-05T22:02:26.067Z",
+      "kstDate": "2026-11-06",
+      "previous": {
+        "opening": {
+          "date": "2026-11-05",
+          "returnPct": -2.2015319141278735,
+          "trades": 2,
+          "finalized": true,
+          "source": "opening-operational-history",
+          "mainVariant": "combo_pb05_e0920"
+        },
+        "daytrading": {
+          "date": "2026-11-05",
+          "returnPct": -0.7164117968323334,
+          "trades": 3,
+          "finalized": true,
+          "source": "daytrading-paper-live"
+        },
+        "crypto": {
+          "date": "2026-11-05",
+          "returnPct": -0.2297558086813244,
+          "trades": 1,
+          "finalized": true,
+          "source": "global-paper-live",
+          "strategyVersion": "btc_midnight_orb_v2@baseline"
+        }
+      },
+      "soxl": {
+        "kstDisplayDate": "2026-11-06",
+        "marketDate": "2026-11-05",
+        "returnPct": 0,
+        "trades": 0,
+        "finalized": true,
+        "source": "global-paper-live",
+        "generatedAt": "2026-11-05T21:05:32.920Z",
+        "strategyVersion": "soxl_orb_v1@baseline"
+      },
+      "currentCryptoFinalized": false
+    },
+    "daytradingHistory": {
+      "url": "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-11-05",
+      "status": "ok",
+      "days": 25,
+      "trades": 69,
+      "averageDailyPct": -0.482137531983185,
+      "profitFactor": 0.4246803544922731,
+      "mddPct": -12.087743771980197,
+      "worstDayPct": -1.2500000000000009,
+      "plus1Days": 0,
+      "weekPct": -2.014601571857111,
+      "weekGapPp": 7.014601571857111,
+      "sourceWarnings": [],
+      "durableDbDays": 27
+    },
+    "soxlHistory": {
+      "url": "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-11-05",
+      "status": "ok",
+      "days": 26,
+      "trades": 11,
+      "averageDailyPct": -0.17692307692307702,
+      "profitFactor": 0.5892857142857145,
+      "mddPct": -9.397870668170306,
+      "worstDayPct": -1.4000000000000121,
+      "plus1Days": 3,
+      "weekPct": 0.7692000000000032,
+      "weekGapPp": 4.230799999999997,
+      "sourceWarnings": [],
+      "durableDbDays": 30
+    },
+    "cryptoHistory": {
+      "url": "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-11-05",
+      "status": "degraded",
+      "durableDbDays": 0,
+      "error": "장중 모의장부 조회 실패: The operation was aborted",
+      "researchThrough": "2026-11-04"
+    },
+    "health": {
+      "url": "https://jkquant-presale-alert.mumae4.workers.dev/health",
+      "ok": true,
+      "version": "2.10.0",
+      "previousMorning": {
+        "date": "2026-11-05",
+        "push": {
+          "sent": 1,
+          "eligible": 1,
+          "failed": 0,
+          "removed": 0
+        },
+        "telegram": {
+          "result": "sent",
+          "tries": 1
+        },
+        "complete": true,
+        "updatedAt": "2026-11-04T23:00:02.180Z"
+      },
+      "lastTradePush": {
+        "opening": {
+          "status": "sent",
+          "eligible": 1,
+          "sent": 1,
+          "failed": 0
+        },
+        "daytrading": {
+          "status": "sent",
+          "eligible": 1,
+          "sent": 1,
+          "failed": 0
+        },
+        "crypto": {
+          "status": "sent",
+          "eligible": 1,
+          "sent": 1,
+          "failed": 0
+        },
+        "soxl": {
+          "status": "no_subscribers",
+          "eligible": 0,
+          "sent": 0,
+          "failed": 0
+        },
+        "closing30": {
+          "status": "sent",
+          "eligible": 1,
+          "sent": 1,
+          "failed": 0
+        }
+      },
+      "lastTradeTelegram": {
+        "opening": null,
+        "daytrading": "sent",
+        "crypto": "sent",
+        "soxl": "unknown",
+        "closing30": "sent"
+      },
+      "actualDeviceArrivalVerified": false
+    },
+    "duel": {
+      "url": "https://jkquant.pages.dev/api/scalping-duel",
+      "ok": false,
+      "error": "branch tree HTTP 403"
+    },
+    "screens": {
+      "gpt": {
+        "url": "https://jkquant.pages.dev/scalping?strategy=daily",
+        "version": "1.48.2",
+        "visibleState": "owner Google sign-in gate"
+      },
+      "claude": {
+        "url": "https://jkquant.pages.dev/claude",
+        "version": "2.24.1",
+        "visibleState": "owner Google sign-in gate"
+      },
+      "internalValuationAndPeriodReturnsVerified": false,
+      "actualPhoneDisplayVerified": false
+    }
+  },
+  "tests": {
+    "reportAndLiveUi": {
+      "command": "node --test tests/gpt-morning-report.test.mjs tests/scalping-live-results.test.mjs",
+      "tests": 41,
+      "passed": 41,
+      "failed": 0,
+      "meaning": "로컬격리시험;실제외부전송/실기기표시를증명하지않음"
+    },
+    "sourceGitBlobChecks": {
+      "main": [
+        {
+          "path": ".github/workflows/gpt-morning-report.yml",
+          "sha": "8c8e8b46a6b9f852a7c3668ea94b26b3cbe932fd",
+          "expected": "8c8e8b46a6b9f852a7c3668ea94b26b3cbe932fd",
+          "match": true
+        },
+        {
+          "path": "CHANGELOG.md",
+          "sha": "ad3a0c7dabe13cd4233292dc5bbce16614be9b23",
+          "expected": "ad3a0c7dabe13cd4233292dc5bbce16614be9b23",
+          "match": true
+        },
+        {
+          "path": "CLAUDE-SCALPING-RESEARCH.md",
+          "sha": "cc35ddcec5723fdecbf331a96b258942f9b88e31",
+          "expected": "cc35ddcec5723fdecbf331a96b258942f9b88e31",
+          "match": true
+        },
+        {
+          "path": "CLAUDE.md",
+          "sha": "9565b9dea9c1fe9b0eb0387b476a6cad72b3a32a",
+          "expected": "9565b9dea9c1fe9b0eb0387b476a6cad72b3a32a",
+          "match": true
+        },
+        {
+          "path": "REQUIREMENTS.md",
+          "sha": "e021401139cc7974cacbbe3c16c6cca7de132677",
+          "expected": "e021401139cc7974cacbbe3c16c6cca7de132677",
+          "match": true
+        },
+        {
+          "path": "RESEARCH.md",
+          "sha": "5ce3374ed08458ab07c82846c87eb590663806cd",
+          "expected": "5ce3374ed08458ab07c82846c87eb590663806cd",
+          "match": true
+        },
+        {
+          "path": "SCALPING.md",
+          "sha": "46f263033df6da265d7dec4564e2865d16c8cbdb",
+          "expected": "46f263033df6da265d7dec4564e2865d16c8cbdb",
+          "match": true
+        },
+        {
+          "path": "SCALPING_DATA_SPEC.md",
+          "sha": "0568f92abd1bbe65f87c7e3e3343b8fb1753fb8b",
+          "expected": "0568f92abd1bbe65f87c7e3e3343b8fb1753fb8b",
+          "match": true
+        },
+        {
+          "path": "TASKS.md",
+          "sha": "f638b41aa9385ea48489c5d4182e09080ef71903",
+          "expected": "f638b41aa9385ea48489c5d4182e09080ef71903",
+          "match": true
+        },
+        {
+          "path": "TENBAGGER_FORWARD_RESEARCH.md",
+          "sha": "cb2b912675147ba66b7036973bf19b8c9a77c162",
+          "expected": "cb2b912675147ba66b7036973bf19b8c9a77c162",
+          "match": true
+        },
+        {
+          "path": "TEST_RESULTS.md",
+          "sha": "5965c04c6496764b5aa8018cbeed4f21d1356da9",
+          "expected": "5965c04c6496764b5aa8018cbeed4f21d1356da9",
+          "match": true
+        },
+        {
+          "path": "data/tenbagger/gpt/forward-latest.json",
+          "sha": "834bb8dc80d1c4f7686430dce564bd88d98d232d",
+          "expected": "834bb8dc80d1c4f7686430dce564bd88d98d232d",
+          "match": true
+        },
+        {
+          "path": "functions/api/_daytrading.js",
+          "sha": "acd6c58427fb798332050cafe4dd27a490f382da",
+          "expected": "acd6c58427fb798332050cafe4dd27a490f382da",
+          "match": true
+        },
+        {
+          "path": "functions/api/_firebase_token.js",
+          "sha": "ce326cfb42ba38c933f1daf16971cae4bae8f267",
+          "expected": "ce326cfb42ba38c933f1daf16971cae4bae8f267",
+          "match": true
+        },
+        {
+          "path": "functions/api/_gpt_morning_report.js",
+          "sha": "5b3c21d3cf3efdc5c099f29a708948374a5a630c",
+          "expected": "5b3c21d3cf3efdc5c099f29a708948374a5a630c",
+          "match": true
+        },
+        {
+          "path": "functions/api/_krx_calendar.js",
+          "sha": "a7e68b10b35eb179f9af49765e0d209f542c7585",
+          "expected": "a7e68b10b35eb179f9af49765e0d209f542c7585",
+          "match": true
+        },
+        {
+          "path": "functions/api/_research_alerts.js",
+          "sha": "f0f69699bd676d090fa9d3a0de16bac373f4be98",
+          "expected": "f0f69699bd676d090fa9d3a0de16bac373f4be98",
+          "match": true
+        },
+        {
+          "path": "functions/api/_scalping_duel.js",
+          "sha": "a7f7cb43537fb7be2b8688d3e37c0aaf46aec624",
+          "expected": "a7f7cb43537fb7be2b8688d3e37c0aaf46aec624",
+          "match": true
+        },
+        {
+          "path": "functions/api/global-paper.js",
+          "sha": "5225462ccc52cc7c703d4f2e9a1b71eb0db6eeb5",
+          "expected": "5225462ccc52cc7c703d4f2e9a1b71eb0db6eeb5",
+          "match": true
+        },
+        {
+          "path": "functions/api/gpt-morning-report.js",
+          "sha": "f10d0a1a39be5dd54fc748b539b0726ad368ba06",
+          "expected": "f10d0a1a39be5dd54fc748b539b0726ad368ba06",
+          "match": true
+        },
+        {
+          "path": "functions/api/scalping-daily-results.js",
+          "sha": "2651f9c51cbc41414e9ea86094a0fc0fb271d37c",
+          "expected": "2651f9c51cbc41414e9ea86094a0fc0fb271d37c",
+          "match": true
+        },
+        {
+          "path": "functions/api/scalping-history.js",
+          "sha": "5ebf1a0530a088065f64f1b18f4e09c1e741be5a",
+          "expected": "5ebf1a0530a088065f64f1b18f4e09c1e741be5a",
+          "match": true
+        },
+        {
+          "path": "functions/api/scalping-live-results.js",
+          "sha": "70a9d2cf83766d11015eea0933791c187d8ddef4",
+          "expected": "70a9d2cf83766d11015eea0933791c187d8ddef4",
+          "match": true
+        },
+        {
+          "path": "scalping.html",
+          "sha": "1d3e9ef7cd92b930a92f37f453f0f28916665c57",
+          "expected": "1d3e9ef7cd92b930a92f37f453f0f28916665c57",
+          "match": true
+        },
+        {
+          "path": "scripts/analyze_tenbagger.py",
+          "sha": "affd4ec210313bd1e1cbb2b46c5ea3e432b1de3a",
+          "expected": "affd4ec210313bd1e1cbb2b46c5ea3e432b1de3a",
+          "match": true
+        },
+        {
+          "path": "scripts/backtest_crypto_orb.py",
+          "sha": "927af6069d51e8f8a9a7acd74d1cafa118e0d870",
+          "expected": "927af6069d51e8f8a9a7acd74d1cafa118e0d870",
+          "match": true
+        },
+        {
+          "path": "scripts/backtest_daytrading.py",
+          "sha": "61ab4fab1bd22b60ae20dac7eff821c52f120809",
+          "expected": "61ab4fab1bd22b60ae20dac7eff821c52f120809",
+          "match": true
+        },
+        {
+          "path": "scripts/backtest_soxl_intraday.py",
+          "sha": "cb938d85a981c3d38c6cd402d1423bd15834fc9d",
+          "expected": "cb938d85a981c3d38c6cd402d1423bd15834fc9d",
+          "match": true
+        },
+        {
+          "path": "scripts/daily1_shadow_lab.py",
+          "sha": "5c7097af65a4518602c81c576e7cc0a2da17d76d",
+          "expected": "5c7097af65a4518602c81c576e7cc0a2da17d76d",
+          "match": true
+        },
+        {
+          "path": "scripts/tenbagger_forward.py",
+          "sha": "b9265cb52efae859eab8d00385587af50ed5d73c",
+          "expected": "b9265cb52efae859eab8d00385587af50ed5d73c",
+          "match": true
+        },
+        {
+          "path": "scripts/test_daily1_shadow.py",
+          "sha": "30afef3e51107fc15328567188cd37c86f197d91",
+          "expected": "30afef3e51107fc15328567188cd37c86f197d91",
+          "match": true
+        },
+        {
+          "path": "scripts/test_daytrading_ui_metrics.mjs",
+          "sha": "fe079afd002bddeb860c5c133eed90b6edbe126a",
+          "expected": "fe079afd002bddeb860c5c133eed90b6edbe126a",
+          "match": true
+        },
+        {
+          "path": "scripts/test_scalping_duel.mjs",
+          "sha": "d915a2cd09add842309203d6a738396265a639db",
+          "expected": "d915a2cd09add842309203d6a738396265a639db",
+          "match": true
+        },
+        {
+          "path": "scripts/validate-gpt-morning-report.mjs",
+          "sha": "0f12939e8cf7f1e76fbcace2b2d2734b7ef058f2",
+          "expected": "0f12939e8cf7f1e76fbcace2b2d2734b7ef058f2",
+          "match": true
+        },
+        {
+          "path": "tests/gpt-morning-report.test.mjs",
+          "sha": "fc7a00324e1e97ce31a97f4b1c57f7590802dbb8",
+          "expected": "fc7a00324e1e97ce31a97f4b1c57f7590802dbb8",
+          "match": true
+        },
+        {
+          "path": "tests/scalping-live-results.test.mjs",
+          "sha": "9cb414afb13369528afcca759a3ba998a2c7173e",
+          "expected": "9cb414afb13369528afcca759a3ba998a2c7173e",
+          "match": true
+        },
+        {
+          "path": "worker/presale-alert/src/index.js",
+          "sha": "e7ef622be4f5919ca01ac842653ba1dbb9bf9932",
+          "expected": "e7ef622be4f5919ca01ac842653ba1dbb9bf9932",
+          "match": true
+        },
+        {
+          "path": "worker/presale-alert/src/ipo-score.mjs",
+          "sha": "884f304730466050d6a08e3f350b7a00fb4680fc",
+          "expected": "884f304730466050d6a08e3f350b7a00fb4680fc",
+          "match": true
+        },
+        {
+          "path": "worker/presale-alert/src/presale-score.mjs",
+          "sha": "42d14816c9fe74d579b3619820b6bb74dd42908f",
+          "expected": "42d14816c9fe74d579b3619820b6bb74dd42908f",
+          "match": true
+        }
+      ],
+      "tenbagger": {
+        "rules": true,
+        "engine": true,
+        "indicators": true,
+        "universeFilter": true
+      },
+      "data": [
+        {
+          "path": "data/claude-lab/review/2026-11-05.json",
+          "sha": "b97a2515c4b1e94a31a240c28b3fde77bb7b3303",
+          "expected": "b97a2515c4b1e94a31a240c28b3fde77bb7b3303",
+          "match": true
+        },
+        {
+          "path": "data/claude-live/2026-11-05.json",
+          "sha": "6152c279a33fa3348b3728e987c8d10fea61aee7",
+          "expected": "6152c279a33fa3348b3728e987c8d10fea61aee7",
+          "match": true
+        },
+        {
+          "path": "data/crypto-research/baseline-trades.csv",
+          "sha": "99515a60a1c68aa908605f06527447bb5496c727",
+          "expected": "99515a60a1c68aa908605f06527447bb5496c727",
+          "match": true
+        },
+        {
+          "path": "data/crypto-research/latest.json",
+          "sha": "e9547f6701ca7dadf9ccae5320b07ebd7a75a9b5",
+          "expected": "e9547f6701ca7dadf9ccae5320b07ebd7a75a9b5",
+          "match": true
+        },
+        {
+          "path": "data/daily1-shadow/latest.json",
+          "sha": "719fc2e44bf5aaa3cda5ee876a32fe7752f08e65",
+          "expected": "719fc2e44bf5aaa3cda5ee876a32fe7752f08e65",
+          "match": true
+        },
+        {
+          "path": "data/daytrading-live/2026/2026-11-05.json",
+          "sha": "001a786a1b20c814a3ee1406cd594d0fa67e6f69",
+          "expected": "001a786a1b20c814a3ee1406cd594d0fa67e6f69",
+          "match": true
+        },
+        {
+          "path": "data/daytrading-research/baseline-trades.csv",
+          "sha": "66d585f65eb67e8cac491613f25e4f76d1a0a5b0",
+          "expected": "66d585f65eb67e8cac491613f25e4f76d1a0a5b0",
+          "match": true
+        },
+        {
+          "path": "data/daytrading-research/latest.json",
+          "sha": "f43ff940a7cc15234bd5327cd41c72055e2ed5b3",
+          "expected": "f43ff940a7cc15234bd5327cd41c72055e2ed5b3",
+          "match": true
+        },
+        {
+          "path": "data/etf-overnight-research/latest.json",
+          "sha": "8fca704d24c65ac1b3511653e525c7ed645a11b7",
+          "expected": "8fca704d24c65ac1b3511653e525c7ed645a11b7",
+          "match": true
+        },
+        {
+          "path": "data/nightly-research/closing30.json",
+          "sha": "8edf51cf9d66f64f9def78ec076a0a4b5ad7a50b",
+          "expected": "8edf51cf9d66f64f9def78ec076a0a4b5ad7a50b",
+          "match": true
+        },
+        {
+          "path": "data/nightly-research/latest.json",
+          "sha": "01d1041969d78aea3023f229160da4d1b6942ef1",
+          "expected": "01d1041969d78aea3023f229160da4d1b6942ef1",
+          "match": true
+        },
+        {
+          "path": "data/opening-history/2026-11-05.json",
+          "sha": "767ee740ad8740629b605094a235acf44420edb8",
+          "expected": "767ee740ad8740629b605094a235acf44420edb8",
+          "match": true
+        },
+        {
+          "path": "data/opening-history/baseline-trades.csv",
+          "sha": "b190f0e47d5036f629dabdeff6415c679588cb16",
+          "expected": "b190f0e47d5036f629dabdeff6415c679588cb16",
+          "match": true
+        },
+        {
+          "path": "data/opening-research/latest.json",
+          "sha": "9981751e151eccda3f0615d8ced8ef5558e23b20",
+          "expected": "9981751e151eccda3f0615d8ced8ef5558e23b20",
+          "match": true
+        },
+        {
+          "path": "data/scalping-trend/latest.json",
+          "sha": "b0f17c0a719e169c7a901227a0ecaf503979e6d6",
+          "expected": "b0f17c0a719e169c7a901227a0ecaf503979e6d6",
+          "match": true
+        },
+        {
+          "path": "data/soxl-research/baseline-decisions.csv",
+          "sha": "c20cc55637fad2fdf6bfbf7a6da265b1688f035a",
+          "expected": "c20cc55637fad2fdf6bfbf7a6da265b1688f035a",
+          "match": true
+        },
+        {
+          "path": "data/soxl-research/baseline-trades.csv",
+          "sha": "37238f9d091e5906ea88205c79bd7004e1b3dec4",
+          "expected": "37238f9d091e5906ea88205c79bd7004e1b3dec4",
+          "match": true
+        },
+        {
+          "path": "data/soxl-research/latest.json",
+          "sha": "cbd2e8463151ea1b76ee1ed737ba09b573c23266",
+          "expected": "cbd2e8463151ea1b76ee1ed737ba09b573c23266",
+          "match": true
+        },
+        {
+          "path": "data/tenbagger-claude-forward/latest.json",
+          "sha": "e07c3b5fcef741ba5dec556377ba06b4a6f79457",
+          "expected": "e07c3b5fcef741ba5dec556377ba06b4a6f79457",
+          "match": true
+        },
+        {
+          "path": "data/tenbagger-forward/latest.json",
+          "sha": "73eddf0e03edd3a08ee17af03f6be151831335c6",
+          "expected": "73eddf0e03edd3a08ee17af03f6be151831335c6",
+          "match": true
+        }
+      ],
+      "rawDay": {
+        "path": "data/daytrading/2026/2026-11-05.json.gz",
+        "expected": "a2042797610f1f54838d91f806a4651771d0c9ce",
+        "sha": "a2042797610f1f54838d91f806a4651771d0c9ce",
+        "match": true
+      }
+    },
+    "originalAppSignalAndLiveLedgerMatches": 6,
+    "tenbaggerHashChecks": {
+      "rules": true,
+      "engine": true,
+      "indicators": true,
+      "universeFilter": true
+    }
+  },
+  "deliveryPreparation": {
+    "mode": "기존push-triggered gpt-morning-report 검증후서버08KST예약",
+    "queueStatusAtAuthoring": "제출전.커밋후Actions검증/예약확인필요.",
+    "actualTodayDeliveryConfirmed": false,
+    "previousReceipt": {
+      "date": "2026-11-05",
+      "push": {
+        "sent": 1,
+        "eligible": 1,
+        "failed": 0,
+        "removed": 0
+      },
+      "telegram": {
+        "result": "sent",
+        "tries": 1
+      },
+      "complete": true,
+      "updatedAt": "2026-11-04T23:00:02.180Z"
+    },
+    "directDuplicateNotificationsSent": 0
+  },
+  "contractCompatibility": {
+    "submittedSections": 7,
+    "note": "사용자계약7탭만제출.현main normalize가종가섹션을추가하고서버가실제closing연구로보완하는경로는41개시험에포함.종가검토는today/closing30상세에보존."
+  },
+  "mutations": {
+    "allowed": "research/gpt-morning 보고데이터3개파일만",
+    "productionStrategyOrderAccountLedgerMainPrDeployChangedByThisReview": false,
+    "externalOpeningSelectionObserved": true
+  }
+}
