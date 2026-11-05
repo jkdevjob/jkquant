@@ -681,6 +681,7 @@ jobs:
       - name: 거래이력 보존 불변식 검사
         run: |
           node scripts/check-history-preservation.cjs
+          node --test tests/paper-history-identity.test.cjs
           node --test tests/paper-storage.test.mjs
 
       - name: 회귀 테스트 (엔진 차분 + UI 배선 + DOM 구조 + 모의 장부)
