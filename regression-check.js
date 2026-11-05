@@ -2160,7 +2160,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /onclick="refreshPaperViewButton\(\)"/.test(idx)
      && /const repaired=await paperRepairCommonStarts\(\)/.test(rvFast));
   ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
-     /const PAPER_VIEW_CACHE_VER=3;/.test(idx)
+     /const PAPER_VIEW_CACHE_VER=4;/.test(idx)
      && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
      && /x\.day===paperKstDate\(\)/.test(extractFn(idx,'function paperViewCacheFresh(x)'))
      && /if\(!force&&paperViewCacheFresh\(current\)\)return/.test(rvFast));
