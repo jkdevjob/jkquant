@@ -1958,7 +1958,8 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
       ok('[JOB 지역] 배선: 필터가 regionMatches · 옛 select#region 없음 · 초기화는 대전·세종 · focus 진입은 전국 · 머리말 배지',
          /if\(!regionMatches\(j\)\)return false;/.test(job)&&!/getElementById\("region"\)/.test(job)
          &&/function resetFilters\(\)\{\n[^\n]*setRegions\(HOME_REGIONS\)/.test(job)&&/keyword"\)\.value=focusJob\.title/.test(job)&&/^\s*setRegions\(\[\]\);$/m.test(job)
-         &&/id="regionBadge"/.test(job)&&/id="regionGrid"/.test(job)&&/regionPreset\('all'\)/.test(job));
+         &&/id="regionBadge"/.test(job)&&/id="regionGrid"/.test(job)&&/regionPreset\('all'\)/.test(job)
+         &&/rc\.textContent=regionLabel\(\)\+" "\+filtered\.length\.toLocaleString\(\)\+"건"/.test(extractFn(job,'function renderList()')));
       const mut=src.replace('if(!REGION_SEL.size)return true;','');
       const M=load(mut); M.sel=new Set();
       ok('[JOB 지역] 변이: 전국일 때 전부 통과를 빼면 빨간불', mut!==src&&!M.regionMatches(J(['서울'])));

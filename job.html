@@ -60,7 +60,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v" id="regionBadge">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.2.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v" id="regionBadge">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.2.1</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -104,7 +104,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
       <div class="regionpop" id="regionPop" hidden>
         <div class="quick"><button type="button" class="btn" id="regionHomeBtn" onclick="regionPreset('home')">대전·세종</button><button type="button" class="btn" id="regionAllBtn" onclick="regionPreset('all')">전국</button></div>
         <div class="grid" id="regionGrid"></div>
-        <div class="foot"><span>여러 지역을 함께 고를 수 있고, 아무것도 고르지 않으면 전국</span><button type="button" class="btn" onclick="regionClose()">닫기</button></div>
+        <div class="foot"><span><b id="regionCount" style="color:var(--text)">대전·세종</b> · 고르면 바로 적용(조회 버튼 없음) · 여러 지역 가능 · 아무것도 안 고르면 전국</span><button type="button" class="btn" onclick="regionClose()">닫기</button></div>
       </div>
     </div>
     <select id="employment"><option value="">고용형태 전체</option><option value="regular">정규직</option><option value="nonregular">정규직 외</option></select>
@@ -361,6 +361,7 @@ function highlightFocusedJob(){
 }
 function renderList(){
   document.getElementById("totalCnt").textContent=DATA.jobs.length.toLocaleString();document.getElementById("viewCnt").textContent=filtered.length.toLocaleString();renderScrapCount();renderAppliedCount();document.getElementById("resultText").textContent=filtered.length.toLocaleString()+"건 · "+(activeCat==="all"?"전체":CAT_LABEL[activeCat]||activeCat)+" · "+regionLabel()+((activeCat==="scrap"||activeCat==="applied")?" · Firebase DB 저장":"")+(DATA.historyCount?" · 장기보관 "+DATA.historyCount.toLocaleString()+"건":"");
+  var rc=document.getElementById("regionCount");if(rc)rc.textContent=regionLabel()+" "+filtered.length.toLocaleString()+"건";
   var rows=filtered.slice(0,shown),el=document.getElementById("list");if(!rows.length){el.innerHTML='<div class="empty">조건에 맞는 공고가 없습니다.</div>';document.getElementById("moreBtn").hidden=true;return}
   el.innerHTML=rows.map(function(j){
     var cats=(j.categories||[]).map(function(c){return '<span class="tag '+tagClass(c)+'">'+esc(CAT_LABEL[c]||c)+"</span>"}).join("");
