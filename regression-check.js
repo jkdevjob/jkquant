@@ -11644,7 +11644,7 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
   ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 기준전략 누적 상태(⑤ 포함 5전략): 표본·승률·거래당·필요승률·엣지·검증상태)',
      /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익<\/span>/.test(ch)
      &&/var pr=dayPair\(r,lt\.days,\(LIVE&&!LIVE\.error&&LIVE\.today\)\|\|""\);/.test(ch)
-     &&/resultCell\(pr\[0\]\.v,pr\[0\]\.date,"전일",cl,pr\[0\]\.lv\)\+resultCell\(pr\[1\]\.v,pr\[1\]\.date,"당일",cl,pr\[1\]\.lv\)/.test(ch)
+     &&/resultCell\(pr\[0\]\.v,pr\[0\]\.date,"전일",cl,pr\[0\]\.lv,z\[4\]\)\+resultCell\(pr\[1\]\.v,pr\[1\]\.date,"당일",cl,pr\[1\]\.lv,z\[4\]\)/.test(ch)
      &&/📊 기준전략 누적 상태/.test(ch)&&/\["close30","⑤ 종가 30분","종가 30분",/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
      &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
   // 값 시험 — 화면 함수를 그대로 떼어 실행
@@ -11662,7 +11662,8 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
      &&/daily-result-goal hit'>\+1% 달성/.test(f.dayCell(1.2,'2026-10-02','당일',null))&&f.scoreOf({tradeDays:0})===null,
      JSON.stringify(s1));
   { // 확정 전 실시간 칸(2026-10-14 사용자 요청 '실시간으로 반영해') — 확정 값이 먼저, 없을 때만 점선 칸에 출처·시각·'확정 전'
-    const lvNow=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0});
+    const lvNow=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0},'15:30 종가에 팔면 확정');   // 2026-11-06 '왜 확정전이냐' — 들고 있는 동안은 보유 · 언제 확정
+    const lvNoUntil=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0});
     const lvNt=f.dayCell('pending','2026-10-14','당일',null,{v:'no_trade',final:true,src:'vts',trades:0,note:'전날 15:21 매수 신호 없음'});
     const lvWait=f.dayCell(null,'2026-10-14','당일',null,{v:'no_trade',final:false,src:'rule',trades:0,note:'아직 매수 없음 — BTC·ETH 돌파 없음 · 10/15 09:00 전까지 돌파하면 매수'});
     const lvDec=f.dayCell(null,'2026-10-14','전일',null,{v:'no_trade',final:true,decided:true,src:'rule',trades:0,note:'ETH 쉼(추세 평균 아래)'});   // 2026-10-15 08:33 '매매 전' 혼동 — 더 살 수 없는 날
@@ -11671,8 +11672,8 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
     const none=f.dayCell('pending','2026-10-13','전일',null,null);
     const pr=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:'pending',last:-1.2},{'2026-10-14':{v:1},'2026-10-15':{v:2}},'2026-10-15');
     const pr0=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:0.5,last:'pending'},null,'');
-    ok('오늘 탭 실시간 칸: 장중 +10.75%(2건 · 모의투자 체결 · ⏱ 09:41 실시간 · 확정 전 · 점선) / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중은 아직 매수 없음(언제까지) · 더 살 수 없으면 매매없음(매수 조건 안 됨) / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
-       /class='daily-result-box live'/.test(lvNow)&&/\+10\.75%/.test(lvNow)&&/기준전략 2건 · 승 2 · 패 0 · 모의투자 체결/.test(lvNow)&&/\+1% 달성 · ⏱ 09:41 실시간 · 확정 전/.test(lvNow)
+    ok('오늘 탭 실시간 칸: 장중 +10.75%(보유 2건 · 오름 2 · 모의투자 체결 · ⏱ 09:41 지금 가격 · 15:30 종가에 팔면 확정 · 점선 · 언제 확정인지 없으면 \'확정 전\') / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중은 아직 매수 없음(언제까지) · 더 살 수 없으면 매매없음(매수 조건 안 됨) / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
+       /class='daily-result-box live'/.test(lvNow)&&/\+10\.75%/.test(lvNow)&&/보유 2건 · 오름 2 · 내림 0 · 모의투자 체결/.test(lvNow)&&!/승 2/.test(lvNow)&&/\+1% 달성 · ⏱ 09:41 지금 가격 · 15:30 종가에 팔면 확정/.test(lvNow)&&/⏱ 09:41 지금 가격 · 확정 전/.test(lvNoUntil)
        &&/>매매없음</.test(lvNt)&&/마감 · 밤 확정 전/.test(lvNt)&&/전날 15:21 매수 신호 없음/.test(lvNt)&&!/확정 대기/.test(lvNt)
        &&/>아직 매수 없음</.test(lvWait)&&/09:00 전까지 돌파하면 매수/.test(lvWait)&&!/매매 전/.test(lvWait+lvDec)&&/>매매없음</.test(lvDec)&&/매수 조건 안 됨 · 밤 확정 전/.test(lvDec)&&!/⏱/.test(lvDec)&&/-5\.95%/.test(lvDone)&&/기준전략 1건 · 승 0 · 패 1 · 시세로 계산/.test(lvDone)&&/>기준전략 0건<br>전날 15:21 매수 신호 없음</.test(lvNt)&&/목표까지 6\.95%p · 마감 · 밤 확정 전/.test(lvDone)
        &&/-5\.95%/.test(conf)&&/모의 장부 확정/.test(conf)&&!/live|확정 전/.test(conf)&&/확정 대기/.test(none)&&!/live/.test(none)

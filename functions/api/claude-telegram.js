@@ -46,7 +46,7 @@ export function compose(kind,date,live,extra={}){
     const buy=(d.rows||[]).find(x=>String(x.buyTime||"").startsWith("오늘"))||(d.rows||[]).find(x=>x.status==="매매 없음");
     const th=String(((d.main||{}).params||MAIN_DEFAULT.daytrading.params).th).replace("-","−");
     if(buy&&buy.status!=="매매 없음")L.push("② 코스닥150 레버리지 "+th+"% 이하 → 종가 모의 매수 "+n(buy.buyPrice)+" ("+buy.status+") → 내일 시가 매도");
-    else L.push("② 매매 없음 — "+((buy&&buy.note)||"예상 하락이 "+th+"% 이내"));
+    else L.push("② 매매 없음 — "+((buy&&buy.note)||"15:21 예상이 기준 "+th+"% 이하 아님"));
   }else if(kind==="promote"){
     const ev=extra.event||{};
     L.push("🔁 [클로드 단타] "+(TABN[ev.tab]||"")+" 메인 전략 자동 교체 ("+date+")");
