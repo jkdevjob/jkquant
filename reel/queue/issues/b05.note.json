@@ -1,0 +1,488 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "연기연금 · 본전 나이",
+  "color": "mint"
+ },
+ "out": "queue/issues/b05_deferred-pension-table.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 2.0,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "국민연금, 늦춰 받으면 얼마나 더 받을까요? 그리고 몇 살부터 이득일까요?"
+   },
+   {
+    "id": "r1",
+    "text": "일 년 늦추면 백칠 점 이 퍼센트, 본전은 칠십구 세 십일 개월이에요.",
+    "gap": 0.45
+   },
+   {
+    "id": "r2",
+    "text": "이 년이면 백십사 점 사 퍼센트, 팔십 세 십일 개월,"
+   },
+   {
+    "id": "r3",
+    "text": "삼 년이면 백이십일 점 육 퍼센트, 팔십일 세 십일 개월,"
+   },
+   {
+    "id": "r4",
+    "text": "사 년이면 백이십팔 점 팔 퍼센트, 팔십이 세 십일 개월,"
+   },
+   {
+    "id": "r5",
+    "text": "오 년 꽉 늦추면 백삼십육 퍼센트, 본전은 팔십삼 세 십일 개월이에요."
+   },
+   {
+    "id": "note",
+    "text": "예순다섯에 바로 받은 사람보다 받은 돈 합계가 많아지기 시작하는 나이예요. 물가랑 세금은 뺐고요.",
+    "gap": 0.4
+   },
+   {
+    "id": "point",
+    "text": "이 나이보다 오래 살수록, 늦춘 쪽이 유리해져요.",
+    "gap": 1.0
+   },
+   {
+    "id": "mine",
+    "text": "다만 늘어난 연금이 한 해 이천만 원을 넘으면, 건보료 피부양자에서 빠질 수 있어요. 이것까지 같이 따져 보세요.",
+    "gap": 0.4
+   },
+   {
+    "id": "save",
+    "text": "내 칸, 저장해 두고 찾아보세요."
+   },
+   {
+    "id": "sig",
+    "text": "늦지 않았습니다.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "start": 0,
+   "stains": [
+    {
+     "x": 690,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -5
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "국민연금 늦춰 받으면",
+     "x": 128,
+     "y": 196,
+     "size": 100,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "h2",
+     "text": "얼마나 더?",
+     "x": 132,
+     "y": 336,
+     "size": 112,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.4
+    },
+    {
+     "type": "underline",
+     "target": "h2",
+     "at": 0.3,
+     "dur": 0.6,
+     "color": "red",
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "th0",
+     "text": "늦춘 기간",
+     "x": 150,
+     "y": 560,
+     "size": 52,
+     "font": "pen",
+     "color": "gray",
+     "at": "@r1-0.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "th1",
+     "text": "받는 돈",
+     "x": 400,
+     "y": 560,
+     "size": 52,
+     "font": "pen",
+     "color": "gray",
+     "at": "@r1-0.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "th2",
+     "text": "본전 나이",
+     "x": 650,
+     "y": 560,
+     "size": 52,
+     "font": "pen",
+     "color": "gray",
+     "at": "@r1-0.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r00",
+     "text": "1년",
+     "x": 150,
+     "y": 650,
+     "size": 70,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r1",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r01",
+     "text": "107.2%",
+     "x": 400,
+     "y": 650,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r1+1.0",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r02",
+     "text": "79세 11개월",
+     "x": 650,
+     "y": 650,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r1.end-1.1",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r10",
+     "text": "2년",
+     "x": 150,
+     "y": 756,
+     "size": 70,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r2",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r11",
+     "text": "114.4%",
+     "x": 400,
+     "y": 756,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r2+1.0",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r12",
+     "text": "80세 11개월",
+     "x": 650,
+     "y": 756,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r2.end-1.1",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r20",
+     "text": "3년",
+     "x": 150,
+     "y": 862,
+     "size": 70,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r3",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r21",
+     "text": "121.6%",
+     "x": 400,
+     "y": 862,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r3+1.0",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r22",
+     "text": "81세 11개월",
+     "x": 650,
+     "y": 862,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r3.end-1.1",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r30",
+     "text": "4년",
+     "x": 150,
+     "y": 968,
+     "size": 70,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r4",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r31",
+     "text": "128.8%",
+     "x": 400,
+     "y": 968,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r4+1.0",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r32",
+     "text": "82세 11개월",
+     "x": 650,
+     "y": 968,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r4.end-1.1",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r40",
+     "text": "5년",
+     "x": 150,
+     "y": 1074,
+     "size": 70,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r5",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r41",
+     "text": "136%",
+     "x": 400,
+     "y": 1074,
+     "size": 66,
+     "font": "bold",
+     "color": "red",
+     "at": "@r5+1.0",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r42",
+     "text": "83세 11개월",
+     "x": 650,
+     "y": 1074,
+     "size": 58,
+     "font": "bold",
+     "color": "red",
+     "at": "@r5.end-1.1",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "n1",
+     "text": "(65세에 받는 69년생 이후 기준 · 1년에 7.2%씩 평생 가산)",
+     "x": 150,
+     "y": 1200,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@note+0.3",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "n2",
+     "text": "(물가·세금 뺀 단순 계산)",
+     "x": 150,
+     "y": 1255,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@note+1.2",
+     "dur": 0.8
+    }
+   ]
+  },
+  {
+   "start": "@note.end+0.3",
+   "stains": [
+    {
+     "x": -110,
+     "y": 1480,
+     "r": 160,
+     "opacity": 0.15,
+     "rot": 12
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "p1",
+     "text": "본전 나이보다 오래 살수록",
+     "x": 132,
+     "y": 196,
+     "size": 76,
+     "font": "bold",
+     "color": "ink",
+     "at": "@point+0.2",
+     "dur": 0.9,
+     "rot": -0.6
+    },
+    {
+     "type": "text",
+     "id": "p2",
+     "text": "늦춘 쪽이 유리",
+     "x": 140,
+     "y": 316,
+     "size": 92,
+     "font": "bold",
+     "color": "blue",
+     "at": "@point.end-1.2",
+     "dur": 0.7
+    },
+    {
+     "type": "highlight",
+     "target": "p2",
+     "at": "@point.end-0.2",
+     "dur": 0.45
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 860,
+     "w": 760,
+     "h": 420,
+     "rot": -2.0,
+     "at": "@mine-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "늦추기 전에",
+       "x": 46,
+       "y": 34,
+       "size": 70,
+       "font": "bold",
+       "color": "red",
+       "at": "@mine",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "늘어난 연금 + 다른 소득",
+       "x": 46,
+       "y": 150,
+       "size": 54,
+       "font": "bold",
+       "color": "ink",
+       "at": "@mine+2.0",
+       "dur": 0.9
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "연 2천만 원 넘으면 건보료",
+       "x": 46,
+       "y": 236,
+       "size": 54,
+       "font": "bold",
+       "color": "blue",
+       "at": "@mine+4.0",
+       "dur": 0.9
+      },
+      {
+       "type": "text",
+       "id": "m4",
+       "text": "저장해 두고 내 칸 찾기",
+       "x": 52,
+       "y": 340,
+       "size": 42,
+       "font": "pen",
+       "color": "gray",
+       "at": "@save",
+       "dur": 0.8
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1490,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@sig",
+     "dur": 0.8,
+     "rot": -2.0
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1575,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@sig+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}

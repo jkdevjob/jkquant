@@ -1,0 +1,364 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "기초연금 · 2026 기준",
+  "color": "yellow"
+ },
+ "out": "queue/issues/b06_basic-pension-2026-line.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 2.0,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "기초연금, 우리 집도 받을 수 있을까요? 올해 기준을 한 장에 정리했어요."
+   },
+   {
+    "id": "one",
+    "text": "혼자 사시면, 소득인정액이 한 달 이백사십칠만 원 이하면 받아요.",
+    "gap": 0.45
+   },
+   {
+    "id": "two",
+    "text": "부부라면 삼백구십오만 이천 원 이하고요."
+   },
+   {
+    "id": "what",
+    "text": "소득인정액은 월 소득에, 집이나 예금 같은 재산을 소득으로 바꾼 금액까지 더한 거예요.",
+    "gap": 0.4
+   },
+   {
+    "id": "amt",
+    "text": "받는 돈은 혼자면 한 달 최대 삼십사만 구천칠백 원,",
+    "gap": 1.0
+   },
+   {
+    "id": "cpl",
+    "text": "부부가 둘 다 받으면 이십 퍼센트씩 깎여서, 한 사람당 이십칠만 구천칠백육십 원이에요.",
+    "gap": 0.15
+   },
+   {
+    "id": "mine",
+    "text": "기준이 해마다 올라서, 작년에 안 됐어도 올해 다시 확인해 볼 만해요.",
+    "gap": 0.45
+   },
+   {
+    "id": "save",
+    "text": "저장해 두고, 부모님께도 보여 드리세요."
+   },
+   {
+    "id": "sig",
+    "text": "늦지 않았습니다.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "start": 0,
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "기초연금, 우리 집도?",
+     "x": 128,
+     "y": 196,
+     "size": 100,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "h2",
+     "text": "2026 기준 한 장",
+     "x": 132,
+     "y": 336,
+     "size": 112,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.4
+    },
+    {
+     "type": "underline",
+     "target": "h2",
+     "at": 0.3,
+     "dur": 0.6,
+     "color": "red",
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "c0",
+     "text": "소득인정액이 이 선 아래면",
+     "x": 150,
+     "y": 560,
+     "size": 54,
+     "font": "pen",
+     "color": "gray",
+     "at": "@one-0.3",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "c1",
+     "text": "혼자",
+     "x": 150,
+     "y": 660,
+     "size": 72,
+     "font": "bold",
+     "color": "ink",
+     "at": "@one+0.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "c2",
+     "text": "월 247만 원 이하",
+     "x": 380,
+     "y": 660,
+     "size": 66,
+     "font": "bold",
+     "color": "blue",
+     "at": "@one.end-1.6",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "c3",
+     "text": "부부",
+     "x": 150,
+     "y": 780,
+     "size": 72,
+     "font": "bold",
+     "color": "ink",
+     "at": "@two",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "c4",
+     "text": "월 395만 2천 원 이하",
+     "x": 380,
+     "y": 780,
+     "size": 60,
+     "font": "bold",
+     "color": "red",
+     "at": "@two+0.8",
+     "dur": 0.9
+    },
+    {
+     "type": "circle",
+     "target": "c4",
+     "at": "@two.end-0.2",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "c5",
+     "text": "소득인정액 = 월 소득 +",
+     "x": 150,
+     "y": 920,
+     "size": 50,
+     "font": "bold",
+     "color": "ink",
+     "at": "@what+0.8",
+     "dur": 1.2
+    },
+    {
+     "type": "text",
+     "id": "c6",
+     "text": "(보건복지부 2026년 선정기준액 · 65세 이상)",
+     "x": 150,
+     "y": 1090,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@what.end",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "c5b",
+     "text": "재산을 소득으로 바꾼 금액",
+     "x": 150,
+     "y": 995,
+     "size": 50,
+     "font": "bold",
+     "color": "ink",
+     "at": "@what+2.6",
+     "dur": 1.2
+    }
+   ]
+  },
+  {
+   "start": "@what.end+0.3",
+   "stains": [
+    {
+     "x": -110,
+     "y": 1480,
+     "r": 160,
+     "opacity": 0.15,
+     "rot": 12
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "a1",
+     "text": "받는 돈",
+     "x": 132,
+     "y": 196,
+     "size": 80,
+     "font": "bold",
+     "color": "ink",
+     "at": "@amt+0.2",
+     "dur": 0.5,
+     "rot": -0.6
+    },
+    {
+     "type": "text",
+     "id": "a2",
+     "text": "혼자: 월 최대 34만 9,700원",
+     "x": 140,
+     "y": 320,
+     "size": 70,
+     "font": "bold",
+     "color": "blue",
+     "at": "@amt.end-2.0",
+     "dur": 0.9
+    },
+    {
+     "type": "text",
+     "id": "a3",
+     "text": "부부 둘 다: 1인당 27만 9,760원",
+     "x": 140,
+     "y": 430,
+     "size": 60,
+     "font": "bold",
+     "color": "ink",
+     "at": "@cpl+2.4",
+     "dur": 0.9
+    },
+    {
+     "type": "text",
+     "id": "a4",
+     "text": "(부부 감액 20%씩)",
+     "x": 150,
+     "y": 530,
+     "size": 44,
+     "font": "pen",
+     "color": "gray",
+     "at": "@cpl.end-0.6",
+     "dur": 0.5
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 860,
+     "w": 760,
+     "h": 420,
+     "rot": -2.0,
+     "at": "@mine-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "작년에 탈락했어도",
+       "x": 46,
+       "y": 34,
+       "size": 70,
+       "font": "bold",
+       "color": "red",
+       "at": "@mine",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "기준이 해마다 올라요",
+       "x": 46,
+       "y": 150,
+       "size": 54,
+       "font": "bold",
+       "color": "ink",
+       "at": "@mine+1.2",
+       "dur": 0.9
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "올해 다시 확인해 보기",
+       "x": 46,
+       "y": 236,
+       "size": 54,
+       "font": "bold",
+       "color": "blue",
+       "at": "@mine+2.8",
+       "dur": 0.9
+      },
+      {
+       "type": "text",
+       "id": "m4",
+       "text": "저장해 두고 부모님께 보여 드리기",
+       "x": 52,
+       "y": 340,
+       "size": 42,
+       "font": "pen",
+       "color": "gray",
+       "at": "@save",
+       "dur": 0.8
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1490,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@sig",
+     "dur": 0.8,
+     "rot": -2.0
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1575,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@sig+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
