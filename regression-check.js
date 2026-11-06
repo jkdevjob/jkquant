@@ -10769,8 +10769,8 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   const shared=fs.readFileSync(path.join(__d,'plan-session-engine.js'),'utf8');
   ok('H3 모의 규칙 v2 · 운영/모의 동일 주수 기준 · 캐시 버전',
     /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
-    && /plan-session-engine\.js\?v=2/.test(plan)
-    && /plan-session-engine\.js\?v=2/.test(idx)
+    && /plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/.test(plan)   // 캐시 판 ≥2 (엔진이 바뀔 때마다 올린다 — plan 1.44.0 에서 3)
+    && /plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/.test(idx)
     && (()=>{ /* 모의 규칙 v2 가 들어간 버전 이상이면 된다 — 숫자를 딱 고정하면 다음 배포(버전 올림)마다 깨진다 */
          const ge=(src,re,min)=>{ const m=src.match(re); if(!m) return false; const a=m[1].split('.').map(Number), b=min.split('.').map(Number);
            for(let i=0;i<3;i++){ if(a[i]!==b[i]) return a[i]>b[i]; } return true; };
