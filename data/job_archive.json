@@ -1,21 +1,25 @@
 {
-  "updatedAt": "2026-11-06T17:41:15+09:00",
+  "updatedAt": "2026-11-06T19:18:08+09:00",
   "rangeDays": 180,
   "cutoffDate": "2026-05-10",
   "historyCount": 0,
   "sourceStatuses": {
     "잡코리아": {
       "ok": true,
-      "count": 1496,
+      "count": 1495,
       "failed_pages": 0,
       "mode": "직접"
     },
     "사람인": {
-      "ok": true,
-      "count": 1799,
-      "failed_pages": 0,
+      "ok": false,
+      "count": 0,
+      "failed_pages": 48,
       "max_pages": 8,
-      "errors": [],
+      "errors": [
+        "대전 Java p1: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=1&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7418fc3bb020>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))",
+        "대전 Java p2: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EB%8C%80%EC%A0%84+Java&recruitPage=2&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7418fc3babd0>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))",
+        "세종 Java p1: ConnectTimeout HTTPSConnectionPool(host='www.saramin.co.kr', port=443): Max retries exceeded with url: /zf_user/search?searchword=%EC%84%B8%EC%A2%85+Java&recruitPage=1&recruitPageCount=40 (Caused by ConnectTimeoutError(<HTTPSConnection(host='www.saramin.co.kr', port=443) at 0x7418fc3ba840>, 'Connection to www.saramin.co.kr timed out. (connect timeout=20)'))"
+      ],
       "mode": "직접"
     },
     "고용24": {
@@ -27,9 +31,18 @@
       "errors": [],
       "mode": "검색"
     },
+    "커리어": {
+      "ok": true,
+      "count": 11,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
     "인크루트": {
       "ok": true,
-      "count": 3,
+      "count": 5,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
@@ -38,14 +51,23 @@
     },
     "원티드": {
       "ok": true,
-      "count": 8,
+      "count": 13,
       "successful_queries": 8,
       "failed_queries": 0,
       "degraded": false,
       "errors": [],
       "mode": "검색"
     },
-    "커리어": {
+    "점핏": {
+      "ok": true,
+      "count": 5,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "알바몬": {
       "ok": true,
       "count": 10,
       "successful_queries": 8,
@@ -63,42 +85,6 @@
       "errors": [],
       "mode": "검색"
     },
-    "알바몬": {
-      "ok": true,
-      "count": 14,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "점핏": {
-      "ok": true,
-      "count": 5,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "로켓펀치": {
-      "ok": true,
-      "count": 0,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
-    "아이엠잡": {
-      "ok": true,
-      "count": 3,
-      "successful_queries": 8,
-      "failed_queries": 0,
-      "degraded": false,
-      "errors": [],
-      "mode": "검색"
-    },
     "알바천국": {
       "ok": true,
       "count": 14,
@@ -107,9 +93,27 @@
       "degraded": false,
       "errors": [],
       "mode": "검색"
+    },
+    "아이엠잡": {
+      "ok": true,
+      "count": 2,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
+    },
+    "로켓펀치": {
+      "ok": true,
+      "count": 2,
+      "successful_queries": 8,
+      "failed_queries": 0,
+      "degraded": false,
+      "errors": [],
+      "mode": "검색"
     }
   },
-  "count": 1424,
+  "count": 1430,
   "jobs": [
     {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50074949",
@@ -627,10 +631,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -1198,10 +1202,10 @@
       "deadline": "2026-11-07",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -1913,10 +1917,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -3019,10 +3023,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -3633,7 +3637,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50279683",
       "title": "웹/앱 프런트 및 백엔드 프로그래머를 모십니다.",
       "company": "㈜폴리큐브",
-      "body": "웹/앱 프런트 및 백엔드 프로그래머를 모십니다. 스크랩 ~ 11/15(일) 입사지원 서울 강남구 경력무관 대졸↑ 정규직·계약직 Spring , SpringBoot , 백엔드/서버개발 , 웹개발 , 프론트엔드 외 수정일 26/11/06",
+      "body": "스크랩 웹/앱 프런트 및 백엔드 프로그래머를 모십니다. ㈜폴리큐브 서울 강남구 모바일·APP, 웹개발자, 앱개발자, 소프트웨어개발자 즉시 지원 경력무관",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50279683",
       "source": "잡코리아",
       "sources": [
@@ -3644,12 +3648,12 @@
         "서울"
       ],
       "categories": [
-        "java_ai",
-        "regular_dev"
+        "java_ai"
       ],
       "employmentTypes": [
         "정규직",
-        "계약직"
+        "계약직",
+        "인턴"
       ],
       "career": "경력무관",
       "education": "대졸↑",
@@ -4165,6 +4169,42 @@
       "lastChecked": "2026-11-06"
     },
     {
+      "id": "https://recruit.incruit.com/wooribank/job/2610260015",
+      "title": "우리은행 AI서비스기획_AI사업개발 (AI데이터사업부) 전문직 채용공고",
+      "company": "우리은행",
+      "body": "모집부문 : AI 서비스 기획 (AI사업개발) 모집인원 : 명 근무장소 : 우리은행 AI데이터사업부 (서울특별시 중구 소공로48 우리금융디지털타워) 담당업무 금융업무 기반 생성형 AI기반 챗봇·콜봇 및 AI Agent 서비스 기획·설계·고도화 추진 봇빌더 (Bot Builder)를 활용한 대화형 시나리오 기획·설계 및 구현 ...",
+      "url": "https://recruit.incruit.com/wooribank/job/2610260015",
+      "source": "인크루트",
+      "sources": [
+        "인크루트"
+      ],
+      "locations": [
+        "서울"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "계약직"
+      ],
+      "career": "경력 3년↑",
+      "education": "석사↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-11-09",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-06",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-06",
+      "lastSeen": "2026-11-06",
+      "lastChecked": "2026-11-06"
+    },
+    {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50129289",
       "title": "온톨로지·지식그래프 / LLM 엔지니어",
       "company": "㈜코그콤",
@@ -4266,10 +4306,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -4340,10 +4380,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -4530,10 +4570,10 @@
       "deadline": "2026-12-04",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "closed",
       "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "closedAt": "2026-11-06",
+      "closeReason": "원문 마감 표시",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -4866,10 +4906,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -4902,10 +4942,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -5748,7 +5788,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50228671",
       "title": "서울 중곡동 프로젝트 JAVA 개발자 정규직/계약직/프리랜서 채용",
       "company": "㈜온앤온정보시스템",
-      "body": "서울 중곡동 프로젝트 JAVA 개발자 (정규직/계약직/프리랜서) 스크랩 ~ 11/22(일) 입사지원 서울 광진구 경력 2~10년 학력무관 정규직·기간제 JSP , Java , Javascript , 웹개발 , Linux 외 수정일 26/11/06",
+      "body": "스크랩 서울 중곡동 프로젝트 JAVA 개발자 정규직/계약직/프리랜서 채용 ㈜온앤온정보시스템 서울 광진구 솔루션·SI·CRM·ERP, 웹개발자 즉시 지원 경력2년↑",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50228671",
       "source": "잡코리아",
       "sources": [
@@ -5767,7 +5807,7 @@
         "계약직",
         "프리랜서"
       ],
-      "career": "경력 2~10년",
+      "career": "경력 2년↑",
       "education": "학력무관",
       "salary": null,
       "shortPay": null,
@@ -5813,10 +5853,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -5886,10 +5926,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -6260,10 +6300,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -7885,10 +7925,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -7995,6 +8035,43 @@
       "postedDate": "",
       "dateSource": "수집일",
       "deadline": "2026-11-15",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-06",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-06",
+      "lastSeen": "2026-11-06",
+      "lastChecked": "2026-11-06"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50322066",
+      "title": "도시안전망서비스 유지보수",
+      "company": "스마트도시협회",
+      "body": "오늘 뜬 따끈한 공고 스크랩 도시안전망서비스 유지보수 스마트도시협회 서울 영등포구 협회·단체, 백엔드개발자, 프론트엔드개발자 즉시 지원 경력3년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50322066",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "서울"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "경력 3년↑",
+      "education": "초대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-12-06",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
       "status": "active",
@@ -9267,10 +9344,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -11436,10 +11513,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "closed",
       "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "closedAt": "2026-11-06",
+      "closeReason": "원문 마감 표시",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -12362,11 +12439,11 @@
       "lastChecked": "2026-11-06"
     },
     {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50273858",
-      "title": "[여의도]손해보험사 채널계 운영 초급, 중급개발자 모집(TM, CS 업무)",
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50265623",
+      "title": "[여의도]손해보험사 영업지원(SFA) 운영 초급, 중급개발자 모집",
       "company": "㈜아이엔에스시스템",
-      "body": "스크랩 [여의도]손해보험사 채널계 운영 초급, 중급개발자 모집(TM, CS 업무) ㈜아이엔에스시스템 서울 영등포구 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자, 소프트웨어개발자 즉시 지원 경력3년↑",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50273858",
+      "body": "스크랩 [여의도]손해보험사 영업지원(SFA) 운영 초급, 중급개발자 모집 ㈜아이엔에스시스템 서울 영등포구 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자, 소프트웨어개발자 즉시 지원 경력3년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50265623",
       "source": "잡코리아",
       "sources": [
         "잡코리아"
@@ -12399,11 +12476,11 @@
       "lastChecked": "2026-11-06"
     },
     {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50265623",
-      "title": "[여의도]손해보험사 영업지원(SFA) 운영 초급, 중급개발자 모집",
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50273876",
+      "title": "[여의도]손해보험사 다이렉트 CM 운영 초급, 중급개발자 모집",
       "company": "㈜아이엔에스시스템",
-      "body": "오늘 마감! 놓치지 마세요! 스크랩 [여의도]손해보험사 영업지원(SFA) 운영 초급, 중급개발자 모집 ㈜아이엔에스시스템 서울 영등포구 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자, 소프트웨어개발자 즉시 지원 경력3년↑",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50265623",
+      "body": "스크랩 [여의도]손해보험사 다이렉트 CM 운영 초급, 중급개발자 모집 ㈜아이엔에스시스템 서울 영등포구 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자, 소프트웨어개발자 즉시 지원 경력3년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50273876",
       "source": "잡코리아",
       "sources": [
         "잡코리아"
@@ -12424,7 +12501,7 @@
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-11-06",
+      "deadline": "2026-11-13",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
       "status": "active",
@@ -12436,11 +12513,11 @@
       "lastChecked": "2026-11-06"
     },
     {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50273876",
-      "title": "[여의도]손해보험사 다이렉트 CM 운영 초급, 중급개발자 모집",
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50273858",
+      "title": "[여의도]손해보험사 CS 운영 초급, 중급개발자 모집",
       "company": "㈜아이엔에스시스템",
-      "body": "스크랩 [여의도]손해보험사 다이렉트 CM 운영 초급, 중급개발자 모집 ㈜아이엔에스시스템 서울 영등포구 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자, 소프트웨어개발자 즉시 지원 경력3년↑",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50273876",
+      "body": "스크랩 [여의도]손해보험사 CS 운영 초급, 중급개발자 모집 ㈜아이엔에스시스템 서울 영등포구 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자, 소프트웨어개발자 즉시 지원 경력3년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50273858",
       "source": "잡코리아",
       "sources": [
         "잡코리아"
@@ -12622,6 +12699,44 @@
       "lastChecked": "2026-11-06"
     },
     {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50322138",
+      "title": "[신입/경력] JAVA/JSP 백엔드 웹프로그래머 정규직/프리랜서 채용",
+      "company": "㈜에이블짐정보",
+      "body": "신입 지원 가능 스크랩 [신입/경력] JAVA/JSP 백엔드 웹프로그래머 정규직/프리랜서 채용 ㈜에이블짐정보 서울 송파구 솔루션·SI·CRM·ERP, 웹개발자 즉시 지원 신입·경력",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50322138",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "서울"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "프리랜서"
+      ],
+      "career": "신입·경력",
+      "education": "학력무관",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-12-06",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-06",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-06",
+      "lastSeen": "2026-11-06",
+      "lastChecked": "2026-11-06"
+    },
+    {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50236858",
       "title": "[신입/경력] JAVA/JSP 백엔드 웹프로그래머 정규직/프리랜서 채용",
       "company": "㈜에이블짐정보",
@@ -12651,10 +12766,10 @@
       "deadline": "2026-11-25",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "closed",
       "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "closedAt": "2026-11-06",
+      "closeReason": "원문 마감 표시",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -12689,10 +12804,10 @@
       "deadline": "2026-11-13",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "closed",
       "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "closedAt": "2026-11-06",
+      "closeReason": "원문 마감 표시",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -13280,10 +13395,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -14259,10 +14374,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -14680,6 +14795,42 @@
       "postedDate": "",
       "dateSource": "수집일",
       "deadline": "2026-11-19",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-06",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-06",
+      "lastSeen": "2026-11-06",
+      "lastChecked": "2026-11-06"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50322303",
+      "title": "[광화문/프리랜서] OO카드 쇼핑몰 주문운영 Java/Spring 고급 개발자 모집",
+      "company": "㈜이노트리",
+      "body": "오늘 뜬 따끈한 공고 스크랩 [광화문/프리랜서] OO카드 쇼핑몰 주문운영 Java/Spring 고급 개발자 모집 ㈜이노트리 서울 종로구 솔루션·SI·CRM·ERP, 웹개발자 월급 ~650만원 즉시 지원 경력11년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50322303",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "서울"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "프리랜서"
+      ],
+      "career": "경력 11년↑",
+      "education": "초대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-11-13",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
       "status": "active",
@@ -15398,10 +15549,10 @@
       "deadline": "2026-11-12",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "closed",
       "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "closedAt": "2026-11-06",
+      "closeReason": "원문 마감 표시",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -16258,10 +16409,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -16331,10 +16482,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -16368,10 +16519,10 @@
       "deadline": "2026-11-13",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "closed",
       "missCount": 0,
-      "closedAt": "",
-      "closeReason": "",
+      "closedAt": "2026-11-06",
+      "closeReason": "원문 마감 표시",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -16557,10 +16708,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -18720,10 +18871,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -20713,10 +20864,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -21009,10 +21160,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -21155,6 +21306,49 @@
       "postedDate": "",
       "dateSource": "수집일",
       "deadline": "2026-11-30",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-06",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-06",
+      "lastSeen": "2026-11-06",
+      "lastChecked": "2026-11-06"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50131404",
+      "title": "JAVA 경력 개발자 채용",
+      "company": "㈜디에스정보",
+      "body": "스크랩 JAVA 경력 개발자 채용 ㈜디에스정보 경기 의왕시 솔루션·SI·CRM·ERP, 소프트웨어개발자 연봉 4,500만원~ 즉시 지원 경력4년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50131404",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "경기"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "계약직",
+        "프리랜서",
+        "인턴"
+      ],
+      "career": "경력 4년↑",
+      "education": "대졸↑",
+      "salary": {
+        "monthly": 375.0,
+        "annual": 4500.0,
+        "label": "연 4,500만원 (월 환산 375만원)"
+      },
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-11-07",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
       "status": "active",
@@ -22422,10 +22616,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -24513,10 +24707,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -24634,10 +24828,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -25231,10 +25425,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -25455,10 +25649,10 @@
       "deadline": "2026-11-07",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -25716,10 +25910,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -25789,6 +25983,44 @@
       "postedDate": "",
       "dateSource": "수집일",
       "deadline": "2026-12-21",
+      "deadlineSource": "구조화데이터:validThrough",
+      "deadlineCheckedAt": "2026-11-06",
+      "status": "active",
+      "missCount": 0,
+      "closedAt": "",
+      "closeReason": "",
+      "firstSeen": "2026-11-06",
+      "lastSeen": "2026-11-06",
+      "lastChecked": "2026-11-06"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50321836",
+      "title": "(충남 계룡시) SW 개발자 초급 모집",
+      "company": "㈜심네트",
+      "body": "오늘 뜬 따끈한 공고 스크랩 (충남 계룡시) SW 개발자 초급 모집 ㈜심네트 대전 유성구 외 1 솔루션·SI·CRM·ERP, 시스템엔지니어, 소프트웨어개발자 즉시 지원 경력무관",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50321836",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아"
+      ],
+      "locations": [
+        "충남",
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "employmentTypes": [
+        "정규직",
+        "인턴"
+      ],
+      "career": "경력무관",
+      "education": "대졸↑",
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "deadline": "2026-11-20",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
       "status": "active",
@@ -26165,10 +26397,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -26884,10 +27116,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -26959,10 +27191,10 @@
       "deadline": "2026-11-29",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -27035,10 +27267,10 @@
       "deadline": "2026-11-06",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -27566,10 +27798,10 @@
       "deadline": "2026-11-30",
       "deadlineSource": "D-day",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-04",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -28622,7 +28854,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50289499",
       "title": "ECMiner 연구소 빅데이터/AI 솔루션 개발자 채용 공고",
       "company": "㈜이씨마이너",
-      "body": "ECMiner 연구소 빅데이터/AI 솔루션 개발자 채용 공고 스크랩 ~ 01/01(금) 입사지원 서울 강남구 경력무관 대졸↑ 정규직 Java , C++ , C언어 , Windows , 소프트웨어개발 등록일 26/11/02",
+      "body": "신입 지원 가능 스크랩 ECMiner 연구소 빅데이터/AI 솔루션 개발자 채용 공고 ㈜이씨마이너 서울 강남구 IT컨설팅, 소프트웨어개발자 즉시 지원 신입·경력 • 운동비 지원 , 연차제도 , 퇴직금 , 반차제도",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50289499",
       "source": "잡코리아",
       "sources": [
@@ -28633,13 +28865,13 @@
         "서울"
       ],
       "categories": [
-        "java_ai",
-        "regular_dev"
+        "java_ai"
       ],
       "employmentTypes": [
-        "정규직"
+        "정규직",
+        "인턴"
       ],
-      "career": "경력무관",
+      "career": "신입·경력",
       "education": "대졸↑",
       "salary": null,
       "shortPay": null,
@@ -30885,10 +31117,10 @@
       "deadline": "2026-11-08",
       "deadlineSource": "지원마감일",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -31530,7 +31762,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50245476",
       "title": "[경력 5년 이상] 솔루션 개발자/웹 개발 리드 채용(Java/Spring)",
       "company": "㈜보이스토어",
-      "body": "[경력 5년 이상] 솔루션 개발자/웹 개발 리드(Java/Spring) 채용 스크랩 내일마감 입사지원 서울 금천구 경력5년↑ 학력무관 정규직 Spring , SpringBoot , Java , 웹개발 , 프론트엔드 외 수정일 26/10/27",
+      "body": "스크랩 [경력 5년 이상] 솔루션 개발자/웹 개발 리드 채용(Java/Spring) ㈜보이스토어 서울 금천구 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자 연봉 25,880만원~ 즉시 지원 경력5년↑",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50245476",
       "source": "잡코리아",
       "sources": [
@@ -31541,11 +31773,11 @@
         "서울"
       ],
       "categories": [
-        "java_ai",
-        "regular_dev"
+        "java_ai"
       ],
       "employmentTypes": [
-        "정규직"
+        "정규직",
+        "인턴"
       ],
       "career": "경력 5년↑",
       "education": "학력무관",
@@ -31568,7 +31800,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50245463",
       "title": "[경력 3년 이상] 솔루션 개발자 채용(Java/Spring)",
       "company": "㈜보이스토어",
-      "body": "[경력 3년 이상] 솔루션 개발자 (Java/Spring) 채용 스크랩 내일마감 입사지원 서울 금천구 경력3년↑ 학력무관 정규직 Spring , SpringBoot , Java , Javascript , 프론트엔드 외 수정일 26/10/27",
+      "body": "스크랩 [경력 3년 이상] 솔루션 개발자 채용(Java/Spring) ㈜보이스토어 서울 금천구 솔루션·SI·CRM·ERP, 백엔드개발자, 웹개발자 연봉 25,880만원~ 즉시 지원 경력3년↑",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50245463",
       "source": "잡코리아",
       "sources": [
@@ -31579,11 +31811,11 @@
         "서울"
       ],
       "categories": [
-        "java_ai",
-        "regular_dev"
+        "java_ai"
       ],
       "employmentTypes": [
-        "정규직"
+        "정규직",
+        "인턴"
       ],
       "career": "경력 3년↑",
       "education": "학력무관",
@@ -33383,7 +33615,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50123828",
       "title": "[테크노밸리 용산동] 12월 말까지/의료기기 생산/단기 알바모집",
       "company": "㈜테크노스탭",
-      "body": "오늘 마감! 놓치지 마세요! 스크랩 [테크노밸리 용산동] 12월 말까지/의료기기 생산/단기 알바모집 ㈜테크노스탭 대전 유성구 생활화학·화장품, 생산직종사자, 생산·공정관리자, 포장·가공담당자 시급 10,820원~ 즉시 지원 경력무관 • 점심 식사 지원 , 연차제도 , 4대보험 , 퇴직금",
+      "body": "스크랩 [테크노밸리 용산동] 12월 말까지/의료기기 생산/단기 알바모집 ㈜테크노스탭 대전 유성구 생활화학·화장품, 생산직종사자, 생산·공정관리자, 포장·가공담당자 시급 10,820원~ 즉시 지원 경력무관 • 점심 식사 지원 , 연차제도 , 4대보험 , 퇴직금",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50123828",
       "source": "잡코리아",
       "sources": [
@@ -33409,7 +33641,7 @@
       },
       "postedDate": "",
       "dateSource": "수집일",
-      "deadline": "2026-11-06",
+      "deadline": "2026-11-13",
       "deadlineSource": "구조화데이터:validThrough",
       "deadlineCheckedAt": "2026-11-06",
       "status": "active",
@@ -36473,10 +36705,10 @@
       "deadline": "",
       "deadlineSource": "채용시",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-11-06",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
@@ -47959,10 +48191,10 @@
       "deadline": "2026-11-30",
       "deadlineSource": "D-day",
       "deadlineCheckedAt": "2026-11-06",
-      "status": "active",
+      "status": "unverified",
       "missCount": 0,
       "closedAt": "",
-      "closeReason": "",
+      "closeReason": "ConnectTimeout",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-11-06",
       "lastChecked": "2026-11-06"
