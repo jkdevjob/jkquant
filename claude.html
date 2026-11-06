@@ -482,9 +482,9 @@ function nextSig(t,unit){
   return "<div class='kpis'><div class='kpi'><div class='l'>다음 "+unit+" 신호 ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.holdNext?"good":"")+"'>"+(n.holdNext?"보유":"쉼")+"</div><div class='sub'>종가 "+Math.round(n.signalClose).toLocaleString()+" · 평균 "+Math.round(n.ma).toLocaleString()+"</div></div></div>";
 }
 // 📅 오늘 탭 — 지피티 단타 오늘 탭과 같은 구성: ① 전략별 전일·당일(모두 한국시간 어제·오늘) + 누적 추이 ② 기준전략 누적 상태
-var TODAY_T=[["opening","① 시초가","시초가","그날 한국장 (15:40 마감)"],["daytrading","② 데이트레이딩","데이트레이딩","그날 아침 시가에 판 결과 (전날 종가 매수분)"],
-  ["crypto","③ 비트코인","비트코인","그날 09:00 시작 업비트 하루 (다음 날 09:00 확정)"],["soxl","④ SOXL","SOXL","전날 밤 미국장 (한국 아침 마감)"],
-  ["close30","⑤ 종가 30분","종가 30분","그날 한국장 15:00 → 15:30 종가 (15:40 마감)"]];
+var TODAY_T=[["opening","① 시초가","시초가","그날 한국장 (15:40 마감)","15:30 종가에 팔면 확정"],["daytrading","② 데이트레이딩","데이트레이딩","그날 아침 시가에 판 결과 (전날 종가 매수분)","09:00 시가에 팔면 확정"],
+  ["crypto","③ 비트코인","비트코인","그날 09:00 시작 업비트 하루 (다음 날 09:00 확정)","다음 날 09:00 확정"],["soxl","④ SOXL","SOXL","전날 밤 미국장 (한국 아침 마감)","미국장 마감 뒤 확정"],
+  ["close30","⑤ 종가 30분","종가 30분","그날 한국장 15:00 → 15:30 종가 (15:40 마감)","15:30 종가에 팔면 확정"]];
 // 전일·당일 = 한국 날짜 어제·오늘(실시간 자료 날짜 기준, 없으면 밤 계산 날짜). 칸마다 밤 계산 확정 값(v)과 확정 전 실시간 값(lv)을 같이 넘긴다.
 function prevDateOf(d){return new Date(Date.parse(d+"T00:00:00Z")-864e5).toISOString().slice(0,10)}
 function dayPair(r,days,today){
@@ -492,17 +492,19 @@ function dayPair(r,days,today){
   return dd.map(function(d){return {date:d,v:d&&d===r.lastDate?r.last:d&&d===r.prevDate?r.prev:null,lv:(days||{})[d]||null}});
 }
 // 확정 전 칸(/api/claude-live days) — 점선 테두리 · 출처(모의투자 체결 / 규칙·시세 계산) · 시각 · '확정 전'을 같이 적어 확정 값과 같은 모양으로 보이지 않게 한다.
-function liveCell(lv,date,label){
+// 아직 들고 있으면 '보유 · 오름/내림'(승패가 아님)과 언제 확정되는지(until — 탭마다, 예: 15:30 종가에 팔면 확정)를 적는다(2026-11-06 사용자 "왜 확정전이냐").
+function liveCell(lv,date,label,until){
   var v=lv.v,nt=v==="no_trade",hd=v==="holiday",ok=!nt&&!hd&&isFinite(v),hit=ok&&v>=1;
-  var meta=hd?"장이 열리지 않은 날":nt?"기준전략 0건":"기준전략 "+(lv.trades||0)+"건"+(lv.wins||lv.losses?" · 승 "+(lv.wins||0)+" · 패 "+(lv.losses||0):"")+" · "+(lv.src==="vts"?"모의투자 체결":"시세로 계산");
+  var held=!lv.final&&!lv.decided&&ok;
+  var meta=hd?"장이 열리지 않은 날":nt?"기준전략 0건":(held?"보유 "+(lv.trades||0)+"건"+(lv.wins||lv.losses?" · 오름 "+(lv.wins||0)+" · 내림 "+(lv.losses||0):""):"기준전략 "+(lv.trades||0)+"건"+(lv.wins||lv.losses?" · 승 "+(lv.wins||0)+" · 패 "+(lv.losses||0):""))+" · "+(lv.src==="vts"?"모의투자 체결":"시세로 계산");
   var g=hit?"+1% 달성 · ":ok?"목표까지 "+Math.max(0,1-v).toFixed(2)+"%p · ":"";
-  var when=lv.decided?"매수 조건 안 됨 · 밤 확정 전":lv.final?"마감 · 밤 확정 전":"⏱ "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"")+" 실시간 · 확정 전";
+  var when=lv.decided?"매수 조건 안 됨 · 밤 확정 전":lv.final?"마감 · 밤 확정 전":"⏱ "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"")+(held?" 지금 가격":" 실시간")+" · "+(until||"확정 전");
   return "<div class='daily-result-box live'><div class='daily-result-label'>"+label+" · "+esc(date||"—")+"</div>"+
     "<div class='daily-result-ret "+(ok?cls(v):"")+"'>"+(hd?"휴장":nt?(lv.final?"매매없음":"아직 매수 없음"):pct(v))+"</div>"+
     "<div class='daily-result-meta'>"+meta+(lv.note?"<br>"+esc(lv.note):"")+"</div><span class='daily-result-goal"+(hit?" hit":"")+"'>"+g+when+"</span></div>";
 }
-function resultCell(v,date,label,cl,lv){
-  if((v==null||v==="pending")&&lv)return liveCell(lv,date,label);
+function resultCell(v,date,label,cl,lv,until){
+  if((v==null||v==="pending")&&lv)return liveCell(lv,date,label,until);
   if(v==null)return "<div class='daily-result-box'><div class='daily-result-label'>"+label+(date?" · "+esc(date):"")+"</div><div class='daily-result-ret'>—</div><div class='daily-result-meta'>확정 결과 대기</div></div>";
   if(v==="holiday")return "<div class='daily-result-box'><div class='daily-result-label'>"+label+" · "+esc(date||"—")+"</div><div class='daily-result-ret'>휴장</div><div class='daily-result-meta'>장이 열리지 않은 날</div><span class='daily-result-goal'>0.00% 반영</span></div>";
   var nt=v==="no_trade",pd=v==="pending",ok=!nt&&!pd&&isFinite(v),hit=ok&&v>=1;
@@ -526,7 +528,7 @@ function todayPage(lab){
     if(cl&&z[0]==="soxl"&&cl.date)cl=Object.assign({},cl,{date:new Date(Date.parse(cl.date+"T00:00:00Z")+864e5).toISOString().slice(0,10)});   // 미국장 d 마감 장부 = 한국 d+1 칸
     var pr=dayPair(r,lt.days,(LIVE&&!LIVE.error&&LIVE.today)||"");   // 확정 전 값은 칸 안에(점선) — 1분마다 실시간 자료로 다시 그린다
     return "<div class='daily-result-card'><div class='daily-result-title'><span>"+z[1]+"</span><button onclick=\"showTab('"+z[0]+"')\">전략 보기 →</button></div>"+
-      "<div class='daily-result-cols'>"+resultCell(pr[0].v,pr[0].date,"전일",cl,pr[0].lv)+resultCell(pr[1].v,pr[1].date,"당일",cl,pr[1].lv)+"</div>"+
+      "<div class='daily-result-cols'>"+resultCell(pr[0].v,pr[0].date,"전일",cl,pr[0].lv,z[4])+resultCell(pr[1].v,pr[1].date,"당일",cl,pr[1].lv,z[4])+"</div>"+
       "<div class='daily-result-meta' style='margin-top:7px'>시간 기준 "+z[3]+"</div>"+(r.plan?"<div class='daily-result-meta'>오늘: "+esc(r.plan)+"</div>":"")+"</div>";
   }).join("");
   var stamp=String(dl.generatedAt||lab.generatedAt||"").replace("T"," ").slice(0,16);
