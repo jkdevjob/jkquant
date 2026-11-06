@@ -1963,6 +1963,18 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
       const mut=src.replace('if(!REGION_SEL.size)return true;','');
       const M=load(mut); M.sel=new Set();
       ok('[JOB 지역] 변이: 전국일 때 전부 통과를 빼면 빨간불', mut!==src&&!M.regionMatches(J(['서울'])));
+      /* 칩 끄기(2026-11-06): 켜진 카테고리 · 고용형태 칩을 다시 누르면 꺼진다 · 지역 빠른 버튼도 */
+      const tg=pick('function toggleChoice('), T={}; VM.createContext(T); VM.runInContext(tg+'\nthis.f=toggleChoice;',T);
+      ok('[JOB 칩] 켜진 칩을 다시 누르면 끈다: 개발자 정규직→전체 · 전체→전체 · 다른 칩은 그 칩 · 정규직 제외→해제',
+         T.f('regular_dev','regular_dev','all')==='all'&&T.f('all','all','all')==='all'&&T.f('all','java_ai','all')==='java_ai'
+         &&T.f('','nonregular','')==='nonregular'&&T.f('nonregular','nonregular','')===''&&T.f('regular','nonregular','')==='nonregular');
+      ok('[JOB 칩] 배선: 카테고리 · 고용형태 칩 · 지역 빠른 버튼이 toggleChoice 를 쓰고, 고용형태 칩과 select 가 setEmployment 로 맞춰지며, 정규직 제외 선택지 · iOS touchstart 바깥 닫기',
+         /activeCat=toggleChoice\(activeCat,b\.dataset\.cat,"all"\)/.test(job)&&/setEmployment\(toggleChoice\(document\.getElementById\("employment"\)\.value,b\.dataset\.emp,""\)\)/.test(job)
+         &&/var next=toggleChoice\(cur,k,k==="all"\?"home":"all"\)/.test(extractFn(job,'function regionPreset('))
+         &&/addEventListener\("change",function\(\)\{setEmployment\(this\.value\)\}\)/.test(job)&&/data-emp="nonregular">정규직 제외</.test(job)&&/<option value="nonregular">정규직 제외/.test(job)
+         &&/setEmployment\(""\)/.test(extractFn(job,'function resetFilters()'))&&/addEventListener\("touchstart",regionOutside/.test(job));
+      const tm=tg.replace('return cur===tapped?off:tapped','return tapped'), TM={}; VM.createContext(TM); VM.runInContext(tm+'\nthis.f=toggleChoice;',TM);
+      ok('[JOB 칩] 변이: 다시 눌러도 안 꺼지면(옛 코드) 빨간불', tm!==tg&&TM.f('regular_dev','regular_dev','all')!=='all');
     }catch(e){ ok('[JOB 지역] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); }
   }
   ok('DB 읽기 실패 뒤 재로그인 대신 같은 계정으로 DB 재연결 가능',
