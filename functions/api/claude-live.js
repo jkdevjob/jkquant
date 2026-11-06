@@ -280,16 +280,20 @@ export function openingRuleCell(pre,P,bars,final){
   return {v:avg(v),final:!!final,src:"rule",trades:v.length,...wl(v),
     note:"모의투자 매수 안 됨"+(failed.length?"("+failed.length+"종목"+(why?" · "+why:"")+")":"")+" — 규칙대로 계산"};
 }
+// 주문 정산 장부(basis=orders · settled) → 칸. 15:40 에 Worker 가 공식 시가 · 종가로 닫은 값이고 밤 계산은 이 값을 그대로 복사하므로
+// 이때 이미 확정이다 → settled:true(화면은 '15:40 장부 확정'으로 보인다 · 2026-11-06 사용자 "왜 얘들이 아직 확정이 아니냐고"). 시세가 모자라 settled=false 면 null.
+export function settledCell(c){
+  if(!c||c.basis!==SETTLE_BASIS)return null;
+  const tv=(c.trades||[]).map(x=>x.pnlPct).filter(x=>x!=null);
+  if(c.dayPct==null)return c.settled===false?null:{v:"no_trade",final:true,settled:true,src:"rule",trades:0,note:c.note||""};
+  return {v:c.dayPct,final:true,settled:true,src:"rule",trades:tv.length,...wl(tv),note:c.warn||""};
+}
 // ① 마감 장부(15:40 체결 조회 뒤 Worker 가 한 번 저장) → 칸. 메인이 고른 종목만(측정용 제외) · 종목 균등(밤 계산 칸과 같은 평균).
 // rule: 위 규칙 칸 — 체결이 하나도 없는 날에만 쓴다(체결이 있으면 모의투자 체결로).
 export function openingClosedCell(c,rule=null){
   if(!c)return null;
   if(c.status==="holiday")return {v:"holiday",final:true,src:"vts"};
-  if(c.basis===SETTLE_BASIS){                                              // 주문 정산 장부(2026-10-22~) — 장부가 적은 그날 값 그대로
-    const tv=(c.trades||[]).map(x=>x.pnlPct).filter(x=>x!=null);
-    if(c.dayPct==null)return c.settled===false?null:{v:"no_trade",final:true,src:"rule",trades:0,note:c.note||""};
-    return {v:c.dayPct,final:true,src:"rule",trades:tv.length,...wl(tv),note:c.warn||""};
-  }
+  if(c.basis===SETTLE_BASIS)return settledCell(c);                          // 주문 정산 장부(2026-10-22~) — 장부가 적은 그날 값 그대로
   const t=(c.trades||[]).filter(x=>x.pnlPct!=null),o=(c.open||[]).filter(x=>x.pnlPct!=null),all=t.concat(o).map(x=>x.pnlPct);
   if(!all.length)return rule||{v:"no_trade",final:true,src:"vts",trades:0,note:c.note||""};
   return {v:avg(all),final:!o.length,src:"vts",trades:all.length,...wl(all),note:o.length?"매도 미체결 "+o.length+"건 — 시세로 평가":""};
@@ -474,9 +478,9 @@ export async function onRequestGet({request,env}){
     };
     const [r1,r1y]=await Promise.all([ruleOf(now.date,lt,c1),krxDay(Y).closed?null:ruleOf(Y,ledAt(Y),c1y)]);
     const days={opening:{[Y]:krxDay(Y).closed?{v:"holiday",final:true,src:"vts"}:openingClosedCell(c1y,r1y),[now.date]:openingTodayCell(out.tabs.opening,c1,krxDay(now.date).closed,r1)},
-      daytrading:{[Y]:etfCell(Y),[now.date]:etfCell(now.date)},
+      daytrading:{[Y]:etfCell(Y),[now.date]:(c2&&c2.date===now.date&&settledCell(c2))||etfCell(now.date)},
       close30:{[Y]:krxDay(Y).closed?{v:"holiday",final:true,src:"vts"}:(ledAt(Y)?close30DayCell(stages(ledAt(Y)),{close:etfBar(Y).close},false):null),
-        [now.date]:close30DayCell(st,{close:now.hm>=1531?etfBar(now.date).close:0,now:prices["233740"]},krxDay(now.date).closed)},
+        [now.date]:(c5&&c5.date===now.date&&settledCell(c5))||close30DayCell(st,{close:now.hm>=1531?etfBar(now.date).close:0,now:prices["233740"]},krxDay(now.date).closed)},
       crypto:{[Y]:coinDayCell(Y,coinRaw,mainOf("crypto",Y).params),[now.date]:coinDayCell(now.date,coinRaw,mainOf("crypto",now.date).params)},
       soxl:sxc&&(sxc.date===Y||sxc.date===now.date)?{[sxc.date]:sxc.cell}:{}};
     for(const k of Object.keys(days))if(out.tabs[k])out.tabs[k].days=days[k];

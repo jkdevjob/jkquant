@@ -250,7 +250,11 @@ JS = [
     ("worker recheck 3 only", "worker", "export const RECHECK={atHms:85800,lastHms:85845,n:10};", "export const RECHECK={atHms:85800,lastHms:85845,n:3};"),
     ("worker recheck at 08:57", "worker", "export const RECHECK={atHms:85800,", "export const RECHECK={atHms:85700,"),
     ("d1 tab drops rejected orders", "claude-live.js", "const uv=use.filter(r=>r.pnlPct!=null).map(r=>r.pnlPct)", 'const uv=use.filter(r=>r.pnlPct!=null&&!/^모의계좌 주문 안/.test(r.vts||"")).map(r=>r.pnlPct)'),
-    ("closed cell basis ignored", "claude-live.js", "if(c.basis===SETTLE_BASIS){", "if(false){"),
+    ("closed cell basis ignored", "claude-live.js", "if(c.basis===SETTLE_BASIS)return settledCell(c);", "if(false)return settledCell(c);"),
+    # 2026-11-06 '왜 얘들이 아직 확정이 아니냐고' — 15:40 주문 정산 장부는 그 자리에서 확정(settled)
+    ("settled cell loses settled flag", "claude-live.js", 'return {v:c.dayPct,final:true,settled:true,src:"rule",trades:tv.length,...wl(tv),note:c.warn||""};', 'return {v:c.dayPct,final:true,src:"rule",trades:tv.length,...wl(tv),note:c.warn||""};'),
+    ("etf today ignores settled ledger", "claude-live.js", "[now.date]:(c2&&c2.date===now.date&&settledCell(c2))||etfCell(now.date)}", "[now.date]:etfCell(now.date)}"),
+    ("close30 today ignores settled ledger", "claude-live.js", "[now.date]:(c5&&c5.date===now.date&&settledCell(c5))||close30DayCell(", "[now.date]:close30DayCell("),
     ("closed cell unsettled shown", "claude-live.js", "if(c.dayPct==null)return c.settled===false?null:", "if(c.dayPct==null)return false?null:"),
     ("coin no-buy day not final", "claude-live.js", "if(!pnl.length&&!open)return", "if(false)return"),
     ("coin entry hour ignored", "claude-live.js", "if(r&&r.action===\"돌파 없음\"&&nowMs<end)open=true;", "if(r&&r.action===\"돌파 없음\")open=true;"),
