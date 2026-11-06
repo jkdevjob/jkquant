@@ -1,0 +1,83 @@
+{
+  "date": "2026-11-06",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": 5.248565717307909,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "삼화콘덴서",
+      "code": "001820",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 73200,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 78100,
+      "qty": 0,
+      "pnlPct": 6.054153005464472,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:10",
+        "expectedPrice": 65600,
+        "basePrice": 85200,
+        "expectedGapPct": -23.004694835680752,
+        "rsi14Prev": 25.21,
+        "qualified": 52,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "후성",
+      "code": "093370",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 8010,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 8210,
+      "qty": 0,
+      "pnlPct": 1.892347066167297,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:10",
+        "expectedPrice": 7010,
+        "basePrice": 9000,
+        "expectedGapPct": -22.111111111111114,
+        "rsi14Prev": 29.964,
+        "qualified": 52,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "RF머트리얼즈",
+      "code": "327260",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 20550,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 22350,
+      "qty": 0,
+      "pnlPct": 7.79919708029196,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:10",
+        "expectedPrice": 19000,
+        "basePrice": 24050,
+        "expectedGapPct": -20.997920997920993,
+        "rsi14Prev": 25.866,
+        "qualified": 52,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "메인 매매일(통과 52종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-11-07T01:56:46.499421+09:00"
+}
