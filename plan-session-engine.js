@@ -8,6 +8,33 @@ const DEFAULTS={
   20:{winnerWeight:.40,m9Weight:.30,m12Weight:.70}
 };
 const FEE_RATE=.001;
+/* 5년 플랜 규칙 벌 — 플랜 화면(renderAlphaPlan)과 모의 재생(replay)이 같은 alphaDecide 로 판정한다 (같은 걸 두 군데서 세지 않는다).
+   base: 공식(지금) 규칙. exp1: '실험적 확장'(2026-11 연구 · 공식 규칙 아님 · 켤 때만) —
+     Guard 끄기 −1% → −3% · TECL 슬리브 밴드 10%p 대칭 → 줄일 때 1%p(전체 0.7%p)·늘릴 때 15%p(전체 10.5%p) ·
+     TQQQ 를 Guard 바뀔 때만이 아니라 해마다 첫 거래일에도 30% 와 2%p 넘게 벌어졌으면 30% 로.
+   연구값(2011~ 앱 조건 1만$): 30.4/48.4 → 30.8/41.6 · 합성 2000~ 13.5/82.3 → 14.4/77.6 (research/im_plan/RESEARCH_LOG.md '앱 반영안'). */
+const ALPHA_RULES={
+  base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false},
+  exp1:{key:'exp1',name:'새 규칙 (실험적 확장)',guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15,tqReb:.02,exp:true}
+};
+function alphaRules(key){return ALPHA_RULES[String(key||'')]||ALPHA_RULES.base;}
+/* 다음 거래일(평일 기준)이 해가 바뀐 첫 거래일인가 — 1월 1일은 휴장이라 평일로 넘겨도 새해 첫 거래일은 1월 안에 있다. */
+function yearDoneAt(dateStr){
+  const d=new Date(String(dateStr||'')+'T00:00:00Z');if(isNaN(d))return false;const y=d.getUTCFullYear();
+  do{d.setUTCDate(d.getUTCDate()+1);}while(d.getUTCDay()===0||d.getUTCDay()===6);
+  return d.getUTCFullYear()!==y;
+}
+/* 5년 플랜 하루 판정 — 전일 확정값만 받는다.
+   a={rules, w(목표 슬리브 비율), sleeveNow, teclQty, tqqqQty, tqqqClose, sma, tqqqWeight(전체 대비 TQQQ 비중), guardWeight, yearStart}
+   반환 {rules, teclHit, guard, guardFlip, tqReb, upper, lower} — tqReb: 해 첫 거래일 TQQQ 30% 맞춤(exp1 · Guard ON 유지 중일 때만) */
+function alphaDecide(a){
+  const R=alphaRules(a.rules&&a.rules.key||a.rules);
+  const teclHit=!(a.teclQty>0)||(a.sleeveNow-a.w>R.bandDn)||(a.w-a.sleeveNow>R.bandUp);
+  const upper=a.sma*(1+R.guardOn),lower=a.sma*(1-R.guardOff),posOn=a.tqqqQty>0;
+  const guard=a.tqqqClose>upper?'ON':a.tqqqClose<lower?'OFF':(posOn?'ON':'OFF'),guardFlip=(guard==='ON')!==posOn;
+  const tqReb=R.tqReb>0&&!!a.yearStart&&guard==='ON'&&!guardFlip&&Math.abs((+a.tqqqWeight||0)-(+a.guardWeight||0))>R.tqReb;
+  return {rules:R,teclHit,guard,guardFlip,tqReb,upper,lower};
+}
 
 function alphaFee(q,p){
   const gross=Math.max(0,(+q||0)*(+p||0));
@@ -120,6 +147,7 @@ function targetOrders(target,pos,px,cash,date,signalDate,ledger,seq){
 function replay(opt){
   opt=opt||{};
   const horizon=[5,10,15,20].includes(+opt.horizon)?+opt.horizon:5;
+  const RULES=alphaRules(opt.rules);   // 5년 규칙 벌(base 기본 · exp1 실험적 확장) — 안 주면 예전과 같다
   const start=String(opt.startDate||''),end=String(opt.endDate||'');
   const principal=Math.max(0,+opt.principal||0),monthlyAdd=Math.max(0,+opt.monthlyAdd||0);
   if(!start||!(principal>0))return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'시작일 또는 원금 없음'};
@@ -163,18 +191,19 @@ function replay(opt){
         if(sigma>0&&mv>0){
           const w=Math.min(1,(D.ivsS0*D.ivsS0)/(sigma*sigma));
           const sleeveNow=((pos.TECL*sp.TECL)/Math.max(total,1))/Math.max(D.teclWeight,1e-9);
-          const teclHit=pos.TECL===0||Math.abs(w-sleeveNow)>D.ivsBand;
-          const up=mv*(1+D.guardBand),dn=mv*(1-D.guardBand),posOn=pos.TQQQ>0;
-          const guard=sp.TQQQ>up?'ON':sp.TQQQ<dn?'OFF':(posOn?'ON':'OFF'),guardFlip=(guard==='ON')!==posOn;
+          // 판정은 공용 alphaDecide (플랜 화면과 같은 글자). 해 첫 거래일 = 체결일 i 와 신호일 p 의 해가 다름.
+          const dec=alphaDecide({rules:RULES,w,sleeveNow,teclQty:pos.TECL,tqqqQty:pos.TQQQ,tqqqClose:sp.TQQQ,sma:mv,
+            tqqqWeight:(pos.TQQQ*sp.TQQQ)/Math.max(total,1),guardWeight:D.guardWeight,yearStart:date.slice(0,4)!==S.dates[p].slice(0,4)});
+          const {teclHit,guard,guardFlip,tqReb}=dec;
           const first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-          need=teclHit||guardFlip||force||first||sgNew;
+          need=teclHit||guardFlip||tqReb||force||first||sgNew;
           if(need){
             const tt=(teclHit||force||first)?Math.max(0,Math.floor(total*D.teclWeight*w/sp.TECL)):pos.TECL;
-            const tq=(guardFlip||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/sp.TQQQ)):0):pos.TQQQ;
+            const tq=(guardFlip||tqReb||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/sp.TQQQ)):0):pos.TQQQ;
             const ts=sgQty(total-tt*sp.TECL-tq*sp.TQQQ);
             targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
           }
-          meta={horizon,sigma,w,sleeveNow,guard,teclHit,guardFlip};
+          meta={horizon,rules:RULES.key,sigma,w,sleeveNow,guard,teclHit,guardFlip,tqReb};
         }
       }else if(horizon===10){
         const D=DEFAULTS[10],mv=tma250[p],bull=mv>0&&sp.TQQQ>=mv;
@@ -237,8 +266,8 @@ function replay(opt){
     nav.push({date,total,inflow,cash,tecl:pos.TECL,tqqq:pos.TQQQ,sgov:pos.SGOV,teclPx:S.tecl[i],tqqqPx:S.tqqq[i],sgovPx:S.sgov[i]});
   }
 
-  return {horizon,orderSizingVersion:2,ledger,nav,stats:stats(nav,nTrade),lastDecision,last:nav[nav.length-1]||null,error:''};
+  return {horizon,rules:RULES.key,orderSizingVersion:2,ledger,nav,stats:stats(nav,nTrade),lastDecision,last:nav[nav.length-1]||null,error:''};
 }
 
-g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',DEFAULTS,FEE_RATE,alphaFee,replay,stats};
+g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',DEFAULTS,ALPHA_RULES,alphaRules,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,replay,stats};
 })(typeof window!=='undefined'?window:globalThis);
