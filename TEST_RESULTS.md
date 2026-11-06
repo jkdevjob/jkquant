@@ -6,6 +6,7 @@
 - `check-plan-evidence.cjs`: 기존 값(σ20 · 90.4% → 63.3% · 9.6%p 유지 · Guard ON) 그대로 + TQQQ 62.2(SMA 63.459 의 −2.0%) 기본 OFF·TQQQ 매도 주문 / 새 규칙 ON·유지·'새 규칙' 표시·OFF 경계 $61.56 — PASS · 변이 2/2.
 - `check-plan-warmup.cjs` 5묶음 · 변이 4/4 · `check-plan-signal-fill.cjs` 7묶음 — 그대로 PASS(엔진 기본값 불변).
 - `check-before-push.cjs` 1차: 57단계 중 회귀 2819 PASS / 2 FAIL — 둘 다 엔진 스크립트 캐시 판 `?v=2` 를 글자로 고정한 검사(H2 signal-fill · H3 캐시 버전). 엔진이 바뀌어 `?v=3` 으로 올린 것이 맞으므로 두 검사를 'v2 이상'으로 바꿈(규칙 v2 마커 `VERSION:2`·`ORDER_SIZING_BASIS` 는 그대로 검사).
+- `check-before-push.cjs` 2차(81e0b33): 57단계 전부 PASS · 전체 회귀 2821 PASS / 0 FAIL — ALL PASS.
 - 미확인: 새 규칙의 실제 운용 성과(연구 추정치) · 실제 화면에서 선택 저장·새로고침 뒤 유지(브라우저 스모크 생략 — 사용자 화면 확인 필요).
 ## 2026-11-06 · JOB 전국 수집 · 지역 다중 선택 · v3.117.0 (JOB v1.2.0 · 푸시 Worker 2.10.1)
 
