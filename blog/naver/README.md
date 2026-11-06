@@ -24,6 +24,11 @@
 - 이미지 블록 다음 줄(`attr`)은 본문에 13px 회색 문단으로 들어가고, 링크가 살아 있다.
 - 지난 원고는 `posts/` 에 날짜별로 남긴다.
 
+## 노트북 자동 게시 (2026-11-06~, 준비되면)
+
+`local_publisher.json` 의 `enabled` 가 `true` 이면 게시는 노트북(윈도우) 작업 스케줄러가 `local_publish.js` 로 한다.
+설치와 동작은 `WINDOWS_SETUP.md`. 클라우드 세션은 원고만 올리고, 약 1시간 뒤 글 목록을 확인해 안 올라갔을 때만 아래 QR 흐름으로 대신 올린다.
+
 ## 매일 흐름
 
 1. 원고는 `../naverpack/README.md` 의 주제·분량·출처 규칙대로 `../naverpack/posts/<날짜>_<이름>/post.json` 에 쓰고,
