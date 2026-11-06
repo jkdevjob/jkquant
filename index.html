@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.115.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.115.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1701,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.115.1</b> · 2026-11-04</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.115.2</b> · 2026-11-05</div>
   </footer>
 </div>
 
@@ -2306,6 +2306,10 @@ function load(){
 let stateCloudHydrated=false, stateCloudRev=0, stateCloudPending=false, stateCloudHistorySig='', stateDbBase=null;
 function _histKeyPart(x){
   if(x&&x.id!=null)return 'id:'+String(x.id);
+  // 재생은 서로 다른 날의 거래를 같은 밀리초에 만든다. 시각만 키로 쓰면
+  // 저장 rebase의 Map에서 첫 매수/잔돈이 후속 체결로 덮인다. 생성 기록은
+  // 거래 내용까지 식별하고, 사람이 입력/수정한 기록의 기존 id/ts는 유지한다.
+  if(x&&x.ts!=null&&(x.sim||x.auto))return 'generated:'+String(x.ts)+'|'+_histSemanticKey(x);
   if(x&&x.ts!=null)return 'ts:'+String(x.ts);
   return '';
 }
@@ -8235,7 +8239,7 @@ function paperFxFallback(){
    - 평소 모의 페이지를 열 때는 저장된 표를 즉시 보여 주고 전 전략 재생을 다시 하지 않는다.
    - 하루가 바뀌었거나 원장이 바뀌면 백그라운드에서 한 번만 증분 갱신한다.
    - 전체 적용/오늘 갱신은 force=true로 명시적으로 다시 계산한다. */
-const PAPER_VIEW_CACHE_VER=3;   // 2: 세후 TR(atr) 칸 (2026-10-21) · 3: 자산플랜 모의 엔진 예열 수정 — SGOV 상장 전 시작 세션 값이 바뀌어 한 번 다시 센다 (2026-10-31)
+const PAPER_VIEW_CACHE_VER=4;   // 4: VR 저장 중 첫 매수 누락 복구 — 이전 성과 순위를 다시 계산한다 (2026-11-05)
 let _paperViewRefreshPromise=null;
 function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
 function paperViewSig(){
@@ -10529,7 +10533,9 @@ const SIM_RULE_VER=14;  // 14: MA150 −10% → 익절 10% 하향 기준 적용
    배포만으로 모의 기록이 전부 다시 만들어지지 않는다. 켜거나 끄면 지문이 바뀌어 그 세션만 다시 돈다. */
 const SIM_OPT_KEYS=['autoTp','autoTpMode'];
 function simSig(tab,st){
-  return 'r'+SIM_RULE_VER+'|'+(SIM_KEYS[tab]||[]).filter(k=>!(k==='autoTp'&&st.autoTp!==true)&&!(k==='autoTpMode'&&st.autoTp!==true)).map(k=>String(st[k]===undefined?'':st[k])).join('|');
+  // VR만 재생성해 이미 저장 중 소실된 첫 매수와 잔돈도 복원한다.
+  // 다른 전략의 지문은 그대로여서 관련 없는 자동 이력을 재생하지 않는다.
+  return 'r'+SIM_RULE_VER+'|'+(tab==='vr'?'ledger2|':'')+(SIM_KEYS[tab]||[]).filter(k=>!(k==='autoTp'&&st.autoTp!==true)&&!(k==='autoTpMode'&&st.autoTp!==true)).map(k=>String(st[k]===undefined?'':st[k])).join('|');
 }
 function paperResetGen(sess,sig){
   // 사람이 직접 넣은 기록은 남긴다 — 버릴 건 기계가 만든 것(sim·auto)뿐이다
