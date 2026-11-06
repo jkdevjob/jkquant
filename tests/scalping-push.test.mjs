@@ -311,3 +311,27 @@ test("연구(지피티) 후보 신호 · 대결 요약은 텔레그램으로 보
   assert.ok(!du.includes("api.telegram.org")&&du.includes('skipped:"buy_sell_only"'));
   assert.ok(om.includes('"[지피티 연구 시초가] 🟢 매수 · "')&&om.includes('"[지피티 연구 시초가] 🔴 매도 · "')&&om.includes('text:title+"\\n\\n"'));
 });
+
+test("JOB 웹 푸시: 보관은 전국 · 푸시는 대전·세종 공고만 (2026-11-06)",async()=>{
+  const oldFetch=globalThis.fetch;
+  const jobs=[
+    {url:"https://j/1",title:"서울 Java 개발자",company:"서울사",status:"active",locations:["서울"],firstSeen:"2026-11-06"},
+    {url:"https://j/2",title:"대전 Java 개발자",company:"대전사",status:"active",locations:["대전"],firstSeen:"2026-11-06"},
+    {url:"https://j/3",title:"세종·경기 개발자",company:"세종사",status:"active",locations:["경기","세종"],firstSeen:"2026-11-05"},
+    {url:"https://j/4",title:"지역 없는 공고",company:"무지역",status:"active",locations:[],firstSeen:"2026-11-05"},
+  ];
+  globalThis.fetch=async()=>new Response(JSON.stringify({jobs}));
+  try{
+    const {worker,deliveries}=fakeStore();
+    const check=async()=>(await worker.fetch(new Request("https://push.invalid/check-jobs",{method:"POST"}))).json();
+    const base=await check();
+    assert.equal(base.baseline,true);assert.equal(base.items,2);                 // 서울·지역 없음은 빠지고 대전·세종 2건만 기준선
+    jobs.push({url:"https://j/5",title:"부산 백엔드",company:"부산사",status:"active",locations:["부산"],firstSeen:"2026-11-06"});
+    const r1=await check();
+    assert.equal(r1.newCount,0);assert.equal(deliveries.length,0);               // 부산 신규는 푸시 없음
+    jobs.push({url:"https://j/6",title:"대전 Spring 개발자",company:"대전2",status:"active",locations:["대전"],firstSeen:"2026-11-06"});
+    const r2=await check();
+    assert.equal(r2.newCount,1);assert.deepEqual(deliveries,["job"]);assert.equal(r2.alert.job.title,"대전 Spring 개발자");
+    assert.ok(r2.alert.title.startsWith("💼 대전·세종 신규 JOB 1건"),r2.alert.title);
+  }finally{globalThis.fetch=oldFetch;}
+});

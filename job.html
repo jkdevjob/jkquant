@@ -23,8 +23,13 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
 .cardtop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.titleline{display:flex;align-items:baseline;gap:7px;min-width:0;flex-wrap:wrap}.title{font-size:15px;font-weight:900;line-height:1.4;text-decoration:none}.title:hover{color:var(--gold)}.company-inline{font-size:11px;font-weight:700;color:var(--dim);white-space:nowrap}.card-actions{display:flex;align-items:center;justify-content:flex-end;gap:9px;flex:0 0 auto}.date{font-size:11px;color:var(--faint);margin-top:8px}.card-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;padding-top:11px;border-top:1px solid var(--border)}.scrap-btn{width:40px;height:40px;border-radius:8px;border:1px solid var(--border);background:var(--surf2);color:var(--faint);cursor:pointer;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}.scrap-btn:hover{border-color:var(--gold);color:var(--gold)}.scrap-btn.on{color:var(--gold);border-color:rgba(245,196,81,.55);background:rgba(245,196,81,.10)}.apply-btn{height:40px;border-radius:8px;border:1px solid var(--border);background:var(--surf2);color:var(--faint);cursor:pointer;font-size:11px;font-weight:800;padding:0 9px;white-space:nowrap}.apply-btn:hover{border-color:var(--green);color:var(--green)}.apply-btn.on{color:var(--green);border-color:rgba(54,211,153,.55);background:rgba(54,211,153,.10)}
 .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.tag{font-size:10.5px;padding:3px 7px;border-radius:999px;background:var(--surf2);color:var(--dim);border:1px solid var(--border)}.tag.hot{color:var(--gold)}.tag.ai{color:#aeb0ff}.tag.reg{color:var(--green)}.tag.pay{color:#ffadbe}.tag.closed{color:var(--red);border-color:rgba(248,123,140,.35)}.tag.active{color:var(--green)}.tag.applied{color:var(--green);border-color:rgba(54,211,153,.45);background:rgba(54,211,153,.08)}
 .desc{margin-top:9px;color:var(--dim);font-size:12px;line-height:1.6}.src{color:var(--faint);font-size:11px;line-height:1.5;flex:1;min-width:0}.empty,.loading{padding:45px 18px;text-align:center;color:var(--dim);background:var(--surf);border:1px solid var(--border);border-radius:12px}.more{display:flex;justify-content:center;margin-top:14px}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:11px;margin-bottom:10px}
+.regionbox{position:relative}.regionbox .rbtn{display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;font-weight:400;cursor:pointer}.regionbox .rbtn .chev{color:var(--faint);font-size:12px;flex:0 0 auto}.regionbox .rbtn.on{border-color:var(--accent);color:var(--text)}.regionbox .rbtn.on #regionLabel{color:#aeb0ff;font-weight:800}
+.regionpop{position:absolute;left:0;top:48px;z-index:60;background:var(--surf);border:1px solid var(--border2);border-radius:12px;padding:10px;min-width:300px;box-shadow:0 14px 34px rgba(0,0,0,.45)}.regionpop[hidden]{display:none}
+.regionpop .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.regionpop .quick button{height:32px;min-height:32px;padding:0 11px;font-size:12px;width:auto}.regionpop .quick button.cur{background:var(--accent);border-color:var(--accent);color:white}
+.regionpop .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px 8px}.regionpop label{display:flex;align-items:center;gap:7px;padding:7px 5px;border-radius:7px;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--dim)}.regionpop label:hover{background:var(--surf2)}.regionpop label.home{color:var(--gold)}.regionpop input[type="checkbox"]{width:16px;height:16px;min-height:0;margin:0;padding:0;accent-color:var(--accent)}
+.regionpop .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--faint)}.regionpop .foot button{height:32px;min-height:32px;width:auto;padding:0 12px;font-size:12px;white-space:nowrap;flex:0 0 auto}
 @media(max-width:850px){.hero{align-items:flex-start;flex-direction:column}.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}}
-@media(max-width:560px){.wrap{padding:0 11px}.filters{grid-template-columns:1fr}.filters .search{grid-column:auto}.cardtop{display:block}.card-footer{flex-direction:column;align-items:stretch;gap:10px}.card-footer .card-actions{justify-content:flex-end;width:100%}.date{margin-top:9px}.hero h2{font-size:20px}}
+@media(max-width:560px){.wrap{padding:0 11px}.filters{grid-template-columns:1fr}.filters .search{grid-column:auto}.cardtop{display:block}.card-footer{flex-direction:column;align-items:stretch;gap:10px}.card-footer .card-actions{justify-content:flex-end;width:100%}.date{margin-top:9px}.hero h2{font-size:20px}.regionpop{left:0;right:0;min-width:0}}
 </style>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js" data-guard="1"></script>
@@ -55,7 +60,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.1.23</span></h1></div>
+  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v" id="regionBadge">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.2.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -94,7 +99,14 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
   <div class="filters">
     <input class="search" id="keyword" placeholder="검색어: Java, Spring, 회사명, 업무내용...">
     <select id="period"><option value="30" selected>최근 1개월</option><option value="14">최근 14일</option><option value="7">최근 7일</option><option value="custom">직접 지정</option><option value="all">전체 보관분</option></select>
-    <select id="region"><option value="">대전·세종 전체</option><option>대전</option><option>세종</option></select>
+    <div class="regionbox" id="regionBox">
+      <button class="btn rbtn" id="regionBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="지역 선택" onclick="regionToggle(event)"><span id="regionLabel">대전·세종</span><span class="chev">▾</span></button>
+      <div class="regionpop" id="regionPop" hidden>
+        <div class="quick"><button type="button" class="btn" id="regionHomeBtn" onclick="regionPreset('home')">대전·세종</button><button type="button" class="btn" id="regionAllBtn" onclick="regionPreset('all')">전국</button></div>
+        <div class="grid" id="regionGrid"></div>
+        <div class="foot"><span>여러 지역을 함께 고를 수 있고, 아무것도 고르지 않으면 전국</span><button type="button" class="btn" onclick="regionClose()">닫기</button></div>
+      </div>
+    </div>
     <select id="employment"><option value="">고용형태 전체</option><option value="regular">정규직</option><option value="nonregular">정규직 외</option></select>
     <select id="jobStatus"><option value="active" selected>진행중</option><option value="all">마감 포함</option><option value="closed">마감만</option></select>
     <select id="source"><option value="">모든 출처</option></select>
@@ -116,6 +128,27 @@ document.addEventListener("click",function(e){var m=document.getElementById("jkm
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 var CAT_LABEL={java_ai:"Java·AI",regular_dev:"개발자 정규직",salary500:"월500+",salary450:"월450~499",short_term:"단기알바",scrap:"스크랩",applied:"지원완료"};
 var DATA={jobs:[],sourceStatuses:{},currentCount:0,historyCount:0},activeCat="all",shown=50,filtered=[];
+/* 지역 — 보관은 전국 17개 시·도, 기본 선택은 대전·세종. 여러 지역을 함께 고를 수 있고 아무것도 고르지 않으면 전국(2026-11-06). */
+var REGIONS=["서울","경기","인천","대전","세종","충남","충북","강원","부산","대구","울산","경남","경북","광주","전남","전북","제주"];
+var HOME_REGIONS=["대전","세종"];
+var REGION_SEL=new Set(HOME_REGIONS);
+function isHomeRegionSel(){return REGION_SEL.size===HOME_REGIONS.length&&HOME_REGIONS.every(function(r){return REGION_SEL.has(r)})}
+function regionLabel(){var a=REGIONS.filter(function(r){return REGION_SEL.has(r)});if(!a.length)return "전국";if(isHomeRegionSel())return "대전·세종";return a.length<=3?a.join("·"):a.slice(0,2).join("·")+" 외 "+(a.length-2)+"곳"}
+function regionMatches(j){if(!REGION_SEL.size)return true;var locs=(j&&j.locations)||[];for(var i=0;i<locs.length;i++)if(REGION_SEL.has(locs[i]))return true;return false}
+function syncRegionUI(){
+  var grid=document.getElementById("regionGrid");
+  if(!grid.children.length)grid.innerHTML=REGIONS.map(function(r){return '<label'+(HOME_REGIONS.indexOf(r)>=0?' class="home"':'')+'><input type="checkbox" value="'+r+'"> '+r+'</label>'}).join("");
+  grid.querySelectorAll("input").forEach(function(cb){cb.checked=REGION_SEL.has(cb.value)});
+  var lab=regionLabel();document.getElementById("regionLabel").textContent=lab;
+  var badge=document.getElementById("regionBadge");if(badge)badge.textContent=lab;
+  document.getElementById("regionBtn").classList.toggle("on",!isHomeRegionSel());
+  document.getElementById("regionHomeBtn").classList.toggle("cur",isHomeRegionSel());
+  document.getElementById("regionAllBtn").classList.toggle("cur",!REGION_SEL.size);
+}
+function setRegions(list){REGION_SEL=new Set(list||[]);syncRegionUI()}
+function regionPreset(k){setRegions(k==="all"?[]:HOME_REGIONS);applyFilters()}
+function regionToggle(e){if(e)e.stopPropagation();var p=document.getElementById("regionPop"),open=p.hidden;p.hidden=!open;document.getElementById("regionBtn").setAttribute("aria-expanded",open?"true":"false")}
+function regionClose(){var p=document.getElementById("regionPop");if(p)p.hidden=true;var b=document.getElementById("regionBtn");if(b)b.setAttribute("aria-expanded","false")}
 var FOCUS_KEY=(new URLSearchParams(location.search)).get("focus")||"";
 var SCRAPS={},APPLICATIONS={};
 function scrapKey(j){return String((j&&j.url)||(j&&j.id)||"").trim()}
@@ -277,7 +310,7 @@ function outboundJobTarget(j,url){
   return ' target="_blank" rel="noopener"'
 }
 function resetFilters(){
-  document.getElementById("keyword").value="";document.getElementById("region").value="";document.getElementById("employment").value="";document.getElementById("jobStatus").value="active";document.getElementById("source").value="";document.getElementById("sort").value="latest";setDefaultDates();shown=+document.getElementById("pageSize").value||50;applyFilters()
+  document.getElementById("keyword").value="";setRegions(HOME_REGIONS);document.getElementById("employment").value="";document.getElementById("jobStatus").value="active";document.getElementById("source").value="";document.getElementById("sort").value="latest";setDefaultDates();shown=+document.getElementById("pageSize").value||50;applyFilters()
 }
 function renderSources(){
   var names=[].concat.apply([],DATA.jobs.map(function(j){return j.sources||[]})).filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i}).sort(function(a,b){return a.localeCompare(b,"ko")});
@@ -291,14 +324,14 @@ function isRegularJob(j){
   return text.indexOf("정규직")>=0||text.indexOf("정규 사원")>=0||text.indexOf("정규사원")>=0
 }
 function applyFilters(){
-  var q=document.getElementById("keyword").value.trim().toLowerCase(),period=document.getElementById("period").value,region=document.getElementById("region").value,employment=document.getElementById("employment").value,jobStatus=document.getElementById("jobStatus").value,source=document.getElementById("source").value,sort=document.getElementById("sort").value,from=document.getElementById("fromDate").value,to=document.getElementById("toDate").value,cutoff=(!from&&/^\d+$/.test(period))?daysAgo(+period):"";
+  var q=document.getElementById("keyword").value.trim().toLowerCase(),period=document.getElementById("period").value,employment=document.getElementById("employment").value,jobStatus=document.getElementById("jobStatus").value,source=document.getElementById("source").value,sort=document.getElementById("sort").value,from=document.getElementById("fromDate").value,to=document.getElementById("toDate").value,cutoff=(!from&&/^\d+$/.test(period))?daysAgo(+period):"";
   var sourceJobs=activeCat==="scrap"?scrapJobs():activeCat==="applied"?applicationJobs():(DATA.jobs||[]);
   filtered=sourceJobs.filter(function(j){
     if(activeCat!=="all"&&activeCat!=="scrap"&&activeCat!=="applied"&&(j.categories||[]).indexOf(activeCat)<0)return false;
     if(activeCat==="scrap"&&!isScrapped(j))return false;
     if(activeCat==="applied"&&!isApplied(j))return false;
     var d=effectiveDate(j);if(activeCat!=="scrap"&&activeCat!=="applied"){if(cutoff&&d&&d<cutoff)return false;if(from&&d&&d<from)return false;if(to&&d&&d>to)return false}
-    if(region&&(j.locations||[]).indexOf(region)<0)return false;
+    if(!regionMatches(j))return false;
     if(employment==="regular"&&!isRegularJob(j))return false;
     if(employment==="nonregular"&&isRegularJob(j))return false;
     var st=j.status||"unverified";
@@ -327,7 +360,7 @@ function highlightFocusedJob(){
   }
 }
 function renderList(){
-  document.getElementById("totalCnt").textContent=DATA.jobs.length.toLocaleString();document.getElementById("viewCnt").textContent=filtered.length.toLocaleString();renderScrapCount();renderAppliedCount();document.getElementById("resultText").textContent=filtered.length.toLocaleString()+"건 · "+(activeCat==="all"?"전체":CAT_LABEL[activeCat]||activeCat)+((activeCat==="scrap"||activeCat==="applied")?" · Firebase DB 저장":"")+(DATA.historyCount?" · 장기보관 "+DATA.historyCount.toLocaleString()+"건":"");
+  document.getElementById("totalCnt").textContent=DATA.jobs.length.toLocaleString();document.getElementById("viewCnt").textContent=filtered.length.toLocaleString();renderScrapCount();renderAppliedCount();document.getElementById("resultText").textContent=filtered.length.toLocaleString()+"건 · "+(activeCat==="all"?"전체":CAT_LABEL[activeCat]||activeCat)+" · "+regionLabel()+((activeCat==="scrap"||activeCat==="applied")?" · Firebase DB 저장":"")+(DATA.historyCount?" · 장기보관 "+DATA.historyCount.toLocaleString()+"건":"");
   var rows=filtered.slice(0,shown),el=document.getElementById("list");if(!rows.length){el.innerHTML='<div class="empty">조건에 맞는 공고가 없습니다.</div>';document.getElementById("moreBtn").hidden=true;return}
   el.innerHTML=rows.map(function(j){
     var cats=(j.categories||[]).map(function(c){return '<span class="tag '+tagClass(c)+'">'+esc(CAT_LABEL[c]||c)+"</span>"}).join("");
@@ -362,7 +395,11 @@ document.getElementById("list").addEventListener("click",function(e){
 });
 document.getElementById("tabs").addEventListener("click",function(e){var b=e.target.closest(".tab");if(!b)return;document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x===b)});activeCat=b.dataset.cat;applyFilters()});
 document.getElementById("period").addEventListener("change",function(){syncDatesFromPeriod();applyFilters()});
-["keyword","region","employment","jobStatus","source","sort","pageSize"].forEach(function(id){var el=document.getElementById(id);el.addEventListener(id==="keyword"?"input":"change",applyFilters)});
+["keyword","employment","jobStatus","source","sort","pageSize"].forEach(function(id){var el=document.getElementById(id);el.addEventListener(id==="keyword"?"input":"change",applyFilters)});
+document.getElementById("regionGrid").addEventListener("change",function(e){var cb=e.target;if(!cb||cb.type!=="checkbox")return;if(cb.checked)REGION_SEL.add(cb.value);else REGION_SEL.delete(cb.value);syncRegionUI();applyFilters()});
+document.getElementById("regionPop").addEventListener("click",function(e){e.stopPropagation()});
+document.addEventListener("click",function(e){var b=document.getElementById("regionBox");if(b&&!b.contains(e.target))regionClose()});
+syncRegionUI();
 ["fromDate","toDate"].forEach(function(id){document.getElementById(id).addEventListener("change",function(){document.getElementById("period").value="custom";applyFilters()})});
 renderScrapCount();renderAppliedCount();setDefaultDates();
 (function(){
@@ -407,7 +444,7 @@ renderScrapCount();renderAppliedCount();setDefaultDates();
         document.getElementById("period").value="all";
         document.getElementById("fromDate").value="";
         document.getElementById("toDate").value="";
-        document.getElementById("region").value="";
+        setRegions([]);
         document.getElementById("employment").value="";
         document.getElementById("jobStatus").value="all";
         document.getElementById("source").value="";

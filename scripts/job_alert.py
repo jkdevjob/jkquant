@@ -140,6 +140,21 @@ SARAMIN_DIRECT_QUERIES = [
 ]
 SARAMIN_MAX_PAGES_PER_QUERY = 8
 
+# 전국 검색(2026-11-06) — 지역 접두어 없는 개발자 검색어만. 대전·세종 검색어는 그대로 두고
+# 전국 검색어는 NATIONWIDE_MAX_PAGES_PER_QUERY 쪽까지만 내려가 수집 시간·상세 확인 수를 묶는다.
+# 단기알바 · 직종무관 급여 검색어는 대전·세종만 유지한다(전국 1일 알바는 쓸모가 없고 보관 용량만 는다).
+JOBKOREA_NATIONWIDE_QUERIES = [
+    'Java 개발자', 'Spring 개발자', 'JSP 개발자', 'Java 백엔드',
+    '전자정부프레임워크 개발', 'Java 프리랜서', 'Java 유지보수 SM',
+    'Spring Boot 백엔드', 'AI 개발자 Java', 'LLM 개발자', 'RAG 개발자',
+    'NestJS 개발자',
+]
+SARAMIN_NATIONWIDE_QUERIES = [
+    'Java 개발자', 'Spring 개발자', 'Java 백엔드', 'Java 프리랜서',
+    'Java 유지보수', 'AI 개발자', 'LLM 개발자', 'Spring Boot',
+]
+NATIONWIDE_MAX_PAGES_PER_QUERY = 4
+
 SEARCH_SOURCES = {
     '고용24': 'work24.go.kr',
     '원티드': 'wanted.co.kr',
@@ -177,7 +192,53 @@ SOURCE_PRIORITY = {
     '알바천국': 70,
 }
 
+# 수집은 전국 17개 시·도. LOCATION_TERMS(대전·세종)는 알림(텔레그램·웹 푸시)과 점수 가중치의 기준 지역.
 LOCATION_TERMS = ('대전', '세종')
+REGION_PATTERNS = (
+    ('서울', r'서울(?:특별시|시)?'),
+    ('부산', r'부산(?:광역시|시)?'),
+    ('대구', r'대구(?:광역시|시)?'),
+    ('인천', r'인천(?:광역시|시)?'),
+    ('광주', r'광주(?:광역시|시)?'),
+    ('대전', r'대전(?:광역시|시)?'),
+    ('울산', r'울산(?:광역시|시)?'),
+    ('세종', r'세종(?:특별자치시|시)?'),
+    ('경기', r'경기(?:도)?'),
+    ('강원', r'강원(?:특별자치도|도)?'),
+    ('충북', r'충북|충청북도'),
+    ('충남', r'충남|충청남도'),
+    ('전북', r'전북(?:특별자치도)?|전라북도'),
+    ('전남', r'전남|전라남도'),
+    ('경북', r'경북|경상북도'),
+    ('경남', r'경남|경상남도'),
+    ('제주', r'제주(?:특별자치도|도|시)?'),
+)
+REGION_NAMES = tuple(name for name, _ in REGION_PATTERNS)
+REGION_LONG_NAMES = (
+    '서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시',
+    '대전광역시', '울산광역시', '세종특별자치시', '경기도', '강원도',
+    '강원특별자치도', '충청북도', '충청남도', '전라북도', '전북특별자치도',
+    '전라남도', '경상북도', '경상남도', '제주도', '제주특별자치도',
+)
+_REGION_TAIL = '|'.join(pattern for _, pattern in REGION_PATTERNS)
+_REGION_RES = tuple(
+    (name, re.compile(r'(?<![가-힣A-Za-z0-9])(?:' + pattern + r')(?:전체)?(?![가-힣A-Za-z0-9])'))
+    for name, pattern in REGION_PATTERNS
+)
+TITLE_STOP_TOKENS = frozenset(REGION_NAMES) | {'개발자', '채용', '모집'}
+
+
+def detect_regions(text):
+    """글에 나오는 시·도를 나온 순서대로(중복 없이) 돌려준다. 경기도 광주시는 광주광역시로 세지 않는다."""
+    text = normalize_text(text or '')
+    found = []
+    for name, regex in _REGION_RES:
+        for m in regex.finditer(text):
+            if name == '광주' and '경기' in text[max(0, m.start() - 4):m.start()]:
+                continue
+            found.append((m.start(), name))
+            break
+    return [name for _, name in sorted(found)]
 CORE_TERMS = (
     'java', 'jsp', 'spring', 'spring boot', '전자정부', 'egov',
     '백엔드', 'sm', '유지보수', 'si', '프리랜서', '계약직',
@@ -261,7 +322,7 @@ def normalize_text(value):
 
 
 INVALID_COMPANY_EXACT = {
-    '대전', '세종', '대전광역시', '세종특별자치시',
+    *REGION_NAMES, *REGION_LONG_NAMES,
     '입사지원', '홈페이지 지원', '즉시지원', '스크랩', '관심기업',
     '채용', '모집', '경력', '신입', '정규직', '계약직',
     '하반기', '상반기', '수정일', '등록일', '채용시',
@@ -293,8 +354,8 @@ def clean_company_name(value, title=''):
     text = re.sub(r'\s+(?:관심기업|채용중\s*\d+\s*)$', '', text)
     text = text.strip('[]{}<>|·•-–— ')
 
-    # [상상스토리/세종]처럼 회사명 뒤에 검색 지역이 붙는 경우만 지역 꼬리를 제거한다.
-    text = re.sub(r'\s*/\s*(?:대전|세종)(?:광역시|특별자치시)?$', '', text).strip()
+    # [상상스토리/세종]처럼 회사명 뒤에 검색 지역이 붙는 경우만 지역 꼬리를 제거한다(전국 시·도).
+    text = re.sub(r'\s*/\s*(?:' + _REGION_TAIL + r')$', '', text).strip()
 
     if not text or len(text) < 2 or len(text) > 60:
         return ''
@@ -304,13 +365,13 @@ def clean_company_name(value, title=''):
     generic = {
         '엔지니어', 'Engineer', '개발자', '프로그래머', '경력자', '신입', '경력',
         '신입/경력', '신입·경력', '경력무관', '정규직', '계약직',
-        '프리랜서', '대전/IT', '세종/IT', 'IT', '백엔드', '프론트엔드',
+        '프리랜서', 'IT', '백엔드', '프론트엔드',
         '소프트웨어개발', '웹개발', '서버개발', '하드웨어개발자',
-        '채용공고', '상주', '항공우주/세종',
+        '채용공고', '상주',
     }
     if text in generic:
         return ''
-    if re.fullmatch(r'(?:대전|세종)(?:광역시|특별자치시)?(?:/IT)?', text, re.I):
+    if re.fullmatch(r'(?:' + _REGION_TAIL + r')(?:/IT)?', text, re.I):
         return ''
     if re.fullmatch(r'(?:신입|경력)(?:\s*[/·ㆍ,+&]\s*(?:신입|경력))?', text):
         return ''
@@ -756,12 +817,8 @@ def is_trusted(url):
 
 
 def has_target_location(text):
-    text = normalize_text(text or '')
-    return bool(re.search(
-        r'(?<![가-힣A-Za-z0-9])(?:대전(?:광역시)?|세종(?:특별자치시)?)(?![가-힣A-Za-z0-9])',
-        text,
-        re.I,
-    ))
+    """수집 대상 지역(전국 시·도) 하나라도 적혀 있는가. 지역을 못 읽는 카드는 공고가 아닐 때가 많아 전처럼 버린다."""
+    return bool(detect_regions(text))
 
 
 def salary_info(title, body):
@@ -1337,7 +1394,7 @@ def jobkorea_card_text(anchor):
 
         if len(detail_ids) == 1:
             fallback = text
-            has_location = any(loc in text for loc in LOCATION_TERMS)
+            has_location = bool(detect_regions(text))
             has_job_meta = any(
                 term in text
                 for term in (
@@ -1371,6 +1428,15 @@ def jobkorea_title_quality(title):
     return score
 
 
+def direct_query_plan(home_queries, home_pages, nationwide_queries, fast=False):
+    """(검색어, 최대 쪽수) 목록. 대전·세종 검색어는 기존 깊이, 전국 검색어는 NATIONWIDE_MAX_PAGES_PER_QUERY(빠른 실행 2쪽)."""
+    nationwide_pages = 2 if fast else NATIONWIDE_MAX_PAGES_PER_QUERY
+    return (
+        [(query, home_pages) for query in home_queries]
+        + [(query, nationwide_pages) for query in nationwide_queries]
+    )
+
+
 def collect_jobkorea_direct():
     session = requests.Session()
     session.headers.update(DETAIL_HEADERS)
@@ -1381,11 +1447,13 @@ def collect_jobkorea_direct():
     parsed_links = 0
     errors = []
     cutoff = today_date_kst() - timedelta(days=CRAWL_RANGE_DAYS)
-    max_pages = 3 if os.environ.get('JOB_ALERT_FAST') == '1' else JOBKOREA_MAX_PAGES_PER_QUERY
+    fast = os.environ.get('JOB_ALERT_FAST') == '1'
+    max_pages = 3 if fast else JOBKOREA_MAX_PAGES_PER_QUERY
+    query_plan = direct_query_plan(JOBKOREA_DIRECT_QUERIES, max_pages, JOBKOREA_NATIONWIDE_QUERIES, fast)
 
-    for query in JOBKOREA_DIRECT_QUERIES:
+    for query, query_pages in query_plan:
         no_new_pages = 0
-        for page_no in range(1, max_pages + 1):
+        for page_no in range(1, query_pages + 1):
             before_count = len(jobs)
             page_dates = []
             page_parsed_detail_links = 0
@@ -1513,7 +1581,7 @@ def compact_job_title(title):
 def title_tokens(title):
     return {
         token for token in compact_job_title(title).split()
-        if len(token) >= 2 and token not in {'대전', '세종', '개발자', '채용', '모집'}
+        if len(token) >= 2 and token not in TITLE_STOP_TOKENS
     }
 
 
@@ -1710,11 +1778,13 @@ def collect_saramin_direct():
     failed_pages = 0
     errors = []
     cutoff = today_date_kst() - timedelta(days=CRAWL_RANGE_DAYS)
-    max_pages = 3 if os.environ.get('JOB_ALERT_FAST') == '1' else SARAMIN_MAX_PAGES_PER_QUERY
+    fast = os.environ.get('JOB_ALERT_FAST') == '1'
+    max_pages = 3 if fast else SARAMIN_MAX_PAGES_PER_QUERY
+    query_plan = direct_query_plan(SARAMIN_DIRECT_QUERIES, max_pages, SARAMIN_NATIONWIDE_QUERIES, fast)
 
-    for query in SARAMIN_DIRECT_QUERIES:
+    for query, query_pages in query_plan:
         no_new_pages = 0
-        for page_no in range(1, max_pages + 1):
+        for page_no in range(1, query_pages + 1):
             before_count = len(jobs)
             page_dates = []
             page_links = 0
@@ -2669,13 +2739,8 @@ def archive_categories(job):
 
 
 def archive_locations(job):
-    text = normalize_text(f"{job.get('title', '')} {job.get('body', '')}")
-    out = []
-    if re.search(r'(?<![가-힣A-Za-z0-9])대전(?:광역시)?(?![가-힣A-Za-z0-9])', text):
-        out.append('대전')
-    if re.search(r'(?<![가-힣A-Za-z0-9])세종(?:특별자치시)?(?![가-힣A-Za-z0-9])', text):
-        out.append('세종')
-    return out
+    """보관 항목의 시·도 목록(전국). 화면의 지역 필터와 웹 푸시의 대전·세종 거르기가 이 값을 쓴다."""
+    return detect_regions(f"{job.get('title', '')} {job.get('body', '')}")
 
 
 def archive_entry(job, existing=None):
@@ -3003,14 +3068,24 @@ def verified_active_jobs(jobs, workers=12):
     return out
 
 
+def is_alert_region_job(job):
+    """텔레그램 알림은 LOCATION_TERMS(대전·세종) 공고만 — 보관은 전국이어도 알림까지 전국으로 넓히지 않는다."""
+    regions = detect_regions(f"{job.get('title', '')} {job.get('body', '')}")
+    return any(region in LOCATION_TERMS for region in regions)
+
+
+def alert_region_jobs(jobs):
+    return [job for job in jobs if is_alert_region_job(job)]
+
+
 def search_jobs():
     all_jobs, source_statuses = collect_all_sources()
     all_jobs = verified_active_jobs(all_jobs)
 
-    java_jobs = classify_jobs(all_jobs, score_java_result)
-    regular_dev_jobs = classify_jobs(all_jobs, score_regular_dev_result)
-    salary_jobs = classify_jobs(all_jobs, score_salary_result)
-    short_term_jobs = classify_jobs(all_jobs, score_short_term_result)
+    java_jobs = alert_region_jobs(classify_jobs(all_jobs, score_java_result))
+    regular_dev_jobs = alert_region_jobs(classify_jobs(all_jobs, score_regular_dev_result))
+    salary_jobs = alert_region_jobs(classify_jobs(all_jobs, score_salary_result))
+    short_term_jobs = alert_region_jobs(classify_jobs(all_jobs, score_short_term_result))
 
     java_jobs.sort(key=lambda x: (-x['score'], x['title']))
     regular_dev_jobs.sort(key=lambda x: (-x['score'], x['title']))
