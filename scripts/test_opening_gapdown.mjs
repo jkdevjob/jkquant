@@ -1084,7 +1084,10 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
       orders: [{ side: "buy", code: "000001", vts: { ok: true } }, { side: "buy", code: "000002", vts: { ok: true } }], breadth: { qualified: 30 } })] },
     "2026-10-13": { events: [ev("etf_buy", { signal: false, dropPct: -2.44 }), ev("etf_reconcile", { fills: { closeBuy: { qty: 0 }, openSell: { qty: 0 } } })] },
     "2026-10-12": { events: [ev("etf_buy", { signal: true, quote: { expectedPrice: 7185 } }), ev("etf_reconcile", { fills: { closeBuy: { qty: 0 }, openSell: { qty: 0 } } })] } };
-  const CLOSE = { "2026-10-13": { events: [{ id: "close:opening", payload: { status: "closed", trades: [{ pnlPct: -3.49 }, { pnlPct: 1.72 }], open: [] } }] } };
+  const CLOSE = { "2026-10-13": { events: [{ id: "close:opening", payload: { status: "closed", trades: [{ pnlPct: -3.49 }, { pnlPct: 1.72 }], open: [] } }] },
+    // 오늘 15:40 주문 정산 장부(②·⑤)가 있으면 그 값이 곧 확정(settled) — 시세 계산 칸(no_trade)을 덮는다(2026-11-06 "왜 얘들이 아직 확정이 아니냐고")
+    "2026-10-14": { events: [{ id: "close:daytrading", payload: { strategy: "daytrading", date: "2026-10-14", basis: "orders", settled: true, dayPct: -1.23, trades: [{ pnlPct: -1.23 }], open: [] } },
+                             { id: "close:close30", payload: { strategy: "close30", date: "2026-10-14", basis: "orders", settled: true, dayPct: null, trades: [], note: "15:00 전일 대비 +0.50% (기준 0% 미만 아님) → 매수 없음" } }] } };
   const Q = { "000001": { price: 1100, ohlc: [{ date: "2026-10-14", open: 1000, close: 1100 }] }, "000002": { price: 2100, ohlc: [{ date: "2026-10-14", open: 2000, close: 2100 }] },
     "233740": { price: 6900, ohlc: [{ date: "2026-10-12", open: 7900, close: 7175 }, { date: "2026-10-13", open: 6760, close: 7000 }, { date: "2026-10-14", open: 6935, close: 6900 }] },
     SOXL: { price: 127.57, marketState: "CLOSED", ohlc: [{ date: "2026-10-13", open: 126, close: 127.57 }] } };
@@ -1116,7 +1119,9 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
     near(D("opening")["2026-10-13"].v, -0.885); assert.equal(D("opening")["2026-10-13"].src, "vts");
     near(D("opening")["2026-10-14"].v, ((10 - LV.d1CostPct(1000)) + (5 - LV.d1CostPct(2000))) / 2); assert.deepEqual([D("opening")["2026-10-14"].final, D("opening")["2026-10-14"].src], [false, "rule"]);
     assert.deepEqual(j.tabs.opening.rows.map(x => [x.buyPrice, x.buyPriceKind, x.status, x.sellPrice]), [[1000, "시가", "보유중", null], [2000, "시가", "보유중", null]]);   // 공식 시가 · 장중(종가 전)
-    near(D("daytrading")["2026-10-13"].v, -5.953344947735195); assert.equal(D("daytrading")["2026-10-14"].v, "no_trade");
+    near(D("daytrading")["2026-10-13"].v, -5.953344947735195);
+    assert.deepEqual([D("daytrading")["2026-10-14"].v, D("daytrading")["2026-10-14"].settled, D("daytrading")["2026-10-13"].settled], [-1.23, true, undefined]);   // 오늘 15:40 장부 = 확정 · 어제는 시세 계산 칸
+    assert.deepEqual([D("close30")["2026-10-14"].v, D("close30")["2026-10-14"].settled, D("close30")["2026-10-14"].note], ["no_trade", true, "15:00 전일 대비 +0.50% (기준 0% 미만 아님) → 매수 없음"]);
     assert.deepEqual([D("crypto")["2026-10-13"].v, D("crypto")["2026-10-13"].final, D("crypto")["2026-10-14"].final, D("crypto")["2026-10-14"].decided], ["no_trade", true, true, true]);   // 오늘도 쉼 — 더 살 수 없어 끝난 값
     assert.equal(D("crypto")["2026-10-13"].note, "BTC·ETH 쉼(추세 평균 아래)");                      // 어제는 그 전 메인(BTC+ETH) — BTC 봉도 받았다
     assert.equal(D("crypto")["2026-10-14"].note, "ETH 쉼(추세 평균 아래)");                           // 오늘은 새 메인(ETH 만)
@@ -1160,7 +1165,15 @@ t("① 규칙 칸: 메인 매매일 · 체결 0건(현금 부족)이면 그날 �
   const dc = LV.openingClosedCell(day, { v: 99 });                                                 // 주문 정산 장부는 장부 값 그대로(규칙 칸으로 덮지 않음)
   near(dc.v, want); assert.deepEqual([dc.final, dc.src, dc.trades, dc.wins, dc.losses, dc.note], [true, "rule", 3, 0, 3, day.warn]);
   assert.equal(LV.openingClosedCell({ ...day, settled: false, dayPct: null }), null);               // 시세가 모자란 장부는 확정 전
-  assert.deepEqual(LV.openingClosedCell({ status: "closed", basis: "orders", settled: true, dayPct: null, trades: [], note: "매매 없음 — x" }), { v: "no_trade", final: true, src: "rule", trades: 0, note: "매매 없음 — x" });
+  assert.deepEqual(LV.openingClosedCell({ status: "closed", basis: "orders", settled: true, dayPct: null, trades: [], note: "매매 없음 — x" }), { v: "no_trade", final: true, settled: true, src: "rule", trades: 0, note: "매매 없음 — x" });
+  // 15:40 주문 정산 장부는 그 자리에서 확정(settled) — 밤 계산은 같은 값을 복사할 뿐(2026-11-06 사용자 "왜 얘들이 아직 확정이 아니냐고")
+  assert.equal(dc.settled, true);
+  const e2c = LV.settledCell({ basis: "orders", settled: true, date: "2026-11-06", dayPct: -12.79, trades: [{ pnlPct: -12.79 }], open: [{}], note: "15:21 예상 전일 대비 -8.00% → 종가 매수" });
+  assert.deepEqual(e2c, { v: -12.79, final: true, settled: true, src: "rule", trades: 1, wins: 0, losses: 1, note: "" });
+  assert.deepEqual(LV.settledCell({ basis: "orders", settled: true, dayPct: null, trades: [], open: [{}], note: "15:21 예상 전일 대비 -8.00% → 종가 매수" }),
+    { v: "no_trade", final: true, settled: true, src: "rule", trades: 0, note: "15:21 예상 전일 대비 -8.00% → 종가 매수" });   // 오늘 산 것은 내일 판 날 센다(밤 계산과 같게)
+  assert.equal(LV.settledCell({ basis: "orders", settled: false, dayPct: null, trades: [] }), null);        // 시세가 모자라면 확정 전
+  assert.equal(LV.settledCell({ status: "closed", trades: [{ pnlPct: 1 }] }), null);                       // 옛 형식(모의투자 체결 기준) 장부는 아님
 });
 // ── ⑤ 종가 30분(close30) — 사용자 요청(2026-10-22) "종가 전략도 탭에 추가하고 다른 전략이랑 동일하게 적용해 알림" ──
 t("⑤ 판단 · 규칙 · 시간창 · 체결 구분: 15:00 등락률이 기준 '미만'일 때만 · ② 와 같은 종목이라 접수 시각으로 나눠 센다", () => {

@@ -82,7 +82,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.24.2</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.24.3</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -497,9 +497,11 @@ function liveCell(lv,date,label,until){
   var v=lv.v,nt=v==="no_trade",hd=v==="holiday",ok=!nt&&!hd&&isFinite(v),hit=ok&&v>=1;
   var held=!lv.final&&!lv.decided&&ok;
   var meta=hd?"장이 열리지 않은 날":nt?"기준전략 0건":(held?"보유 "+(lv.trades||0)+"건"+(lv.wins||lv.losses?" · 오름 "+(lv.wins||0)+" · 내림 "+(lv.losses||0):""):"기준전략 "+(lv.trades||0)+"건"+(lv.wins||lv.losses?" · 승 "+(lv.wins||0)+" · 패 "+(lv.losses||0):""))+" · "+(lv.src==="vts"?"모의투자 체결":"시세로 계산");
-  var g=hit?"+1% 달성 · ":ok?"목표까지 "+Math.max(0,1-v).toFixed(2)+"%p · ":"";
-  var when=lv.decided?"매수 조건 안 됨 · 밤 확정 전":lv.final?"마감 · 밤 확정 전":"⏱ "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"")+(held?" 지금 가격":" 실시간")+" · "+(until||"확정 전");
-  return "<div class='daily-result-box live'><div class='daily-result-label'>"+label+" · "+esc(date||"—")+"</div>"+
+  var g=hit?"+1% 달성 · ":ok?"목표까지 "+Math.max(0,1-v).toFixed(2)+"%p · ":nt&&lv.settled?"매매없음 · 0.00% 반영 · ":"";
+  // settled: 15:40 주문 정산 장부가 닫힌 값 — 밤 계산은 이 값을 그대로 복사하므로 이미 확정(실선 · 2026-11-06 사용자 "왜 얘들이 아직 확정이 아니냐고")
+  var when=lv.settled?"15:40 장부 확정":lv.decided?"매수 조건 안 됨 · 밤 확정 전":lv.final?"마감 · 밤 확정 전":"⏱ "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"")+(held?" 지금 가격":" 실시간")+" · "+(until||"확정 전");
+  if(lv.settled&&!hd&&!nt)meta=meta.replace(" · 시세로 계산"," · 장부 정산");
+  return "<div class='daily-result-box"+(lv.settled?"":" live")+"'><div class='daily-result-label'>"+label+" · "+esc(date||"—")+"</div>"+
     "<div class='daily-result-ret "+(ok?cls(v):"")+"'>"+(hd?"휴장":nt?(lv.final?"매매없음":"아직 매수 없음"):pct(v))+"</div>"+
     "<div class='daily-result-meta'>"+meta+(lv.note?"<br>"+esc(lv.note):"")+"</div><span class='daily-result-goal"+(hit?" hit":"")+"'>"+g+when+"</span></div>";
 }
