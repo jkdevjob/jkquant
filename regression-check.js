@@ -12699,6 +12699,8 @@ Promise.all(PENDING).then(()=>{
   const rec=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-inf-record-quantity.cjs'),IDX],{encoding:'utf8'});
   const pr=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-rules-exp.cjs')],{encoding:'utf8'});
   ok('5년 플랜 규칙 벌(새 규칙 실험적 확장): 판정·재생 동일성·Guard −3%·TECL 비대칭·해 첫 거래일 30%·변이 5종',pr.status===0,(pr.stdout||'')+(pr.stderr||''));
+  const prs=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-rules-session.cjs')],{encoding:'utf8'});
+  ok('자산플랜 세션 설정 5년 규칙: 세션마다 저장·모달 저장·화면 반영·칩·모의투자 목록·변이 5종',prs.status===0,(prs.stdout||'')+(prs.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
