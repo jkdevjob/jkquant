@@ -831,6 +831,27 @@ console.log('[13] BIG 처음매수 전용 · 주문가 상한 제거');
       return m.length===2 && l.length===8 && l.every(o=>o.price<lo); })());
 }
 
+/* ── [331] 기록 시트 자동 채움 수량 = 그 세션 아침 주문표 수량 (11-06) ──
+   11-05 SOXL 종가 40.87(−38.7%): 주문표는 별지점 매수(전액) 89.42×7 + 하방 81.90·72.80·65.52 ×1 = 10주인데
+   기록 시트는 1회매수금÷종가 = 655.28÷40.87 = 16주를 채웠다. LOC 는 수량을 아침에 주문가로 정하고 종가엔 체결만 된다. */
+{ let fill=null; try{ fill=new Function(extractFn(idx,'function imFillAtClose(lines, close, kind)')+'\nreturn imFillAtClose;')(); }catch(e){}
+  ok('[331] imFillAtClose 가 있다', !!fill);
+  if(fill){
+    const L=imBuyOrders({first:false,half:false,buy1:655.279,bal:1474.38,starPrice:89.42,avg:105.83,rows:3,fee:0,cur:'usd'});
+    ok('[331] 후반전 주문표 89.42×7 · 하방 81.90 · 72.80 · 65.52 ×1', L.length===4 && L[0].q===7 && L[0].price===89.42 && L.slice(1).every(o=>o.ladder&&o.q===1) && L[1].price===81.9 && L[2].price===72.8 && L[3].price===65.52, JSON.stringify(L));
+    const F=fill(L,40.87,'1회매수');
+    ok('[331] 값: 종가 40.87 → 10주 (1회매수금÷종가 16주 아님) · T+1 · 4줄', F.qty===10 && F.dT===1 && F.n===4, JSON.stringify(F));
+    ok('[331] 값: 종가 85 → 본 주문 7주만 · 95 → 체결 없음', fill(L,85,'1회매수').qty===7 && fill(L,95,'1회매수').qty===0);
+    const H=imBuyOrders({first:false,half:true,buy1:539.2,bal:5000,starPrice:78.11,avg:69.75,rows:2,fee:0,cur:'usd'});   // 원문 전반전 표 78.11×3 · 69.75×4 · 67.40×1 · 59.91×1
+    ok('[331] 전반전: 종가 75 → 별지점 절반 3주(T+0.5) · 종가 59 → 3+4+1+1=9주(T+1)',
+       fill(H,75,'절반매수').qty===3 && near(fill(H,75,'절반매수').dT,0.5) && fill(H,59,'1회매수').qty===9 && near(fill(H,59,'1회매수').dT,1), JSON.stringify(H));
+    ok('[331] 본 주문 없이 하방만 체결되면 1회로 센다', (()=>{ const r=fill([{kind:'하방',price:10,q:1,dT:0,ladder:true}],9,'1회매수'); return r.qty===1&&r.dT===1; })());
+    const sug=extractFn(idx,'function infSuggest(kind)');
+    ok('[331] 변이: infSuggest 가 주문표(imBuyOrders)+imFillAtClose 로 채운다 — 1회매수금÷종가 로 되돌리면 빨간불',
+       /imBuyOrders\(\{first, half, buy1/.test(sug) && /imFillAtClose\(lines, close/.test(sug) && !/'1회매수':\s*buyAt\(/.test(sug) && /infSettledPrev\(\)/.test(sug));
+  }
+}
+
 /* ════ 14. 체결가 규약 — 주문 종류별로 어느 가격에 체결되는가 (15차 버그 클래스) ════
    LOC는 종가, 지정가매도는 익절가. 그런데 시가가 이미 익절가 위면 지정가 매도는
    '시가'에 체결된다(가격개선). 익절가로 고정하면 갭업 익절이 통째로 과소계상된다.
