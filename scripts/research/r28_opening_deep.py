@@ -100,6 +100,24 @@ mfe = [float(r["mfePct"]) for r in sig if r.get("mfePct")]
 mae = [float(r["maePct"]) for r in sig if r.get("maePct")]
 print(f" 장중 경로: MFE 평균 {mean(mfe):+.2f}% · MAE 평균 {mean(mae):+.2f}% · +1% 닿음 {mean([float(r['hitPlus1']=='True') for r in sig]) * 100:.0f}% · −2% 닿음 {mean([float(r['hitMinus2']=='True') for r in sig]) * 100:.0f}%")
 
+# Q1-b 해별 일관성(결과를 본 뒤 고른 구간이 아니라, 위 구간표의 극단 두 칸과 신호 수 칸을 해마다 다시 본다) · 익절/손절 상한선
+print(" 해별 일관성(평균 · 플러스 해 수)")
+for nm, cond in (("≤−8 갭", lambda r: r["gap"] <= -8), ("−2~−3 갭", lambda r: r["gap"] > -3), ("신호 3~6개 날", lambda r: 3 <= r["n"] <= 6)):
+    ys = sorted({r["date"][:4] for r in sig})
+    ms = [(y, mean([r["pnl"] for r in sig if r["date"][:4] == y and cond(r)])) for y in ys]
+    ms = [(y, m) for y, m in ms if m is not None]
+    print(f"  {nm}: " + " · ".join(f"{y} {m:+.2f}" for y, m in ms) + f" → 플러스 {sum(1 for _, m in ms if m > 0)}/{len(ms)}년")
+print(" 익절 · 손절 상한선(일봉 고가·저가에 닿으면 그 값에 팔린 것으로 — 분봉 순서는 모름)")
+base_all = [r["pnl"] for r in sig]
+print(line("기준", base_all))
+for X in (1, 2, 3, 5):
+    print(line(f"익절 +{X}%", [(X if float(r["mfePct"]) >= X else float(r["grossPnl"])) - float(r["frictionPct"]) for r in sig]))
+for X in (1, 2, 3, 5):
+    sl = [(-X if float(r["maePct"]) <= -X else float(r["grossPnl"])) - float(r["frictionPct"]) for r in sig]
+    ys = sorted({r["date"][:4] for r in sig})
+    better = sum(1 for y in ys if mean([v for r, v in zip(sig, sl) if r["date"][:4] == y]) > mean([r["pnl"] for r in sig if r["date"][:4] == y]))
+    print(line(f"손절 −{X}%", sl) + f" · 기준보다 나은 해 {better}/{len(ys)}")
+
 # ── 실측 자료 ────────────────────────────────────────────────────────────────────────────────────
 rows, days = [], {}
 for f in sorted(glob.glob(os.path.join(LIVE, "*.json"))):
@@ -219,6 +237,11 @@ for d in dates:
     if (days[d]["qualified"] or 0) >= 7:
         post += [r["pnl"] for r in g]
 print(line("실제 갭 깊은 3(사후 · 통과 7↑ 날)", post))
+pkr = [r for r in have_pnl if r["pick"] and (days[r["day"]]["qualified"] or 0) >= 7]
+if pkr:
+    print(f" 메인이 고른 종목의 갭: 예상 평균 {mean([r['gexp'] for r in pkr]):+.2f}% → 실제 평균 {mean([r['gact'] for r in pkr]):+.2f}% · 실제 ≤−2 {sum(1 for r in pkr if r['gact'] <= -2) / len(pkr) * 100:.0f}% · ≤−3 {sum(1 for r in pkr if r['gact'] <= -3) / len(pkr) * 100:.0f}% · ≤−5 {sum(1 for r in pkr if r['gact'] <= -5) / len(pkr) * 100:.0f}%")
+    for lo, hi, nm in ((-2, 99, "  고른 것 중 실제 >−2"), (-3, -2, "  −3~−2"), (-5, -3, "  −5~−3"), (-99, -5, "  ≤−5")):
+        print(line(nm, [r["pnl"] for r in pkr if lo < r["gact"] <= hi]))
 print("═ Q5 통과 수(실전 qualified)와 그날 예상 −2% 이하 후보 평균")
 for d in dates:
     g = [r["pnl"] for r in have_pnl if r["day"] == d and r["gexp"] <= -2]
