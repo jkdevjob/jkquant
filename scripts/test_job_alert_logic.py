@@ -279,6 +279,28 @@ def run():
     assert detail_closed['status'] == 'closed'
     assert detail_closed['closeReason'] == '원문 마감 표시'
 
+    # 전국 지역 판정(2026-11-06) — 수집은 17개 시·도, 알림은 대전·세종만
+    assert len(j.REGION_NAMES) == 17 and j.LOCATION_TERMS == ('대전', '세종')
+    assert j.detect_regions('회사 위치: 서울 강남구 · 경기 성남시 분당구') == ['서울', '경기']
+    assert j.detect_regions('세종특별자치시 경력무관 · 대전광역시 유성구') == ['세종', '대전']
+    assert j.detect_regions('경기도 광주시 오포읍') == ['경기'], '경기 광주시는 광주광역시가 아니다'
+    assert j.detect_regions('광주광역시 북구 · 전북특별자치도 전주시') == ['광주', '전북']
+    assert j.detect_regions('세종대학교 산학협력단 서울전체') == ['서울']
+    assert j.detect_regions('재택근무 가능 전국 · 충청권') == []
+    assert j.has_target_location('부산 해운대구 Java 개발자') and not j.has_target_location('해외 근무 Java 개발자')
+    assert j.archive_locations({'title': '[강원] 백엔드', 'body': '강원특별자치도 춘천시 · 제주시 지사'}) == ['강원', '제주']
+    assert j.clean_company_name('테크원/경기') == '테크원' and j.clean_company_name('서울/IT') == ''
+    assert j.clean_company_name('부산광역시') == '' and j.clean_company_name('경상남도') == ''
+    assert j.title_tokens('서울 부산 Java 개발자 채용') == {'java'}
+    assert j.direct_query_plan(['대전 Java'], 10, ['Java 개발자'], False) == [('대전 Java', 10), ('Java 개발자', j.NATIONWIDE_MAX_PAGES_PER_QUERY)]
+    assert j.direct_query_plan(['대전 Java'], 3, ['Java 개발자'], True) == [('대전 Java', 3), ('Java 개발자', 2)]
+    assert j.JOBKOREA_NATIONWIDE_QUERIES and all('대전' not in q and '세종' not in q for q in j.JOBKOREA_NATIONWIDE_QUERIES + j.SARAMIN_NATIONWIDE_QUERIES)
+    seoul = {'title': '서울 Java 개발자', 'body': '서울 강남구 정규직', 'url': 'https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=1'}
+    sejong = {'title': 'Java 개발자', 'body': '세종특별자치시 · 경기 성남 겸무', 'url': 'https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=2'}
+    assert j.alert_region_jobs([seoul, sejong, dict(a)]) == [sejong, dict(a)], '텔레그램 알림은 대전·세종 공고만'
+    src = inspect.getsource(j.search_jobs)
+    assert src.count('alert_region_jobs(classify_jobs(') == 4, '네 구역 모두 알림 지역 거르기'
+
     print('JOB logic tests: PASS')
 
 
