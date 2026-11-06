@@ -299,6 +299,8 @@ async function swimFeed(baseUrl){
   return best;
 }
 
+const JOB_PUSH_REGIONS=["대전","세종"];   // 공고 보관은 전국(2026-11-06) · 웹 푸시는 이 지역만 (scripts/job_alert.py LOCATION_TERMS 와 같은 값)
+function jobInPushRegions(row){const locs=Array.isArray(row&&row.locations)?row.locations:[];return locs.some(l=>JOB_PUSH_REGIONS.includes(String(l)))}
 async function jobFeed(baseUrl){
   const urls=[
     "https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/job_archive.json?ts="+Date.now(),
@@ -320,6 +322,7 @@ async function jobFeed(baseUrl){
   const out=[];
   for(const row of (Array.isArray(j.jobs)?j.jobs:[])){
     if(String(row.status||"")!=="active")continue;
+    if(!jobInPushRegions(row))continue;                  // 전국 보관분 중 대전·세종만 푸시
     const key=clean(row.url||row.id,2000);if(!key)continue;
     const title=clean(row.title,180);if(!title||title==="제목 없음")continue;
     const deadline=clean(row.deadline,20);
@@ -986,7 +989,7 @@ export class PresaleAlertStore{
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
       const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
       const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.10.0",topicSchemaVersion:2,subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.10.1",topicSchemaVersion:2,subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,lastTelegramDeliveries,
         telegramSignalDedup:{version:1,store:"durable-object",unknownRetry:false},gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }

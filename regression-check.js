@@ -1937,6 +1937,32 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
          && !/\bgetFirestore\s*\(/.test(src));
     }
     ok('JOB 화면도 배포 버전 x.y.z 표시', /id="jobVer">v\d+\.\d+\.\d+<\/span>/.test(job));
+    /* JOB 지역 필터(2026-11-06): 보관은 전국 17개 시·도 · 기본 선택 대전·세종 · 여러 지역 동시 선택 · 아무것도 안 고르면 전국 */
+    try{
+      const VM=require('vm');
+      const pick=m=>{const i=job.indexOf(m);if(i<0)throw new Error('추출 실패: '+m);return job.slice(i,job.indexOf('\n',i)+1);};
+      const src=['var REGIONS=','var HOME_REGIONS=','var REGION_SEL=','function isHomeRegionSel(','function regionLabel(','function regionMatches('].map(pick).join('');
+      const load=code=>{const c={};VM.createContext(c);VM.runInContext(code+'\nthis.R={REGIONS,HOME_REGIONS,regionLabel,regionMatches,set sel(v){REGION_SEL=v}};',c);return c.R;};
+      const R=load(src), J=l=>({locations:l});
+      ok('[JOB 지역] 기본 선택 대전·세종 · 시·도 17개(중복 없음)',
+         R.HOME_REGIONS.join('·')==='대전·세종'&&R.REGIONS.length===17&&new Set(R.REGIONS).size===17&&R.regionLabel()==='대전·세종');
+      ok('[JOB 지역] 기본값: 대전·세종이 적힌 공고만 통과 — 서울만 적힌 공고 · 지역 없는 공고는 제외',
+         R.regionMatches(J(['대전']))&&R.regionMatches(J(['경기','세종']))&&!R.regionMatches(J(['서울']))&&!R.regionMatches(J([]))&&!R.regionMatches({}));
+      R.sel=new Set();
+      ok('[JOB 지역] 전국(아무것도 안 고름): 전부 통과 · 이름 "전국"', R.regionLabel()==='전국'&&R.regionMatches(J(['서울']))&&R.regionMatches(J([])));
+      R.sel=new Set(['서울','경기','대전']);
+      ok('[JOB 지역] 여러 지역: 그중 하나라도 적혀 있으면 통과 · 이름은 지역 순서대로 "서울·경기·대전"',
+         R.regionLabel()==='서울·경기·대전'&&R.regionMatches(J(['대전']))&&R.regionMatches(J(['경기','부산']))&&!R.regionMatches(J(['부산'])));
+      R.sel=new Set(['부산','서울','경기','인천']);
+      ok('[JOB 지역] 4곳 이상은 "서울·경기 외 2곳"', R.regionLabel()==='서울·경기 외 2곳');
+      ok('[JOB 지역] 배선: 필터가 regionMatches · 옛 select#region 없음 · 초기화는 대전·세종 · focus 진입은 전국 · 머리말 배지',
+         /if\(!regionMatches\(j\)\)return false;/.test(job)&&!/getElementById\("region"\)/.test(job)
+         &&/function resetFilters\(\)\{\n[^\n]*setRegions\(HOME_REGIONS\)/.test(job)&&/keyword"\)\.value=focusJob\.title/.test(job)&&/^\s*setRegions\(\[\]\);$/m.test(job)
+         &&/id="regionBadge"/.test(job)&&/id="regionGrid"/.test(job)&&/regionPreset\('all'\)/.test(job));
+      const mut=src.replace('if(!REGION_SEL.size)return true;','');
+      const M=load(mut); M.sel=new Set();
+      ok('[JOB 지역] 변이: 전국일 때 전부 통과를 빼면 빨간불', mut!==src&&!M.regionMatches(J(['서울'])));
+    }catch(e){ ok('[JOB 지역] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); }
   }
   ok('DB 읽기 실패 뒤 재로그인 대신 같은 계정으로 DB 재연결 가능',
      /async function retryDbLoad\(\)/.test(idx)
