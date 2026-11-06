@@ -1,0 +1,72 @@
+{
+  "duration": "auto",
+  "fps": 30,
+  "flip": 0.7,
+  "tape": { "text": "국민연금 · 몇 년 내면 얼마", "color": "mint" },
+  "out": "queue/issues/2026-11-06_pension-by-years-table.mp4",
+  "voice": {
+    "name": "ko-KR-HyunsuMultilingualNeural",
+    "rate": "+10%",
+    "lead": 0.35,
+    "gap": 0.28,
+    "tail": 2.0,
+    "lines": [
+      { "id": "hook", "text": "국민연금, 몇 년 내면 한 달에 얼마 받는지 궁금하시죠? 평균 소득 기준으로 한 장에 정리했어요." },
+      { "id": "y10", "text": "십 년이면 삼십사만 원,", "gap": 0.45 },
+      { "id": "y20", "text": "이십 년이면 육십구만 원," },
+      { "id": "y30", "text": "삼십 년이면 백삼만 원," },
+      { "id": "y40", "text": "사십 년 꽉 채우면 백삼십칠만 원이에요." },
+      { "id": "note", "text": "올해 평균 소득, 월 삼백십구만 원에 소득대체율 사십삼 퍼센트로 계산한 값이에요.", "gap": 0.4 },
+      { "id": "real", "text": "실제로 이십 년 넘게 낸 분들 평균은 백십육만 원인데, 예전에 낸 기간은 대체율이 더 높았거든요.", "gap": 1.0 },
+      { "id": "point", "text": "결국 일 년 더 낼 때마다, 평생 받는 돈이 한 달 삼만 사천 원씩 늘어나는 셈이에요." },
+      { "id": "save", "text": "내 가입 기간 칸, 저장해 두고 찾아보세요.", "gap": 0.45 },
+      { "id": "sig", "text": "늦지 않았습니다.", "gap": 0.4 }
+    ]
+  },
+  "pages": [
+    {
+      "start": 0,
+      "stains": [ { "x": 700, "y": 1500, "r": 170, "opacity": 0.18, "rot": -8 } ],
+      "items": [
+        { "type": "text", "id": "h1", "text": "국민연금 몇 년 내면", "x": 128, "y": 196, "size": 100, "font": "bold", "color": "ink", "at": 0, "dur": 0, "rot": -0.8 },
+        { "type": "text", "id": "h2", "text": "한 달에 얼마?", "x": 132, "y": 336, "size": 116, "font": "bold", "color": "red", "at": 0, "dur": 0, "rot": 0.4 },
+        { "type": "underline", "target": "h2", "at": 0.3, "dur": 0.6, "color": "red", "width": 6 },
+        { "type": "text", "id": "th1", "text": "낸 기간", "x": 170, "y": 560, "size": 54, "font": "pen", "color": "gray", "at": "@y10-0.3", "dur": 0.4 },
+        { "type": "text", "id": "th2", "text": "월 받는 돈", "x": 520, "y": 560, "size": 54, "font": "pen", "color": "gray", "at": "@y10-0.2", "dur": 0.4 },
+        { "type": "text", "id": "r1a", "text": "10년", "x": 170, "y": 650, "size": 76, "font": "bold", "color": "ink", "at": "@y10", "dur": 0.4 },
+        { "type": "text", "id": "r1b", "text": "34만 원", "x": 520, "y": 650, "size": 76, "font": "bold", "color": "ink", "at": "@y10+0.6", "dur": 0.5 },
+        { "type": "text", "id": "r2a", "text": "20년", "x": 170, "y": 765, "size": 76, "font": "bold", "color": "ink", "at": "@y20", "dur": 0.4 },
+        { "type": "text", "id": "r2b", "text": "69만 원", "x": 520, "y": 765, "size": 76, "font": "bold", "color": "blue", "at": "@y20+0.7", "dur": 0.5 },
+        { "type": "text", "id": "r3a", "text": "30년", "x": 170, "y": 880, "size": 76, "font": "bold", "color": "ink", "at": "@y30", "dur": 0.4 },
+        { "type": "text", "id": "r3b", "text": "103만 원", "x": 520, "y": 880, "size": 76, "font": "bold", "color": "blue", "at": "@y30+0.7", "dur": 0.5 },
+        { "type": "text", "id": "r4a", "text": "40년", "x": 170, "y": 995, "size": 80, "font": "bold", "color": "ink", "at": "@y40", "dur": 0.4 },
+        { "type": "text", "id": "r4b", "text": "137만 원", "x": 520, "y": 995, "size": 84, "font": "bold", "color": "red", "at": "@y40+0.9", "dur": 0.5 },
+        { "type": "circle", "target": "r4b", "at": "@y40.end-0.4", "dur": 0.5, "color": "red", "pad": 12, "width": 6 },
+        { "type": "text", "id": "n1", "text": "(평균소득 월 319만 원 × 소득대체율 43% 기준 단순 계산)", "x": 150, "y": 1120, "size": 38, "font": "pen", "color": "gray", "at": "@note+0.4", "dur": 0.8 },
+        { "type": "text", "id": "n2", "text": "(10년 34만 원은 국민연금연구원 11/3 보고서와 같은 값)", "x": 150, "y": 1180, "size": 38, "font": "pen", "color": "gray", "at": "@note.end-1.0", "dur": 0.7 }
+      ]
+    },
+    {
+      "start": "@note.end+0.3",
+      "stains": [ { "x": -110, "y": 1480, "r": 160, "opacity": 0.15, "rot": 12 } ],
+      "items": [
+        { "type": "text", "id": "a1", "text": "실제 20년 넘게 낸 분들", "x": 132, "y": 196, "size": 80, "font": "bold", "color": "ink", "at": "@real+0.2", "dur": 1.0, "rot": -0.6 },
+        { "type": "text", "id": "a2", "text": "평균 월 116만 원", "x": 140, "y": 320, "size": 92, "font": "bold", "color": "blue", "at": "@real+2.6", "dur": 0.8 },
+        { "type": "text", "id": "a3", "text": "(예전 가입 기간은 대체율이 더 높았어요 · 2026년 1월 수급자 통계)", "x": 150, "y": 450, "size": 36, "font": "pen", "color": "gray", "at": "@real.end-1.2", "dur": 0.7 },
+        { "type": "text", "id": "p1", "text": "1년 더 내면", "x": 150, "y": 580, "size": 70, "font": "bold", "color": "ink", "at": "@point+0.6", "dur": 0.6 },
+        { "type": "text", "id": "p2", "text": "평생 월 +3만 4천 원", "x": 150, "y": 680, "size": 84, "font": "bold", "color": "red", "at": "@point.end-1.8", "dur": 0.9 },
+        { "type": "highlight", "target": "p2", "at": "@point.end-0.3", "dur": 0.45 },
+        {
+          "type": "sticky", "x": 150, "y": 840, "w": 760, "h": 400, "rot": -2.0, "at": "@save-0.3",
+          "items": [
+            { "type": "text", "id": "m1", "text": "내 칸 찾기", "x": 46, "y": 34, "size": 78, "font": "bold", "color": "red", "at": "@save", "dur": 0.5 },
+            { "type": "text", "id": "m2", "text": "내 가입 기간은 공단 앱에서", "x": 46, "y": 150, "size": 54, "font": "bold", "color": "ink", "at": "@save+0.8", "dur": 0.9 },
+            { "type": "text", "id": "m3", "text": "저장해 두고 한 번 확인하기", "x": 46, "y": 240, "size": 54, "font": "bold", "color": "blue", "at": "@save+1.8", "dur": 0.8 }
+          ]
+        },
+        { "type": "text", "id": "sig", "text": "늦지 않았습니다. — 은퇴노트", "x": 330, "y": 1490, "size": 60, "font": "pen", "color": "ink", "at": "@sig", "dur": 0.8, "rot": -2.0 },
+        { "type": "text", "id": "handle", "text": "@retire.note", "x": 600, "y": 1575, "size": 36, "font": "sans", "color": "gray", "at": "@sig+0.6", "dur": 0.5, "fade": true }
+      ]
+    }
+  ]
+}
