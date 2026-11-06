@@ -1,0 +1,492 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "기초연금 · 하후상박 개편",
+  "color": "yellow"
+ },
+ "out": "queue/issues/2026-11-07_basic-pension-3tiers.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 2.0,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "기초연금이 내년부터 세 단계로 나뉜다는 거, 들으셨어요? 내 칸은 얼마인지 볼게요."
+   },
+   {
+    "id": "r1",
+    "text": "소득 하위 삼십 퍼센트까지는 한 달 삼십팔만 원, 지금보다 삼만 원 정도 올라요.",
+    "gap": 0.45
+   },
+   {
+    "id": "r2",
+    "text": "삼십에서 사십오 퍼센트는 삼십오만 구천 원,"
+   },
+   {
+    "id": "r3",
+    "text": "사십오에서 칠십 퍼센트는 삼십오만 원, 그대로예요."
+   },
+   {
+    "id": "note",
+    "text": "정부 내년 예산안 기준이고, 아직 국회 심의 중이에요. 구간 기준은 연말에 정해지고요.",
+    "gap": 0.4
+   },
+   {
+    "id": "deb",
+    "text": "그런데 어제 토론회에서 이런 분석이 나왔어요.",
+    "gap": 1.0
+   },
+   {
+    "id": "an1",
+    "text": "위 구간이 이천삼십오 년까지 그대로면, 그해 수급자 열 명 중 네 명 가까이가 지금 제도보다 덜 받는다는 거예요."
+   },
+   {
+    "id": "an2",
+    "text": "한 사람당 한 달 평균 사만 육천 원 정도요.",
+    "gap": 0.15
+   },
+   {
+    "id": "mine",
+    "text": "그래서 내 칸은, 연말에 기준이 나오면 소득인정액으로 확인해 보는 게 순서예요.",
+    "gap": 0.45
+   },
+   {
+    "id": "save",
+    "text": "저장해 두셨다가 발표 나면 다시 보세요."
+   },
+   {
+    "id": "sig",
+    "text": "늦지 않았습니다.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "start": 0,
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "기초연금",
+     "x": 130,
+     "y": 470,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1.0
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "내년부터 3단계",
+     "x": 130,
+     "y": 660,
+     "size": 120,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "내 칸은 얼마?",
+     "x": 130,
+     "y": 830,
+     "size": 130,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "circle",
+     "target": "cv3",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 18,
+     "width": 8
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "38만 · 35만 9천 · 35만",
+     "x": 140,
+     "y": 1040,
+     "size": 64,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.9,
+     "dur": 0.7
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "기초연금 내년부터",
+     "x": 128,
+     "y": 196,
+     "size": 100,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "h2",
+     "text": "3단계로?",
+     "x": 132,
+     "y": 336,
+     "size": 112,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.4
+    },
+    {
+     "type": "underline",
+     "target": "h2",
+     "at": 0.3,
+     "dur": 0.6,
+     "color": "red",
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "th0",
+     "text": "소득 하위",
+     "x": 150,
+     "y": 560,
+     "size": 52,
+     "font": "pen",
+     "color": "gray",
+     "at": "@r1-0.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "th1",
+     "text": "월 받는 돈",
+     "x": 470,
+     "y": 560,
+     "size": 52,
+     "font": "pen",
+     "color": "gray",
+     "at": "@r1-0.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r00",
+     "text": "0~30%",
+     "x": 150,
+     "y": 650,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r1",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r01",
+     "text": "38만 원",
+     "x": 470,
+     "y": 650,
+     "size": 70,
+     "font": "bold",
+     "color": "red",
+     "at": "@r1+1.0",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r10",
+     "text": "30~45%",
+     "x": 150,
+     "y": 770,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r2",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r11",
+     "text": "35만 9천 원",
+     "x": 470,
+     "y": 770,
+     "size": 70,
+     "font": "bold",
+     "color": "blue",
+     "at": "@r2+1.0",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r20",
+     "text": "45~70%",
+     "x": 150,
+     "y": 890,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r3",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "r21",
+     "text": "35만 원",
+     "x": 470,
+     "y": 890,
+     "size": 70,
+     "font": "bold",
+     "color": "ink",
+     "at": "@r3+1.0",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "n1",
+     "text": "(정부 2027년 예산안 · 국회 심의 중)",
+     "x": 150,
+     "y": 1150,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@note+0.3",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "n2",
+     "text": "(구간 기준은 연말 확정 · 지금은 모두 월 34만 9,700원)",
+     "x": 150,
+     "y": 1205,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@note+1.6",
+     "dur": 0.7
+    }
+   ]
+  },
+  {
+   "start": "@note.end+0.3",
+   "stains": [
+    {
+     "x": -110,
+     "y": 1480,
+     "r": 160,
+     "opacity": 0.15,
+     "rot": 12
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "d1",
+     "text": "어제 토론회 분석",
+     "x": 132,
+     "y": 196,
+     "size": 76,
+     "font": "bold",
+     "color": "ink",
+     "at": "@deb+0.2",
+     "dur": 0.7,
+     "rot": -0.6
+    },
+    {
+     "type": "text",
+     "id": "d2",
+     "text": "2035년 수급자",
+     "x": 150,
+     "y": 320,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@an1+3.2",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "d3",
+     "text": "10명 중 4명 가까이(37.1%)",
+     "x": 150,
+     "y": 410,
+     "size": 66,
+     "font": "bold",
+     "color": "red",
+     "at": "@an1.end-2.4",
+     "dur": 1.0
+    },
+    {
+     "type": "text",
+     "id": "d4",
+     "text": "지금 제도보다 덜 받아요",
+     "x": 150,
+     "y": 500,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@an1.end-0.8",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "d5",
+     "text": "1인당 월 −4만 6천 원",
+     "x": 150,
+     "y": 610,
+     "size": 74,
+     "font": "bold",
+     "color": "blue",
+     "at": "@an2+0.3",
+     "dur": 0.8
+    },
+    {
+     "type": "highlight",
+     "target": "d5",
+     "at": "@an2.end-0.2",
+     "dur": 0.45
+    },
+    {
+     "type": "text",
+     "id": "d6",
+     "text": "(위 구간 2035년까지 동결 가정 · 공적연금강화국민행동 등 주최 토론회, 11/6)",
+     "x": 150,
+     "y": 710,
+     "size": 34,
+     "font": "pen",
+     "color": "gray",
+     "at": "@an2.end",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 860,
+     "w": 760,
+     "h": 420,
+     "rot": -2.0,
+     "at": "@mine-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "내 칸은?",
+       "x": 46,
+       "y": 34,
+       "size": 70,
+       "font": "bold",
+       "color": "red",
+       "at": "@mine",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "연말 구간 기준 발표 후",
+       "x": 46,
+       "y": 150,
+       "size": 54,
+       "font": "bold",
+       "color": "ink",
+       "at": "@mine+1.4",
+       "dur": 0.9
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "내 소득인정액으로 확인",
+       "x": 46,
+       "y": 236,
+       "size": 54,
+       "font": "bold",
+       "color": "blue",
+       "at": "@mine+3.0",
+       "dur": 0.9
+      },
+      {
+       "type": "text",
+       "id": "m4",
+       "text": "저장해 두고 발표 나면 보기",
+       "x": 52,
+       "y": 340,
+       "size": 42,
+       "font": "pen",
+       "color": "gray",
+       "at": "@save",
+       "dur": 0.8
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1490,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@sig",
+     "dur": 0.8,
+     "rot": -2.0
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1575,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@sig+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
