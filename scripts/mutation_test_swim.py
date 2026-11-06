@@ -13,6 +13,12 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 FILES = ["collect_swim.py", "swim_regions.py", "swim_alerts.py", "test_swim_collect.py"]
 MUTANTS = [
+    ("제주 연맹 게시판 미등록", "collect_swim.py",
+     '    {"key": "kjaq", "url": "https://www.kjaq.kr/31", "link": r"kjaq\\.kr/31/\\d+", "content": "#bo_v_con"},\n', "",
+     "ParserTests.test_federation_boards_registered"),
+    ("새 시·도 연맹을 수영연맹 출처로 안 봄", "collect_swim.py",
+     '"busanswim", "djswim", "jnsf", "gwswim", "kjaq"}', '"busanswim", "djswim"}',
+     "ParserTests.test_federation_boards_registered"),
     ("robots.txt 무시", "collect_swim.py", "return rp is None or rp.can_fetch(UA_TOKEN, url)", "return True",
      "ParserTests.test_robots_respected"),
     ("점검 페이지(HTTP 200)를 성공으로", "collect_swim.py",
