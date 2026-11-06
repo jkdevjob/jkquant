@@ -103,6 +103,21 @@ BOARD_369 = """<html><body><div id="bo_v_con"><p>1. 대회개요</p><p>1) 대 �
 <p>4) 경기종목: 자유형 50m, 100m / 배영 50m / 평영 50m</p><p>5) 참가비: 개인 20,000원 ※ 환불 불가</p></div></body></html>"""
 BOARD_367 = """<html><body><div id="bo_v_con"><p>대회명 : 제1회 강남구청장배 수영대회</p><p>일시 : 2026년 11월 22일(일)</p><p>장소 : 강남스포츠문화센터</p>
 <p>사정으로 대회를 취소합니다.</p></div></body></html>"""
+# 제주특별자치도수영연맹(kjaq.kr) 실제 화면 형태 — 제목 앞 [도내대회] 꼬리표, 본문은 글자마다 span 으로 쪼개져 있다
+KJAQ_LIST = """<html><body><ul class="list">
+<li><a href="https://www.kjaq.kr/31/24"><span class="cate">[도내대회]</span>
+<span class="subject">제39회 제주특별자치도수영연맹 회장배 전도 수영대회</span></a></li>
+<li><a href="https://www.kjaq.kr/31/20"><span class="cate">[전국대회]</span>
+<span class="subject">제20회 수애기배 전국 마스터즈 수영대회</span></a></li>
+</ul><a href="https://www.kjaq.kr/32/7">2026 전국생활체육대축전 결과 안내</a></body></html>"""
+KJAQ_24 = """<html><body><div id="bo_v_con"><p>[제39회 제주특별자치도수영연맹 회장배 전도 수영대회]</p>
+<p><span>1.</span> <span>대 회 명</span> <span>:</span> <span>제</span><span>39</span><span>회 제주특별자치도수영연맹 회장배 전도 수영대회</span></p>
+<p><span>2.</span> <span>일    시</span> <span>:</span> <span>2026</span><span>년 </span><span>11</span><span>월 </span><span>15</span><span>일</span><span>(</span><span>일</span><span>)</span></p>
+<p><span>3.</span> <span>장    소</span> <span>:</span> <span>제주시 종합경기장 실내수영장</span></p>
+<p><span>7.</span> <span>참가 신청방법</span></p>
+<p><span>❑</span> <span>신청마감</span> <span>:</span> <span>2026</span><span>년 </span><span>11</span><span>월 </span><span>3</span><span>일</span><span>(</span><span>화</span><span>) 18:00</span><span>까지</span></p>
+</div></body></html>"""
+
 
 
 class DateTests(unittest.TestCase):
@@ -238,6 +253,31 @@ class ParserTests(unittest.TestCase):
         self.assertTrue(sb["fee"].startswith("개인 20,000원"))
         gn = next(o for o in obs if "강남" in o["title"])
         self.assertEqual(gn["status"], "cancelled")
+
+
+    def test_federation_boards_registered(self):
+        """시·도 연맹 게시판을 추가하면 이름·우선순위·연맹 구분·공식 판정이 같이 따라와야 한다."""
+        keys = [b["key"] for b in m.BOARDS]
+        self.assertTrue({"jnsf", "gwswim", "kjaq"} <= set(keys), keys)       # 2026-11-06 전남·강원·제주 추가
+        self.assertEqual(len(keys), len(set(keys)))
+        for b in m.BOARDS:
+            self.assertIn(b["key"], m.SOURCE_NAMES)
+            self.assertIn(b["key"], m.SOURCE_ORDER)
+            self.assertIn(b["key"], m.SWIM_FEDERATION_SOURCES)
+            self.assertTrue(m.is_official_url(b["url"]), b["url"])
+        self.assertTrue({"jnsf", "gwswim", "kjaq"} <= {k for k, *_ in m.SOURCES})
+
+    def test_kjaq_board(self):
+        cfg = next(b for b in m.BOARDS if b["key"] == "kjaq")
+        pages = {cfg["url"]: KJAQ_LIST, "https://www.kjaq.kr/31/24": KJAQ_24}
+        obs = m.scrape_board(fetcher(pages), {}, cfg)
+        self.assertEqual(len(obs), 1, [o["title"] for o in obs])         # 본문을 못 읽은 글(31/20)은 만들어 내지 않는다
+        o = obs[0]
+        self.assertEqual(o["title"], "제39회 제주특별자치도수영연맹 회장배 전도 수영대회")
+        self.assertEqual((o["start_date"], o["end_date"], o["apply_close"]), ("2026-11-15", "2026-11-15", "2026-11-03"))
+        self.assertEqual((o["sido"], o["sigungu"]), ("제주", "제주시"))
+        self.assertEqual((o["source"], o["tier"]), ("kjaq", "official"))
+        self.assertEqual(o["url"], "https://www.kjaq.kr/31/24")
 
 
 class SportTests(unittest.TestCase):

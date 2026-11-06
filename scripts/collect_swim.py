@@ -55,7 +55,7 @@ def now_iso():
 
 TIER_RANK = {"official": 3, "secondary": 2, "unverified": 1}
 # 같은 등급 안에서의 우선순위(앞이 강함)
-SOURCE_ORDER = ["korswim", "korswim_detail", "kua", "seoulswim", "gswimming", "busanswim", "djswim",
+SOURCE_ORDER = ["korswim", "korswim_detail", "kua", "seoulswim", "gswimming", "busanswim", "djswim", "jnsf", "gwswim", "kjaq",
                 "official_link", "swimming_co_kr", "whoisfast", "search_lead", "legacy_v1"]
 SOURCE_NAMES = {
     "korswim": "대한수영연맹 대회일정",
@@ -65,6 +65,9 @@ SOURCE_NAMES = {
     "gswimming": "경기도수영연맹 공지사항",
     "busanswim": "부산광역시수영연맹 공지사항",
     "djswim": "대전광역시수영연맹 공지사항",
+    "jnsf": "전남수영연맹 대회일정",
+    "gwswim": "강원특별자치도수영연맹 대회일정",
+    "kjaq": "제주특별자치도수영연맹 대회일정",
     "official_link": "공식 공고 원문 확인",
     "swimming_co_kr": "전국 수영대회 통합 플랫폼(swimming.co.kr)",
     "whoisfast": "Whoisfast 대회 일정",
@@ -74,7 +77,8 @@ SOURCE_NAMES = {
 OFFICIAL_HOST_SUFFIX = (".go.kr", ".or.kr", ".ac.kr", ".kr.kr")
 OFFICIAL_HOSTS = ("korswim.co.kr", "kua.or.kr", "gswimming.com", "busanswimming.kr", "gbaquatics.co.kr",
                   "ulsanswimming.com", "djswimming.or.kr", "seoulswim.or.kr", "sjswim.or.kr",
-                  "cnswimming.or.kr", "goegu.kr", "seo.incheon.kr", "bucheon.go.kr", "hscity.go.kr")
+                  "cnswimming.or.kr", "goegu.kr", "seo.incheon.kr", "bucheon.go.kr", "hscity.go.kr",
+                  "jnsf.kr", "jgswim.kr", "gwswim.or.kr", "kjaq.kr")
 UNOFFICIAL_HOSTS = ("cafe.naver.com", "blog.naver.com", "m.blog.naver.com", "cafe.daum.net", "tistory.com",
                     "instagram.com", "facebook.com", "youtube.com", "swimming.co.kr", "whoisfast.com",
                     "myranking.co.kr", "band.us")
@@ -541,7 +545,7 @@ def kind_conflict(ta, tb):
 
 
 FEDERATION = {"kua": "fin", "korswim": "swim", "korswim_detail": "swim"}
-SWIM_FEDERATION_SOURCES = {"korswim", "korswim_detail", "seoulswim", "gswimming", "busanswim", "djswim"}
+SWIM_FEDERATION_SOURCES = {"korswim", "korswim_detail", "seoulswim", "gswimming", "busanswim", "djswim", "jnsf", "gwswim", "kjaq"}
 
 
 def federations(x):
@@ -818,6 +822,10 @@ BOARDS = [
      "link": r"BoardView\.asp\?idx=\d+", "content": None},
     {"key": "djswim", "url": "https://djswimming.or.kr/bizdemo38944/mp5/mp5_sub1.php?sub=01",
      "link": r"com_board_basic=read_form&com_board_idx=\d+", "content": None},
+    # 2026-11-04 추가: 네이버 카페가 아닌 공식 홈페이지 게시판(robots.txt 허용)
+    {"key": "jnsf", "url": "http://www.jnsf.kr/board.php?bo=schedule", "link": r"board\.php\?bo=schedule&no=\d+", "content": None},
+    {"key": "gwswim", "url": "https://gwswim.or.kr/bbs/board.php?bo_table=501", "link": r"bo_table=501&wr_id=\d+", "content": "#bo_v_con"},
+    {"key": "kjaq", "url": "https://www.kjaq.kr/31", "link": r"kjaq\.kr/31/\d+", "content": "#bo_v_con"},
 ]
 
 
@@ -1077,7 +1085,7 @@ def confirm_official_links(f, state, records, limit=25):
     out = []
     cache = state.setdefault("cache", {}).setdefault("link", {})
     t = today().isoformat()
-    covered = {"korswim", "korswim_detail", "kua", "seoulswim", "gswimming", "busanswim", "djswim"}
+    covered = {"korswim", "korswim_detail", "kua"} | {b["key"] for b in BOARDS}   # 공식 게시판 목록 한 곳에서만 센다
     todo = []
     for rec in records.values():
         d = rec.get("derived", {})
