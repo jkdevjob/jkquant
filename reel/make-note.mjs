@@ -50,10 +50,17 @@ async function makeVoice(v){
   const py = fs.existsSync("/usr/bin/python3") ? "/usr/bin/python3" : "python3";
   try { await run(py, [path.join(__dirname, "tts", "say.py"), req]); } finally { fs.rmSync(req, { force:true }); }
   const trim = "silenceremove=start_periods=1:start_threshold=-45dB";
+  const toRaw = (l) => runFF(["-y", "-i", l.mp3, "-af", `${trim},areverse,${trim},areverse`, "-ar", "44100", "-ac", "1", "-f", "s16le", l.raw]);
+  // 합성이 중간에 끊겨 너무 짧은 음성(글자당 0.05초 미만)은 지우고 한 번 더 만든다
+  const bad = lines.filter(l => fs.existsSync(l.raw) && fs.statSync(l.raw).size / 88200 < l.text.length * 0.05);
+  if (bad.length){
+    for (const l of bad){ console.warn(`  ⚠ 잘린 음성 다시 만듦: ${l.id}`); fs.rmSync(l.mp3, { force:true }); fs.rmSync(l.raw, { force:true }); }
+    fs.writeFileSync(req, JSON.stringify({ voice:name, rate, pitch, lines: bad.map(l => ({ text:l.text, out:l.mp3 })) }));
+    try { await run(py, [path.join(__dirname, "tts", "say.py"), req]); } finally { fs.rmSync(req, { force:true }); }
+  }
   let prevEnd = null;
   for (const l of lines){
-    if (!fs.existsSync(l.raw))
-      await runFF(["-y", "-i", l.mp3, "-af", `${trim},areverse,${trim},areverse`, "-ar", "44100", "-ac", "1", "-f", "s16le", l.raw]);
+    if (!fs.existsSync(l.raw)) await toRaw(l);
     l.len = fs.statSync(l.raw).size / 88200;
     l.start = typeof l.at === "number" ? l.at : prevEnd == null ? (v.lead ?? 0.3) : prevEnd + (l.gap ?? v.gap ?? 0.3);
     if (prevEnd != null && l.start < prevEnd - 0.01) console.warn(`  ⚠ 목소리 '${l.id}' 가 앞 줄과 겹친다 (${l.start.toFixed(2)} < ${prevEnd.toFixed(2)})`);
