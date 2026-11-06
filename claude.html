@@ -82,7 +82,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.24.1</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.24.2</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -670,10 +670,10 @@ async function openHist(tab,version){
 }
 // 매매 행 = [손익 날짜, 진입 시각, 진입가, 청산 시각, 청산가, 종목, 이름, 순손익 %, 사유] (밤 계산 HIST_FIELDS)
 function histTradeRow(t){return "<tr><td>"+esc(t[0])+"</td><td class='nm' style='text-align:left'><b>"+esc(t[6]||t[5]||"")+"</b><div class='sub'>"+esc(t[1]||"")+" "+won(t[2])+" → "+(t[3]?esc(t[3])+" "+won(t[4]):"보유 중")+"</div></td><td class='"+cls(t[7])+"'><b>"+pct(t[7])+"</b></td><td style='text-align:left;white-space:normal'>"+esc(t[8]||"")+"</td></tr>"}
-// 신호 낸 조건(판단 시각 · 판단 가격 · 기준) — ① 예상 갭 · ② 15:21 예상 하락 · ⑤ 15:00 전일 대비
+// 신호 낸 조건(판단 시각 · 판단 가격 · 기준) — ① 예상 갭 · ② 15:21 예상 전일 대비 · ⑤ 15:00 전일 대비
 function histSignal(g){if(!g)return "";var t=g.at?esc(String(g.at).slice(0,5))+" ":"";
   if(g.expectedGapPct!=null)return t+"예상 갭 "+pct(g.expectedGapPct)+(g.expectedPrice?" ("+won(g.expectedPrice)+")":"");
-  if(g.dropPct!=null)return t+"예상 하락 "+pct(g.dropPct)+(g.th!=null?" · 기준 "+esc(String(g.th))+"%":"");
+  if(g.dropPct!=null)return t+"예상 전일 대비 "+pct(g.dropPct)+(g.th!=null?" · 기준 "+esc(String(g.th))+"%":"");
   if(g.sofarPct!=null)return t+"전일 대비 "+pct(g.sofarPct)+(g.price?" ("+won(g.price)+")":"");return t;}
 function histLiveTrades(list){return (list||[]).map(function(x){var g=histSignal(x.signal),v=x.vts&&x.vts.ok===false?(x.vts.msg==="모의투자 꺼짐(설정)"?"모의투자 꺼짐":"모의계좌 주문 안 됨"):"";
   return esc(x.name||x.code||"")+" "+esc(x.entryTime||"")+" "+won(x.entryPrice)+(x.exitPrice!=null?" → "+esc(x.exitTime||"")+" "+won(x.exitPrice):"")+" <b class='"+cls(x.pnlPct)+"'>"+pct(x.pnlPct)+"</b>"+(x.reason?" · "+esc(x.reason):"")+

@@ -305,7 +305,7 @@ t("live ③: breakout of yesterday's high in an uptrend; stop and no-break are e
 t("telegram: each kind says what happened, no-trade is explicit", () => {
   const live = { tabs: { opening: { rows: [{ name: "휴젤", buyPrice: 171200, buyPriceKind: "체결", expectedGapPct: -4.2, sellPrice: 174000, pnlPct: 1.41, status: "청산" }],
                                     decision: { reason: "x", breadth: { qualified: 6, v2Signal: true } } },
-                         daytrading: { rows: [{ status: "매매 없음", note: "15:21 예상 하락 -1.20%" }] },
+                         daytrading: { rows: [{ status: "매매 없음", note: "15:21 예상 전일 대비 -1.20% (기준 −3% 이하 아님)" }] },
                          crypto: { tabPct: 0.4 }, soxl: { rows: [{ pnlPct: null }] } } };
   const pre = TG.compose("preopen", "2026-10-02", live);
   assert.ok(pre.includes("모의 매수 1종목") && pre.includes("v2 매매일 예") && pre.includes("휴젤"));
@@ -338,7 +338,7 @@ t("today summary: tab return vs per-trade sum, account share, no-trade reason", 
   assert.equal(z.tabPct, 0); assert.equal(z.sumPct, 0); assert.ok(z.noTrade); assert.ok(z.why.includes("예상 갭 −2%~−29% 인 종목 없음"));
   assert.equal(LV.todaySummary("opening", { rows: [] }, 850).why, "08:58 판단 전"); assert.equal(LV.todaySummary("opening", { rows: [] }, 857).why, "08:58 판단 전");
   const e = LV.todaySummary("daytrading", { rows: [{ buyPrice: 100, sellTime: "오늘 09:00 시가", status: "청산", pnlPct: 1.5 },
-                                                  { status: "매매 없음", note: "15:21 예상 하락 -1.00% (기준 −3% 이하)" }] }, 1600);
+                                                  { status: "매매 없음", note: "15:21 예상 전일 대비 -1.00% (기준 −3% 이하 아님)" }] }, 1600);
   near(e.tabPct, 1.5); assert.equal(e.trades, 1); assert.ok(e.why.includes("시가 매도(청산)") && e.why.includes("오늘 매수 없음"));
   assert.equal(LV.todaySummary("daytrading", { rows: [] }, 1400).why, "15:21 판단 전");
   const c = LV.todaySummary("crypto", { rows: [{ name: "BTC", hold: true, status: "보유중", pnlPct: 2 }, { name: "ETH", hold: false, pnlPct: 0, status: "쉼 — 어제 종가가 20일 평균 아래" }], basketPct: 1 }, 1000);
@@ -877,6 +877,12 @@ t("day close ②: 전날 신호를 전날 공식 종가 → 오늘 시가로 정
   // 전날 신호 없음 · 오늘 신호 없음 → 매매 없음(확정)
   const r4 = DAY.etfDay("2026-10-05", { events: [{ stage: "etf_buy", payload: { signal: false, dropPct: -1 } }] }, { events: [] }, "2026-10-02", true, bars);
   assert.deepEqual([r4.settled, r4.dayPct, r4.exits, r4.open.length], [true, null, 0, 0]);
+  // 메모는 부호 있는 '예상 전일 대비' — 오른 날을 '하락'으로 적지 않는다(11/04 '예상 하락 2.77%' 문구 버그)
+  assert.equal(r.note, "15:21 예상 전일 대비 -3.40% → 종가 매수");
+  const up = DAY.etfDay("2026-10-05", { events: [{ stage: "etf_buy", payload: { signal: false, dropPct: 2.77, rule: { dropMaxPct: -4.75 } } }] }, { events: [] }, "2026-10-02", true, bars);
+  assert.equal(up.note, "15:21 예상 전일 대비 +2.77% (기준 −4.75% 이하 아님) → 매수 없음");
+  const lvUp = LV.etfRows({ etf_buy: { signal: false, dropPct: 2.77, rule: { dropMaxPct: -4.75 } } }, {}, null, null);
+  assert.equal(lvUp[0].note, "15:21 예상 전일 대비 +2.77% (기준 −4.75% 이하 아님)");
 });
 t("day close ③: KST 00:00 day — realized = closed in the day, open = held at midnight, no bar after midnight used", () => {
   const D = (d, close, high) => ({ candle_date_time_kst: d + "T09:00:00", trade_price: close, high_price: high });

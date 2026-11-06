@@ -102,7 +102,7 @@ export function etfRows(todaySt,prevSt,prevDate,nowPrice,bars={},hm=2400,today="
         sellTime:"다음 거래일 09:00 시가",sellPrice:null,nowPrice:nowPrice,status:"보유중(오버나잇)",
         pnlPct:null,realized:false,dropPct:buy.dropPct,vts:note,note});
     }else if(buy.decisionReason==="krx_holiday")rows.push({code:"233740",name:"KODEX 코스닥150레버리지",status:"매매 없음",note:"국내 휴장일"});
-    else rows.push({code:"233740",name:"KODEX 코스닥150레버리지",status:"매매 없음",note:"15:21 예상 하락 "+(buy.dropPct==null?"—":buy.dropPct.toFixed(2)+"%")+" (기준 "+String((buy.rule&&buy.rule.dropMaxPct)??-3).replace("-","−")+"% 이하)"});
+    else rows.push({code:"233740",name:"KODEX 코스닥150레버리지",status:"매매 없음",note:"15:21 예상 전일 대비 "+(buy.dropPct==null?"—":(buy.dropPct>=0?"+":"")+buy.dropPct.toFixed(2)+"%")+" (기준 "+String((buy.rule&&buy.rule.dropMaxPct)??-3).replace("-","−")+"% 이하 아님)"});   // 오른 날을 '하락'으로 적지 않는다(11/04)
   }
   return rows;
 }

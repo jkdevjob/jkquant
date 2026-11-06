@@ -119,7 +119,7 @@ export function etfDay(date, ledger, prevLedger, prevDate, krOpen, bars = {}) {
     status: "closed", settled, dayPct, candidates: buy && buy.signal ? 1 : 0, entries: buy && buy.signal ? 1 : 0,
     strategyVersion: buy && buy.strategyVersion || MAIN_DEFAULT.daytrading.version,
     params: buy && buy.rule ? { code: "233740", th: buy.rule.dropMaxPct } : Object.assign({}, MAIN_DEFAULT.daytrading.params),
-    note: buy ? (buy.signal ? "15:21 예상 하락 " + (+buy.dropPct).toFixed(2) + "% → 종가 매수" : "15:21 예상 하락 " + (buy.dropPct == null ? "—" : (+buy.dropPct).toFixed(2) + "%") + " (기준 " + String((buy.rule && buy.rule.dropMaxPct) ?? -3).replace("-", "−") + "% 이하 아님) → 매수 없음")
+    note: buy ? (buy.signal ? "15:21 예상 전일 대비 " + P(buy.dropPct) + " → 종가 매수" : "15:21 예상 전일 대비 " + P(buy.dropPct) + " (기준 " + String((buy.rule && buy.rule.dropMaxPct) ?? -3).replace("-", "−") + "% 이하 아님) → 매수 없음")
       : "15:21 판단 기록 없음 — 점검"
   });
 }
