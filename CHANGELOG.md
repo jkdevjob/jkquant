@@ -1,5 +1,14 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-07 · 자산플랜 세션 설정에서 '5년 규칙' 선택 — 모의 세션끼리 기본/새 규칙 비교 · v3.117.4 (플랜 v1.45.0)
+
+- 사용자: "아니 자산플랜 세션 설정에서 선택할수 있게 하라고 — 그래서 모의투자로 비교해보게". v1.44.0 의 선택은 화면(판단 근거) 한 곳이었고 세션 설정에는 없어 모의 세션이 늘 기본 규칙으로 재생됐다.
+- 세션 추가·설정 모달에 '5년 규칙' 선택(기본 · 새 규칙 실험적 확장 — 5년 플랜에만 보임). `JKPlanSessionSettings.update` 가 `settings.alphaRules` 로 세션마다 저장(안 주면 기존 값 그대로). 새 세션의 기본값은 화면 선택값.
+- 세션을 고르면 화면 '5년 규칙' 선택이 그 세션 값을 따르고(applyAssetSettings), 모의 세션이 떠 있을 때 화면에서 바꾸면 그 세션에 저장하고 다시 재생한다. 운영 세션은 기존 경로(localSave → syncActiveAssetSessionFromView)로 저장.
+- 표시: 세션 칩 '새 규칙' 꼬리표 · 상태 줄 '· 새 규칙(실험적 확장)' · 모의 결과 머리에 규칙 · 모의투자 성과 목록(index) 옵션 칸에 '새 규칙(실험적)'.
+- 시험: `scripts/check-plan-rules-session.cjs`(update 4 · 실제 createAssetSession 5년 exp1/base·10년 없음·수정 · settingsFromView · applyAssetSettings · 칩/상태 · 결과 머리 · 목록 · 변이 5종) — 전체 회귀에 연결. 기존 `check-plan-session-settings` · `check-plan-session-mutations` · `check-plan-rules-exp` · `check-plan-evidence` 그대로 PASS.
+- 버전: index v3.117.3 → v3.117.4 · 플랜 v1.44.0 → v1.45.0 · `plan-session-settings.js?v=2`.
+
 ## 2026-11-06 · JOB 고용형태 칩 줄 삭제(아래 select 와 중복) · v3.117.3 (JOB v1.2.2)
 
 - 사용자: "지워 밑에 있었구나 · 이럴땐 물어봐 · 밑에 있는데 또 만드냐고". v1.2.1 에서 더한 '고용형태: 전체 · 정규직만 · 정규직 제외' 칩 줄은 아래 고용형태 select 와 같은 기능이라 지웠다. 앞으로 같은 기능이 이미 있으면 새로 만들기 전에 묻는다.

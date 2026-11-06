@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 자산플랜</title>
 <script src="/plan-session-engine.js?v=3"></script>
-<script src="/plan-session-settings.js"></script>
+<script src="/plan-session-settings.js?v=2"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.1.0" defer></script>
@@ -311,7 +311,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.44.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.45.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -827,6 +827,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="field"><label>목표자산 ($)</label><input id="assetSessionTarget" type="number" min="1" step="100"></div>
       <div class="field"><label>세션 종류</label><select id="assetSessionKind"><option value="live">운영 세션</option><option value="paper">모의투자 세션</option></select></div>
       <div class="field" id="assetSessionStartWrap"><label id="assetSessionStartLabel">시작일</label><input id="assetSessionStart" type="date"></div>
+      <div class="field" id="assetSessionRulesWrap" style="grid-column:1/-1"><label for="assetSessionRules">5년 규칙 <span class="hint">세션마다 따로 저장 — 기본·새 규칙 모의 세션을 나란히 만들어 비교할 수 있다 · 새 규칙은 실험적 확장(공식 규칙 아님)</span></label><select id="assetSessionRules"><option value="base">기본 규칙 — Guard ±1% · TECL 밴드 10%p · TQQQ는 Guard 바뀔 때만</option><option value="exp1">새 규칙 (실험적 확장) — Guard 끄기 −3% · TECL 줄일 때 바로(0.7%p)·늘릴 때 10.5%p · TQQQ 1월 첫 거래일 30% 맞춤</option></select></div>
     </div>
     <div class="asset-session-paper" id="assetSessionPaperNote">운영 세션은 실제 체결을 직접 기록합니다. 모의투자 세션은 과거 시세로 자동 재생하며 실제 거래이력을 변경하지 않습니다.</div>
     <div class="btnrow"><button class="btn primary" id="assetSessionCreate">세션 만들기</button><button class="btn" id="assetSessionCancel">취소</button></div>
@@ -1090,7 +1091,7 @@ function assetSessionSettingsFromView(capOverride){
   return {ticker:'PLAN5',horizon:activeHorizon,startCapital:cap,targetCapital:Math.max(1,num('targetCapital',150000)),monthlyAdd:Math.max(0,num('monthlyAdd',0)),
     targetIncome:Math.max(0,num('targetIncome',0)),stageMode:String($('stageMode').value||'auto'),
     startDate:String($('startDate').value||todayISO()),targetDate:String($('targetDate').value||plusYears(todayISO(),activeHorizon)),
-    engine:'asset-plan-v2'};
+    engine:'asset-plan-v2',...(+activeHorizon===5?{alphaRules:alphaRuleSet().key}:{})};   // 5년 규칙 벌 — 세션마다 저장(기본 base · exp1 실험적 확장)
 }
 function writeAssetSessionLocal(){
   if(liveState)liveState._updated=Date.now();
@@ -1108,6 +1109,7 @@ function applyAssetSettings(x){
   $('monthlyAdd').value=Math.max(0,+st.monthlyAdd||0);
   $('targetIncome').value=Math.max(0,+st.targetIncome||0);
   $('stageMode').value=st.stageMode||'auto';
+  if($('alphaRules'))$('alphaRules').value=st.alphaRules==='exp1'?'exp1':'base';   // 5년 규칙 벌은 세션 설정을 따른다(화면 판정·모의 재생이 같은 규칙)
   const sd=x&&x.paper?x.simStart:(st.startDate||todayISO());
   $('startDate').value=sd||todayISO();
   $('targetDate').value=plusYears($('startDate').value||todayISO(),activeHorizon);
@@ -1121,7 +1123,7 @@ function restoreCurrentPlanView(){
 function assetPaperStatsHtml(x,R){
   const z=R&&R.stats;if(!z)return '<div class="sub">모의 성과를 계산할 수 없습니다.</div>';
   const col=z.ret>=0?'var(--green)':'var(--red)';
-  return '<div class="asset-session-head"><div><b>'+String(x.name||'모의 세션').replace(/</g,'&lt;')+'</b><div class="sub">'+z.from+' ~ '+z.to+' · 자동 재생 결과</div></div><a class="btn" href="/paper" style="text-decoration:none">모의투자 성과에서 비교</a></div>'+
+  return '<div class="asset-session-head"><div><b>'+String(x.name||'모의 세션').replace(/</g,'&lt;')+'</b><div class="sub">'+z.from+' ~ '+z.to+' · 자동 재생 결과 · '+(R.rules==='exp1'?'새 규칙(실험적 확장)':'기본 규칙')+'</div></div><a class="btn" href="/paper" style="text-decoration:none">모의투자 성과에서 비교</a></div>'+
     '<div class="path-note">모의 체결 v'+(R.orderSizingVersion||'?')+' · 전일 확정종가로 주수를 결정하고 다음 거래일 종가로 체결합니다.</div><div class="kpis"><div class="kpi"><div class="k">평가액</div><div class="v">'+usd2(z.total)+'</div></div>'+
     '<div class="kpi"><div class="k">최종 수익률</div><div class="v" style="color:'+col+'">'+(z.ret>=0?'+':'')+z.ret.toFixed(1)+'%</div></div>'+
     '<div class="kpi"><div class="k">MDD</div><div class="v" style="color:var(--red)">-'+z.mdd.toFixed(1)+'%</div></div>'+
@@ -1153,20 +1155,21 @@ async function replayAssetPaperSession(x,applyView){
     return null;
   }
 }
+function assetRuleTag(x){return (x&&+x.horizon===5&&x.settings&&x.settings.alphaRules==='exp1')?' · 새 규칙(실험적 확장)':'';}   // 5년 규칙 벌 표시(세션 칩·상태 줄)
 function renderAssetSessions(){
   const b=assetPlanBox(),box=$('assetSessionChips'),st=$('assetSessionState');if(!box)return;
   const list=assetSessionList(),active=activeAssetSession();
   let h='<button class="asset-session-chip '+(!active?'on':'')+'" data-asess="">현재 투자중</button>';
   for(const x of list){
     h+='<button class="asset-session-chip '+(active&&active.id===x.id?'on':'')+'" data-asess="'+String(x.id).replace(/"/g,'&quot;')+'">'+
-      String(x.name||'세션').replace(/</g,'&lt;')+(x.paper?' <span class="paper">모의</span>':'')+
+      String(x.name||'세션').replace(/</g,'&lt;')+(x.paper?' <span class="paper">모의</span>':'')+(assetRuleTag(x)?' <span class="paper">새 규칙</span>':'')+
       '<span class="x" data-asess-del="'+String(x.id).replace(/"/g,'&quot;')+'">×</span></button>';
   }
   box.innerHTML=h;
   if(st){
     if(!active){st.className='asset-session-state';st.textContent='현재 투자중 · '+horizonStrategy().name;}
-    else if(active.paper){st.className='asset-session-state paper';st.textContent='모의투자 · '+active.simStart+' 시작 · '+horizonStrategy().name;}
-    else{st.className='asset-session-state';st.textContent='운영 세션 · '+horizonStrategy().name;}
+    else if(active.paper){st.className='asset-session-state paper';st.textContent='모의투자 · '+active.simStart+' 시작 · '+horizonStrategy().name+assetRuleTag(active);}
+    else{st.className='asset-session-state';st.textContent='운영 세션 · '+horizonStrategy().name+assetRuleTag(active);}
   }
 }
 async function loadActiveAssetSessionView(refresh=true){
@@ -1215,6 +1218,7 @@ function openAssetSessionModal(){
   $('assetSessionMonthly').value=Math.max(0,num('monthlyAdd',0));
   $('assetSessionTarget').value=Math.max(1,num('targetCapital',150000));
   $('assetSessionKind').value='live';
+  if($('assetSessionRules')){$('assetSessionRules').value=alphaRuleSet().key;$('assetSessionRulesWrap').hidden=+assetModalHorizon!==5;}   // 5년 규칙 벌 — 새 세션은 화면 선택값이 기본 · 5년 플랜에만 보인다
   const min=new Date();min.setFullYear(min.getFullYear()-3);
   $('assetSessionStart').min=min.toISOString().slice(0,10);$('assetSessionStart').max=todayISO();$('assetSessionStart').value=todayISO();
   $('assetSessionName').disabled=false;$('assetSessionKind').disabled=false;
@@ -1231,6 +1235,7 @@ function editAssetSession(){
   $('assetSessionName').value=x?x.name:'현재 투자중';
   $('assetSessionName').disabled=!x;$('assetSessionKind').disabled=!x;
   $('assetSessionKind').value=x&&x.paper?'paper':'live';
+  if($('assetSessionRules'))$('assetSessionRules').value=st.alphaRules==='exp1'?'exp1':'base';
   $('assetSessionCapital').value=st.startCapital;$('assetSessionMonthly').value=st.monthlyAdd;
   $('assetSessionTarget').value=st.targetCapital;$('assetSessionStart').value=x&&x.paper?x.simStart:st.startDate;
   $('assetSessionModalTitle').textContent='자산플랜 세션 설정';$('assetSessionCreate').textContent='변경 저장';
@@ -1257,7 +1262,7 @@ async function createAssetSession(){
   if(assetSessionSaving)return;
   ensureLiveBoxes();
   const revision=assetModalRevision,horizon=assetModalHorizon,id=assetEditingId;
-  const input={paper:$('assetSessionKind').value==='paper',name:$('assetSessionName').value,capital:$('assetSessionCapital').value,monthly:$('assetSessionMonthly').value,target:$('assetSessionTarget').value,start:$('assetSessionStart').value};
+  const input={paper:$('assetSessionKind').value==='paper',name:$('assetSessionName').value,capital:$('assetSessionCapital').value,monthly:$('assetSessionMonthly').value,target:$('assetSessionTarget').value,start:$('assetSessionStart').value,rules:(+assetModalHorizon===5&&$('assetSessionRules'))?$('assetSessionRules').value:undefined};   // 5년 규칙 벌 — 세션마다 저장
   const box=assetPlanBox(),original=id==='current'?{id,horizon,paper:false,settings:assetSessionSettingsFromView(),ledger:cloneObj(alphaLedger)}:box.sessions.find(x=>x.id===id);
   if(id&&!original)return;
   if(original&&original.paper!==input.paper&&!confirm('세션 종류를 변경할까요? 실제 거래이력은 보존하고, 모의 거래는 운영 거래이력에 복사하지 않습니다.'))return;
@@ -3120,7 +3125,9 @@ function userBadge(user){
 const d=defaults();
 apply(d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","alphaRules","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
-$("alphaRules").addEventListener("change",()=>{renderHorizonCopy();refreshAlphaFromCache();});   // 5년 규칙 벌 바꾸면 설명·판단을 다시 그린다 (저장은 render 의 readForm)
+$("alphaRules").addEventListener("change",async()=>{renderHorizonCopy();refreshAlphaFromCache();   // 5년 규칙 벌 바꾸면 설명·판단을 다시 그린다 (현재 투자중·운영 세션 저장은 render → localSave → syncActiveAssetSessionFromView)
+  const x=activeAssetSession();   // 모의 세션이 떠 있으면 그 세션의 규칙을 바꾸고 다시 재생한다(모의 세션 설정은 모달과 이 선택에서만 바뀐다)
+  if(x&&x.paper&&+x.horizon===5&&((x.settings||{}).alphaRules==='exp1'?'exp1':'base')!==alphaRuleSet().key){x.settings={...x.settings,alphaRules:alphaRuleSet().key};x.updatedAt=Date.now();delete assetPaperCache[x.id];writeAssetSessionLocal();await saveOperatingState();await loadActiveAssetSessionView(true);}});
 $("assetSessionAdd").addEventListener("click",openAssetSessionModal);
 $("assetSessionEdit").addEventListener("click",editAssetSession);
 $("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});

@@ -1,5 +1,11 @@
 # JKQuant 요구사항 및 검증 기준
 
+## 2026-11-07 · 자산플랜 세션별 5년 규칙 · 플랜 v1.45.0
+
+- 5년 규칙(base · exp1)은 **세션 설정**(세션 추가·설정 모달)에서 고르고 `settings.alphaRules` 로 세션마다 저장된다. 모의 재생(plan.html replayAssetPaperSession · index.html replayPlanPaper)과 화면 판정(renderAlphaPlan)은 활성 세션의 값을 쓴다. 규칙을 안 가진 세션(옛 세션)은 base.
+- 모달의 선택은 5년 플랜에만 보인다. 새 세션 기본값 = 화면 선택값. 세션 칩·상태 줄·모의 결과·모의투자 목록에 규칙이 표시되어 기본/새 규칙 세션을 구분할 수 있다.
+- 검증: `scripts/check-plan-rules-session.cjs`.
+
 ## 2026-11-06 · 5년 플랜 규칙 벌 — 새 규칙 '실험적 확장' · 플랜 v1.44.0
 
 - 공식 규칙(base)은 기본값이며 바뀌지 않는다: Guard 켜기 +1%·끄기 −1% · TECL 슬리브 밴드 10%p 대칭 · TQQQ 는 Guard 바뀔 때만. `rules` 를 안 주면 모의 재생 장부가 예전과 글자까지 같아야 한다.

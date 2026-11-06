@@ -1,5 +1,13 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-07 · 자산플랜 세션 설정 '5년 규칙' 선택 · v3.117.4 (플랜 v1.45.0)
+
+- `scripts/check-plan-rules-session.cjs`: PASS — update rules 4 · 실제 createAssetSession(5년 exp1/base 두 세션 · 10년은 규칙 없음 · 수정 exp1→base) · settingsFromView(5년만) · applyAssetSettings(화면 반영) · 세션 칩/상태 줄 · 모의 결과 머리 · index paperOpts 목록 · 변이 5/5 빨간불(설정 모듈 저장 제거 · 모달 rules 제거 · 화면→세션 규칙 제거 · 화면 반영 제거 · 목록 표시 제거).
+- 기존: `check-plan-session-settings.cjs` PASS · `check-plan-session-mutations.cjs` 3/3 · `check-plan-rules-exp.cjs` 변이 5/5 · `check-plan-evidence.cjs` +2/2.
+- 시험이 잡은 실수: 모의 결과 머리 문자열을 고치며 따옴표를 잘못 닫아 plan.html 스크립트가 SyntaxError — vm 실행 시험(G6)이 바로 빨간불.
+- `check-before-push.cjs`(e2e0ecd): 57단계 전부 PASS · 전체 회귀 2825 PASS / 0 FAIL — ALL PASS(새 시험 '자산플랜 세션 설정 5년 규칙' 포함).
+- 미확인: 운영 화면에서 모의 세션 둘(기본·새 규칙)을 실제로 만들어 비교한 결과 — 사용자 확인 전.
+
 ## 2026-11-06 · JOB 고용형태 칩 줄 삭제 · v3.117.3 (JOB v1.2.2)
 
 - 회귀 `[JOB 칩]`: 칩 줄 · setEmployment 가 없고 select 의 '정규직 제외' 선택지만 있는지, 카테고리 칩 · 지역 빠른 버튼 끄기는 그대로인지 검사. 전체 검사 결과는 아래 줄.
