@@ -1120,8 +1120,10 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
     near(D("opening")["2026-10-14"].v, ((10 - LV.d1CostPct(1000)) + (5 - LV.d1CostPct(2000))) / 2); assert.deepEqual([D("opening")["2026-10-14"].final, D("opening")["2026-10-14"].src], [false, "rule"]);
     assert.deepEqual(j.tabs.opening.rows.map(x => [x.buyPrice, x.buyPriceKind, x.status, x.sellPrice]), [[1000, "시가", "보유중", null], [2000, "시가", "보유중", null]]);   // 공식 시가 · 장중(종가 전)
     near(D("daytrading")["2026-10-13"].v, -5.953344947735195);
-    assert.deepEqual([D("daytrading")["2026-10-14"].v, D("daytrading")["2026-10-14"].settled, D("daytrading")["2026-10-13"].settled], [-1.23, true, undefined]);   // 오늘 15:40 장부 = 확정 · 어제는 시세 계산 칸
-    assert.deepEqual([D("close30")["2026-10-14"].v, D("close30")["2026-10-14"].settled, D("close30")["2026-10-14"].note], ["no_trade", true, "15:00 전일 대비 +0.50% (기준 0% 미만 아님) → 매수 없음"]);
+    const e2t = D("daytrading")["2026-10-14"], c5t = D("close30")["2026-10-14"];
+    assert.ok(e2t && c5t, "②⑤ 오늘 칸은 15:40 장부가 있으면 비지 않는다");                           // 장부를 무시하면 ⑤ 는 15:00 판단 전이라 null
+    assert.deepEqual([e2t.v, e2t.settled, D("daytrading")["2026-10-13"].settled], [-1.23, true, undefined]);   // 오늘 15:40 장부 = 확정 · 어제는 시세 계산 칸
+    assert.deepEqual([c5t.v, c5t.settled, c5t.note], ["no_trade", true, "15:00 전일 대비 +0.50% (기준 0% 미만 아님) → 매수 없음"]);
     assert.deepEqual([D("crypto")["2026-10-13"].v, D("crypto")["2026-10-13"].final, D("crypto")["2026-10-14"].final, D("crypto")["2026-10-14"].decided], ["no_trade", true, true, true]);   // 오늘도 쉼 — 더 살 수 없어 끝난 값
     assert.equal(D("crypto")["2026-10-13"].note, "BTC·ETH 쉼(추세 평균 아래)");                      // 어제는 그 전 메인(BTC+ETH) — BTC 봉도 받았다
     assert.equal(D("crypto")["2026-10-14"].note, "ETH 쉼(추세 평균 아래)");                           // 오늘은 새 메인(ETH 만)
