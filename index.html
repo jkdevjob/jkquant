@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 운영</title>
-<script src="/plan-session-engine.js?v=2"></script>
+<script src="/plan-session-engine.js?v=3"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.1.0" defer></script>
@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.117.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.117.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1701,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.117.1</b> · 2026-11-06</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.117.2</b> · 2026-11-06</div>
   </footer>
 </div>
 
@@ -7408,7 +7408,7 @@ function replayPlanPaper(sess){
   if(!window.JKPlanSessionEngine||!sess||!sess.settings)return null;
   const T=PLAN_PAPER_QUOTES.TECL,Q=PLAN_PAPER_QUOTES.TQQQ,G=PLAN_PAPER_QUOTES.SGOV;
   if(!T||!Q||!G)return null;
-  const R=window.JKPlanSessionEngine.replay({horizon:+sess.horizon||+sess.settings.horizon||5,startDate:sess.simStart,endDate:simCutoff('usd'),
+  const R=window.JKPlanSessionEngine.replay({horizon:+sess.horizon||+sess.settings.horizon||5,rules:sess.settings.alphaRules||'base',startDate:sess.simStart,endDate:simCutoff('usd'),
     principal:+sess.settings.startCapital||+sess.settings.principal||0,monthlyAdd:+sess.settings.monthlyAdd||0,
     tecl:T.days,tqqq:Q.days,sgov:G.days,teclDiv:T.dividends,tqqqDiv:Q.dividends,sgovDiv:G.dividends});
   PLAN_PAPER_CACHE[sess.id]=R;return R;
