@@ -12,7 +12,7 @@ const ctx={};vm.runInNewContext(js,ctx);
 const E=ctx.JKPlanSessionEngine;
 function eq(a,b){assert.equal(JSON.stringify(a),JSON.stringify(b));}
 assert.equal(E.VERSION,2);assert.equal(E.ORDER_SIZING_BASIS,'previous-settled-close');
-assert.match(pl,/plan-session-engine\.js\?v=2/);assert.match(idx,/plan-session-engine\.js\?v=2/);
+assert.match(pl,/plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/);assert.match(idx,/plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/);   // 캐시 판은 모의 규칙 v2 이상이면 된다(엔진이 바뀔 때마다 올린다 — plan 1.44.0 에서 3)
 // All horizon planned trade sizes are determined only with the previously settled price.
 const fixed=s=>{assert(!/\b(?:ep\.TECL|ep\.TQQQ|ep\.SGOV)\b/.test(s));};
 for(const part of [...js.matchAll(/if\(need\)\{\s*const (?:tt|tq)=([\s\S]*?)\s*targetShares=\{TECL:[\s\S]*?\};\s*\}/g)])fixed(part[0].replace(/targetOrders[\s\S]*$/,''));
