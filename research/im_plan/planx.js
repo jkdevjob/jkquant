@@ -4,16 +4,18 @@
 const {prep,sim,stats,q}=require('./px'); const {mk}=require('./plan_rules');
 const BASE={cur:{gsb:1e9,fee:0.001}, new:{gbOn:0.01,gbOff:0.03,sbDn:0.01,sbUp:0.15,gReb:'y',fee:0.001}};
 const BASES=(process.env.BASES||'cur,new').split(','), VARS=JSON.parse(process.env.VARS||'{}');
+const EXTRA=(process.env.EXTRA||'').split(',').filter(Boolean);   // 추가 종목(IEF 등) — 합성은 SYN 접두사 · 변형의 offAsset 도 자료에 맞춰 접두사를 붙인다
+const fix=(p,pre)=>{ const q=Object.assign({},p); if(q.offAsset&&!q.offAsset.startsWith('SYN')) q.offAsset=pre+q.offAsset; return q; };
 const f=x=>x.toFixed(1);
 function dd(eq,s,e){ let pk=0,x=0; for(const [d,v] of eq){ if(d>e) break; pk=Math.max(pk,v); if(d>=s) x=Math.max(x,(pk-v)/pk); } return x*100; }
 for(const [lab,P,R,G,from,y0,subs,W] of [
-  ['실제',prep(['TECL','TQQQ']),'TECL','TQQQ','2011-01-01',2011,[['2011~18','2011-01-01','2018-12-31'],['2019~','2019-01-01',null]],[['2015','2015-06-01','2016-02-29'],['2018','2018-09-01','2018-12-31'],['2020','2020-02-15','2020-03-31'],['2022','2021-12-27','2022-12-31'],['2024-25','2024-07-10','2025-04-30'],['2026-10','2026-10-01','2026-12-31']]],
-  ['합성',prep(['SYNTECL','SYNTQQQ']),'SYNTECL','SYNTQQQ','2000-01-01',2000,[['2000~09','2000-01-01','2009-12-31'],['2010~','2010-01-01',null]],[['닷컴','2000-03-10','2002-10-31'],['금융위기','2007-10-09','2009-03-31'],['2022','2021-12-27','2022-12-31']]]]){
+  ['실제',prep(['TECL','TQQQ'].concat(EXTRA)),'TECL','TQQQ','2011-01-01',2011,[['2011~18','2011-01-01','2018-12-31'],['2019~','2019-01-01',null]],[['2015','2015-06-01','2016-02-29'],['2018','2018-09-01','2018-12-31'],['2020','2020-02-15','2020-03-31'],['2022','2021-12-27','2022-12-31'],['2024-25','2024-07-10','2025-04-30'],['2026-10','2026-10-01','2026-12-31']]],
+  ['합성',prep(['SYNTECL','SYNTQQQ'].concat(EXTRA.map(x=>'SYN'+x))),'SYNTECL','SYNTQQQ','2000-01-01',2000,[['2000~09','2000-01-01','2009-12-31'],['2010~','2010-01-01',null]],[['닷컴','2000-03-10','2002-10-31'],['금융위기','2007-10-09','2009-03-31'],['2022','2021-12-27','2022-12-31']]]]){
   const isSyn=lab==='합성', last=P.dates[P.dates.length-1];
   const mkO=(p,cap,extra)=>{ const o=Object.assign({cap,fee:p.fee},mk(P,R,G,p),extra||{}); if(isSyn) o.frac=true; return o; };
   const wins=(p,cap)=>{ const o=mkO(p,cap), out=[]; for(let y=y0;y<=2021;y++) for(let m=1;m<=12;m++){ const s=`${y}-${String(m).padStart(2,'0')}-01`, e=`${y+5}-${String(m).padStart(2,'0')}-01`; if(e>last) continue; out.push(stats(sim(P,Object.assign({},o,{from:s,to:e})).eq,cap)); } return out; };
   for(const cap of [10000,100000]) for(const bk of BASES){
-    const bp=BASE[bk]; const V=[['기준',bp]].concat(Object.entries(VARS).map(([n,p])=>[n,Object.assign({},bp,p)]));
+    const bp=BASE[bk]; const V=[['기준',bp]].concat(Object.entries(VARS).map(([n,p])=>[n,fix(Object.assign({},bp,p),isSyn?'SYN':'')]));
     console.log(`\n■ ${lab} ${cap/1e4}만$ · ${bk==='cur'?'지금 앱 플랜':'새 플랜 운영형'} (${from.slice(0,4)}~)`);
     let B=null, BY=null;
     for(const [nm,p] of V){ const cnt={}; const r=sim(P,mkO(p,cap,{from,cnt})), s=stats(r.eq,cap), ne=sim(P,mkO(p,cap,{from,endTax:false})).eq, w=wins(p,cap);

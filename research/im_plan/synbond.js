@@ -27,6 +27,8 @@ module.exports={build};
 if(require.main===module){ const {axis,SYNIEF,SYNTLT,SYNGLD,SYNQQQ,SYNBIL,SYNMIXGI:SYNMIX}=build('SYNTECL');
 const save=(nm,arr)=>fs.writeFileSync(path.join(D,nm+'.json'),JSON.stringify({symbol:nm,src:'synthetic',series:axis.map((d,i)=>({date:d,close:+arr[i].toFixed(6)}))}));
 save('SYNIEF',SYNIEF); save('SYNTLT',SYNTLT); save('SYNGLD',SYNGLD); save('SYNQQQ',SYNQQQ);
+{ const L=build('SYNTQQQ'); const sv=(nm,arr)=>fs.writeFileSync(path.join(D,nm+'.json'),JSON.stringify({symbol:nm,src:'synthetic',series:L.axis.map((d,i)=>({date:d,close:+arr[i].toFixed(6)}))}));   // _L: SYNTQQQ 축(1985-10~) — planoos.js(표본 밖 1987~) 용(11-06)
+  sv('SYNIEF_L',L.SYNIEF); sv('SYNTLT_L',L.SYNTLT); sv('SYNGLD_L',L.SYNGLD); sv('SYNBIL_L',L.SYNBIL); }
 // 검증
 const f=x=>x.toFixed(1);
 for(const [nm,syn,real,from] of [['IEF',SYNIEF,'IEF','2002-07-30'],['TLT',SYNTLT,'TLT','2002-07-30'],['GLD',SYNGLD,'GLD','2004-11-18'],['QQQ',SYNQQQ,'QQQ','1999-03-10']]){

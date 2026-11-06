@@ -27,6 +27,8 @@ function mix(im,pl,w,mode){ const [kind,bs]=mode.split(':'), b=+bs||0;
     out.push([d,a+p]); }
   return {eq:out,moved}; }
 function roll(eq,y0){ const ds=eq.map(x=>x[0]); const R=[]; for(let y=y0;y<=2021;y++) for(let m=1;m<=12;m++){ const s=`${y}-${String(m).padStart(2,'0')}-01`, e=`${y+5}-${String(m).padStart(2,'0')}-01`; if(e>ds[ds.length-1]||s<ds[0]) continue; const sl=eq.filter(x=>x[0]>=s&&x[0]<e); R.push(stats(sl.map(([d,v])=>[d,v/sl[0][1]]),1)); } return R; }
+module.exports={mix,roll,FEE};   // xfer.js(11-06) 가 같은 mix 를 쓴다 — 같은 걸 두 군데서 세지 않는다
+if(require.main===module){
 const SYNIM=process.env.OLDSYN?'SYNSOXL':'SYNSOXL_S', PP=JSON.parse(process.env.PLAN||'{}');
 (async()=>{ const {pg,close}=await open([{sym:'SOXL'},{sym:SYNIM}]);
   const irx={}; require('./data/IRX.json').series.forEach(x=>irx[x.date]=x.close); await pg.evaluate(x=>{window.__IRX=x;},irx);
@@ -40,3 +42,4 @@ const SYNIM=process.env.OLDSYN?'SYNSOXL':'SYNSOXL_S', PP=JSON.parse(process.env.
         for(const w of WS) for(const mode of MODES){ const {eq,moved}=mix(im,pl,w,mode); const s=stats(eq,1), Rr=roll(eq,y0);
           console.log(`  ${(k+' '+Math.round(w*100)+'/'+Math.round((1-w)*100)).padEnd(15)} ${mode.padEnd(12)} | ${f(s.cagr)}/${f(s.mdd)} MAR ${(s.cagr/s.mdd).toFixed(2)} | 5y롤링 CAGR 중앙 ${f(q(Rr.map(x=>x.cagr),.5))} 하위10% ${f(q(Rr.map(x=>x.cagr),.1))} · MDD 중앙 ${f(q(Rr.map(x=>x.mdd),.5))} 최악 ${f(Math.max(...Rr.map(x=>x.mdd)))} | 옮긴 양 ${f(moved*100)}%`); } } } }
   await close(); })().catch(e=>{console.error(e);process.exit(1);});
+}

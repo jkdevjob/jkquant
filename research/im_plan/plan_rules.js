@@ -1,5 +1,6 @@
 // 5년 플랜 규칙과 변형 — 모두 전일(kp)까지의 종가만 본다
 const {ind}=require('./px');
+const fs=require('fs'), path=require('path');
 // 하방 변동성: 음수 일수익만 제곱해 평균(n일) — 연율. 대칭이면 σ/√2 쯤이라 s0 도 같이 낮춰야 같은 평균 비중이 된다.
 function dvol(a,n){ const o=[]; for(let k=0;k<a.length;k++){ if(k<n){o.push(null);continue;} let s=0; for(let j=k-n+1;j<=k;j++){ const r=a[j]/a[j-1]-1; if(r<0) s+=r*r; } o.push(Math.sqrt(s/n*252)); } return o; }
 function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:225,gb:.01},p||{});
@@ -14,6 +15,10 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
   const rv=p.down?dvol(P.C[R],p.look):p.look2?(()=>{ const a=ind.vol(P.C[R],p.look), b=ind.vol(P.C[R],p.look2); return a.map((x,i)=>(x==null||b[i]==null)?null:Math.max(x,b[i])); })():ind.vol(P.C[R],p.look), gm=ind.ma(P.C[G],p.ma), rm=p.rMA?ind.ma(P.C[R],p.rMA):null;
   const rvDn=p.lookDn?ind.vol(P.C[R],p.lookDn):null;   // 내릴 때만 빠른 σ: 목표 = min(σ look 목표, σ lookDn 목표) 가 지금 비중보다 낮으면 그쪽으로(올릴 때는 σ look 그대로)
   const extra=p.div?{sym:p.div, w:p.dw, m:ind.ma(P.C[p.div],p.dMA||200)}:null;
+  // offRate(11-06): Guard OFF 동안 offAsset 을 '금리 하락 국면'에만 — 전일까지의 ^TNX(sym) 가 ma 일선 아래(mode 'ma') · 252 거래일 전보다 낮음(mode 'yoy') 일 때. 아니면 SGOV(현금). 금리 자료는 플랜 날짜 축에 직전 값으로 이음.
+  const rs=p.offRate?(()=>{ const R=p.offRate, m={}; JSON.parse(fs.readFileSync(path.join(__dirname,'data',(R.sym||'TNX')+'.json'))).series.forEach(x=>{ if(x.close>0) m[x.date]=x.close; });
+    let last=null; const y=P.dates.map(d=>{ if(m[d]!=null) last=m[d]; return last; }); if(R.mode==='yoy'){ const L=R.lag||252; return y.map((v,k)=>k>=L&&v!=null&&y[k-L]!=null?v<y[k-L]:false); }
+    const ma=ind.ma(y.map(v=>v??0),R.ma||200); return y.map((v,k)=>v!=null&&ma[k]>0?v<ma[k]*(1-(R.band||0)):false); })():null;
   return {assets:[R,GA].concat(extra?[extra.sym]:[]).concat(p.offAsset?[p.offAsset]:[]), warm:Math.max(p.ma,p.look+1,(p.lookDn||0)+1,(p.look2||0)+1,p.rMA||0,extra?(p.dMA||200):0)+1,
     bandOf:(s,t,c)=>{ if(s!==R) return ((s===GA||(p.offAsset&&s===p.offAsset))&&t>0&&c>0)?(p.gReb?(isStart(lastK,PER[p.gReb])?(p.gRebB??0.02):Infinity):((p.gsbDn!=null&&t<c)?p.gsbDn:(p.gsbUp!=null&&t>c)?p.gsbUp:(p.gsb??0.02))):0.02;   // gReb: TQQQ 를 정해진 때(월 m·분기 q·반기 h·연 y 첫 거래일)만 목표로 — 그날 gRebB 넘게 벌어졌을 때
       if((p.wkAll&&!isStart(lastK,wk))||(p.wkDn&&t<c&&!isStart(lastK,wk))||(p.moDn&&t<c&&!isStart(lastK,d=>d.slice(0,7)))) return Infinity;
@@ -29,7 +34,7 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
       st.od=st.g?0:(st.od||0)+1; if(p.offLongN&&!st.g&&st.od>p.offLongN) w*=(p.offLongK??0.5);   // 변형(11-04): Guard OFF 가 offLongN 신호일 넘게 이어지면 TECL 목표 × offLongK — 긴 하락장만 줄이기
       if(rm&&P.C[R][k]<rm[k]) w=Math.min(w,p.rFloor??0);   // 변형: TECL 자체 추세
       const t={}; t[R]=p.tw*w; if(rvDn&&rvDn[k]>0){ const wd=Math.min(w,Math.min(1,(p.s0*p.s0)/(rvDn[k]*rvDn[k]))); if(p.tw*wd<(cur[R]||0)) t[R]=p.tw*wd; } t[GA]=st.g?p.gw*((p.gs0&&gvT[k]>0)?Math.min(1,p.gs0*p.gs0/(gvT[k]*gvT[k])):1):0;
-      if(p.offAsset) t[p.offAsset]=st.g?0:(p.offW??p.gw);   // 변형(11-03): Guard OFF 동안 TQQQ 몫(gw)을 SGOV(현금) 대신 offAsset(IEF·TLT·GLD·QQQ 등)으로 — 매매 시점·밴드는 TQQQ 와 같은 규칙(Guard 바뀔 때 · gReb)
+      if(p.offAsset) t[p.offAsset]=st.g?0:((rs?rs[k]:true)?(p.offW??p.gw):0);   // 변형(11-03): Guard OFF 동안 TQQQ 몫(gw)을 SGOV(현금) 대신 offAsset(IEF·TLT·GLD·QQQ 등)으로 — 매매 시점·밴드는 TQQQ 와 같은 규칙(Guard 바뀔 때 · gReb)
       if(extra){ const on=P.C[extra.sym][k]>extra.m[k]; t[extra.sym]=on?extra.w:0; const sum=t[R]+t[G]+t[extra.sym]; if(sum>1){ t[R]*=1/sum; t[G]*=1/sum; t[extra.sym]*=1/sum; } }
       return t; } }; }
 module.exports={mk};
