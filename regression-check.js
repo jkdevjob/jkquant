@@ -10769,8 +10769,8 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   const shared=fs.readFileSync(path.join(__d,'plan-session-engine.js'),'utf8');
   ok('H3 모의 규칙 v2 · 운영/모의 동일 주수 기준 · 캐시 버전',
     /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
-    && /plan-session-engine\.js\?v=2/.test(plan)
-    && /plan-session-engine\.js\?v=2/.test(idx)
+    && /plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/.test(plan)   // 캐시 판 ≥2 (엔진이 바뀔 때마다 올린다 — plan 1.44.0 에서 3)
+    && /plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/.test(idx)
     && (()=>{ /* 모의 규칙 v2 가 들어간 버전 이상이면 된다 — 숫자를 딱 고정하면 다음 배포(버전 올림)마다 깨진다 */
          const ge=(src,re,min)=>{ const m=src.match(re); if(!m) return false; const a=m[1].split('.').map(Number), b=min.split('.').map(Number);
            for(let i=0;i<3;i++){ if(a[i]!==b[i]) return a[i]>b[i]; } return true; };
@@ -12681,6 +12681,8 @@ console.log('\n[37-조회] 모의 성과 첫 진입 — 오늘 결과 없으면 
 
 Promise.all(PENDING).then(()=>{
   const rec=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-inf-record-quantity.cjs'),IDX],{encoding:'utf8'});
+  const pr=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-rules-exp.cjs')],{encoding:'utf8'});
+  ok('5년 플랜 규칙 벌(새 규칙 실험적 확장): 판정·재생 동일성·Guard −3%·TECL 비대칭·해 첫 거래일 30%·변이 5종',pr.status===0,(pr.stdout||'')+(pr.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
