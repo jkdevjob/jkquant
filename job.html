@@ -60,7 +60,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v" id="regionBadge">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.2.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v" id="regionBadge">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.2.2</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -104,10 +104,10 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
       <div class="regionpop" id="regionPop" hidden>
         <div class="quick"><button type="button" class="btn" id="regionHomeBtn" onclick="regionPreset('home')">대전·세종</button><button type="button" class="btn" id="regionAllBtn" onclick="regionPreset('all')">전국</button></div>
         <div class="grid" id="regionGrid"></div>
-        <div class="foot"><span>여러 지역을 함께 고를 수 있고, 아무것도 고르지 않으면 전국</span><button type="button" class="btn" onclick="regionClose()">닫기</button></div>
+        <div class="foot"><span><b id="regionCount" style="color:var(--text)">대전·세종</b> · 고르면 바로 적용(조회 버튼 없음) · 여러 지역 가능 · 아무것도 안 고르면 전국</span><button type="button" class="btn" onclick="regionClose()">닫기</button></div>
       </div>
     </div>
-    <select id="employment"><option value="">고용형태 전체</option><option value="regular">정규직</option><option value="nonregular">정규직 외</option></select>
+    <select id="employment"><option value="">고용형태 전체</option><option value="regular">정규직만</option><option value="nonregular">정규직 제외 (계약·프리랜서·파견 등)</option></select>
     <select id="jobStatus"><option value="active" selected>진행중</option><option value="all">마감 포함</option><option value="closed">마감만</option></select>
     <select id="source"><option value="">모든 출처</option></select>
     <select id="sort"><option value="latest" selected>최신순</option><option value="oldest">오래된순</option><option value="title">제목순</option></select>
@@ -146,9 +146,11 @@ function syncRegionUI(){
   document.getElementById("regionAllBtn").classList.toggle("cur",!REGION_SEL.size);
 }
 function setRegions(list){REGION_SEL=new Set(list||[]);syncRegionUI()}
-function regionPreset(k){setRegions(k==="all"?[]:HOME_REGIONS);applyFilters()}
+function toggleChoice(cur,tapped,off){return cur===tapped?off:tapped}   /* 켜진 칩을 다시 누르면 끈다(off 값으로) — 카테고리 · 지역 빠른 버튼 공용 */
+function regionPreset(k){var cur=!REGION_SEL.size?"all":isHomeRegionSel()?"home":"custom";var next=toggleChoice(cur,k,k==="all"?"home":"all");setRegions(next==="all"?[]:HOME_REGIONS);applyFilters()}
 function regionToggle(e){if(e)e.stopPropagation();var p=document.getElementById("regionPop"),open=p.hidden;p.hidden=!open;document.getElementById("regionBtn").setAttribute("aria-expanded",open?"true":"false")}
 function regionClose(){var p=document.getElementById("regionPop");if(p)p.hidden=true;var b=document.getElementById("regionBtn");if(b)b.setAttribute("aria-expanded","false")}
+function regionOutside(e){var b=document.getElementById("regionBox");if(b&&!b.contains(e.target))regionClose()}
 var FOCUS_KEY=(new URLSearchParams(location.search)).get("focus")||"";
 var SCRAPS={},APPLICATIONS={};
 function scrapKey(j){return String((j&&j.url)||(j&&j.id)||"").trim()}
@@ -361,6 +363,7 @@ function highlightFocusedJob(){
 }
 function renderList(){
   document.getElementById("totalCnt").textContent=DATA.jobs.length.toLocaleString();document.getElementById("viewCnt").textContent=filtered.length.toLocaleString();renderScrapCount();renderAppliedCount();document.getElementById("resultText").textContent=filtered.length.toLocaleString()+"건 · "+(activeCat==="all"?"전체":CAT_LABEL[activeCat]||activeCat)+" · "+regionLabel()+((activeCat==="scrap"||activeCat==="applied")?" · Firebase DB 저장":"")+(DATA.historyCount?" · 장기보관 "+DATA.historyCount.toLocaleString()+"건":"");
+  var rc=document.getElementById("regionCount");if(rc)rc.textContent=regionLabel()+" "+filtered.length.toLocaleString()+"건";
   var rows=filtered.slice(0,shown),el=document.getElementById("list");if(!rows.length){el.innerHTML='<div class="empty">조건에 맞는 공고가 없습니다.</div>';document.getElementById("moreBtn").hidden=true;return}
   el.innerHTML=rows.map(function(j){
     var cats=(j.categories||[]).map(function(c){return '<span class="tag '+tagClass(c)+'">'+esc(CAT_LABEL[c]||c)+"</span>"}).join("");
@@ -393,12 +396,12 @@ document.getElementById("list").addEventListener("click",function(e){
   if(!b)return;
   e.preventDefault();e.stopPropagation();toggleScrapByKey(b.getAttribute("data-scrap-key"))
 });
-document.getElementById("tabs").addEventListener("click",function(e){var b=e.target.closest(".tab");if(!b)return;document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x===b)});activeCat=b.dataset.cat;applyFilters()});
+document.getElementById("tabs").addEventListener("click",function(e){var b=e.target.closest(".tab");if(!b)return;activeCat=toggleChoice(activeCat,b.dataset.cat,"all");document.querySelectorAll("#tabs .tab").forEach(function(x){x.classList.toggle("on",x.dataset.cat===activeCat)});applyFilters()});
 document.getElementById("period").addEventListener("change",function(){syncDatesFromPeriod();applyFilters()});
 ["keyword","employment","jobStatus","source","sort","pageSize"].forEach(function(id){var el=document.getElementById(id);el.addEventListener(id==="keyword"?"input":"change",applyFilters)});
 document.getElementById("regionGrid").addEventListener("change",function(e){var cb=e.target;if(!cb||cb.type!=="checkbox")return;if(cb.checked)REGION_SEL.add(cb.value);else REGION_SEL.delete(cb.value);syncRegionUI();applyFilters()});
 document.getElementById("regionPop").addEventListener("click",function(e){e.stopPropagation()});
-document.addEventListener("click",function(e){var b=document.getElementById("regionBox");if(b&&!b.contains(e.target))regionClose()});
+document.addEventListener("click",regionOutside);document.addEventListener("touchstart",regionOutside,{passive:true});   /* iOS 는 빈 곳 탭에 click 이 안 올 수 있어 touchstart 도 받는다 */
 syncRegionUI();
 ["fromDate","toDate"].forEach(function(id){document.getElementById(id).addEventListener("change",function(){document.getElementById("period").value="custom";applyFilters()})});
 renderScrapCount();renderAppliedCount();setDefaultDates();

@@ -1958,10 +1958,22 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
       ok('[JOB 지역] 배선: 필터가 regionMatches · 옛 select#region 없음 · 초기화는 대전·세종 · focus 진입은 전국 · 머리말 배지',
          /if\(!regionMatches\(j\)\)return false;/.test(job)&&!/getElementById\("region"\)/.test(job)
          &&/function resetFilters\(\)\{\n[^\n]*setRegions\(HOME_REGIONS\)/.test(job)&&/keyword"\)\.value=focusJob\.title/.test(job)&&/^\s*setRegions\(\[\]\);$/m.test(job)
-         &&/id="regionBadge"/.test(job)&&/id="regionGrid"/.test(job)&&/regionPreset\('all'\)/.test(job));
+         &&/id="regionBadge"/.test(job)&&/id="regionGrid"/.test(job)&&/regionPreset\('all'\)/.test(job)
+         &&/rc\.textContent=regionLabel\(\)\+" "\+filtered\.length\.toLocaleString\(\)\+"건"/.test(extractFn(job,'function renderList()')));
       const mut=src.replace('if(!REGION_SEL.size)return true;','');
       const M=load(mut); M.sel=new Set();
       ok('[JOB 지역] 변이: 전국일 때 전부 통과를 빼면 빨간불', mut!==src&&!M.regionMatches(J(['서울'])));
+      /* 칩 끄기(2026-11-06): 켜진 카테고리 · 고용형태 칩을 다시 누르면 꺼진다 · 지역 빠른 버튼도 */
+      const tg=pick('function toggleChoice('), T={}; VM.createContext(T); VM.runInContext(tg+'\nthis.f=toggleChoice;',T);
+      ok('[JOB 칩] 켜진 칩을 다시 누르면 끈다: 개발자 정규직→전체 · 전체→전체 · 다른 칩은 그 칩 · 전국→대전·세종',
+         T.f('regular_dev','regular_dev','all')==='all'&&T.f('all','all','all')==='all'&&T.f('all','java_ai','all')==='java_ai'
+         &&T.f('all','all','home')==='home'&&T.f('home','all','home')==='all');
+      ok('[JOB 칩] 배선: 카테고리 칩 · 지역 빠른 버튼이 toggleChoice 를 쓰고, 고용형태는 아래 select 하나뿐(칩 줄 없음 — 2026-11-06 사용자: 밑에 있는데 또 만드냐) · iOS touchstart 바깥 닫기',
+         /activeCat=toggleChoice\(activeCat,b\.dataset\.cat,"all"\)/.test(job)&&/var next=toggleChoice\(cur,k,k==="all"\?"home":"all"\)/.test(extractFn(job,'function regionPreset('))
+         &&!/empTabs|setEmployment|data-emp=/.test(job)&&/<option value="nonregular">정규직 제외/.test(job)
+         &&/getElementById\("employment"\)\.value=""/.test(extractFn(job,'function resetFilters()'))&&/addEventListener\("touchstart",regionOutside/.test(job));
+      const tm=tg.replace('return cur===tapped?off:tapped','return tapped'), TM={}; VM.createContext(TM); VM.runInContext(tm+'\nthis.f=toggleChoice;',TM);
+      ok('[JOB 칩] 변이: 다시 눌러도 안 꺼지면(옛 코드) 빨간불', tm!==tg&&TM.f('regular_dev','regular_dev','all')!=='all');
     }catch(e){ ok('[JOB 지역] 시험 실행',false,String(e&&e.stack||e).slice(0,300)); }
   }
   ok('DB 읽기 실패 뒤 재로그인 대신 같은 계정으로 DB 재연결 가능',
@@ -10769,8 +10781,8 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   const shared=fs.readFileSync(path.join(__d,'plan-session-engine.js'),'utf8');
   ok('H3 모의 규칙 v2 · 운영/모의 동일 주수 기준 · 캐시 버전',
     /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
-    && /plan-session-engine\.js\?v=2/.test(plan)
-    && /plan-session-engine\.js\?v=2/.test(idx)
+    && /plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/.test(plan)   // 캐시 판 ≥2 (엔진이 바뀔 때마다 올린다 — plan 1.44.0 에서 3)
+    && /plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/.test(idx)
     && (()=>{ /* 모의 규칙 v2 가 들어간 버전 이상이면 된다 — 숫자를 딱 고정하면 다음 배포(버전 올림)마다 깨진다 */
          const ge=(src,re,min)=>{ const m=src.match(re); if(!m) return false; const a=m[1].split('.').map(Number), b=min.split('.').map(Number);
            for(let i=0;i<3;i++){ if(a[i]!==b[i]) return a[i]>b[i]; } return true; };
@@ -11664,6 +11676,8 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
   { // 확정 전 실시간 칸(2026-10-14 사용자 요청 '실시간으로 반영해') — 확정 값이 먼저, 없을 때만 점선 칸에 출처·시각·'확정 전'
     const lvNow=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0},'15:30 종가에 팔면 확정');   // 2026-11-06 '왜 확정전이냐' — 들고 있는 동안은 보유 · 언제 확정
     const lvNoUntil=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0});
+    const lvSet=f.dayCell(null,'2026-11-06','당일',null,{v:5.25,final:true,settled:true,src:'rule',trades:3,wins:3,losses:0},'15:30 종가에 팔면 확정');   // 2026-11-06 '왜 얘들이 아직 확정이 아니냐고' — 15:40 장부가 닫혔으면 확정
+    const lvSetNt=f.dayCell(null,'2026-11-06','당일',null,{v:'no_trade',final:true,settled:true,src:'rule',trades:0,note:'15:00 전일 대비 +2.55% (기준 0% 미만 아님) → 매수 없음'});
     const lvNt=f.dayCell('pending','2026-10-14','당일',null,{v:'no_trade',final:true,src:'vts',trades:0,note:'전날 15:21 매수 신호 없음'});
     const lvWait=f.dayCell(null,'2026-10-14','당일',null,{v:'no_trade',final:false,src:'rule',trades:0,note:'아직 매수 없음 — BTC·ETH 돌파 없음 · 10/15 09:00 전까지 돌파하면 매수'});
     const lvDec=f.dayCell(null,'2026-10-14','전일',null,{v:'no_trade',final:true,decided:true,src:'rule',trades:0,note:'ETH 쉼(추세 평균 아래)'});   // 2026-10-15 08:33 '매매 전' 혼동 — 더 살 수 없는 날
@@ -11672,8 +11686,10 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
     const none=f.dayCell('pending','2026-10-13','전일',null,null);
     const pr=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:'pending',last:-1.2},{'2026-10-14':{v:1},'2026-10-15':{v:2}},'2026-10-15');
     const pr0=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:0.5,last:'pending'},null,'');
-    ok('오늘 탭 실시간 칸: 장중 +10.75%(보유 2건 · 오름 2 · 모의투자 체결 · ⏱ 09:41 지금 가격 · 15:30 종가에 팔면 확정 · 점선 · 언제 확정인지 없으면 \'확정 전\') / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중은 아직 매수 없음(언제까지) · 더 살 수 없으면 매매없음(매수 조건 안 됨) / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
+    ok('오늘 탭 실시간 칸: 장중 +10.75%(보유 2건 · 오름 2 · 모의투자 체결 · ⏱ 09:41 지금 가격 · 15:30 종가에 팔면 확정 · 점선 · 언제 확정인지 없으면 \'확정 전\') / 15:40 장부가 닫혔으면(settled) 실선 · 장부 정산 · \'15:40 장부 확정\'(밤 확정 전 아님) / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중은 아직 매수 없음(언제까지) · 더 살 수 없으면 매매없음(매수 조건 안 됨) / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
        /class='daily-result-box live'/.test(lvNow)&&/\+10\.75%/.test(lvNow)&&/보유 2건 · 오름 2 · 내림 0 · 모의투자 체결/.test(lvNow)&&!/승 2/.test(lvNow)&&/\+1% 달성 · ⏱ 09:41 지금 가격 · 15:30 종가에 팔면 확정/.test(lvNow)&&/⏱ 09:41 지금 가격 · 확정 전/.test(lvNoUntil)
+       &&/class='daily-result-box'>/.test(lvSet)&&!/live|확정 전|밤 확정/.test(lvSet)&&/\+5\.25%/.test(lvSet)&&/기준전략 3건 · 승 3 · 패 0 · 장부 정산/.test(lvSet)&&/\+1% 달성 · 15:40 장부 확정/.test(lvSet)
+       &&/class='daily-result-box'>/.test(lvSetNt)&&/>매매없음</.test(lvSetNt)&&/매매없음 · 0\.00% 반영 · 15:40 장부 확정/.test(lvSetNt)&&!/밤 확정/.test(lvSetNt)
        &&/>매매없음</.test(lvNt)&&/마감 · 밤 확정 전/.test(lvNt)&&/전날 15:21 매수 신호 없음/.test(lvNt)&&!/확정 대기/.test(lvNt)
        &&/>아직 매수 없음</.test(lvWait)&&/09:00 전까지 돌파하면 매수/.test(lvWait)&&!/매매 전/.test(lvWait+lvDec)&&/>매매없음</.test(lvDec)&&/매수 조건 안 됨 · 밤 확정 전/.test(lvDec)&&!/⏱/.test(lvDec)&&/-5\.95%/.test(lvDone)&&/기준전략 1건 · 승 0 · 패 1 · 시세로 계산/.test(lvDone)&&/>기준전략 0건<br>전날 15:21 매수 신호 없음</.test(lvNt)&&/목표까지 6\.95%p · 마감 · 밤 확정 전/.test(lvDone)
        &&/-5\.95%/.test(conf)&&/모의 장부 확정/.test(conf)&&!/live|확정 전/.test(conf)&&/확정 대기/.test(none)&&!/live/.test(none)
@@ -12681,6 +12697,8 @@ console.log('\n[37-조회] 모의 성과 첫 진입 — 오늘 결과 없으면 
 
 Promise.all(PENDING).then(()=>{
   const rec=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-inf-record-quantity.cjs'),IDX],{encoding:'utf8'});
+  const pr=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-rules-exp.cjs')],{encoding:'utf8'});
+  ok('5년 플랜 규칙 벌(새 규칙 실험적 확장): 판정·재생 동일성·Guard −3%·TECL 비대칭·해 첫 거래일 30%·변이 5종',pr.status===0,(pr.stdout||'')+(pr.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
