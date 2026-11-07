@@ -12715,6 +12715,8 @@ Promise.all(PENDING).then(()=>{
   const pr=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-rules-exp.cjs')],{encoding:'utf8'});
   ok('5년 플랜 규칙 벌(새 규칙 실험적 확장): 판정·재생 동일성·Guard −3%·TECL 비대칭·해 첫 거래일 30%·변이 5종',pr.status===0,(pr.stdout||'')+(pr.stderr||''));
   const prs=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-rules-session.cjs')],{encoding:'utf8'});
+  const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
+  ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
   ok('자산플랜 세션 설정 5년 규칙: 세션마다 저장·모달 저장·화면 반영·칩·모의투자 목록·변이 5종',prs.status===0,(prs.stdout||'')+(prs.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});

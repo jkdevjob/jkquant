@@ -7,6 +7,7 @@
 <title>JK 투자 — 자산플랜</title>
 <script src="/plan-session-engine.js?v=4"></script>
 <script src="/plan-session-settings.js?v=2"></script>
+<script src="/plan-tax-check.js?v=1"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.1.0" defer></script>
@@ -143,6 +144,8 @@ th:first-child,td:first-child{text-align:left}
 .path-summary{margin-top:10px;padding:11px;border-radius:9px;background:var(--surf2);border:1px solid var(--border);font-size:12px;line-height:1.7}
 .path-summary b{color:var(--gold)}
 .alpha-account-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tax-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;font-variant-numeric:tabular-nums}.tax-table th,.tax-table td{padding:5px 6px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}.tax-table th:first-child,.tax-table td:first-child{text-align:left;white-space:normal}.tax-table th{color:var(--dim);font-weight:800;font-size:11px;white-space:normal}
+.tax-sug{margin-top:10px;padding:10px 11px;border-radius:10px;background:var(--surf2);border:1px solid var(--border);font-size:12.5px;line-height:1.65}.tax-sug ul{margin:6px 0 0 18px;padding:0}.tax-foot{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.55}
 .alpha-account-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
 .alpha-account-card{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:11px}
 .alpha-account-card .sym{font-size:11px;color:var(--dim);font-weight:800}
@@ -311,7 +314,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.46.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.47.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -411,6 +414,15 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
         </div>
         <div class="alpha-cash-warn" id="alphaCashWarn" hidden></div>
         <input type="hidden" id="aTeclQty"><input type="hidden" id="aTqqqQty"><input type="hidden" id="aSgovQty"><input type="hidden" id="aCash">
+      </div>
+
+      <div class="card" id="alphaTaxSection" data-asset-view="current" style="margin-top:10px;margin-bottom:0">
+        <div class="alpha-account-head">
+          <div><h3 style="margin-bottom:2px">🧾 연말 세금 점검 · 해외주식 양도세</h3><div class="alpha-ledger-note">이 계좌 거래이력으로 올해 실현손익을 추정하고, 연말에 '팔고 바로 되사기'로 250만원 공제를 채우거나 공제를 넘은 이익을 평가손실로 상계할 주수를 알려 줍니다. 주문은 내지 않습니다.</div></div>
+          <span class="status-pill" id="taxStatus">계산 중</span>
+        </div>
+        <div class="field" style="max-width:320px;margin-top:8px"><label for="taxOtherKrw">다른 해외주식 올해 실현손익 (원) <span class="hint">무매 등 다른 계좌·전략 — 공제는 사람당 한 번 · 손실은 −</span></label><input id="taxOtherKrw" type="number" step="10000"></div>
+        <div id="taxBody" class="alpha-ledger-note">시세·환율을 불러오는 중…</div>
       </div>
 
       <div class="card" id="alphaHistorySection" data-asset-view="history" hidden style="margin-top:10px;margin-bottom:0">
@@ -2620,7 +2632,7 @@ async function refreshLive(){
 
 function defaults(){
   const s=todayISO(),t=plusYears(s,5);
-  return {startDate:s,targetDate:t,startCapital:20000,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",alphaRules:"base",
+  return {startDate:s,targetDate:t,startCapital:20000,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",alphaRules:"base",taxOtherKrw:0,
     aTeclQty:0,aTqqqQty:0,aSgovQty:0,aCash:20000,
     alphaLedger:{base:{date:s,tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"},
     balMM:0,balVR:0,balQLD:0,balSGOV:0,cagrLow:8,cagrBase:15,cagrHigh:22,
@@ -2628,7 +2640,7 @@ function defaults(){
     planLinks:{inf:"",vr:"",sleeve:""},sleeveSessions:[],sleeveLedger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}};
 }
 function readForm(){
-  const ids=["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","alphaRules","aTeclQty","aTqqqQty","aSgovQty","aCash","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw","autoBalances","autoSleeve"];
+  const ids=["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","alphaRules","taxOtherKrw","aTeclQty","aTqqqQty","aSgovQty","aCash","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw","autoBalances","autoSleeve"];
   const o={};ids.forEach(id=>{const el=$(id);o[id]=el.type==='checkbox'?el.checked:el.value;});
   o.planLinks={...planLinks};
   o.sleeveSessions=JSON.parse(JSON.stringify(sleeveSessions));
@@ -2715,6 +2727,59 @@ function alphaSyncInputs(){
   if($('aSgovQty'))$('aSgovQty').value=S.sgov;
   if($('aCash'))$('aCash').value=Number(S.cash.toFixed(2));
 }
+/* 🧾 연말 세금 점검 (plan 1.47.0) — 계산은 plan-tax-check.js(JKPlanTaxCheck.check). 시세는 계좌 카드와 같은 값(liveQuotes),
+   환율은 USD/KRW 일봉(KRW=X · /api/quote). 수수료는 장부와 같은 alphaFee. 조회·안내 — 주문을 내지 않는다. */
+const planFx={series:null,loading:null,error:''};
+function loadPlanFx(){
+  if(planFx.series||planFx.loading)return planFx.loading;
+  planFx.loading=fetch('/api/quote?symbol='+encodeURIComponent('KRW=X')+'&range=max&intraday=0',{headers:{Accept:'application/json'}})
+    .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(j=>{const a=(j&&j.series)||[];if(!a.length)throw new Error('환율 자료 없음');planFx.series=a;planFx.error='';})
+    .catch(e=>{planFx.error=String(e&&e.message||e);})
+    .finally(()=>{planFx.loading=null;renderTaxCheck();});
+  return planFx.loading;
+}
+const taxKrw=v=>(v<0?'−':'')+Math.round(Math.abs(+v||0)).toLocaleString('ko-KR')+'원';   // 앱 표기(금액 뒤 '원')
+function taxRoomText(v){return v>=0?'남음 '+taxKrw(v):'<span style="color:var(--red)">초과 '+taxKrw(-v)+'</span>';}
+function renderTaxCheck(){
+  const body=$('taxBody'),pill=$('taxStatus');if(!body)return;
+  const setPill=(t,c)=>{if(pill){pill.textContent=t;pill.className='status-pill'+(c?' '+c:'');}};
+  const T=window.JKPlanTaxCheck;if(!T){body.textContent='세금 점검 모듈(plan-tax-check.js)을 불러오지 못했습니다 — 새로고침하세요.';setPill('모듈 없음','warn');return;}
+  if(!planFx.series){if(!planFx.loading&&!planFx.error)loadPlanFx();body.textContent=planFx.error?('USD/KRW 환율을 불러오지 못해 원화로 계산할 수 없습니다 · '+planFx.error):'USD/KRW 환율을 불러오는 중…';setPill(planFx.error?'환율 없음':'계산 중',planFx.error?'warn':'');return;}
+  const prices={};for(const s of ['TECL','TQQQ','SGOV']){const L=liveQuotes[s];prices[s]=L&&+L.price>0?+L.price:(L&&L.settled?+L.settled.close:0);}
+  const year=todayISO().slice(0,4),R=T.check({ledger:alphaLedger,prices,fxSeries:planFx.series,year,otherKrw:num('taxOtherKrw',0),feeFn:alphaFee});
+  if(!R.ok){body.textContent='환율 자료가 비어 원화로 계산할 수 없습니다.';setPill('환율 없음','warn');return;}
+  const both=(f,a)=>'<td>'+taxKrw(f)+'</td><td>'+taxKrw(a)+'</td>';
+  let h='<table class="tax-table"><thead><tr><th>'+R.year+'년 (결제일 기준)</th><th>선입선출<br><span style="font-weight:600">증권사 기본</span></th><th>이동평균</th></tr></thead><tbody>'
+    +'<tr><td>이 계좌 실현손익 · 매도 '+R.realized.n+'건</td>'+both(R.realized.fifo,R.realized.avg)+'</tr>'
+    +(R.other?'<tr><td>다른 해외주식 (입력)</td>'+both(R.other,R.other)+'</tr>':'')
+    +'<tr><td><b>합계</b></td>'+both(R.total.fifo,R.total.avg)+'</tr>'
+    +'<tr><td>기본공제 250만원까지</td><td>'+taxRoomText(R.room.fifo)+'</td><td>'+taxRoomText(R.room.avg)+'</td></tr>'
+    +'<tr><td>예상 세금 22%</td>'+both(R.tax.fifo,R.tax.avg)+'</tr></tbody></table>';
+  if(R.positions.length){
+    h+='<table class="tax-table"><thead><tr><th>지금 팔면 (평가손익 · 원화)</th><th>선입선출</th><th>이동평균</th></tr></thead><tbody>'
+      +R.positions.map(p=>'<tr><td>'+p.symbol+' '+p.qty+'주'+(p.price>0?' · '+usd2(p.price):'')+'</td>'+(p.unknown?'<td colspan="2">평단 미등록 — 계산 불가</td>':p.unreal?both(p.unreal.fifo.krw,p.unreal.avg.krw):'<td colspan="2">시세 대기</td>')+'</tr>').join('')+'</tbody></table>';
+  }
+  const dl=R.deadline,mon=+todayISO().slice(5,7),S=R.suggestions,tot=S.reduce((a,x)=>a+x.taxKrw,0),fee=S.reduce((a,x)=>a+x.feeUsd,0);
+  const list=S.length?'<ul>'+S.map(x=>'<li><b>'+x.symbol+' '+x.qty+'주 팔고 같은 날 '+x.qty+'주 되사기</b> · 확정 '+taxKrw(x.realized.fifo.krw)+' (선입선출) · '+taxKrw(x.realized.avg.krw)+' (이동평균) · 수수료 약 '+usd2(x.feeUsd)+'</li>').join('')+'</ul>':'';
+  let sug='';
+  if(R.mode==='fill'){
+    if(S.length){sug='✅ 공제가 '+taxKrw(Math.min(R.room.fifo,R.room.avg))+' 남았습니다. <b>'+dl+'</b>(미국 날짜)까지 아래처럼 팔고 바로 되사면 이익이 공제 안에서 세금 없이 확정되고 원가가 올라가, 앞으로 낼 세금이 최대 <b>'+taxKrw(tot)+'</b> 줄어듭니다(내년 이후 실현이익이 공제를 넘을 때 · 수수료 약 '+usd2(fee)+'). 환율 오차를 보아 남은 공제의 90%까지만 채웁니다.'+list;setPill('공제 채우기 가능','good');}
+    else{sug='공제가 '+taxKrw(Math.min(R.room.fifo,R.room.avg))+' 남았지만 원화 기준 평가이익이 난 종목이 없습니다 — 할 일 없음.';setPill('할 일 없음','');}
+  }else if(R.mode==='offset'){
+    if(S.length){sug='⚠️ 공제를 '+taxKrw(Math.min(-R.room.fifo,-R.room.avg))+' 넘었습니다. <b>'+dl+'</b>(미국 날짜)까지 원화 기준 평가손실 종목을 팔고 바로 되사면 손실이 올해 이익과 상계되어 세금이 약 <b>'+taxKrw(tot)+'</b> 줄어듭니다(수수료 약 '+usd2(fee)+').'+list;setPill('손실 상계 가능','warn');}
+    else{sug='공제를 넘었지만 원화 기준 평가손실이 난 종목이 없습니다 — 할 일 없음. 달러로는 손실이어도 그사이 환율이 올랐으면 원화로는 이익이라 팔면 세금이 늡니다.';setPill('할 일 없음','');}
+  }else{sug='선입선출과 이동평균의 결과가 공제 위·아래로 갈립니다 — 증권사 양도세 계산 방식을 확인한 뒤 판단하세요.';setPill('확인 필요','warn');}
+  if(mon<12)sug+='<div class="tax-foot">지금은 '+mon+'월 — 남은 리밸런싱으로 실현손익이 바뀌니 12월 마지막 주('+dl+' 전)에 다시 보세요.</div>';
+  const warn=[];
+  if(assetPaperMode())warn.push('모의 세션 — 실제 계좌가 아니라 참고용입니다.');
+  if(R.positions.some(p=>p.unknown)||R.realized.unknown)warn.push('평단 미등록 종목이 있어 그 종목은 원가를 모릅니다 — 시작잔고에 평단을 넣으세요.');
+  if(R.notes.some(n=>String(n).startsWith('oversell')))warn.push('거래이력에 보유보다 많은 매도가 있어 계산이 부정확합니다.');
+  if(R.notes.includes('reconcile'))warn.push('보정 기록 뒤는 보정 평단 한 덩어리로 계산합니다(선입선출 근사).');
+  h+='<div class="tax-sug">'+sug+(warn.length?'<div class="tax-foot" style="color:var(--gold)">'+warn.join(' · ')+'</div>':'')+'</div>';
+  h+='<div class="tax-foot">양도 시기는 결제일(미국 T+1) — 올해 세금에 넣으려면 '+dl+' 체결까지(증권사 연말 공지로 확인). 원화는 결제일 USD/KRW 종가로 근사(신고는 기준환율 · 지금 1달러 '+taxKrw(R.fxNow)+' · '+R.fxDate+') — 취득·양도 환율 차이(환차손익)는 들어갑니다. 수수료는 취득가·양도가에 반영 · 시작잔고는 시작일 환율로 근사 · 배당은 배당소득이라 제외. 국내 양도세엔 미국식 워시세일 규정이 없어 같은 날 되사도 손익이 인정되는 것으로 알려져 있습니다(증권사·세무 확인). 추정치이며 신고는 증권사 양도세 계산이 기준입니다.</div>';
+  body.innerHTML=h;
+}
 function alphaAvgText(q,avg){return q>0?(Number.isFinite(avg)?'평단 '+usd2(avg):'평단가 미등록'):'평단 —';}
 function renderAlphaLedger(){
   alphaSyncInputs();
@@ -2747,6 +2812,7 @@ function renderAlphaLedger(){
   if($('alphaReturnTotal')){$('alphaReturnTotal').textContent=Number.isFinite(retTotal)?((retTotal>=0?'+':'')+retTotal.toFixed(2)+'%'):'—';$('alphaReturnTotal').className='v '+(Number.isFinite(retTotal)?(retTotal>=0?'pos':'neg'):'');}
   if($('alphaAssetTotal'))$('alphaAssetTotal').textContent=usd2(assetTotal);
   if($('alphaAcctCashState')){$('alphaAcctCashState').textContent=S.cash<0?'현금 부족 '+usd2(Math.abs(S.cash)):'사용가능 '+usd2(S.cash);$('alphaAcctCashState').className='pl '+(S.cash<0?'neg':'pos');}
+  renderTaxCheck();   // 🧾 연말 세금 점검 — 계좌 카드와 같은 시세·거래이력
   if($('alphaCashWarn')){const bad=S.cash<-.005;$('alphaCashWarn').hidden=!bad;if(bad)$('alphaCashWarn').textContent='현금이 '+usd2(S.cash)+'입니다. 기록된 매수금액+수수료가 시작 현금을 초과했습니다. 거래이력 또는 시작잔고를 실제 토스 계좌와 맞게 수정하세요.';}
   if($('alphaLedgerBody')){
     const rows=ev.map(e=>{
@@ -3128,6 +3194,7 @@ function userBadge(user){
 const d=defaults();
 apply(d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","alphaRules","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
+$("taxOtherKrw").addEventListener("change",()=>{render();cloudSave();});   // 연말 세금 점검 — 다른 해외주식 실현손익(원) · 플랜 설정과 함께 저장
 $("alphaRules").addEventListener("change",async()=>{renderHorizonCopy();refreshAlphaFromCache();   // 5년 규칙 벌 바꾸면 설명·판단을 다시 그린다 (현재 투자중·운영 세션 저장은 render → localSave → syncActiveAssetSessionFromView)
   const x=activeAssetSession();   // 모의 세션이 떠 있으면 그 세션의 규칙을 바꾸고 다시 재생한다(모의 세션 설정은 모달과 이 선택에서만 바뀐다)
   if(x&&x.paper&&+x.horizon===5&&alphaRuleKey((x.settings||{}).alphaRules)!==alphaRuleSet().key){x.settings={...x.settings,alphaRules:alphaRuleSet().key};x.updatedAt=Date.now();delete assetPaperCache[x.id];writeAssetSessionLocal();await saveOperatingState();await loadActiveAssetSessionView(true);}});
