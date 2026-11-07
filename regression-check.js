@@ -12394,8 +12394,9 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        later.every(c=>/if: \$\{\{ !cancelled\(\) \}\}/.test(stepOf(c)))&&/id: tests/.test(stepOf('node scripts/test_realestate_claude.cjs'))
        &&/if: \$\{\{ !cancelled\(\) && steps\.tests\.outcome == 'success' \}\}/.test(commit)&&!/continue-on-error/.test(stepOf('run: python scripts/realestate_claude/collect.py')));
     const col=fs.readFileSync(__d+'/scripts/realestate_claude/collect.py','utf8');
-    ok('지수 수집기: 한 시계열 실패는 그 시계열만(옛 자료 그대로·기록) · 끝에 종료 코드 2 · R-ONE 은 잠금으로 하나씩',
-       /def collect_one\(/.test(col)&&/"event": "failed"/.test(col)&&/EXIT_PARTIAL = 2/.test(col)&&/sys\.exit\(main\(\)\)/.test(col)&&/with RONE_LOCK:/.test(col)&&!/utcnow\(/.test(col));
+    ok('지수 수집기: 한 시계열 실패는 그 시계열만(옛 자료 그대로·기록) · 끝에 종료 코드 2 · R-ONE 은 따로 한 줄(ECOS·KB 는 기다리지 않음) · 시간 한도 · 단계 한도',
+       /def collect_one\(/.test(col)&&/"event": "failed"/.test(col)&&/EXIT_PARTIAL = 2/.test(col)&&/sys\.exit\(main\(\)\)/.test(col)&&/with RONE_LOCK:/.test(col)&&!/utcnow\(/.test(col)
+       &&/def run_all\(/.test(col)&&/run_all\(tasks, a\.jobs,/.test(col)&&/BUDGET_MIN = \d+/.test(col)&&/timeout-minutes: 90/.test(stepOf('run: python scripts/realestate_claude/collect.py')));
   }
   const E2=require(__d+'/realestate-claude-engine.js');
   const ledgers=[['paper.json','rec-wf-1'],['paper-rec-wf-2.json','rec-wf-2']].map(([f,sv])=>[f,sv,JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/'+f,'utf8'))]);

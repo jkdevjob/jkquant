@@ -155,5 +155,32 @@ ok("실패를 이름·사유와 함께 기록한다", fl == ["sale:b"] and any(x
 ok("실패가 있으면 종료 코드 2(받은 것은 저장) · 없으면 0", C.exit_code(["sale:b"]) == 2 and C.EXIT_PARTIAL == 2 and C.exit_code([]) == 0)
 ok("R-ONE 호출은 한 번에 하나씩(잠금)", hasattr(C.RONE_LOCK, "acquire") and "with RONE_LOCK" in open(os.path.join(HERE, "collect.py"), encoding="utf-8").read().split("def rone_call")[1].split("def rone_rows")[0])
 
+# 8) 시간 한도가 지나면 받지 않고 건너뛴다(옛 자료 그대로 · 실패로 적음)
+import time as _t
+called = []
+bucket = {"a": C.to_series({"202001": 1.0})}
+log, fl = [], []
+r = C.collect_one(("sale:a", bucket, "a", lambda s, e: called.append(1) or {"202001": 9.0}), False, "202002", log, fl, _t.time() - 1)
+ok("시간 한도를 넘으면 그 시계열은 받지 않는다(옛 자료 그대로 · 실패 기록)", called == [] and C.from_series(bucket["a"]) == {"202001": 1.0} and fl == ["sale:a"] and "한도" in log[-1]["error"] and r[1] is None, (called, fl, log))
+r = C.collect_one(("sale:a", bucket, "a", lambda s, e: {"202001": 1.0, "202002": 2.0}), False, "202002", [], [], _t.time() + 60)
+ok("한도 안이면 그대로 받는다", C.from_series(bucket["a"]) == {"202001": 1.0, "202002": 2.0})
+
+# 9) R-ONE 이 느려도 한국은행(ECOS)·KB 는 기다리지 않는다 — R-ONE 은 한 줄, 나머지는 따로
+import threading as _th
+order, ev = [], _th.Event()
+def slow(s, e):
+    ev.wait(2)
+    order.append("rone")
+    return {"202001": 1.0}
+def fast(s, e):
+    order.append("ecos")
+    ev.set()
+    return {"202001": 2.0}
+b2 = {}
+tasks = [("sale:r%d" % i, b2, "r%d" % i, slow) for i in range(5)] + [("macro:baseRate", b2, "base", fast)]
+C.run_all(tasks, 4, lambda t: C.collect_one(t, False, "202001", [], [], None))
+ok("R-ONE 다섯이 막혀 있어도 기준금리(ECOS)가 먼저 끝난다", order[0] == "ecos" and order.count("rone") == 5 and set(b2) == {"r0", "r1", "r2", "r3", "r4", "base"}, order)
+ok("R-ONE 분류: R-ONE 표만(ECOS·KB 는 아님)", C.is_rone(("sale:x", 0, 0, 0)) and C.is_rone(("land:x", 0, 0, 0)) and not C.is_rone(("macro:baseRate", 0, 0, 0)) and not C.is_rone(("unsold:x", 0, 0, 0)) and not C.is_rone(("kbSale:x", 0, 0, 0)) and not C.is_rone(("movein:x", 0, 0, 0)))
+
 print("\n결과: %d PASS / %d FAIL" % (passed, failed))
 sys.exit(1 if failed else 0)
