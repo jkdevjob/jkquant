@@ -1,5 +1,15 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-07 · 부동산 클로드 월간 수집 멈춤 고침 · 부동산 v1.10.10
+
+- 재현: GitHub 실행 10-20·10-27 둘 다 `collect.py` 가 R-ONE `Remote end closed connection` 으로 멈춤(로그 확인). 이 환경에서 옛 코드를 돌려 37번째 시계열에서 `Connection reset by peer` 재현 · 직접 8번 호출에 2번 reset(15초 뒤).
+- `python scripts/realestate_claude/test_collect.py`: **20 PASS / 0 FAIL** (새 4: 실패 시계열은 옛 자료 그대로·나머지 계속 · 이름·사유 기록 · 종료 코드 2/0 · R-ONE 잠금).
+- `python scripts/realestate_claude/test_collect_apt.py`: **22 PASS / 0 FAIL** (새 3: 지금 달부터 시세 제외 · 실거래 제외 · KST).
+- `node scripts/realestate_claude/mutation_test.cjs`: **82/82 잡힘** (새 8: 한 시계열 실패가 전체 멈춤 · 실패 시계열 옛 자료 삭제 · 실패 기록 없음 · 실패해도 0 종료 · R-ONE 동시 호출 · 지금 달 시세 포함 · 지금 달 실거래 포함).
+- 고친 수집기로 이 환경에서 KB 단지 수집 실제 실행: 109곳 · 2026-10 까지 · 11월(미확정) 제외 확인. 지수 수집기 실제 실행은 R-ONE 재시도 때문에 느려(한 시계열에 1분 안팎) 이 PR 전에 끝나지 않았다 — 실패 0 으로 진행 중이었고, 다음 자동 갱신(11-20)에서 결과를 본다.
+- 회귀 `node regression-check.js index.html backtest.html testdata`: **2827 PASS / 0 FAIL — ALL PASS**. `node scripts/check-before-push.cjs`: **57단계 PASS**.
+- 미확인: GitHub 실행 환경에서 R-ONE 이 하나씩 받는 방식을 끝까지 허용하는지(11-20 실행 로그로 확인). 운영 화면은 자료만 바뀐다.
+
 ## 2026-11-07 · 5년 규칙 '공격형' 선택(새 규칙 + s0 .60) · v3.117.5 (플랜 v1.46.0)
 
 - `scripts/check-plan-rules-exp.cjs`: ALL PASS — A1~A8 · B1(rules 없음 == base 글자까지) · C1~C3 · D1~D2 · E1~E4 · **F1 공격형 σ57% 구간 TECL 매도 없음(목표 w=1 · 새 규칙은 매도) · F2 TQQQ 매매 새 규칙과 같은 날·방향 · F3 벌 값(exp2 s0 .60 · base/exp1 s0 없음) · F4 유한** · 변이 6/6 빨간불(+ '공격형 s0 무시').

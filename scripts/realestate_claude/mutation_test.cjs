@@ -44,7 +44,12 @@ const COL_MUTS=[
   ['KB 지역 이름 검사 없음','    if row.get("지역명") != name:','    if False:'],
   ['KB 입주 연도 합계도 달로 셈','        if len(m) == 6 and r.get("합계") is not None:','        if r.get("합계") is not None:'],
   ['ECOS 항목 이름 검사 없음','            if expect is not None and r.get("ITEM_NAME1") != expect:','            if False:'],
-  ['이어 받기 시작 달 건너뜀','    s = ym_add(max(out), 1)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)','    s = ym_add(max(out), 2)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)']
+  ['이어 받기 시작 달 건너뜀','    s = ym_add(max(out), 1)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)','    s = ym_add(max(out), 2)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)'],
+  ['옛 방식: 한 시계열 실패가 전체를 멈춤','    except Exception as e:  # noqa: BLE001 — 어떤 오류든 이 시계열만 포기한다\n        log.append','    except ValueError as e:  # noqa: BLE001 — 어떤 오류든 이 시계열만 포기한다\n        log.append'],
+  ['실패한 시계열의 옛 자료를 지움','        failed.append(name)\n        print(name, "실패 — 옛 자료 그대로:", str(e)[:200], file=sys.stderr, flush=True)\n        return t, None','        failed.append(name)\n        bucket[key] = None\n        return t, None'],
+  ['실패를 기록하지 않음','        log.append({"series": name, "event": "failed", "error": str(e)[:200]})\n        failed.append(name)','        failed.append(name)'],
+  ['실패해도 성공(0)으로 끝냄','    return EXIT_PARTIAL if failed else 0','    return 0'],
+  ['R-ONE 동시 호출(잠금 없음)','    with RONE_LOCK:\n        d = get_json(RONE_URL + "?" + urllib.parse.urlencode(q))\n        time.sleep(PAUSE)','    if True:\n        d = get_json(RONE_URL + "?" + urllib.parse.urlencode(q))\n        time.sleep(PAUSE)']
 ];
 const APT_MUTS=[
   ['후보 상승률에 이번 달 시세(룩어헤드)','function momOf(A,id,k,o){ const a=price(A,id,k-1),b=price(A,id,k-1-o.mom);','function momOf(A,id,k,o){ const a=price(A,id,k),b=price(A,id,k-o.mom);'],
@@ -88,7 +93,9 @@ const CAPT_MUTS=[
   ['단지 이름 검사 없음','    if norm(m.get("단지명")) != norm(c["name"]):','    if False:'],
   ['모든 오류를 자료 없음으로',"        if soft and head.get(\"resultCode\") == \"10500\":","        if True:"],
   ['대단지 문턱 무시','    big = [c for c in allc if c["kind"] in ("아파트", "주상복합") and (c.get("units") or 0) >= MIN_UNITS]','    big = [c for c in allc if c["kind"] in ("아파트", "주상복합")]'],
-  ['짝수 건 중앙값을 위쪽 값으로','        med = v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2','        med = v[n // 2]']
+  ['짝수 건 중앙값을 위쪽 값으로','        med = v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2','        med = v[n // 2]'],
+  ['지금 달(아직 바뀌는 값)도 시세로 넣음','        if m >= CUTOFF_YM:\n            continue\n        mid = it.get("매매일반거래가")','        mid = it.get("매매일반거래가")'],
+  ['지금 달 실거래도 넣음','        if d[:6] >= CUTOFF_YM:\n            continue\n        by.setdefault','        by.setdefault']
 ];
 const CPRE_MUTS=[
   ['청약홈 목록 지역 검사 없음','        if c[0] != area:','        if False:'],
