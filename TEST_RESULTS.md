@@ -1,5 +1,14 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-07 · 부동산 클로드 현실 점검 · 전세 끼고(-gap) 실험적 확장 · 부동산 v1.11.0
+
+- `node scripts/test_realestate_claude_apt.cjs`: **121 PASS / 0 FAIL** (새 41 — 갭 내 돈·전세·전세가율 기록 · 산 달 평가 · 재계약 받음/역전세 · 회수 식 · 레버리지 > 내 돈 · 파산(표시·그 뒤 거래 없음·내 돈이면 손실·낙폭 −100%) · 조정대상지역 월 단위 · 비과세 없는 양도세 10,652 · 조정지역 갭 거래 과세 vs 내 돈 비과세 · 현실 점검 분포 독립 계산·연도별 · 고점 스트레스 식 · 룩어헤드 합성 2·실제 2 · 장부 lev·renew·어긋남 멈춤·옛 장부 호환 · 실제 자료 사고파는 달 같음·회수 식·과세 규칙·분포·스트레스).
+- apt-1 · apt-lead-1 변경 전후 비교: `simulate`(거래·곡선·최종값)·`benchmarks`·`nowView`·`eventStudy` JSON **동일**(열쇠 순서까지).
+- `node scripts/realestate_claude/mutation_test.cjs`: **95/95 잡힘** (새 13: 갭 내 돈 비용 누락 · 역전세 내 돈 누락 · 재계약 보증금 안 바꿈 · 보증금 안 돌려줌 · 파산 뒤 거래 · 조정지역 비과세 · 비과세 없음에 12억 기준 · 넘겨받은 lev · 장부 lev 검사 없음 · 분포 비용 누락 · 분포 작은 단지 · 스트레스 첫 달 · 세종 지정 시작 틀림). 함수를 쪼개며 원문이 바뀐 옛 변이 5건은 새 원문으로 옮김.
+- 회귀 `node regression-check.js index.html backtest.html testdata`: **2827 PASS / 0 FAIL — ALL PASS** (화면이 `X.forwardStats`·`X.stress` 만 부르고 `acqRate`·`brokerRate`·`gapNeed` 를 정의·계산하지 않음 · 장부 4개 전략·돈 방식 일치 · 공식/실험 이름 구분).
+- Chromium 360px(로컬 서버, Firebase·Chart 가짜): 네 전략 × 매매 기록·지금 8화면 가로 넘침 0 · 화면 오류 0 · 현실 점검·거래 카드(재계약·회수·×8.03)·대장 내 돈 표시 확인.
+- 미확인: 운영 사이트 브라우저 열기(이 환경 인증서) — 배포 뒤 curl 로 버전·파일 해시만 확인. 실제 투자 결과·레버리지 실행 가능성(대출·전세 수요)은 자료 밖.
+
 ## 2026-11-07 · 부동산 클로드 월간 수집 멈춤 고침 · 부동산 v1.10.10
 
 - 재현: GitHub 실행 10-20·10-27 둘 다 `collect.py` 가 R-ONE `Remote end closed connection` 으로 멈춤(로그 확인). 이 환경에서 옛 코드를 돌려 37번째 시계열에서 `Connection reset by peer` 재현 · 직접 8번 호출에 2번 reset(15초 뒤).
