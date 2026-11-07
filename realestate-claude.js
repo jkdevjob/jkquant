@@ -294,13 +294,13 @@ function renderTrades(el){
   chart('rc-apt-eq',labels,sets.concat([ds('대장 계속 보유',BENCH.lead.curve.map(v=>v/10000),'#f87b8c',{borderDash:[4,3],borderWidth:1}),ds('대단지 고르게 보유',BENCH.hold.curve.map(v=>v/10000),'#8b8cf0',{borderDash:[4,3],borderWidth:1}),ds('예금',BENCH.deposit.curve.map(v=>v/10000),'#59627f',{borderWidth:1})]),{fmt:v=>num(v,1)+'억',log:true});   // 로그 눈금: 2배씩 같은 높이 — 전세 끼고 선이 나머지를 납작하게 만들지 않게
 }
 /* ── 🧭 지금 ── */
-function waitTxt(why,m,o,ld){
+function waitTxt(why,m,o,ld,dm){
   const w=[];
   if(why.indexOf('rateUp')>=0) w.push('기준금리 '+num(m.rate,2)+'%가 1년 전('+num(m.rate0,2)+'%)보다 높음 → 사지 않음');
   if(why.indexOf('weak')>=0) w.push((ld?'두 대장 중 6개월 상승률이 높은 곳도':'6개월 상승률 1위 단지도')+' +'+Math.round(o.buyMin*100)+'%에 못 미침 → 사지 않음');
   if(why.indexOf('noCand')>=0) w.push(ld?'6개월 시세를 비교할 대장이 없음':'비교할 대단지 시세가 없음');
   if(why.indexOf('noJeonse')>=0) w.push('전세 시세가 없어 전세를 끼고 살 수 없음');
-  if(why.indexOf('noRate')>=0) w.push('금리 자료 없음');
+  if(why.indexOf('noRate')>=0) w.push('한국은행 기준금리 자료가 아직 '+(dm?dm+'분까지 ':'')+'안 들어옴 — 들어오면 판단합니다(장부도 그때 씀)');
   if(why.indexOf('minHold')>=0) w.push('2년(비과세 요건)이 안 돼 팔지 않음');
   if(why.indexOf('mom')>=0) w.push('보유 단지 6개월 시세가 떨어짐 → 판다');
   if(why.indexOf('rate')>=0) w.push('기준금리가 1년 새 +'+o.rateUpSell+'%p 이상 → 판다');
@@ -315,7 +315,7 @@ function renderNow(el){
   let h=svChips()+'<div class="card"><h3>🧭 '+esc(N.forMonth)+' 판단 · '+esc(sv)+' <span class="note">('+esc(N.dataMonth)+' 시세·금리까지 보고 · 아래 모의장부 기준)</span></h3><div class="big '+(N.action==='buy'?'gd':'')+'">'+act+'</div>';
   if(N.action==='buy'&&!ruined){ const t=N.top[0]; h+='<div class="kv"><span>살 단지</span><b style="white-space:normal;text-align:right">'+aptName(t)+'</b></div><div class="kv"><span>6개월 · 지금 시세</span><b>'+pct(t.mom)+' · '+eok(t.price)+'</b></div>'
     +(gp?'<div class="kv"><span>전세 끼면 내 돈</span><b>'+(t.gap?eok(t.gap.need)+' <span class="note">(전세 '+eok(t.gap.jeonse)+' · 전세가율 '+pct0(t.gap.ratio,0)+')</span>':'전세 시세 없음')+'</b></div>':''); }
-  h+='<ul class="f">'+waitTxt(N.why,N.market,o,ld).map(x=>'<li>'+esc(x)+'</li>').join('')+'<li>기준금리 '+num(N.market.rate,2)+'% (1년 전 '+num(N.market.rate0,2)+'%)</li></ul>';
+  h+='<ul class="f">'+waitTxt(N.why,N.market,o,ld,N.dataMonth).map(x=>'<li>'+esc(x)+'</li>').join('')+'<li>기준금리 '+num(N.market.rate,2)+'% (1년 전 '+num(N.market.rate0,2)+'%)</li></ul>';
   if(sim.pos){ const t=sim.trades[sim.trades.length-1]; h+='<div class="note">2004년부터 규칙대로 했다면 지금 보유: '+aptName(t)+' ('+esc(t.buy.m)+' 매수 '+eok(t.buy.price)+(t.buy.gap?' · 내 돈 '+eok(t.buy.gap.need):'')+')</div>'; }
   h+='</div>';
   const gapTxt=t=>gp?'<div class="note">전세 끼면 내 돈 '+(t.gap?'<b>'+eok(t.gap.need)+'</b> (전세가율 '+pct0(t.gap.ratio,0)+')':'– (전세 시세 없음)')+'</div>':'';

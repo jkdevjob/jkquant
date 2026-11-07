@@ -12411,10 +12411,11 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
      &&ASV.join()==='apt-1,apt-lead-1,apt-1-gap,apt-lead-1-gap'&&/Object\.keys\(X\.STRATEGIES\)\.map\(sv => \(\{ file: 'paper-' \+ sv \+ '\.json', sv \}\)\)/.test(pm)
      &&/APT_PAPER\[sv\]='paper-'\+sv\+'\.json'/.test(ui)&&/Object\.keys\(X\.STRATEGIES\)/.test(ui)
      &&/X\.paperUpdate\(old, A, \{ strategy: sv \}, now\)/.test(pm));
-  ok('아파트 모의장부 4개(apt-1 · apt-lead-1 · 전세 끼고 둘): 파일마다 제 전략 버전 · 후보·돈 방식 · 당시 가정(원금·문턱·최소 보유) · 시작 달 기록 · 공식(cash)과 실험(gap)이 다른 이름',
+  ok('아파트 모의장부 4개(apt-1 · apt-lead-1 · 전세 끼고 둘): 파일마다 제 전략 버전 · 후보·돈 방식 · 당시 가정(원금·문턱·최소 보유) · 시작 달 기록 · 금리 없음 줄 없음 · 공식(cash)과 실험(gap)이 다른 이름',
      ASV.every(sv=>{ const PA=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/paper-'+sv+'.json','utf8')),o=XA.opts({strategy:sv});
        return PA.strategyVersion===sv&&PA.params&&(PA.params.pick==null?sv===XA.STRATEGY:PA.params.pick===o.pick)&&(PA.params.lev||'cash')===o.lev&&PA.params.minHold===o.minHold&&PA.params.buyMin===o.buyMin&&PA.params.capital===o.capital
-         &&/^\d{4}-\d{2}$/.test(PA.startedData)&&Array.isArray(PA.months)&&Array.isArray(PA.trades); })
+         &&/^\d{4}-\d{2}$/.test(PA.startedData)&&Array.isArray(PA.months)&&Array.isArray(PA.trades)
+         &&PA.months.every(m=>(m.why||[]).indexOf('noRate')<0); })   // 금리 자료가 늦어 생긴 '금리 없음' 줄은 장부에 없다(엔진이 기다린다)
      &&ASV.every(sv=>(XA.STRATEGIES[sv].lev==='gap')===/-gap$/.test(sv)&&!!XA.STRATEGIES[sv].experimental===(XA.STRATEGIES[sv].lev==='gap')));
   const AP=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/apt.json','utf8'));
   const kstNow=new Date(Date.now()+9*3600e3),thisYm=kstNow.getUTCFullYear()*12+kstNow.getUTCMonth();
