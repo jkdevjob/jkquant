@@ -1,0 +1,369 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #2",
+  "color": "mint"
+ },
+ "out": "queue/issues/2026-11-08_nps-182tn-my-pension.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "국민연금 백팔십이조가 날아갔다는데, 내 연금 깎이는 거예요?"
+   },
+   {
+    "id": "what",
+    "text": "국민연금이 큰 지분을 가진 회사들 주식값이, 석 달 반 새 백팔십이조 줄었다는 계산이에요.",
+    "gap": 0.35
+   },
+   {
+    "id": "counter",
+    "text": "여당은, 판 게 아니라 평가액일 뿐이라고 반박했고요."
+   },
+   {
+    "id": "answer",
+    "text": "그런데 내 연금은 낸 기간과 소득으로 계산해요. 기금 수익률은 그 식에 안 들어가요.",
+    "gap": 0.4
+   },
+   {
+    "id": "guar",
+    "text": "올해부터는 국가가 지급을 보장한다는 조항도 법에 들어갔고요."
+   },
+   {
+    "id": "but",
+    "text": "다만 수익률은 기금이 언제까지 버티느냐를 바꿔서, 다들 예민한 거예요.",
+    "gap": 0.35
+   },
+   {
+    "id": "cta",
+    "text": "팔로우해 두시면, 내 연금 얘기 이어서 보여 드릴게요.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "국민연금",
+     "x": 120,
+     "y": 450,
+     "size": 160,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1.0
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "182조",
+     "x": 120,
+     "y": 650,
+     "size": 200,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "circle",
+     "target": "cv2",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 14,
+     "width": 9
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "날아갔다?",
+     "x": 120,
+     "y": 900,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "그럼 내 연금은?",
+     "x": 130,
+     "y": 1110,
+     "size": 84,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.4,
+     "dur": 0.6
+    }
+   ],
+   "start": 0
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "국민연금 '182조 증발'?",
+     "x": 128,
+     "y": 196,
+     "size": 86,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "t0",
+     "text": "국민연금이 5% 넘게 가진 287개 회사 주식값",
+     "x": 140,
+     "y": 320,
+     "size": 44,
+     "font": "pen",
+     "color": "gray",
+     "at": "@what+0.3",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "6월 말",
+     "x": 150,
+     "y": 400,
+     "size": 64,
+     "font": "bold",
+     "color": "ink",
+     "at": "@what+1.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "515.9조",
+     "x": 520,
+     "y": 400,
+     "size": 70,
+     "font": "bold",
+     "color": "ink",
+     "at": "@what+1.6",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "10월 15일",
+     "x": 150,
+     "y": 500,
+     "size": 64,
+     "font": "bold",
+     "color": "ink",
+     "at": "@what+2.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "333.5조",
+     "x": 520,
+     "y": 500,
+     "size": 70,
+     "font": "bold",
+     "color": "blue",
+     "at": "@what+3.0",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "r3",
+     "text": "−182조",
+     "x": 520,
+     "y": 600,
+     "size": 88,
+     "font": "bold",
+     "color": "red",
+     "at": "@what.end-1.2",
+     "dur": 0.5
+    },
+    {
+     "type": "circle",
+     "target": "r3",
+     "at": "@what.end-0.5",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 12,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n1",
+     "text": "(에프앤가이드 계산 · 이번 주 폭락 전 숫자)",
+     "x": 150,
+     "y": 715,
+     "size": 36,
+     "font": "pen",
+     "color": "gray",
+     "at": "@what.end",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "c1",
+     "text": "여당: \"판 게 아니라 평가액\"",
+     "x": 150,
+     "y": 790,
+     "size": 56,
+     "font": "bold",
+     "color": "blue",
+     "at": "@counter+0.3",
+     "dur": 0.9
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 890,
+     "w": 760,
+     "h": 400,
+     "rot": -2.0,
+     "at": "@answer-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "내 연금은?",
+       "x": 46,
+       "y": 30,
+       "size": 66,
+       "font": "bold",
+       "color": "red",
+       "at": "@answer",
+       "dur": 0.4
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "낸 기간 × 소득으로 계산",
+       "x": 46,
+       "y": 135,
+       "size": 52,
+       "font": "bold",
+       "color": "ink",
+       "at": "@answer+0.6",
+       "dur": 0.8
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "기금 수익률은 식에 없음",
+       "x": 46,
+       "y": 215,
+       "size": 52,
+       "font": "bold",
+       "color": "ink",
+       "at": "@answer.end-1.6",
+       "dur": 0.8
+      },
+      {
+       "type": "text",
+       "id": "m4",
+       "text": "2026년~ 국가 지급 보장 법에",
+       "x": 46,
+       "y": 300,
+       "size": 46,
+       "font": "bold",
+       "color": "blue",
+       "at": "@guar+0.4",
+       "dur": 0.9
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "b1",
+     "text": "단, 수익률 → 기금이 버티는 해가 달라져요",
+     "x": 150,
+     "y": 1335,
+     "size": 46,
+     "font": "pen",
+     "color": "ink",
+     "at": "@but+0.3",
+     "dur": 1.0
+    },
+    {
+     "type": "text",
+     "id": "b2",
+     "text": "(정부 추계 소진 2064년 · 2025년 개혁 후)",
+     "x": 150,
+     "y": 1400,
+     "size": 36,
+     "font": "pen",
+     "color": "gray",
+     "at": "@but.end-1.0",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1480,
+     "size": 56,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2.0
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1560,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,333 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #1",
+  "color": "yellow"
+ },
+ "out": "queue/issues/2026-11-08_pension-savings-health-insurance.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "연금저축, 아이알피에도 건보료가 붙는다고요?"
+   },
+   {
+    "id": "why",
+    "text": "건보공단이 국회에, 분리과세 소득에도 건보료를 매기겠다고 보고했거든요.",
+    "gap": 0.35
+   },
+   {
+    "id": "list",
+    "text": "연 천오백만 원 이하 사적연금, 아이에스에이, 일용직 소득 같은 거예요."
+   },
+   {
+    "id": "now",
+    "text": "그런데 복지부는, 구체적으로 검토하거나 결정한 건 없다고 했어요."
+   },
+   {
+    "id": "rule",
+    "text": "지금은 사적연금엔 건보료가 없고, 이자랑 배당도 일 년 천만 원은 넘어야 잡혀요.",
+    "gap": 0.4
+   },
+   {
+    "id": "warn",
+    "text": "겁나서 해지하면, 세액공제 받은 돈에 십육 점 오 퍼센트 세금이 붙어요."
+   },
+   {
+    "id": "cta",
+    "text": "정해지면 바로 알려 드릴게요. 팔로우해 두세요.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "start": 0,
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "세금 냈는데",
+     "x": 120,
+     "y": 450,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1.0
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "건보료 또?",
+     "x": 120,
+     "y": 650,
+     "size": 165,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "circle",
+     "target": "cv2",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 12,
+     "width": 8
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "연금저축·IRP·ISA",
+     "x": 120,
+     "y": 900,
+     "size": 116,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "복지부 답은?",
+     "x": 130,
+     "y": 1100,
+     "size": 72,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.4,
+     "dur": 0.6
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": -110,
+     "y": 1480,
+     "r": 160,
+     "opacity": 0.15,
+     "rot": 12
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "연금저축·IRP에 건보료?",
+     "x": 128,
+     "y": 196,
+     "size": 92,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "건보공단 → 국회 보고(11/4) '분리과세 소득에도 부과 추진'",
+     "x": 140,
+     "y": 320,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@why+0.6",
+     "dur": 0.9
+    },
+    {
+     "type": "text",
+     "id": "th",
+     "text": "거론된 소득",
+     "x": 150,
+     "y": 410,
+     "size": 50,
+     "font": "pen",
+     "color": "gray",
+     "at": "@list-0.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1",
+     "text": "사적연금 (연 1,500만 원 이하)",
+     "x": 150,
+     "y": 490,
+     "size": 60,
+     "font": "bold",
+     "color": "ink",
+     "at": "@list+0.2",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "r2",
+     "text": "ISA 비과세 한도 넘는 수익",
+     "x": 150,
+     "y": 580,
+     "size": 60,
+     "font": "bold",
+     "color": "ink",
+     "at": "@list+2.4",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "r3",
+     "text": "일용직 소득",
+     "x": 150,
+     "y": 670,
+     "size": 60,
+     "font": "bold",
+     "color": "ink",
+     "at": "@list.end-1.0",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "st",
+     "text": "아직 확정 아님",
+     "x": 150,
+     "y": 780,
+     "size": 80,
+     "font": "bold",
+     "color": "red",
+     "at": "@now+0.5",
+     "dur": 0.6,
+     "rot": -1.5
+    },
+    {
+     "type": "circle",
+     "target": "st",
+     "at": "@now.end-0.6",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 14,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n1",
+     "text": "(복지부 \"구체적으로 검토·결정된 바 없다\" · 11/4 보도)",
+     "x": 150,
+     "y": 890,
+     "size": 36,
+     "font": "pen",
+     "color": "gray",
+     "at": "@now.end-0.3",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 960,
+     "w": 760,
+     "h": 400,
+     "rot": -2.0,
+     "at": "@rule-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "지금 기준",
+       "x": 46,
+       "y": 30,
+       "size": 64,
+       "font": "bold",
+       "color": "red",
+       "at": "@rule",
+       "dur": 0.4
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "사적연금: 건보료 0원",
+       "x": 46,
+       "y": 130,
+       "size": 54,
+       "font": "bold",
+       "color": "ink",
+       "at": "@rule+0.5",
+       "dur": 0.7
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "이자·배당: 1천만 원 넘으면",
+       "x": 46,
+       "y": 210,
+       "size": 50,
+       "font": "bold",
+       "color": "ink",
+       "at": "@rule.end-2.2",
+       "dur": 0.8
+      },
+      {
+       "type": "text",
+       "id": "m4",
+       "text": "해지하면 16.5% 토해내요",
+       "x": 46,
+       "y": 295,
+       "size": 52,
+       "font": "bold",
+       "color": "red",
+       "at": "@warn+1.0",
+       "dur": 0.8
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1440,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2.0
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1530,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}

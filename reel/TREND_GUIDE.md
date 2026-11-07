@@ -1,9 +1,9 @@
-# 매일 동향 분석 영상 규칙
+# 매일 동향·학습 규칙
 
-매일 아침 작업에서 **같은 분야(은퇴·노후·연금)에서 지금 조회수가 잘 나오는 영상**을 모아 보고,
-잘 먹히는 주제와 제목 구조를 가져와 **우리 형식·우리 숫자로 새로** 만든다. 12:30 게시.
-(전날 이슈 영상은 `ISSUE_GUIDE.md` 대로 20:00 게시 — 하루 2편)
-기준 예시: `queue/issues/2026-10-30-t.note.json` ("국민연금 60세 vs 70세, 받는 돈 2배? 본전 나이는")
+**2026-11-08 사용자 지시: 주제는 무조건 어제나 최근에 은퇴·경제에서 핫했던 것.** 그래서 12:30 도 20:00 처럼
+`ISSUE_GUIDE.md` 1장(핫이슈 고르기)대로 만든다 — 12:30 = 핫이슈 1위, 20:00 = 2위(다른 주제).
+이 문서는 그 두 편을 더 잘 만들기 위한 **학습**(남의 인기 영상 기법, 우리 조회수)과 일요일 성과 보고만 맡는다.
+시기 안 타는 표 영상(kind "buffer")은 아침 작업이 빠진 날을 위한 **예비**로만 둔다(ISSUE_GUIDE 6-1).
 
 ## 1. 수집
 
@@ -15,7 +15,8 @@ cd reel && node trends/scan-youtube.mjs      # → trends/YYYY-MM-DD.md / .json
 - 인스타는 공개 데이터를 가져올 길이 없어서, Metricool 에 경쟁 계정을 넣어 두면 그 릴스도 같이 본다
   (`getAnalyticsDataByMetrics` 의 `IGCR01~10` — 경쟁 계정이 없으면 건너뛴다).
 
-- 궁금증: `node trends/curious.mjs` → `trends/curious-YYYY-MM-DD.md` (자동완성 질문·급상승 검색어). 동향 영상 주제는 인기 영상 주제와 이 질문이 겹치는 것을 우선한다.
+- 궁금증: `node trends/curious.mjs` → `trends/curious-YYYY-MM-DD.md` (자동완성 질문·급상승 검색어). 핫이슈 후보 중 이 질문과 겹치는 것을 먼저 고른다.
+- 핫이슈: `node trends/hot-news.mjs` → `trends/hot-YYYY-MM-DD.md` (ISSUE_GUIDE 1장).
 
 ## 1-1. 기법 학습 — 매일 다른 인기 영상 보기
 
