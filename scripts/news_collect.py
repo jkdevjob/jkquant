@@ -7,6 +7,10 @@
   업비트 KRW-BTC · KRW-ETH 1분봉(한국 날짜 0~24시) · 미국 SOXL · NVDA · QQQ 1분봉(뉴욕 날짜 정규장 앞뒤 포함) ·
   국내 233740(코스닥150 레버리지) · 122630(코스피200 레버리지) 1분 종가 · 거래량(네이버 — 시가 · 고가 · 저가는 원천에 없음).
   data/minute/{종목}/{YYYY-MM-DD}.json — {symbol, date, tz, schema, rows}.
+- ① 후보 분봉(R32 · 2026-11-07): 그날 ① 장부(data/opening-gapdown-live/{날짜}.json · 밤에 저장)가 생기면 후보 종목 —
+  장전 예상갭(08:56 · 08:58) −2% 이하 · 메인/그림자가 고른 종목 · 밤 연구 신호 — 의 정규장(09:00~15:30) 1분 종가 · 거래량을 한 번 받는다.
+  네이버 종목 분봉은 최근 6거래일쯤만 주므로 그 안에 받지 못하면 사라진다. data/minute-opening/{YYYY-MM-DD}.json(하루 한 파일 · 덮어쓰지 않음).
+  장 마감 뒤 받은 재구성 자료다 — 실시간 원본(장부)을 대신하지 않는다.
 실시간 원본(이 수집)과 나중에 다시 만든 자료는 섞지 않는다(CLAUDE.md 단타 데이터 누적 원칙).
 """
 import argparse, hashlib, json, os, re, time, urllib.request
@@ -16,7 +20,7 @@ from email.utils import parsedate_to_datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-V = "news-collect-1.0.0"
+V = "news-collect-1.1.0"
 KST, NY = ZoneInfo("Asia/Seoul"), ZoneInfo("America/New_York")
 FEEDS = [
     ("yna_economy", "https://www.yna.co.kr/rss/economy.xml"),
@@ -28,6 +32,8 @@ FEEDS = [
 UPBIT = ["KRW-BTC", "KRW-ETH"]
 US = ["SOXL", "NVDA", "QQQ"]
 KR = ["233740", "122630"]
+OPENING_GAP, OPENING_MAX, OPENING_DAYS, OPENING_PAUSE = -2.0, 60, 6, 0.3   # ① 후보: 예상갭 −2% 이하 · 하루 60종목까지 · 최근 장부 6일 · 요청 간격(초)
+OPENING_SESSION = ("09:00", "15:30")                                        # 정규장(종가 동시호가 15:30 포함) — 시간외(NXT ~20:00)는 ① 에 쓰지 않는다
 UA = {"User-Agent": "Mozilla/5.0 (jkquant research collector)"}
 
 
@@ -162,6 +168,97 @@ def save_day(data, sym, day, tz, schema, rows):
     return True
 
 
+def opening_codes(live, research=None):
+    """그날 ① 후보 → [{code, name, expGap, actGap, why}] — 고른 종목(메인 · 그림자) · 밤 연구 신호를 먼저(빠뜨리지 않음),
+    나머지는 장전 예상갭 −2% 이하를 깊은 순으로 · 합쳐 최대 OPENING_MAX. 예상갭은 08:56 · 08:58 중 깊은 값(예상가 ÷ 기준가)."""
+    ev = {}
+    for e in ((live or {}).get("ledger") or {}).get("events") or []:
+        p = e.get("payload") or {}
+        ev[str(e.get("stage")) + ":" + str(p.get("part", ""))] = p
+    rows = {}
+
+    def add(code, name, why, exp=None, act=None):
+        code = str(code or "")
+        if not re.fullmatch(r"\d{6}", code):
+            return
+        r = rows.setdefault(code, dict(code=code, name=name or code, expGap=None, actGap=None, why=[]))
+        if exp is not None and (r["expGap"] is None or exp < r["expGap"]):
+            r["expGap"] = exp
+        if act is not None:
+            r["actGap"] = act
+        if why not in r["why"]:
+            r["why"].append(why)
+
+    for k, p in ev.items():
+        if not k.startswith("quote:"):
+            continue
+        for c in p.get("candidates") or []:
+            px, base = c.get("expectedPrice"), c.get("basePrice")
+            if px and base and base > 0 and (px / base - 1) * 100 <= OPENING_GAP:
+                add(c.get("code"), c.get("name"), "0858" if p.get("part") == "recheck" else "0856", exp=(px / base - 1) * 100)
+    pre = ev.get("preopen:") or {}
+    for x in pre.get("picks") or []:
+        add(x.get("code"), x.get("name"), "pick", exp=x.get("expectedGapPct"))
+    for x in (pre.get("shadow") or {}).get("picks") or []:
+        add(x.get("code"), x.get("name"), "shadow", exp=x.get("expectedGapPct"))
+    for x in (research or {}).get("signals") or []:
+        add(x.get("code"), x.get("name"), "research", act=x.get("gapPct"))
+    key = lambda r: (r["expGap"] if r["expGap"] is not None else 0.0, r["code"])
+    must = sorted([r for r in rows.values() if {"pick", "shadow", "research"} & set(r["why"])], key=key)
+    rest = sorted([r for r in rows.values() if not {"pick", "shadow", "research"} & set(r["why"])], key=key)
+    return must + rest[:max(0, OPENING_MAX - len(must))]
+
+
+def naver_minutes(code):
+    return naver_sessions(http(f"https://fchart.stock.naver.com/siseJson.nhn?symbol={code}&requestType=0&count=2400&timeframe=minute"))
+
+
+def archive_opening_minutes(data, now, fetch=naver_minutes):
+    """① 후보 분봉 — 최근 장부 OPENING_DAYS 일 중 아직 파일이 없고 끝난 날만. 한 종목은 한 번만 받아(최근 6거래일이 한 번에 온다) 여러 날에 쓴다.
+    받다가 실패하면 그날 파일을 쓰지 않고 다음 수집에 다시 한다(반쯤 받은 파일을 남기지 않음). 원천에 그날 분봉이 없는 종목은 missing 에 남긴다."""
+    base = Path(data)
+    out_dir = base / "minute-opening"
+    saved, errors, cache = [], [], {}
+    for f in sorted((base / "opening-gapdown-live").glob("*.json"))[-OPENING_DAYS:]:
+        day = f.stem
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day) or (out_dir / (day + ".json")).exists() or not done_days([day], now, KST, "15:45"):
+            continue
+        try:
+            live = json.loads(f.read_text(encoding="utf-8"))
+            rp = base / "opening-gapdown-research" / "daily" / (day + ".json")
+            research = json.loads(rp.read_text(encoding="utf-8")) if rp.exists() else None
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"① {day}: {type(e).__name__}")
+            continue
+        cands = opening_codes(live, research)
+        if not cands:
+            continue
+        codes, missing, failed = {}, [], False
+        for c in cands:
+            if c["code"] not in cache:
+                try:
+                    cache[c["code"]] = fetch(c["code"])
+                except Exception as e:  # noqa: BLE001
+                    errors.append(f"① {day} {c['code']}: {type(e).__name__}")
+                    failed = True
+                    break
+                time.sleep(OPENING_PAUSE)
+            rows = [r for r in (cache[c["code"]].get(day) or []) if OPENING_SESSION[0] <= r[0] <= OPENING_SESSION[1]]
+            if rows:
+                codes[c["code"]] = dict(name=c["name"], why=c["why"], expGap=c["expGap"], actGap=c["actGap"], rows=rows)
+            else:
+                missing.append(c["code"])
+        if failed:
+            continue
+        out_dir.mkdir(parents=True, exist_ok=True)
+        (out_dir / (day + ".json")).write_text(json.dumps(dict(
+            date=day, tz="Asia/Seoul", schema="time,close,volume", session="-".join(OPENING_SESSION),
+            source="naver fchart 1분(장 마감 뒤 받음 · 재구성 자료 — 실시간 원본은 장부)", ledger=f"opening-gapdown-live/{day}.json",
+            codes=codes, missing=missing, v=V), ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        saved.append(f"① {day} {len(codes)}종목" + (f" · 없음 {len(missing)}" if missing else ""))
+    return dict(saved=saved, errors=errors)
+
+
 def archive_minutes(data, now):
     saved, errors = [], []
     yday = (now.astimezone(KST).date() - timedelta(days=1)).isoformat()
@@ -212,4 +309,5 @@ if __name__ == "__main__":
         res["news"] = collect_news(a.data, now)
     if not a.no_minute:
         res["minute"] = archive_minutes(a.data, now)
+        res["opening"] = archive_opening_minutes(a.data, now)
     print(json.dumps(res, ensure_ascii=False))

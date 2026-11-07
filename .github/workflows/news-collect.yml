@@ -2,6 +2,7 @@ name: 연구 R11 — 헤드라인 · 분봉 쌓기 (매매에 쓰지 않음)
 
 # 사용자 요청(2026-10-15): 속보를 투자에 — 바로 매매하지 않고 공식 RSS 헤드라인과 시각을 먼저 쌓고, 뒤에 5 · 10 · 30분 가격 경로를 잰다.
 # 헤드라인은 제목 · 링크 · 발행 시각만(본문 저장 안 함). 분봉은 끝난 하루만 한 번 쓴다. 저장: scalping-data data/news · data/minute.
+# R32(2026-11-07): ① 후보 종목 정규장 1분봉도 그날 장부가 생기면 한 번 받는다 — data/minute-opening(네이버는 6거래일쯤만 준다).
 on:
   schedule:
     - cron: "7,37 * * * *"   # 30분마다
@@ -38,9 +39,9 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/news data/minute 2>/dev/null || true
+          git add data/news data/minute data/minute-opening 2>/dev/null || true
           if ! git diff --cached --quiet; then
-            git commit -m "data: news headlines · minute bars [skip ci]"
+            git commit -m "data: news headlines · minute bars · ① candidate minutes [skip ci]"
             bash .app/scripts/push-scalping-data.sh
           else
             echo "새 헤드라인 · 분봉 없음"

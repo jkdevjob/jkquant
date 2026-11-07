@@ -62,7 +62,8 @@ for (const { file, sv } of LEDGERS) {
       bad++;
       continue;
     }
-    const { ledger, added } = X.paperUpdate(old, A, { strategy: sv }, now);
+    const { ledger, added, waitFor } = X.paperUpdate(old, A, { strategy: sv }, now);
+    if (waitFor) console.log(`${sv} 장부: ${waitFor} 판단은 기준금리 자료가 들어오면 씁니다(지금은 멈춤)`);
     const same = (a, b) => a.every((x, i) => JSON.stringify(x) === JSON.stringify(b[i]));
     if (old && (!same(old.months, ledger.months) || !same(old.trades, ledger.trades))) {
       console.error(`${file}: 지난 장부 기록이 바뀌었습니다 — 저장하지 않습니다.`);

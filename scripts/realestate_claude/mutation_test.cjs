@@ -99,6 +99,7 @@ const APT_MUTS=[
   ['현실 점검 분포에 비용·세금 안 뺌',"const net=(b-sb-gainTax(tot,b,sb,h,k+h)-hold)/tot-1; r.push(net);","const net=b/a-1; r.push(net);"],
   ['현실 점검 분포에 작은 단지 포함',"    for(const u of A.U){ if(o.minUnits&&(+u.units||0)<o.minUnits) continue;\n      for(let k=s;k+h<=A.lastK;k++){","    for(const u of A.U){\n      for(let k=s;k+h<=A.lastK;k++){"],
   ['고점 스트레스가 고점 대신 첫 달',"const kb=pk.k,ks=Math.min(kb+24,A.lastK),st={eq:1,pos:null};","const kb=ymk('2015-01'),ks=Math.min(kb+24,A.lastK),st={eq:1,pos:null};"],
+  ['장부가 금리 없는 달도 씀',"    if(marketAt(A,k,po).rateUp==null){ waitFor=kym(k); break; }      // 금리 자료 기다림 — 이 달부터는 다음 갱신 때\n",""],
   ['조정대상지역 세종 시작을 2017년으로',"if(u.city==='세종') return k>=ymk('2016-11')&&k<=ymk('2022-11');","if(u.city==='세종') return k>=ymk('2017-11')&&k<=ymk('2022-11');"]
 ];
 const CAPT_MUTS=[

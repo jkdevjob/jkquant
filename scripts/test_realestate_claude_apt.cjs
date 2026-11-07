@@ -337,6 +337,22 @@ function lookaheadGap(list,rates,month){
   ok('옛 장부(lev 칸 없음)는 내 돈으로 본다', (()=>{ const L=X.paperUpdate(null,prep(short),{},'t0').ledger; delete L.params.lev; try{ X.paperUpdate(L,A1,{},'t'); return true; }catch(e){ return false; } })());
 }
 
+console.log('[부동산 클로드 아파트 전략] 모의장부 — 금리 자료가 늦으면 기다린다');
+{
+  // 시세는 2006-12 까지, 기준금리는 2006-09 까지만 들어온 상황 → 2006-11 판단(2006-10 금리 필요)부터는 쓰지 않는다
+  const cut=K('2006-06'),short=BASE.map(c=>Object.assign({},c,{mid:c.mid.slice(0,cut-K('2004-01')+1)}));
+  const L0=X.paperUpdate(null,prep(short),{},'t0').ledger;
+  const upto=BASE.map(c=>Object.assign({},c,{mid:c.mid.slice(0,K('2006-12')-K('2004-01')+1)}));
+  const lateRates=R0.slice(0,K('2006-09')-K('2002-01')+1);
+  const r1=X.paperUpdate(L0,prep(upto,lateRates),{},'t1');
+  ok('금리 자료가 없는 달은 장부에 쓰지 않고 멈춘다(2006-07~10 넉 줄 · 2006-11 부터 기다림)', r1.added===4&&r1.ledger.months.map(m=>m.m).join()==='2006-07,2006-08,2006-09,2006-10'&&r1.waitFor==='2006-11', JSON.stringify([r1.added,r1.waitFor]));
+  ok('장부에 금리 없음(noRate) 줄이 생기지 않는다', r1.ledger.months.every(m=>m.why.indexOf('noRate')<0));
+  const r2=X.paperUpdate(r1.ledger,prep(upto),{},'t2'),once=X.paperUpdate(L0,prep(upto),{},'t2');
+  ok('금리가 들어오면 이어 쓰고, 처음부터 한 번에 쓴 장부와 같다', r2.added===2&&r2.waitFor===null&&JSON.stringify(r2.ledger.months.map(m=>[m.m,m.action,m.eq]))===JSON.stringify(once.ledger.months.map(m=>[m.m,m.action,m.eq]))&&JSON.stringify(r2.ledger.acct)===JSON.stringify(once.ledger.acct), JSON.stringify([r2.added,r2.waitFor]));
+  const g1=X.paperUpdate(X.paperUpdate(null,prep(short),{strategy:'apt-lead-1-gap'},'t0').ledger,prep(upto,lateRates),{strategy:'apt-lead-1-gap'},'t1');
+  ok('전세 끼고 장부도 같이 기다린다', g1.waitFor==='2006-11'&&g1.added===4);
+}
+
 /* ── 실제 자료 ── */
 const DIR=path.join(__dirname,'..','data','realestate','claude');
 if(fs.existsSync(path.join(DIR,'apt.json'))){

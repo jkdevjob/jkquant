@@ -7,6 +7,18 @@
 - `check-before-push.cjs` 1차(8f39f06): 2827 PASS / 1 FAIL — `check-plan-session-views.cjs` 가 '현재' 탭 구역을 [주문 · 계좌] 두 개로 고정해 둠(새 카드가 셋째) → 기대값에 `alphaTaxSection` 추가 · 탭 `aria-controls` 에도 추가. 이어서 장부만 떼어 돌리는 시험 문맥 3곳(`check-plan-history-pnl` · `check-login-quote-paper` · `check-plan-session-views`)에서 `renderTaxCheck` 가 없어 ReferenceError → 호출을 `typeof` 로 감쌈(페이지에선 늘 있음). 전체 회귀 2828 PASS / 0 FAIL.
 - `check-before-push.cjs` 2차(09d7340): 57단계 전부 PASS · 전체 회귀 2828 PASS / 0 FAIL — ALL PASS.
 - 미확인: 실제 증권사 양도세 계산과의 대조(방식·기준환율 차이).
+## 2026-11-07 · 클로드 ① 그림자(v2.25.0) · ① 후보 분봉 쌓기(v2.26.0) · 연구 R28 · R28-b · R30
+
+- v2.25.0 그림자: `node scripts/test_opening_gapdown.mjs` **55 ALL PASS**(그림자 값 시험 — 통과 6/7 경계 · 08:58 우선 · 바닥 −29 · 규칙 없음 null · preopen 기록 · 메인 picks/orders 불변) · 변이 9종 모두 잡힘(처음 2종은 TypeError 로 끝나 생존 집계 → `assert.ok` 가드로 고쳐 잡음) · `check-before-push` 57단계 · 회귀 **2827 PASS / 0 FAIL** · GitHub check.yml 성공 · 운영 `clVer` v2.25.0 확인.
+- v2.26.0 분봉: `python scripts/test_news_collect.py` **19 PASS / 0 FAIL**(새 9) · 변이 6/6 잡힘(예상갭 기준 −2 → 0 · 정규장 거르기 없앰 · 실패해도 씀 · 6일 창 없앰 · 덮어쓰기 · 상한이 고른 종목 자름).
+- 실제 자료 시험 수집(로컬 · 스크래치 폴더 · 데이터 브랜치에는 안 올림): 10/30~11/06 6일 · 129종목 · 140초 · 오류 0 · 15:30 분봉 종가 = KRX 종가 77/77.
+- 연구 수치(재현 스크립트): R28 `r28_opening_deep.py` · R28-b `r28b_opening_breadth.py` · R30 `r30_opening_hedge.py`(연구실 goal_metrics · score_metrics · gate_reason 그대로) · R32 `r32_opening_minutes.py` · 과정 지표 `opening_agreement.py`.
+- 미확인: ① 11/09 08:56 장부의 `shadow` 칸 · ② 병합 뒤 `news-collect.yml` 이 `data/minute-opening/` 을 데이터 브랜치에 저장하는지 · ③ 백테 수치는 실측이 아니다(R28-b 의 +2.17%p/일 초과는 설계 표본 값).
+## 2026-11-07 · 부동산 클로드 모의장부 금리 기다림 · 부동산 v1.11.1
+
+- 재현: 현재 main 자료로 `nowView` — 네 전략 모두 2026-11 판단 `wait` · `noRate`(기준금리 2026-09 까지 · 단지 시세 2026-10 까지).
+- `node scripts/test_realestate_claude_apt.cjs`: **125 PASS / 0 FAIL** (새 4: 금리 없는 달에서 멈춤·waitFor · noRate 줄 없음 · 이어 쓰면 한 번에 쓴 장부와 같음 · 전세 끼고도 기다림).
+- 변이 '장부가 금리 없는 달도 씀': 값 시험 3개 빨간불(122/125). 전체 변이 결과·check-before-push 는 PR 에 적는다.
 
 ## 2026-11-07 · 부동산 클로드 현실 점검 · 전세 끼고(-gap) 실험적 확장 · 부동산 v1.11.0
 
