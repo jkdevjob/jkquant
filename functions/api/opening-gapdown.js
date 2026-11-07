@@ -270,7 +270,21 @@ export function choosePicks(cands,fresh,rule){
   const f=(Array.isArray(fresh)?fresh:[]).filter(r=>r&&Number.isFinite(r.expectedGapPct));
   return {qualified,picks:gapdownPicks(f.length?f:cands,rule),source:f.length?"recheck":"first",priced:f.length};
 }
-async function preopen(origin,env,date,rows,recheck){
+// R31-가 그림자(2026-11-07 · 사용자 "해") — 예상갭이 실제 시가갭보다 깊게 나오는 것(R28: 실제 ≈ +0.23 + 0.61×예상 · 예상 순위 1~3 되돌림 +5.19%p)을
+// 보정한 통과 · 고르기. 연구 정의(실제 갭 −2% 이하 수 ≥ 7 · 실제 갭 −3% 이하 깊은 3)에 대응하는 예상갭 기준 = 통과 −4% · 고르기 −5%.
+// 기록만 한다 — 주문 · 메인 판단 · 알림에 쓰지 않는다. 판정은 손익이 아니라 과정 지표(연구 정의와 통과 날 일치 · 고른 종목의 실제 갭 ≤−3% 비율)로
+// 20매매일 안에(scripts/research/opening_agreement.py). 바닥(gapFloor)은 명단 규칙 값을 그대로 쓴다 — 같은 숫자를 두 군데 적지 않는다.
+export const SHADOW_CALIB={name:"calib_e4_p5",breadthGapMax:-4,minQ:7,pickGapMax:-5,picks:3};
+export function shadowDecision(cands,fresh,rule){
+  const floor=+(rule&&rule.gapFloor);
+  if(!Number.isFinite(floor))return null;
+  const qualified=gapdownPicks(cands,{gapMax:SHADOW_CALIB.breadthGapMax,gapFloor:floor,picks:1e9}).length;
+  const f=(Array.isArray(fresh)?fresh:[]).filter(r=>r&&Number.isFinite(r.expectedGapPct));
+  const picks=gapdownPicks(f.length?f:cands,{gapMax:SHADOW_CALIB.pickGapMax,gapFloor:floor,picks:SHADOW_CALIB.picks});
+  return {variant:SHADOW_CALIB.name,rule:{...SHADOW_CALIB,gapFloor:floor},qualified,signal:qualified>=SHADOW_CALIB.minQ,source:f.length?"recheck":"first",
+    picks:picks.map(x=>({code:x.code,name:x.name,expectedPrice:x.expectedPrice,basePrice:x.basePrice,expectedGapPct:x.expectedGapPct}))};
+}
+export async function preopen(origin,env,date,rows,recheck){
   const out={stage:"preopen",strategyVersion:GAPDOWN_VERSION,date,startedAt:new Date().toISOString(),
     watchlist:null,candidates:0,picks:[],orders:[],decisionReason:""};
   const {wl,meta,reason}=await loadWatchlist(date);
@@ -282,6 +296,7 @@ async function preopen(origin,env,date,rows,recheck){
   const ch=choosePicks(cands,Array.isArray(recheck)?sanitizeCandidates(recheck,wl):[],wl.rule),picks=ch.picks,qualified=ch.qualified;
   out.breadth={qualified,v2MinQualified:BREADTH_V2_MIN,v2Signal:qualified>=BREADTH_V2_MIN};
   out.recheck=Array.isArray(recheck)?{asked:recheck.length,priced:ch.priced,used:ch.source==="recheck"}:null;
+  out.shadow=shadowDecision(cands,Array.isArray(recheck)?sanitizeCandidates(recheck,wl):[],wl.rule);   // R31-가 그림자 — 기록만(주문 · 고르기에 영향 없음)
   const first=new Map(cands.map(c=>[c.code,c]));
   out.picks=picks.map(x=>({code:x.code,name:x.name,expectedPrice:x.expectedPrice,basePrice:x.basePrice,expectedGapPct:x.expectedGapPct,rsi14Prev:x.rsi14Prev,
     ...(ch.source==="recheck"?{expectedPrice0856:(first.get(x.code)||{}).expectedPrice??null,expectedGapPct0856:(first.get(x.code)||{}).expectedGapPct??null}:{})}));
