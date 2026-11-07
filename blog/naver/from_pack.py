@@ -32,13 +32,16 @@ def main():
         shutil.copyfile(os.path.join(imgdir, os.path.basename(b['file'])), os.path.join(assets, name))
         cap = b['caption'].replace('. 블로그 직접 작성 도표', '').replace(' 블로그 직접 작성 도표', '').strip()
         links = b.get('links') or []
+        if b.get('thumb'):  # 대표 이미지(썸네일): 블로그가 직접 만든 글자 이미지라 출처 링크가 없다
+            blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': ['이미지: 블로그 직접 제작(사진 아님)']})
+            continue
         if not links:
             sys.exit('image without source link: ' + b['file'])
         attr = ['사진: 블로그 직접 작성 도표 / 출처: ' + a(links[0]['url'])]
         attr += ['출처: ' + a(l['url']) for l in links[1:]]
         attr.append('자료: ' + ' · '.join(l['label'] for l in links))
         blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': attr})
-    out = {'title': pk['title'], 'blocks': blocks, 'tags': pk['tags']}
+    out = {'title': pk['title'], 'blocks': blocks, 'tags': pk['tags'], 'topic': pk.get('topic') or '비즈니스·경제'}
     dst = os.path.join(HERE, 'posts', f'{date}_{slug}.json')
     if os.path.exists(dst):
         sys.exit('already exists: ' + dst)

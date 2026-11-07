@@ -1,42 +1,35 @@
 #!/usr/bin/env python3
-"""'사람들이 가장 궁금해할 만한' 경제 이슈 후보를 실제 공개 순위에서 모은다(주제 고르기 1단계).
+"""어제 '사람들이 가장 궁금해한' 이슈를 분야 제한 없이 실제 공개 순위에서 모은다(주제 고르기 1단계).
 
-usage: python3 -I blog/hot_topics.py [--all]
-  1) 네이버 뉴스 언론사별 '많이 본 뉴스'(경제지 각 상위 5개) — 사람들이 실제로 많이 클릭한 기사
-  2) 네이버 뉴스 '댓글 많은 뉴스' 중 경제 낱말이 든 기사 — 사람들이 할 말이 많은 이슈
-  3) 구글 트렌드 한국 급상승 검색어(대략 검색량 포함) — 사람들이 직접 찾아본 낱말
-  마지막에 경제 기사 제목의 낱말 빈도를 묶어 보여 준다.
-숫자(순위·검색량)는 이 출력에 있는 것만 근거로 쓴다. 지어내지 않는다.
+usage: python3 -I blog/hot_topics.py [--econ]
+  1) 네이버 '많이 본 뉴스'(언론사 80여 곳 × 상위 5개)에서 여러 언론사에 겹친 이슈(낱말 묶음) 순위
+  2) 네이버 '댓글 많은 뉴스'에서 겹친 이슈 순위 — 사람들이 할 말이 많은 이슈
+  3) 구글 트렌드 한국 급상승 검색어(대략 검색량)
+  '언론사 수'가 많을수록 어제 가장 뜨거웠던 이슈다. 사건·사고(사망·범죄 등)는 [주의] 표시: 피해자·사생활·추측을 다루지 않는다.
+  --econ 을 주면 예전처럼 경제 낱말이 든 기사만 따로 보여 준다.
+숫자(순위·언론사 수·검색량)는 이 출력에 있는 것만 근거로 쓴다. 지어내지 않는다.
 """
 import html, re, sys, urllib.request
-from collections import Counter
+from collections import Counter, defaultdict
 
 UA = {'User-Agent': 'Mozilla/5.0 (blog topic research)'}
-ECON_PRESS = ['한국경제', '매일경제', '머니투데이', '서울경제', '이데일리', '헤럴드경제', '아시아경제', '파이낸셜뉴스',
-              '조선비즈', '비즈워치', 'SBS Biz', '한국경제TV', '매경이코노미', '한경비즈니스', '이코노미스트', '조세일보']
-ECON_WORDS = ('금리 환율 코스피 코스닥 증시 주가 주식 유가 원유 반도체 수출 수입 무역 물가 부동산 아파트 집값 전세 대출 '
-              '연금 세금 관세 달러 원화 엔화 비트코인 코인 금값 실적 연준 한은 기준금리 국채 채권 엔비디아 삼성전자 하이닉스 '
-              '테슬라 애플 AMD 인텔 나스닥 다우 S&P 월가 뉴욕증시 경제 경기침체 경기둔화 고용 실업 소비 투자 펀드 ETF 배당 상장 공모 '
-              '은행 보험 카드 월급 임금 최저임금 예산 재정 적자 흑자 GDP 성장률 인플레 부채 가계 기업 매출 영업이익').split()
+SENSITIVE = '사망 숨져 숨진 숨졌 살해 살인 흉기 피살 성폭 성범죄 자살 극단 투신 실종 시신 학대 폭행 참사 유족'.split()
+STOP = set('''속보 단독 종합 영상 사진 포토 자막뉴스 현장 오늘 어제 내일 이번 지난 올해 내년 이후 이전 관련 위해 대한 통해 때문 정도 가장 모두 다시
+ 결국 무슨 일이 왜 이유 이게 그냥 진짜 만에 만원 억원 조원 달러 대해 발표 공개 논란 확인 사실 전망 분석 우려 기대 가능성 상황 문제 여부 이상 이하
+ 하는 하고 했다 한다 있다 없다 된다 됐다 위한 대로 까지 부터 에서 으로 에게 the and 기자 뉴스 보도 입장 발언 주장 이날 당시 최대 최고 최초 역대'''.split())
+ECON_WORDS = ('금리 환율 코스피 코스닥 증시 주가 주식 유가 원유 반도체 수출 물가 부동산 아파트 집값 전세 대출 연금 세금 관세 달러 비트코인 '
+              '금값 실적 연준 한은 국채 경제 고용 소비 투자 ETF 배당 은행 보험 월급 임금 예산 재정 GDP 성장률').split()
 
 
 def get(url):
-    req = urllib.request.Request(url, headers=UA)
-    with urllib.request.urlopen(req, timeout=20) as r:
+    with urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=20) as r:
         b = r.read()
-    m = re.search(rb'charset=["\']?([\w-]+)', b[:5000])
-    enc = (m.group(1).decode() if m else 'utf-8').lower()
-    try:
-        return b.decode('euc-kr' if enc in ('euc-kr', 'ks_c_5601-1987') else enc)
-    except UnicodeDecodeError:
+    for enc in ('utf-8', 'euc-kr', 'cp949'):
         try:
-            return b.decode('euc-kr')
+            return b.decode(enc)
         except UnicodeDecodeError:
-            return b.decode('utf-8', 'replace')
-
-
-def is_econ(title):
-    return any(w in title for w in ECON_WORDS)
+            pass
+    return b.decode('utf-8', 'replace')
 
 
 def naver_boxes(url):
@@ -47,8 +40,61 @@ def naver_boxes(url):
         if not m:
             continue
         items = re.findall(r'<a href="(https://n\.news\.naver\.com/article/[^"]+)"[^>]*class="list_title[^"]*"[^>]*>([^<]+)</a>', box)
-        out.append((html.unescape(m.group(1)).strip(), [(html.unescape(x).strip(), u.split('?')[0]) for u, x in items]))
+        out.append((html.unescape(m.group(1)).strip(), [(html.unescape(x).strip(), u.split('?')[0]) for u, x in items[:5]]))
     return out
+
+
+def tokens(title):
+    t = re.sub(r'\[[^\]]*\]', ' ', title)
+    ws = set()
+    for w in re.findall(r'[가-힣A-Za-z0-9·]{2,}', t):
+        w = re.sub(r'(은|는|을|를|의|에|와|과|도|으로|에서|까지|부터|이다|했다|한다|라며|라고|이란)$', '', w)
+        if len(w) >= 2 and w not in STOP and not w.isdigit():
+            ws.add(w)
+    return ws
+
+
+def clusters(boxes, top=12):
+    """같은 기사들에 함께 나오는 낱말은 한 이슈로 묶는다. 점수 = 그 이슈를 상위 5개에 올린 서로 다른 언론사 수."""
+    items_by_tok = defaultdict(set)
+    meta = {}
+    for name, items in boxes:
+        for rank, (title, url) in enumerate(items, 1):
+            key = (name, title)
+            meta[key] = (rank, name, title, url)
+            for w in tokens(title):
+                items_by_tok[w].add(key)
+    ranked = sorted(items_by_tok.items(), key=lambda kv: (-len({k[0] for k in kv[1]}), kv[0]))
+    groups = []  # [labels, item set]
+    for w, its in ranked:
+        if len({k[0] for k in its}) < 2:
+            break
+        for g in groups:
+            inter = len(its & g[1])
+            if inter / len(its) >= 0.5:
+                g[0].append(w); g[1] |= its
+                break
+        else:
+            groups.append([[w], set(its)])
+    out = []
+    for labels, its in groups:
+        presses = {k[0] for k in its}
+        hs = sorted(meta[k] for k in its)
+        out.append((' · '.join(labels[:4]), len(presses), hs))
+    out.sort(key=lambda x: -x[1])
+    return out[:top]
+
+
+def flag(title):
+    return ' [주의:사건·사고]' if any(s in title for s in SENSITIVE) else ''
+
+
+def print_clusters(label, boxes):
+    print(f'== {label} — 여러 언론사 상위 5개에 겹친 이슈(언론사 수 순)')
+    for w, n, hs in clusters(boxes):
+        print(f'  ◆ {w}  (언론사 {n}곳)')
+        for rank, name, title, url in hs[:3]:
+            print(f'     - [{name} {rank}위] {title}{flag(title)}  {url}')
 
 
 def trends():
@@ -63,51 +109,32 @@ def trends():
 
 
 def main():
-    show_all = '--all' in sys.argv
-    econ_titles = []
-    print('== 1) 네이버 많이 본 뉴스 — 경제지 상위 5개 (집계 시각은 네이버 페이지 기준)')
+    econ = '--econ' in sys.argv
     try:
-        boxes = naver_boxes('https://news.naver.com/main/ranking/popularDay.naver')
-        for name, items in boxes:
-            if name in ECON_PRESS:
-                hits = [(i, x, u) for i, (x, u) in enumerate(items[:5], 1) if show_all or is_econ(x)]
-                print(f'[{name}]' + ('' if hits else ' (상위 5개에 경제 낱말 기사 없음)'))
-                for i, x, u in hits:
-                    print(f'  {i}. {x}  {u}')
-                    econ_titles.append(x)
-        others = [(n, i, x, u) for n, items in boxes if n not in ECON_PRESS
-                  for i, (x, u) in enumerate(items[:5], 1) if is_econ(x)]
-        print(f'-- 일반 언론사 상위 5개 중 경제 낱말 기사 {len(others)}건')
-        for n, i, x, u in others[: (999 if show_all else 25)]:
-            print(f'  [{n} {i}위] {x}  {u}')
-            econ_titles.append(x)
+        pop = naver_boxes('https://news.naver.com/main/ranking/popularDay.naver')
+        print_clusters('1) 네이버 많이 본 뉴스', pop)
     except Exception as e:
-        print('  (가져오기 실패:', e, ')')
-
-    print('\n== 2) 네이버 댓글 많은 뉴스 — 경제 낱말 기사')
+        pop = []
+        print('  (많이 본 뉴스 가져오기 실패:', e, ')')
+    print()
     try:
-        for n, items in naver_boxes('https://news.naver.com/main/ranking/popularMemo.naver'):
-            for i, (x, u) in enumerate(items[:5], 1):
-                if is_econ(x):
-                    print(f'  [{n} {i}위] {x}  {u}')
+        memo = naver_boxes('https://news.naver.com/main/ranking/popularMemo.naver')
+        print_clusters('2) 네이버 댓글 많은 뉴스', memo)
     except Exception as e:
-        print('  (가져오기 실패:', e, ')')
-
+        print('  (댓글 많은 뉴스 가져오기 실패:', e, ')')
     print('\n== 3) 구글 트렌드 한국 급상승 검색어 (대략 검색량)')
     try:
-        for title, traffic, news in trends():
-            econ = is_econ(title) or any(is_econ(n) for n in news[:3])
-            if econ or show_all:
-                print(f"  {'★' if econ else ' '} {title} ({traffic}) — {news[0] if news else ''}")
+        for title, traffic, news in trends()[:20]:
+            n0 = news[0] if news else ''
+            print(f'  - {title} ({traffic}) — {n0}{flag(n0)}')
     except Exception as e:
         print('  (가져오기 실패:', e, ')')
-
-    print('\n== 경제 기사 제목 낱말 빈도(상위 25) — 여러 매체가 같이 다루는 이슈 찾기')
-    words = Counter()
-    for x in econ_titles:
-        for w in set(re.findall(r'[가-힣A-Za-z0-9&]{2,}', x)):
-            words[w] += 1
-    print('  ' + ', '.join(f'{w} {c}' for w, c in words.most_common(25)))
+    if econ and pop:
+        print('\n== (참고) 경제 낱말 기사')
+        for name, items in pop:
+            for i, (x, u) in enumerate(items, 1):
+                if any(w in x for w in ECON_WORDS):
+                    print(f'  [{name} {i}위] {x}  {u}')
 
 
 if __name__ == '__main__':

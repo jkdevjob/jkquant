@@ -2,15 +2,17 @@
 const {getEditor}=require('./ed_common');
 const fs=require('fs');
 const post=JSON.parse(fs.readFileSync(process.argv[2],'utf8')); const GO=process.argv.includes('--go');
+// 글마다 네이버 주제(post.topic, 예: '스타·연예인' '사회·정치' 'IT·컴퓨터'). 없으면 비즈니스·경제. 이름이 틀리면 설정 불일치로 발행하지 않는다.
+const TOPIC=post.topic||'비즈니스·경제';
 (async()=>{
   const {b,p,f}=await getEditor();
   const L=f.locator('[class*="layer_publish"]');
   if(!(await L.count())){ await f.locator('button[class*="publish_btn"]').first().click(); await p.waitForTimeout(2500); }
   // topic
   const topicNow=((await L.innerText()).match(/주제\n(.+)/)||[])[1]||'';
-  if(!/비즈니스·경제/.test(topicNow)){
+  if(!topicNow.includes(TOPIC)){
     await L.getByText(topicNow.replace(/\s*>\s*$/,'').trim(),{exact:false}).first().click(); await p.waitForTimeout(1200);
-    await f.getByText('비즈니스·경제',{exact:true}).first().click(); await p.waitForTimeout(300);
+    await f.getByText(TOPIC,{exact:true}).first().click(); await p.waitForTimeout(300);
     await f.getByRole('button',{name:'확인',exact:true}).last().click(); await p.waitForTimeout(1000);
   }
   // tags
@@ -23,7 +25,7 @@ const post=JSON.parse(fs.readFileSync(process.argv[2],'utf8')); const GO=process
     return {public:g('open_public'),comment:g('publish-option-comment'),sympathy:g('publish-option-sympathy'),search:g('publish-option-search'),setDefault:g('set-default'),notice:g('set-notice'),now:g('radio_time1'),
       cat:l.querySelector('button[class*="selectbox_button"]').innerText.trim(),topic:(l.innerText.match(/주제\n(.+)/)||[])[1],tags:[...l.querySelectorAll('span[id^="tag-item-"]')].map(x=>x.getAttribute('aria-label'))}});
   console.log(JSON.stringify(st));
-  const ok=st.public&&st.comment&&st.sympathy&&st.search&&!st.setDefault&&!st.notice&&st.now&&['핫이슈 분석','경제','게시판'].includes(st.cat)&&/비즈니스·경제/.test(st.topic||'')&&JSON.stringify(st.tags)===JSON.stringify(post.tags);
+  const ok=st.public&&st.comment&&st.sympathy&&st.search&&!st.setDefault&&!st.notice&&st.now&&['핫이슈 분석','경제','게시판'].includes(st.cat)&&(st.topic||'').includes(TOPIC)&&JSON.stringify(st.tags)===JSON.stringify(post.tags);
   await p.screenshot({path:'pub_settings.png'});
   if(!ok){ console.log('SETTINGS MISMATCH — not publishing'); await b.close(); return; }
   if(!GO){ console.log('settings ok, stopped before publish'); await b.close(); return; }

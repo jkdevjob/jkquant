@@ -69,7 +69,11 @@ for b in imgs:
     ext = f.rsplit('.', 1)[1].lower()
     ok({'png': 'PNG', 'jpg': 'JPEG', 'jpeg': 'JPEG'}.get(ext) == im.format, f'{f} format {im.format}')
     ok(b.get('caption', '').strip() != '', 'empty caption')
-    ok(b.get('links') and all(l['url'].startswith('https://') and 'example' not in l['url'] for l in b['links']), 'links')
+    if b.get('thumb'):
+        ok(b is imgs[0], 'thumbnail must be the first image (네이버 대표 이미지)')
+        ok(im.size[0] == im.size[1], f'thumbnail must be square {im.size}')
+    else:
+        ok(b.get('links') and all(l['url'].startswith('https://') and 'example' not in l['url'] for l in b['links']), 'links')
     print(f, im.format, im.size, len(data), 'bytes')
 
 text = ''.join(b['text'] for b in paras)
