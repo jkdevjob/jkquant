@@ -3,6 +3,9 @@ name: 부동산(클로드) 월간 자료·모의장부
 # 한국부동산원 월간 지수는 다음 달 중순(대략 15~20일)에 공표된다. KB 단지 시세는 매달 말 기준으로 바로 나온다.
 # 20일·27일 두 번 돌려 늦은 공표도 잡는다. 새 달이 없으면 커밋하지 않는다.
 # 장부는 덧붙이기만 한다(paper.mjs 가 지난 기록이 바뀌면 저장을 거부한다).
+# 지수 수집(R-ONE·ECOS·KB 지수)이 실패해도 단지 시세(KB)·분양·장부·시험은 계속 돈다(!cancelled()) —
+# 2026-10 두 번 모두 R-ONE 연결 끊김 한 번으로 뒤 단계가 전부 건너뛰어져 장부가 한 달도 쌓이지 못했다.
+# 실패한 단계는 그대로 빨간불로 남고, 커밋은 값 시험이 통과했을 때만 한다.
 on:
   schedule:
     - cron: "17 1 20 * *"   # 매달 20일 10:17 KST
@@ -19,7 +22,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150   # R-ONE 이 연결을 자주 끊어(2026-11 측정: 8번 중 2번, 15초 뒤 reset) 하나씩 재시도하며 받으면 한 시간 넘게 걸릴 수 있다
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,24 +36,30 @@ jobs:
           ECOS_KEY: ${{ secrets.ECOS_KEY }}
         run: python scripts/realestate_claude/collect.py
 
-      - name: 아파트 단지 시세·실거래(KB) 수집 — 대단지 84㎡
+      - name: 아파트 단지 시세·실거래(KB) 수집 — 대단지 84㎡ (지수 수집이 실패해도 돈다)
+        if: ${{ !cancelled() }}
         run: python scripts/realestate_claude/collect_apt.py
 
       - name: 신규 분양(청약홈) 수집 — 실패해도 지수·단지 갱신은 계속
+        if: ${{ !cancelled() }}
         continue-on-error: true
         run: python scripts/realestate_claude/collect_presale.py
 
-      - name: 모의장부 덧붙이기
+      - name: 모의장부 덧붙이기 (앞 단계가 실패해도 받은 자료로 돈다)
+        if: ${{ !cancelled() }}
         run: node scripts/realestate_claude/paper.mjs
 
       - name: 엔진·수집기 값 시험(실제 자료 포함) — 실패하면 커밋하지 않는다
+        id: tests
+        if: ${{ !cancelled() }}
         run: |
           node scripts/test_realestate_claude.cjs
           python scripts/realestate_claude/test_collect.py
           python scripts/realestate_claude/test_collect_apt.py
           python scripts/realestate_claude/test_collect_presale.py
 
-      - name: 커밋
+      - name: 커밋 — 값 시험이 통과했을 때만(앞 단계 실패는 빨간불로 남긴다)
+        if: ${{ !cancelled() && steps.tests.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail

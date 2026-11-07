@@ -145,5 +145,15 @@ A.main()
 ok("두 번째부터는 기본정보를 다시 묻지 않는다(새 단지만)", first_main == 600 and calls["main"] == first_main, (first_main, calls["main"]))
 ok("바뀐 게 없으면 파일을 다시 쓰지 않는다", os.path.getmtime(A.OUT) == mt)
 
+# 지금 달(KST)은 아직 바뀌는 값 — 시세·실거래 모두 지난달까지만
+import datetime as _dt
+import re as _re
+A.CUTOFF_YM = "202611"
+cut = A.sise_rows([{"기준년월": "202610", "매매일반거래가": 10}, {"기준년월": "202611", "매매일반거래가": 11}, {"기준년월": "202612", "매매일반거래가": 12}])
+ok("시세: 지금 달부터는 버린다(주 단위로 아직 바뀌는 값) — 지난달까지만", list(cut) == ["202610"], cut)
+cr = A.real_rows([{"계약시작년월일": "20261031", "매매실거래금액": 1}, {"계약시작년월일": "20261101", "매매실거래금액": 2}])
+ok("실거래: 지금 달 것은 버린다(아직 신고 중)", list(cr) == ["202610"], cr)
+ok("지금 달은 KST 로 센다", A.this_month_kst() == (_dt.datetime.now(_dt.timezone.utc) + _dt.timedelta(hours=9)).strftime("%Y%m") and _re.fullmatch(r"\d{6}", A.this_month_kst()))
+
 print("\n결과: %d PASS / %d FAIL" % (passed, failed))
 sys.exit(1 if failed else 0)

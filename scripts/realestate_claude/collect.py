@@ -21,6 +21,7 @@ import datetime as dt
 import json
 import os
 import sys
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -33,6 +34,8 @@ ECOS_URL = "https://ecos.bok.or.kr/api/StatisticSearch"
 RONE_KEY = os.environ.get("RONE_KEY", "").strip()
 ECOS_KEY = os.environ.get("ECOS_KEY", "").strip() or "sample"
 PAUSE = 0.12  # 공공 API 예의상 호출 간격(초)
+RONE_LOCK = threading.Lock()  # R-ONE 은 한 번에 하나씩 — 동시에 여러 연결을 열면 서버가 연결을 끊는다(2026-10 GitHub 실행 두 번 모두)
+EXIT_PARTIAL = 2  # 시계열 일부가 실패했을 때의 종료 코드(받은 것은 저장하되 실패를 숨기지 않는다)
 
 # 지역: 키 → (이름, 묶음, {코드 체계: 코드}, R-ONE 지역 전체이름). 표마다 분류 번호가 다르다.
 # 받은 행의 지역 이름이 마지막 값과 다르면 수집을 멈춘다(번호가 밀려 다른 지역을 받는 사고 방지).
@@ -141,7 +144,7 @@ def ym_dash(ym):
     return ym[:4] + "-" + ym[4:]
 
 
-def get_json(url, tries=5, headers=None):
+def get_json(url, tries=6, headers=None):
     last = None
     for a in range(tries):
         try:
@@ -175,8 +178,9 @@ def rone_call(stat, where, s, e, out, expect=None, cycle="MM"):
     q.update(where)
     if RONE_KEY:
         q["KEY"] = RONE_KEY
-    d = get_json(RONE_URL + "?" + urllib.parse.urlencode(q))
-    time.sleep(PAUSE)
+    with RONE_LOCK:
+        d = get_json(RONE_URL + "?" + urllib.parse.urlencode(q))
+        time.sleep(PAUSE)
     t = d.get("SttsApiTblData")
     if t and len(t) > 1:
         rows = t[1].get("row", [])
@@ -354,6 +358,29 @@ def refresh(name, old, fetch_range, full, now_ym, log):
     return to_series(old_rows)
 
 
+def collect_one(t, full, now_ym, log, failed):
+    """한 시계열 받기 → 담을 곳에 넣는다. 받다가 실패하면 그 시계열은 옛 자료 그대로 두고 failed 에 적는다 —
+    한 시계열의 연결 오류가 나머지(지수·금리·KB) 갱신까지 막지 않게 한다. 실패는 끝에 종료 코드로 알린다."""
+    name, bucket, key, fr = t
+    try:
+        ser = refresh(name, bucket.get(key), fr, full, now_ym, log)
+    except Exception as e:  # noqa: BLE001 — 어떤 오류든 이 시계열만 포기한다
+        log.append({"series": name, "event": "failed", "error": str(e)[:200]})
+        failed.append(name)
+        print(name, "실패 — 옛 자료 그대로:", str(e)[:200], file=sys.stderr, flush=True)
+        return t, None
+    if not ser:  # 설정한 시계열인데 자료가 없다 — 코드가 그 표에 없을 수 있다
+        log.append({"series": name, "event": "empty"})
+    else:
+        bucket[key] = ser
+    print(name, len(from_series(ser)), "months", file=sys.stderr, flush=True)
+    return t, ser
+
+
+def exit_code(failed):
+    return EXIT_PARTIAL if failed else 0
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--full", action="store_true")
@@ -367,7 +394,7 @@ def main():
         with open(a.out, encoding="utf-8") as f:
             old = json.load(f)
     only = set(x for x in a.only.split(",") if x)
-    now_ym = dt.datetime.utcnow().strftime("%Y%m")
+    now_ym = dt.datetime.now(dt.timezone.utc).strftime("%Y%m")
     log = []
     series = old.get("series") or {}
 
@@ -425,26 +452,20 @@ def main():
                     del series[bucket_name][rk]
                     log.append({"series": "%s:%s" % (bucket_name, rk), "event": "dropped"})
 
-    def run(t):
-        name, bucket, key, fr = t
-        ser = refresh(name, bucket.get(key), fr, a.full, now_ym, log)
-        if not ser:  # 설정한 시계열인데 자료가 없다 — 코드가 그 표에 없을 수 있다
-            log.append({"series": name, "event": "empty"})
-        print(name, len(from_series(ser)), "months", file=sys.stderr, flush=True)
-        return t, ser
-
-    # 시계열마다 따로 받으므로 동시에 받아도 된다(한 시계열 안에서는 순서대로).
+    failed = []
+    # 시계열마다 따로 받으므로 동시에 받아도 된다(한 시계열 안에서는 순서대로 · R-ONE 은 RONE_LOCK 으로 하나씩).
     with cf.ThreadPoolExecutor(max_workers=max(1, a.jobs)) as ex:
-        for (name, bucket, key, _), ser in ex.map(run, tasks):
-            if ser:
-                bucket[key] = ser
+        for _ in ex.map(lambda t: collect_one(t, a.full, now_ym, log, failed), tasks):
+            pass
+    if failed:
+        print("실패한 시계열 %d개(옛 자료 그대로): %s" % (len(failed), ", ".join(failed)), file=sys.stderr)
 
-    if old and not log and not a.full:
+    if old and not [x for x in log if x["event"] != "failed"] and not a.full:
         print("변경 없음 — 파일을 다시 쓰지 않는다", file=sys.stderr)
-        return
+        return exit_code(failed)
     doc = {
         "schema": 1,
-        "fetchedAt": dt.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+        "fetchedAt": dt.datetime.now(dt.timezone.utc).replace(microsecond=0, tzinfo=None).isoformat() + "Z",
         "sources": {
             "rone": {"name": "한국부동산원 부동산통계정보(R-ONE) 오픈API", "url": "https://www.reb.or.kr/r-one/",
                      "tables": RONE_TABLES, "note": "월간 조사 · 다음 달 중순 공표"},
@@ -466,7 +487,8 @@ def main():
         json.dump(doc, f, ensure_ascii=False, separators=(",", ":"))
     os.replace(tmp, a.out)
     print("saved", a.out, "changes:", len(log), file=sys.stderr)
+    return exit_code(failed)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

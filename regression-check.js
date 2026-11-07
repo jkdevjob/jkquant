@@ -12386,6 +12386,17 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
      &&!/const EVENTS=\[/.test(eng)&&!/E\.EVENTS/.test(ui));
   const st=['run: python scripts/realestate_claude/collect.py','run: python scripts/realestate_claude/collect_apt.py','run: python scripts/realestate_claude/collect_presale.py','run: node scripts/realestate_claude/paper.mjs','node scripts/test_realestate_claude.cjs','python scripts/realestate_claude/test_collect_apt.py','git commit -m'].map(x=>wfl.indexOf(x));
   ok('월간 자동 갱신: 지수 수집 → 단지 수집 → 분양 수집 → 장부 덧붙이기 → 값 시험 → 커밋 순서(시험 실패면 커밋 안 함)', st.every((x,i)=>x>0&&(i===0||x>st[i-1]))&&/cron:/.test(wfl));
+  { // 지수 수집(R-ONE)이 실패해도 단지·장부·시험은 돌고(!cancelled), 커밋은 시험 통과에만 묶인다 — 2026-10 두 번 전부 멈춘 뒤 고침
+    const stepOf=cmd=>{ const i=wfl.indexOf(cmd); return i<0?'':wfl.slice(wfl.lastIndexOf('      - name:',i),i); };
+    const later=['run: python scripts/realestate_claude/collect_apt.py','run: python scripts/realestate_claude/collect_presale.py','run: node scripts/realestate_claude/paper.mjs','node scripts/test_realestate_claude.cjs'];
+    const commit=stepOf('git commit -m');
+    ok('월간 자동 갱신: 지수 수집이 실패해도 단지 수집·분양·장부·값 시험은 돈다(!cancelled()) · 커밋은 값 시험 통과(steps.tests.outcome)에만',
+       later.every(c=>/if: \$\{\{ !cancelled\(\) \}\}/.test(stepOf(c)))&&/id: tests/.test(stepOf('node scripts/test_realestate_claude.cjs'))
+       &&/if: \$\{\{ !cancelled\(\) && steps\.tests\.outcome == 'success' \}\}/.test(commit)&&!/continue-on-error/.test(stepOf('run: python scripts/realestate_claude/collect.py')));
+    const col=fs.readFileSync(__d+'/scripts/realestate_claude/collect.py','utf8');
+    ok('지수 수집기: 한 시계열 실패는 그 시계열만(옛 자료 그대로·기록) · 끝에 종료 코드 2 · R-ONE 은 잠금으로 하나씩',
+       /def collect_one\(/.test(col)&&/"event": "failed"/.test(col)&&/EXIT_PARTIAL = 2/.test(col)&&/sys\.exit\(main\(\)\)/.test(col)&&/with RONE_LOCK:/.test(col)&&!/utcnow\(/.test(col));
+  }
   const E2=require(__d+'/realestate-claude-engine.js');
   const ledgers=[['paper.json','rec-wf-1'],['paper-rec-wf-2.json','rec-wf-2']].map(([f,sv])=>[f,sv,JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/'+f,'utf8'))]);
   ok('모의장부 2개(rec-wf-1 첫 장부 · rec-wf-2 새 장부): 파일마다 제 전략 버전 · 당시 가정 · 결정마다 버전/판단 자료 달 · 그 버전 후보만',
@@ -12404,9 +12415,11 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        return PA.strategyVersion===sv&&PA.params&&(PA.params.pick==null?sv===XA.STRATEGY:PA.params.pick===o.pick)&&PA.params.minHold===o.minHold&&PA.params.buyMin===o.buyMin&&PA.params.capital===o.capital
          &&/^\d{4}-\d{2}$/.test(PA.startedData)&&Array.isArray(PA.months)&&Array.isArray(PA.trades); }));
   const AP=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/apt.json','utf8'));
-  ok('아파트 원자료(KB): 대단지 30곳 이상 · 단지마다 2004~ 월 시세(하한·일반·상한·전세) · 실거래 월 요약',
+  const kstNow=new Date(Date.now()+9*3600e3),thisYm=kstNow.getUTCFullYear()*12+kstNow.getUTCMonth();
+  ok('아파트 원자료(KB): 대단지 30곳 이상 · 단지마다 2004~ 월 시세(하한·일반·상한·전세) · 실거래 월 요약 · 지금 달(아직 바뀌는 값)은 없음',
      AP.universe.length>=30&&AP.universe.every(u=>u.units>=AP.minUnits&&AP.sise[u.id]&&AP.sise[u.id].mid.length===AP.sise[u.id].jeonse.length)
-     &&Object.values(AP.sise).some(x=>x.start==='2004-01')&&Object.keys(AP.real).length>=30);
+     &&Object.values(AP.sise).some(x=>x.start==='2004-01')&&Object.keys(AP.real).length>=30
+     &&Object.values(AP.sise).every(x=>E2.ymk(x.start)+x.mid.length-1<thisYm)&&Object.values(AP.real).every(x=>E2.ymk(x.start)+x.n.length-1<thisYm));
   const S=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/series.json','utf8')).series;
   ok('원자료(KB·ECOS): 대전 아파트 1986~ · 입주물량(예정 포함) · 매수우위 · 미분양 · 인허가',
      S.kbSale&&S.kbSale.daejeon&&S.kbSale.daejeon.start==='1986-01'&&S.movein&&S.movein.daejeon&&E2.ymk(S.movein.daejeon.start)+S.movein.daejeon.v.length-1>E2.ymk(S.sale.daejeon.start)+S.sale.daejeon.v.length-1
