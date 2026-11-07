@@ -12,6 +12,7 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
   let lastK=-1; const wk=d=>Math.floor((Date.parse(d)/864e5+3)/7), isStart=(k,f)=>k+1<P.dates.length&&k>=0&&f(P.dates[k+1])!==f(P.dates[k]);
   const MO=p.gRebMo||1, sh=d=>{ const y=+d.slice(0,4), m=+d.slice(5,7); return [m>=MO?y:y-1,(m-MO+12)%12]; };   // gRebMo: 정기 맞춤을 몇 월부터 셀지(기본 1월) — 달력 운 검사용
   const PER={m:d=>d.slice(0,7), q:d=>{ const [y,m]=sh(d); return y+'-'+Math.floor(m/3); }, h:d=>{ const [y,m]=sh(d); return y+'-'+Math.floor(m/6); }, y:d=>String(sh(d)[0]), y2:d=>String(Math.floor(sh(d)[0]/2))};
+  const rmF=p.reMA?ind.ma(P.C[G],p.reMA):null;   // 변형(11-08): 긴 OFF 뒤 빠른 재진입의 빠른 이평
   const gmL=p.maEns?(p.maList||[200,225,250]).map(n=>ind.ma(P.C[G],n)):null; let lastSt=null;   // 변형(11-07): Guard 이평 앙상블 — 'avg' 이평들의 평균선 · 'vote' 이평마다 히스테리시스 상태를 두고 다수결 · sbDnOffN 용 st 보관
   const rv=p.down?dvol(P.C[R],p.look):p.look2?(()=>{ const a=ind.vol(P.C[R],p.look), b=ind.vol(P.C[R],p.look2); return a.map((x,i)=>(x==null||b[i]==null)?null:Math.max(x,b[i])); })():ind.vol(P.C[R],p.look), gm=ind.ma(P.C[G],p.ma), rm=p.rMA?ind.ma(P.C[R],p.rMA):null;
   const rvDn=p.lookDn?ind.vol(P.C[R],p.lookDn):null;   // 내릴 때만 빠른 σ: 목표 = min(σ look 목표, σ lookDn 목표) 가 지금 비중보다 낮으면 그쪽으로(올릴 때는 σ look 그대로)
@@ -20,7 +21,8 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
   const rs=p.offRate?(()=>{ const R=p.offRate, m={}; JSON.parse(fs.readFileSync(path.join(__dirname,'data',(R.sym||'TNX')+'.json'))).series.forEach(x=>{ if(x.close>0) m[x.date]=x.close; });
     let last=null; const y=P.dates.map(d=>{ if(m[d]!=null) last=m[d]; return last; }); if(R.mode==='yoy'){ const L=R.lag||252; return y.map((v,k)=>k>=L&&v!=null&&y[k-L]!=null?v<y[k-L]:false); }
     const ma=ind.ma(y.map(v=>v??0),R.ma||200); return y.map((v,k)=>v!=null&&ma[k]>0?v<ma[k]*(1-(R.band||0)):false); })():null;
-  return {assets:[R,GA].concat(extra?[extra.sym]:[]).concat(p.offAsset?[p.offAsset]:[]), warm:Math.max(p.ma,...(gmL?(p.maList||[200,225,250]):[]),p.look+1,(p.lookDn||0)+1,(p.look2||0)+1,p.rMA||0,extra?(p.dMA||200):0)+1,
+  return {deferDec:p.deferDec?Object.assign({},p.deferDec,{sym:R}):undefined, harvest:p.harvest,   // px 옵션 통과(11-08) — 12월 이연 · 연말 세금 최적화(planx VARS 로 쓰려고)
+    assets:[R,GA].concat(extra?[extra.sym]:[]).concat(p.offAsset?[p.offAsset]:[]), warm:Math.max(p.ma,p.reMA||0,...(gmL?(p.maList||[200,225,250]):[]),p.look+1,(p.lookDn||0)+1,(p.look2||0)+1,p.rMA||0,extra?(p.dMA||200):0)+1,
     bandOf:(s,t,c)=>{ if(s!==R) return ((s===GA||(p.offAsset&&s===p.offAsset))&&t>0&&c>0)?(p.gReb?(isStart(lastK,PER[p.gReb])?(p.gRebB??0.02):Infinity):((p.gsbDn!=null&&t<c)?p.gsbDn:(p.gsbUp!=null&&t>c)?p.gsbUp:(p.gsb??0.02))):0.02;   // gReb: TQQQ 를 정해진 때(월 m·분기 q·반기 h·연 y 첫 거래일)만 목표로 — 그날 gRebB 넘게 벌어졌을 때
       if((p.wkAll&&!isStart(lastK,wk))||(p.wkDn&&t<c&&!isStart(lastK,wk))||(p.moDn&&t<c&&!isStart(lastK,d=>d.slice(0,7)))) return Infinity;
       if((p.wkUp&&t>c&&!isStart(lastK,wk))||(p.moUp&&t>c&&!isStart(lastK,d=>d.slice(0,7)))||(p.qUp&&t>c&&!isStart(lastK,PER.q))) return Infinity;   // TECL 올릴 때만 주(wkUp)·월(moUp)·분기(qUp) 첫 거래일에
@@ -28,11 +30,15 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
       return ((p.sbDn!=null&&t<c&&dnOk)?p.sbDn:(p.sbUp!=null&&t>c)?p.sbUp:p.sb)*p.tw; },   // TECL 비중: 내릴 때 sbDn · 올릴 때 sbUp (없으면 sb)
     target(k,cur,st){ lastK=k; const s=rv[k]; let w=Math.min(p.wMax??1,(p.s0*p.s0)/(s*s));   // wMax: TECL 슬리브 상한(기본 1) — 1 보다 크면 잔잔할 때만 더 싣는다
       lastSt=st; const c=P.C[G][k], m=(gmL&&p.maEns==='avg')?gmL.reduce((a,x)=>a+x[k],0)/gmL.length:gm[k]; if(st.g===undefined) st.g=c>m;
-      if(gmL&&p.maEns==='vote'){ st.gv=st.gv||gmL.map(x=>c>x[k]); gmL.forEach((x,i)=>{ const mm=x[k]; if(c>mm*(1+(p.gbOn??p.gb))) st.gv[i]=true; else if(c<mm*(1-offB(k))) st.gv[i]=false; }); st.g=st.gv.filter(Boolean).length*2>gmL.length; }   // 다수결: 이평마다 같은 밴드로 ON/OFF 를 두고 과반이 ON 이면 ON
+      if(p.reN&&st.fast){   // 빠른 모드(11-08): 225일선 아래라도 빠른 조건이 깨질 때만 끈다 · 225일선 +gbOn 위로 오르면 보통 모드로
+        if(c>m*(1+(p.gbOn??p.gb))) st.fast=false;
+        else if((p.reMA&&rmF[k]>0)?c<rmF[k]*(1-(p.gbOff??p.gb)):c<st.reLow){ st.g=false; st.fast=false; st.offLow=c; } }
+      else if(gmL&&p.maEns==='vote'){ st.gv=st.gv||gmL.map(x=>c>x[k]); gmL.forEach((x,i)=>{ const mm=x[k]; if(c>mm*(1+(p.gbOn??p.gb))) st.gv[i]=true; else if(c<mm*(1-offB(k))) st.gv[i]=false; }); st.g=st.gv.filter(Boolean).length*2>gmL.length; }   // 다수결: 이평마다 같은 밴드로 ON/OFF 를 두고 과반이 ON 이면 ON
       else if(p.offN||p.offHard){   // 시간 확인: 이평×(1−gbOff) 아래가 offN 일 연속일 때만 나감 · offHard 아래로 떨어지면 바로 나감
         st.n=(c<m*(1-(p.gbOff??p.gb)))?(st.n||0)+1:0;
         if(c>m*(1+(p.gbOn??p.gb))) st.g=true; else if((p.offN&&st.n>=p.offN)||(p.offHard&&c<m*(1-p.offHard))) st.g=false; }
       else if(c>m*(1+(p.gbOn??p.gb))) st.g=true; else if(c<m*(1-offB(k))) st.g=false;   // 들어갈 때(gbOn)·나올 때(gbOff) 밴드를 따로 줄 수 있다
+      if(p.reN){ if(!st.g){ st.offLow=Math.min(st.offLow??Infinity,c); if((st.od||0)>=p.reN&&((p.reMA&&rmF[k]>0&&c>rmF[k]*(1+(p.gbOn??p.gb)))||(p.reUp&&c>=st.offLow*(1+p.reUp)))){ st.g=true; st.fast=true; st.reLow=st.offLow; } } else if(!st.fast) st.offLow=Infinity; }   // 변형(11-08): OFF 가 reN 신호일 넘으면 TQQQ > reMA일선×(1+gbOn) 또는 OFF 최저가×(1+reUp) 에서 켠다
       if(p.full&&!st.g) w=0;                       // 변형: Guard OFF 면 TECL 도 끔
       if(p.offMul!=null&&!st.g) w*=p.offMul;       // 변형: Guard OFF 동안 TECL 목표에 offMul 곱함(일부만 줄임)
       st.od=st.g?0:(st.od||0)+1; if(p.offLongN&&!st.g&&st.od>p.offLongN) w*=(p.offLongK??0.5);   // 변형(11-04): Guard OFF 가 offLongN 신호일 넘게 이어지면 TECL 목표 × offLongK — 긴 하락장만 줄이기

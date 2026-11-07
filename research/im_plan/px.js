@@ -15,6 +15,8 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
   let cash=cap, q={}, basis={}, yearPnl=0, yr=null, lastIrx=0, prevDate=null; syms.forEach(s=>{q[s]=0;basis[s]=0;});
   const eq=[]; const KRW=1350, DED=250e4/KRW; let turn=0;
   const st={}; // 규칙 상태(히스테리시스 등)
+  // o.deferDec(11-08): {sym, days, taxable} — 그해 남은 거래일이 days 보다 적을 때 sym 의 '이익 나는' 매도를 다음 해 첫 거래일로 미룬다(목표는 그대로라 해가 바뀌면 보통 규칙이 다시 판다). taxable 이면 공제를 넘는 이익일 때만. 안 주면 기존과 같다.
+  const remY=o.deferDec?(()=>{ const r=new Array(dates.length).fill(0); for(let k=dates.length-2;k>=0;k--) r[k]=dates[k+1].slice(0,4)===dates[k].slice(0,4)?r[k+1]+1:0; return r; })():null; let deferN=0;
   for(let k=i0;k<=i1;k++){ const d=dates[k];
     if(irx[d]!=null) lastIrx=irx[d];
     if(prevDate&&cash>0){ const gap=Math.max(1,Math.round((Date.parse(d)-Date.parse(prevDate))/864e5)); cash+=cash*Math.max(0,lastIrx/100-0.0009)*(tax?(1-0.154):1)*gap/365; }
@@ -27,7 +29,9 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     // 매도 먼저
     // o.frac: 소수 주 — 합성 자료처럼 1주 값이 원금보다 비쌀 때(2000년 합성 TQQQ 67,137$) 정수 주가 매매 자체를 막는 왜곡을 없앤다
     const shares=x=>o.frac?x:Math.floor(x);   // o.cnt={}: 매매 기록(종목별 [날짜, 's'|'b', 금액/총자산]) — 안 주면 계산은 그대로
-    for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n; cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'s',g/tot]); } }
+    for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n;
+      if(o.deferDec&&s===o.deferDec.sym&&want>0&&remY[k]<o.deferDec.days){ const gain=g-g*fee-b; if(gain>0&&(!o.deferDec.taxable||yearPnl+gain>DED)){ deferN++; continue; } }   // 12월 이연(전량 청산 = Guard·규칙 0 목표는 미루지 않음)
+      cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'s',g/tot]); } }
     for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want>q[s]){ const n=Math.min(want-q[s],shares(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'b',g/tot]); } } }
     // o.harvest(11-07): 연말(그해 마지막 거래일 종가) 실현손익을 250만원 공제(DED)에 맞춘다 — 공제 미달이면 평가이익을 팔고 바로 되사 공제를 채움(원가 상향 · 미래 세금↓) · 공제 초과면 평가손실을 팔고 되사 상계(이월공제 없음 → 공제까지만). 수수료 양쪽. 안 주면 기존과 같다.
     if(o.harvest&&(k===i1||dates[k+1].slice(0,4)!==d.slice(0,4))){ const H=o.harvest; let gH=0,lH=0;
@@ -40,7 +44,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     eq.push([d,cash+syms.reduce((a,s)=>a+q[s]*px[s],0)]); }
   if(o.liq){ for(const s of syms){ if(q[s]>0){ const g=q[s]*C[s][i1]; yearPnl+=g-g*fee-basis[s]; eq[eq.length-1][1]-=g*fee; } } }   // liq: 끝날 전부 판다 — 수수료 + 그 이익을 올해 실현분에 넣어 아래 세금
   { const _t=(tax&&yearPnl>0&&o.endTax!==false)?Math.max(0,yearPnl-DED)*0.22:0; eq[eq.length-1][1]-=_t; if(o.ylog) o.ylog.push([yr,yearPnl,_t,eq[eq.length-1][0]]); }   // 끝날 올해 실현이익 세금을 미리 뺀다(청산 가치) — 진행 중 구간 낙폭을 잴 때는 endTax:false
-  return {eq,turn}; }
+  return {eq,turn,deferN}; }
 function stats(eq,cap){ const a=eq[0][0], b=eq[eq.length-1][0], fin=eq[eq.length-1][1]; const yrs=(Date.parse(b)-Date.parse(a))/(365.25*864e5);
   let pk=0,m=0; eq.forEach(([,v])=>{ if(v>pk)pk=v; else m=Math.max(m,(pk-v)/pk); }); return {cagr:(Math.pow(Math.max(fin,1e-9)/cap,1/yrs)-1)*100, mdd:m*100, fin}; }
 const q=(a,p)=>{ const b=[...a].sort((x,y)=>x-y); return b[Math.floor(p*(b.length-1))]; };
