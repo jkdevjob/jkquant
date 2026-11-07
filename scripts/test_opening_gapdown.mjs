@@ -1533,5 +1533,40 @@ t("텔레그램 엔드포인트: 실제 매수·매도(op=event, [클로드 연�
     assert.equal((await post({ op: "nope" })).status, 400);
   } finally { globalThis.fetch = old; }
 });
+
+t("R31-가 그림자(calib_e4_p5): 통과 = 예상 ≤−4% 수 ≥7 · 고르기 = 예상 ≤−5% 깊은 3 · 08:58 값 우선 · 바닥 −29 · 기록만(주문 · 메인 그대로)", async () => {
+  await Promise.all(pending.slice());                                         // 전역 fetch 를 바꾸므로 앞 시험이 다 끝난 뒤에
+  const rule = { gapMax: -2, gapFloor: -29, picks: 3 };
+  const c = (code, g) => ({ code, name: code, expectedPrice: 1000 * (1 + g / 100), basePrice: 1000, expectedGapPct: g });
+  const first = [c("A", -15.5), c("B", -15.1), c("C", -10.2), c("D", -5), c("E", -4.5), c("F", -4), c("G", -3.9), c("H", -2.5), c("I", -1), c("J", -30)];
+  const sh = F.shadowDecision(first, [], rule);
+  assert.deepEqual([sh.variant, sh.qualified, sh.signal, sh.source, sh.picks.map(x => x.code)], ["calib_e4_p5", 6, false, "first", ["A", "B", "C"]]);   // ≤−4: A B C D E F = 6 (G −3.9 · J −30 제외) → 7 미만
+  assert.deepEqual(sh.rule, { name: "calib_e4_p5", breadthGapMax: -4, minQ: 7, pickGapMax: -5, picks: 3, gapFloor: -29 });
+  const sh7 = F.shadowDecision(first.concat([c("K", -4.2)]), [], rule);
+  assert.deepEqual([sh7.qualified, sh7.signal], [7, true]);                                                 // 경계 7 은 신호
+  assert.deepEqual([F.choosePicks(first, [], rule).qualified, F.choosePicks(first, [], rule).picks.map(x => x.code)], [8, ["A", "B", "C"]]);   // 메인은 그대로(≤−2 수 8)
+  const fresh = [c("A", -5.3), c("B", -1.0), c("C", -9.0), c("D", -4.0)];
+  const fr = F.shadowDecision(first, fresh, rule);
+  assert.deepEqual([fr.source, fr.picks.map(x => x.code)], ["recheck", ["C", "A"]]);                        // 08:58 값으로 · D(−4.0) 는 −5 기준 미달 → 2종목
+  assert.deepEqual(F.choosePicks(first, fresh, rule).picks.map(x => x.code), ["C", "A", "D"]);               // 메인 고르기는 D 포함 — 그림자가 바꾸지 않는다
+  assert.equal(F.shadowDecision(first, [], { picks: 3 }), null);                                             // 명단 규칙(바닥) 없으면 그림자도 없음
+  assert.deepEqual(F.SHADOW_CALIB, { name: "calib_e4_p5", breadthGapMax: -4, minQ: 7, pickGapMax: -5, picks: 3 });
+  // preopen 기록: picks · breadth 는 그대로, shadow 칸만 더해진다(주문은 SCALPING_VTS_AUTO=0 으로 막음 · 명단은 가짜 fetch)
+  const wl = { strategyVersion: "opening_gapdown_v1", basedOn: "2026-10-13", rule, names: first.map(x => ({ code: x.code, name: x.code, market: "KOSDAQ", rsi14: 25, prevClose: 1000, prevAmountKrw: 5e9 })) };
+  const old = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, json: async () => wl });
+  try {
+    const rows = first.map(x => ({ code: x.code, expectedPrice: x.expectedPrice, basePrice: 1000 }));
+    const re = fresh.map(x => ({ code: x.code, expectedPrice: x.expectedPrice, basePrice: 1000 }));
+    const out = await F.preopen("https://o", { SCALPING_VTS_AUTO: "0" }, "2026-10-14", rows, re);
+    assert.deepEqual([out.picks.map(x => x.code), out.breadth.qualified, out.decisionReason, out.ordersSkipped, out.orders], [["C", "A", "D"], 8, "rsi14_prev<30+expected_gap<=-2%+deepest3", "SCALPING_VTS_AUTO=0", []]);
+    assert.ok(out.shadow && typeof out.shadow === "object", "shadow 칸이 기록돼야 한다: " + JSON.stringify(out.shadow));
+    assert.deepEqual([out.shadow.variant, out.shadow.qualified, out.shadow.signal, out.shadow.source, out.shadow.picks.map(x => x.code)], ["calib_e4_p5", 6, false, "recheck", ["C", "A"]]);
+    near(out.shadow.picks[0].expectedGapPct, -9);                                                           // 갭은 Pages 가 다시 계산한 값(예상가 ÷ 기준가)
+    const none = await F.preopen("https://o", { SCALPING_VTS_AUTO: "0" }, "2026-10-14", rows.filter(r => r.code === "I"), []);
+    assert.ok(none.shadow && typeof none.shadow === "object", "메인이 안 골라도 shadow 칸은 있어야 한다");
+    assert.deepEqual([none.picks, none.decisionReason, none.shadow.qualified, none.shadow.picks], [[], "no_expected_gap_down", 0, []]);   // 메인이 안 골라도 그림자는 기록된다
+  } finally { globalThis.fetch = old; }
+});
 await Promise.all(pending);
 console.log(`opening gap-down JS: ${n} ALL PASS`);
