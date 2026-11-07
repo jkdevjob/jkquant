@@ -15,7 +15,8 @@ const FEE_RATE=.001;
    연구값(2011~ 앱 조건 1만$): 30.4/48.4 → 30.8/41.6 · 합성 2000~ 13.5/82.3 → 14.4/77.6 (research/im_plan/RESEARCH_LOG.md '앱 반영안'). */
 const ALPHA_RULES={
   base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false},
-  exp1:{key:'exp1',name:'새 규칙 (실험적 확장)',guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15,tqReb:.02,exp:true}
+  exp1:{key:'exp1',name:'새 규칙 (실험적 확장)',guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15,tqReb:.02,exp:true},
+  exp2:{key:'exp2',name:'공격형 (실험적 확장)',guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15,tqReb:.02,s0:.60,exp:true}   // 새 규칙 + TECL 목표 변동성 .55 → .60 (2026-11-07 연구: 2011~ 1만$ 30.4/41.6 → 30.9/46.1 · 5년 ×4.68 → ×4.91 · .65 부터는 수익이 안 늘고 낙폭만 늘어 공격 다이얼의 끝). s0 가 없는 벌은 공식 .55.
 };
 function alphaRules(key){return ALPHA_RULES[String(key||'')]||ALPHA_RULES.base;}
 /* 다음 거래일(평일 기준)이 해가 바뀐 첫 거래일인가 — 1월 1일은 휴장이라 평일로 넘겨도 새해 첫 거래일은 1월 안에 있다. */
@@ -189,7 +190,7 @@ function replay(opt){
       if(horizon===5){
         const D=DEFAULTS[5],sigma=realizedVol(S.tecl,p,D.ivsLook),mv=tma225[p];
         if(sigma>0&&mv>0){
-          const w=Math.min(1,(D.ivsS0*D.ivsS0)/(sigma*sigma));
+          const s0=RULES.s0??D.ivsS0,w=Math.min(1,(s0*s0)/(sigma*sigma));   // 규칙 벌의 TECL 목표 변동성(exp2 공격형 .60) · 없으면 공식 .55
           const sleeveNow=((pos.TECL*sp.TECL)/Math.max(total,1))/Math.max(D.teclWeight,1e-9);
           // 판정은 공용 alphaDecide (플랜 화면과 같은 글자). 해 첫 거래일 = 체결일 i 와 신호일 p 의 해가 다름.
           const dec=alphaDecide({rules:RULES,w,sleeveNow,teclQty:pos.TECL,tqqqQty:pos.TQQQ,tqqqClose:sp.TQQQ,sma:mv,
@@ -203,7 +204,7 @@ function replay(opt){
             const ts=sgQty(total-tt*sp.TECL-tq*sp.TQQQ);
             targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
           }
-          meta={horizon,rules:RULES.key,sigma,w,sleeveNow,guard,teclHit,guardFlip,tqReb};
+          meta={horizon,rules:RULES.key,s0,sigma,w,sleeveNow,guard,teclHit,guardFlip,tqReb};
         }
       }else if(horizon===10){
         const D=DEFAULTS[10],mv=tma250[p],bull=mv>0&&sp.TQQQ>=mv;
