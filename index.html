@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 운영</title>
-<script src="/plan-session-engine.js?v=3"></script>
+<script src="/plan-session-engine.js?v=4"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.1.0" defer></script>
@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.117.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.117.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1701,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.117.4</b> · 2026-11-07</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.117.5</b> · 2026-11-07</div>
   </footer>
 </div>
 
@@ -7973,7 +7973,7 @@ function paperOpts(tab, st){
   }else if(tab==='plan'){
     const H={5:'역분산+Guard',10:'추세+폭락매수',15:'Shannon 60:40',20:'Dual Momentum'},y=+S0.horizon||5;
     bits.push(`${y}년 ${H[y]||'자산플랜'}`);
-    if(y===5&&S0.alphaRules==='exp1')bits.push('새 규칙(실험적)');   // 5년 규칙 벌 — 기본·새 규칙 모의 세션을 목록에서 구분
+    if(y===5&&S0.alphaRules&&S0.alphaRules!=='base')bits.push(S0.alphaRules==='exp2'?'공격형(실험적)':'새 규칙(실험적)');   // 5년 규칙 벌 — 기본·새 규칙 모의 세션을 목록에서 구분
     if(+S0.monthlyAdd>0)bits.push(`월 ${amt(S0.monthlyAdd)}`);else bits.push('목돈');
   }
   return bits;

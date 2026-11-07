@@ -8,7 +8,7 @@ function check(source=src){
   const D={teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01};
   const c={PATH_DEFAULTS:{alpha:D},horizonStrategy:()=>({years:5,key:'ivsGuard',name:'5년'}),document:{querySelectorAll:()=>[]},$:el,activeHorizon:5,horizonRebalancePending:false,setTxt:(id,v)=>el(id).textContent=v};
   vm.createContext(c);c.window=c;vm.runInContext(fs.readFileSync('plan-session-engine.js','utf8'),c);   // 판정(alphaDecide)·규칙 벌은 모의 엔진과 같은 글자 (plan 1.44.0)
-  vm.runInContext(fn(source,'function alphaRuleSet()'),c);vm.runInContext(fn(source,'function renderHorizonCopy()'),c);c.renderHorizonCopy();
+  vm.runInContext(fn(source,'function alphaRuleSet()'),c);vm.runInContext(fn(source,'function alphaS0Pct()'),c);vm.runInContext(fn(source,'function renderHorizonCopy()'),c);c.renderHorizonCopy();   // alphaS0Pct: 규칙 벌의 TECL 목표 변동성(공격형 60 · plan 1.46.0)
   assert.equal(el('alphaEv1Label').textContent,'TECL σ20');assert(el('alphaEv2Sub').textContent.includes('σ20'));assert(el('alphaEv2Sub').textContent.includes('최대70%'));
   assert(el('alphaExplain').innerHTML.includes('10%p를 초과'));assert.equal(el('alphaEv3Label').textContent,'TECL 몫 안의 현재 비율');
   el('alphaEv1Label').textContent='TQQQ 추세';el('alphaEv2Sub').textContent='10년';c.renderHorizonCopy();assert.equal(el('alphaEv1Label').textContent,'TECL σ20','다른 기간에서 돌아와도5년 설명 복원');
