@@ -142,5 +142,18 @@ try:
 except RuntimeError as e:
     ok("ECOS: 항목 이름이 다르면 멈춘다", "불일치" in str(e), e)
 
+# 7) 한 시계열이 실패해도 나머지는 계속 — 실패한 것은 옛 자료 그대로 · 기록 · 종료 코드 2 (2026-10 GitHub 실행이 R-ONE 연결 끊김 한 번으로 전부 멈췄다)
+bucket = {"a": C.to_series({"202001": 1.0}), "b": C.to_series({"202001": 2.0})}
+good = {"202001": 1.0, "202002": 1.5}
+def boom(s, e):
+    raise RuntimeError("Remote end closed connection without response")
+log, fl = [], []
+tasks = [("sale:a", bucket, "a", lambda s, e: dict(good)), ("sale:b", bucket, "b", boom), ("sale:c", bucket, "c", lambda s, e: {"202001": 3.0})]
+res = [C.collect_one(t, False, "202002", log, fl) for t in tasks]
+ok("실패한 시계열은 옛 자료 그대로 두고 나머지는 받는다", C.from_series(bucket["a"]) == good and C.from_series(bucket["b"]) == {"202001": 2.0} and C.from_series(bucket["c"]) == {"202001": 3.0}, bucket)
+ok("실패를 이름·사유와 함께 기록한다", fl == ["sale:b"] and any(x["event"] == "failed" and x["series"] == "sale:b" and "closed" in x["error"] for x in log) and res[1][1] is None, (fl, log))
+ok("실패가 있으면 종료 코드 2(받은 것은 저장) · 없으면 0", C.exit_code(["sale:b"]) == 2 and C.EXIT_PARTIAL == 2 and C.exit_code([]) == 0)
+ok("R-ONE 호출은 한 번에 하나씩(잠금)", hasattr(C.RONE_LOCK, "acquire") and "with RONE_LOCK" in open(os.path.join(HERE, "collect.py"), encoding="utf-8").read().split("def rone_call")[1].split("def rone_rows")[0])
+
 print("\n결과: %d PASS / %d FAIL" % (passed, failed))
 sys.exit(1 if failed else 0)

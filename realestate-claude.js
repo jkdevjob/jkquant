@@ -10,9 +10,10 @@ const SVN={'rec-wf-2':'v2 — 입주·매수우위 포함','rec-wf-1':'v1 — �
 const PAPER_FILES={'rec-wf-1':'paper.json','rec-wf-2':'paper-rec-wf-2.json'};
 const st={tab:'trades',ref:'sum',region:'daejeon',real:false,opts:{},charts:{},sv:E.STRATEGY_VERSION,order:'new',as:X.STRATEGY};
 let DOC=null,PAPERS={},D=null,WF=null,SNAP=null,SNAP1=null,WFL=null,OLD=false;
-let APT=null,EVD=null,PRE=null,PAPTS={},A=null,RUN={},BENCH=null,EVS=null,LCH=null;
-const AICON={'apt-1':'📈','apt-lead-1':'👑'};                                         // 아파트 전략 버전 → 칩 아이콘
-const APT_PAPER={'apt-1':'paper-apt-1.json','apt-lead-1':'paper-apt-lead-1.json'};    // 아파트 전략 버전 → 모의장부 파일
+let APT=null,EVD=null,PRE=null,PAPTS={},A=null,RUN={},BENCH=null,EVS=null,LCH=null,FS=null,STRESS=null;
+const AICON={'apt-1':'📈','apt-lead-1':'👑','apt-1-gap':'📈','apt-lead-1-gap':'👑'};  // 아파트 전략 버전 → 칩 아이콘
+const APT_PAPER={}; for(const sv of Object.keys(X.STRATEGIES)) APT_PAPER[sv]='paper-'+sv+'.json';   // 전략마다 장부 파일 하나(엔진 전략 목록에서)
+const baseOf=sv=>sv.replace(/-gap$/,''),levOf=sv=>X.STRATEGIES[sv].lev,withLev=(sv,lev)=>baseOf(sv)+(lev==='gap'?'-gap':'');
 
 /* ── 꾸밈(클로드 칸 안에서만) ── */
 const CSS=`
@@ -75,6 +76,9 @@ const CSS=`
 .rec .tag.gd{color:var(--gold);border-color:rgba(245,196,81,.45)} .rec .tag.dn{color:var(--red);border-color:rgba(248,123,140,.45)}
 .rec .up1{padding:7px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:12.5px;line-height:1.55}
 .rec .chip .svid{font-weight:600;font-size:10.5px;opacity:.7;margin-left:2px}
+.rec .sub2.lv{margin-top:-6px} .rec .chip.exp{border-style:dashed}
+@media(max-width:400px){.rec .chip .svid{display:none}}
+.rec .rn2{padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.06);font-size:12px;line-height:1.5}
 .rec tr.on td{background:rgba(245,196,81,.07)}
 .rec details{margin-top:8px} .rec details summary{cursor:pointer;font-size:12px;font-weight:800;color:var(--dim);padding:4px 0}
 @media(max-width:560px){.rec .cv{height:230px}.rec .big{font-size:19px}.rec .card{padding:11px}.rec .kv{flex-wrap:wrap}.rec .kv b{text-align:right;flex:1 1 auto}}
@@ -116,7 +120,7 @@ function computeApt(){
   D=E.prepare(DOC);
   if(APT){ A=X.prepareApt(APT,D,EVD); RUN={};
     for(const sv of Object.keys(X.STRATEGIES)){ const sim=X.simulate(A,{strategy:sv}); RUN[sv]={sim,summ:X.summary(A,sim)}; }
-    BENCH=X.benchmarks(A,RUN[X.STRATEGY].sim); }
+    BENCH=X.benchmarks(A,RUN[X.STRATEGY].sim); FS=X.forwardStats(A); STRESS={cash:X.stress(A,{strategy:'apt-1'}),gap:X.stress(A,{strategy:'apt-1-gap'})}; }
 }
 function compute(){
   if(!D) D=E.prepare(DOC);
@@ -148,13 +152,16 @@ function render(){
   catch(e){ body.innerHTML='<div class="warn">화면을 그리지 못했습니다: '+esc(e.message||e)+'</div>'; console.error(e); }
 }
 
-/* ── 📒 아파트 매매 기록 (apt-1 · apt-lead-1) ── */
+/* ── 📒 아파트 매매 기록 (apt-1 · apt-lead-1 · 전세 끼고 -gap) ── */
 const eok=v=>v==null||!isFinite(v)?'–':(Math.abs(v)>=10000?(v/10000).toFixed(2)+'억':Math.round(v).toLocaleString('ko-KR')+'만');
 const man=v=>v==null||!isFinite(v)?'–':Math.round(v).toLocaleString('ko-KR')+'만';
+const yrs=v=>v==null||!isFinite(v)?'–':(v<10?v.toFixed(1):Math.round(v))+'년';
 const TYPE_CLS={호재:'gd',완화:'gd',교통:'gd',개발:'gd',금리인하:'gd',악재:'dn',규제:'dn',위기:'dn',금리인상:'dn',공급:''};
-const isLead=sv=>!!(X.STRATEGIES[sv]&&X.STRATEGIES[sv].pick==='leader');
+const isLead=sv=>!!(X.STRATEGIES[sv]&&X.STRATEGIES[sv].pick==='leader'),isGap=sv=>levOf(sv)==='gap';
 function svChips(){
-  return '<div class="sub2 sv">'+Object.keys(X.STRATEGIES).map(sv=>'<button class="chip'+(st.as===sv?' on':'')+'" data-as="'+sv+'">'+(AICON[sv]||'')+' '+esc(X.STRATEGIES[sv].name)+' <span class="svid">'+esc(sv)+'</span></button>').join('')+'</div>';
+  const base=baseOf(st.as),lev=levOf(st.as);
+  return '<div class="sub2 sv">'+['apt-1','apt-lead-1'].map(sv=>'<button class="chip'+(base===sv?' on':'')+'" data-as="'+withLev(sv,lev)+'">'+(AICON[sv]||'')+' '+esc(X.STRATEGIES[sv].name)+' <span class="svid">'+esc(withLev(sv,lev))+'</span></button>').join('')+'</div>'
+    +'<div class="sub2 sv lv">'+[['cash','💵 내 돈으로만'],['gap','🏦 전세 끼고 — 실험적 확장']].map(x=>'<button class="chip'+(lev===x[0]?' on':'')+(x[0]==='gap'?' exp':'')+'" data-as="'+withLev(base,x[0])+'">'+x[1]+'</button>').join('')+'</div>';
 }
 function bindSv(el){ el.querySelectorAll('[data-as]').forEach(b=>b.onclick=()=>{ st.as=b.getAttribute('data-as'); render(); }); }
 function aptName(t){ return esc((t.city==='세종'?'세종 ':'대전 '+(t.gu||'')+' ')+(t.dong||'')+' '+t.name)+' <span class="note">'+esc(Math.floor(t.excl||84))+'㎡ · '+esc(String(t.built||'').slice(0,4))+'년 · '+Number(t.units||0).toLocaleString('ko-KR')+'세대</span>'; }
@@ -173,27 +180,35 @@ function sellWhy(s){
   const w=[];
   if(s.why.indexOf('mom')>=0) w.push('<li>그 단지 6개월 시세 <b class="dn">'+pct(s.mom)+'</b> — 오름세가 꺾임</li>');
   if(s.why.indexOf('rate')>=0) w.push('<li>기준금리 <b>'+num(s.rate,2)+'%</b> — 1년 전 '+num(s.rate0,2)+'%보다 <b class="dn">+'+num(s.rateUp,2)+'%p</b></li>');
-  w.push('<li>보유 '+s.held+'개월 — 2년(1주택 비과세 요건) 채움</li>');
+  if(s.why.indexOf('stress')>=0) w.push('<li>고점 스트레스 — 규칙과 상관없이 24개월 뒤 강제로 팔아 본 것</li>');
+  w.push('<li>보유 '+s.held+'개월'+(s.held>=24?' — 2년(1주택 비과세 요건) 채움':'')+'</li>');
   return w.join('');
 }
+function renewHtml(ev){
+  if(!ev||!ev.length) return '';
+  return '<div class="why">🔁 전세 재계약(2년마다)</div><ul class="f">'+ev.map(e=>'<li>'+esc(e.m)+' 전세 '+eok(e.jeonse)+' — '+(e.call!=null?'내려서 <b class="dn">'+man(e.call)+' 더 넣음(역전세)</b>':'올라서 <b class="up">'+man(e.inflow)+' 받음</b>')+'</li>').join('')+'</ul>';
+}
 function tradeCard(t){
-  const b=t.buy,s=t.sell,r=t.result,gap=b.jeonse?b.price-b.jeonse+b.costs.acq+b.costs.broker:null;
+  const b=t.buy,s=t.sell,r=t.result,g=b.gap,sg=s&&s.gap,mg=t.mark&&t.mark.gap,gap=b.jeonse?b.price-b.jeonse+b.costs.acq+b.costs.broker:null;
   let h='<div class="card trade'+(t.open?' open':'')+'" id="rec-t'+t.no+'"><div class="th"><span class="no">'+t.no+'</span><div><div class="tt">'+aptName(t)+'</div>'
-    +'<div class="note">'+esc(b.m)+' 매수 → '+(s?esc(s.m)+' 매도 · '+r.months+'개월':'지금 보유 중 · '+r.months+'개월')+'</div></div>'
+    +'<div class="note">'+esc(b.m)+' 매수 → '+(s?esc(s.m)+' 매도 · '+r.months+'개월':'지금 보유 중 · '+r.months+'개월')+(g?' · 전세 끼고':'')+'</div></div>'
     +'<b class="res '+cls(r.net)+'">'+pct(r.net)+'</b></div>';
   h+='<div class="leg buy"><div class="lh">🟢 매수 '+esc(b.m)+' · <b>'+eok(b.price)+'</b> <span class="note">KB 시세(하한 '+eok(b.low)+' ~ 상한 '+eok(b.high)+')</span></div>'
     +'<div class="note">'+realTxt(b.real)+'</div>'
-    +'<div class="note">어떻게: 1주택 매매(대출 없이 계산) · 취득세 '+man(b.costs.acq)+' · 중개 '+man(b.costs.broker)+(gap!=null?' · 전세('+eok(b.jeonse)+') 끼고 사면 필요한 돈 '+eok(gap):'')+'</div>'
-    +'<div class="why">왜(규칙)</div><ul class="f">'+buyWhy(b)+'</ul><div class="why">그때 뉴스</div>'+newsHtml(b.news)+'</div>';
+    +(g?'<div class="note">어떻게: 전세 <b>'+eok(g.jeonse)+'</b> 끼고(전세가율 '+pct0(g.ratio,0)+') → <b>내 돈 '+eok(g.need)+'</b> = 가격 − 전세 + 취득세 '+man(b.costs.acq)+' + 중개 '+man(b.costs.broker)+(g.res?' · <span class="dn">조정대상지역일 때 산 집 → 2년 거주를 못 해 비과세 없음</span>':'')+'</div>'
+       :'<div class="note">어떻게: 1주택 매매(대출 없이 계산) · 취득세 '+man(b.costs.acq)+' · 중개 '+man(b.costs.broker)+(gap!=null?' · 전세('+eok(b.jeonse)+') 끼고 사면 필요한 돈 '+eok(gap):'')+'</div>')
+    +'<div class="why">왜(규칙)</div><ul class="f">'+buyWhy(b)+'</ul><div class="why">그때 뉴스</div>'+newsHtml(b.news)+renewHtml((sg||mg||{}).events)+'</div>';
   if(s){
     h+='<div class="leg sell"><div class="lh">🔴 매도 '+esc(s.m)+' · <b>'+eok(s.price)+'</b> <span class="note">KB 시세(하한 '+eok(s.low)+' ~ 상한 '+eok(s.high)+')</span></div>'
       +'<div class="note">'+realTxt(s.real)+'</div>'
-      +'<div class="note">비용: 중개 '+man(s.costs.broker)+' · 보유세 '+man(s.costs.hold)+' · 양도세 '+(s.costs.tax?man(s.costs.tax):'0(1주택 비과세)')+'</div>'
+      +'<div class="note">비용: 중개 '+man(s.costs.broker)+' · 보유세 '+man(s.costs.hold)+' · 양도세 '+(s.costs.tax?man(s.costs.tax)+(sg&&sg.res?'(비과세 없음)':''):'0(1주택 비과세)')+'</div>'
+      +(sg?'<div class="note">회수 <b>'+eok(sg.back)+'</b> = 매도가 − 중개 − 양도세 − 보유세 − 보증금 '+eok(sg.j)+(sg.inflow?' + 받은 차액 '+man(sg.inflow):'')+' → 내 돈 '+eok(sg.out)+(sg.calls?'(역전세 '+man(sg.calls)+' 포함)':'')+'의 <b class="'+cls(sg.mult-1)+'">×'+sg.mult.toFixed(2)+'</b></div>':'')
       +'<div class="why">왜(규칙)</div><ul class="f">'+sellWhy(s)+'</ul><div class="why">그때 뉴스</div>'+newsHtml(s.news)+'</div>';
   } else {
-    h+='<div class="leg sell"><div class="lh">⏳ '+esc(t.mark.m)+' 현재 <b>'+eok(t.mark.price)+'</b> <span class="note">KB 시세 · 팔 조건(2년 뒤 6개월 하락 또는 금리 +0.5%p)을 기다리는 중</span></div><div class="note">'+realTxt(t.mark.real)+'</div></div>';
+    h+='<div class="leg sell"><div class="lh">⏳ '+esc(t.mark.m)+' 현재 <b>'+eok(t.mark.price)+'</b> <span class="note">KB 시세 · 팔 조건(2년 뒤 6개월 하락 또는 금리 +0.5%p)을 기다리는 중</span></div><div class="note">'+realTxt(t.mark.real)+'</div>'
+      +(mg?'<div class="note">내 돈 '+eok(mg.out)+' → 지금 평가 '+eok(mg.out*(1+r.net))+' (보증금 '+eok(mg.j)+' 돌려주고 중개·세금 전)</div>':'')+'</div>';
   }
-  h+='<div class="kv"><span>결과(1채 기준)</span><b>시세 '+pct(r.gross)+' · 비용·세금 뒤 <span class="'+cls(r.net)+'">'+pct(r.net)+'</span> · 차익 '+eok(r.profit)+'</b></div></div>';
+  h+='<div class="kv"><span>결과(1채 기준)</span><b>'+(g?'내 돈 기준 <span class="'+cls(r.net)+'">'+pct(r.net)+'</span> · 시세 '+pct(r.gross):'시세 '+pct(r.gross)+' · 비용·세금 뒤 <span class="'+cls(r.net)+'">'+pct(r.net)+'</span>')+' · 차익 '+eok(r.profit)+'</b></div></div>';
   return h;
 }
 function leaderHist(){
@@ -202,56 +217,81 @@ function leaderHist(){
     +'<div class="note">84㎡ '+eok(x.price)+' · '+esc(String(x.built||'').slice(0,4))+'년 · '+Number(x.units||0).toLocaleString('ko-KR')+'세대 · 그 도시 대단지 '+x.n+'곳 중 1위</div></div>').join('')+'</details>';
 }
 function ruleCard(sv,o){
-  const ld=isLead(sv);
+  const ld=isLead(sv),gp=isGap(sv);
   let h='<div class="card"><h3>📏 전략 규칙 ('+esc(sv)+' · '+esc(X.STRATEGIES[sv].name)+') — 이것만 보고 사고판다</h3><ul class="f">';
   h+=ld?'<li><b>무엇을</b>: 대전·세종 '+o.minUnits.toLocaleString('ko-KR')+'세대 이상 대단지 중 <b>도시마다 전달 84㎡ KB 시세가 가장 비싼 1곳(대장)</b> — 대전 1곳 · 세종 1곳. 시세 1위가 바뀌면 대장도 바뀐다</li>'
       +'<li><b>살 때</b>: 현금일 때, 기준금리가 1년 전보다 높지 않고 · 두 대장 중 6개월 시세 상승률이 높은 곳이 +'+Math.round(o.buyMin*100)+'% 이상이면 → 그 단지를 그 달 KB 시세로 산다</li>'
     :'<li><b>무엇을</b>: 대전·세종 '+o.minUnits.toLocaleString('ko-KR')+'세대 이상 대단지 '+A.U.length+'곳의 전용 84㎡(그 단지에서 가장 흔한 84㎡ 타입)</li>'
       +'<li><b>살 때</b>: 현금일 때, 기준금리가 1년 전보다 높지 않고 · 6개월 시세 상승률 1위 단지가 +'+Math.round(o.buyMin*100)+'% 이상이면 → 그 단지를 그 달 KB 시세로 산다</li>';
   h+='<li><b>팔 때</b>: '+o.minHold/12+'년 이상 보유한 뒤(1주택 양도세 비과세 요건), 그 단지 6개월 시세가 떨어지거나 · 기준금리가 1년 새 +'+o.rateUpSell+'%p 이상 오르면 → 판다. 그 달 사는 조건이 맞는 '+(ld?'대장이':'단지가')+' 있으면 바로 갈아탄다</li>'
-    +'<li><b>그 밖</b>: 예금(세후 이자). 결정은 전달까지 공개된 시세·금리만 본다(미래 자료 안 씀)</li></ul>'
+    +(gp?'<li><b>돈</b>: <b>전세를 끼고 산다</b> — 내 돈 = 가격 − 전세 + 취득세 + 중개. '+o.renew/12+'년마다 전세 재계약: 전세가 내렸으면 차액을 돌려주고(내 돈 추가 · 역전세), 올랐으면 받는다. 팔 때 보증금을 돌려주고 남는 돈이 회수. 내 돈이 0 아래로 가면 파산(그 뒤 거래 없음). 조정대상지역일 때 산 집은 2년 거주를 못 해(세를 줬으니) 비과세 없이 양도세를 낸다</li>'
+       :'<li><b>돈</b>: 1채를 내 돈으로만 산다(대출 없음)</li>')
+    +'<li><b>그 밖</b>: 현금일 땐 예금(세후 이자). 결정은 전달까지 공개된 시세·금리만 본다(미래 자료 안 씀)</li></ul>'
+    +(gp?'<div class="warn">실험적 확장 — 공식 규칙('+esc(baseOf(sv))+')에 전세 레버리지만 얹은 것입니다. 레버리지는 이익도 손실도 같은 배수로 키웁니다. 대출 이자·공실·세입자 교체 비용은 넣지 않았습니다(역전세 차액만 넣음).</div>':'')
     +(ld?'<div class="note">사는 때·파는 때 규칙은 📈 상승률 1위(apt-1)와 같고 ‘무엇을 사나’만 다릅니다.</div>':'')
     +'<div class="note">뉴스는 규칙에 넣지 않았습니다 — 각 거래 아래 ‘그때 뉴스’는 결정 직전 6개월 안에 나온 사건(날짜 확인·출처 링크)입니다. 뉴스가 실제로 값을 움직였는지는 ‘📰 뉴스·사건’ 칸에서 봅니다.</div>'
     +(ld?leaderHist():'');
   return h+'</div>';
 }
-/* 두 전략 + 비교 기준 — 값은 모두 엔진(summary·benchmarks)에서 온다 */
+/* 💰 현실 점검 — "이걸로 돈을 빨리 많이 벌 수 있나"를 자료가 말하는 대로. 값은 전부 엔진(summary·benchmarks·forwardStats·stress)에서 온다 */
+function realityCard(){
+  const S=sv=>RUN[sv].summ,f24=FS.h[24],f60=FS.h[60],years=Object.keys(FS.byYear),good=years.filter(y=>FS.byYear[y].med>=0.10);
+  const closed=[].concat(RUN['apt-1-gap'].sim.trades,RUN['apt-lead-1-gap'].sim.trades).filter(t=>!t.open&&t.sell.gap);
+  const best=closed.length?closed.reduce((a,t)=>t.result.net>a.result.net?t:a):null;
+  const wg=STRESS.gap.length?STRESS.gap.reduce((a,x)=>x.mult<a.mult?x:a):null,wc=wg?STRESS.cash.find(x=>x.city===wg.city):null;
+  const lo=Math.min(S('apt-1').cagr,S('apt-lead-1').cagr),hi=Math.max(S('apt-1').cagr,S('apt-lead-1').cagr);
+  let h='<div class="card"><h3>💰 현실 점검 — 이걸로 돈을 빨리 많이 벌 수 있나</h3>'
+    +'<p class="lead">짧게: <b>내 돈으로만 사면 연 '+pct0(lo)+'~'+pct0(hi)+'</b> — 2배까지 '+yrs(S('apt-lead-1').double)+'~'+yrs(S('apt-1').double)+'. 빨리는 아닙니다. '
+    +(best?'이 자료에서 빨리 번 길은 하나, <b>전세를 끼고(레버리지) 오르는 창에</b> 산 것입니다 — '+esc(best.name)+' '+esc(best.buy.m)+' 내 돈 '+eok(best.sell.gap.out)+' → '+esc(best.sell.m)+' '+eok(best.sell.gap.back)+' (×'+best.sell.gap.mult.toFixed(1)+'). ':'')
+    +(wg?'같은 레버리지를 고점('+esc(wg.peakM)+' '+esc(wg.city)+')에 쓰면 2년 만에 내 돈 '+eok(wg.buy.gap.need)+' → '+eok(wg.sell.gap.back)+' (×'+wg.mult.toFixed(2)+')입니다.':'')+'</p>'
+    +'<div class="kv"><span>2배까지</span><b>📈 '+yrs(S('apt-1').double)+' · 👑 '+yrs(S('apt-lead-1').double)+' · 예금 '+yrs(BENCH.deposit.double)+' <span class="note">· 전세 끼고(실험): 📈 '+yrs(S('apt-1-gap').double)+' · 👑 '+yrs(S('apt-lead-1-gap').double)+'</span></b></div>'
+    +(f24?'<div class="kv"><span>아무 대단지나 아무 달에 사서 2년 뒤 팔면</span><b>중앙 '+pct(f24.med)+' · 이익 확률 '+pct0(f24.pos,0)+' · +20% '+pct0(f24.p20,0)+' · 2배 '+pct0(f24.dbl,1)+' <span class="note">(비용·세금 뺀 뒤 · '+f24.n.toLocaleString('ko-KR')+'건)</span></b></div>':'')
+    +(f60?'<div class="kv"><span>5년 뒤 팔면</span><b>중앙 '+pct(f60.med)+' · 이익 확률 '+pct0(f60.pos,0)+' · +50% '+pct0(f60.p50,0)+'</b></div>':'')
+    +'<div class="kv"><span>돈이 난 해 <span class="note">(산 해 기준 2년 중앙값 +10% 이상)</span></span><b>'+(good.length?good.join('·'):'없음')+' — '+years.length+'년 중 '+good.length+'년</b></div>'
+    +(wc?'<div class="kv"><span>고점에 샀다면 <span class="note">('+esc(wg.peakM)+' '+esc(wg.city)+' '+esc(wg.name)+' · 2년 뒤)</span></span><b>내 돈으로만 ×'+wc.mult.toFixed(2)+' · 전세 끼고 <span class="dn">×'+wg.mult.toFixed(2)+'</span></b></div>':'')
+    +'<div class="note">결론: 아파트는 2년 보유 요건·4%대 왕복 비용·한 번에 한 채라 구조적으로 느립니다. 빨리 벌려면 레버리지와 때가 둘 다 맞아야 하고, 둘 다 틀리면 손실도 같은 배수입니다. 여기 거래는 전략마다 5건뿐이라 어느 쪽도 검증이 아닙니다 — 네 전략 장부를 앞으로 같이 쌓습니다(🧭 지금).</div></div>';
+  return h;
+}
+/* 네 전략 + 비교 기준 — 값은 모두 엔진(summary·benchmarks)에서 온다 */
 function compareCard(){
   const sm0=RUN[st.as].summ,cap=RUN[st.as].sim.opts.capital,bm=BENCH;
-  const rows=Object.keys(X.STRATEGIES).map(sv=>{ const sm=RUN[sv].summ;
-      return {on:sv===st.as,name:(AICON[sv]||'')+' '+X.STRATEGIES[sv].name,sub:sv+' · 거래 '+sm.trades+'번(이익 '+sm.wins+'/'+sm.closed+') · 집 가진 기간 '+pct0(sm.inMarket,0),final:sm.final,cagr:sm.cagr,mdd:sm.mdd}; })
-    .concat([{name:'대장 2곳 계속 보유',sub:'시세 흐름 · 대장이 바뀌면 그대로 따라감',final:bm.lead.final,cagr:bm.lead.cagr,mdd:bm.lead.mdd},
-      {name:'대단지 고르게 보유',sub:'시세 흐름 · '+RUN[st.as].sim.opts.minUnits.toLocaleString('ko-KR')+'세대 이상 전부 평균',final:bm.hold.final,cagr:bm.hold.cagr,mdd:bm.hold.mdd},
-      {name:'예금만',sub:'세후 이자',final:bm.deposit.final,cagr:bm.deposit.cagr,mdd:bm.deposit.mdd}]);
+  const rows=Object.keys(X.STRATEGIES).map(sv=>{ const sm=RUN[sv].summ,S=X.STRATEGIES[sv];
+      return {on:sv===st.as,name:(AICON[sv]||'')+' '+S.name+(S.experimental?' (실험)':''),sub:sv+' · 거래 '+sm.trades+'번(이익 '+sm.wins+'/'+sm.closed+') · 집 가진 기간 '+pct0(sm.inMarket,0)+' · 2배까지 '+yrs(sm.double),final:sm.final,cagr:sm.cagr,mdd:sm.mdd,ruin:sm.ruin?sm.ruinM:null}; })
+    .concat([{name:'대장 2곳 계속 보유',sub:'시세 흐름 · 대장이 바뀌면 그대로 따라감 · 2배까지 '+yrs(bm.lead.double),final:bm.lead.final,cagr:bm.lead.cagr,mdd:bm.lead.mdd},
+      {name:'대단지 고르게 보유',sub:'시세 흐름 · '+RUN[st.as].sim.opts.minUnits.toLocaleString('ko-KR')+'세대 이상 전부 평균 · 2배까지 '+yrs(bm.hold.double),final:bm.hold.final,cagr:bm.hold.cagr,mdd:bm.hold.mdd},
+      {name:'예금만',sub:'세후 이자 · 2배까지 '+yrs(bm.deposit.double),final:bm.deposit.final,cagr:bm.deposit.cagr,mdd:bm.deposit.mdd}]);
   return '<div class="card"><h3>📊 결과 '+esc(sm0.start)+' ~ '+esc(sm0.end)+' — 3억으로 시작했다면</h3><div class="tw"><table><tr><th class="l">방식</th><th>지금 · 연</th><th>최대 낙폭</th></tr>'
-    +rows.map(r=>'<tr'+(r.on?' class="on"':'')+'><td class="l"><b>'+esc(r.name)+'</b><div class="note">'+esc(r.sub)+'</div></td><td><b class="'+cls(r.final/cap-1)+'">'+eok(r.final)+'</b><div class="note">'+pct(r.final/cap-1,0)+' · 연 '+pct(r.cagr)+'</div></td><td>'+pct0(r.mdd)+'</td></tr>').join('')
+    +rows.map(r=>'<tr'+(r.on?' class="on"':'')+'><td class="l"><b>'+esc(r.name)+'</b><div class="note">'+esc(r.sub)+'</div></td><td>'+(r.ruin?'<b class="dn">💀 파산 '+esc(r.ruin)+'</b>':'<b class="'+cls(r.final/cap-1)+'">'+eok(r.final)+'</b><div class="note">'+pct(r.final/cap-1,0)+' · 연 '+pct(r.cagr)+'</div>')+'</td><td>'+pct0(r.mdd)+'</td></tr>').join('')
     +'</table></div><div class="cv"><canvas id="rc-apt-eq"></canvas></div>'
-    +'<div class="note">수익은 1채를 대출 없이 샀다고 보고 계산했습니다(대출을 쓰면 이익·손실 모두 커짐). 집에 살며 아낀 월세·전세 이자는 넣지 않았습니다. 취득세·중개·보유세·양도세는 현행 기준 근사입니다. ‘계속 보유’ 두 줄은 사고팔 때 비용을 빼지 않은 시세 흐름(보유세만 뺌)이라 실제로는 조금 낮습니다.</div></div>';
+    +'<div class="note">수익은 1채 기준입니다(내 돈으로만: 대출 없음 · 전세 끼고: 내 돈 기준, 역전세 차액 포함). 집에 살며 아낀 월세·전세 이자는 넣지 않았습니다. 취득세·중개·보유세·양도세는 현행 기준 근사입니다. ‘계속 보유’ 두 줄은 사고팔 때 비용을 빼지 않은 시세 흐름(보유세만 뺌)이라 실제로는 조금 낮습니다.</div></div>';
 }
 function renderTrades(el){
   const run=RUN[st.as];
-  if(!run||!run.summ||!BENCH){ el.innerHTML='<div class="warn">아파트 시세 자료(apt.json)를 불러오지 못했습니다.</div>'; return; }
-  const sim=run.sim,o=sim.opts,ld=isLead(st.as);
-  let h='<div class="warn">과거 자료로 규칙을 그대로 따라 해 본 연구용 모의매매입니다. 투자 권유가 아닙니다.</div>'+svChips()+ruleCard(st.as,o);
+  if(!run||!run.summ||!BENCH||!FS){ el.innerHTML='<div class="warn">아파트 시세 자료(apt.json)를 불러오지 못했습니다.</div>'; return; }
+  const sim=run.sim,o=sim.opts,ld=isLead(st.as),gp=isGap(st.as);
+  let h='<div class="warn">과거 자료로 규칙을 그대로 따라 해 본 연구용 모의매매입니다. 투자 권유가 아닙니다.</div>'+realityCard()+svChips()+ruleCard(st.as,o);
   h+='<div class="card"><h3>🧾 거래 한눈에 — 어디를 언제·얼마에 사고팔았나</h3>'+sim.trades.map(t=>'<a class="ql" href="#rec-t'+t.no+'"><span class="rno">'+t.no+'</span><span class="qn"><b>'+esc((t.city==='세종'?'세종 ':t.gu+' ')+t.dong+' '+t.name)+'</b>'
-      +'<span class="note">'+esc(t.buy.m)+' '+eok(t.buy.price)+' 매수 → '+(t.sell?esc(t.sell.m)+' '+eok(t.sell.price)+' 매도':'보유 중('+esc(t.mark.m)+' '+eok(t.mark.price)+')')+'</span></span><b class="'+cls(t.result.net)+'">'+pct(t.result.net)+'</b></a>').join('')
-    +'<div class="note">누르면 아래 그 거래의 매수·매도 이유와 그때 뉴스로 갑니다. 수익률은 취득세·중개·보유세·양도세를 뺀 값(1채 기준).</div></div>';
+      +'<span class="note">'+esc(t.buy.m)+' '+eok(t.buy.price)+(t.buy.gap?'(내 돈 '+eok(t.buy.gap.need)+')':'')+' 매수 → '+(t.sell?esc(t.sell.m)+' '+eok(t.sell.price)+' 매도':'보유 중('+esc(t.mark.m)+' '+eok(t.mark.price)+')')+'</span></span><b class="'+cls(t.result.net)+'">'+pct(t.result.net)+'</b></a>').join('')
+    +(sim.ruin?'<div class="warn">💀 '+esc(sim.ruinM)+' 파산 — 내 돈이 0 아래로 갔습니다. 그 뒤 거래가 없습니다.</div>':'')
+    +'<div class="note">누르면 아래 그 거래의 매수·매도 이유와 그때 뉴스로 갑니다. 수익률은 취득세·중개·보유세·양도세를 뺀 값'+(gp?'(내 돈 기준)':'(1채 기준)')+'.</div></div>';
   h+=compareCard();
   h+='<div class="row"><b style="font-size:13px">거래 '+sim.trades.length+'건</b><button class="btn'+(st.order==='new'?' on':'')+'" data-ord="new">최근 것부터</button><button class="btn'+(st.order==='old'?' on':'')+'" data-ord="old">처음부터</button></div>';
   h+=(st.order==='new'?sim.trades.slice().reverse():sim.trades).map(tradeCard).join('');
   h+='<div class="card"><h3>⚠️ 이 기록을 읽을 때</h3><ul class="f">'
     +'<li>규칙 값(6개월 · +'+Math.round(o.buyMin*100)+'% · +'+o.rateUpSell+'%p · '+o.minHold/12+'년)은 결과를 보기 전에 정했고 보고 나서 고치지 않았습니다. 다만 근거가 된 패턴(오름세 지속 · 금리)이 같은 기간 자료에서 나왔으니, 진짜 시험은 앞으로의 모의장부(🧭 지금 칸)입니다.</li>'
+    +(gp?'<li>전세 끼고는 <b>실험적 확장</b>입니다. 공식 규칙에 레버리지만 얹었고, 결과를 본 뒤 만든 비교라 배수를 그대로 믿으면 안 됩니다. 대출 이자·공실·세입자 교체 비용은 넣지 않았습니다. 전세가율이 낮으면(지금 대장 40~50%) 내 돈이 6억 가까이 들어 레버리지 효과가 작습니다.</li>':'')
     +(ld?'<li>대장 방식은 apt-1 결과를 본 뒤 비교하려고 만든 변형입니다. 규칙 값은 그대로 두고 ‘무엇을 사나’만 바꿨지만, 결과를 보고 만든 비교라 두 전략의 차이를 그대로 믿으면 안 됩니다. 두 장부를 앞으로 같이 쌓아 봅니다.</li>'
         +'<li>여기서 대장은 '+o.minUnits.toLocaleString('ko-KR')+'세대 이상이면서 84㎡가 있는 단지 중 시세 1위입니다. 도룡동 스마트시티(단지별 300여 세대 주상복합)·나성동 나릿재(1,000세대 미만)·둔산동 목련(84㎡ 없음)처럼 흔히 대장이라 부르는 단지 일부는 빠집니다.</li>'
         +'<li>2012년 세종시 출범 전 ‘세종’ 단지는 연기군 조치원읍 아파트입니다. 그때 세종 대단지는 1~2곳뿐이라 대장이 사실상 유일한 단지였습니다.</li>'
       :'<li>‘6개월 상승률 1위’ 규칙이라 오래된 저가 대단지를 자주 고릅니다. 대장 아파트만 사는 방식은 위 👑 대장 아파트에서 같은 형식으로 봅니다.</li>')
-    +'<li>대출·전세 끼고 사기·거주 효과는 넣지 않았습니다. 오늘 KB에 남아 있는 단지만 봅니다(대전·세종은 재건축으로 사라진 단지가 거의 없음).</li>'
+    +'<li>'+(gp?'거주 효과와 대출은 넣지 않았습니다.':'대출·전세 끼고 사기·거주 효과는 넣지 않았습니다.')+' 오늘 KB에 남아 있는 단지만 봅니다(대전·세종은 재건축으로 사라진 단지가 거의 없음).</li>'
     +'<li>KB 시세는 실거래보다 매끄럽게 움직입니다. 그래서 거래마다 그 달 실거래 건수·가격을 같이 적었습니다.</li></ul></div>';
   el.innerHTML=h;
   bindSv(el);
   el.querySelectorAll('[data-ord]').forEach(b=>b.onclick=()=>{ st.order=b.getAttribute('data-ord'); render(); });
-  const labels=sim.curve.map(c=>c.m),sets=Object.keys(X.STRATEGIES).map(sv=>ds((AICON[sv]||'')+' '+X.STRATEGIES[sv].name,RUN[sv].sim.curve.map(c=>c.eq/10000),sv===st.as?'#f5c451':'#36d399',{borderWidth:sv===st.as?2.4:1.4}));
-  chart('rc-apt-eq',labels,sets.concat([ds('대장 계속 보유',BENCH.lead.curve.map(v=>v/10000),'#f87b8c',{borderDash:[4,3]}),ds('대단지 고르게 보유',BENCH.hold.curve.map(v=>v/10000),'#8b8cf0',{borderDash:[4,3]}),ds('예금',BENCH.deposit.curve.map(v=>v/10000),'#59627f')]),{fmt:v=>num(v,1)+'억'});
+  const labels=sim.curve.map(c=>c.m),COL={'apt-1':'#36d399','apt-lead-1':'#9fb4ff','apt-1-gap':'#36d399','apt-lead-1-gap':'#9fb4ff'};
+  const sets=Object.keys(X.STRATEGIES).map(sv=>ds((AICON[sv]||'')+' '+X.STRATEGIES[sv].name,RUN[sv].sim.curve.map(c=>c.eq/10000),sv===st.as?'#f5c451':COL[sv],{borderWidth:sv===st.as?2.4:1.2,borderDash:isGap(sv)&&sv!==st.as?[2,3]:undefined}));
+  chart('rc-apt-eq',labels,sets.concat([ds('대장 계속 보유',BENCH.lead.curve.map(v=>v/10000),'#f87b8c',{borderDash:[4,3],borderWidth:1}),ds('대단지 고르게 보유',BENCH.hold.curve.map(v=>v/10000),'#8b8cf0',{borderDash:[4,3],borderWidth:1}),ds('예금',BENCH.deposit.curve.map(v=>v/10000),'#59627f',{borderWidth:1})]),{fmt:v=>num(v,1)+'억',log:true});   // 로그 눈금: 2배씩 같은 높이 — 전세 끼고 선이 나머지를 납작하게 만들지 않게
 }
 /* ── 🧭 지금 ── */
 function waitTxt(why,m,o,ld){
@@ -259,6 +299,7 @@ function waitTxt(why,m,o,ld){
   if(why.indexOf('rateUp')>=0) w.push('기준금리 '+num(m.rate,2)+'%가 1년 전('+num(m.rate0,2)+'%)보다 높음 → 사지 않음');
   if(why.indexOf('weak')>=0) w.push((ld?'두 대장 중 6개월 상승률이 높은 곳도':'6개월 상승률 1위 단지도')+' +'+Math.round(o.buyMin*100)+'%에 못 미침 → 사지 않음');
   if(why.indexOf('noCand')>=0) w.push(ld?'6개월 시세를 비교할 대장이 없음':'비교할 대단지 시세가 없음');
+  if(why.indexOf('noJeonse')>=0) w.push('전세 시세가 없어 전세를 끼고 살 수 없음');
   if(why.indexOf('noRate')>=0) w.push('금리 자료 없음');
   if(why.indexOf('minHold')>=0) w.push('2년(비과세 요건)이 안 돼 팔지 않음');
   if(why.indexOf('mom')>=0) w.push('보유 단지 6개월 시세가 떨어짐 → 판다');
@@ -268,30 +309,33 @@ function waitTxt(why,m,o,ld){
 function renderNow(el){
   const run=RUN[st.as];
   if(!A||!run){ el.innerHTML='<div class="warn">아파트 시세 자료를 불러오지 못했습니다.</div>'; return; }
-  const sv=st.as,sim=run.sim,o=sim.opts,ld=isLead(sv),P=PAPTS[sv],pos=P&&P.acct&&P.acct.pos?P.acct.pos:null,N=X.nowView(A,{strategy:sv},pos);
-  const act={buy:'🟢 매수 신호',sell:'🔴 매도 신호',hold:'🏠 보유 유지',wait:'💤 현금 대기'}[N.action];
+  const sv=st.as,sim=run.sim,o=sim.opts,ld=isLead(sv),gp=isGap(sv),P=PAPTS[sv],pos=P&&P.acct&&P.acct.pos?P.acct.pos:null,N=X.nowView(A,{strategy:sv},pos);
+  const ruined=!!(P&&P.acct&&P.acct.ruin);
+  const act=ruined?'💀 파산 — 거래 없음':{buy:'🟢 매수 신호',sell:'🔴 매도 신호',hold:'🏠 보유 유지',wait:'💤 현금 대기'}[N.action];
   let h=svChips()+'<div class="card"><h3>🧭 '+esc(N.forMonth)+' 판단 · '+esc(sv)+' <span class="note">('+esc(N.dataMonth)+' 시세·금리까지 보고 · 아래 모의장부 기준)</span></h3><div class="big '+(N.action==='buy'?'gd':'')+'">'+act+'</div>';
-  if(N.action==='buy') h+='<div class="kv"><span>살 단지</span><b style="white-space:normal;text-align:right">'+aptName(N.top[0])+'</b></div><div class="kv"><span>6개월 · 지금 시세</span><b>'+pct(N.top[0].mom)+' · '+eok(N.top[0].price)+'</b></div>';
+  if(N.action==='buy'&&!ruined){ const t=N.top[0]; h+='<div class="kv"><span>살 단지</span><b style="white-space:normal;text-align:right">'+aptName(t)+'</b></div><div class="kv"><span>6개월 · 지금 시세</span><b>'+pct(t.mom)+' · '+eok(t.price)+'</b></div>'
+    +(gp?'<div class="kv"><span>전세 끼면 내 돈</span><b>'+(t.gap?eok(t.gap.need)+' <span class="note">(전세 '+eok(t.gap.jeonse)+' · 전세가율 '+pct0(t.gap.ratio,0)+')</span>':'전세 시세 없음')+'</b></div>':''); }
   h+='<ul class="f">'+waitTxt(N.why,N.market,o,ld).map(x=>'<li>'+esc(x)+'</li>').join('')+'<li>기준금리 '+num(N.market.rate,2)+'% (1년 전 '+num(N.market.rate0,2)+'%)</li></ul>';
-  if(sim.pos){ const t=sim.trades[sim.trades.length-1]; h+='<div class="note">2004년부터 규칙대로 했다면 지금 보유: '+aptName(t)+' ('+esc(t.buy.m)+' 매수 '+eok(t.buy.price)+')</div>'; }
+  if(sim.pos){ const t=sim.trades[sim.trades.length-1]; h+='<div class="note">2004년부터 규칙대로 했다면 지금 보유: '+aptName(t)+' ('+esc(t.buy.m)+' 매수 '+eok(t.buy.price)+(t.buy.gap?' · 내 돈 '+eok(t.buy.gap.need):'')+')</div>'; }
   h+='</div>';
+  const gapTxt=t=>gp?'<div class="note">전세 끼면 내 돈 '+(t.gap?'<b>'+eok(t.gap.need)+'</b> (전세가율 '+pct0(t.gap.ratio,0)+')':'– (전세 시세 없음)')+'</div>':'';
   if(ld) h+='<div class="card"><h3>👑 지금 대장 <span class="note">'+esc(N.dataMonth)+' KB 시세 · 도시마다 84㎡ 1위</span></h3>'
     +N.leaders.map((t,i)=>'<div class="rk"><b class="rno">'+(i+1)+'</b><div class="rn"><span class="tag">'+esc(t.city)+'</span>'+esc((t.city==='세종'?'':t.gu+' ')+t.dong+' '+t.name)
       +'<div class="note">84㎡ <b>'+eok(t.price)+'</b> · 전세 '+eok(t.jeonse)+' · '+esc(String(t.built||'').slice(0,4))+'년 · '+Number(t.units).toLocaleString('ko-KR')+'세대</div>'
-      +'<div class="note">대단지 '+t.n+'곳 중 1위'+(t.next?' · 2위 '+esc(t.next.name)+' '+eok(t.next.price):'')+'</div></div>'
+      +'<div class="note">대단지 '+t.n+'곳 중 1위'+(t.next?' · 2위 '+esc(t.next.name)+' '+eok(t.next.price):'')+'</div>'+gapTxt(t)+'</div>'
       +'<div class="rv"><b class="'+cls(t.mom)+'">'+pct(t.mom)+'</b><div class="note">6개월</div></div></div>').join('')
     +'<div class="note">사려면 두 대장 중 6개월 상승률이 높은 쪽이 +'+Math.round(o.buyMin*100)+'% 이상이고 금리가 1년 전보다 높지 않아야 합니다. 시세는 KB 일반거래가(84㎡).</div></div>';
   else h+='<div class="card"><h3>🏆 대단지 6개월 상승률 상위 10 <span class="note">'+esc(N.dataMonth)+' KB 시세</span></h3>'
     +N.top.map(t=>'<div class="rk"><b class="rno">'+t.rank+'</b><div class="rn">'+esc((t.city==='세종'?'세종 ':t.gu+' ')+t.dong+' '+t.name)
-      +'<div class="note">'+esc(String(t.built||'').slice(0,4))+'년 · '+Number(t.units).toLocaleString('ko-KR')+'세대 · 실거래 '+(t.real?eok(t.real.med)+'('+t.real.n+'건)':'이번 달 없음')+'</div></div>'
+      +'<div class="note">'+esc(String(t.built||'').slice(0,4))+'년 · '+Number(t.units).toLocaleString('ko-KR')+'세대 · 실거래 '+(t.real?eok(t.real.med)+'('+t.real.n+'건)':'이번 달 없음')+'</div>'+gapTxt(t)+'</div>'
       +'<div class="rv"><b class="'+cls(t.mom)+'">'+pct(t.mom)+'</b><div class="note">'+eok(t.price)+' · 전세 '+eok(t.jeonse)+'</div></div></div>').join('')
     +'<div class="note">사려면 1위가 +'+Math.round(o.buyMin*100)+'% 이상이고 금리가 1년 전보다 높지 않아야 합니다. 시세는 KB 일반거래가(84㎡).</div></div>';
   h+='<div class="card"><h3>📒 모의투자 장부 — 앞으로 ('+esc(sv)+')</h3>';
   if(P){ const eq=P.acct.eq,ret=eq/P.params.capital-1;
     h+='<div class="kv"><span>시작</span><b>'+esc(P.startedData)+' 자료까지 보고 만든 날 '+esc(String(P.created||'').slice(0,10))+'</b></div>'
-      +'<div class="kv"><span>지금 평가액</span><b>'+eok(eq)+' <span class="'+cls(ret)+'">'+pct(ret)+'</span></b></div>'
-      +'<div class="kv"><span>보유</span><b>'+(pos?aptName(pos.meta):'현금(예금)')+'</b></div>'
-      +(P.months.length?'<div class="tw"><table><tr><th>달</th><th class="l">판단</th><th>평가액</th></tr>'+P.months.slice().reverse().map(m=>'<tr><td>'+esc(m.m)+'</td><td class="l">'+esc({buy:'매수',sell:'매도',switch:'갈아타기',hold:'보유',wait:'현금 대기'}[m.action]||m.action)+'</td><td>'+eok(m.eq)+'</td></tr>').join('')+'</table></div>'
+      +'<div class="kv"><span>지금 평가액</span><b>'+eok(eq)+' <span class="'+cls(ret)+'">'+pct(ret)+'</span>'+(ruined?' <span class="dn">💀 파산</span>':'')+'</b></div>'
+      +'<div class="kv"><span>보유</span><b>'+(pos?aptName(pos.meta)+(pos.gap?' <span class="note">· 전세 '+eok(pos.gap.j)+' 끼고 · 내 돈 '+eok(pos.gap.out)+'</span>':''):'현금(예금)')+'</b></div>'
+      +(P.months.length?'<div class="tw"><table><tr><th>달</th><th class="l">판단</th><th>평가액</th></tr>'+P.months.slice().reverse().map(m=>'<tr><td>'+esc(m.m)+'</td><td class="l">'+esc({buy:'매수',sell:'매도',switch:'갈아타기',hold:'보유',wait:'현금 대기',ruin:'파산'}[m.action]||m.action)+'</td><td>'+eok(m.eq)+'</td></tr>').join('')+'</table></div>'
         :'<div class="note">아직 지난 달이 없습니다. 다음 달 시세가 나오면 매달 자동으로 한 줄씩 쌓입니다(지난 기록은 고치지 않음).</div>')
       +(P.trades.length?P.trades.map(tradeCard).join(''):'');
   } else h+='<div class="note">장부('+esc(APT_PAPER[sv]||'')+')를 불러오지 못했습니다.</div>';

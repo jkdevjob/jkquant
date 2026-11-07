@@ -44,7 +44,12 @@ const COL_MUTS=[
   ['KB 지역 이름 검사 없음','    if row.get("지역명") != name:','    if False:'],
   ['KB 입주 연도 합계도 달로 셈','        if len(m) == 6 and r.get("합계") is not None:','        if r.get("합계") is not None:'],
   ['ECOS 항목 이름 검사 없음','            if expect is not None and r.get("ITEM_NAME1") != expect:','            if False:'],
-  ['이어 받기 시작 달 건너뜀','    s = ym_add(max(out), 1)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)','    s = ym_add(max(out), 2)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)']
+  ['이어 받기 시작 달 건너뜀','    s = ym_add(max(out), 1)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)','    s = ym_add(max(out), 2)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)'],
+  ['옛 방식: 한 시계열 실패가 전체를 멈춤','    except Exception as e:  # noqa: BLE001 — 어떤 오류든 이 시계열만 포기한다\n        log.append','    except ValueError as e:  # noqa: BLE001 — 어떤 오류든 이 시계열만 포기한다\n        log.append'],
+  ['실패한 시계열의 옛 자료를 지움','        failed.append(name)\n        print(name, "실패 — 옛 자료 그대로:", str(e)[:200], file=sys.stderr, flush=True)\n        return t, None','        failed.append(name)\n        bucket[key] = None\n        return t, None'],
+  ['실패를 기록하지 않음','        log.append({"series": name, "event": "failed", "error": str(e)[:200]})\n        failed.append(name)','        failed.append(name)'],
+  ['실패해도 성공(0)으로 끝냄','    return EXIT_PARTIAL if failed else 0','    return 0'],
+  ['R-ONE 동시 호출(잠금 없음)','    with RONE_LOCK:\n        d = get_json(RONE_URL + "?" + urllib.parse.urlencode(q))\n        time.sleep(PAUSE)','    if True:\n        d = get_json(RONE_URL + "?" + urllib.parse.urlencode(q))\n        time.sleep(PAUSE)']
 ];
 const APT_MUTS=[
   ['후보 상승률에 이번 달 시세(룩어헤드)','function momOf(A,id,k,o){ const a=price(A,id,k-1),b=price(A,id,k-1-o.mom);','function momOf(A,id,k,o){ const a=price(A,id,k),b=price(A,id,k-o.mom);'],
@@ -53,17 +58,17 @@ const APT_MUTS=[
   ['2년 보유 전 매도','    if(held>=o.minHold){ if(mc!=null&&mc<0)','    if(true){ if(mc!=null&&mc<0)'],
   ['금리 급등 매도 없음',"if(m.rateUp!=null&&m.rateUp>=o.rateUpSell) why.push('rate'); }\n    const px","}\n    const px"],
   ['취득세를 매수 총액에서 뺌','total:px+acq+broker,','total:px+broker,'],
-  ['보유세를 안 쌓음','      if(px!=null){ p.hold+=px*o.holdCostYr/12;','      if(px!=null){'],
+  ['보유세를 안 쌓음','  p.hold+=px*o.holdCostYr/12;\n  if(p.gap){','  if(p.gap){'],
   ['그때 뉴스에 결정 달 사건 포함','e.k>=k-n&&e.k<=k-1&&regionHit(e,city)','e.k>=k-n&&e.k<=k&&regionHit(e,city)'],
   ['다른 지역 뉴스도 붙임',"function regionHit(e,city){ return e.region==='전국'||e.region==='대전·세종'||e.region===city; }","function regionHit(e,city){ return true; }"],
   ['작은 단지도 후보',"    if(o.minUnits&&(+u.units||0)<o.minUnits) continue;\n    const ld=lead","    const ld=lead"],
-  ['갈아타기 없음','  if(!st.pos){\n    const C=candidatesAt(A,k,o)','  if(!st.pos&&!out.closed){\n    const C=candidatesAt(A,k,o)'],
+  ['갈아타기 없음','  if(!st.pos&&!st.ruin){\n    const C=candidatesAt(A,k,o)','  if(!st.pos&&!st.ruin&&!out.closed){\n    const C=candidatesAt(A,k,o)'],
   ['장부를 처음부터 다시 씀',"  const done=L.months.length?ymk(L.months[L.months.length-1].m):ymk(L.startedData);","  const done=ymk(L.startedData); L.months=[];"],
   ['사건 기준 달을 사건 달로',"const a=price(A,u.id,e.k-1),b=price(A,u.id,e.k-1+h);","const a=price(A,u.id,e.k),b=price(A,u.id,e.k+h);"],
   ['예금 이자소득세 무시',"return (d==null?0:d/100)*(1-o.depositTax)/12;","return (d==null?0:d/100)/12;"],
   ['비과세 기준 12억 안 올림',"k<ymk('2021-12')?90000:120000;","90000;"],
   ['장기보유특별공제 없음',"  if(held>=36) taxable*=1-Math.min(0.8,0.08*Math.floor(held/12));","  if(false) taxable*=1;"],
-  ['체결을 전달 시세로',"      const px=price(A,best.id,k),q=quote(A,best.id,k)","      const px=price(A,best.id,k-1),q=quote(A,best.id,k)"],
+  ['체결을 전달 시세로',"  const px=price(A,best.id,k),q=quote(A,best.id,k),acq=","  const px=price(A,best.id,k-1),q=quote(A,best.id,k),acq="],
   // apt-lead-1 (대장 아파트)
   ['대장을 이번 달 시세로(룩어헤드)',"    const p=price(A,u.id,k-1); if(p==null) continue;\n    (by[u.city]","    const p=price(A,u.id,k); if(p==null) continue;\n    (by[u.city]"],
   ['대장에 작은 단지도',"    if(o.minUnits&&(+u.units||0)<o.minUnits) continue;\n    const p=price(A,u.id,k-1)","    const p=price(A,u.id,k-1)"],
@@ -72,15 +77,29 @@ const APT_MUTS=[
   ['대장 2위 기록 틀림',"next:a[1]?{id:a[1].id,name:A.byId[a[1].id].name,price:a[1].price}:null","next:a[1]?{id:a[0].id,name:A.byId[a[0].id].name,price:a[0].price}:null"],
   ['대장 후보 거르기 없음',"if(lead&&!ld) continue;",""],
   ['대장 매수 기록 없음',"if(best.lead) buy.lead=","if(false) buy.lead="],
-  ['전략 이름 대신 넘겨받은 pick 사용',"return Object.assign({},DEFAULTS,o,{strategy:sv,pick:S.pick});","return Object.assign({},DEFAULTS,{pick:S.pick},o,{strategy:sv});"],
+  ['전략 이름 대신 넘겨받은 pick 사용',"return Object.assign({},DEFAULTS,o,{strategy:sv,pick:S.pick,lev:S.lev});","return Object.assign({},DEFAULTS,{pick:S.pick},o,{strategy:sv,lev:S.lev});"],
   ['모르는 전략도 통과',"if(!S) throw new Error('모르는 전략: '+sv);","if(!S) return Object.assign({},DEFAULTS,o);"],
   ['장부 전략 버전 검사 없음',"if(L&&L.strategyVersion!==o.strategy) throw","if(false) throw"],
   ['장부 후보 방식 검사 없음',"if(L&&L.params&&L.params.pick!=null&&L.params.pick!==o.pick) throw","if(false) throw"],
-  ['장부에 후보 방식(pick) 안 남김',"for(const k of ['pick','mom',","for(const k of ['mom',"],
+  ['장부에 후보 방식(pick) 안 남김',"for(const k of ['pick','lev','renew','mom',","for(const k of ['lev','renew','mom',"],
   ['대장 계속 보유를 이번 달 대장으로(룩어헤드)',"for(const x of leadersAt(A,k,o)){ const a=price(A,x.id,k); if(a!=null&&x.price>0){ s2+=a/x.price-1; n2++; } }","for(const x of leadersAt(A,k+1,o)){ const a=price(A,x.id,k),b=price(A,x.id,k-1); if(a!=null&&b>0){ s2+=a/b-1; n2++; } }"],
   ['대장 계속 보유에 보유세 안 뺌',"ld*=1+(n2?s2/n2:0)-o.holdCostYr/12;","ld*=1+(n2?s2/n2:0);"],
   ['대장이 바뀐 때를 결정 달로',"{m:kym(k-1),price:x.price,n:x.n}","{m:kym(k),price:x.price,n:x.n}"],
-  ['지금 대장을 한 달 뒤 시세로',"const leaders=leadersAt(A,n,o)","const leaders=leadersAt(A,n+1,o)"]
+  ['지금 대장을 한 달 뒤 시세로',"const leaders=leadersAt(A,n,o)","const leaders=leadersAt(A,n+1,o)"],
+  // -gap (전세 끼고, 실험적 확장)
+  ['갭 내 돈에 취득세·중개 안 넣음',"need:px-j+Math.round(px*acqRate(px))+Math.round(px*brokerRate(px))};","need:px-j};"],
+  ['역전세 차액을 내 돈에 안 더함',"g.calls+=g.j-jn; g.out+=g.j-jn;","g.calls+=g.j-jn;"],
+  ['전세 재계약 때 보증금을 안 바꿈',"        g.j=jn; } }","        } }"],
+  ['팔 때 전세보증금을 안 돌려줌',"const net=p.gap?px-broker-tax-p.hold-p.gap.j+p.gap.inflow:px-broker-tax-p.hold;","const net=p.gap?px-broker-tax-p.hold+p.gap.inflow:px-broker-tax-p.hold;"],
+  ['파산 뒤에도 거래',"  if(st.ruin){ out.action='ruin'; out.eq=st.eq; out.market=m; return out; }                     // 내 돈이 바닥났다 — 더 거래하지 않는다\n",""],
+  ['조정대상지역 취득도 비과세',"buy.gap={jeonse:g.jeonse,ratio:g.ratio,need:g.need,res:regulated(meta,k)};","buy.gap={jeonse:g.jeonse,ratio:g.ratio,need:g.need,res:false};"],
+  ['비과세 없음일 때도 12억 기준 적용',"  if(noExempt){","  if(false){"],
+  ['전략 이름 대신 넘겨받은 lev 사용',"return Object.assign({},DEFAULTS,o,{strategy:sv,pick:S.pick,lev:S.lev});","return Object.assign({},DEFAULTS,{lev:S.lev},o,{strategy:sv,pick:S.pick});"],
+  ['장부 돈 방식 검사 없음',"if(L&&L.params&&(L.params.lev||'cash')!==o.lev) throw","if(false) throw"],
+  ['현실 점검 분포에 비용·세금 안 뺌',"const net=(b-sb-gainTax(tot,b,sb,h,k+h)-hold)/tot-1; r.push(net);","const net=b/a-1; r.push(net);"],
+  ['현실 점검 분포에 작은 단지 포함',"    for(const u of A.U){ if(o.minUnits&&(+u.units||0)<o.minUnits) continue;\n      for(let k=s;k+h<=A.lastK;k++){","    for(const u of A.U){\n      for(let k=s;k+h<=A.lastK;k++){"],
+  ['고점 스트레스가 고점 대신 첫 달',"const kb=pk.k,ks=Math.min(kb+24,A.lastK),st={eq:1,pos:null};","const kb=ymk('2015-01'),ks=Math.min(kb+24,A.lastK),st={eq:1,pos:null};"],
+  ['조정대상지역 세종 시작을 2017년으로',"if(u.city==='세종') return k>=ymk('2016-11')&&k<=ymk('2022-11');","if(u.city==='세종') return k>=ymk('2017-11')&&k<=ymk('2022-11');"]
 ];
 const CAPT_MUTS=[
   ['84㎡ 대표 타입을 세대수 대신 첫 타입',"    t84.sort(key=lambda t: (-(t.get(\"세대수\") or 0), t.get(\"면적일련번호\") or 0))","    pass"],
@@ -88,7 +107,9 @@ const CAPT_MUTS=[
   ['단지 이름 검사 없음','    if norm(m.get("단지명")) != norm(c["name"]):','    if False:'],
   ['모든 오류를 자료 없음으로',"        if soft and head.get(\"resultCode\") == \"10500\":","        if True:"],
   ['대단지 문턱 무시','    big = [c for c in allc if c["kind"] in ("아파트", "주상복합") and (c.get("units") or 0) >= MIN_UNITS]','    big = [c for c in allc if c["kind"] in ("아파트", "주상복합")]'],
-  ['짝수 건 중앙값을 위쪽 값으로','        med = v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2','        med = v[n // 2]']
+  ['짝수 건 중앙값을 위쪽 값으로','        med = v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2','        med = v[n // 2]'],
+  ['지금 달(아직 바뀌는 값)도 시세로 넣음','        if m >= CUTOFF_YM:\n            continue\n        mid = it.get("매매일반거래가")','        mid = it.get("매매일반거래가")'],
+  ['지금 달 실거래도 넣음','        if d[:6] >= CUTOFF_YM:\n            continue\n        by.setdefault','        by.setdefault']
 ];
 const CPRE_MUTS=[
   ['청약홈 목록 지역 검사 없음','        if c[0] != area:','        if False:'],

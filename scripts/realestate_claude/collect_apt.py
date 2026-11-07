@@ -106,6 +106,15 @@ def ym(s):
     return s
 
 
+def this_month_kst():
+    """지금 달(KST). KB 월 시세는 그 달이 끝나기 전엔 주 단위로 계속 바뀌는 값이라 넣지 않는다
+    (2026-11-06 수집에서 11월 값이 10월 값 그대로 109곳 중 103곳 들어왔다). 실거래도 이 달 것은 아직 신고 중이다."""
+    return (dt.datetime.now(dt.timezone.utc) + dt.timedelta(hours=9)).strftime("%Y%m")
+
+
+CUTOFF_YM = this_month_kst()  # 이 달부터는 버린다 — 지난달까지만 확정 자료로 본다
+
+
 def ym_add(s, n):
     y, m = int(s[:4]), int(s[4:]) - 1 + n
     return "%04d%02d" % (y + m // 12, m % 12 + 1)
@@ -134,6 +143,8 @@ def sise_rows(items):
         m = ym(it.get("기준년월"))
         if m in rows:
             raise RuntimeError("시세 같은 달 두 번: %s" % m)
+        if m >= CUTOFF_YM:
+            continue
         mid = it.get("매매일반거래가")
         if not mid:
             continue
@@ -148,6 +159,8 @@ def real_rows(items):
         p = it.get("매매실거래금액")
         d = str(it.get("계약시작년월일") or "")
         if not p or not re.fullmatch(r"\d{8}", d):
+            continue
+        if d[:6] >= CUTOFF_YM:
             continue
         by.setdefault(d[:6], []).append(int(p))
     rows = {}

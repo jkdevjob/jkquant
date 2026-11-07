@@ -5,6 +5,7 @@
 //   paper-rec-wf-2.json   — rec-wf-2 (지수 전략 v2, 처음 만든 달 자료부터)     realestate-claude-engine.js
 //   paper-apt-1.json      — apt-1      (아파트 단지 매매: 대단지 상승률 1위, 처음 만든 달 자료부터) realestate-claude-apt.js
 //   paper-apt-lead-1.json — apt-lead-1 (아파트 단지 매매: 대장 아파트만, 처음 만든 달 자료부터)  realestate-claude-apt.js
+//   paper-apt-1-gap.json · paper-apt-lead-1-gap.json — 같은 규칙을 전세 끼고(실험적 확장)      realestate-claude-apt.js
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -19,10 +20,8 @@ const LEDGERS = [
   { file: 'paper.json', sv: 'rec-wf-1' },
   { file: 'paper-rec-wf-2.json', sv: 'rec-wf-2' },
 ];
-const APT_LEDGERS = [
-  { file: 'paper-apt-1.json', sv: 'apt-1' },
-  { file: 'paper-apt-lead-1.json', sv: 'apt-lead-1' },
-];
+// 아파트 전략마다 장부 하나: paper-<전략>.json (apt-1 · apt-lead-1 · apt-1-gap · apt-lead-1-gap) — 엔진의 전략 목록에서 나온다
+const APT_LEDGERS = Object.keys(X.STRATEGIES).map(sv => ({ file: 'paper-' + sv + '.json', sv }));
 
 const doc = JSON.parse(fs.readFileSync(path.join(DIR, 'series.json'), 'utf8'));
 const D = E.prepare(doc);
