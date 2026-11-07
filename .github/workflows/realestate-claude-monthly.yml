@@ -31,6 +31,7 @@ jobs:
         with: { node-version: '22' }
 
       - name: 원자료 수집(증분 — 최근 12개월 대조, 소급 수정이면 그 시계열만 전체 재수집)
+        timeout-minutes: 90   # 수집기는 70분이 지나면 새 시계열을 시작하지 않는다 — 이건 그래도 안 끝날 때의 마지막 한도
         env:
           RONE_KEY: ${{ secrets.RONE_KEY }}
           ECOS_KEY: ${{ secrets.ECOS_KEY }}
