@@ -6,6 +6,7 @@
 - `scripts/check-plan-rules-session.cjs`(다시 씀): PASS — update rules exp1/exp2/base/모름 · 실제 createAssetSession(exp1·base·exp2 · 10년 없음 · 수정) · settingsFromView · applyAssetSettings(exp1/exp2/없음/모름) · 칩 '새 규칙'·'공격형' · 결과 머리 · 화면 s0(55/55/60) · renderAlphaPlan w 가 S0 · 목록 — 변이 8/8 빨간불(설정 저장 제거 · exp2 거부 · 모달 rules 제거 · 화면→세션 제거 · 화면 반영 제거 · s0 고정 · 목록 표시 제거 · 엔진 exp2 제거).
 - 기존: `check-plan-session-settings.cjs` PASS · `check-plan-session-mutations.cjs` 3/3 · `check-plan-evidence.cjs` +2/2(vm 문맥에 alphaS0Pct 추가 — 처음엔 ReferenceError 로 빨간불이었다).
 - 연구 근거(research/im_plan RESEARCH_LOG.md 11-07 질문 답): 실제 2011~ 1만$ s0 .55/.60/.65/.70 = 30.4/41.6 · 30.9/46.1 · 31.9/51.5 · 31.4/56.3 · 5년 배수 ×4.68/×4.91/×5.01 · 두 배 1.8년 같음 · 합성 2000~ .60 14.2/82.4 · .65 14.3/85.5(짝 0:54) · 표본 밖 .60 짝 2:29.
+- `check-before-push.cjs`(5c1e05d): 57단계 전부 PASS · 전체 회귀 2825 PASS / 0 FAIL — ALL PASS.
 - 미확인: 운영 화면에서 공격형 모의 세션 실제 재생 — 사용자 확인 전.
 
 ## 2026-11-07 · 자산플랜 세션 설정 '5년 규칙' 선택 · v3.117.4 (플랜 v1.45.0)
