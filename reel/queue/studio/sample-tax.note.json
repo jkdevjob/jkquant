@@ -1,0 +1,66 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": { "text": "노후 세금 한 장 #1", "color": "yellow" },
+ "out": "queue/studio/sample-tax.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   { "id": "hook", "text": "퇴직금, 연금으로 나눠 받으면 세금이 얼마나 줄까요?" },
+   { "id": "base", "text": "퇴직소득세가 천만 원이라고 해 볼게요.", "gap": 0.35 },
+   { "id": "y1", "text": "한 번에 받으면 천만 원 그대로고요," },
+   { "id": "y2", "text": "연금으로 받으면 칠백만 원, 십일 년 차부터는 육백만 원," },
+   { "id": "y3", "text": "이십일 년 차부터는 오백만 원까지 줄어요." },
+   { "id": "cond", "text": "아이알피로 받아서, 쉰다섯 살 넘어 연금으로 받을 때 얘기예요.", "gap": 0.4 },
+   { "id": "cta", "text": "팔로우해 두시면, 다음 세금 칸도 이어서 보여 드릴게요.", "gap": 0.4 }
+  ]
+ },
+ "pages": [
+  {
+   "start": 0,
+   "cover": true,
+   "stains": [ { "x": 720, "y": 1480, "r": 170, "opacity": 0.16, "rot": -6 } ],
+   "items": [
+    { "type": "text", "id": "cv1", "text": "퇴직금", "x": 130, "y": 470, "size": 150, "font": "bold", "color": "ink", "at": 0, "dur": 0, "rot": -1.0 },
+    { "type": "text", "id": "cv2", "text": "연금으로 받으면", "x": 130, "y": 660, "size": 120, "font": "bold", "color": "ink", "at": 0, "dur": 0, "rot": 0.5 },
+    { "type": "text", "id": "cv3", "text": "세금 −50%?", "x": 130, "y": 860, "size": 140, "font": "bold", "color": "red", "at": 0, "dur": 0, "rot": -0.6 },
+    { "type": "circle", "target": "cv3", "at": 0.25, "dur": 0.7, "color": "red", "pad": 18, "width": 8 },
+    { "type": "text", "id": "cv4", "text": "받는 방법 따라 달라지는 세금", "x": 140, "y": 1080, "size": 60, "font": "pen", "color": "ink", "at": 0.9, "dur": 0.7 }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [ { "x": 700, "y": 1500, "r": 170, "opacity": 0.18, "rot": -8 } ],
+   "items": [
+    { "type": "text", "id": "h1", "text": "퇴직소득세 1,000만 원이면", "x": 128, "y": 196, "size": 80, "font": "bold", "color": "ink", "at": 0, "dur": 0, "rot": -0.8 },
+    { "type": "underline", "target": "h1", "at": "@base", "dur": 0.6, "color": "red", "width": 6 },
+    { "type": "text", "id": "th1", "text": "받는 방법", "x": 150, "y": 400, "size": 54, "font": "pen", "color": "gray", "at": "@y1-0.3", "dur": 0.4 },
+    { "type": "text", "id": "th2", "text": "내는 세금", "x": 600, "y": 400, "size": 54, "font": "pen", "color": "gray", "at": "@y1-0.2", "dur": 0.4 },
+    { "type": "text", "id": "r1a", "text": "한 번에", "x": 150, "y": 490, "size": 72, "font": "bold", "color": "ink", "at": "@y1", "dur": 0.4 },
+    { "type": "text", "id": "r1b", "text": "1,000만", "x": 600, "y": 490, "size": 76, "font": "bold", "color": "ink", "at": "@y1+0.7", "dur": 0.5 },
+    { "type": "text", "id": "r2a", "text": "연금 1~10년 차", "x": 150, "y": 605, "size": 64, "font": "bold", "color": "ink", "at": "@y2", "dur": 0.5 },
+    { "type": "text", "id": "r2b", "text": "700만", "x": 600, "y": 605, "size": 76, "font": "bold", "color": "blue", "at": "@y2+0.9", "dur": 0.5 },
+    { "type": "text", "id": "r3a", "text": "11~20년 차", "x": 150, "y": 720, "size": 64, "font": "bold", "color": "ink", "at": "@y2.end-1.3", "dur": 0.5 },
+    { "type": "text", "id": "r3b", "text": "600만", "x": 600, "y": 720, "size": 76, "font": "bold", "color": "blue", "at": "@y2.end-0.6", "dur": 0.5 },
+    { "type": "text", "id": "r4a", "text": "21년 차부터", "x": 150, "y": 835, "size": 64, "font": "bold", "color": "ink", "at": "@y3", "dur": 0.5 },
+    { "type": "text", "id": "r4b", "text": "500만", "x": 600, "y": 835, "size": 84, "font": "bold", "color": "red", "at": "@y3+1.0", "dur": 0.5 },
+    { "type": "circle", "target": "r4b", "at": "@y3.end-0.3", "dur": 0.5, "color": "red", "pad": 12, "width": 6 },
+    { "type": "text", "id": "n1", "text": "(그해 받는 몫에 붙는 세금 기준 · 소득세법 연금수령 감면 30~50%)", "x": 150, "y": 960, "size": 34, "font": "pen", "color": "gray", "at": "@y3.end", "dur": 0.6 },
+    { "type": "sticky", "x": 150, "y": 1040, "w": 760, "h": 300, "rot": -2.0, "at": "@cond-0.2",
+      "items": [
+        { "type": "text", "id": "m1", "text": "조건", "x": 46, "y": 34, "size": 70, "font": "bold", "color": "red", "at": "@cond", "dur": 0.4 },
+        { "type": "text", "id": "m2", "text": "IRP로 받기 + 55세 이후", "x": 46, "y": 140, "size": 58, "font": "bold", "color": "ink", "at": "@cond+0.9", "dur": 0.8 },
+        { "type": "text", "id": "m3", "text": "연금으로 나눠 받기", "x": 46, "y": 220, "size": 50, "font": "bold", "color": "blue", "at": "@cond+2.4", "dur": 0.7 }
+      ]
+    },
+    { "type": "text", "id": "sig", "text": "○○세무회계 · 노후 세금 노트", "x": 250, "y": 1440, "size": 56, "font": "pen", "color": "ink", "at": "@cta", "dur": 0.8, "rot": -2.0 },
+    { "type": "text", "id": "handle", "text": "@your.office", "x": 600, "y": 1530, "size": 36, "font": "sans", "color": "gray", "at": "@cta+0.6", "dur": 0.5, "fade": true }
+   ]
+  }
+ ]
+}
