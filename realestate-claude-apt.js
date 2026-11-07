@@ -1,4 +1,4 @@
-/* 부동산 🤖 클로드 — 아파트(단지) 매매 전략 엔진 apt-1 · apt-lead-1
+/* 부동산 🤖 클로드 — 아파트(단지) 매매 전략 엔진 apt-1 · apt-lead-1 (+ 전세 끼고 사는 실험적 확장 -gap)
    "어느 아파트를 언제·얼마에·왜 사서, 언제·얼마에·왜 팔았나"를 계산하는 한 곳.
    화면(realestate-claude.js)·모의장부(scripts/realestate_claude/paper.mjs)·시험이 이 함수를 같이 쓴다.
    자료  apt.json    — 단지별 KB 월 시세(전용 84㎡ 대표 타입: 하한·일반·상한·전세)와 매매 실거래 월 요약 (단위 만원)
@@ -10,20 +10,31 @@
          판 달에 매수 조건이 맞는 다른 단지가 있으면 바로 갈아탄다. 현금은 예금이자(세후)를 받는다.
    후보  전략마다 '무엇을 사나'만 다르다(사고파는 때·비용·체결은 같은 stepMonth).
          apt-1      — 대단지 전부
-         apt-lead-1 — 대장 아파트만: 도시(대전·세종)마다 전달 84㎡ KB 시세가 가장 비싼 대단지 1곳 */
+         apt-lead-1 — 대장 아파트만: 도시(대전·세종)마다 전달 84㎡ KB 시세가 가장 비싼 대단지 1곳
+   돈    lev 'cash' — 1채를 내 돈으로만(기본). lev 'gap' — 전세를 끼고 산다(실험적 확장, 이름 끝에 -gap).
+         갭: 내 돈 = 가격 − 전세 + 취득세 + 중개. 2년마다 전세 재계약 — 전세가 내렸으면 차액을 내 돈으로 돌려주고(역전세),
+             올랐으면 받는다. 팔 때 전세보증금을 돌려주고 남는 돈이 회수. 내 돈이 0 아래로 가면 파산(그 뒤 거래 없음).
+             조정대상지역일 때 산 집은 2년 거주 요건을 못 채우니(전세를 줬다) 1주택 비과세 없이 양도세를 낸다. */
 (function(g){
 'use strict';
 const BASE=(typeof module!=='undefined'&&module.exports)?require('./realestate-claude-engine.js'):g.JKRealEstateClaude;
 const {ymk,kym,at,upTo,lastK}=BASE;
 
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 const STRATEGY='apt-1';   // 기본 전략(첫 장부)
-const STRATEGIES={'apt-1':{pick:'mom',name:'상승률 1위'},'apt-lead-1':{pick:'leader',name:'대장 아파트'}};
-const DEFAULTS={strategy:STRATEGY,pick:'mom',mom:6,buyMin:0.03,minHold:24,rateLook:12,rateUpSell:0.5,minUnits:1000,holdCostYr:0.0015,depositTax:0.154,newsWindow:6,capital:30000};
-/* 전략 버전이 후보 방식을 정한다 — 같은 이름으로 다른 규칙이 돌지 않게 pick 은 넘겨받지 않는다 */
+const STRATEGIES={'apt-1':{pick:'mom',lev:'cash',name:'상승률 1위'},'apt-lead-1':{pick:'leader',lev:'cash',name:'대장 아파트'},
+  'apt-1-gap':{pick:'mom',lev:'gap',name:'상승률 1위 · 전세 끼고',experimental:true},'apt-lead-1-gap':{pick:'leader',lev:'gap',name:'대장 아파트 · 전세 끼고',experimental:true}};
+const DEFAULTS={strategy:STRATEGY,pick:'mom',lev:'cash',renew:24,mom:6,buyMin:0.03,minHold:24,rateLook:12,rateUpSell:0.5,minUnits:1000,holdCostYr:0.0015,depositTax:0.154,newsWindow:6,capital:30000};
+/* 전략 버전이 후보 방식(pick)·돈 방식(lev)을 정한다 — 같은 이름으로 다른 규칙이 돌지 않게 둘 다 넘겨받지 않는다 */
 function opts(o){
   o=o||{}; const sv=o.strategy||STRATEGY,S=STRATEGIES[sv]; if(!S) throw new Error('모르는 전략: '+sv);
-  return Object.assign({},DEFAULTS,o,{strategy:sv,pick:S.pick});
+  return Object.assign({},DEFAULTS,o,{strategy:sv,pick:S.pick,lev:S.lev});
+}
+/* 조정대상지역(월 단위 근사) — 이 기간에 산 집은 1주택 비과세에 2년 거주 요건이 붙는다(2017-08-03 이후 취득분).
+   세종 2016-11-03 지정 → 2022-11-14 해제 · 대전 동·중·서·유성 2020-06-19, 대덕 2020-12-18 지정 → 2022-09-26 해제 */
+function regulated(u,k){
+  if(u.city==='세종') return k>=ymk('2016-11')&&k<=ymk('2022-11');
+  return k>=ymk(u.gu==='대덕구'?'2020-12':'2020-06')&&k<=ymk('2022-09');
 }
 const CITY_OF=gu=>gu==='세종시'?'세종':'대전';
 
@@ -102,14 +113,24 @@ function candidatesAt(A,k,o){
 function acqRate(p){ const e=p/10000,r=e<=6?1:e<=9?e*2/3-3:3; return r*1.1/100; }              // 취득세+지방교육세(전용 85㎡ 이하)
 function brokerRate(p){ const e=p/10000,r=p<5000?0.6:e<2?0.5:e<9?0.4:e<12?0.5:e<15?0.6:0.7; return r*1.1/100; } // 중개보수 상한+부가세
 function exemptLimit(k){ return k<ymk('2008-10')?60000:k<ymk('2021-12')?90000:120000; }        // 1주택 비과세 고가주택 기준
-function gainTax(buyTotal,sellP,sellBroker,held,k){
+function gainTax(buyTotal,sellP,sellBroker,held,k,noExempt){
   const gain=sellP-sellBroker-buyTotal; if(gain<=0) return 0;
   if(held<24) return Math.round(gain*(held<12?0.77:0.66));
-  const lim=exemptLimit(k); if(sellP<=lim) return 0;
-  let taxable=gain*(sellP-lim)/sellP;
-  if(held>=36) taxable*=1-Math.min(0.8,0.08*Math.floor(held/12));                              // 1주택 장기보유특별공제(보유+거주)
+  let taxable;
+  if(noExempt){                                                                                   // 비과세 없음(거주 요건 못 채움): 전체 과세 · 일반 장기보유공제(3년부터 연 2%, 최대 30%)
+    taxable=gain; if(held>=36) taxable*=1-Math.min(0.3,0.02*Math.floor(held/12));
+  } else {
+    const lim=exemptLimit(k); if(sellP<=lim) return 0;
+    taxable=gain*(sellP-lim)/sellP;
+    if(held>=36) taxable*=1-Math.min(0.8,0.08*Math.floor(held/12));                            // 1주택 장기보유특별공제(보유+거주)
+  }
   taxable=Math.max(0,taxable-250);
   return Math.round(taxable*0.385);
+}
+/* 갭(전세 끼고): 그 달 전세로 사면 필요한 내 돈. 전세가 없거나 가격 이상이면 null */
+function gapNeed(A,id,k){
+  const px=price(A,id,k),j=at(A.J[id],k); if(px==null||j==null||j<=0||j>=px) return null;
+  return {price:px,jeonse:j,ratio:j/px,acq:Math.round(px*acqRate(px)),broker:Math.round(px*brokerRate(px)),need:px-j+Math.round(px*acqRate(px))+Math.round(px*brokerRate(px))};
 }
 
 /* ── 뉴스: 결정 직전 n개월(k-n ~ k-1) 사건 중 그 지역·전국 것 ── */
@@ -120,47 +141,84 @@ function newsFor(A,k,city,n){
 }
 
 /* ── 한 달 진행 — 백테스트와 모의장부가 같은 함수를 쓴다 ──
-   st = {eq(만원), pos:null|{id,k,buy...,hold}} → 이 달 체결·평가를 반영해 st 를 고친다. */
+   st = {eq(만원), pos:null|{id,k,buy,hold,eqIn,gap?}, ruin?} → 이 달 체결·평가를 반영해 st 를 고친다.
+   갭(lev 'gap')의 내 돈 계산은 openPos·markPos·closePos 한 곳에만 있다(고점 스트레스도 같은 함수). */
 function info(A,id){ const u=A.byId[id]||{}; return {id,name:u.name,gu:u.gu,dong:u.dong,city:u.city,built:u.built,units:u.units,excl:u.excl}; }
+function openPos(A,st,best,k,o,C){
+  const px=price(A,best.id,k),q=quote(A,best.id,k),acq=Math.round(px*acqRate(px)),broker=Math.round(px*brokerRate(px));
+  const meta=info(A,best.id),rank=C?C.indexOf(best)+1:1;
+  const buy=Object.assign(q,{k,costs:{acq,broker},total:px+acq+broker,mom:best.mom,rank,of:C?C.length:1,rate:best.rate,rate0:best.rate0,rateUp:best.rateUp,
+    runners:C?C.filter(c=>c!==best).slice(0,2).map(c=>({id:c.id,name:A.byId[c.id].name,mom:c.mom})):[],news:newsFor(A,k,meta.city,o.newsWindow)});
+  if(best.lead) buy.lead={city:best.lead.city,last:best.lead.price,n:best.lead.n,next:best.lead.next};   // 왜 대장인가: 전달 시세 1위 · 그 도시 대단지 수 · 2위
+  st.pos={id:best.id,k,meta,buy,hold:0,eqIn:st.eq};
+  if(o.lev==='gap'){
+    const g=gapNeed(A,best.id,k);                                                               // 호출 전에 gapNeed 가 있는지 확인한다
+    buy.gap={jeonse:g.jeonse,ratio:g.ratio,need:g.need,res:regulated(meta,k)};                // res: 조정대상지역 취득 → 거주 요건 → 비과세 없음
+    st.pos.gap={j:g.jeonse,calls:0,inflow:0,out:g.need,res:buy.gap.res,events:[]};
+    st.eq=st.pos.eqIn*((px-g.jeonse)/g.need);
+  } else st.eq=st.pos.eqIn*(px/buy.total);
+  if(st.eq<=0) st.ruin=true;
+}
+function markPos(A,st,k,o){
+  const p=st.pos,px=price(A,p.id,k); if(px==null) return;
+  p.hold+=px*o.holdCostYr/12;
+  if(p.gap){
+    const g=p.gap,held=k-p.k;
+    if(held>0&&held%o.renew===0){ const jn=at(A.J[p.id],k);                                      // 전세 재계약: 내렸으면 돌려줄 돈(역전세) · 올랐으면 받는 돈
+      if(jn!=null&&jn>0){ if(jn<g.j){ g.calls+=g.j-jn; g.out+=g.j-jn; g.events.push({m:kym(k),jeonse:jn,call:g.j-jn}); }
+        else if(jn>g.j){ g.inflow+=jn-g.j; g.events.push({m:kym(k),jeonse:jn,inflow:jn-g.j}); }
+        g.j=jn; } }
+    st.eq=p.eqIn*((px-g.j-p.hold+g.inflow)/g.out);
+  } else st.eq=p.eqIn*((px-p.hold)/p.buy.total);
+  if(st.eq<=0) st.ruin=true;
+}
+function closePos(A,st,k,o,why,m,mc){
+  const p=st.pos,px=price(A,p.id,k),held=k-p.k,q=quote(A,p.id,k),broker=Math.round(px*brokerRate(px));
+  const tax=gainTax(p.buy.total,px,broker,held,k,!!(p.gap&&p.gap.res)),eq0=st.eq;
+  const net=p.gap?px-broker-tax-p.hold-p.gap.j+p.gap.inflow:px-broker-tax-p.hold;            // 갭: 전세보증금을 돌려주고 남는 돈(회수)
+  const r=p.gap?net/p.gap.out-1:net/p.buy.total-1;
+  const sell=Object.assign(q,{k,costs:{broker,tax,hold:Math.round(p.hold)},net:Math.round(net),mom:mc,held,rate:m.rate,rate0:m.rate0,rateUp:m.rateUp,why,news:newsFor(A,k,p.meta.city,o.newsWindow)});
+  if(p.gap){ const g=p.gap; sell.gap={j:g.j,calls:g.calls,inflow:g.inflow,out:g.out,back:Math.round(net),mult:net/g.out,res:g.res,events:g.events}; }
+  st.eq=p.eqIn*(1+r);
+  const out=Object.assign({},p.meta,{buy:p.buy,sell,
+    result:{months:held,gross:px/p.buy.price-1,net:r,profit:Math.round(p.gap?net-p.gap.out:net-p.buy.total),eqIn:p.eqIn,eqOut:st.eq,eqBefore:eq0}});
+  st.pos=null; if(st.eq<=0) st.ruin=true;
+  return out;
+}
+function markOpen(A,p,k){                                                                        // 아직 안 판 거래의 평가(시뮬레이션 끝)
+  const px=price(A,p.id,k),r=p.gap?(px-p.gap.j-p.hold+p.gap.inflow)/p.gap.out-1:(px-p.hold)/p.buy.total-1;
+  return {mark:Object.assign(quote(A,p.id,k),{k,held:k-p.k,gap:p.gap?{j:p.gap.j,calls:p.gap.calls,inflow:p.gap.inflow,out:p.gap.out,events:p.gap.events}:undefined}),
+    result:{months:k-p.k,gross:px/p.buy.price-1,net:r,profit:Math.round(p.gap?(px-p.gap.j-p.hold+p.gap.inflow)-p.gap.out:px-p.hold-p.buy.total),eqIn:p.eqIn}};
+}
 function stepMonth(A,st,k,o){
   const out={k,closed:null,opened:null,action:'wait',why:[]};
   const m=marketAt(A,k,o);
+  if(st.ruin){ out.action='ruin'; out.eq=st.eq; out.market=m; return out; }                     // 내 돈이 바닥났다 — 더 거래하지 않는다
   if(st.pos){
     const p=st.pos,held=k-p.k,mc=momOf(A,p.id,k,o),why=[];
     if(held>=o.minHold){ if(mc!=null&&mc<0) why.push('mom'); if(m.rateUp!=null&&m.rateUp>=o.rateUpSell) why.push('rate'); }
     const px=price(A,p.id,k);
     if(why.length&&px!=null){
-      const q=quote(A,p.id,k),broker=Math.round(px*brokerRate(px)),tax=gainTax(p.buy.total,px,broker,held,k);
-      const net=px-broker-tax-p.hold,r=net/p.buy.total-1,eq0=st.eq;
-      st.eq=p.eqIn*(1+r);
-      out.closed=Object.assign({},p.meta,{buy:p.buy,
-        sell:Object.assign(q,{k,costs:{broker,tax,hold:Math.round(p.hold)},net:Math.round(net),mom:mc,held,rate:m.rate,rate0:m.rate0,rateUp:m.rateUp,why,news:newsFor(A,k,p.meta.city,o.newsWindow)}),
-        result:{months:held,gross:px/p.buy.price-1,net:r,profit:Math.round(net-p.buy.total),eqIn:p.eqIn,eqOut:st.eq,eqBefore:eq0}});
-      st.pos=null; out.action='sell'; out.why=why;
+      out.closed=closePos(A,st,k,o,why,m,mc); out.action='sell'; out.why=why;
     }else{
-      if(px!=null){ p.hold+=px*o.holdCostYr/12; st.eq=p.eqIn*((px-p.hold)/p.buy.total); }
+      markPos(A,st,k,o);
       out.action='hold'; out.why=held<o.minHold?['minHold']:[];
     }
   }
-  if(!st.pos){
-    const C=candidatesAt(A,k,o),best=C.find(c=>price(A,c.id,k)!=null)||null;
+  if(!st.pos&&!st.ruin){
+    const C=candidatesAt(A,k,o),best=C.find(c=>price(A,c.id,k)!=null&&(o.lev!=='gap'||gapNeed(A,c.id,k)))||null;
     if(best&&m.rateUp!=null&&m.rateUp<=0&&best.mom>=o.buyMin){
-      const px=price(A,best.id,k),q=quote(A,best.id,k),acq=Math.round(px*acqRate(px)),broker=Math.round(px*brokerRate(px));
-      const meta=info(A,best.id),rank=C.indexOf(best)+1;
-      const buy=Object.assign(q,{k,costs:{acq,broker},total:px+acq+broker,mom:best.mom,rank,of:C.length,rate:m.rate,rate0:m.rate0,rateUp:m.rateUp,
-        runners:C.filter(c=>c!==best).slice(0,2).map(c=>({id:c.id,name:A.byId[c.id].name,mom:c.mom})),news:newsFor(A,k,meta.city,o.newsWindow)});
-      if(best.lead) buy.lead={city:best.lead.city,last:best.lead.price,n:best.lead.n,next:best.lead.next};   // 왜 대장인가: 전달 시세 1위 · 그 도시 대단지 수 · 2위
-      st.pos={id:best.id,k,meta,buy,hold:0,eqIn:st.eq};
-      st.eq=st.pos.eqIn*(px/buy.total);
-      out.opened=Object.assign({},meta,{buy}); out.action=out.closed?'switch':'buy';
+      openPos(A,st,Object.assign(best,{rate:m.rate,rate0:m.rate0,rateUp:m.rateUp}),k,o,C);
+      out.opened=Object.assign({},st.pos.meta,{buy:st.pos.buy}); out.action=out.closed?'switch':'buy';
     }else{
       if(out.action!=='sell') out.action='wait';
       const w=[]; if(m.rateUp==null) w.push('noRate'); else if(m.rateUp>0) w.push('rateUp');
-      if(!best) w.push('noCand'); else if(best.mom<o.buyMin) w.push('weak');
+      if(!best) w.push(o.lev==='gap'&&C.some(c=>price(A,c.id,k)!=null)?'noJeonse':'noCand'); else if(best.mom<o.buyMin) w.push('weak');
       if(out.action==='wait') out.why=w;
       st.eq*=1+depMonthly(A,k,o);
     }
   }
+  if(st.ruin&&out.action!=='ruin'){ out.ruin=true; }
   out.eq=st.eq; out.market=m;
   return out;
 }
@@ -179,20 +237,20 @@ function simulate(A,o){
     if(r.closed) trades.push(Object.assign(r.closed,{open:false}));
     curve.push({m:kym(r.k),eq:r.eq,pos:st.pos?st.pos.id:null}); months.push(r);
   }
-  if(st.pos){ const p=st.pos,px=price(A,p.id,k1);
-    trades.push(Object.assign({},p.meta,{buy:p.buy,sell:null,open:true,mark:Object.assign(quote(A,p.id,k1),{k:k1,held:k1-p.k}),
-      result:{months:k1-p.k,gross:px/p.buy.price-1,net:(px-p.hold)/p.buy.total-1,profit:Math.round(px-p.hold-p.buy.total),eqIn:p.eqIn,eqOut:st.eq}})); }
+  if(st.pos){ const p=st.pos,mo=markOpen(A,p,k1);
+    trades.push(Object.assign({},p.meta,{buy:p.buy,sell:null,open:true,mark:mo.mark,result:Object.assign(mo.result,{eqOut:st.eq})})); }
   trades.forEach((t,i)=>t.no=i+1);
-  return {trades,curve,months,opts:o,start:kym(k0),end:kym(k1),final:st.eq,pos:st.pos?st.pos.id:null};
+  return {trades,curve,months,opts:o,start:kym(k0),end:kym(k1),final:st.eq,pos:st.pos?st.pos.id:null,ruin:!!st.ruin,ruinM:st.ruin?kym((months.find(x=>x.ruin)||months[months.length-1]).k):null};
 }
 function cagr(a,b,months){ return (a>0&&b>0&&months>0)?Math.pow(b/a,12/months)-1:null; }
-function mdd(curve){ let pk=-Infinity,dd=0; for(const c of curve){ pk=Math.max(pk,c.eq); dd=Math.min(dd,c.eq/pk-1); } return dd; }
+function mdd(curve){ let pk=-Infinity,dd=0; for(const c of curve){ pk=Math.max(pk,c.eq); dd=Math.min(dd,pk>0?c.eq/pk-1:-1); } return dd; }
 function summary(A,sim){
   const c=sim.curve; if(!c.length) return null;
   const n=c.length,cl=sim.trades.filter(t=>!t.open);
   return {start:sim.start,end:sim.end,months:n,trades:sim.trades.length,closed:cl.length,wins:cl.filter(t=>t.result.net>0).length,
     final:sim.final,total:sim.final/sim.opts.capital-1,cagr:cagr(sim.opts.capital,sim.final,n),mdd:mdd(c),
-    inMarket:c.filter(x=>x.pos).length/n};
+    inMarket:c.filter(x=>x.pos).length/n,ruin:!!sim.ruin,ruinM:sim.ruinM||null,
+    double:(sim.final>sim.opts.capital&&n>0)?Math.log(2)/Math.log(Math.pow(sim.final/sim.opts.capital,12/n)):null};   // 이 속도면 2배까지 몇 년
 }
 /* 비교: 같은 기간 예금만 / 대단지 전부 고르게 사서 보유(시세 있는 단지 평균 월수익)
         / 대장 계속 보유(그달 대장 = 전달 시세 1위, 도시별 평균 월수익 — 대장이 바뀔 때 사고파는 비용은 넣지 않은 시세 흐름)
@@ -209,7 +267,7 @@ function benchmarks(A,sim){
     ld*=1+(n2?s2/n2:0)-o.holdCostYr/12;
     cd.push(dep); ch.push(eqw); cl.push(ld);
   }
-  const months=k1-k0+1,f=(v,c)=>({final:v,cagr:cagr(o.capital,v,months),mdd:mdd(c.map(eq=>({eq}))),curve:c});
+  const months=k1-k0+1,f=(v,c)=>{ const g=cagr(o.capital,v,months); return {final:v,cagr:g,double:g>0?Math.log(2)/Math.log(1+g):null,mdd:mdd(c.map(eq=>({eq}))),curve:c}; };
   return {deposit:f(dep,cd),hold:f(eqw,ch),lead:f(ld,cl)};
 }
 /* 대장이 바뀐 때 — 시세 달(m)마다 도시별 1위가 바뀐 기록(화면 설명용, 대장 판단과 같은 leadersAt) */
@@ -246,15 +304,15 @@ function eventStudy(A,o){
 function nowView(A,o,pos){
   o=opts(o);
   const n=A.lastK+1,m=marketAt(A,n,o),C=candidatesAt(A,n,o);
-  const top=C.slice(0,10).map((c,i)=>Object.assign(info(A,c.id),{rank:i+1,mom:c.mom},quote(A,c.id,A.lastK)));
+  const top=C.slice(0,10).map((c,i)=>Object.assign(info(A,c.id),{rank:i+1,mom:c.mom},quote(A,c.id,A.lastK),o.lev==='gap'?{gap:gapNeed(A,c.id,A.lastK)}:{}));
   let action='wait',why=[];
   if(pos){ const held=n-pos.k,mc=momOf(A,pos.id,n,o);
     if(held>=o.minHold&&((mc!=null&&mc<0)||(m.rateUp!=null&&m.rateUp>=o.rateUpSell))){ action='sell'; if(mc!=null&&mc<0) why.push('mom'); if(m.rateUp!=null&&m.rateUp>=o.rateUpSell) why.push('rate'); }
     else { action='hold'; why=held<o.minHold?['minHold']:[]; } }
   else if(C.length&&m.rateUp!=null&&m.rateUp<=0&&C[0].mom>=o.buyMin){ action='buy'; }
   else { if(m.rateUp==null) why.push('noRate'); else if(m.rateUp>0) why.push('rateUp'); if(!C.length) why.push('noCand'); else if(C[0].mom<o.buyMin) why.push('weak'); }
-  const leaders=leadersAt(A,n,o).map(x=>Object.assign(info(A,x.id),{n:x.n,next:x.next,mom:momOf(A,x.id,n,o)},quote(A,x.id,A.lastK)));
-  return {strategy:o.strategy,forMonth:kym(n),dataMonth:kym(A.lastK),market:m,action,why,top,leaders,news:newsFor(A,n,'대전',o.newsWindow).concat(newsFor(A,n,'세종',o.newsWindow).filter(e=>e.title&&!/대전/.test(e.title))).slice(0,6)};
+  const leaders=leadersAt(A,n,o).map(x=>Object.assign(info(A,x.id),{n:x.n,next:x.next,mom:momOf(A,x.id,n,o)},quote(A,x.id,A.lastK),o.lev==='gap'?{gap:gapNeed(A,x.id,A.lastK)}:{}));
+  return {strategy:o.strategy,lev:o.lev,forMonth:kym(n),dataMonth:kym(A.lastK),market:m,action,why,top,leaders,news:newsFor(A,n,'대전',o.newsWindow).concat(newsFor(A,n,'세종',o.newsWindow).filter(e=>e.title&&!/대전/.test(e.title))).slice(0,6)};
 }
 
 /* ── 모의장부(앞으로) — 만든 달 다음 달부터 같은 stepMonth 로 한 달씩. 지난 기록은 고치지 않는다 ── */
@@ -263,9 +321,10 @@ function paperUpdate(ledger,A,o,nowIso){
   let L=ledger?JSON.parse(JSON.stringify(ledger)):null;
   if(L&&L.strategyVersion!==o.strategy) throw new Error('장부 전략 버전 다름: '+L.strategyVersion+' ≠ '+o.strategy);
   if(L&&L.params&&L.params.pick!=null&&L.params.pick!==o.pick) throw new Error('장부 후보 방식 다름: '+L.params.pick+' ≠ '+o.pick);
+  if(L&&L.params&&(L.params.lev||'cash')!==o.lev) throw new Error('장부 돈 방식 다름: '+(L.params.lev||'cash')+' ≠ '+o.lev);
   if(!L){ L={strategyVersion:o.strategy,engineVersion:VERSION,created:nowIso,startedData:kym(A.lastK),params:pickParams(o),months:[],trades:[],acct:{eq:o.capital,pos:null}}; return {ledger:L,added:0}; }
   const po=Object.assign({},o,L.params);
-  const st={eq:L.acct.eq,pos:L.acct.pos?JSON.parse(JSON.stringify(L.acct.pos)):null};
+  const st={eq:L.acct.eq,pos:L.acct.pos?JSON.parse(JSON.stringify(L.acct.pos)):null,ruin:!!L.acct.ruin};
   const done=L.months.length?ymk(L.months[L.months.length-1].m):ymk(L.startedData);
   let added=0;
   for(let k=done+1;k<=A.lastK;k++){
@@ -274,11 +333,50 @@ function paperUpdate(ledger,A,o,nowIso){
     if(r.closed) L.trades.push(Object.assign(r.closed,{open:false,closedAt:nowIso}));
     added++;
   }
-  L.acct={eq:st.eq,pos:st.pos};
+  L.acct={eq:st.eq,pos:st.pos}; if(st.ruin) L.acct.ruin=true;
   return {ledger:L,added};
 }
-function pickParams(o){ const x={}; for(const k of ['pick','mom','buyMin','minHold','rateLook','rateUpSell','minUnits','holdCostYr','depositTax','newsWindow','capital']) x[k]=o[k]; return x; }
+function pickParams(o){ const x={}; for(const k of ['pick','lev','renew','mom','buyMin','minHold','rateLook','rateUpSell','minUnits','holdCostYr','depositTax','newsWindow','capital']) x[k]=o[k]; return x; }
 
+
+/* ── 현실 점검 1: 아무 대단지나 아무 달에 1채(내 돈으로) 사서 h개월 뒤 팔면 — 비용·세금 뺀 수익률 분포 ──
+   같은 비용 함수(취득세·중개·보유세·양도세)를 쓴다. 매수 연도별 24개월 중앙값으로 '돈이 난 해'를 본다. */
+function forwardStats(A,o){
+  o=opts(o); const H=[12,24,36,60],out={h:{},byYear:{}};
+  let s=null; for(const u of A.U){ const p=A.P[u.id]; if(p&&(s==null||p.k0<s)) s=p.k0; }
+  if(s==null||A.lastK==null) return out;
+  const q=(a,p)=>a[Math.min(a.length-1,Math.floor(p*a.length))];
+  for(const h of H){ const r=[],by={};
+    for(const u of A.U){ if(o.minUnits&&(+u.units||0)<o.minUnits) continue;
+      for(let k=s;k+h<=A.lastK;k++){ const a=price(A,u.id,k),b=price(A,u.id,k+h); if(a==null||b==null) continue;
+        const acq=Math.round(a*acqRate(a)),br=Math.round(a*brokerRate(a)),tot=a+acq+br,sb=Math.round(b*brokerRate(b));
+        let hold=0; for(let j=k+1;j<k+h;j++){ const p=price(A,u.id,j); if(p!=null) hold+=p*o.holdCostYr/12; }
+        const net=(b-sb-gainTax(tot,b,sb,h,k+h)-hold)/tot-1; r.push(net);
+        if(h===24){ const y=Math.floor(k/12); (by[y]=by[y]||[]).push(net); } } }
+    r.sort((a,b)=>a-b);
+    out.h[h]=r.length?{n:r.length,med:q(r,.5),p10:q(r,.1),p90:q(r,.9),max:r[r.length-1],pos:r.filter(x=>x>0).length/r.length,p20:r.filter(x=>x>.2).length/r.length,p50:r.filter(x=>x>.5).length/r.length,dbl:r.filter(x=>x>1).length/r.length}:null;
+    if(h===24) for(const y of Object.keys(by)){ const a=by[y].sort((x,z)=>x-z); out.byYear[y]={med:q(a,.5),n:a.length}; } }
+  return out;
+}
+/* ── 현실 점검 2: 고점 스트레스 — 도시 대단지 평균 시세가 가장 높았던 달에 그때의 대장을 (내 돈으로 / 전세 끼고) 샀다면 2년 뒤 ──
+   같은 openPos·markPos·closePos 로 계산한다(강제 매도). 전략의 '언제 사나'를 무시하고 최악의 때를 고른 것. */
+function stress(A,o){
+  o=opts(o); const out=[];
+  for(const city of ['대전','세종']){
+    let pk=null; for(let k=ymk('2015-01');k<=A.lastK;k++){ let s=0,n=0; for(const u of A.U){ if(u.city!==city||(o.minUnits&&(+u.units||0)<o.minUnits)) continue; const p=price(A,u.id,k),p0=price(A,u.id,ymk('2015-01')); if(p!=null&&p0) { s+=p/p0; n++; } }
+      if(n&&(!pk||s/n>pk.v)) pk={k,v:s/n}; }
+    if(!pk) continue;
+    const L=leadersAt(A,pk.k+1,o).find(x=>x.city===city); if(!L) continue;
+    const kb=pk.k,ks=Math.min(kb+24,A.lastK),st={eq:1,pos:null};
+    if(o.lev==='gap'&&!gapNeed(A,L.id,kb)) continue;
+    openPos(A,st,{id:L.id,mom:momOf(A,L.id,kb,o),rate:null,rate0:null,rateUp:null,lead:L},kb,o,null);
+    let low=st.eq; for(let k=kb+1;k<ks;k++){ markPos(A,st,k,o); low=Math.min(low,st.eq); }
+    const t=closePos(A,st,ks,o,['stress'],marketAt(A,ks,o),momOf(A,L.id,ks,o));
+    let tr=null; for(let k=kb;k<=A.lastK;k++){ const p=price(A,L.id,k); if(p!=null&&(!tr||p<tr.p)) tr={k,p}; }
+    out.push(Object.assign(info(A,L.id),{peakM:kym(kb),buy:t.buy,sell:t.sell,result:t.result,mult:1+t.result.net,low,trough:{m:kym(tr.k),price:tr.p,pct:tr.p/t.buy.price-1},ruin:!!st.ruin}));
+  }
+  return out;
+}
 
 /* ── 주변 대단지(신규 분양 비교) — 좌표 반경 안 대단지의 최근 KB 시세 ── */
 function distKm(a,b,c,d){ const p=Math.PI/180; return 6371*Math.hypot((d-b)*p*Math.cos((a+c)/2*p),(c-a)*p); }
@@ -294,8 +392,8 @@ function nearby(A,lat,lng,o){
   return out.slice(0,o.limit);
 }
 
-const API={VERSION,STRATEGY,STRATEGIES,DEFAULTS,opts,nearby,distKm,prepareApt,rateEvents,price,momOf,marketAt,leadersAt,candidatesAt,acqRate,brokerRate,exemptLimit,gainTax,newsFor,
-  stepMonth,simulate,summary,benchmarks,leaderChanges,eventStudy,nowView,paperUpdate,quote,realAt,startK};
+const API={VERSION,STRATEGY,STRATEGIES,DEFAULTS,opts,regulated,gapNeed,nearby,distKm,prepareApt,rateEvents,price,momOf,marketAt,leadersAt,candidatesAt,acqRate,brokerRate,exemptLimit,gainTax,newsFor,
+  stepMonth,simulate,summary,benchmarks,leaderChanges,eventStudy,forwardStats,stress,nowView,paperUpdate,quote,realAt,startK};
 if(typeof module!=='undefined'&&module.exports) module.exports=API;
 g.JKREApt=API;
 })(typeof globalThis!=='undefined'?globalThis:this);
