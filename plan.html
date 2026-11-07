@@ -365,7 +365,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
   </section>
 
   <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
-    <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection">현재</button>
+    <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaTaxSection">현재</button>
     <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaEvidenceSection assetPaperPanel">분석</button>
     <button class="asset-detail-tab" id="assetHistoryTab" data-asset-detail="history" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaHistorySection alphaResetSection">거래이력</button>
     <button class="asset-detail-tab" id="assetExplainTab" data-asset-detail="explain" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaStrategySection">설명</button>
@@ -2812,7 +2812,7 @@ function renderAlphaLedger(){
   if($('alphaReturnTotal')){$('alphaReturnTotal').textContent=Number.isFinite(retTotal)?((retTotal>=0?'+':'')+retTotal.toFixed(2)+'%'):'—';$('alphaReturnTotal').className='v '+(Number.isFinite(retTotal)?(retTotal>=0?'pos':'neg'):'');}
   if($('alphaAssetTotal'))$('alphaAssetTotal').textContent=usd2(assetTotal);
   if($('alphaAcctCashState')){$('alphaAcctCashState').textContent=S.cash<0?'현금 부족 '+usd2(Math.abs(S.cash)):'사용가능 '+usd2(S.cash);$('alphaAcctCashState').className='pl '+(S.cash<0?'neg':'pos');}
-  renderTaxCheck();   // 🧾 연말 세금 점검 — 계좌 카드와 같은 시세·거래이력
+  if(typeof renderTaxCheck==='function')renderTaxCheck();   // 🧾 연말 세금 점검 — 계좌 카드와 같은 시세·거래이력 (장부만 떼어 돌리는 시험 문맥에선 없다)
   if($('alphaCashWarn')){const bad=S.cash<-.005;$('alphaCashWarn').hidden=!bad;if(bad)$('alphaCashWarn').textContent='현금이 '+usd2(S.cash)+'입니다. 기록된 매수금액+수수료가 시작 현금을 초과했습니다. 거래이력 또는 시작잔고를 실제 토스 계좌와 맞게 수정하세요.';}
   if($('alphaLedgerBody')){
     const rows=ev.map(e=>{
