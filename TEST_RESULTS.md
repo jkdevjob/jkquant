@@ -7,6 +7,11 @@
 - 실제 자료 시험 수집(로컬 · 스크래치 폴더 · 데이터 브랜치에는 안 올림): 10/30~11/06 6일 · 129종목 · 140초 · 오류 0 · 15:30 분봉 종가 = KRX 종가 77/77.
 - 연구 수치(재현 스크립트): R28 `r28_opening_deep.py` · R28-b `r28b_opening_breadth.py` · R30 `r30_opening_hedge.py`(연구실 goal_metrics · score_metrics · gate_reason 그대로) · R32 `r32_opening_minutes.py` · 과정 지표 `opening_agreement.py`.
 - 미확인: ① 11/09 08:56 장부의 `shadow` 칸 · ② 병합 뒤 `news-collect.yml` 이 `data/minute-opening/` 을 데이터 브랜치에 저장하는지 · ③ 백테 수치는 실측이 아니다(R28-b 의 +2.17%p/일 초과는 설계 표본 값).
+## 2026-11-07 · 부동산 클로드 모의장부 금리 기다림 · 부동산 v1.11.1
+
+- 재현: 현재 main 자료로 `nowView` — 네 전략 모두 2026-11 판단 `wait` · `noRate`(기준금리 2026-09 까지 · 단지 시세 2026-10 까지).
+- `node scripts/test_realestate_claude_apt.cjs`: **125 PASS / 0 FAIL** (새 4: 금리 없는 달에서 멈춤·waitFor · noRate 줄 없음 · 이어 쓰면 한 번에 쓴 장부와 같음 · 전세 끼고도 기다림).
+- 변이 '장부가 금리 없는 달도 씀': 값 시험 3개 빨간불(122/125). 전체 변이 결과·check-before-push 는 PR 에 적는다.
 
 ## 2026-11-07 · 부동산 클로드 현실 점검 · 전세 끼고(-gap) 실험적 확장 · 부동산 v1.11.0
 

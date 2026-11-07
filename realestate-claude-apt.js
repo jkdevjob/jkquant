@@ -20,7 +20,7 @@
 const BASE=(typeof module!=='undefined'&&module.exports)?require('./realestate-claude-engine.js'):g.JKRealEstateClaude;
 const {ymk,kym,at,upTo,lastK}=BASE;
 
-const VERSION='1.2.0';
+const VERSION='1.2.1';
 const STRATEGY='apt-1';   // 기본 전략(첫 장부)
 const STRATEGIES={'apt-1':{pick:'mom',lev:'cash',name:'상승률 1위'},'apt-lead-1':{pick:'leader',lev:'cash',name:'대장 아파트'},
   'apt-1-gap':{pick:'mom',lev:'gap',name:'상승률 1위 · 전세 끼고',experimental:true},'apt-lead-1-gap':{pick:'leader',lev:'gap',name:'대장 아파트 · 전세 끼고',experimental:true}};
@@ -315,7 +315,9 @@ function nowView(A,o,pos){
   return {strategy:o.strategy,lev:o.lev,forMonth:kym(n),dataMonth:kym(A.lastK),market:m,action,why,top,leaders,news:newsFor(A,n,'대전',o.newsWindow).concat(newsFor(A,n,'세종',o.newsWindow).filter(e=>e.title&&!/대전/.test(e.title))).slice(0,6)};
 }
 
-/* ── 모의장부(앞으로) — 만든 달 다음 달부터 같은 stepMonth 로 한 달씩. 지난 기록은 고치지 않는다 ── */
+/* ── 모의장부(앞으로) — 만든 달 다음 달부터 같은 stepMonth 로 한 달씩. 지난 기록은 고치지 않는다 ──
+   판단에 쓰는 기준금리(k-1월 · k-13월)가 아직 안 들어온 달은 쓰지 않고 멈춘다(waitFor) — 장부는 덧붙이기만이라
+   자료가 늦게 와서 생긴 '금리 없음 → 대기' 줄이 한 번 들어가면 영영 고칠 수 없다. 금리가 들어오면 그때 이어 쓴다. */
 function paperUpdate(ledger,A,o,nowIso){
   o=opts(o);
   let L=ledger?JSON.parse(JSON.stringify(ledger)):null;
@@ -326,15 +328,16 @@ function paperUpdate(ledger,A,o,nowIso){
   const po=Object.assign({},o,L.params);
   const st={eq:L.acct.eq,pos:L.acct.pos?JSON.parse(JSON.stringify(L.acct.pos)):null,ruin:!!L.acct.ruin};
   const done=L.months.length?ymk(L.months[L.months.length-1].m):ymk(L.startedData);
-  let added=0;
+  let added=0,waitFor=null;
   for(let k=done+1;k<=A.lastK;k++){
+    if(marketAt(A,k,po).rateUp==null){ waitFor=kym(k); break; }      // 금리 자료 기다림 — 이 달부터는 다음 갱신 때
     const r=stepMonth(A,st,k,po);
     L.months.push({m:kym(k),action:r.action,why:r.why,eq:Math.round(r.eq*100)/100,pos:st.pos?st.pos.id:null,at:nowIso});
     if(r.closed) L.trades.push(Object.assign(r.closed,{open:false,closedAt:nowIso}));
     added++;
   }
   L.acct={eq:st.eq,pos:st.pos}; if(st.ruin) L.acct.ruin=true;
-  return {ledger:L,added};
+  return {ledger:L,added,waitFor};
 }
 function pickParams(o){ const x={}; for(const k of ['pick','lev','renew','mom','buyMin','minHold','rateLook','rateUpSell','minUnits','holdCostYr','depositTax','newsWindow','capital']) x[k]=o[k]; return x; }
 
