@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "date": "2026-11-08",
+  "preparedAt": "2026-11-07T22:25:20.688Z",
+  "mainSha": "b2f81de6bd06f3fbdc43cfd913aefc44e2ca9efc",
+  "summary": "11/7 BTC 무거래 0% 확정·11/8 미확정, 주식 주말 휴장. 신규 모의거래 0건. SOXL 원본 엔진 10세션 재현: holdout PF 1.571→1.048, 비용 +0.10%p 시 일평균 −0.030%로 가설 보류. 텐배거 성숙 표본 0. 운영 변경 없음.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "collecting",
+      "findings": "전일 11/7 BTC는 무거래 0% 확정, 오늘 11/8은 미확정이다. 국내 11/7~8·미국 11/7 휴장 0을 성과 일수에 추가하지 않았다. 전일 대비 신규 모의거래 0건. SOXL 11/6 손절은 이미 보고한 거래이며 이번에는 원천 재생으로 검증했다. 그림자 BTC/SOXL은 11/6 무거래 관찰일만 각 1일 추가됐다. 모든 GPT군의 +5% 달성 주는 0. 전일 아침 보고는 push 1/1·실패 0 및 Telegram sent 영수증을 확인했고 기기 표시는 미확인이다. 일일 API는 KST, SOXL은 미국 11/6→KST 11/7로 대조했다. GPT 1.48.2·Claude 2.26.0은 소유자 로그인벽만 확인해 내부 평가금액·기간 수익률·모바일 표시는 미확인이다. 종가 보조자료도 신규 확정 표본 없이 21건 청산/12건 미정산, 익일군 36건 미정산이다.",
+      "nextTest": "08:00 발송은 기존 서버 알람에 맡기고 예약과 실제 영수증을 구분한다. 보고 7탭과 서버 보강 종가탭의 출처·기준일·확정 상태를 대조한다. 소유자 화면의 평가금액/동일 기간 수익률은 접근 가능할 때 확인한다. 별도 시험 푸시·Telegram·Claude/텐배거 알림은 추가 실행하지 않는다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health",
+        "https://github.com/jkdevjob/jkquant/blob/09901d899341881ed15e68c44dac75ff1f2fa727/research/gpt-morning/2026-11-07-research.json",
+        "https://github.com/jkdevjob/jkquant/blob/b2f81de6bd06f3fbdc43cfd913aefc44e2ca9efc/research/gpt-morning/README.md"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "blocked",
+      "findings": "최근 거래일 11/6 운영 0%·0건(원본 27/27 감시), 주말 신규 0건. 현재 main은 combo_pb05_e0920. 저장 혼합 16매매일/89건 참고치: 일평균 −0.6447%, PF 0.4377, MDD −9.9216%, 최악 −2.5497%, +1%일 0, 이번 주 −4.6255%(+5%까지 9.6255%p). 검증된 동일 버전 전향 통계가 아니다. 11/5 원본 루닛/저장 현대차 및 −1.9584%/−2.2015% 불일치는 미해결. 기존 WF 5일/39건은 새 OOS가 아니다. 그림자 20일/16건: 최근 −0.8077%, 평균 −0.5387%, PF 0.0849, MDD −10.2875%, 최악 −2.0265%, +1%일 0. 그림자 이번 주 관찰은 11/6 하루 −0.8077%(부분; 잔여 5.8077%p)뿐이다. 장후 Top100을 장전 모집단으로 간주하지 않는다.",
+      "nextTest": "다음 개장일 당시 모집단·원본 감시 전분·당시 main 버전·체결 경로를 보존해 같은 비용식으로 저장 기록과 대조한다. 11/5 종목/수익 불일치와 11/2~5 원천 결손을 해소하기 전 개선 채택은 blocked. 그림자는 20일/20건 및 PF 1.10·양의 일기대값·위험 관문을 유지한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/opening-history/2026-11-06.json",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=opening&from=2026-10-01&to=2026-11-07",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/opening-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "no_change",
+      "findings": "주말 신규 0건. 최근 11/6 HLB·한미약품·삼성바이오 각 +1.75%, 고정 3슬롯 일수익 +1.75%는 전일과 같다. 10/1 이후 26일/72건: 평균 −0.3963%, PF 0.5082, MDD −12.0877%, 최악 −1.25%, +1%일 1, 이번 주 −0.2999%(잔여 5.2999%p). 37건은 버전 공란이며, 명시된 현재 버전은 10/22~12일/35건(평균 −0.4673%, PF 0.4617)으로 따로 기록했다. 기존 WF는 5일/14건. 그림자 25일/75건: 최근 +0.0923%, 평균 −0.1646%, PF 0.7330, MDD −5.4945%, 최악 −1.05%, +1%일 3, 이번 주 −0.0810%(잔여 5.0810%p). 표본 관문에 도달했지만 음의 기대값이다. session_min_2 후보의 기존 7일/20건·PF 1.024 보류도 유지한다.",
+      "nextTest": "최소상승 2% 후보는 나머지 조건/비용 0.25%/3슬롯을 고정해 다음 국내 개장일 09:55 자료·원본 앱 신호·장중 장부로 누적한다. 기존 5일 WF+후속 2일을 새 독립 WF로 세지 않는다. 20전향일/후보 30건·PF 1.10·국면별 위험·비용 +0.10%p 관문 전 제안 보류. 버전 공란은 추정 복원하지 않는다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-11-07",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/daytrading-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/09901d899341881ed15e68c44dac75ff1f2fa727/research/gpt-morning/2026-11-07-research.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "blocked",
+      "findings": "11/7 BTC 운영 무거래 0% 확정·신규 0건. 11/8은 진행 중으로 성과에서 제외했다. 확인/재생 누적 36일/21건(전일 35일): 평균 −0.1156%, PF 0.2771, MDD −4.7619%, 최악 −0.64%, +1%일 0, 이번 주 −1.4665%(잔여 6.4665%p). 누적 원장 API는 timeout/degraded로 CSV 대체이며 10/18·19 결손은 0으로 채우지 않았다. 연구는 11/6까지 393유효일. 70/30 경계 이동으로 holdout 118일 72→71건은 새 OOS가 아니다. 그림자는 11/6까지 35일/1건: 최근 0%, 평균 −0.0111%, PF 0, MDD/최악 −0.3878%, +1%일 0, 이번 주 0%(잔여 5%p). 원본 Upbit KST 00시 세션과 Claude ETH 09시 세션을 같은 날 수익으로 직접 순위 매기지 않는다.",
+      "nextTest": "완료된 11/7의 00:00~23:55 원천 288봉과 btc_midnight_orb_v2@baseline 장부를 확보해 원본 엔진에서 무거래를 재현하고, 누적 API 복구 후 CSV와 대조한다. 비용 0.14%, 완료봉→다음 봉 시가, 신호 마감 21:55/진입 22:00을 유지. 진행봉·누락 세션·재분할 holdout은 확정 전향 표본에 합산하지 않는다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-11-07",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/crypto-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "verified",
+      "findings": "검증 완료는 실제 78봉씩 10세션의 원본 앱/연구 엔진 재현 일치와 11/6 장부 일치이며, 개선 확정이 아니다. 11/6 −1.4% 손절은 전일 기보고·신규 거래 0건. 운영 27일/12건(연구 수입 2건 포함): 평균 −0.2222%, PF 0.5238, MDD −9.3979%, 최악 −1.4%, +1%일 3, 이번 주 −0.6416%(잔여 5.6416%p). 고정 holdout 9일/4건→10일/5건: 평균 +0.1778→+0.0200%, PF 1.571→1.048, MDD −2.7804→−4.1415%. 비용 +0.10%p에서는 평균 −0.0300%·PF 0.933으로 가설 보류. WF 0(31/40세션). 그림자 27일/2건: 최근 0%, 평균 +0.0526%, PF 손실 없음(999표식), MDD 0%, 무거래 포함 최악 0%, +1%일 1, 이번 주 0%(잔여 5%p). 11/5 거래량 46봉 수정·가격 불변·무거래 판정 불변.",
+      "nextTest": "새 필터/새 버전 제안 없음. 첫 3봉·VWAP·거래량 1.0·손절 1.2/익절 2.4·18봉·비용 0.20%·1슬롯을 고정해 40완료 세션의 첫 30/10 시간순 WF를 기다린다. 11/2 장부/재생 손익차와 11/3 가격·청산 시각차를 추적하고 수정 전후 원천 해시를 분리한다. 전일 11/3 재구성 무매매 설명은 손절 1건으로 정정한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/soxl/SOXL/5m/2026-11-06.json.gz",
+        "https://github.com/jkdevjob/jkquant/blob/b2f81de6bd06f3fbdc43cfd913aefc44e2ca9efc/worker/global-intraday-scheduler/src/index.js",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-11-07"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "no_change",
+      "findings": "GPT는 전일과 같은 11/5 자료(생성 11/7 02:38 KST)로 신규 등록/관찰 진입/청산은 각 0건. 누적 216등록·183종목·195진입·21대기. hold1260 청산 0/보유 195, stop12_trail35 청산 58/보유 137. 최대 16세션으로 20/60/120/252/756/1260 성숙 표본과 2/5/10배 최초 도달은 모두 0이며 미검증이다. 종가 MFE 최대 +41.2463%/MAE 최저 −45.1713%/MDD 최저 −50.2825%는 개별 관찰 극값이다. 초기 10/8 자료의 10/13 등록 시각·v1.0.0·rules SHA 5e690dd8… 및 현재 코드/원천 manifest 해시를 대조했다. 누락 181·미거래 30, 무진입 observing 17은 성과 제외. 수정 표시 0은 정지/폐지 정산 완료 보장이 아니다. 가격조건 가설로 재무 시점 패널·시장 대조가 없고 계좌 CAGR/초과수익으로 해석하지 않는다.",
+      "nextTest": "11/6 이후 확정 원천을 기다리며 등록일과 신호일 모두 지난 첫 거래 가능 종가만 관찰 진입으로 인정한다. 신규 시세·정지/누락·폐지 정산·원천 수정 상태를 추적하고 초기/현재 생성기 해시차이의 전체 영향 감사를 남긴다. 성숙 후 동일 시장 국면·유동성 실패 대조군과 공시 접수 시각 재무 패널을 맞춘 가설만 별도 버전 검증 제안으로 남긴다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/b2f81de6bd06f3fbdc43cfd913aefc44e2ca9efc/TENBAGGER_FORWARD_RESEARCH.md",
+        "https://github.com/jkdevjob/jkquant/blob/b2f81de6bd06f3fbdc43cfd913aefc44e2ca9efc/data/tenbagger/gpt/forward-latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/tenbagger-forward/latest.json",
+        "https://jkquant.pages.dev/api/tenbagger-research"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "동일 날짜/자금/비용의 우열은 미검증이며 대결 API는 branch tree HTTP 403이다. Claude 연구 JSON은 11/7 05:36의 기존 자료. 11/6 원본 신호 손익은 시초가 +5.2486%, ETF 야간 −12.7882%, 종가30분 −2.2241%이나 수량 0으로 체결 성과가 아니다. 재구성 통계의 누락/차이는 유지된다. 코인은 ETH 09시 세션·기존 OOS 35일/1건, SOXL은 11/5까지 26일/0건으로 GPT 미국 11/6과 미정렬. Claude 텐배거는 11/4→11/5 갱신·신규 이벤트 0. 같은 upstream이나 모형/자금배분이 달라 직접 비교할 수 없다. 새 R31 시초가 그림자와 R32 분봉은 과거 재구성/9건 미리보기로 새 전향 성과가 아니다. R33은 ②④ 당일 청산 후보 통과 없음·쉼 권고 기록이며, 현재 야간/5일 운영 규칙은 그대로다.",
+      "nextTest": "403 복구와 소유자 접근이 가능할 때 7개 탭의 출처/거래일/운영 버전·표출 평가금액을 맞춘다. Claude ②④ 당일 청산 제약은 원본 FDR 입력 해시와 운영 함수로 동일 자본·비용 재현 후 별도 판단하며 자동 변경하지 않는다. R31은 재구성/신규 원본을 분리해 20신호일 과정 지표, R32/R29는 40건 관문을 유지한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/claude-lab/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/b2f81de6bd06f3fbdc43cfd913aefc44e2ca9efc/CLAUDE-SCALPING-RESEARCH.md",
+        "https://github.com/jkdevjob/jkquant/blob/e05eaf87d861df0978e4e1efaed42e0a8004f960/data/tenbagger-claude-forward/latest.json",
+        "https://jkquant.pages.dev/api/scalping-duel"
+      ]
+    }
+  ]
+}
