@@ -29,6 +29,14 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     const shares=x=>o.frac?x:Math.floor(x);   // o.cnt={}: 매매 기록(종목별 [날짜, 's'|'b', 금액/총자산]) — 안 주면 계산은 그대로
     for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n; cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'s',g/tot]); } }
     for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want>q[s]){ const n=Math.min(want-q[s],shares(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'b',g/tot]); } } }
+    // o.harvest(11-07): 연말(그해 마지막 거래일 종가) 실현손익을 250만원 공제(DED)에 맞춘다 — 공제 미달이면 평가이익을 팔고 바로 되사 공제를 채움(원가 상향 · 미래 세금↓) · 공제 초과면 평가손실을 팔고 되사 상계(이월공제 없음 → 공제까지만). 수수료 양쪽. 안 주면 기존과 같다.
+    if(o.harvest&&(k===i1||dates[k+1].slice(0,4)!==d.slice(0,4))){ const H=o.harvest; let gH=0,lH=0;
+      for(const s of syms){ if(!(q[s]>0)) continue; const avg=basis[s]/q[s], p0=px[s];
+        if(H.gain!==false&&p0>avg&&yearPnl<DED){ const per=p0-avg-p0*fee; if(per<=0) continue; const need=DED-yearPnl; let n=Math.min(q[s],o.frac?need/per:Math.floor(need/per)); if(n<=0) continue;
+          const g=n*p0, realized=g-g*fee-avg*n; cash+=g-g*fee; yearPnl+=realized; basis[s]-=avg*n; cash-=g+g*fee; basis[s]+=g+g*fee; turn+=2*g; gH+=realized; }
+        else if(H.loss!==false&&p0<avg&&yearPnl>DED){ const per=avg-p0+p0*fee; const need=yearPnl-DED; let n=Math.min(q[s],o.frac?need/per:Math.ceil(need/per)); if(n<=0) continue;
+          const g=n*p0, realized=g-g*fee-avg*n; cash+=g-g*fee; yearPnl+=realized; basis[s]-=avg*n; cash-=g+g*fee; basis[s]+=g+g*fee; turn+=2*g; lH+=-realized; } }
+      if(o.hlog) o.hlog.push([d.slice(0,4),gH,lH]); }
     eq.push([d,cash+syms.reduce((a,s)=>a+q[s]*px[s],0)]); }
   { const _t=(tax&&yearPnl>0&&o.endTax!==false)?Math.max(0,yearPnl-DED)*0.22:0; eq[eq.length-1][1]-=_t; if(o.ylog) o.ylog.push([yr,yearPnl,_t,eq[eq.length-1][0]]); }   // 끝날 올해 실현이익 세금을 미리 뺀다(청산 가치) — 진행 중 구간 낙폭을 잴 때는 endTax:false
   return {eq,turn}; }
