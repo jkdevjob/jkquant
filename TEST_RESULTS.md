@@ -1,5 +1,44 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-07 · 자산플랜 연말 세금 점검 카드 · v3.117.6 (플랜 v1.47.0)
+
+- `scripts/check-plan-tax.cjs`: PASS — A1 결제일(12-30→12-31 · 12-31→01-04 · 2022 T+2) · A2 마지막 체결일(2023 12-27 · 2024 12-30 · 2026 12-30 · 2028 12-28) · A3 환율 찾기 · A4 선입선출 312,116원/248.65$ · 이동평균 269,398.5원/223.5$ · 남은 lot 435,435원 · A5 12-31 매도는 다음 해 · A6 수량 = 화면 alphaLedgerCalc(현금·보정 기록 포함) · A7 공제 채우기 최대 n(≤ 225만원 · n+1 넘음) · A8 손실 상계 298,188원(순 287,388원) · A9 환율 함정(달러 손실 · 원화 이익 → 제안 없음) · A10 평단 미등록 제외 · B1~B3 화면 연결(실제 renderTaxCheck 실행 · '공제 채우기 가능' · 마감 2026-12-30). 변이 4/4 빨간불(시작잔고 원가 지금 환율 · 결제일 = 체결일 · 선입선출 대신 이동평균 · 공제 여유 없앰).
+- 휴대폰 폭(375px) 렌더 확인: 가로 넘침 없음(scrollWidth 375) · 공제 채우기/손실 상계 두 경우 숫자 손 검산과 같음(TECL 43주 1,848,226원 ≤ 1,874,772원 · 세금 406,610원 / TQQQ 80주 + SGOV 40주 상계 218,613원).
+- `check-before-push.cjs` 1차(8f39f06): 2827 PASS / 1 FAIL — `check-plan-session-views.cjs` 가 '현재' 탭 구역을 [주문 · 계좌] 두 개로 고정해 둠(새 카드가 셋째) → 기대값에 `alphaTaxSection` 추가 · 탭 `aria-controls` 에도 추가. 이어서 장부만 떼어 돌리는 시험 문맥 3곳(`check-plan-history-pnl` · `check-login-quote-paper` · `check-plan-session-views`)에서 `renderTaxCheck` 가 없어 ReferenceError → 호출을 `typeof` 로 감쌈(페이지에선 늘 있음). 전체 회귀 2828 PASS / 0 FAIL.
+- `check-before-push.cjs` 2차(09d7340): 57단계 전부 PASS · 전체 회귀 2828 PASS / 0 FAIL — ALL PASS.
+- 미확인: 실제 증권사 양도세 계산과의 대조(방식·기준환율 차이).
+## 2026-11-07 · 클로드 ① 그림자(v2.25.0) · ① 후보 분봉 쌓기(v2.26.0) · 연구 R28 · R28-b · R30
+
+- v2.25.0 그림자: `node scripts/test_opening_gapdown.mjs` **55 ALL PASS**(그림자 값 시험 — 통과 6/7 경계 · 08:58 우선 · 바닥 −29 · 규칙 없음 null · preopen 기록 · 메인 picks/orders 불변) · 변이 9종 모두 잡힘(처음 2종은 TypeError 로 끝나 생존 집계 → `assert.ok` 가드로 고쳐 잡음) · `check-before-push` 57단계 · 회귀 **2827 PASS / 0 FAIL** · GitHub check.yml 성공 · 운영 `clVer` v2.25.0 확인.
+- v2.26.0 분봉: `python scripts/test_news_collect.py` **19 PASS / 0 FAIL**(새 9) · 변이 6/6 잡힘(예상갭 기준 −2 → 0 · 정규장 거르기 없앰 · 실패해도 씀 · 6일 창 없앰 · 덮어쓰기 · 상한이 고른 종목 자름).
+- 실제 자료 시험 수집(로컬 · 스크래치 폴더 · 데이터 브랜치에는 안 올림): 10/30~11/06 6일 · 129종목 · 140초 · 오류 0 · 15:30 분봉 종가 = KRX 종가 77/77.
+- 연구 수치(재현 스크립트): R28 `r28_opening_deep.py` · R28-b `r28b_opening_breadth.py` · R30 `r30_opening_hedge.py`(연구실 goal_metrics · score_metrics · gate_reason 그대로) · R32 `r32_opening_minutes.py` · 과정 지표 `opening_agreement.py`.
+- 미확인: ① 11/09 08:56 장부의 `shadow` 칸 · ② 병합 뒤 `news-collect.yml` 이 `data/minute-opening/` 을 데이터 브랜치에 저장하는지 · ③ 백테 수치는 실측이 아니다(R28-b 의 +2.17%p/일 초과는 설계 표본 값).
+## 2026-11-07 · 부동산 클로드 모의장부 금리 기다림 · 부동산 v1.11.1
+
+- 재현: 현재 main 자료로 `nowView` — 네 전략 모두 2026-11 판단 `wait` · `noRate`(기준금리 2026-09 까지 · 단지 시세 2026-10 까지).
+- `node scripts/test_realestate_claude_apt.cjs`: **125 PASS / 0 FAIL** (새 4: 금리 없는 달에서 멈춤·waitFor · noRate 줄 없음 · 이어 쓰면 한 번에 쓴 장부와 같음 · 전세 끼고도 기다림).
+- 변이 '장부가 금리 없는 달도 씀': 값 시험 3개 빨간불(122/125). 전체 변이 결과·check-before-push 는 PR 에 적는다.
+
+## 2026-11-07 · 부동산 클로드 현실 점검 · 전세 끼고(-gap) 실험적 확장 · 부동산 v1.11.0
+
+- `node scripts/test_realestate_claude_apt.cjs`: **121 PASS / 0 FAIL** (새 41 — 갭 내 돈·전세·전세가율 기록 · 산 달 평가 · 재계약 받음/역전세 · 회수 식 · 레버리지 > 내 돈 · 파산(표시·그 뒤 거래 없음·내 돈이면 손실·낙폭 −100%) · 조정대상지역 월 단위 · 비과세 없는 양도세 10,652 · 조정지역 갭 거래 과세 vs 내 돈 비과세 · 현실 점검 분포 독립 계산·연도별 · 고점 스트레스 식 · 룩어헤드 합성 2·실제 2 · 장부 lev·renew·어긋남 멈춤·옛 장부 호환 · 실제 자료 사고파는 달 같음·회수 식·과세 규칙·분포·스트레스).
+- apt-1 · apt-lead-1 변경 전후 비교: `simulate`(거래·곡선·최종값)·`benchmarks`·`nowView`·`eventStudy` JSON **동일**(열쇠 순서까지).
+- `node scripts/realestate_claude/mutation_test.cjs`: **95/95 잡힘** (새 13: 갭 내 돈 비용 누락 · 역전세 내 돈 누락 · 재계약 보증금 안 바꿈 · 보증금 안 돌려줌 · 파산 뒤 거래 · 조정지역 비과세 · 비과세 없음에 12억 기준 · 넘겨받은 lev · 장부 lev 검사 없음 · 분포 비용 누락 · 분포 작은 단지 · 스트레스 첫 달 · 세종 지정 시작 틀림). 함수를 쪼개며 원문이 바뀐 옛 변이 5건은 새 원문으로 옮김.
+- 회귀 `node regression-check.js index.html backtest.html testdata`: **2827 PASS / 0 FAIL — ALL PASS** (화면이 `X.forwardStats`·`X.stress` 만 부르고 `acqRate`·`brokerRate`·`gapNeed` 를 정의·계산하지 않음 · 장부 4개 전략·돈 방식 일치 · 공식/실험 이름 구분).
+- Chromium 360px(로컬 서버, Firebase·Chart 가짜): 네 전략 × 매매 기록·지금 8화면 가로 넘침 0 · 화면 오류 0 · 현실 점검·거래 카드(재계약·회수·×8.03)·대장 내 돈 표시 확인.
+- 미확인: 운영 사이트 브라우저 열기(이 환경 인증서) — 배포 뒤 curl 로 버전·파일 해시만 확인. 실제 투자 결과·레버리지 실행 가능성(대출·전세 수요)은 자료 밖.
+
+## 2026-11-07 · 부동산 클로드 월간 수집 멈춤 고침 · 부동산 v1.10.10
+
+- 재현: GitHub 실행 10-20·10-27 둘 다 `collect.py` 가 R-ONE `Remote end closed connection` 으로 멈춤(로그 확인). 이 환경에서 옛 코드를 돌려 37번째 시계열에서 `Connection reset by peer` 재현 · 직접 8번 호출에 2번 reset(15초 뒤).
+- `python scripts/realestate_claude/test_collect.py`: **20 PASS / 0 FAIL** (새 4: 실패 시계열은 옛 자료 그대로·나머지 계속 · 이름·사유 기록 · 종료 코드 2/0 · R-ONE 잠금).
+- `python scripts/realestate_claude/test_collect_apt.py`: **22 PASS / 0 FAIL** (새 3: 지금 달부터 시세 제외 · 실거래 제외 · KST).
+- `node scripts/realestate_claude/mutation_test.cjs`: **82/82 잡힘** (새 8: 한 시계열 실패가 전체 멈춤 · 실패 시계열 옛 자료 삭제 · 실패 기록 없음 · 실패해도 0 종료 · R-ONE 동시 호출 · 지금 달 시세 포함 · 지금 달 실거래 포함).
+- 고친 수집기로 이 환경에서 KB 단지 수집 실제 실행: 109곳 · 2026-10 까지 · 11월(미확정) 제외 확인. 지수 수집기 실제 실행은 R-ONE 재시도 때문에 느려(한 시계열에 1분 안팎) 이 PR 전에 끝나지 않았다 — 실패 0 으로 진행 중이었고, 다음 자동 갱신(11-20)에서 결과를 본다.
+- 회귀 `node regression-check.js index.html backtest.html testdata`: **2827 PASS / 0 FAIL — ALL PASS**. `node scripts/check-before-push.cjs`: **57단계 PASS**.
+- 미확인: GitHub 실행 환경에서 R-ONE 이 하나씩 받는 방식을 끝까지 허용하는지(11-20 실행 로그로 확인). 운영 화면은 자료만 바뀐다.
+
 ## 2026-11-07 · 5년 규칙 '공격형' 선택(새 규칙 + s0 .60) · v3.117.5 (플랜 v1.46.0)
 
 - `scripts/check-plan-rules-exp.cjs`: ALL PASS — A1~A8 · B1(rules 없음 == base 글자까지) · C1~C3 · D1~D2 · E1~E4 · **F1 공격형 σ57% 구간 TECL 매도 없음(목표 w=1 · 새 규칙은 매도) · F2 TQQQ 매매 새 규칙과 같은 날·방향 · F3 벌 값(exp2 s0 .60 · base/exp1 s0 없음) · F4 유한** · 변이 6/6 빨간불(+ '공격형 s0 무시').
