@@ -36,6 +36,7 @@ ECOS_KEY = os.environ.get("ECOS_KEY", "").strip() or "sample"
 PAUSE = 0.12  # 공공 API 예의상 호출 간격(초)
 RONE_LOCK = threading.Lock()  # R-ONE 은 한 번에 하나씩 — 동시에 여러 연결을 열면 서버가 연결을 끊는다(2026-10 GitHub 실행 두 번 모두)
 EXIT_PARTIAL = 2  # 시계열 일부가 실패했을 때의 종료 코드(받은 것은 저장하되 실패를 숨기지 않는다)
+BUDGET_MIN = 70   # 이 시간(분)이 지나면 새 시계열을 시작하지 않는다 — 뒤 단계(단지·장부·시험·커밋)가 늘 돌게(작업 한도 150분)
 
 # 지역: 키 → (이름, 묶음, {코드 체계: 코드}, R-ONE 지역 전체이름). 표마다 분류 번호가 다르다.
 # 받은 행의 지역 이름이 마지막 값과 다르면 수집을 멈춘다(번호가 밀려 다른 지역을 받는 사고 방지).
@@ -144,12 +145,12 @@ def ym_dash(ym):
     return ym[:4] + "-" + ym[4:]
 
 
-def get_json(url, tries=6, headers=None):
+def get_json(url, tries=5, headers=None):
     last = None
     for a in range(tries):
         try:
             req = urllib.request.Request(url, headers=headers or {"User-Agent": "jkquant-realestate/1.0"})
-            with urllib.request.urlopen(req, timeout=40) as r:
+            with urllib.request.urlopen(req, timeout=30) as r:
                 return json.loads(r.read().decode("utf-8"))
         except Exception as e:  # 네트워크·일시 오류만 재시도한다
             last = e
@@ -358,10 +359,16 @@ def refresh(name, old, fetch_range, full, now_ym, log):
     return to_series(old_rows)
 
 
-def collect_one(t, full, now_ym, log, failed):
+def collect_one(t, full, now_ym, log, failed, deadline=None):
     """한 시계열 받기 → 담을 곳에 넣는다. 받다가 실패하면 그 시계열은 옛 자료 그대로 두고 failed 에 적는다 —
-    한 시계열의 연결 오류가 나머지(지수·금리·KB) 갱신까지 막지 않게 한다. 실패는 끝에 종료 코드로 알린다."""
+    한 시계열의 연결 오류가 나머지(지수·금리·KB) 갱신까지 막지 않게 한다. 실패는 끝에 종료 코드로 알린다.
+    deadline(시각)이 지났으면 받지 않고 건너뛴다(옛 자료 그대로 · 실패로 적음)."""
     name, bucket, key, fr = t
+    if deadline is not None and time.time() > deadline:
+        log.append({"series": name, "event": "failed", "error": "시간 한도(%d분)를 넘어 이번엔 건너뜀" % BUDGET_MIN})
+        failed.append(name)
+        print(name, "건너뜀 — 시간 한도", file=sys.stderr, flush=True)
+        return t, None
     try:
         ser = refresh(name, bucket.get(key), fr, full, now_ym, log)
     except Exception as e:  # noqa: BLE001 — 어떤 오류든 이 시계열만 포기한다
@@ -381,12 +388,27 @@ def exit_code(failed):
     return EXIT_PARTIAL if failed else 0
 
 
+def is_rone(t):
+    return t[0].split(":")[0] in RONE_TABLES
+
+
+def run_all(tasks, jobs, go):
+    """R-ONE 시계열은 한 줄로(서버가 동시 연결을 끊는다), 한국은행(ECOS)·KB 는 따로 여럿이 동시에 받는다 —
+    R-ONE 이 느려도 기준금리 같은 다른 서버 자료가 그 뒤에 줄 서지 않게(2026-11 GitHub 실행에서 기준금리가 R-ONE 뒤에 밀렸다)."""
+    rone = [t for t in tasks if is_rone(t)]
+    rest = [t for t in tasks if not is_rone(t)]
+    with cf.ThreadPoolExecutor(max_workers=1) as ex1, cf.ThreadPoolExecutor(max_workers=max(1, jobs)) as ex2:
+        fs = [ex2.submit(go, t) for t in rest] + [ex1.submit(go, t) for t in rone]
+        return [f.result() for f in fs]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--full", action="store_true")
     ap.add_argument("--out", default=OUT)
     ap.add_argument("--only", default="", help="쉼표로 시계열 이름 제한(시험용) 예: sale:daejeon,macro:cpi")
-    ap.add_argument("--jobs", type=int, default=4, help="동시에 받을 시계열 수")
+    ap.add_argument("--jobs", type=int, default=4, help="동시에 받을 시계열 수(R-ONE 밖)")
+    ap.add_argument("--budget", type=float, default=BUDGET_MIN, help="이 시간(분)이 지나면 새 시계열을 시작하지 않는다(0 이면 한도 없음)")
     a = ap.parse_args()
 
     old = {}
@@ -453,10 +475,9 @@ def main():
                     log.append({"series": "%s:%s" % (bucket_name, rk), "event": "dropped"})
 
     failed = []
-    # 시계열마다 따로 받으므로 동시에 받아도 된다(한 시계열 안에서는 순서대로 · R-ONE 은 RONE_LOCK 으로 하나씩).
-    with cf.ThreadPoolExecutor(max_workers=max(1, a.jobs)) as ex:
-        for _ in ex.map(lambda t: collect_one(t, a.full, now_ym, log, failed), tasks):
-            pass
+    deadline = time.time() + a.budget * 60 if a.budget > 0 else None
+    # 시계열마다 따로 받으므로 동시에 받아도 된다(한 시계열 안에서는 순서대로 · R-ONE 은 한 줄로).
+    run_all(tasks, a.jobs, lambda t: collect_one(t, a.full, now_ym, log, failed, deadline))
     if failed:
         print("실패한 시계열 %d개(옛 자료 그대로): %s" % (len(failed), ", ".join(failed)), file=sys.stderr)
 

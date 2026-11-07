@@ -49,6 +49,8 @@ const COL_MUTS=[
   ['실패한 시계열의 옛 자료를 지움','        failed.append(name)\n        print(name, "실패 — 옛 자료 그대로:", str(e)[:200], file=sys.stderr, flush=True)\n        return t, None','        failed.append(name)\n        bucket[key] = None\n        return t, None'],
   ['실패를 기록하지 않음','        log.append({"series": name, "event": "failed", "error": str(e)[:200]})\n        failed.append(name)','        failed.append(name)'],
   ['실패해도 성공(0)으로 끝냄','    return EXIT_PARTIAL if failed else 0','    return 0'],
+  ['시간 한도 무시',"    if deadline is not None and time.time() > deadline:\n        log.append","    if False:\n        log.append"],
+  ['옛 방식: R-ONE·ECOS 한 줄에 섞어 받음',"        fs = [ex2.submit(go, t) for t in rest] + [ex1.submit(go, t) for t in rone]","        fs = [ex2.submit(go, t) for t in rone + rest]"],
   ['R-ONE 동시 호출(잠금 없음)','    with RONE_LOCK:\n        d = get_json(RONE_URL + "?" + urllib.parse.urlencode(q))\n        time.sleep(PAUSE)','    if True:\n        d = get_json(RONE_URL + "?" + urllib.parse.urlencode(q))\n        time.sleep(PAUSE)']
 ];
 const APT_MUTS=[
