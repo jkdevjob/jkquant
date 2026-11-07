@@ -1,5 +1,12 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-07 · 자산플랜 연말 세금 점검 카드 · v3.117.6 (플랜 v1.47.0)
+
+- `scripts/check-plan-tax.cjs`: PASS — A1 결제일(12-30→12-31 · 12-31→01-04 · 2022 T+2) · A2 마지막 체결일(2023 12-27 · 2024 12-30 · 2026 12-30 · 2028 12-28) · A3 환율 찾기 · A4 선입선출 312,116원/248.65$ · 이동평균 269,398.5원/223.5$ · 남은 lot 435,435원 · A5 12-31 매도는 다음 해 · A6 수량 = 화면 alphaLedgerCalc(현금·보정 기록 포함) · A7 공제 채우기 최대 n(≤ 225만원 · n+1 넘음) · A8 손실 상계 298,188원(순 287,388원) · A9 환율 함정(달러 손실 · 원화 이익 → 제안 없음) · A10 평단 미등록 제외 · B1~B3 화면 연결(실제 renderTaxCheck 실행 · '공제 채우기 가능' · 마감 2026-12-30). 변이 4/4 빨간불(시작잔고 원가 지금 환율 · 결제일 = 체결일 · 선입선출 대신 이동평균 · 공제 여유 없앰).
+- 휴대폰 폭(375px) 렌더 확인: 가로 넘침 없음(scrollWidth 375) · 공제 채우기/손실 상계 두 경우 숫자 손 검산과 같음(TECL 43주 1,848,226원 ≤ 1,874,772원 · 세금 406,610원 / TQQQ 80주 + SGOV 40주 상계 218,613원).
+- `check-before-push.cjs` 1차(8f39f06): 2827 PASS / 1 FAIL — `check-plan-session-views.cjs` 가 '현재' 탭 구역을 [주문 · 계좌] 두 개로 고정해 둠(새 카드가 셋째) → 기대값에 `alphaTaxSection` 추가 · 탭 `aria-controls` 에도 추가. 이어서 장부만 떼어 돌리는 시험 문맥 3곳(`check-plan-history-pnl` · `check-login-quote-paper` · `check-plan-session-views`)에서 `renderTaxCheck` 가 없어 ReferenceError → 호출을 `typeof` 로 감쌈(페이지에선 늘 있음). 전체 회귀 2828 PASS / 0 FAIL.
+- `check-before-push.cjs` 2차(09d7340): 57단계 전부 PASS · 전체 회귀 2828 PASS / 0 FAIL — ALL PASS.
+- 미확인: 실제 증권사 양도세 계산과의 대조(방식·기준환율 차이).
 ## 2026-11-07 · 클로드 ① 그림자(v2.25.0) · ① 후보 분봉 쌓기(v2.26.0) · 연구 R28 · R28-b · R30
 
 - v2.25.0 그림자: `node scripts/test_opening_gapdown.mjs` **55 ALL PASS**(그림자 값 시험 — 통과 6/7 경계 · 08:58 우선 · 바닥 −29 · 규칙 없음 null · preopen 기록 · 메인 picks/orders 불변) · 변이 9종 모두 잡힘(처음 2종은 TypeError 로 끝나 생존 집계 → `assert.ok` 가드로 고쳐 잡음) · `check-before-push` 57단계 · 회귀 **2827 PASS / 0 FAIL** · GitHub check.yml 성공 · 운영 `clVer` v2.25.0 확인.
