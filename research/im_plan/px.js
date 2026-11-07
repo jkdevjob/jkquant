@@ -38,6 +38,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
           const g=n*p0, realized=g-g*fee-avg*n; cash+=g-g*fee; yearPnl+=realized; basis[s]-=avg*n; cash-=g+g*fee; basis[s]+=g+g*fee; turn+=2*g; lH+=-realized; } }
       if(o.hlog) o.hlog.push([d.slice(0,4),gH,lH]); }
     eq.push([d,cash+syms.reduce((a,s)=>a+q[s]*px[s],0)]); }
+  if(o.liq){ for(const s of syms){ if(q[s]>0){ const g=q[s]*C[s][i1]; yearPnl+=g-g*fee-basis[s]; eq[eq.length-1][1]-=g*fee; } } }   // liq: 끝날 전부 판다 — 수수료 + 그 이익을 올해 실현분에 넣어 아래 세금
   { const _t=(tax&&yearPnl>0&&o.endTax!==false)?Math.max(0,yearPnl-DED)*0.22:0; eq[eq.length-1][1]-=_t; if(o.ylog) o.ylog.push([yr,yearPnl,_t,eq[eq.length-1][0]]); }   // 끝날 올해 실현이익 세금을 미리 뺀다(청산 가치) — 진행 중 구간 낙폭을 잴 때는 endTax:false
   return {eq,turn}; }
 function stats(eq,cap){ const a=eq[0][0], b=eq[eq.length-1][0], fin=eq[eq.length-1][1]; const yrs=(Date.parse(b)-Date.parse(a))/(365.25*864e5);
