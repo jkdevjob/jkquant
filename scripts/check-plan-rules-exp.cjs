@@ -63,6 +63,13 @@ function check(E){
   t('E2 그 전날 TQQQ 비중 > 32%',wBefore&&wBefore.tqqq*wBefore.tqqqPx/wBefore.total>.32,wBefore&&(wBefore.tqqq*wBefore.tqqqPx/wBefore.total).toFixed(3));
   t('E3 기본: 그날 TQQQ 거래 없음',sellB.length===0,JSON.stringify(sellB));
   t('E4 두 규칙 다 평가액 유한 · 현금 음수 없음',[RB,RX].every(R=>R.nav.every(x=>Number.isFinite(x.total)&&x.cash>=-1e-7)));
+  // F. exp2 공격형(2026-11-07) — 새 규칙과 같은 판정에 TECL 목표 변동성 .55 → .60. σ57% 구간: 새 규칙 w .93(줄이기 매도) · 공격형 w 1(상한) → 매도 없음
+  const RA=E.replay(Object.assign({},base,{rules:'exp2'}));
+  const volSellA=trades(RA,'TECL').filter(x=>x.side==='sell'&&x.date>D[VOL0]&&x.date<=D[VOL1+5]);
+  t('F1 공격형: σ57% 구간 TECL 매도 없음(목표 w=1) · 새 규칙은 매도',volSellA.length===0&&volSellX.length>=1&&RA.rules==='exp2',JSON.stringify(volSellA.map(x=>x.date+':'+x.qty)));
+  t('F2 공격형: TQQQ 매매(Guard −3% · 1월 맞춤)는 새 규칙과 같은 날·같은 방향',trades(RA,'TQQQ').map(x=>x.date+x.side).join()===trades(RX,'TQQQ').map(x=>x.date+x.side).join());
+  t('F3 규칙 벌: exp2 s0 .60 · 실험 표시 · base·exp1 은 s0 없음(공식 .55)',E.alphaRules('exp2').s0===.60&&E.alphaRules('exp2').exp===true&&E.alphaRules('base').s0===undefined&&E.alphaRules('exp1').s0===undefined);
+  t('F4 공격형 평가액 유한 · 현금 음수 없음',RA.nav.every(x=>Number.isFinite(x.total)&&x.cash>-1e-6));
   return bad;
 }
 const E=load(src),bad=check(E);
@@ -70,6 +77,7 @@ if(bad.length){console.error('FAIL plan rules exp:\n  '+bad.join('\n  '));proces
 console.log('PASS plan rules exp: 판정 8 · 재생 동일성 · Guard −3% · TECL 비대칭 · TQQQ 해 첫 거래일 30% (base 는 글자까지 예전과 같음)');
 // ── 변이: 고친 곳을 되돌리면 빨간불이어야 한다
 const MUT=[
+  ['공격형 s0 무시(늘 공식 .55)',s=>s.replace("const s0=RULES.s0??D.ivsS0,w=Math.min(1,(s0*s0)/(sigma*sigma));","const s0=D.ivsS0,w=Math.min(1,(s0*s0)/(sigma*sigma));")],
   ['새 규칙 Guard 끄기 −3% → −1%',s=>s.replace("guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15","guardOn:.01,guardOff:.01,bandDn:.01,bandUp:.15")],
   ['새 규칙 TECL 줄일 때 1%p → 10%p',s=>s.replace("guardOff:.03,bandDn:.01,bandUp:.15","guardOff:.03,bandDn:.10,bandUp:.15")],
   ['해 첫 거래일 TQQQ 맞춤 제거',s=>s.replace("const tqReb=R.tqReb>0&&!!a.yearStart","const tqReb=false&&R.tqReb>0&&!!a.yearStart")],

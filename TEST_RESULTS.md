@@ -1,5 +1,13 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-07 · 5년 규칙 '공격형' 선택(새 규칙 + s0 .60) · v3.117.5 (플랜 v1.46.0)
+
+- `scripts/check-plan-rules-exp.cjs`: ALL PASS — A1~A8 · B1(rules 없음 == base 글자까지) · C1~C3 · D1~D2 · E1~E4 · **F1 공격형 σ57% 구간 TECL 매도 없음(목표 w=1 · 새 규칙은 매도) · F2 TQQQ 매매 새 규칙과 같은 날·방향 · F3 벌 값(exp2 s0 .60 · base/exp1 s0 없음) · F4 유한** · 변이 6/6 빨간불(+ '공격형 s0 무시').
+- `scripts/check-plan-rules-session.cjs`(다시 씀): PASS — update rules exp1/exp2/base/모름 · 실제 createAssetSession(exp1·base·exp2 · 10년 없음 · 수정) · settingsFromView · applyAssetSettings(exp1/exp2/없음/모름) · 칩 '새 규칙'·'공격형' · 결과 머리 · 화면 s0(55/55/60) · renderAlphaPlan w 가 S0 · 목록 — 변이 8/8 빨간불(설정 저장 제거 · exp2 거부 · 모달 rules 제거 · 화면→세션 제거 · 화면 반영 제거 · s0 고정 · 목록 표시 제거 · 엔진 exp2 제거).
+- 기존: `check-plan-session-settings.cjs` PASS · `check-plan-session-mutations.cjs` 3/3 · `check-plan-evidence.cjs` +2/2(vm 문맥에 alphaS0Pct 추가 — 처음엔 ReferenceError 로 빨간불이었다).
+- 연구 근거(research/im_plan RESEARCH_LOG.md 11-07 질문 답): 실제 2011~ 1만$ s0 .55/.60/.65/.70 = 30.4/41.6 · 30.9/46.1 · 31.9/51.5 · 31.4/56.3 · 5년 배수 ×4.68/×4.91/×5.01 · 두 배 1.8년 같음 · 합성 2000~ .60 14.2/82.4 · .65 14.3/85.5(짝 0:54) · 표본 밖 .60 짝 2:29.
+- 미확인: 운영 화면에서 공격형 모의 세션 실제 재생 — 사용자 확인 전.
+
 ## 2026-11-07 · 자산플랜 세션 설정 '5년 규칙' 선택 · v3.117.4 (플랜 v1.45.0)
 
 - `scripts/check-plan-rules-session.cjs`: PASS — update rules 4 · 실제 createAssetSession(5년 exp1/base 두 세션 · 10년은 규칙 없음 · 수정 exp1→base) · settingsFromView(5년만) · applyAssetSettings(화면 반영) · 세션 칩/상태 줄 · 모의 결과 머리 · index paperOpts 목록 · 변이 5/5 빨간불(설정 모듈 저장 제거 · 모달 rules 제거 · 화면→세션 규칙 제거 · 화면 반영 제거 · 목록 표시 제거).

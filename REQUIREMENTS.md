@@ -1,5 +1,11 @@
 # JKQuant 요구사항 및 검증 기준
 
+## 2026-11-07 · 5년 규칙 벌 exp2 '공격형' · 플랜 v1.46.0
+
+- 규칙 벌에 TECL 목표 변동성 `s0` 를 둘 수 있다. 재생·화면 판정·목표비율 그래프는 `rules.s0 ?? DEFAULTS[5].ivsS0(.55)` 를 쓴다. exp2 = exp1 과 같은 판정 + s0 .60. s0 가 없는 벌(base·exp1)의 결과는 바뀌지 않는다.
+- 세션 설정·화면 선택·세션 칩·모의 결과·모의투자 목록은 엔진의 규칙 이름을 쓴다(모르는 이름은 base). 공격형도 '실험적 확장'(공식 규칙 아님 · 켤 때만).
+- 검증: `scripts/check-plan-rules-exp.cjs` F1~F4 · `scripts/check-plan-rules-session.cjs`.
+
 ## 2026-11-07 · 자산플랜 세션별 5년 규칙 · 플랜 v1.45.0
 
 - 5년 규칙(base · exp1)은 **세션 설정**(세션 추가·설정 모달)에서 고르고 `settings.alphaRules` 로 세션마다 저장된다. 모의 재생(plan.html replayAssetPaperSession · index.html replayPlanPaper)과 화면 판정(renderAlphaPlan)은 활성 세션의 값을 쓴다. 규칙을 안 가진 세션(옛 세션)은 base.
