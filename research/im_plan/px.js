@@ -17,7 +17,11 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
   const st={}; // 규칙 상태(히스테리시스 등)
   // o.deferDec(11-08): {sym, days, taxable} — 그해 남은 거래일이 days 보다 적을 때 sym 의 '이익 나는' 매도를 다음 해 첫 거래일로 미룬다(목표는 그대로라 해가 바뀌면 보통 규칙이 다시 판다). taxable 이면 공제를 넘는 이익일 때만. 안 주면 기존과 같다.
   const remY=o.deferDec?(()=>{ const r=new Array(dates.length).fill(0); for(let k=dates.length-2;k>=0;k--) r[k]=dates[k+1].slice(0,4)===dates[k].slice(0,4)?r[k+1]+1:0; return r; })():null; let deferN=0;
+  // o.dep(11-08): 적립을 앱 플랜 monthlyAdd 처럼 — 날마다 o.dep.perDay 씩 쌓아 두었다가 달이 바뀐 첫 거래일 아침에 현금으로 넣고 그날 모든 종목을 목표로 맞춘다(강제 리밸런싱).
+  //   들어온 돈은 o.flows 에 [날짜, 금액] · 끝날 아직 못 넣은 돈은 현금으로 더한다(낸 돈 합이 매일 적립과 같게). 안 주면 기존과 같다.
+  let depPend=0, depForce=false; if(o.dep) o.flows=o.flows||[];
   for(let k=i0;k<=i1;k++){ const d=dates[k];
+    depForce=false; if(o.dep&&k>i0){ if(d.slice(0,7)!==dates[k-1].slice(0,7)&&depPend>0){ cash+=depPend; o.flows.push([d,depPend]); depPend=0; depForce=true; } depPend+=o.dep.perDay; }
     if(irx[d]!=null) lastIrx=irx[d];
     if(prevDate&&cash>0){ const gap=Math.max(1,Math.round((Date.parse(d)-Date.parse(prevDate))/864e5)); cash+=cash*Math.max(0,lastIrx/100-0.0009)*(tax?(1-0.154):1)*gap/365; }
     prevDate=d; const y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ const _t=(tax&&yearPnl>0)?Math.max(0,yearPnl-DED)*0.22:0; cash-=_t; if(o.ylog) o.ylog.push([yr,yearPnl,_t,d]); yearPnl=0; yr=y; }   // o.ylog: 해마다 [해, 실현손익, 세금, 낸 날](11-05)
@@ -25,7 +29,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     const cur={}; syms.forEach(s=>cur[s]=q[s]*pp[s]/tot);
     const tgt=o.target(kp,cur,st);
     const px={}; syms.forEach(s=>px[s]=C[s][k]);
-    const todo=syms.filter(s=>{ const t=tgt[s]||0; return (t===0)!==(q[s]===0) || Math.abs(t-cur[s])>(o.bandOf?o.bandOf(s,t,cur[s]):band); });   // bandOf(종목, 목표, 현재) — 내릴 때·올릴 때 밴드를 따로 줄 수 있다
+    const todo=syms.filter(s=>{ const t=tgt[s]||0; if(depForce) return t>0||q[s]>0; return (t===0)!==(q[s]===0) || Math.abs(t-cur[s])>(o.bandOf?o.bandOf(s,t,cur[s]):band); });   // depForce: 적립금 들어온 날은 전부 목표로   // bandOf(종목, 목표, 현재) — 내릴 때·올릴 때 밴드를 따로 줄 수 있다
     // 매도 먼저
     // o.frac: 소수 주 — 합성 자료처럼 1주 값이 원금보다 비쌀 때(2000년 합성 TQQQ 67,137$) 정수 주가 매매 자체를 막는 왜곡을 없앤다
     const shares=x=>o.frac?x:Math.floor(x);   // o.cnt={}: 매매 기록(종목별 [날짜, 's'|'b', 금액/총자산]) — 안 주면 계산은 그대로
@@ -42,6 +46,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
           const g=n*p0, realized=g-g*fee-avg*n; cash+=g-g*fee; yearPnl+=realized; basis[s]-=avg*n; cash-=g+g*fee; basis[s]+=g+g*fee; turn+=2*g; lH+=-realized; } }
       if(o.hlog) o.hlog.push([d.slice(0,4),gH,lH]); }
     eq.push([d,cash+syms.reduce((a,s)=>a+q[s]*px[s],0)]); }
+  if(o.dep&&depPend>0){ eq[eq.length-1][1]+=depPend; o.flows.push([eq[eq.length-1][0],depPend]); depPend=0; }   // 못 넣은 적립금은 현금
   if(o.liq){ for(const s of syms){ if(q[s]>0){ const g=q[s]*C[s][i1]; yearPnl+=g-g*fee-basis[s]; eq[eq.length-1][1]-=g*fee; } } }   // liq: 끝날 전부 판다 — 수수료 + 그 이익을 올해 실현분에 넣어 아래 세금
   { const _t=(tax&&yearPnl>0&&o.endTax!==false)?Math.max(0,yearPnl-DED)*0.22:0; eq[eq.length-1][1]-=_t; if(o.ylog) o.ylog.push([yr,yearPnl,_t,eq[eq.length-1][0]]); }   // 끝날 올해 실현이익 세금을 미리 뺀다(청산 가치) — 진행 중 구간 낙폭을 잴 때는 endTax:false
   return {eq,turn,deferN}; }
