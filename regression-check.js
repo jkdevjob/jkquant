@@ -11389,8 +11389,9 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      /자동 재시도하지 않음/.test(gd)&&/if\(!\(await claimSignal\(id\)\)\)/.test(gd)
      &&gd.indexOf('await claimSignal(id)')<gd.indexOf('/api/kis?op=order&internal=1')
      &&!/for\s*\(let\s+\w+=0;[^)]*\)\s*\{[^}]*op=order/.test(gd));
-  ok('D-1 매수는 08:59:40 전·매도는 15:20~15:28 종가 동시호가 창에서만',
+  ok('D-1 매수는 08:59:40 전·매도는 10:00~10:05(① 10:00 매도 · 2026-11-09~) · 15:20~15:28 종가 동시호가(남은 수량) 창에서만',
      /const ORDER_DEADLINE=85940;/.test(gd)&&/if\(stage==="close"\)return hms>=152000&&hms<152800;/.test(gd)
+     &&/const EXIT10_HMS=100000;/.test(gd)&&/if\(stage==="exit10"\)return hms>=EXIT10_HMS&&hms<EXIT10_HMS\+500;/.test(gd)
      &&/if\(!stageWindow\(stage,now\.hms\)\)/.test(gd));
   ok('D-1 선택 기준값은 전날 밤 명단(rule)에서만 읽는다 — JS 에 -2/-29 하드코딩 없음',
      /const ch=choosePicks\(cands,Array\.isArray\(recheck\)\?sanitizeCandidates\(recheck,wl\):\[\],wl\.rule\)/.test(gd)&&/picks:gapdownPicks\(f\.length\?f:cands,rule\)/.test(gd)
@@ -11409,11 +11410,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
       const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
       const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
     const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
-    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:00(⑤)·15:21·15:23 연구 주문·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
-       crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_c30===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
+    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·10:00(① 매도)·15:00(⑤)·15:21·15:23 연구 주문·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
+       crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_exit10===5&&count.gapdown_c30===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
        &&count.claude_kr===5&&count.duel===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
        &&count.closing_day_signal===5&&count.closing_day_entry===5&&count.closing_overnight_signal===5&&count.research_close===5    // 연구 장부 15:06/15:07/15:22 · 한투 모의 15:23
-       &&Object.keys(count).length===13&&r0==='gapdown_preopen'&&r1===null
+       &&Object.keys(count).length===14&&r0==='gapdown_preopen'&&r1===null
+       &&route(Date.parse('2026-11-09T01:00:00Z'))==='gapdown_exit10'&&route(Date.parse('2026-11-09T01:05:00Z'))===null&&route(Date.parse('2026-11-08T01:00:00Z'))===null   // 월 10:00 KST ① 매도 / 10:05 · 일요일 없음
        &&route(Date.parse('2026-10-05T06:00:00Z'))==='gapdown_c30'&&route(Date.parse('2026-10-04T06:00:00Z'))===null      // 월 15:00 KST ⑤ / 일요일 없음
        &&route(Date.parse('2026-10-05T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-05T21:05:00Z'))===null      // 여름(EDT) 05:05 KST
        &&route(Date.parse('2026-12-07T21:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-12-07T20:05:00Z'))===null      // 겨울(EST) 06:05 KST
@@ -12249,7 +12251,7 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
     ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만 · 켜기/끄기는 설정 → 알림 한 곳(연구 화면 상단 상태 줄과 🔔 버튼은 2026-10-14 사용자 요청으로 삭제)',
-       JSON.parse(wr).triggers.crons.join()==="0,5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
+       JSON.parse(wr).triggers.crons.join()==="0,5-31,40,56 0,1,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
        &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(fs.readFileSync(__d+'/claude-push-client.js','utf8'))

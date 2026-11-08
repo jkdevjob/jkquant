@@ -6,7 +6,7 @@
 // 확정 결과는 밤 workflow 의 모의투자 장부(claude-paper)가 따로 남긴다. 이 응답은 화면 표시용이다.
 
 import { claudeAuthorized } from "./_claude_auth.js";
-import { MAIN_DEFAULT, VTS_OFF, coinDaysNeeded, loadMainEvents, mainFor, openingCounts, openingPick } from "./_claude_main.js";
+import { MAIN_DEFAULT, VTS_OFF, coinDaysNeeded, etfMax24, loadMainEvents, mainFor, openingCounts, openingExit, openingExitPrices, openingPick } from "./_claude_main.js";
 import { krxDay } from "./_krx_calendar.js";
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WORKER="https://jkquant-opening-scheduler.mumae4.workers.dev";
@@ -66,20 +66,33 @@ export function vtsNote(o,fill,skipped=""){
   if(!o.vts.ok)return "모의계좌 주문 안 됨("+String(o.vts.msg||"").replace(/^매수 생략 — /,"").replace(/ · 계획.*$/,"")+") — 시세로 정산";
   return fill&&fill.qty>0?"모의계좌 체결 "+fill.qty+"주 · "+Math.round(+fill.avgPrice).toLocaleString("en-US")+"원":"모의계좌 주문 접수";
 }
-// ① 시초가: 08:59 장전 동시호가 매수 → 15:30 종가 매도 — 주문한 종목을 그날 공식 시가 → 종가로.
-// bars: {종목: 그날 일봉 {open, close}} · hm: 지금 한국시각(HHMM). 시가 전이면 08:58 예상가(손익 없음), 장중이면 지금 가격으로 평가.
-export function openingRows(st,prices,bars={},hm=2400){
-  const pre=st.preopen||{},rec=st.reconcile||st.close||{};
+// ① 시초가: 08:59 장전 동시호가 매수 → 매도(2026-11-09~ 10:00 · 그 전 15:30 종가 — _claude_main.openingExit) — 주문한 종목을 그날 공식 시가 → 매도 가격으로.
+// bars: {종목: 그날 일봉 {open, close}} · hm: 지금 한국시각(HHMM) · date: 그날(매도 규칙을 고른다 — 없으면 옛 규칙).
+// 시가 전이면 08:58 예상가(손익 없음), 장중이면 지금 가격으로 평가. 10:00 매도 날은 Worker 10:00 단계가 남긴 가격이 있어야 '청산'(장부와 같은 값).
+export function openingRows(st,prices,bars={},hm=2400,date=""){
+  const pre=st.preopen||{},rec=st.reconcile||st.close||{},X=openingExit(date),ex=openingExitPrices(st);
   const pos=Object.fromEntries((rec.positions||[]).map(p=>[p.code,p]));
   const ord=Object.fromEntries((pre.orders||[]).filter(o=>o.side==="buy").map(o=>[o.code,o]));
   return (pre.picks||[]).map(p=>{
-    const b=(bars||{})[p.code]||{},o=ord[p.code]||{},opened=hm>=900&&+b.open>0,closed=opened&&hm>=1531&&+b.close>0;
-    const buy=opened?+b.open:(p.expectedPrice||null),sell=closed?+b.close:null,now=sell||prices[p.code]||null;
+    const b=(bars||{})[p.code]||{},o=ord[p.code]||{},opened=hm>=900&&+b.open>0,e=X.kind==="exit10"?ex[String(p.code)]:null;
+    const closed=opened&&(X.kind==="exit10"?!!e:hm>=1531&&+b.close>0);
+    const buy=opened?+b.open:(p.expectedPrice||null),sell=closed?(e?e.price:+b.close):null,now=sell||prices[p.code]||null;
     const note=vtsNote(o,(pos[p.code]||{}).buy,pre.ordersSkipped);
+    const wait=X.kind==="exit10"&&opened&&!closed&&hm>=1000?(hm<1010?"10:00 매도 기록 대기":"10:00 매도 기록 없음 — 15:40 마감 때 한투 분봉 가격으로 정산"):"";
     return {code:p.code,name:p.name||p.code,buyTime:"09:00 시가",buyPrice:buy,buyPriceKind:opened?"시가":"예상",
-      sellTime:closed?"15:30 종가":null,sellPrice:sell,nowPrice:now,status:!opened?"매수 예정(09:00 시가)":closed?"청산":"보유중",
+      sellTime:closed?(e?"10:00":"15:30 종가"):null,sellPrice:sell,nowPrice:now,status:!opened?"매수 예정(09:00 시가)":closed?"청산":wait||"보유중",
       pnlPct:opened&&now?pct(now,buy)-d1CostPct(buy):null,realized:closed,expectedGapPct:p.expectedGapPct,vts:note,note};
   });
+}
+// ② 15:21 '매수 없음' 한 줄 — 기준 미달 · 최대 24시간(다음 날 휴장 · 2026-11-09~). 실시간 화면과 하루 마감 장부가 같이 쓴다.
+const sgnPct=v=>v==null||!isFinite(v)?"—":(v>=0?"+":"")+(+v).toFixed(2)+"%";
+export function etfNoBuyNote(buy){
+  const th=String(((buy&&buy.rule)||{}).dropMaxPct??-3).replace("-","−"),dp=sgnPct(buy&&buy.dropPct);
+  if(buy&&buy.decisionReason==="no_signal_next_day_closed_max24h"){
+    const n=String(((buy.max24||{}).next)||"");
+    return "15:21 예상 전일 대비 "+dp+" — 기준 "+th+"% 이하지만 다음 날"+(n?"("+n.slice(5,7)+"/"+n.slice(8,10)+")":"")+" 휴장 · 최대 24시간이라 매수 없음";
+  }
+  return "15:21 예상 전일 대비 "+dp+" (기준 "+th+"% 이하 아님)";       // 오른 날을 '하락'으로 적지 않는다(11/04)
 }
 // ② ETF: 전날 15:21 신호(종가 매수 주문) → 오늘 09:00 시가 매도 · 오늘 15:21 신호면 종가 매수(오버나잇) — 주문한 건을 공식 종가 → 다음 날 시가로.
 // bars: {날짜: 233740 일봉} · hm: 지금 한국시각 · today: 오늘 날짜.
@@ -102,7 +115,7 @@ export function etfRows(todaySt,prevSt,prevDate,nowPrice,bars={},hm=2400,today="
         sellTime:"다음 거래일 09:00 시가",sellPrice:null,nowPrice:nowPrice,status:"보유중(오버나잇)",
         pnlPct:null,realized:false,dropPct:buy.dropPct,vts:note,note});
     }else if(buy.decisionReason==="krx_holiday")rows.push({code:"233740",name:"KODEX 코스닥150레버리지",status:"매매 없음",note:"국내 휴장일"});
-    else rows.push({code:"233740",name:"KODEX 코스닥150레버리지",status:"매매 없음",note:"15:21 예상 전일 대비 "+(buy.dropPct==null?"—":(buy.dropPct>=0?"+":"")+buy.dropPct.toFixed(2)+"%")+" (기준 "+String((buy.rule&&buy.rule.dropMaxPct)??-3).replace("-","−")+"% 이하 아님)"});   // 오른 날을 '하락'으로 적지 않는다(11/04)
+    else rows.push({code:"233740",name:"KODEX 코스닥150레버리지",status:"매매 없음",note:etfNoBuyNote(buy)});
   }
   return rows;
 }
@@ -268,13 +281,13 @@ function wl(xs){return {wins:xs.filter(x=>x>0).length,losses:xs.filter(x=>x<=0).
 const KR_TICK=[[2000,1],[5000,5],[20000,10],[50000,50],[200000,100],[500000,500]];
 export function krTick(p){for(const [u,t] of KR_TICK)if(p<u)return t;return 1000;}
 export function d1CostPct(p){return 0.23+2*1.5*krTick(p)/p*100;}
-export function openingRuleCell(pre,P,bars,final){
+export function openingRuleCell(pre,P,bars,final,date="",st=null){
   const b=pre&&pre.breadth;
   if(!b||b.qualified==null||!openingCounts(P,b.qualified))return null;
   const keep=openingPick(P,pre.picks||[]);
   if(!keep.length)return null;
-  const v=[];
-  for(const c of keep){const x=(bars||{})[c]||{};if(!(+x.open>0&&+x.close>0))return null;v.push(pct(+x.close,+x.open)-d1CostPct(+x.open));}
+  const v=[],X=openingExit(date),ex=openingExitPrices(st);                // 매도 가격은 장부 · 화면과 같은 표(10:00 매도 날은 10:00 기록 가격)
+  for(const c of keep){const x=(bars||{})[c]||{},out=X.kind==="exit10"?+((ex[c]||{}).price)||0:+x.close;if(!(+x.open>0&&out>0))return null;v.push(pct(out,+x.open)-d1CostPct(+x.open));}
   const failed=(pre.orders||[]).filter(o=>o&&o.side==="buy"&&keep.includes(String(o.code))&&!(o.vts&&o.vts.ok));
   const why=failed.length?String((failed[0].vts||{}).msg||"").replace(/^매수 생략 — /,"").replace(/ · 계획.*$/,""):"";
   return {v:avg(v),final:!!final,src:"rule",trades:v.length,...wl(v),
@@ -305,7 +318,10 @@ export function openingTodayCell(t,closed,holiday,rule=null){
   const q=t&&t.today;
   if(!t||!t.decision||!q)return null;                                    // 08:56 판단 전
   if(q.noTrade)return rule||{v:"no_trade",final:true,src:"vts",trades:0,note:q.why||""};
-  return {v:q.tabPct,final:false,src:"rule",trades:q.trades,wins:q.wins,losses:q.losses};   // 매매 근거는 ① 탭에(칸은 짧게)
+  // 장부에 넣는 종목을 다 팔았으면(① 10:00 매도 · 2026-11-09~) 15:40 장부 전이라도 '보유'가 아니라 끝난 값(밤 · 장부 확정 전)
+  const P=(t.main&&t.main.params)||MAIN_DEFAULT.opening.params,keep=new Set(openingPick(P,t.rows||[])),use=(t.rows||[]).filter(r=>keep.has(String(r.code)));
+  const sold=use.length>0&&use.every(r=>r.realized);
+  return {v:q.tabPct,final:sold,src:"rule",trades:q.trades,wins:q.wins,losses:q.losses};   // 매매 근거는 ① 탭에(칸은 짧게)
 }
 // ② 칸 d = 매수일(d 의 직전 거래일) 종가에 사서 d 아침 시가에 판 결과 — 밤 계산 ETF 칸과 같은 식(claude_lab etf_variant):
 // (d 시가 ÷ 매수일 종가 − 1) − (0.03% + 2틱). 매수했는지는 매수일 15:21 판단(signal) — 모의투자 매수가 안 됐어도(현금 부족 등) 규칙 결과를 보이고 그 사실을 적는다.
@@ -401,13 +417,15 @@ export async function onRequestGet({request,env}){
     const prices=Object.fromEntries([...codes,"233740"].map((c,i)=>[c,qs[i]?qs[i].price:null]));
     const pre=st.preopen||null;
     const todayBars=Object.fromEntries([...codes,"233740"].map((c,i)=>[c,barOn(qs[i],now.date)]).filter(x=>x[1]));
-    out.tabs.opening={rows:openingRows(st,prices,todayBars,now.hm),decision:pre?{reason:pre.decisionReason,breadth:pre.breadth||null,candidates:pre.candidates,recheck:pre.recheck||null}:null,
+    const X1=openingExit(now.date);
+    out.tabs.opening={rows:openingRows(st,prices,todayBars,now.hm,now.date),decision:pre?{reason:pre.decisionReason,breadth:pre.breadth||null,candidates:pre.candidates,recheck:pre.recheck||null}:null,
       ledgerFound:!!lt,main:mainOf("opening",now.date),
-      note:"08:56 예상체결가로 명단 전체 확인 → 08:58 갭 깊은 10종목 다시 확인해 판단 → 08:59 장전 동시호가 매수 → 15:21 종가 동시호가 매도 → 15:40 체결 조회. 매매일은 통과 "+mainOf("opening",now.date).params.minQ+"종목 이상."};
+      exit:X1,
+      note:"08:56 예상체결가로 명단 전체 확인 → 08:58 갭 깊은 10종목 다시 확인해 판단 → 08:59 장전 동시호가 매수 → "+(X1.kind==="exit10"?"10:00 시장가 매도(그 가격으로 정산 · 모의투자에서 못 판 수량은 15:21 종가 동시호가)":"15:21 종가 동시호가 매도")+" → 15:40 체결 조회. 매매일은 통과 "+mainOf("opening",now.date).params.minQ+"종목 이상."};
     const m2=mainOf("daytrading",now.date);
     const etfBars={[now.date]:barOn(qs[codes.length],now.date),...(prev?{[prev.date]:barOn(qs[codes.length],prev.date)}:{})};
     out.tabs.daytrading={rows:etfRows(st,pst,prev&&prev.date,prices["233740"],etfBars,now.hm,now.date),ledgerFound:!!lt,main:m2,
-      note:"전날 "+String(m2.params.th).replace("-","−")+"% 이하 마감이면 15:21 종가 매수 → 다음 거래일 08:59 시가 매도."};
+      note:"전날 "+String(m2.params.th).replace("-","−")+"% 이하 마감이면 15:21 종가 매수 → 다음 거래일 08:59 시가 매도."+(etfMax24(now.date).on?" 다음 날이 휴장(금요일 · 연휴 전)이면 사지 않는다(최대 24시간).":"")};
     const m5=mainOf("close30",now.date),th5=+m5.params.th;
     out.tabs.close30={rows:close30Rows(st,prices["233740"],etfBars[now.date]||{},now.hm),ledgerFound:!!lt,main:m5,
       note:"15:00 에 KODEX 코스닥150레버리지가 전일 종가보다 "+(th5?String(Math.abs(th5))+"% 넘게 ":"")+"내려 있으면 15:00 시장가 매수 → 15:21 종가 동시호가 매도(15:30 종가 체결) → 15:40 체결 조회. 하룻밤 보유 없음. 실험 전략(R14 사후 발견)."};
@@ -474,7 +492,7 @@ export async function onRequestGet({request,env}){
         const i=codes.indexOf(c),q=d===now.date&&i>=0?qs[i]:await quote(origin,c);
         const b=((q&&q.ohlc)||[]).find(x=>x.date===d);if(b)bars[c]=b;
       }
-      return openingRuleCell(pre,P,bars,d<now.date||now.hm>=1600);
+      return openingRuleCell(pre,P,bars,d<now.date||now.hm>=1600,d,stages(led));
     };
     const [r1,r1y]=await Promise.all([ruleOf(now.date,lt,c1),krxDay(Y).closed?null:ruleOf(Y,ledAt(Y),c1y)]);
     const days={opening:{[Y]:krxDay(Y).closed?{v:"holiday",final:true,src:"vts"}:openingClosedCell(c1y,r1y),[now.date]:openingTodayCell(out.tabs.opening,c1,krxDay(now.date).closed,r1)},

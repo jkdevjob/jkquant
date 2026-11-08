@@ -3,9 +3,11 @@
 //   stage=quote     08:50~08:59:15 전날 밤 명단(RSI<30·유동성·관리종목 대용 필터)의 예상체결가 조회 (주문 없음)
 //                                한 번에 40종목 — Pages 요청당 외부호출 50건 한도 때문에 Worker 가 part 로 나눠 부른다
 //   stage=preopen   ~08:59:40    Worker 가 모은 예상가로 갭 계산 → 가장 깊은 갭 3종목을 장전 동시호가 시장가 매수
-//   stage=close     15:20~15:28  이 전략이 아침에 산 체결수량만 종가 동시호가 시장가 매도
+//   stage=exit10    10:00~10:05  ① 2026-11-09~ 아침에 고른 종목의 10:00 가격을 정산 가격으로 남기고, 이 전략이 산 체결수량만 시장가 매도
+//   stage=close     15:20~15:28  이 전략이 아침에 산 체결수량 중 남은 것만 종가 동시호가 시장가 매도(10:00 매도가 안 된 몫 — 하루를 넘기지 않게)
 //   stage=reconcile 15:35~       매수·매도 실제 체결가 조회 (주문 없음)
 //   stage=etf_buy   15:20~15:28  ② 코스닥150 레버리지(233740) 예상 종가가 기준가 대비 그날 메인 기준(기본 −3%) 이하면 종가 동시호가 시장가 매수
+//                                (2026-11-09~ 다음 날이 휴장인 날은 사지 않음 — 최대 24시간)
 //   stage=etf_sell  08:50~08:59:40 ② 전날 이 전략이 산 수량만 장전 동시호가 시장가 매도
 //   stage=etf_reconcile 15:35~   ② 오늘 매도·매수 체결가 조회 (주문 없음)
 //   stage=c30_buy   15:00~15:10  ⑤ 코스닥150 레버리지(233740) 지금 가격이 전일 종가보다 그날 메인 기준(기본 0%) 미만이면 시장가 매수
@@ -16,7 +18,7 @@
 // 주문은 절대 자동 재시도하지 않는다.
 import { GAPDOWN_VERSION, expectedGapPct, gapdownPicks, watchlistUsable } from "./_gapdown.js";
 import { krxDay } from "./_krx_calendar.js";
-import { claudeVts, loadMainEvents, mainFor } from "./_claude_main.js";
+import { claudeVts, etfMax24, loadMainEvents, mainFor, openingExit } from "./_claude_main.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WATCH_URL="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/opening-gapdown-research/watchlist.json";
@@ -26,6 +28,7 @@ const QUOTE_GAP_MS=550;         // KIS 모의투자 초당 2건 한도 안쪽
 const ORDER_GAP_MS=2500;
 const QUOTE_DEADLINE=85915;     // 08:59:15 이후엔 시세를 더 받지 않는다
 const ORDER_DEADLINE=85940;     // 08:59:40 이후엔 매수 주문을 내지 않는다 (09:00 체결 전 접수 보장)
+const EXIT10_HMS=100000;        // ① 10:00 매도(2026-11-09~) — Worker cron 10:00 한 번
 const BREADTH_V2_MIN=5;        // 연구 BREADTH_MIN 중 기본값 — 과거 8년 하루 +1.33%(1.5틱, t=3.0), 9개 연도 모두 양수
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let _lastOrderAt=0;
@@ -49,6 +52,7 @@ export function stageWindow(stage,hms){
   if(stage==="etf_reconcile")return hms>=153500&&hms<235959;
   if(stage==="quote")return hms>=85000&&hms<QUOTE_DEADLINE;
   if(stage==="preopen")return hms>=85000&&hms<ORDER_DEADLINE;
+  if(stage==="exit10")return hms>=EXIT10_HMS&&hms<EXIT10_HMS+500;      // 10:00:00~10:04:59 — 늦게 온 호출은 주문하지 않는다(15:21 단계가 남은 몫을 판다)
   if(stage==="close")return hms>=152000&&hms<152800;
   if(stage==="reconcile")return hms>=153500&&hms<235959;
   if(stage==="c30_buy")return hms>=150000&&hms<151000;
@@ -179,8 +183,8 @@ async function orders(origin,env,date,code){
   return j.orders||[];
 }
 function hms6(t){const s=String(t||"").replace(/\D/g,"").padStart(6,"0").slice(-6);return /^\d{6}$/.test(s)?+s:0;}
-// 이 전략 물량만 센다: 매수는 09:00 전(장전 동시호가) 접수분, 매도는 15:15 이후 접수분.
-// 같은 모의계좌의 시초가 재돌파 전략(09:05~09:31 매매)과 시간으로 갈린다.
+// 이 전략 물량만 센다: 매수는 09:00 전(장전 동시호가) 접수분, 매도는 10:00~10:30(① 10:00 매도 · 2026-11-09~) · 15:15 이후 접수분.
+// 같은 모의계좌의 시초가 재돌파 전략(09:05~09:31 매매)과 시간으로 갈린다. 10:00 에 판 수량을 15:21 단계가 다시 팔지 않게 둘을 같이 센다.
 export function strategyFills(rows){
   const fills=(side,from,to)=>(Array.isArray(rows)?rows:[]).filter(o=>String(o.sideCode)===side&&+o.fillQty>0&&hms6(o.orderTime)>=from&&hms6(o.orderTime)<to);
   const agg=list=>{
@@ -188,7 +192,7 @@ export function strategyFills(rows){
     const amt=list.reduce((s,o)=>s+(+o.fillAmount||(+o.fillQty||0)*(+o.fillPrice||0)),0);
     return {qty,avgPrice:qty?amt/qty:null,orderNos:list.map(o=>o.orderNo),orderTimes:list.map(o=>o.orderTime)};
   };
-  return {buy:agg(fills("02",83000,90000)),sell:agg(fills("01",151500,240000))};
+  return {buy:agg(fills("02",83000,90000)),sell:agg(fills("01",EXIT10_HMS,EXIT10_HMS+3000).concat(fills("01",151500,240000)))};
 }
 
 async function loadWatchlist(date){
@@ -349,6 +353,50 @@ async function closeOrReconcile(origin,env,date,stage,picks){
   return out;
 }
 
+// ① 10:00 매도(2026-11-09~ · 2026-11-08 사용자 "1은 10시" · 연구 R34). Worker 가 10:00 에 그날 고른 종목 전부를 넘긴다(picks: {code, name, vts}).
+//  1) 종목마다 지금 가격(KIS 현재가 · 읽기 전용)을 남긴다 — 하루 마감 장부가 이 값으로 정산한다(모의투자 체결과 상관없이 주문한 건 기준).
+//     조회가 실패하면 1.1초 뒤 한 번 더 묻는다(읽기라 안전).
+//  2) 모의투자로 산 종목(vts)만 이 전략 체결수량 − 이미 판 수량을 시장가로 판다. 주문은 재시도하지 않는다 — 못 판 몫은 15:21 단계가 종가 동시호가에 판다.
+// dep 는 시험용(price · orders · order · hms · wait — 기본 = KIS 조회 · vtsOrder · 지금 한국시각 · 초당 2건 간격).
+export function exit10SignalId(date,code){return signalId(date,code,"exit10");}
+export async function exit10(origin,env,date,picks,dep={}){
+  const getPrice=dep.price||price,getOrders=dep.orders||orders,order=dep.order||vtsOrder,hms=dep.hms||(()=>kstNow().hms),wait=dep.wait||paceKis;
+  const out={stage:"exit10",strategyVersion:GAPDOWN_VERSION,exitRule:openingExit(date).kind,date,startedAt:new Date().toISOString(),prices:[],positions:[],orders:[],decisionReason:""};
+  if(out.exitRule!=="exit10"){out.decisionReason="exit_rule_close";return out;}         // 2026-11-09 전 거래일은 15:30 종가 규칙
+  const list=[];
+  for(const p of (Array.isArray(picks)?picks:[])){
+    const code=String(p&&p.code||"");
+    if(/^\d{6}$/.test(code)&&!list.some(x=>x.code===code))list.push({code,name:p.name||code,vts:!!p.vts});
+  }
+  for(const x of list){
+    let q=null,err="";
+    for(let i=0;i<2&&!q;i++){
+      await wait();
+      try{const j=await getPrice(origin,x.code);if(+(j&&j.price)>0)q=j;else err="가격 없음";}
+      catch(e){err=String(e.message||e);}
+      finally{_lastKisAt=Date.now();}
+    }
+    out.prices.push(q?{code:x.code,name:x.name,price:+q.price,open:+q.open||null,chgRate:q.chgRate??null,at:new Date().toISOString(),hms:hms()}
+      :{code:x.code,name:x.name,price:null,error:"10:00 가격 조회 실패: "+err});
+  }
+  for(const x of list.filter(x=>x.vts)){
+    let f;
+    await wait();
+    try{f=strategyFills(await getOrders(origin,env,date,x.code));}
+    catch(e){out.positions.push({code:x.code,error:"체결조회 실패: "+String(e.message||e)});continue;}
+    finally{_lastKisAt=Date.now();}
+    const pos={code:x.code,name:x.name,buy:f.buy,sell:f.sell,openQty:Math.max(0,f.buy.qty-f.sell.qty)};
+    out.positions.push(pos);
+    const skip=msg=>out.orders.push({signalId:exit10SignalId(date,x.code),code:x.code,side:"sell",qty:0,vts:{ok:false,env:"vts",msg}});
+    if(!(pos.openQty>0)){skip("매도 생략 — 이 전략의 VTS 보유수량 없음");continue;}
+    if(hms()>=EXIT10_HMS+2500){skip("10:25 이후 — 15:21 종가 동시호가에 매도");continue;}      // 체결 집계 창(10:00~10:30) 밖으로 나가지 않게
+    await wait();
+    out.orders.push(await order(origin,env,date,"sell",{code:x.code,name:x.name},pos.openQty,{id:exit10SignalId(date,x.code)}));
+  }
+  out.decisionReason="exit_10am";
+  return out;
+}
+
 // ── ② etf_dip_overnight_v1: 코스닥150 레버리지 하락일 종가 매수 → 다음 거래일 시가 매도 ──
 // 과거 2018-04~2026-09: 하루 −3% 이하인 날 연 45회, 평균 +0.40%(t=2.8), 9개 연도 중 8개 양수, 기준을 −2→−6% 로
 // 바꾸면 +0.23→+0.98% 로 단조 증가. ETF 라 증권거래세가 없다(왕복 비용 약 0.1%). D-1 과 시간이 겹치지 않는다.
@@ -363,10 +411,16 @@ export function etfDecision(dropPct,th=ETF_RULE.dropMaxPct){
   if(dropPct>th)return {signal:false,decisionReason:"no_signal_drop_above_"+th+"%"};
   return {signal:true,decisionReason:"expected_close_vs_base<="+th+"%"};
 }
-// 15:21 판단(순수): 그날 메인 규칙 R 의 하락 기준으로 예상 종가 하락을 본다
-export function etfBuyPlan(R,q){
-  const dropPct=etfDropPct(q);
-  return {dropPct,...etfDecision(dropPct,R.rule.dropMaxPct)};
+// 15:21 판단(순수): 그날 메인 규칙 R 의 하락 기준으로 예상 종가 하락을 본다.
+// date 가 있으면 ② 최대 24시간(2026-11-09~ · _claude_main.etfMax24)도 본다: 기준을 넘었어도 다음 달력일이 휴장(금요일 · 연휴 전)이면 사지 않는다.
+// 제한 없는 판의 판단은 shadow 로 같이 남긴다(기록만 — 주문 · 정산 · 알림에 쓰지 않음).
+export function etfBuyPlan(R,q,date=""){
+  const dropPct=etfDropPct(q),base=etfDecision(dropPct,R.rule.dropMaxPct),m=etfMax24(date);
+  if(!m.on)return {dropPct,...base};
+  const shadow={variant:"etf_nolimit",signal:base.signal,decisionReason:base.decisionReason};
+  const max24={next:m.next,nextOpen:m.ok,...(m.ok?{}:{nextClosed:m.nextClosed})};
+  if(base.signal&&!m.ok)return {dropPct,signal:false,decisionReason:"no_signal_next_day_closed_max24h",max24,shadow};
+  return {dropPct,...base,max24,shadow};
 }
 // 그날 ② 메인 규칙 — 승격 기록을 못 읽으면 기본 규칙으로 하되, 그 사실을 장부에 남긴다(주문을 막지 않는다).
 export function etfRuleFor(cfg,date){
@@ -393,7 +447,8 @@ async function etfBuy(origin,env,date){
   let q;
   try{q=await quote(origin,ETF_RULE.code);}catch(e){out.decisionReason="quote_failed: "+String(e.message||e);return out;}
   out.quote={expectedPrice:q.expectedPrice||null,basePrice:q.basePrice||null,expectedChgPct:q.expectedChgPct,phase:q.phase||"",time:q.time||""};
-  Object.assign(out,etfBuyPlan(R,q));
+  Object.assign(out,etfBuyPlan(R,q,date));
+  if(out.max24)out.rule={...out.rule,max24h:true};                    // 기록이 스스로 말하게(그날 규칙 스냅샷)
   if(!out.signal)return out;
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
   const vts=await claudeVts(env,"daytrading");
@@ -533,6 +588,7 @@ export async function onRequestPost({request,env}){
       return json({ok:true,...await quotePart(origin,date,part),finishedAt:new Date().toISOString()});
     }
     if(stage==="preopen")return json({ok:true,...await preopen(origin,env,date,b.candidates,b.recheck),finishedAt:new Date().toISOString()});
+    if(stage==="exit10")return json({ok:true,...await exit10(origin,env,date,(Array.isArray(b.picks)?b.picks:[]).slice(0,5)),finishedAt:new Date().toISOString()});
     if(stage==="etf_buy")return json({ok:true,...await etfBuy(origin,env,date),finishedAt:new Date().toISOString()});
     if(stage==="etf_sell")return json({ok:true,...await etfSell(origin,env,date,String(b.buyDate||"")),finishedAt:new Date().toISOString()});
     if(stage==="etf_reconcile")return json({ok:true,...await etfReconcile(origin,env,date),finishedAt:new Date().toISOString()});

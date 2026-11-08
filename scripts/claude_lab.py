@@ -421,8 +421,23 @@ def d1_daily():
     return {d: statistics.fmean(v) for d, v in by.items() if q.get(d, 0) >= 5}, sorted(q)
 
 
+# ② 최대 24시간(2026-11-08 사용자 "2는 무조건 수익률 좋은걸로" · 연구 R34 ②-24) — Pages _claude_main.etfMax24 와 같은 정의:
+# 매도일(다음 거래일)이 매수일의 다음 달력일인 매매만(금요일 · 연휴 전 진입 없음). 휴장 목록은 미리 공지되므로 매도일을 보는 것은 미래 정보가 아니다.
+# 연구 · 경쟁 · 이력의 지난 계산은 지금 규칙으로 전 기간을 다시 센다. 실매매(15:21 주문)는 ETF_MAX24_FROM 부터 — 그 전 주문 장부는 그대로 둔다.
+ETF_MAX24_FROM = "2026-11-09"
+
+
+def etf_24h(buy_date, sell_date):
+    return (date.fromisoformat(str(sell_date)[:10]) - date.fromisoformat(str(buy_date)[:10])).days == 1
+
+
+def etf_rows():
+    """연구 결과(etf-overnight-research/signals.csv) 중 최대 24시간 매매만."""
+    return [r for r in read_csv(DATA / "etf-overnight-research/signals.csv") if etf_24h(r["signalDate"], r["exitDate"])]
+
+
 def etf_daily():
-    return {r["exitDate"]: float(r["pnl"]) for r in read_csv(DATA / "etf-overnight-research/signals.csv")}
+    return {r["exitDate"]: float(r["pnl"]) for r in etf_rows()}
 
 
 def basket(per, cal):
@@ -526,11 +541,13 @@ def daily_board(report, d1, krx_cal, crypto_full, cal_c, now=None):
     mo, md, mc, ms = (main_for(t) for t in TABS4)
     d1, etf, c30 = apply_orders(d1, "opening"), apply_orders(ETF_PW, "daytrading"), apply_orders(C30_PW, "close30")   # 10/22~ 주문 정산 장부 값
     add("시초가", "claude", mo["name"], mo["version"], lambda d: order_cell("opening", d1, d, today, lambda x: kr_cell(d1, x, today, hm, final_kr, d1_live_status)),
-        plan=f"명단 {len(wl.get('names') or [])}종목 · 08:56 예상갭 확인 (통과 {mo['params']['minQ']}종목 이상일 때 매매)")
+        plan=f"명단 {len(wl.get('names') or [])}종목 · 08:56 예상갭 확인 (통과 {mo['params']['minQ']}종목 이상일 때 매매)"
+             + (" → 09:00 시가 매수 · 10:00 매도" if today >= D1_EXIT10_FROM else ""))
     g, gv, _ = gpt_daily("opening")
     add("시초가", "gpt", "시초가 돌파", ", ".join(gv), lambda d, g=g: kr_cell(g, d, today, hm, wait_close=True))
     add("데이트레이딩", "claude", md["name"], md["version"], lambda d: order_cell("daytrading", etf, d, today, lambda x: kr_cell(etf, x, today, hm, wait_close=True)),
-        plan=f"15:21 예상 종가 {md['params']['th']:g}% 이하면 종가 매수 → 다음 날 시가 매도".replace("-", "−"))
+        plan=f"15:21 예상 종가 {md['params']['th']:g}% 이하면 종가 매수 → 다음 날 시가 매도".replace("-", "−")
+             + (" (다음 날 휴장이면 안 삼 · 최대 24시간)" if today >= ETF_MAX24_FROM else ""))
     g, gv, _ = gpt_daily("daytrading")
     add("데이트레이딩", "gpt", "데이트레이딩", ", ".join(gv), lambda d, g=g: kr_cell(g, d, today, hm, wait_close=True))
     m5 = main_for("close30")
@@ -962,7 +979,7 @@ def etf_trades(code, th):
     out = []
     for i in range(1, len(b) - 1):
         chg = (b[i][2] / b[i - 1][2] - 1) * 100
-        if abs(chg) <= 35 and chg <= th:                              # 연구와 같은 경계(35% 넘는 값은 액면분할 등 자료 오류로 본다)
+        if abs(chg) <= 35 and chg <= th and etf_24h(b[i][0], b[i + 1][0]):   # 연구와 같은 경계(35% 넘는 값은 액면분할 등 자료 오류로 본다) · 최대 24시간
             tick = 5 if b[i][2] >= 2000 else 1
             out.append(dict(buyDate=b[i][0], buyPrice=b[i][2], sellDate=b[i + 1][0], sellPrice=b[i + 1][1], dropPct=chg,
                             pnl=(b[i + 1][1] / b[i][2] - 1) * 100 - (0.03 + 2 * tick / b[i][2] * 100)))
@@ -1062,11 +1079,16 @@ ETF_DEFAULT = dict(code="233740", th=-3.0)
 C30_DEFAULT = dict(code="233740", th=0.0)
 COIN_KEYS = ("ma", "stopPct", "level", "k", "hiN", "lastEntryHour", "tabSize", "markets")
 SOXL_KEYS = ("rsiMax", "rsiN", "ibsMax", "downDays", "ma", "maxHoldDays", "tabSize")
+# ① 실매매 매도 시각(2026-11-08 사용자 "1은 10시" · 연구 R34) — Pages _claude_main.openingExit 와 같은 날짜. 8년 연구 · 경쟁 점수는 일봉(시가 → 종가)
+# 자료로 계산한다(10:00 가격은 2년치 60분봉뿐). 실매매(주문 정산 장부)는 이 날부터 10:00 매도 — 두 결과를 같은 이름으로 섞지 않게 규칙 글에 적는다.
+D1_EXIT10_FROM = "2026-11-09"
+D1_EXIT_NOTE = f" (연구 자료 기준 · 실매매는 {D1_EXIT10_FROM[5:7]}/{D1_EXIT10_FROM[8:]}~ 10:00 매도)"
+ETF_24H_NOTE = " · 다음 날 휴장(금요일 · 연휴 전)이면 사지 않음(최대 24시간)"
 MAIN_DEFAULT = {
     "opening": dict(version="opening_gapdown_v1+v2filter", name="① D-1 갭하락 과매도 v2", params=dict(D1_DEFAULT),
-                    rule="전일 RSI<30 + 시가 갭 −2~−29% 종목이 5개 이상인 날, 가장 깊은 3종목 시가 매수 → 종가 매도"),
+                    rule="전일 RSI<30 + 시가 갭 −2~−29% 종목이 5개 이상인 날, 가장 깊은 3종목 시가 매수 → 종가 매도" + D1_EXIT_NOTE),
     "daytrading": dict(version="etf_dip_overnight_v1", name="② 코스닥150 레버리지 하락일 야간", params=dict(ETF_DEFAULT),
-                       rule="KODEX 코스닥150레버리지가 −3% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도 (거래세 없음)"),
+                       rule="KODEX 코스닥150레버리지가 −3% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도 (거래세 없음)" + ETF_24H_NOTE),
     "crypto": dict(version="coin_breakout_v1", name="③ BTC·ETH 어제 고가 돌파 하루 단타", params=dict({k: COIN_BO.get(k) for k in COIN_KEYS}),
                    rule=COIN_BO["note"]),
     "soxl": dict(version="soxl_rsi2_meanrev_v1", name="④ SOXL 단기 과매도 반등 (최대 5일)", params={k: dict(SOXL_MR, rsiN=2)[k] for k in SOXL_KEYS},
@@ -1418,10 +1440,10 @@ def describe(tab, p):
     if tab == "opening":
         g = f" · 갭 {p['gapMax']:g}% 이하만" if p.get("gapMax") is not None else ""
         return (f"통과 {p['minQ']}개↑ · 깊은 {p['topK']}종목{g}",
-                f"전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 {p['minQ']}개 이상인 날, 갭 깊은 {p['topK']}종목{g} 시가 매수 → 종가 매도")
+                f"전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 {p['minQ']}개 이상인 날, 갭 깊은 {p['topK']}종목{g} 시가 매수 → 종가 매도" + D1_EXIT_NOTE)
     if tab == "daytrading":
         return (f"{p['th']:g}% 이하 마감".replace("-", "−"),
-                f"KODEX 코스닥150레버리지가 {p['th']:g}% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도".replace("-", "−"))
+                f"KODEX 코스닥150레버리지가 {p['th']:g}% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도".replace("-", "−") + ETF_24H_NOTE)
     if tab == "close30":
         down = "" if p["th"] == 0 else f"{abs(p['th']):g}% 넘게 "
         return (f"15:00 까지 {down}내린 날",
@@ -2034,7 +2056,7 @@ def strategy_trades(tab, params, ctx):
     elif tab == "daytrading":
         if p["code"] == ETF_DEFAULT["code"] and float(p["th"]) == ETF_DEFAULT["th"]:     # 기본값 = 연구 결과(etf_series 와 같은 원본)
             tr = [dict(buyDate=r["signalDate"], buyPrice=r["entryPrice"], sellDate=r["exitDate"], sellPrice=r["exitPrice"],
-                       dropPct=r.get("dayChangePct"), pnl=float(r["pnl"])) for r in read_csv(DATA / "etf-overnight-research/signals.csv")]
+                       dropPct=r.get("dayChangePct"), pnl=float(r["pnl"])) for r in etf_rows()]
             cal = ctx["kr_cal"]
         else:
             tr, cal = etf_trades(p["code"], float(p["th"]))
@@ -2651,10 +2673,12 @@ def main():
     m1 = main_for("opening")
     d1_cur, krx_cal = d1_series(m1["params"])
     d1 = apply_orders(piecewise("opening", lambda p: d1_series(p)[0]), "opening")
-    report["tabs"]["opening"] = tab_report("opening", m1["name"], m1["version"], m1["rule"], d1_cur, krx_cal, 250, extra=dict(params=m1["params"]))
+    r1 = m1["rule"] + ("" if "10:00" in m1["rule"] else D1_EXIT_NOTE)       # 승격 때 적힌 옛 규칙 글에도 실매매 매도 시각을 붙인다(기록은 그대로)
+    report["tabs"]["opening"] = tab_report("opening", m1["name"], m1["version"], r1, d1_cur, krx_cal, 250, extra=dict(params=m1["params"]))
     m2 = main_for("daytrading")
     ETF_PW = apply_orders(piecewise("daytrading", etf_series), "daytrading")
-    report["tabs"]["daytrading"] = tab_report("daytrading", m2["name"], m2["version"], m2["rule"], etf_series(m2["params"]), krx_cal, 250,
+    r2 = m2["rule"] + ("" if "24시간" in m2["rule"] else ETF_24H_NOTE)      # 승격 때 적힌 옛 규칙 글에도 최대 24시간을 붙인다(기록은 그대로)
+    report["tabs"]["daytrading"] = tab_report("daytrading", m2["name"], m2["version"], r2, etf_series(m2["params"]), krx_cal, 250,
                                               extra=dict(params=m2["params"]))
     try:                                           # ⑤ 종가 30분 — 60분봉을 못 받아도 다른 탭 계산은 계속
         m5 = main_for("close30")

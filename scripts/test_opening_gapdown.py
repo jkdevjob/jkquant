@@ -150,6 +150,44 @@ class GapdownLive(unittest.TestCase):
         self.assertEqual(g.live_summary(rows)["openVsExpected0856Pct"]["n"], 1)
         self.assertTrue(r["actualGapQualifies"])
         self.assertIsNone(none[0]["actualOpen"], "provisional day must not be priced")
+        self.assertEqual(r["exitRef"], "close")
+
+    def test_live_join_uses_10am_price_on_exit10_days(self):
+        """2026-11-09~ ① 10:00 매도: 매도 슬리피지 · 모델 손익의 기준가 = Worker exit10 단계가 남긴 10:00 가격(종가로 대신하지 않는다)."""
+        cl = falling()
+        op = [None] * 79 + [round(cl[78] * 0.95)]
+        by = {"000010": series("000010", cl, op)}
+        d = days(80)[-1]
+        px10 = op[-1] * 1.02
+
+        def run(prices):
+            with tempfile.TemporaryDirectory() as tmp:
+                live = Path(tmp)
+                ledger = {"ok": True, "ledger": {"date": d, "events": [
+                    {"stage": "preopen", "payload": {"picks": [{"code": "000010", "name": "N", "expectedPrice": op[-1], "expectedGapPct": -4.0}],
+                                                      "orders": [{"code": "000010", "side": "buy", "vts": {"ok": True, "msg": "ok"}}]}},
+                    {"stage": "exit10", "payload": {"prices": prices,
+                                                     "orders": [{"code": "000010", "side": "sell", "qty": 10, "vts": {"ok": True, "msg": "10시 매도"}}]}},
+                    {"stage": "close", "payload": {"orders": [{"code": "000010", "side": "sell", "qty": 0, "vts": {"ok": False, "msg": "매도 생략"}}]}},
+                    {"stage": "reconcile", "payload": {"positions": [{"code": "000010", "buy": {"qty": 10, "avgPrice": op[-1]},
+                                                                        "sell": {"qty": 10, "avgPrice": px10 - 5}}]}}]}}
+                (live / f"{d}.json").write_text(json.dumps(ledger), encoding="utf-8")
+                old = g.LIVE
+                g.LIVE = live
+                try:
+                    return g.live_trades(by, d)[0]
+                finally:
+                    g.LIVE = old
+
+        r = run([{"code": "000010", "price": px10}])
+        self.assertEqual((r["exitRef"], r["exitRefPrice"]), ("10:00", px10))
+        self.assertAlmostEqual(r["sellSlipPct"], -(((px10 - 5) / px10 - 1) * 100))      # 종가가 아니라 10:00 가격 대비
+        self.assertAlmostEqual(r["modelNet0tPct"], (px10 / op[-1] - 1) * 100 - 0.23)
+        self.assertEqual((r["sellOrderOk"], r["sellOrderMsg"]), (True, "10시 매도"))     # 10:00 주문이 15:21 '매도 생략'보다 먼저
+        miss = run([])
+        self.assertEqual(miss["exitRef"], "10:00")
+        self.assertIsNone(miss["sellSlipPct"])                                           # 10:00 가격이 없으면 종가로 대신하지 않는다
+        self.assertIsNone(miss["modelNet0tPct"])
 
 
 def btc_days(closes_by_hour, start="2026-01-01T00:00:00"):
@@ -1237,6 +1275,27 @@ class HistoryTest(unittest.TestCase):
         self.assertEqual(rows[0][4], 98.5)
         self.assertAlmostEqual(rows[0][7], round((98.5 / 96 - 1) * 100 - (0.03 + 2 * 1 / 96 * 100), 4))
         self.assertEqual(acts[ds[1]], "no_trade")
+
+    def test_etf_max24_skips_friday_and_pre_holiday_entries(self):
+        """② 최대 24시간(2026-11-08 사용자 · R34 ②-24): 매도일이 매수일 다음 달력일이 아닌 매매(금요일 · 연휴 전 진입)는 연구 · 경쟁 · 이력 모두 뺀다."""
+        ds = self.etf([100.0, 96.0, 97.0, 97.0, 93.0, 94.0, 90.0, 91.0], opens=[100.0, 99.0, 98.5, 97.0, 95.0, 93.0, 92.0, 92.5])   # 10/12 월 ~ 10/21 수
+        self.assertEqual(ds[4], "2026-10-16")                                       # 금요일(−4.1% 마감)
+        tr, cal = lab.etf_trades("122630", -3.0)
+        self.assertEqual([(t["buyDate"], t["sellDate"]) for t in tr], [(ds[1], ds[2]), (ds[6], ds[7])])   # 10/13(화 −4%)→수 · 10/20(화 −4.3%)→수
+        self.assertNotIn(ds[4], [t["buyDate"] for t in tr])                          # 10/16(금)은 기준을 넘었어도 월요일까지 72시간 → 안 산다
+        self.assertTrue(lab.etf_24h("2026-10-15", "2026-10-16") and not lab.etf_24h("2026-10-16", "2026-10-19") and not lab.etf_24h("2026-12-30", "2027-01-04"))
+        rows, dv, _, acts = lab.strategy_trades("daytrading", dict(code="122630", th=-3.0), {"kr_cal": ds})
+        self.assertEqual(sorted(dv), [ds[2], ds[7]])
+        self.assertEqual(dv, lab.etf_variant("122630", -3.0)[0])                     # 이력 행 = 경쟁 점수 시계열(같은 함수)
+        self.csv("etf-overnight-research/signals.csv", [dict(signalDate="2026-10-15", exitDate="2026-10-16", entryPrice=96, exitPrice=97, dayChangePct=-4, pnl=1.0),
+                                                        dict(signalDate="2026-10-16", exitDate="2026-10-19", entryPrice=93, exitPrice=95, dayChangePct=-4, pnl=2.0)])
+        self.assertEqual(lab.etf_daily(), {"2026-10-16": 1.0})                        # 기본 메인(연구 결과) 경로도 같은 규칙
+        rows2, dv2, _, _ = lab.strategy_trades("daytrading", dict(lab.ETF_DEFAULT), {"kr_cal": ds})
+        self.assertEqual([r[0] for r in rows2], ["2026-10-16"])
+        self.assertEqual(lab.ETF_MAX24_FROM, "2026-11-09")
+        self.assertIn("최대 24시간", lab.describe("daytrading", dict(code="233740", th=-4.75))[1])
+        self.assertIn("실매매는 11/09~ 10:00 매도", lab.describe("opening", dict(minQ=7, topK=3, gapMax=-3.0))[1])   # ① 연구(종가) · 실매매(10:00)를 같은 이름으로 섞지 않는다
+        self.assertIn("10:00 매도", lab.MAIN_DEFAULT["opening"]["rule"])
 
     def test_soxl_trade_compounds_daily_values_and_open_position(self):
         d0 = lab.date.fromisoformat("2026-01-01")

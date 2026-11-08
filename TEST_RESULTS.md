@@ -1,5 +1,17 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-08 · 클로드 ① 10:00 매도 · ② 최대 24시간 · v2.27.0 (PR #603)
+
+- `node scripts/test_opening_gapdown.mjs`: **68 ALL PASS**(새 13 — 규칙표 경계 11/08·11/09 · 체결 집계 10:00~10:30 · Pages exit10(가격 재조회 · 모의투자 종목만 매도 · 10:25 뒤 주문 없음 · 11/06 아무것도 안 함) · 마감 장부(10:00 가격 · 분봉 예비 · 둘 다 없으면 미청산 · 11/06 종가) · 화면(10:00 전 보유 · 기록 대기 · 청산) · 오늘 칸(다 팔면 끝난 값) · 알림 문구 · 분봉 예비(09:59 경계 · 다른 날 봉) · closeDay 경로(빠진 종목만 묻기) · Worker 10:00 경로 · 실시간 API 11/09 10:01 · ② 판단(금 · 성탄 전 · 12/31 전 · 2027 설 전) · ② 화면/장부 문구 · ② Pages 15:21 금요일 주문 없음/목요일 매수).
+- `python scripts/test_opening_gapdown.py`: **91 OK**(새 2 — 실행 품질 표 10:00 기준가 · ② 24시간 연구 · 경쟁 · 이력 계산).
+- `node regression-check.js index.html backtest.html testdata`: **2828 PASS / 0 FAIL — ALL PASS**(Worker 시각표 10:00 경로 5번 · 경로 14개 · 단계 창 검사 갱신).
+- 변이: 새 57종(① 10:00 단계 · 체결 집계 · 규칙표 · 장부 · 화면 · 알림 · 분봉 예비 · Worker / ② 24시간 · 그림자 · 문구 · 연구실 · 실행 품질 표) + 바뀐 코드로 옮긴 옛 8종 — 따로 돌려 모두 잡힘. 처음엔 2종('exit10 not routed' · 'max24 date not passed')이 시험이 TypeError 로 끝나 '살아남음'으로 나왔다 → 값이 없을 때도 단언으로 끝나게 시험을 고쳐 잡힘.
+- Worker `wrangler deploy --dry-run`(opening-scheduler): 빌드 OK(131 KiB) — `_claude_main.js` 가 `_krx_calendar.js` 를 새로 가져와도 묶인다.
+- `node scripts/check-before-push.cjs`(87ea0b58): **57단계 전부 PASS** — D-1 단계 Python 91 OK · JS 68 ALL PASS · 변이 **399종 모두 잡힘**(PY 145 · JS 254) · 전체 회귀 2828 PASS / 0 FAIL · 스케줄 정책 · CI 안전검사(cron 한 줄 `0,5-31,40,56 0,1,6,9,15,20,21,23 * * *`).
+- main(#605 자산플랜 v2.0.0) 병합 뒤(91de0224) 다시 `check-before-push.cjs`: **57단계 전부 PASS** · 변이 399종 모두 잡힘 · 전체 회귀 2819 PASS / 0 FAIL(#605 가 지운 플랜 시험만큼 줄어듦).
+- main(#606 부동산 경매) 병합 뒤(74c5782c) 다시 `check-before-push.cjs`: **57단계 전부 PASS** · 변이 모두 잡힘 · 전체 회귀 **2822 PASS / 0 FAIL**.
+- 미확인(운영): 11/09(월) 10:00 Worker `gapdown_exit10` 실행 · 장부 `exit10.prices` · 15:40 장부 `exitRule: exit10` · 10:00 매도 알림 / ② 첫 금요일 11/13 15:21 `no_signal_next_day_closed_max24h` + `shadow` — 11/10 06:50 확인 예약. 한투 1분봉 이름이 시작 · 끝 시각 중 어느 쪽인지(예비 가격 1분 안 차이).
+
 ## 2026-11-08 · 부동산 클로드 🏛️ 온비드 공매 수집 · 부동산 v1.13.0
 
 - `python scripts/realestate_claude/test_collect_onbid.py`: **22 PASS / 0 FAIL**(가짜 API: 응답 모양 · 인증키/한도/자료 없음 · 대전·세종만 · 원→만원 · 결과 붙이기 · 예전 결과 지키기 · 쌓기 · 한도 초과 2 · 인증 오류 시 파일 그대로).

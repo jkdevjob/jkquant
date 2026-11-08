@@ -624,10 +624,12 @@ async function runMinute(controller,env){
 }
 
 // ── D-1 시초가 갭하락 과매도(opening_gapdown_v1) 연구용 모의체결 ──
-// 08:56 예상체결가 조회(40종목씩 순차) → 08:58 갭 깊은 10종목 다시 조회 → 규칙 선택 + 장전 동시호가 VTS 매수 → 15:21 종가 동시호가 VTS 매도 → 15:40 체결 조회.
+// 08:56 예상체결가 조회(40종목씩 순차) → 08:58 갭 깊은 10종목 다시 조회 → 규칙 선택 + 장전 동시호가 VTS 매수 → 10:00 정산 가격 기록 + VTS 시장가 매도(2026-11-09~)
+// → 15:21 남은 수량만 종가 동시호가 VTS 매도 → 15:40 체결 조회.
 // 매 단계 응답 원본을 별도 ledger(gapdown:날짜)에 먼저 쌓는다. 주문 호출은 재시도하지 않는다.
 // Workers 무료 요금제는 계정 전체 cron 5개가 한도라 이 Worker 는 cron 한 줄만 쓴다(wrangler.jsonc).
-// "0,5-31,40,56 0,6,9,15,20,21,23 * * *" 로 필요한 시각을 모두 덮고, 실제로 할 일은 한국시각으로 여기서 고른다(0분은 ⑤ 15:00 매수 — 2026-10-22).
+// "0,5-31,40,56 0,1,6,9,15,20,21,23 * * *" 로 필요한 시각을 모두 덮고, 실제로 할 일은 한국시각으로 여기서 고른다(0분은 ⑤ 15:00 매수 — 2026-10-22).
+// 시(UTC) 1 = 한국 10시 — ① 10:00 매도(2026-11-09~ · 사용자 2026-11-08 "1은 10시"). 10시의 다른 분(10:05~10:31 · 10:40 · 10:56)은 할 일이 없다(null).
 // 토요일 09:05 — 금요일 밤(23:40) 장부로 이번 주 결과를 보낸다(코인 금요일 하루는 토 09시에 끝나 다음 주 계산에 들어감).
 export function scheduleRoute(ms){
   const p=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
@@ -647,6 +649,7 @@ export function scheduleRoute(ms){
   if(hm===906)return "opening"; // 병렬로 종가 베팅의 전일 종목 시가 청산
   if(hm===1500)return "gapdown_c30";               // ⑤ 종가 30분 — 15:00 판단 · 매수(15:21 매도 · 15:40 체결 조회는 아래 ①② 단계에 붙어 돈다)
   if(hm===856)return "gapdown_preopen";
+  if(hm===1000)return "gapdown_exit10";            // ① 10:00 매도(아침에 산 종목 — 정산 가격 기록 + 모의투자 보유분 시장가 매도)
   if(hm===1521)return "gapdown_close";
   if(hm===1540)return "gapdown_reconcile";
   if(hm===1556)return "claude_kr";                 // 15:40 마감 알림이 실패했을 때 한 번 더
@@ -831,6 +834,17 @@ export function gapdownPicksFromLedger(ledger){
   // 매수 주문이 접수된 종목만 오후에 다룬다. 접수 실패 종목은 보유가 없다.
   return orders.filter(o=>o&&o.side==="buy"&&o.vts&&o.vts.ok).map(o=>({code:o.code,name:o.name||o.code}));
 }
+// ① 10:00 매도 대상 — 그날 08:56 단계가 고른 종목 전부(정산 가격을 남기려고 모의투자 주문과 상관없이) + 모의투자 매수가 접수된 종목 표시(vts).
+// Pages 는 vts 종목만 체결을 조회해 이 전략 보유수량만 판다. 최대 5종목(Pages 도 5개로 자른다).
+export function gapdownExitPicksFromLedger(ledger){
+  const ev=(ledger&&Array.isArray(ledger.events)?ledger.events:[]).find(e=>e&&e.stage==="preopen");
+  const p=(ev&&ev.payload)||{},orders=Array.isArray(p.orders)?p.orders:[];
+  const held=new Set(orders.filter(o=>o&&o.side==="buy"&&o.vts&&o.vts.ok).map(o=>String(o.code)));
+  const out=new Map();
+  for(const x of (Array.isArray(p.picks)?p.picks:[]))if(x&&x.code&&!out.has(String(x.code)))out.set(String(x.code),{code:String(x.code),name:x.name||String(x.code),vts:held.has(String(x.code))});
+  for(const o of orders)if(o&&held.has(String(o.code))&&!out.has(String(o.code)))out.set(String(o.code),{code:String(o.code),name:o.name||String(o.code),vts:true});
+  return [...out.values()].slice(0,5);
+}
 // ② ETF 전략: 전날(공휴일·주말이면 최대 5일 전) ledger 에서 접수 성공한 etf_buy 를 찾는다.
 export function etfBuyDateFromLedgers(ledgers){
   for(const l of (Array.isArray(ledgers)?ledgers:[])){
@@ -973,6 +987,20 @@ export async function runGapdown(stage,controller,env){
     catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"preopen",error:String(e.message||e)}));}
     console.log(JSON.stringify({type:"gapdown_preopen",date,picks:(res.picks||[]).length,orders:(res.orders||[]).length,reason:res.decisionReason||res.error||""}));
     await claudeAlertsNow(env);                      // ① 매수 · ② 매도 기록 직후 바로 알림(5분 감시를 기다리지 않게)
+    return;
+  }
+  if(stage==="exit10"){                            // ① 10:00 — 고른 종목의 10:00 가격 기록(정산용) + 모의투자 보유분 매도(Pages · 재시도 없음)
+    let led=null;
+    try{led=await readLedger(env,date,"gapdown");}catch(e){led=null;}
+    const xp=gapdownExitPicksFromLedger(led);
+    if(!xp.length){console.log(JSON.stringify({type:"gapdown_exit10",date,picks:0}));return;}
+    let res;
+    try{res=await gapdownCall(env,{stage:"exit10",date,picks:xp});}
+    catch(e){res={ok:false,error:"전송 결과 불명 — 재시도하지 않음: "+String(e.message||e)};}
+    try{await gapdownRecord(env,date,"exit10",res,ms);}
+    catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"exit10",error:String(e.message||e)}));}
+    console.log(JSON.stringify({type:"gapdown_exit10",date,picks:xp.length,prices:(res.prices||[]).filter(x=>x&&x.price>0).length,orders:(res.orders||[]).length,error:res.error||""}));
+    await claudeAlertsNow(env);                      // ① 10:00 매도 기록 직후 바로 알림
     return;
   }
   let ledger=null;
