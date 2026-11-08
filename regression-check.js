@@ -12371,7 +12371,11 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        &&['OnbidPbancListSrvc2/getPbancList2','OnbidPbancCltrDtlSrvc2/getPbancCltrInf2','OnbidPbancBidRsltDtlSrvc2/getPbancBidRsltDtl2'].every(x=>onc.indexOf(x)>0)&&(onc.match(/https:\/\/[a-z.]+/g)||[]).every(u=>u==='https://apis.data.go.kr')
        &&!onc.split('\n').some(l=>/print\(/.test(l)&&/\bkey\b/.test(l)));
     const OB=fs.existsSync(__d+'/data/realestate/claude/onbid.json')?JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/onbid.json','utf8')):null;
-    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원 · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||'')&&(x.appraisal==null||x.appraisal<1e7))&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))));
+    /* 금액 만원 확인은 물건 하나의 상한이 아니라 중앙값으로 — 2026-11-08 자료에 대전 중구 유천동 '60필지 토지 및 건물'(감정가 1,258억원 = 12,584,244만원)이
+       들어와 물건별 상한(1억 만원 미만)에 걸렸다(자료는 맞다). 원 단위였다면 어떤 부동산이든 중앙값이 1,000만 이상 — 중앙값 100만(=100억원) 미만이면 만원이다. */
+    const obAp=OB&&Array.isArray(OB.items)?OB.items.map(x=>x.appraisal).filter(v=>v!=null).sort((a,b)=>a-b):[],obMed=obAp.length?obAp[Math.floor((obAp.length-1)/2)]:0;
+    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원(중앙값 100억원 미만 · 물건마다 0 이상 유한) · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||'')&&(x.appraisal==null||(Number.isFinite(x.appraisal)&&x.appraisal>=0)))
+       &&obMed<1e6&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))), '감정가 중앙값 '+obMed+'만원 · 물건 '+((OB&&OB.items||[]).length));
     ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 안내',
        /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI));
   }
