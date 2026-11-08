@@ -1,7 +1,7 @@
 # 매일 동향·학습 규칙
 
-**2026-11-08 사용자 지시: 주제는 무조건 어제나 최근에 은퇴·경제에서 핫했던 것.** 그래서 12:30 도 20:00 처럼
-`ISSUE_GUIDE.md` 1장(핫이슈 고르기)대로 만든다 — 12:30 = 핫이슈 1위, 20:00 = 2위(다른 주제), 조회수가 나올 만한 3위가 있으면 17:30(하루 최대 3편).
+**2026-11-08 사용자 지시: 주제는 무조건 어제나 최근에 은퇴·경제에서 핫했던 것.** 그래서 09:00·12:00·18:00 모두
+`ISSUE_GUIDE.md` 1장(핫이슈 고르기)대로 만든다 — 09:00 = 핫이슈 1위, 12:00 = 2위(다른 주제), 조회수가 나올 만한 3위가 있으면 18:00(하루 최대 3편, 굳이 채우지 않음).
 이 문서는 그 두 편을 더 잘 만들기 위한 **학습**(남의 인기 영상 기법, 우리 조회수)과 일요일 성과 보고만 맡는다.
 시기 안 타는 표 영상(kind "buffer")은 아침 작업이 빠진 날을 위한 **예비**로만 둔다(ISSUE_GUIDE 6-1).
 
@@ -59,7 +59,7 @@ cd reel && node trends/frames.mjs --n 6     # → trends/frames/YYYY-MM-DD/sheet
 - 노트 설정 `queue/issues/YYYY-MM-DD-t.note.json`, 영상 `queue/issues/YYYY-MM-DD_<영문-slug>.mp4`
 - queue.json 항목: `{"id":"tYYYYMMDD","kind":"trend","date":"YYYY-MM-DD","file":…,"caption":…,"yt_title":…,"tags":[…],
   "sources":[…], "basis":[참고한 인기 영상 주소 2~3개], "angle":"우리만의 각도 한 줄"}`
-- Metricool 예약은 `ISSUE_GUIDE.md` 6-1 과 같은 방식, 시각만 **12:30(Asia/Seoul)**.
+- Metricool 예약은 `ISSUE_GUIDE.md` 6-1 과 같은 방식, 시각은 **09:00·12:00·18:00(Asia/Seoul)**.
 
 ## 5. 성과 보고 (일요일)
 
