@@ -133,7 +133,7 @@ function compute(){
 }
 
 /* ── 칸들 ── */
-const TABS=[['trades','📒 매매 기록'],['now','🧭 지금'],['events','📰 뉴스·사건'],['presale','🏗️ 신규 분양'],['ref','📚 참고(지수 분석)']];
+const TABS=[['trades','📒 매매 기록'],['now','🧭 지금'],['events','📰 뉴스·사건'],['presale','🏗️ 신규 분양'],['auction','🔨 경매'],['ref','📚 참고(지수 분석)']];
 const REF=[['sum','지수 전략 요약'],['hist','40년 흐름'],['why','사이클·원인'],['sup','공급·수급'],['strat','지수 전략 검증'],['paper','지수 모의장부'],['data','자료·가정']];
 function render(){
   const root=document.getElementById(ROOT_ID); if(!root) return;
@@ -147,7 +147,7 @@ function render(){
       body.innerHTML='<div class="sub2 ref">'+REF.map(t=>'<button class="chip'+(st.ref===t[0]?' on':'')+'" data-rf="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div id="rec-ref"></div>';
       body.querySelectorAll('[data-rf]').forEach(b=>b.onclick=()=>{ st.ref=b.getAttribute('data-rf'); render(); });
       ({sum:renderSum,hist:renderHist,why:renderWhy,sup:renderSup,strat:renderStrat,paper:renderPaper,data:renderData})[st.ref](document.getElementById('rec-ref'));
-    } else ({trades:renderTrades,now:renderNow,events:renderEvents,presale:renderPresale})[st.tab](body);
+    } else ({trades:renderTrades,now:renderNow,events:renderEvents,presale:renderPresale,auction:renderAuction})[st.tab](body);
   }
   catch(e){ body.innerHTML='<div class="warn">화면을 그리지 못했습니다: '+esc(e.message||e)+'</div>'; console.error(e); }
 }
@@ -342,6 +342,12 @@ function renderNow(el){
   h+='</div>';
   el.innerHTML=h;
   bindSv(el);
+}
+
+/* ── 🔨 경매 — 화면은 realestate-claude-auction-ui.js, 계산은 경매 엔진. 여기서는 도우미만 넘긴다 ── */
+function renderAuction(el){
+  if(!window.JKREAuctionUI||!window.JKREAuction){ el.innerHTML='<div class="warn">경매 화면을 불러오지 못했습니다.</div>'; return; }
+  window.JKREAuctionUI.render(el,{A,X,esc,eok,man,pct,pct0,num,cls,rerender:render});
 }
 
 /* ── 📰 뉴스·사건 ── */

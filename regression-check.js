@@ -12348,8 +12348,21 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
      (tc.stdout||'').split('\n').filter(l=>/✗|결과/.test(l)).join(' / ')+(tc.stderr||'').slice(0,300));
   const iC=re.indexOf('id="pane-claude"'),iG=re.indexOf('id="pane-gpt"');
   const iE=re.indexOf('<script src="/realestate-claude-engine.js" defer></script>'),iA=re.indexOf('<script src="/realestate-claude-apt.js" defer></script>'),iU=re.indexOf('<script src="/realestate-claude.js" defer></script>');
-  ok('클로드 칸: 지수 엔진 → 아파트 엔진 → 화면 순서로, 클로드 칸 뒤 · 지피티 칸 앞에서 불러온다', iC>0&&iC<iE&&iE<iA&&iA<iU&&iU<iG&&/id="rec-root"/.test(re.slice(iC,iE)));
-  ok('클로드 화면·엔진은 지피티 칸을 건드리지 않는다', !/pane-gpt/.test(ui)&&!/pane-gpt/.test(eng)&&!/pane-gpt/.test(apt));
+  const iAu=re.indexOf('<script src="/realestate-claude-auction.js" defer></script>'),iAuU=re.indexOf('<script src="/realestate-claude-auction-ui.js" defer></script>'),iAc=re.indexOf('<script type="module" src="/realestate-claude-account.js"></script>');
+  ok('클로드 칸: 지수 엔진 → 아파트 엔진 → 경매 엔진 → 경매 화면 → 화면 → 내 장부 저장 순서로, 클로드 칸 뒤 · 지피티 칸 앞에서 불러온다',
+     iC>0&&iC<iE&&iE<iA&&iA<iAu&&iAu<iAuU&&iAuU<iU&&iU<iAc&&iAc<iG&&/id="rec-root"/.test(re.slice(iC,iE)));
+  const auc=fs.readFileSync(__d+'/realestate-claude-auction.js','utf8'),aucUI=fs.readFileSync(__d+'/realestate-claude-auction-ui.js','utf8'),acc=fs.readFileSync(__d+'/realestate-claude-account.js','utf8');
+  ok('클로드 화면·엔진은 지피티 칸을 건드리지 않는다', [ui,eng,apt,auc,aucUI,acc].every(x=>!/pane-gpt|realestateGpt|REGPT_/.test(x)));
+  const tau=require('child_process').spawnSync(process.execPath,[__d+'/scripts/test_realestate_claude_auction.cjs'],{encoding:'utf8'});
+  ok('경매 계산 엔진 값 시험 전부 통과 — 유찰·보증금 · 권리 연습(대항력·확정일자·배당요구·특수 권리) · 비용·내 돈·2년 뒤·입찰가 · 모의입찰 장부', tau.status===0,
+     (tau.stdout||'').split('\n').filter(l=>/✗|결과:/.test(l)).join(' / ')+(tau.stderr||'').slice(0,300));
+  ok('경매 화면은 계산하지 않는다 — 엔진(analyze·schedule·newCase·setResult·ledgerSummary)만 부르고 세금·중개 함수는 엔진이 아파트 엔진 것을 쓴다',
+     !/acqRate|brokerRate|gainTax|Math\.pow/.test(aucUI)&&['U.analyze(','U.schedule(','U.newCase(','U.setResult(','U.ledgerSummary('].every(x=>aucUI.indexOf(x)>=0)
+     &&/const \{acqRate,brokerRate,gainTax\}=APT;/.test(auc)&&!/function\s+(acqRate|brokerRate|gainTax)\b/.test(auc)&&/auction:renderAuction/.test(ui));
+  ok('내 경매 장부는 승인된 본인 문서(users/{uid}/realestateClaude/auction)에만 · 페이지의 Firebase 앱을 그대로(getApp) · 저장 때 revision 확인 · 계정 바뀌면 멈춤',
+     /getApp\(\)/.test(acc)&&!/initializeApp|initializeFirestore/.test(acc)&&/doc\(db, "users", user\.uid, COL, DOC\)/.test(acc)&&/const COL = "realestateClaude", DOC = "auction";/.test(acc)
+     &&/revision !== expectedRevision/.test(acc)&&(acc.match(/mine\(\)/g)||[]).length>=5&&!/setDoc|deleteDoc|collection\(/.test(acc)
+     &&/match \/users\/\{uid\} \{[\s\S]*?match \/\{document=\*\*\} \{\s*allow read, write: if isMine\(uid\) && approved\(\);/.test(fs.readFileSync(__d+'/firestore.rules','utf8')));
   ok('화면은 장부·전략을 계산하지 않는다 — 엔진 함수만 부른다(같은 걸 두 군데서 세지 않는다 · 비교 곡선도 엔진 benchmarks 값)',
      !/function\s+(simulate|markMonth|planNext|walkForward|monthYield|desire|stepMonth|candidatesAt|leadersAt|leaderChanges|benchmarks|eventStudy|paperUpdate|gainTax|acqRate|gapNeed|regulated|forwardStats|stress|openPos|markPos|closePos)\b/.test(ui)
      &&/E\.walkForward\(/.test(ui)&&/E\.snapshot\(/.test(ui)&&/X\.simulate\(/.test(ui)&&/X\.nowView\(/.test(ui)&&/X\.eventStudy\(/.test(ui)
