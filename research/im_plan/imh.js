@@ -23,7 +23,7 @@ const SETUP=`(()=>{
   inj('const fin=cash+shares*','cash+=__res;__res=0; const fin=cash+shares*');
   inj('imRowsOf({})','imRowsOf({rows:__H.rows})');   // 하방 LOC 줄 수 — o.rows 를 안 주면 undefined 라 기본 3 그대로
   inj('const buyLimit=prevC*(1+bigPct/100);','const buyLimit=prevC*(1+bigPct/100); if(__H.rate){ const _r=__H.rate(d,i); if(cash>0) cash+=cash*_r; if(__res>0) __res+=__res*_r; if(__H.savedYield&&savedProfit>0) savedProfit+=savedProfit*_r; }\\n    if(__H.exit&&shares>0&&__H.exit(d,i,tkr)){ _sell(o,shares,0); cash+=__res;__res=0; shares=0;avg=0;T=0;inReverse=false;cycleStart=String();cycles++; __H.exits++; }');
-  inj('const buyLimit=prevC*(1+bigPct/100);','const buyLimit=prevC*(1+bigPct/100); if(__H.sg){ const G=__H.sg, _r=__H.sgRate(d), unit=(cash+shares*prevC)/divs; if(G.S>0){ const y=G.S*_r; G.S+=y; cash+=y; G.yld+=y; }; const mv=x=>{ if(Math.abs(x)<1) return; const f=Math.abs(x)*G.fee; G.S+=x; cash-=f; G.fees+=f; G.n++; };; if(G.mode==="week"){ const wk=Math.floor((Date.parse(d)/864e5+3)/7); if(wk!==G.wk){ G.wk=wk; mv(Math.max(0,cash-G.k*unit)-G.S); } } else if(!(shares>0)&&T===0){ mv(Math.max(0,cash-G.k*unit)-G.S); }; if(G.S>0&&cash-G.S<2*unit){ mv(-Math.min(G.S, G.mode==="week"?(2*unit-(cash-G.S)):G.k*unit)); } }');
+  inj('const buyLimit=prevC*(1+bigPct/100);','const buyLimit=prevC*(1+bigPct/100); if(__H.sg){ const G=__H.sg, _r=__H.sgRate(d), unit=(cash+shares*prevC)/divs; if(G.S>0){ const y=G.S*_r; G.S+=y; cash+=y; G.yld+=y; if(G.tax) yearPnl+=y; }; const mv=x=>{ if(Math.abs(x)<1) return; const f=Math.abs(x)*G.fee; G.S+=x; cash-=f; G.fees+=f; G.n++; };; if(G.mode==="week"){ const wk=Math.floor((Date.parse(d)/864e5+3)/7); if(wk!==G.wk){ G.wk=wk; mv(Math.max(0,cash-G.k*unit)-G.S); } } else if(!(shares>0)&&T===0){ mv(Math.max(0,cash-G.k*unit)-G.S); }; if(G.S>0&&cash-G.S<2*unit){ mv(-Math.min(G.S, G.mode==="week"?(2*unit-(cash-G.S)):G.k*unit)); } }');
   inj('{ const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)','{ const eq=cash+__res+shares*c+savedProfit-addedCash; __H.eqs.push([d,eq,savedProfit]); if(eq>mddPeak)');
   inj('const buys=_imBuyPlan(','if((flat0||__H.divsDaily)&&__H.divsAt){ const _nd=__H.divsAt(d,i,tkr); if(_nd&&_nd!==divs){ divs=_nd; starSlope=starBase*0.1*20/divs; } }\\n    if(flat0&&__H.tpAt){ const _tp=__H.tpAt(d,i,tkr); if(_tp&&_tp!==curTP){ curTP=_tp; starBase=_tp; starSlope=starBase*0.1*20/divs; exitMul=1-starBase/100; } }\\n    const buys=(flat0&&__H.gate&&!__H.gate(d,i,tkr))?[]:_imBuyPlan(');
   inj('if(flat0&&__H.tpAt)','if(flat0&&__H.budget&&__res===0){ const _b=__H.budget(d,i,tkr); if(_b<1){ __res=cash*(1-_b); cash-=__res; } }\\n    if(flat0&&__H.tpAt)');
@@ -38,6 +38,10 @@ const SETUP=`(()=>{
   inj('const buyLimit=prevC*(1+bigPct/100);','const buyLimit=prevC*(1+((__H.bigAt&&__H.bigAt(d)!=null)?__H.bigAt(d):bigPct)/100);');
   inj('const taxUsd=capGainTax(yearPnl, tkr);','const taxUsd=capGainTax(yearPnl, tkr); if(__H.yp) __H.yp.push([curYear,yearPnl,taxUsd]);');
   inj('if(flat0&&__H.budget&&__res===0)','if(flat0&&__H.xfer){ const _x=__H.xfer(d,cash); if(_x) cash+=_x; }\\n    if(flat0&&__H.budget&&__res===0)');   // 11-06: 외부 입출금(o.xfer) — 사이클이 끝나 전량 현금인 날 아침, 그날 매수 계획 전에만(새 사이클 1회매수금에 그대로 들어간다)   // 11-05: 해마다 실현손익·세금 기록(o.yp) — 계좌 합산 공제 계산용 · 마지막 해는 여러 번 정산될 수 있어 해마다 더해 쓴다
+  inj('let __res=0, __m1x=false,','let __res=0, __flrS=false, __m1x=false,');   // 11-09: 바닥선(o.floor) 상태 — 올린 익절 동안 원래 익절선을 한 번 넘었나
+  inj('if(_fillHit>=tgt&&q3>0){','if(__H.floor&&q3>0&&avg>0){ const _bt=avg*(1+curTP/100); if(__flrS&&prevC<_bt){ _sell(o,q3,SLIP); tpHit=true; __flrS=false; __H.flrN=(__H.flrN||0)+1; } else if(tgt>_bt&&hi>=_bt) __flrS=true; }\\n      if(!tpHit&&_fillHit>=tgt&&q3>0){');   // 11-09: 익절을 올려 둔 사이 원래 익절선(평단×(1+익절%))을 고가로 넘었다가 종가가 다시 그 아래면 다음 날 시가에 익절분(3/4)을 판다
+  inj('if(imCycleEnds(soldToday, shares)){cash+=__res;','if(imCycleEnds(soldToday, shares)){__flrS=false;cash+=__res;');
+  inj('if(tpHit) T*=0.25;','if(tpHit){ T*=0.25; __flrS=false; }');   // 익절·바닥선으로 3/4 를 팔면 그 회는 끝 — 다시 익절을 올리고 넘으면 새로 센다
   window.__H={eqs:[]};
   (0,eval)(src);
   window.RUN=function(o){
@@ -50,7 +54,7 @@ const SETUP=`(()=>{
     const IRX=window.__IRX||{}; const irxDates=Object.keys(IRX).sort();
     let lastIrx=0, li=0; const irxAt=d=>{ while(li<irxDates.length&&irxDates[li]<=d){ lastIrx=IRX[irxDates[li]]; li++; } return lastIrx; };
     let prevD=null;
-    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; if(o.yp) __H.yp=[];
+    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.floor=!!o.floor; if(o.yp) __H.yp=[];
     if(o.xfer){ const X=o.xfer; let F=1, yr=null, pend=false; __H.xlog=[];   // 조합 입출금(11-06): X={mode:'year'|'oneway'|'band'|'oneband', w, b, pl:{날짜:플랜값}, fee} — 플랜 쪽은 비례 배율 F 로(플랜은 사이클이 없어 비례 근사가 맞다)
       __H.xfer=(d,cash)=>{ const P0=X.pl[d]; if(!(P0>0)) return 0; const P=P0*F, y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ yr=y; if(X.mode==='year'||X.mode==='oneway') pend=true; }
         const t=cash+P, wa=cash/t; let x=cash-t*X.w;   // x>0: 무매 → 플랜
@@ -58,7 +62,7 @@ const SETUP=`(()=>{
         else if(X.mode==='band'){ if(Math.abs(wa-X.w)<=X.b) return 0; } else if(X.mode==='oneband'){ if(wa-X.w<=X.b) return 0; } else return 0;
         if(Math.abs(x)<1e-9) return 0; const c=Math.abs(x)*(X.fee||0);   // 옮긴 금액의 수수료는 받는 쪽이 낸다(combo3 과 같음)
         if(x>0){ F*=(P+x-c)/P; __H.xlog.push([d,x,F]); return -x; } else { F*=(P+x)/P; __H.xlog.push([d,x,F]); return -x-c; } }; }
-    if(o.sgov){ let pd=null; __H.sgRate=(d)=>{ const r=irxAt(d); const gap=pd?Math.max(1,Math.round((Date.parse(d)-Date.parse(pd))/864e5)):1; pd=d; return Math.max(0,(r/100-(o.sgov.spread??0.0009)))*(1-0.154)*gap/365; }; __H.sg={mode:o.sgov.mode,k:o.sgov.k||10,fee:o.sgov.fee!=null?o.sgov.fee:0.0026,S:0,fees:0,yld:0,n:0,wk:null}; }
+    if(o.sgov){ let pd=null; if(o.sgov.sym){ const sd=Object.keys(M[o.sgov.sym]).sort(), si={}; sd.forEach((x,k)=>si[x]=k); const sc=sd.map(x=>M[o.sgov.sym][x][C0]); __H.sgRate=(d)=>{ const k=si[d]; return (k>=2&&sc[k-2]>0)?sc[k-1]/sc[k-2]-1:0; }; } else __H.sgRate=(d)=>{ const r=irxAt(d); const gap=pd?Math.max(1,Math.round((Date.parse(d)-Date.parse(pd))/864e5)):1; pd=d; return Math.max(0,(r/100-(o.sgov.spread??0.0009)))*(1-0.154)*gap/365; }; __H.sg={mode:o.sgov.mode,k:o.sgov.k||10,fee:o.sgov.fee!=null?o.sgov.fee:0.0026,S:0,fees:0,yld:0,n:0,wk:null,tax:!!o.sgov.tax}; }   // 11-09: o.sgov.sym = 잔금을 그 종목(1배 지수 등)에 — 전일 확정 일수익률(하루 늦게 장부에 · 룩어헤드 없음) · o.sgov.tax = 그 손익을 해마다 양도세 장부(yearPnl)에
     const _A0=Object.assign({},IM_AUTOTP), _M0=Object.assign({},IM_AUTOTP_M1); window.__imAutoTP0=window.__imAutoTP0||imAutoTP; imAutoTP=window.__imAutoTP0;
     if(o.auto){ Object.assign(IM_AUTOTP,o.auto.A||{}); Object.assign(IM_AUTOTP_M1,o.auto.M||{}); if(o.auto.noWeak) imAutoTP=(b,d)=>{ const P=window.__imAutoTP0(b,d); if(P) P.tp=P.hot?IM_AUTOTP.lo:IM_AUTOTP.hi; return P; }; }
     if(o.cashYield){ __H.rate=(d,i)=>{ const r=irxAt(d); const gap=prevD?Math.max(1,Math.round((Date.parse(d)-Date.parse(prevD))/864e5)):1; prevD=d; return Math.max(0,(r/100-(o.cashSpread??0.0009)))*(1-0.154)*gap/365; }; }   // cashSpread: T-bill 에서 빼는 폭(기본 0.09% = SGOV 보수 · 달러 RP 등은 0.5~1%)
@@ -90,7 +94,7 @@ const SETUP=`(()=>{
     imCostOn=o.cost!==false; imReverse=!!o.reverse;
     const r=runIMx(days,tkr,o.cap||10000,o.divs||20,o.tgt||20,o.compound!==false,o.big);
     Object.assign(IM_AUTOTP,_A0); Object.assign(IM_AUTOTP_M1,_M0); imAutoTP=window.__imAutoTP0;
-    return {trace:o.trace?{tr:__H.tr,m1d:__H.m1d,cyc:__H.cyc}:null, sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, yp:__H.yp||null, xlog:__H.xlog||null, first:days[0], last:days[days.length-1], n:days.length};
+    return {trace:o.trace?{tr:__H.tr,m1d:__H.m1d,cyc:__H.cyc}:null, sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, flrN:__H.flrN||0, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, yp:__H.yp||null, xlog:__H.xlog||null, first:days[0], last:days[days.length-1], n:days.length};
   };
 })()`;
 function stats(r,cap){ const yrs=(Date.parse(r.last)-Date.parse(r.first))/(365.25*864e5); const cagr=(Math.pow(r.final/cap,1/yrs)-1)*100;
