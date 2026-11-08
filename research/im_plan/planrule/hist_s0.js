@@ -1,12 +1,9 @@
 // 듀얼 가드 공격 다이얼(11-08 · 사용자 "공격형은 어디갔어? 그냥 기본으로 해?") — 기본 규칙 + TECL 목표 변동성 s0 .60 (새 규칙 없이)
 // vs 기본(.55) vs 옛 공격형(새 규칙 + .60). 앱 엔진 replay 그대로(전일 종가 주수 · 체결가 · 배당 현금) + 모의 목록 세후 TR(hist_at.js 와 같은 계산).
 const fs=require('fs'),vm=require('vm'),path=require('path'); const D=__dirname;
-let src=fs.readFileSync(path.join(D,'..','..','..','plan-session-engine.js'),'utf8');
-const anchor="  exp2:{key:'exp2'"; if(!src.includes(anchor)||!src.includes('const s0=RULES.s0??D.ivsS0')) throw Error('엔진 표지 없음 — 규칙 벌·s0 를 받는 판이어야 한다');
-src=src.replace(anchor,"  b58:{key:'b58',name:'기본+.58',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,s0:.58,exp:true},\n"
-  +"  b60:{key:'b60',name:'기본+.60',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,s0:.60,exp:true},\n"
-  +"  b65:{key:'b65',name:'기본+.65',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,s0:.65,exp:true},\n"+anchor);
-const ctx={}; vm.runInNewContext(src,ctx); const E=ctx.JKPlanSessionEngine;
+// 11-09: 앱 엔진이 규칙 하나만 받게 바뀌어(main 합침) 연구 규칙 벌은 engine_var.js 로 끼운다 — 옛 공격형(exp2)도 같은 값으로 다시 정의.
+const E=require('./engine_var').load({b58:{guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,s0:.58},b60:{guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,s0:.60},
+  b65:{guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,s0:.65},oldAgg:{guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15,tqReb:.02,s0:.60}});
 const q=s=>{ const j=JSON.parse(fs.readFileSync(path.join(D,'data',s+'.json'))); return {days:j.ohlcTrade.map(x=>({date:x.date,close:+x.close})).filter(x=>x.close>0),div:j.dividends||[]}; };
 const T=q('TECL'),Q=q('TQQQ'),G=q('SGOV'); const LAST=T.days[T.days.length-1].date;
 const capGainTax=pnl=>pnl>0?Math.max(0,pnl*1350-250e4)*0.22/1350:0;
@@ -31,23 +28,23 @@ const addM=(d,m)=>{ const y=+d.slice(0,4), mo=+d.slice(5,7)-1+m; return `${y+Mat
 const f=(x,d=1)=>x.toFixed(d);
 // 0) 확인 — 사용자 모의(1억원·월 10만원·2026-01-02~) 목록 숫자 재현: 기본 세후 11.2 · 공격형 12.1
 console.log('자료 끝',LAST);
-for(const k of ['base','exp2','b60']){ const r=run(k,'2026-01-02',LAST,69244,69.24); console.log(`2026-01-02~ 1억+월10만 ${k}: TR ${f(r.ret)} · 세후 TR ${f(r.atr)} · MDD ${f(r.mdd)}`); }
-const KEYS=['base','b58','b60','b65','exp2'];
+for(const k of ['base','oldAgg','b60']){ const r=run(k,'2026-01-02',LAST,69244,69.24); console.log(`2026-01-02~ 1억+월10만 ${k}: TR ${f(r.ret)} · 세후 TR ${f(r.atr)} · MDD ${f(r.mdd)}`); }
+const KEYS=['base','b58','b60','b65','oldAgg'];
 const SETS=[['1만$ 거치',10000,0],['10만$ 거치',100000,0],['2만$ 거치(지금 플랜)',20000,0],['1억원+월 10만원(모의)',69244,69.24]];
 for(const [lab,P,M] of SETS){
   console.log(`\n■ ${lab}`);
   const full=Object.fromEntries(KEYS.map(k=>[k,run(k,'2011-04-01',LAST,P,M)]));
   console.log('  전 구간 2011-04~ 세후 연/MDD/TECL 주문 연: '+KEYS.map(k=>`${k} ${f(full[k].ann)}/${f(full[k].mdd)}/${f(full[k].teclPerYr,0)}`).join(' · '));
   for(const [a,b] of [['2011-04-01','2016-01-01'],['2016-01-01','2021-01-01'],['2021-01-01',LAST]]){
-    const r=Object.fromEntries(['base','b60','exp2'].map(k=>[k,run(k,a,b,P,M)]));
-    console.log(`  구간 ${a.slice(0,7)}~${b.slice(0,7)}: `+['base','b60','exp2'].map(k=>`${k} ${f(r[k].ann)}/${f(r[k].mdd)}`).join(' · '));
+    const r=Object.fromEntries(['base','b60','oldAgg'].map(k=>[k,run(k,a,b,P,M)]));
+    console.log(`  구간 ${a.slice(0,7)}~${b.slice(0,7)}: `+['base','b60','oldAgg'].map(k=>`${k} ${f(r[k].ann)}/${f(r[k].mdd)}`).join(' · '));
   }
   for(const [nm,months] of [['1년',12],['3년',36],['5년',60]]){
-    const rows=[]; for(let s='2011-04-01'; addM(s,months)<=LAST; s=addM(s,1)){ const e=addM(s,months); const r=Object.fromEntries(['base','b60','exp2'].map(k=>[k,run(k,s,e,P,M)])); if(r.base&&r.b60&&r.exp2) rows.push(r); }
+    const rows=[]; for(let s='2011-04-01'; addM(s,months)<=LAST; s=addM(s,1)){ const e=addM(s,months); const r=Object.fromEntries(['base','b60','oldAgg'].map(k=>[k,run(k,s,e,P,M)])); if(r.base&&r.b60&&r.exp2) rows.push(r); }
     const d=rows.map(r=>r.b60.ann-r.base.ann), m=rows.map(r=>r.b60.mdd-r.base.mdd);
     const both=rows.filter(r=>r.b60.ann>r.base.ann&&r.b60.mdd<=r.base.mdd).length, worse=rows.filter(r=>r.b60.ann<r.base.ann&&r.b60.mdd>r.base.mdd).length;
     const med=k=>qq(rows.map(r=>r[k].ann),.5), wst=k=>qq(rows.map(r=>r[k].ann),0), mm=k=>qq(rows.map(r=>r[k].mdd),.5), mw=k=>qq(rows.map(r=>r[k].mdd),1);
-    console.log(`  ${nm} 창 ${rows.length}개 · 세후 연 중앙/최악 · MDD 중앙/최악 — 기본 ${f(med('base'))}/${f(wst('base'))} · ${f(mm('base'))}/${f(mw('base'))} | 기본+.60 ${f(med('b60'))}/${f(wst('b60'))} · ${f(mm('b60'))}/${f(mw('b60'))} | 옛 공격형 ${f(med('exp2'))}/${f(wst('exp2'))} · ${f(mm('exp2'))}/${f(mw('exp2'))}`);
+    console.log(`  ${nm} 창 ${rows.length}개 · 세후 연 중앙/최악 · MDD 중앙/최악 — 기본 ${f(med('base'))}/${f(wst('base'))} · ${f(mm('base'))}/${f(mw('base'))} | 기본+.60 ${f(med('b60'))}/${f(wst('b60'))} · ${f(mm('b60'))}/${f(mw('b60'))} | 옛 공격형 ${f(med('oldAgg'))}/${f(wst('oldAgg'))} · ${f(mm('oldAgg'))}/${f(mw('oldAgg'))}`);
     console.log(`     기본+.60 − 기본: 연 차 중앙 ${f(qq(d,.5),2)}%p(하위10% ${f(qq(d,.1),2)} · 상위10% ${f(qq(d,.9),2)}) · 기본보다 낮은 창 ${f(d.filter(x=>x<0).length/rows.length*100,0)}% · MDD 차 중앙 ${f(qq(m,.5))} · 둘 다 나음 ${both} vs 둘 다 나쁨 ${worse}`);
   }
 }
