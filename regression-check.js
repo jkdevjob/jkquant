@@ -12714,6 +12714,10 @@ Promise.all(PENDING).then(()=>{
   const pct=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-claude-tab.cjs')],{encoding:'utf8'});
   ok('자산플랜 v2 🤖 클로드/⚡ 지피티 탭 · 5년 듀얼 가드 하나: 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·탭 전환·폐지 세션 숨김·모의 목록·변이 14종',
      pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 14/14 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
+  /* 2026-11-08 — 입금 맞춤: 모의 엔진은 입금일 전체 맞춤(force)인데 운영 화면은 신호 없으면 현금으로 두던 갈림을 고침(plan 2.0.1) */
+  const pdp=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-deposit.cjs')],{encoding:'utf8'});
+  ok('자산플랜 입금 맞춤: 마지막 체결 뒤 입금 → 전체 맞춤 · 운영 주문표 = 모의 엔진 입금일 체결(21일 전부) · 변이 6종',
+     pdp.status===0&&(pdp.stdout||'').includes('ALL PASS plan deposit · 변이 6/6 red'),(pdp.stdout||'').slice(-600)+(pdp.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
   ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
