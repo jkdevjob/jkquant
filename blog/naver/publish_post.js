@@ -8,21 +8,34 @@ const TOPIC=post.topic||'비즈니스·경제';
   const {b,p,f}=await getEditor();
   const L=f.locator('[class*="layer_publish"]');
   if(!(await L.count())){ await f.locator('button[class*="publish_btn"]').first().click(); await p.waitForTimeout(2500); }
-  // topic
-  const topicNow=((await L.innerText()).match(/주제\n(.+)/)||[])[1]||'';
-  if(!topicNow.includes(TOPIC)){
-    await L.getByText(topicNow.replace(/\s*>\s*$/,'').trim(),{exact:false}).first().click(); await p.waitForTimeout(1200);
-    await f.getByText(TOPIC,{exact:true}).first().click(); await p.waitForTimeout(300);
-    await f.getByRole('button',{name:'확인',exact:true}).last().click(); await p.waitForTimeout(1000);
-  }
-  // category (post.category, 예: 'IT·과학'). 없으면 지금 선택된 것을 그대로 둔다. 이름이 목록에 없으면 설정 불일치로 멈춘다.
+  const exact=s=>new RegExp('^\\s*'+s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*$');
+  // 주제 선택 창(theme_list_wrap)이 열린 채로 남아 있으면 먼저 닫는다(열려 있으면 카테고리 버튼이 화면에 없다).
+  const picker=L.locator('[class*="theme_list_wrap"]');
+  if(await picker.count()){ const c=L.locator('button[class*="cancel_btn"]'); if(await c.count()){ await c.first().click(); await p.waitForTimeout(800); } }
+  // category 먼저 (post.category, 예: 'IT·과학'). 카테고리를 바꾸면 네이버가 주제를 '주제 선택 안 함' 등으로 되돌리므로
+  // 주제는 그 뒤에 고른다(11/09 확인). 카테고리가 없으면 지금 선택된 것을 그대로 둔다. 이름이 목록에 없으면 설정 불일치로 멈춘다.
   const CAT=post.category||'';
   const catNow=async()=>((await L.locator('button[class*="selectbox_button"]').first().innerText().catch(()=>''))||'').trim();
   if(CAT && (await catNow())!==CAT){
-    await L.locator('button[class*="selectbox_button"]').first().click(); await p.waitForTimeout(700);
-    const opt=L.locator('[class*="selectbox_list"] , [role="listbox"]').getByText(CAT,{exact:true}).first();
-    if(await opt.count()) { await opt.click(); await p.waitForTimeout(700); }
-    else console.log('CATEGORY NOT FOUND:',CAT,'| options:',(await L.locator('[class*="selectbox_list"], [role="listbox"]').first().innerText().catch(()=>'?')).replace(/\n+/g,' / '));
+    // 목록은 div.option_list_layer[role=menu] 안의 label.radio_label 이다(11/09 확인). 이미 열려 있으면 다시 누르지 않는다(누르면 닫힌다).
+    const sb=L.locator('button[class*="selectbox_button"]').first();
+    if((await sb.getAttribute('aria-expanded'))!=='true'){ await sb.click(); await p.waitForTimeout(700); }
+    const menu=L.locator('[class*="option_list_layer"], [role="menu"]').first();
+    const opt=menu.locator('label[class*="radio_label"]').filter({hasText:exact(CAT)}).first();
+    if(await opt.count()) { await opt.click(); await p.waitForTimeout(1000); }
+    else console.log('CATEGORY NOT FOUND:',CAT,'| options:',(await menu.innerText().catch(()=>'?')).replace(/\n+/g,' / '));
+  }
+  // topic: 주제 줄의 링크(set_theme__ a)를 눌러 선택 창을 열고, 창 안의 label 중 이름이 정확히 같은 것만 누른다.
+  // (전체 화면에서 이름으로 찾으면 카테고리 버튼의 '스포츠' 같은 같은 글자를 누를 수 있다.)
+  const topicNow=async()=>((await L.innerText().catch(()=>'')).match(/주제\n(.+)/)||[])[1]||'';
+  const tNow=await topicNow();
+  if(!tNow.includes(TOPIC)){
+    const row=L.locator('[class^="set_theme__"] a').first();
+    if(await row.count()) await row.click(); else await L.getByText(tNow.replace(/\s*>\s*$/,'').trim(),{exact:false}).first().click();
+    await p.waitForTimeout(1200);
+    const opt=picker.locator('label').filter({hasText:exact(TOPIC)}).first();
+    if(await opt.count()){ await opt.click(); await p.waitForTimeout(400); await L.locator('button[class*="ok_btn"]').first().click(); await p.waitForTimeout(1000); }
+    else { console.log('TOPIC NOT FOUND:',TOPIC); const c=L.locator('button[class*="cancel_btn"]'); if(await c.count()) await c.first().click(); await p.waitForTimeout(800); }
   }
   // tags
   const tags=()=>f.evaluate(()=>[...document.querySelectorAll('[class*="layer_publish"] span[id^="tag-item-"]')].map(x=>x.getAttribute('aria-label')));
