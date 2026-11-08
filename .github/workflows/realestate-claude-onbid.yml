@@ -1,0 +1,52 @@
+name: 부동산(클로드) 온비드 공매 수집
+
+# 대전·세종 온비드 공매(캠코) 물건을 매일 모은다 — 공공데이터포털 차세대 온비드 오픈API 3개(공고목록 · 공고상세 물건정보 · 공고 입찰결과상세).
+# 인증키는 GitHub Secrets 의 DATA_GO_KR_KEY — 로그·파일 어디에도 쓰지 않는다(GitHub 가 로그에서도 가린다). 키가 없으면 수집기가 그냥 끝난다.
+# 커밋은 수집기 값 시험이 통과했을 때만, 바뀐 것이 있을 때만.
+on:
+  schedule:
+    - cron: "13 22 * * *"   # 매일 07:13 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: realestate-claude-onbid
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      - name: 온비드 공매 수집(대전·세종) — 한도 초과면 받은 만큼만
+        timeout-minutes: 30
+        env:
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}
+        run: python scripts/realestate_claude/collect_onbid.py
+
+      - name: 수집기 값 시험 — 실패하면 커밋하지 않는다
+        id: tests
+        if: ${{ !cancelled() }}
+        run: python scripts/realestate_claude/test_collect_onbid.py
+
+      - name: 커밋 — 값 시험이 통과했을 때만
+        if: ${{ !cancelled() && steps.tests.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/realestate/claude/onbid.json && [ -z "$(git ls-files --others --exclude-standard data/realestate/claude/onbid.json)" ]; then
+            echo "새 자료 없음"
+            exit 0
+          fi
+          git config user.name "jkquant-realestate-bot"
+          git config user.email "jkquant-realestate-bot@users.noreply.github.com"
+          git add data/realestate/claude/onbid.json
+          git commit -m "data: 부동산(클로드) 온비드 공매 갱신"
+          git pull --rebase origin main
+          git push origin HEAD:main

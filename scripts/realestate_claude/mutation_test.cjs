@@ -10,6 +10,7 @@ const APT=fs.readFileSync(path.join(ROOT,'realestate-claude-apt.js'),'utf8');
 const CAPT=fs.readFileSync(path.join(__dirname,'collect_apt.py'),'utf8'),TCAPT=fs.readFileSync(path.join(__dirname,'test_collect_apt.py'),'utf8');
 const CPRE=fs.readFileSync(path.join(__dirname,'collect_presale.py'),'utf8'),TCPRE=fs.readFileSync(path.join(__dirname,'test_collect_presale.py'),'utf8');
 const AUC=fs.readFileSync(path.join(ROOT,'realestate-claude-auction.js'),'utf8');
+const CONB=fs.readFileSync(path.join(__dirname,'collect_onbid.py'),'utf8'),TCONB=fs.readFileSync(path.join(__dirname,'test_collect_onbid.py'),'utf8');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'rec-mut-'));
 const ENGINE_MUTS=[
   ['결정에 한 달 뒤 자료(룩어헤드)','    const d=k-o.lag,ch=choose(d,plan.pos)','    const d=k-o.lag+1,ch=choose(d,plan.pos)'],
@@ -123,6 +124,17 @@ const AUC_MUTS=[
   ['같은 값을 이긴 것으로',"won:my>win?true:my===win?'tie':false","won:my>=win?true:false"],
   ['최저가 아래 입찰도 저장',"  if(a.warn.indexOf('belowMin')>=0) throw new Error('입찰가가 최저가보다 낮으면 무효입니다');\n",""]
 ];
+const CONB_MUTS=[
+  ['대전·세종 아닌 물건도 남김','        mine = [norm_item(it, n) for it in its if in_area(it.get("cltrAdr"))]','        mine = [norm_item(it, n) for it in its]'],
+  ['원을 만원으로 잘못 바꿈','    return int(round(v / 10000)) if v > 0 else None','    return int(round(v / 1000)) if v > 0 else None'],
+  ['지난 물건을 지움','    keep = {x["id"]: x for x in old_items or []}','    keep = {}'],
+  ['지난 결과를 지움','        if prev and prev.get("result") and not it.get("result"):','        if False:'],
+  ['개찰 전 공고도 결과를 물음','        if mine and str(n.get("cltrOpbdDt") or "") <= now:','        if mine:'],
+  ['한도 초과면 다 버림','            print(str(e), file=sys.stderr)\n            limited = True\n            break\n        except ApiError:\n            raise','            raise\n        except ApiError:\n            raise'],
+  ['인코딩된 키를 또 인코딩','    return urllib.parse.unquote(k) if "%" in k else k','    return k'],
+  ['한 건짜리 응답을 못 읽음','    if isinstance(its, dict):\n        its = [its]\n    return its, int','    return its, int'],
+  ['인증키 오류를 자료 없음으로','        if c in ("03",):\n            return EMPTY\n        raise (LimitError','        if True:\n            return EMPTY\n        raise (LimitError']
+];
 const CAPT_MUTS=[
   ['84㎡ 대표 타입을 세대수 대신 첫 타입',"    t84.sort(key=lambda t: (-(t.get(\"세대수\") or 0), t.get(\"면적일련번호\") or 0))","    pass"],
   ['시세 같은 달 두 번 검사 없음','        if m in rows:\n            raise RuntimeError("시세 같은 달 두 번: %s" % m)','        if False:\n            raise RuntimeError("x")'],
@@ -170,7 +182,7 @@ for(const [name,a,b] of AUC_MUTS){
   const r=cp.spawnSync(process.execPath,[path.join(ROOT,'scripts','test_realestate_claude_auction.cjs')],{encoding:'utf8',env:Object.assign({},process.env,{REC_AUC:f})});
   if(r.status!==0){ killed++; console.log('  ✓ 잡힘: '+name); } else { bad.push(name); console.log('  ✗ 살아남음: '+name); }
 }
-for(const [muts,src,test,file,tfile] of [[CAPT_MUTS,CAPT,TCAPT,'collect_apt.py','test_collect_apt.py'],[CPRE_MUTS,CPRE,TCPRE,'collect_presale.py','test_collect_presale.py']]){
+for(const [muts,src,test,file,tfile] of [[CAPT_MUTS,CAPT,TCAPT,'collect_apt.py','test_collect_apt.py'],[CPRE_MUTS,CPRE,TCPRE,'collect_presale.py','test_collect_presale.py'],[CONB_MUTS,CONB,TCONB,'collect_onbid.py','test_collect_onbid.py']]){
   for(const [name,a,b] of muts){
     total++;
     const aa=a.replace(/\\n/g,'\n'),bb=b.replace(/\\n/g,'\n');

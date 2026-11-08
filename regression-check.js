@@ -12359,6 +12359,20 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
   ok('경매 화면은 계산하지 않는다 — 엔진(analyze·schedule·newCase·setResult·ledgerSummary)만 부르고 세금·중개 함수는 엔진이 아파트 엔진 것을 쓴다',
      !/acqRate|brokerRate|gainTax|Math\.pow/.test(aucUI)&&['U.analyze(','U.schedule(','U.newCase(','U.setResult(','U.ledgerSummary('].every(x=>aucUI.indexOf(x)>=0)
      &&/const \{acqRate,brokerRate,gainTax\}=APT;/.test(auc)&&!/function\s+(acqRate|brokerRate|gainTax)\b/.test(auc)&&/auction:renderAuction/.test(ui));
+  { // 온비드 공매 — 공식 API(공공데이터포털) · 인증키는 Secrets 에서만 · 수집기 값 시험 · 화면은 엔진 요약만
+    const onw=fs.readFileSync(__d+'/.github/workflows/realestate-claude-onbid.yml','utf8'),onc=fs.readFileSync(__d+'/scripts/realestate_claude/collect_onbid.py','utf8');
+    const ton=require('child_process').spawnSync('python3',['-I',__d+'/scripts/realestate_claude/test_collect_onbid.py'],{encoding:'utf8'});
+    ok('온비드 공매 수집기 값 시험 — 응답 모양 · 인증키/한도 오류 · 대전·세종만 · 원→만원 · 결과 붙이기 · 쌓기(지난 결과 유지) · 한도 초과면 받은 만큼', ton.status===0,
+       (ton.stdout||'').split('\n').filter(l=>/✗|결과/.test(l)).join(' / ')+(ton.stderr||'').slice(0,300));
+    ok('온비드 자동 수집: 매일 · 손으로도 · 키는 secrets.DATA_GO_KR_KEY 에서만 · 커밋은 값 시험 통과 때만 · 공식 API 세 곳만 · 키를 찍는 줄 없음',
+       /cron:/.test(onw)&&/workflow_dispatch:/.test(onw)&&/DATA_GO_KR_KEY: \$\{\{ secrets\.DATA_GO_KR_KEY \}\}/.test(onw)&&/id: tests/.test(onw)&&/steps\.tests\.outcome == 'success'/.test(onw)
+       &&['OnbidPbancListSrvc2/getPbancList2','OnbidPbancCltrDtlSrvc2/getPbancCltrInf2','OnbidPbancBidRsltDtlSrvc2/getPbancBidRsltDtl2'].every(x=>onc.indexOf(x)>0)&&(onc.match(/https:\/\/[a-z.]+/g)||[]).every(u=>u==='https://apis.data.go.kr')
+       &&!onc.split('\n').some(l=>/print\(/.test(l)&&/\bkey\b/.test(l)));
+    const OB=fs.existsSync(__d+'/data/realestate/claude/onbid.json')?JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/onbid.json','utf8')):null;
+    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원 · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||'')&&(x.appraisal==null||x.appraisal<1e7))&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))));
+    ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 안내',
+       /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI));
+  }
   ok('내 경매 장부는 승인된 본인 문서(users/{uid}/realestateClaude/auction)에만 · 페이지의 Firebase 앱을 그대로(getApp) · 저장 때 revision 확인 · 계정 바뀌면 멈춤',
      /getApp\(\)/.test(acc)&&!/initializeApp|initializeFirestore/.test(acc)&&/doc\(db, "users", user\.uid, COL, DOC\)/.test(acc)&&/const COL = "realestateClaude", DOC = "auction";/.test(acc)
      &&/revision !== expectedRevision/.test(acc)&&(acc.match(/mine\(\)/g)||[]).length>=5&&!/setDoc|deleteDoc|collection\(/.test(acc)
