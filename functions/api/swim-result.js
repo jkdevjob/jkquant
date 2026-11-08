@@ -2,7 +2,7 @@
 // 수집기가 공개 자료에 올린 대회만 · 한 번에 원래 사이트 한 요청 · 결과 표를 글자로만 풀어 돌려준다(HTML 을 화면에 넣지 않음 · 저장 안 함).
 //   events: 대회의 종별 · 세부종목 목록(INF202)   rounds: 한 종목의 예선 · 결승 목록(INF301)   round: 한 경기의 순위 · 기록 표(INF306)
 // SW(대한수영연맹)와 UW(대한수중핀수영협회)는 같은 화면 구조다. UW 는 경기 열쇠에 종목 · 종별을 함께 넘긴다.
-import { swimDoc, findSystem, json, edgeCache } from "./_swim_results.js";
+import { swimDoc, findSystem, findFresh, json, edgeCache } from "./_swim_results.js";
 
 export const OPS = {
   events: { path: "INF202.do", body: p => ({ classCd: p.classCd, toCd: p.toCd, pageIndex: "1" }) },
@@ -83,9 +83,10 @@ export function params(u) {
 export async function handle(request, { fetchImpl = fetch, waitUntil = null, docLoader = swimDoc } = {}) {
   const u = new URL(request.url), { p, error } = params(u);
   if (error) return json({ ok: false, error }, 400);
-  let doc;
-  try { doc = await docLoader(u.origin, { fetchImpl }); } catch (e) { return json({ ok: false, error: "수영대회 자료를 읽지 못했습니다" }, 503); }
-  if (!findSystem(doc, p.sys, p.toCd, p.classCd)) return json({ ok: false, error: "수영대회 결과 목록에 없는 대회입니다" }, 403);
+  let known;
+  try { known = await findFresh(u.origin, d => findSystem(d, p.sys, p.toCd, p.classCd), { fetchImpl, docLoader }); }
+  catch (e) { return json({ ok: false, error: "수영대회 자료를 읽지 못했습니다" }, 503); }
+  if (!known) return json({ ok: false, error: "수영대회 결과 목록에 없는 대회입니다" }, 403);
   const cache = edgeCache();
   const key = new Request(`https://swim-result.cache/v1/${p.sys}/${p.op}/${p.classCd}/${p.toCd}/${p.kind}/${p.dc}/${p.rh}`);
   let html = "";

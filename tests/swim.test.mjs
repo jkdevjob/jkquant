@@ -384,6 +384,25 @@ test('결과 중계(결과 시스템) — 종목 · 경기 · 순위표를 글�
   await resultFlow();
 });
 
+async function freshFlow(file = '../functions/api/swim-file.js') {
+  const F = await import(file), S = await import('../functions/api/_swim_results.js');
+  S._setDocForTest(null);
+  const OLD = { schema_version: 2, competitions: [] }, calls = [];
+  const loader = async (origin, o = {}) => { calls.push(!!o.force); return o.force ? DOCX : OLD; };
+  const pdf = 'http://www.busanswimming.kr/data/26-04.pdf';
+  const up = upstream({ [pdf]: new Response(PDFB) });
+  const get = u => F.handle(new Request('https://jkquant.pages.dev/api/swim-file?u=' + encodeURIComponent(u)), { fetchImpl: up.fetchImpl, docLoader: loader });
+  let r = await get(pdf);
+  assert.equal(r.status, 200, '기억해 둔 자료가 예전 것이어도 새로 읽어 방금 올라온 결과를 찾는다');
+  assert.deepEqual(calls, [false, true]);
+  r = await get('https://evil.example/a.pdf');
+  r = await get('https://evil.example/b.pdf');
+  assert.equal(r.status, 403);
+  assert.deepEqual(calls, [false, true, false, false], '새로 읽기는 1분에 한 번만 — 아무 주소로 두드려도 원본을 계속 읽지 않는다');
+  S._setDocForTest(null);
+}
+test('결과 중계 — 수집이 방금 올린 결과: 예전 자료면 한 번 새로 읽어 찾기(1분에 한 번)', async () => { await freshFlow(); });
+
 test('결과 중계 — 변이: 목록 확인 없음 · 글을 안 거침 · 안내 화면을 그대로 · 숨긴 줄 포함 → 빨간불', async () => {
   const cases = [
     ['functions/api/swim-file.js', fileFlow, '목록 확인 없음(열린 중계)', '  if (!ent) return json({ ok: false, error: "수영대회 결과 목록에 없는 파일입니다" }, 403);',
@@ -394,8 +413,10 @@ test('결과 중계 — 변이: 목록 확인 없음 · 글을 안 거침 · 안
       '    jar.delete(kv.slice(0, i));                    // 같은 이름은 나중 값(자리도 뒤로)\n    jar.set(kv.slice(0, i), kv.slice(i + 1));',
       '    if (!jar.has(kv.slice(0, i))) jar.set(kv.slice(0, i), kv.slice(i + 1));'],
     ['functions/api/swim-file.js', fileFlow, '넘겨진 주소를 안 따라감(중간 쿠키 버림)', '      if (!loc) break;', '      break;'],
+    ['functions/api/swim-file.js', freshFlow, '예전 자료만 보고 거절(새로 읽기 없음)', '  try { ent = await findFresh(u.origin, d => findFile(d, want), { fetchImpl, docLoader }); }',
+      '  try { ent = findFile(await docLoader(u.origin, { fetchImpl }), want); }'],
     ['functions/api/swim-result.js', resultFlow, '숨긴 구간 기록 줄 포함', '      if (/\\bid\\s*=\\s*["\']?subResult/i.test(r[1]) || /display\\s*:\\s*none/i.test(r[1])) continue;', ''],
-    ['functions/api/swim-result.js', resultFlow, '목록에 없는 대회도 중계', '  if (!findSystem(doc, p.sys, p.toCd, p.classCd)) return', '  if (false) return'],
+    ['functions/api/swim-result.js', resultFlow, '목록에 없는 대회도 중계', '  if (!known) return json({ ok: false, error: "수영대회 결과 목록에 없는 대회입니다" }, 403);', ''],
   ];
   for (const [path, flow, name, a, b] of cases) {
     const src = fs.readFileSync(path, 'utf8');
