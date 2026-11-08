@@ -134,7 +134,7 @@ const CONB_MUTS=[
   ['지난 물건을 지움','    keep = {x["id"]: x for x in old_items or []}','    keep = {}'],
   ['지난 결과를 지움','        if prev and prev.get("result") and not it.get("result"):','        if False:'],
   ['개찰 전 공고도 결과를 물음','        if mine and str(n.get("cltrOpbdDt") or "") <= now:','        if mine:'],
-  ['한도 초과면 다 버림','            print(str(e), file=sys.stderr)\n            limited = True\n            break\n        except ApiError:\n            raise','            raise\n        except ApiError:\n            raise'],
+  ['한도 초과면 다 버림','            print(str(e), file=sys.stderr)\n            limited = True\n            break\n        except ApiError:   # 인증키·권한 오류(403 포함)는 멈춘다\n            raise','            raise\n        except ApiError:   # 인증키·권한 오류(403 포함)는 멈춘다\n            raise'],
   ['인코딩된 키를 또 인코딩','    return urllib.parse.unquote(k) if "%" in k else k','    return k'],
   ['한 건짜리 응답을 못 읽음','    if isinstance(its, dict):\n        its = [its]\n    return its, int','    return its, int'],
   ['403 도 재시도',"            if e.code == 403:   # 권한 없음은 다시 해도 같다 — 바로 알린다\n                raise Forbidden","            if False:\n                raise Forbidden"],
