@@ -16,7 +16,7 @@ const {acqRate,brokerRate,gainTax}=APT;
 const BASE=(typeof module!=='undefined'&&module.exports)?require('./realestate-claude-engine.js'):g.JKRealEstateClaude;
 const {ymk}=BASE;
 
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 /* 가정 — 화면에서 바꿀 수 있다. 근거 없는 값은 '가정'으로 보이게 한다 */
 const DEFAULTS={
   cut:0.30,           // 유찰 1번마다 최저가 저감률 — 대전지방법원 30%(법원·사건마다 다름 · 매각공고 확인)
@@ -190,7 +190,22 @@ function ledgerSummary(cases){
     avgMyGap:avg(sold.map(c=>c.result.myVsWin)),avgWonDisc:avg(won.map(c=>c.snap.disc))};
 }
 
-const API={VERSION,DEFAULTS,FLAGS,minPriceAt,schedule,rights,costsAt,maxBidFor,analyze,newCase,editBid,setResult,ledgerSummary};
+/* ── 온비드 공매(수집기가 만든 onbid.json) — 끝난 물건 결과 요약 · 🧮 분석 칸으로 넘길 입력 ──
+   공매는 경매와 달리 인도명령이 없다(점유자가 안 나가면 명도소송) — 화면 안내에 쓴다. 금액 단위는 만원(수집기가 바꿔 둠). */
+function isApt(x){ return /아파트/.test(String(x&&x.usage||'')+' '+String(x&&x.name||'')); }
+function onbidSummary(items,onlyApt){
+  const its=(items||[]).filter(x=>!onlyApt||isApt(x));
+  const done=its.filter(x=>x.result&&x.result.status),sold=done.filter(x=>x.result.win>0);
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  return {n:its.length,open:its.length-done.length,done:done.length,sold:sold.length,unsold:done.length-sold.length,
+    avgWinApp:avg(sold.filter(x=>x.result.winApp>0).map(x=>x.result.winApp)),avgBidders:avg(sold.filter(x=>x.result.bidders!=null).map(x=>+x.result.bidders))};
+}
+function onbidToCase(x){
+  return {court:'온비드 공매',caseNo:String(x.onbidCltrno||x.cltrMngNo||''),itemNo:1,name:x.name||'',address:x.addr||'',
+    appraisal:x.appraisal,minPrice:x.minPrice,fails:x.fails||0,saleDate:String(x.bidEnd||'').slice(0,10)};
+}
+
+const API={VERSION,DEFAULTS,FLAGS,minPriceAt,schedule,rights,costsAt,maxBidFor,analyze,newCase,editBid,setResult,ledgerSummary,isApt,onbidSummary,onbidToCase};
 if(typeof module!=='undefined'&&module.exports) module.exports=API;
 g.JKREAuction=API;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -12,6 +12,13 @@
 - main(#606 부동산 경매) 병합 뒤(74c5782c) 다시 `check-before-push.cjs`: **57단계 전부 PASS** · 변이 모두 잡힘 · 전체 회귀 **2822 PASS / 0 FAIL**.
 - 미확인(운영): 11/09(월) 10:00 Worker `gapdown_exit10` 실행 · 장부 `exit10.prices` · 15:40 장부 `exitRule: exit10` · 10:00 매도 알림 / ② 첫 금요일 11/13 15:21 `no_signal_next_day_closed_max24h` + `shadow` — 11/10 06:50 확인 예약. 한투 1분봉 이름이 시작 · 끝 시각 중 어느 쪽인지(예비 가격 1분 안 차이).
 
+## 2026-11-08 · 부동산 클로드 🏛️ 온비드 공매 수집 · 부동산 v1.13.0
+
+- `python scripts/realestate_claude/test_collect_onbid.py`: **22 PASS / 0 FAIL**(가짜 API: 응답 모양 · 인증키/한도/자료 없음 · 대전·세종만 · 원→만원 · 결과 붙이기 · 예전 결과 지키기 · 쌓기 · 한도 초과 2 · 인증 오류 시 파일 그대로).
+- `node scripts/test_realestate_claude_auction.cjs`: **47 PASS**. 변이: 수집기 9종 추가 — 처음 돌렸을 때 '지난 결과를 지움'이 살아남아 시험을 보강한 뒤 잡힘.
+- Chromium 360px(가짜 onbid.json): 진행 중 · 끝난 결과(낙찰 4.3억 · 86% · 6명) · 아파트만 끄기 · 분석에 넣기(물건번호·감정가·최저가) — 가로 넘침 0.
+- 실제 키로 돌린 결과는 병합 뒤 손 실행으로 확인(아래 갱신).
+
 ## 2026-11-08 · 자산플랜 입금 맞춤 · 플랜 v2.0.1
 
 - `scripts/check-plan-deposit.cjs`: ALL PASS · 변이 6/6 빨간불(맞춤 없음 · TECL 안 맞춤 · TQQQ 안 맞춤 · 체결 뒤에도 안 끝남 · 배당도 맞춤 · 입금 합 대신 마지막만).

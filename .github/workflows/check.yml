@@ -201,6 +201,7 @@ jobs:
           node scripts/test_realestate_claude.cjs
           python scripts/realestate_claude/test_collect.py
           node scripts/test_realestate_claude_auction.cjs
+          python scripts/realestate_claude/test_collect_onbid.py
           node scripts/realestate_claude/mutation_test.cjs
 
       - name: 부동산 GPT 투자판단·자금·계약 기록 값 및 변이 검사

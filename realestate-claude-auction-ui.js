@@ -11,7 +11,7 @@ const LINKS=[
   ['온비드(캠코 공매)','https://www.onbid.co.kr/','법원경매가 아닌 공매 — 인터넷으로 입찰합니다'],
   ['KB부동산(시세)','https://kbland.kr/','단지 시세·실거래 확인']
 ];
-const S={sub:'guide',form:null,book:null,bookErr:null,busy:false,msg:null,q:''};   // 입력 중인 사건은 이 창에서만 기억(브라우저 영구저장 금지) — 저장은 내 계정 장부로
+const S={sub:'guide',form:null,book:null,bookErr:null,busy:false,msg:null,q:'',ob:null,obErr:null,obView:'open',obApt:true};   // 입력 중인 사건은 이 창에서만 기억(브라우저 영구저장 금지) — 저장은 내 계정 장부로
 const CSS=`
 .rec .auc .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 10px;margin:6px 0 10px}
 .rec .auc label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--dim);font-weight:700}
@@ -33,7 +33,7 @@ const CSS=`
 let C=null;   // 화면 도우미(realestate-claude.js 가 넘김): A · X · esc · eok · man · pct · pct0 · num · cls · rerender
 
 /* ── 입력 상태 ── */
-function blankForm(){ return {court:'대전지방법원',caseNo:'',itemNo:1,saleDate:'',name:'',complexId:null,area:'',appraisal:'',fails:'1',minPrice:'',resale:false,market:'',marketSrc:'',
+function blankForm(){ return {court:'대전지방법원',caseNo:'',itemNo:1,saleDate:'',name:'',complexId:null,area:'',appraisal:'',fails:'0',minPrice:'',resale:false,market:'',marketSrc:'',
   base:'',tenants:[{deposit:'',moveIn:'',fixed:'',claimed:false}],flags:{},legal:String(U.DEFAULTS.legal),moveOut:String(U.DEFAULTS.moveOut),repair:'0',arrears:'0',loan:'',loanRate:String(U.DEFAULTS.loanRate),bid:'',memo:''}; }
 function loadDraft(){ return blankForm(); }
 function saveDraft(){}
@@ -183,11 +183,34 @@ function bookHtml(){
     return x+'</div>'; }).join('');
   return h;
 }
-function onbidHtml(){
-  return '<div class="card"><h3>🏛️ 온비드 공매 — 준비 중</h3><p class="lead">캠코(한국자산관리공사) 공매는 공공데이터포털에 공식 API가 있어 대전·세종 물건을 매일 자동으로 모아 여기 띄울 수 있습니다. 인증키가 있어야 합니다.</p>'
-    +'<ul class="f"><li>공공데이터포털(data.go.kr) 가입 → <b>‘한국자산관리공사_차세대 온비드 공고목록 조회서비스’</b> 활용신청(무료)</li><li>발급된 인증키를 GitHub 저장소 설정의 Secrets 에 <b>DATA_GO_KR_KEY</b> 이름으로 넣기</li><li>그러면 자동 수집을 켜고 이 칸에 목록을 띄웁니다(키 값은 화면·기록 어디에도 안 남김)</li></ul>'
-    +'<div class="note"><a href="https://www.data.go.kr/data/15157216/openapi.do" target="_blank" rel="noopener">공고목록 조회서비스 신청 페이지</a> · <a href="https://www.onbid.co.kr/" target="_blank" rel="noopener">온비드</a></div></div>';
+async function loadOnbid(){
+  try{ const r=await fetch('/data/realestate/claude/onbid.json',{cache:'no-cache'}); if(r.status===404){ S.ob={items:[],missing:true}; return; } if(!r.ok) throw new Error('HTTP '+r.status); S.ob=await r.json(); S.obErr=null; }
+  catch(e){ S.obErr=e.message||String(e); }
 }
+function onbidHtml(){
+  if(S.obErr) return '<div class="card"><div class="warn">온비드 자료를 불러오지 못했습니다: '+C.esc(S.obErr)+'</div></div>';
+  if(!S.ob){ loadOnbid().then(()=>C.rerender()); return '<div class="card"><div class="note">온비드 자료를 불러오는 중…</div></div>'; }
+  if(S.ob.missing||!(S.ob.items||[]).length) return '<div class="card"><h3>🏛️ 온비드 공매</h3><div class="note">아직 모은 물건이 없습니다. 매일 아침 7시쯤 대전·세종 물건을 자동으로 모읍니다(인증키 DATA_GO_KR_KEY).</div></div>';
+  const all=S.ob.items||[],sm=U.onbidSummary(all,S.obApt),open=S.obView==='open';
+  const list=all.filter(x=>(!S.obApt||U.isApt(x))&&(open?!x.result:!!x.result)).sort((a,b)=>open?String(a.bidEnd||'').localeCompare(String(b.bidEnd||'')):String(b.opbd||'').localeCompare(String(a.opbd||'')));
+  let h='<div class="card"><h3>🏛️ 온비드 공매 — 대전·세종</h3>'
+    +'<div class="note">캠코 공식 API · 수집 '+C.esc(String(S.ob.updated||'').slice(0,10))+' · 개찰일 '+C.esc(fmtYmd(S.ob.window&&S.ob.window.opbdStart))+' ~ '+C.esc(fmtYmd(S.ob.window&&S.ob.window.opbdEnd))+' · 쌓인 물건 '+all.length+'건</div>'
+    +'<div class="acts"><button class="btn'+(open?' on':'')+'" data-ob="open">진행 중</button><button class="btn'+(!open?' on':'')+'" data-ob="done">끝난 결과</button><label class="ck"><input type="checkbox" data-obapt'+(S.obApt?' checked':'')+'> 아파트만</label></div>'
+    +(sm.sold?'<div class="kv"><span>끝난 '+(S.obApt?'아파트 ':'')+'물건 낙찰</span><b>'+sm.sold+'건 / '+sm.done+'건 · 평균 낙찰가율 '+C.pct0(sm.avgWinApp)+' · 평균 '+(sm.avgBidders==null?'–':sm.avgBidders.toFixed(1))+'명</b></div>':'')
+    +'<div class="warn">공매는 경매와 달리 <b>인도명령이 없습니다</b> — 사는 사람이 안 나가면 명도소송을 해야 합니다. 처음이면 빈집이나 소유자가 사는 물건부터 보세요. 입찰은 온비드 사이트에서 인터넷으로 합니다.</div></div>';
+  if(!list.length) h+='<div class="card"><div class="note">'+(open?'지금 진행 중인':'끝난')+' '+(S.obApt?'아파트 ':'')+'물건이 없습니다.</div></div>';
+  h+=list.slice(0,60).map(x=>{ const r=x.result,ratio=x.minPrice&&x.appraisal?x.minPrice/x.appraisal:null;
+    return '<div class="card"><div class="note">'+C.esc(x.prpt||'')+' · '+C.esc(x.usage||'')+' · '+C.esc(x.round?x.round+'회차':'')+(x.fails?' · 유찰 '+x.fails+'번':'')+'</div>'
+      +'<div class="et">'+C.esc(x.name||'')+'</div><div class="note">'+C.esc(x.addr||'')+'</div>'
+      +'<div class="kv"><span>감정가 · 최저가</span><b>'+C.eok(x.appraisal)+' · '+(x.minPrice?C.eok(x.minPrice)+' <span class="note">('+C.pct0(ratio,0)+')</span>':'<span class="note">비공개</span>')+'</b></div>'
+      +'<div class="kv"><span>입찰 · 개찰</span><b>'+C.esc((x.bidStart||'').slice(5))+' ~ '+C.esc((x.bidEnd||'').slice(5))+' · '+C.esc((x.opbd||'').slice(5))+'</b></div>'
+      +(r?'<div class="kv"><span>결과</span><b class="'+(r.win?'up':'')+'">'+C.esc(r.status||'')+(r.win?' '+C.eok(r.win)+' · 감정가 대비 '+C.pct0(r.winApp)+(r.bidders!=null?' · '+r.bidders+'명':''):'')+'</b></div>':'')
+      +'<div class="note">'+C.esc(x.org||'')+(x.branch?' · '+C.esc(x.branch):'')+' · 온비드 물건번호 '+C.esc(x.onbidCltrno||x.cltrMngNo||'')+'</div>'
+      +(r?'':'<div class="acts"><button class="btn pri" data-obcase="'+C.esc(x.id)+'">🧮 분석에 넣기</button><a class="btn" href="https://www.onbid.co.kr/" target="_blank" rel="noopener">온비드에서 보기</a></div>')+'</div>'; }).join('');
+  if(list.length>60) h+='<div class="note">앞의 60건만 보입니다.</div>';
+  return h;
+}
+const fmtYmd=s=>{ s=String(s||''); return s.length===8?s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6):s; };
 
 /* ── 입력 연결 ── */
 function setF(k,v){ S.form[k]=v; saveDraft(); }
@@ -209,6 +232,12 @@ function bind(el){
   el.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>act(b.getAttribute('data-act')));
   el.querySelectorAll('[data-res]').forEach(b=>b.onclick=()=>result(b));
   el.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>del(b.getAttribute('data-del')));
+  el.querySelectorAll('[data-ob]').forEach(b=>b.onclick=()=>{ S.obView=b.getAttribute('data-ob'); C.rerender(); });
+  const oa=el.querySelector('[data-obapt]'); if(oa) oa.onchange=()=>{ S.obApt=oa.checked; C.rerender(); };
+  el.querySelectorAll('[data-obcase]').forEach(b=>b.onclick=()=>{ const x=(S.ob.items||[]).find(i=>i.id===b.getAttribute('data-obcase')); if(!x) return;
+    const c=U.onbidToCase(x),f=blankForm();
+    Object.assign(f,{court:c.court,caseNo:c.caseNo,itemNo:1,saleDate:c.saleDate,name:c.name+(c.address?' · '+c.address:''),appraisal:c.appraisal==null?'':String(c.appraisal),fails:String(c.fails||0),minPrice:c.minPrice==null?'':String(c.minPrice)});
+    S.form=f; S.sub='calc'; S.msg='온비드 물건을 넣었습니다 — 시세와 권리, 내 입찰가를 넣어 보세요.'; C.rerender(); });
 }
 async function act(a){
   const f=S.form;
