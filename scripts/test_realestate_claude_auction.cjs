@@ -100,20 +100,43 @@ console.log('[부동산 클로드 경매] 모의입찰 장부');
   ok('장부 요약: 4건 · 결과 3 · 낙찰 2 · 유찰 1 · 이겼을 것 1 · 평균 낙찰가율', S.n===4&&S.done===3&&S.sold===2&&S.unsold===1&&S.won===1&&near(S.avgWinApp,(23500+22000)/2/30000)&&near(S.avgWonDisc,c.snap.disc), JSON.stringify(S));
 }
 
-console.log('[부동산 클로드 경매] 온비드 공매 요약 · 분석 칸으로');
+console.log('[부동산 클로드 경매] 온비드 공매 — 회차를 물건으로 묶기 · 요약 · 분석 칸으로');
 {
+  const T='2026-11-08';
   const its=[
-    {name:'둔산동 ○○아파트',usage:'토지/건물 > 주거용건물 > 아파트',appraisal:50000,minPrice:40000,fails:2,bidEnd:'2026-10-29 17:00',onbidCltrno:'2026-0001-001',addr:'대전 서구',result:{status:'낙찰',win:43000,winApp:0.86,bidders:6}},
-    {name:'한솔동 ○○아파트',usage:'주거용건물 > 아파트',appraisal:30000,result:{status:'낙찰',win:24000,winApp:0.8,bidders:2}},
-    {name:'유성 상가',usage:'상가용및업무용건물',appraisal:20000,result:{status:'유찰'}},
-    {name:'세종 토지',usage:'토지 > 대지',appraisal:10000,result:null}];
-  const all=U.onbidSummary(its),apt=U.onbidSummary(its,true);
-  ok('공매 요약: 4건 · 끝난 3 · 낙찰 2 · 유찰 1 · 평균 낙찰가율 83% · 평균 입찰자 4명', all.n===4&&all.done===3&&all.sold===2&&all.unsold===1&&near(all.avgWinApp,0.83)&&near(all.avgBidders,4), JSON.stringify(all));
-  ok('아파트만: 2건 · 둘 다 낙찰', apt.n===2&&apt.sold===2&&apt.open===0);
-  const c=U.onbidToCase(its[0]);
-  ok('분석 칸으로: 온비드 물건번호 · 감정가 · 공고 최저가 · 유찰 횟수 · 입찰 마감일', c.court==='온비드 공매'&&c.caseNo==='2026-0001-001'&&c.appraisal===50000&&c.minPrice===40000&&c.fails===2&&c.saleDate==='2026-10-29');
-  const a=U.analyze({appraisal:c.appraisal,minPrice:c.minPrice,round:c.fails+1,bid:42000,market:52000},{},NOW);
-  ok('공고 최저가가 있으면 그 값을 쓴다(저감 계산 안 함)', a.minPrice===40000&&a.deposit===4000);
+    // 아파트 A: 1회차 유찰 → 2회차 진행 예정(최저가 4.5억)
+    {cltrMngNo:'A',name:'둔산동 ○○아파트',usage:'주거용건물 > 아파트',appraisal:50000,minPrice:50000,round:'1',fails:0,bidEnd:'2026-11-04 17:00',status:'유찰',onbidCltrno:'2026-A'},
+    {cltrMngNo:'A',name:'둔산동 ○○아파트',usage:'주거용건물 > 아파트',appraisal:50000,minPrice:45000,round:'2',fails:1,bidEnd:'2026-11-11 17:00',status:'입찰준비중',onbidCltrno:'2026-A'},
+    // 아파트 B: 1회차 유찰 → 2회차 낙찰(결과 금액 있음) → 3회차 취소
+    {cltrMngNo:'B',name:'한솔동 ○○아파트',usage:'아파트',appraisal:30000,minPrice:30000,round:'1',bidEnd:'2026-10-01 17:00',status:'유찰'},
+    {cltrMngNo:'B',name:'한솔동 ○○아파트',usage:'아파트',appraisal:30000,minPrice:27000,round:'2',bidEnd:'2026-10-08 17:00',status:'낙찰',result:{status:'낙찰',win:28000,bidders:4}},
+    {cltrMngNo:'B',name:'한솔동 ○○아파트',usage:'아파트',appraisal:30000,minPrice:24000,round:'3',bidEnd:'2026-10-15 17:00',status:'취소'},
+    // 상가 C: 다 취소 · 지난 회차만
+    {cltrMngNo:'C',name:'유성 상가',usage:'상가용및업무용건물',appraisal:20000,minPrice:10000,round:'5',bidEnd:'2026-10-28 17:00',status:'취소'},
+    // 땅 D: 낙찰(금액 모름 — 입찰결과 API 권한 전) · 감정가가 회차에 따라 빈 값
+    {cltrMngNo:'D',name:'대지',usage:'토지 > 대지',appraisal:null,minPrice:5000,round:'1',bidEnd:'',status:'낙찰'},
+    // E: 낙찰 뒤 잔금 안 내 재공매 — 새 회차가 열려 있으면 진행 중
+    {cltrMngNo:'E',name:'재공매 상가',usage:'상가',appraisal:10000,minPrice:9000,round:'1',bidEnd:'2026-10-01 17:00',status:'낙찰'},
+    {cltrMngNo:'E',name:'재공매 상가',usage:'상가',appraisal:10000,minPrice:9000,round:'2',bidEnd:'2026-11-20 17:00',status:'입찰준비중'},
+    // F: 앞으로 있을 회차가 취소됨 → 끝남 / G: 상태는 준비중인데 마감일이 지남(묵은 자료) → 끝남
+    {cltrMngNo:'F',name:'취소된 예정',usage:'대지',appraisal:5000,minPrice:5000,round:'1',bidEnd:'2026-11-20 17:00',status:'취소'},
+    {cltrMngNo:'G',name:'묵은 준비중',usage:'대지',appraisal:5000,minPrice:5000,round:'1',bidEnd:'2026-10-01 17:00',status:'입찰준비중'}];
+  const G=U.onbidGroups(its,T),g=k=>G.find(x=>x.key===k);
+  ok('회차를 물건으로: 11줄 → 7물건', G.length===7);
+  ok('A: 진행 중 · 다음 회차 2회차(11-11) · 지금 최저가 4.5억', g('A').state==='open'&&g('A').next.round==='2'&&g('A').minNow===45000&&g('A').rounds.length===2&&g('A').apt);
+  ok('B: 낙찰(2회차 2.8억 · 4명) — 뒤 회차 취소는 상관없음', g('B').state==='sold'&&g('B').sold.round==='2'&&g('B').win===28000&&g('B').bidders===4&&g('B').next===null);
+  ok('C: 끝남(다 취소·지난 회차)', g('C').state==='done'&&g('C').next===null&&!g('C').apt);
+  ok('D: 낙찰이지만 금액 모름 · 감정가 없음', g('D').state==='sold'&&g('D').win===null&&g('D').appraisal===null);
+  ok('E: 낙찰 뒤 재공매 회차가 열려 있으면 진행 중(지난 낙찰은 기록으로)', g('E').state==='open'&&g('E').next.round==='2'&&g('E').sold.round==='1');
+  ok('F: 앞으로 있을 회차가 취소면 끝남 · G: 마감일 지난 준비중은 끝남', g('F').state==='done'&&g('G').state==='done');
+  ok('진행 중이 먼저(마감 가까운 순)', G[0].key==='A'&&G[1].key==='E');
+  const all=U.onbidSummary(G),apt=U.onbidSummary(G,true);
+  ok('요약: 7물건 · 진행 2 · 낙찰 2 · 끝남 3 · 금액 있는 낙찰 1(감정가 대비 93.3%) · 평균 4명', all.n===7&&all.open===2&&all.sold===2&&all.done===3&&all.priced===1&&near(all.avgWinApp,28000/30000)&&near(all.avgBidders,4), JSON.stringify(all));
+  ok('아파트만: 2물건 · 진행 1 · 낙찰 1', apt.n===2&&apt.open===1&&apt.sold===1);
+  const c=U.onbidToCase(g('A'));
+  ok('분석 칸으로: 다음 회차 최저가 · 유찰 횟수 · 마감일 · 물건 감정가', c.court==='온비드 공매'&&c.caseNo==='2026-A'&&c.appraisal===50000&&c.minPrice===45000&&c.fails===1&&c.saleDate==='2026-11-11');
+  const a=U.analyze({appraisal:c.appraisal,minPrice:c.minPrice,round:c.fails+1,bid:46000,market:52000},{},NOW);
+  ok('공고 최저가가 있으면 그 값을 쓴다(저감 계산 안 함)', a.minPrice===45000&&a.deposit===4500);
 }
 
 console.log(`\n결과: ${pass} PASS / ${fail} FAIL`);

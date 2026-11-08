@@ -142,5 +142,53 @@ try:
 except O.ApiError:
     ok("인증키 오류면 멈추고 파일은 그대로", open(out, encoding="utf-8").read() == before)
 
+# 상태 이름 — 이름 칸에 코드가 오면 이름으로(실제 자료에서 '0001' 267건)
+ok("상태: 코드(0001)는 이름으로 · 이름은 그대로 · 이름 없으면 코드로", O.stat_name("0001", "0001") == "입찰준비중" and O.stat_name("낙찰", "0009") == "낙찰" and O.stat_name("", "0003") == "입찰마감" and O.stat_name("9999", None) == "상태 9999" and O.stat_name(None, None) is None)
+# 목록은 끝까지 읽는다 — 전국 공고가 1만 줄을 넘는다(옛 상한 60쪽에서 잘림)
+pages = []
+def many(url, params):
+    pages.append(params["pageNo"])
+    return resp([{"pbancMngNo": "P%d" % params["pageNo"]}], total=70)
+got, tot = O.list_notices("k", "20260101", "20260201", many)
+ok("공고 목록: 60쪽을 넘어도 끝까지(70쪽)", len(got) == 70 and tot == 70 and pages[-1] == 70, (len(got), pages[-1]))
+# HTTP 403 — 그 API 승인 안 됨: 바로(재시도 없이) Forbidden
+import urllib.error, urllib.request, io
+calls403 = []
+def urlopen403(req, timeout=None):
+    calls403.append(1)
+    raise urllib.error.HTTPError(req.full_url, 403, "Forbidden", {}, io.BytesIO(b""))
+real = urllib.request.urlopen
+urllib.request.urlopen = urlopen403
+try:
+    O.get_json(O.RSLT_URL, {"serviceKey": "k"})
+    ok("HTTP 403 은 재시도 없이 Forbidden", False, "예외 없음")
+except O.Forbidden as e:
+    ok("HTTP 403 은 재시도 없이 Forbidden(활용신청 승인 확인 안내)", len(calls403) == 1 and "승인" in str(e), (len(calls403), e))
+finally:
+    urllib.request.urlopen = real
+# ③ 만 403 이면 한 번만 부르고 경고로 남긴다(나머지 자료 · 종료 코드 0)
+NOTICES[:] = [{"pbancMngNo": "F1", "rspbSbrNm": "대전충남지역본부", "cltrOpbdDt": "202611011100"}, {"pbancMngNo": "F2", "rspbSbrNm": "대전충남지역본부", "cltrOpbdDt": "202611021100"}]
+ITEMS["F1"] = [{"pbancMngNo": "F1", "cltrMngNo": "D1", "cltrAdr": "대전 서구 1", "pbctNsq": "1", "apslEvlAmt": 100000000, "pbctStatNm": "유찰"}]
+ITEMS["F2"] = [{"pbancMngNo": "F2", "cltrMngNo": "D2", "cltrAdr": "세종 한솔동 1", "pbctNsq": "1", "apslEvlAmt": 200000000, "pbctStatNm": "낙찰"}]
+rcalls = []
+def forb(url, params):
+    if url == O.RSLT_URL:
+        rcalls.append(params["pbancMngNo"])
+        raise O.Forbidden("getPbancBidRsltDtl2: HTTP 403")
+    return fake(url, params)
+out4 = os.path.join(tempfile.mkdtemp(), "onbid.json")
+code4 = O.main(getj=forb, out=out4, today=dt.date(2026, 11, 8))
+doc4 = json.load(open(out4, encoding="utf-8"))
+ok("③ 입찰결과만 403: 한 번만 부르고 경고(rsltForbidden) · 물건은 저장 · 종료 코드 0", code4 == 0 and rcalls == ["F1"] and doc4["warnings"] == ["rsltForbidden"] and {x["cltrMngNo"] for x in doc4["items"]} == {"D1", "D2"}, (code4, rcalls, doc4.get("warnings")))
+def forb2(url, params):
+    if url == O.ITEM_URL:
+        raise O.Forbidden("getPbancCltrInf2: HTTP 403")
+    return fake(url, params)
+try:
+    O.main(getj=forb2, out=out4, today=dt.date(2026, 11, 8))
+    ok("② 물건정보가 403 이면 멈춘다(쓸 자료가 없다)", False, "예외 없음")
+except O.ApiError:
+    ok("② 물건정보가 403 이면 멈춘다(쓸 자료가 없다)", True)
+
 print("\n결과: %d PASS / %d FAIL" % (passed, failed))
 sys.exit(1 if failed else 0)

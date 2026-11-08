@@ -12372,8 +12372,8 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        &&!onc.split('\n').some(l=>/print\(/.test(l)&&/\bkey\b/.test(l)));
     const OB=fs.existsSync(__d+'/data/realestate/claude/onbid.json')?JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/onbid.json','utf8')):null;
     ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원 · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||'')&&(x.appraisal==null||x.appraisal<1e7))&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))));
-    ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 안내',
-       /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI));
+    ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 묶기(onbidGroups)·요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 · 입찰결과 권한 안내',
+       /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidGroups\(/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI)&&/rsltForbidden/.test(aucUI));
   }
   ok('내 경매 장부는 승인된 본인 문서(users/{uid}/realestateClaude/auction)에만 · 페이지의 Firebase 앱을 그대로(getApp) · 저장 때 revision 확인 · 계정 바뀌면 멈춤',
      /getApp\(\)/.test(acc)&&!/initializeApp|initializeFirestore/.test(acc)&&/doc\(db, "users", user\.uid, COL, DOC\)/.test(acc)&&/const COL = "realestateClaude", DOC = "auction";/.test(acc)
