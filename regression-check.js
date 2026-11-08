@@ -12371,14 +12371,19 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        &&['OnbidPbancListSrvc2/getPbancList2','OnbidPbancCltrDtlSrvc2/getPbancCltrInf2','OnbidPbancBidRsltDtlSrvc2/getPbancBidRsltDtl2'].every(x=>onc.indexOf(x)>0)&&(onc.match(/https:\/\/[a-z.]+/g)||[]).every(u=>u==='https://apis.data.go.kr')
        &&!onc.split('\n').some(l=>/print\(/.test(l)&&/\bkey\b/.test(l)));
     const OB=fs.existsSync(__d+'/data/realestate/claude/onbid.json')?JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/onbid.json','utf8')):null;
-    // 금액 단위(만원) — 물건 하나의 크기로 정하지 않는다(교보자산신탁 유천동 61필지 일괄매각 감정가 1,258억이 실제로 있다).
+    // 금액 단위(만원) — 물건 하나의 크기로 정하지 않는다(교보자산신탁 유천동 61필지 일괄매각 감정가 1,258억 = 12,584,244만원이 실제로 있다 · 자료는 맞다).
     // 원을 만원으로 안 바꾸면 모든 값이 1만 배 → 가운데값이 100억(1e6 만원)을 넘거나 한 건이라도 1조(1e8 만원)를 넘는다.
+    // #611 이 같은 빨간불을 가운데값으로 먼저 고쳤다 — 여기서 하나로 합쳤다(가운데값 · 한 건 1조 미만 · 최저가도 · 0 이상 유한한 수).
     const obUnit=o=>{ const v=o.items.map(x=>x.appraisal).filter(x=>x!=null).sort((a,b)=>a-b),m=o.items.map(x=>x.minPrice).filter(x=>x!=null);
-      return v.concat(m).every(x=>x>=0&&x<1e8)&&(!v.length||v[Math.floor((v.length-1)/2)]<1e6); };
-    ok('온비드 금액 단위 검사: 만원이면 통과(1,258억 큰 물건 포함) · 원 그대로면 걸림(최저가만 원 그대로 · 작은 값만 여럿)',
+      return v.concat(m).every(x=>Number.isFinite(x)&&x>=0&&x<1e8)&&(!v.length||v[Math.floor((v.length-1)/2)]<1e6); };
+    const obAp=OB&&Array.isArray(OB.items)?OB.items.map(x=>x.appraisal).filter(v=>v!=null).sort((a,b)=>a-b):[],obMed=obAp.length?obAp[Math.floor((obAp.length-1)/2)]:0;
+    ok('온비드 금액 단위 검사: 만원이면 통과(1,258억 큰 물건 포함) · 원 그대로면 걸림(최저가만 원 그대로 · 작은 값만 여럿) · 글자 금액도 걸림',
        obUnit({items:[{appraisal:57200,minPrice:34440},{appraisal:12584244,minPrice:7680000},{appraisal:47,minPrice:null}]})
-       &&!obUnit({items:[{appraisal:57200,minPrice:344400000}]})&&!obUnit({items:[{appraisal:27000000},{appraisal:57200000},{appraisal:28000000,minPrice:null}]}));
-    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원 · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||''))&&obUnit(OB)&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))));
+       &&!obUnit({items:[{appraisal:57200,minPrice:344400000}]})&&!obUnit({items:[{appraisal:27000000},{appraisal:57200000},{appraisal:28000000,minPrice:null}]})
+       &&!obUnit({items:[{appraisal:'57200',minPrice:34440}]}));
+    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원(가운데값 100억 미만 · 한 건 1조 미만 · 0 이상 유한) · 인증키 흔적 없음',
+       !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||''))&&obUnit(OB)&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))),
+       '감정가 가운데값 '+obMed+'만원 · 물건 '+((OB&&OB.items||[]).length));
     ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 묶기(onbidGroups)·요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 · 입찰결과 권한 안내',
        /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidGroups\(/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI)&&/rsltForbidden/.test(aucUI));
   }
@@ -12735,8 +12740,8 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-08 — 5년 규칙 벌(새 규칙·공격형) 시험 2개(check-plan-rules-exp · check-plan-rules-session)는 규칙 폐지와 함께 빠졌다.
      폐지 자체(규칙 하나 · 10·15·20년 거절 · 폐지 세션 숨김 · 기본 결과 = 개편 전 엔진)와 클로드/지피티 탭은 check-plan-claude-tab 이 본다. */
   const pct=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-claude-tab.cjs')],{encoding:'utf8'});
-  ok('자산플랜 v2 🤖 클로드/⚡ 지피티 탭 · 5년 듀얼 가드 하나: 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·탭 전환·폐지 세션 숨김·모의 목록·변이 14종',
-     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 14/14 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
+  ok('자산플랜 v2 🤖 클로드/⚡ 지피티 탭 · 5년 듀얼 가드 하나: 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·탭 전환·폐지 세션 숨김·모의 목록·지피티 저장 창구·변이 18종',
+     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 18/18 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
   /* 2026-11-08 — 입금 맞춤: 모의 엔진은 입금일 전체 맞춤(force)인데 운영 화면은 신호 없으면 현금으로 두던 갈림을 고침(plan 2.0.1) */
   const pdp=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-deposit.cjs')],{encoding:'utf8'});
   ok('자산플랜 입금 맞춤: 마지막 체결 뒤 입금 → 전체 맞춤 · 운영 주문표 = 모의 엔진 입금일 체결(21일 전부) · 변이 6종',
