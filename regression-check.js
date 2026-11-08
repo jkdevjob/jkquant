@@ -11304,9 +11304,9 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   ok('SOXL 현재 기준/그림자 전략은 모두 당일청산 범위',
      holdBars.length>0 && holdBars.every(x=>x<=78)
      && /반드시 당일 청산/.test(soxlDoc));
-  ok('단타 보유정책은 기본 당일청산, 예외도 최대 5거래일·6일 이상 금지',
-     /최대 5거래일/.test(scl) && /6거래일 이상/.test(scl)
-     && /최대 5거래일/.test(soxlDoc) && /6거래일 이상/.test(soxlDoc));
+  ok('GPT 메인은 시각 제한 유지 · 승인된 연장형은 주문 없는 독립 그림자',
+     /시초가 09:30 · 데이 15:10 · BTC 최대 60분 · SOXL 최대 90분/.test(scl)
+     && /연장 보유와 시간 제한 없는 비교는 주문 없이 별도 그림자 모의장부/.test(scl));
   ok('SOXL Worker는 11:30까지만 신규신호, 장 종료 뒤 16:05 ET까지 최종 장부 갱신',
      /SOXL_LAST_SIGNAL_HM=1130/.test(globalWorker)
      && /SOXL_PAPER_TRACK_END_HM=1605/.test(globalWorker)
@@ -11403,7 +11403,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   { // cron 한 줄(무료 요금제 계정당 5개 한도) → 한 주 전체 예약시각을 scheduleRoute 로 돌려 실제 할 일을 센다
     const crons=JSON.parse(wr).triggers.crons;
     const fnSrc=ow.slice(ow.indexOf('export function scheduleRoute('),ow.indexOf('\n}\n',ow.indexOf('export function scheduleRoute('))+2).replace('export ','');
-    const route=new Function(fnSrc+'\nreturn scheduleRoute;')();
+    const holdingPolicy=require('./functions/api/_gpt-holding-lab.js');
+    const route=new Function('holdingClock','HOLDING_START',fnSrc+'\nreturn scheduleRoute;')(holdingPolicy.holdingClock,holdingPolicy.HOLDING_START);
     const expand=(f,max)=>f==='*'?Array.from({length:max},(_,i)=>i):f.split(',').flatMap(x=>{const m=x.match(/^(\d+)-(\d+)$/);if(!m)return [+x];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(i);return a;});
     const count={};
     for(let d=0;d<7;d++)for(const c of crons){const [mi,h]=c.split(' ');for(const hh of expand(h,24))for(const mm of expand(mi,60)){
@@ -11424,6 +11425,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&route(Date.parse('2026-10-05T06:21:00Z'))==='gapdown_close'&&route(Date.parse('2026-10-05T06:40:00Z'))==='gapdown_reconcile'
        &&route(Date.parse('2026-10-05T00:05:00Z'))==='opening'&&route(Date.parse('2026-10-05T00:31:00Z'))==='opening'
        &&route(Date.parse('2026-10-05T06:31:00Z'))===null,JSON.stringify(count));
+    ok('GPT 새 종가 30/60분과 15:15 종료/15:16 정산 · 기존 텐배거 15:23 경로 보존',
+      [['05:14','closing_hour_signal'],['05:15','closing_hour_entry'],['05:44','closing_day_signal'],['05:45','closing_day_entry'],['06:15','research_close'],['06:16','closing_settle'],['06:23','research_close']]
+       .every(([hm,expected])=>route(Date.parse('2026-11-09T'+hm+':00Z'))===expected)
+      &&route(Date.parse('2026-11-09T06:22:00Z'))===null);
   }
   // 알림 정책(사용자 요청 2026-10-13): 모든 연구 메뉴는 실제 매수·매도 때만 — 주간·판단·마감 결과 텔레그램 없음
   ok('클로드 알림: 주간 · 08:56 판단 · 15:21 판단 · 마감 결과 텔레그램 호출 없음(Worker) · 매수·매도 감시를 ①② 기록 직후에도 바로 돌림',
@@ -12250,8 +12255,9 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   }
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
+    const alarm=wk.slice(wk.indexOf('async alarm(){'),wk.indexOf('async pushOp('));
     ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만 · 켜기/끄기는 설정 → 알림 한 곳(연구 화면 상단 상태 줄과 🔔 버튼은 2026-10-14 사용자 요청으로 삭제)',
-       JSON.parse(wr).triggers.crons.join()==="0,5-31,40,56 0,1,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
+       JSON.parse(wr).triggers.crons.join()==="0,5-31,40,44,45,56 0,1,5,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(alarm)&&/finally\{[\s\S]*await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);/.test(alarm)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
        &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(fs.readFileSync(__d+'/claude-push-client.js','utf8'))

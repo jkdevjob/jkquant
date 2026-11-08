@@ -1,3 +1,4 @@
+import {HOLDING_START,CLOSING_VERSION,holdingClock} from './_gpt-holding-lab.js';
 // 종가 30분 연구 엔진. 시점 고정(lookahead 방지), 종가 경매는 15:40 후 확정.
 // 매매는 종이모의(paper)만. 실계좌/KIS VTS 주문 경로에 연결하지 않는다.
 export const CLOSE_VARIANTS=Object.freeze([
@@ -38,14 +39,21 @@ export function qualifying(f,v){
   if(v.side==="flat")return Math.abs(f.intradayPct)<v.threshold;
   return true;
 }
-export function chooseClosingSignals(stockFeatures,model,limit=3){
+export function closingWindow(kind,date=holdingClock(Date.now()).date){
+ if(date<HOLDING_START)return kind==='hour'?null:{version:'closing30_v1',signalHm:kind==='day'?1506:1522,cutoff:kind==='day'?1504:1520,entryHm:kind==='day'?1507:1540,entryPriceHm:kind==='day'?1506:1530,exitHm:1530,settleHm:1540};
+ if(kind==='overnight')return null;
+ if(!['day','hour'].includes(kind))return null;
+ return {version:CLOSING_VERSION,signalHm:kind==='day'?1444:1414,cutoff:kind==='day'?1443:1413,entryHm:kind==='day'?1445:1415,entryPriceHm:kind==='day'?1444:1414,exitHm:1515,exitPriceHm:1514,settleHm:1516};
+}
+export function chooseClosingSignals(stockFeatures,model,limit=3,date){
+  const window=closingWindow(model,date);if(!window)return [];
   const all=[];
   for(const v of CLOSE_VARIANTS){
     const matches=stockFeatures.filter(s=>qualifying(s.feature,v))
       .sort((a,b)=>b.feature.liquidity-a.feature.liquidity||String(a.code).localeCompare(String(b.code)))
       .slice(0,limit);
     for(const x of matches)all.push({kind:model,variant:v.id,variantLabel:v.label,code:x.code,name:x.name,
-      strategyParams:{...v,maxTrades:limit,frictionPct:CLOSE_FEES_PCT,signalCutoff:model==="day"?1504:1520,entry:model==="day"?"next_completed_minute_proxy":"official_close",exit:model==="day"?"official_close":"next_session_open"},signal:x.feature,signalHm:x.feature.signalHm,fillStatus:"signal_only",strategyVersion:"close30-paper-v1"});
+      strategyParams:{...v,maxTrades:limit,frictionPct:CLOSE_FEES_PCT,signalCutoff:window.cutoff,entry:model==="overnight"?"official_close":"next_completed_minute_proxy",exit:model==="overnight"?"next_session_open":window.version===CLOSING_VERSION?"15:14_completed_close_for_15:15_deadline":"official_close",entryHm:window.entryHm,exitHm:window.exitHm},signal:x.feature,signalHm:x.feature.signalHm,fillStatus:"signal_only",strategyVersion:window.version});
   }
   return all;
 }

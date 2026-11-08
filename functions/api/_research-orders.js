@@ -1,3 +1,5 @@
+import {closingWindow} from './_closing30.js';
+import {HOLDING_START} from './_gpt-holding-lab.js';
 // Broker plans reference already persisted research evidence. No signal discovery or fills here.
 export const RESEARCH_BROKER_VERSION='research_kis_vts_v1';
 export const BROKER_STRATEGIES=['gpt_daytrading','gpt_closing30','gpt_closing_bet','gpt_soxl','gpt_tenbagger'];
@@ -22,7 +24,9 @@ export function validateBrokerPlan(p,now=Date.now()){
  const hm=clock.hm;
  if(p.strategy==='gpt_daytrading'&&(hm<1000||hm>(p.side==='buy'?1433:1512)))return '데이트레이딩 주문 시간 아님';
  if(p.strategy==='gpt_soxl'&&(hm<945||hm>1558||(p.side==='buy'&&hm>1136)))return 'SOXL 정규장 주문 시간 아님';
- if(p.strategy==='gpt_closing30'&&(p.side==='buy'?(hm<1507||hm>1509):(hm<1523||hm>1527)))return '종가 30분 주문 시간 아님';
+ const closeWindow=closingWindow('day',session);
+ if(p.strategy==='gpt_closing30'&&(p.side==='buy'?(hm<closeWindow.entryHm||hm>closeWindow.entryHm+2):(hm<(session>=HOLDING_START?1515:1523)||hm>(session>=HOLDING_START?1519:1527))))return '종가 30분 주문 시간 아님';
+ if(p.strategy==='gpt_closing_bet'&&p.side==='buy'&&session>=HOLDING_START)return '익일시가 신규 진입 중단';
  if(p.strategy==='gpt_closing_bet'&&(p.side==='buy'?(hm<1523||hm>1527):(hm<856||hm>859)))return '종가 베팅 주문 시간 아님';
  if(p.strategy==='gpt_tenbagger'&&(hm<1523||hm>1527))return '텐배거 종가 주문 시간 아님';
  return '';
@@ -47,16 +51,19 @@ export function soxlBrokerPlans(ledger,now=Date.now()){
  if(!ledger||ledger.mode!=='server-live-paper-no-order'||ledger.strategy!=='soxl')return [];
  return (ledger.trades||[]).flatMap(x=>{
   const out=[];if(!x.id)return out;
-  if(x.entryMs>0&&x.entryPrice>0&&x.deadlineMs>0&&now>=x.entryMs)out.push(plan('gpt_soxl',ledger,x,'buy',x.entryMs,x.entryMs+6*60000,{exitDueAt:iso(x.deadlineMs)}));
-  const due=x.status==='closed'&&x.exitMs>0?x.exitMs+5*60000:x.deadlineMs;
-  if(due>0&&now>=due)out.push(plan('gpt_soxl',ledger,x,'sell',due,due+3*60000,{source:{tradeId:x.id,reason:x.status==='closed'?x.reason:'broker_holding_deadline'}}));
+  const sessionDeadline=x.sessionEndMs>0?x.sessionEndMs-2*60000:Infinity;
+  if(x.entryMs>0&&x.entryPrice>0&&x.deadlineMs>0&&now>=x.entryMs&&now<sessionDeadline)out.push(plan('gpt_soxl',ledger,x,'buy',x.entryMs,Math.min(x.entryMs+6*60000,sessionDeadline),{exitDueAt:iso(Math.min(x.deadlineMs,sessionDeadline))}));
+  const due=Math.min(x.status==='closed'&&x.exitMs>0?x.exitMs+5*60000:x.deadlineMs,sessionDeadline);
+  if(due>0&&now>=due)out.push(plan('gpt_soxl',ledger,x,'sell',due,Math.min(due+3*60000,x.sessionEndMs>0?x.sessionEndMs-1:Infinity),{source:{tradeId:x.id,reason:x.status==='closed'?x.reason:'broker_holding_deadline'}}));
   return out;
  });
 }
 export function closingBrokerPlans(ledger,kind,side,sessionDate,now=Date.now()){
- if(!ledger||(ledger.scans||[]).some(x=>x.partial))return [];
+ if(!ledger||kind==='hour'||(kind==='overnight'&&side==='buy'&&sessionDate>=HOLDING_START))return [];
+ if(side==='buy'&&(ledger.scans||[]).some(x=>x.partial&&!String(x.id||x.scanId||'').includes('closing_hour')))return [];
+ const window=closingWindow('day',sessionDate);
  const strategy=kind==='day'?'gpt_closing30':'gpt_closing_bet',stage=kind==='day'&&side==='sell'?'buy':'signal';
- const due=krAt(sessionDate,kind==='day'&&side==='buy'?1507:kind==='overnight'&&side==='sell'?856:1523);
+ const due=krAt(sessionDate,kind==='day'&&side==='buy'?window.entryHm:kind==='overnight'&&side==='sell'?856:kind==='day'?(sessionDate>=HOLDING_START?window.exitHm:1523):1523);
  return (ledger.events||[]).filter(x=>x.kind===kind&&x.stage===stage&&x.variant==='baseline').map(x=>{
   const sourceId=[kind,x.variant,x.code].join(':');
   return plan(strategy,{...ledger,mainVariant:'baseline'},{...x,id:sourceId},side,due,due+(kind==='overnight'&&side==='sell'?3:kind==='day'&&side==='buy'?2:4)*60000,{sessionDate,triggerAt:x.createdAt,source:{eventId:x.id,ledgerDate:ledger.date,kind,params:x.strategyParams,recordedAt:x.createdAt}});

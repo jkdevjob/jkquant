@@ -215,6 +215,7 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
   const frictionCalibration=extra.frictionCalibration||null;
   delete extra.frictionCalibration;
   const p={...OPENING_BASE_PARAMS,...extra};
+  if(p.beforeDeadline&&p.exitPolicy==='next_session_open')p.exitPolicy='intraday';
   if(!Array.isArray(rows)||rows.length<p.obs+3||!meta)return null;
 
   const gap=(meta.open/meta.prevClose-1)*100;
@@ -224,7 +225,7 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
   // entryCutoff은 신규 진입 허용 시각이며, 그 뒤 봉은 기존 포지션의 청산 판단에만 사용한다.
   const a=rows.filter(x=>{
     const hm=hmOf(x.t);
-    return hm>=900&&hm<=Math.min(930,cutoffHm);
+    return hm>=900&&hm<=Math.min(p.beforeDeadline?929:930,cutoffHm);
   }).sort((x,y)=>String(x.t||"").localeCompare(String(y.t||"")))
     .map(x=>({t:x.t,hm:hmOf(x.t),close:+x.close||0,high:+(x.high??x.close)||0,vol:+x.vol||0}));
 
@@ -253,14 +254,14 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
 
     for(let j=i+1;j<a.length;j++){
       const y=a[j];
-      if(y.hm>p.entryCutoff||y.hm>=p.finalExit)break; // 종료 분봉에는 신규 진입 금지
+      if(y.hm>p.entryCutoff||y.hm>=(p.beforeDeadline?929:p.finalExit))break; // 종료 분봉에는 신규 진입 금지
       const jp=y.close,jv=y.vol,ja=jp*jv;
       const volRatio=jv/Math.max(1,baseVol),amountRatio=ja/Math.max(1,baseAmt);
       if(jp>peak&&volRatio>=p.volMult&&amountRatio>=p.amountMult){
         const friction=openingFriction(jp,frictionCalibration);
         const tr={
           signalSchemaVersion:2,
-          strategyVersion:"opening_rebreak_v1",
+          strategyVersion:p.beforeDeadline?"opening_rebreak_intraday_v2":"opening_rebreak_v1",
           strategyParams:{...p},
           decisionReason:"gap+first_breakout+pullback+rebreak+volume+amount_pass",
           gap,firstHigh,peak,pullbackPct:dd,
@@ -296,7 +297,8 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
           if(b){
              // 09:30 분봉 지연 시 마지막 확인 봉의 가격은 추정값, 청산 주문 신호 시각은 09:30으로 고정.
              tr.exitTime=p.finalExit;tr.exitPrice=b.close;tr.reason="09:30 청산";
-             if(b.hm!==p.finalExit){tr.evidence.finalExitPriceProxyHm=b.hm;tr.evidence.finalExitPriceUnconfirmed=true;}
+             if(p.beforeDeadline)tr.evidence.finalExitPriceModel="09:29 completed close proxy · 09:30 broker fills separate";
+             if(b.hm!==(p.beforeDeadline?929:p.finalExit)){tr.evidence.finalExitPriceProxyHm=b.hm;tr.evidence.finalExitPriceUnconfirmed=true;}
            }
         }
         if(tr.exitPrice!=null){

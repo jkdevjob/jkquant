@@ -76,6 +76,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/nightly-research data/opening-history/variant-trades.csv data/trade-history
           [ -d data/closing30 ] && git add data/closing30 || true
+          [ -d data/gpt-holding ] && git add data/gpt-holding || true
           if git diff --cached --quiet; then
             echo "야간 연구결과 변경 없음"
             exit 0

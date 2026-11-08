@@ -18,7 +18,7 @@ const mutants=[
   ['global','completed candle','tMs+FIVE<=now-1500','tMs<=now','unfinished candle'],
   ['global','missing next candle','entry.ms!==x.ms+FIVE||','','missing next candle'],
   ['global','stop wins same candle','price:ls?stop:target','price:hs?target:stop','unfinished candle'],
-  ['global','session end cap','Math.min(entry.ms+params.maxHoldBars*FIVE,entry.ms+(sessionEndMinute-minute)*60_000)','entry.ms+params.maxHoldBars*FIVE','maximum holding'],
+  ['global','session end cap','Math.min(entry.ms+params.maxHoldBars*FIVE,entry.ms+(sessionEndMinute-minute)*60_000,params.sessionEndMs>0?params.sessionEndMs:Infinity)','entry.ms+params.maxHoldBars*FIVE','maximum holding'],
   ['opening','full-universe original only','||!full.has(e.targetHm)','','opening retry'],
   ['daily','live no-trade priority','return {...x,sourceConflict:','return {...fb,sourceConflict:','actual zero-trade'],
   ['daily','missing PnL','if(v==null||v==="")return null;','','missing closed PnL'],

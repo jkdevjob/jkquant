@@ -83,7 +83,7 @@ test('settings owner/monitor authorization and method validation prevent unautho
  });
 });
 async function executionEndpoint(src=read('functions/api/opening-execute.js')){
- return (await dataImport(src.replace(/'\.\/(_paper-trading|_opening-execution)\.js'/g,(_,f)=>JSON.stringify(new URL('../functions/api/'+f+'.js',import.meta.url).href))+'\n// isolated '+Math.random())).onRequestPost;
+ return (await dataImport(src.replace(/'\.\/(_paper-trading|_opening-execution|_gpt-holding-lab)\.js'/g,(_,f)=>JSON.stringify(new URL('../functions/api/'+f+'.js',import.meta.url).href))+'\n// isolated '+Math.random())).onRequestPost;
 }
 async function atOpening(fn){const old=globalThis.Date,now=old.parse(date+'T09:08:00+09:00');globalThis.Date=class extends old{constructor(...a){super(...(a.length?a:[now]));}static now(){return now;}};try{return await fn();}finally{globalThis.Date=old;}}
 const executeReq=()=>new Request('https://app/api/opening-execute',{method:'POST',headers:{'x-monitor-key':'fixture'},body:JSON.stringify({date,buyEvents:[signal],sellEvents:[]})});
@@ -152,6 +152,17 @@ test('final session recovery cannot report success for a rejected sell',async()=
  h.executeResponse=Response.json({ok:true,enabled:true,events:[{signalId:openingOrderRefs(date,[],[signal])[0].signalId,submittedAt:'2026-10-22T00:31:00Z',qty:3,vts:{ok:false,rejected:true,msg:'매도 거절'}}]});
  await mocked(h,async()=>{const r=await W.forceOpeningSessionClose(h.env,date,'baseline',930);assert.equal(r.ok,false);assert.equal(r.counts.rejected,1);});
  const [r]=openingRecords(h.ledger());assert.equal(r.status,'unverified');assert.equal(r.pnl,null);assert.equal(r.broker.sell,'rejected');
+});
+test('deadline order-only attempt journals the result without inventing a price or paper sell',async()=>{
+ const h=world();h.store.objects.get(date).values.get('ledger').events=[event('buy')];
+ await mocked(h,async()=>{
+  await W.forceOpeningSessionClose(h.env,date,'baseline',930,{orderOnly:true});
+ });
+ assert.equal(h.ledger().events.length,2);assert.equal(h.ledger().events[1].stage,'sell_request');
+ assert.equal(h.ledger().events[1].signal.exitPrice,null);assert.equal(h.ledger().events.some(x=>x.stage==='sell'),false);
+ assert.equal(h.ledger().executionEvents.length,2);
+ assert.equal(h.ledger().executionEvents[0].phase,'intent');assert.equal(h.ledger().executionEvents[1].phase,'result');
+ assert.equal(h.calls.length,1);
 });
 test('archive/live merge keeps final paper results and newer broker receipts in either source order',()=>{
  const h=world(),old=h.ledger(),intent={id:'i',phase:'intent',date,at:'a',requests:openingOrderRefs(date,[signal])};
