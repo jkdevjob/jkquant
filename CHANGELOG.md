@@ -1,5 +1,13 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-08 · 자산플랜 ⚡ 지피티 탭을 지피티가 채울 수 있게 — 저장 창구 · 작업 계약 · 플랜 v2.1.0
+
+- 사용자: "자산플랜 지피티탭에 지피티도 넣을수 있게 명령어 만들어".
+- 저장 창구 `window.PLANGPT_ACCOUNT`(plan.html): 로그인·이용 승인 뒤 열고 `plangpt-account` 를 알린다 · `load()`/`save(next, expectedRevision)` 는 `users/{uid}/planGpt/notebook` 만(클로드 장부 `fiveYearPlanV2`·`stateV2` 와 따로) · revision 이 다르면 거절 · 계정이 바뀌면 거절 · 로그아웃·승인 취소면 null. 부동산 지피티(`REGPT_ACCOUNT`)와 같은 모양.
+- 작업 계약 `docs/PLAN_GPT_TAB.md`: 지피티가 고칠 수 있는 파일(`plan-gpt*.js` · `plan-gpt.css` · `data/plan-gpt/` · `scripts/check-plan-gpt*.cjs` · plan.html 의 지피티 칸·태그·버전) · 건드리지 않는 것(클로드 탭·엔진·장부·연구 · 공용 모의 목록은 먼저 묻기) · 페이지가 주는 것(창구 · 시세 API · 돈 표시) · 공용 규칙.
+- 클로드 시험(`check-plan-claude-tab.cjs`): 지피티 코드는 실행하지 않고 경계만 본다(주석 뺀 `plan-gpt*.js` 에 클로드 엔진·장부 이름이 없는지) — 지피티가 화면을 바꿔도 클로드 시험이 막지 않게. 저장 창구 값 시험 F1~F8 · 변이 18/18.
+- 버전: 플랜 v2.0.1 → v2.1.0.
+
 ## 2026-11-08 · 수영대회 지난 대회 결과지 받기 · 보기 · v3.118.0 (수영대회 v2.3.0)
 
 - 사용자: "지난 대회는 결과지 다운로드 또는 파일 읽어서 내용 볼 수 있게 해".

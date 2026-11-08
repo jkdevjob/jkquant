@@ -9,12 +9,14 @@
  *  B 설정 모듈: 무엇을 넘겨도 규칙은 base
  *  C plan.html: 기간 탭·규칙 선택 없음 · 담당 탭 2개 · 탭 전환 · 폐지 세션 숨김(목록·선택·안내) · 딥링크
  *  D index.html: 모의 목록 이름 · 폐지 세션 빼기 · 캐시 판 · 엔진 판 같음
- *  E plan-gpt.js: 지피티 칸만 그리고 클로드 엔진·장부를 건드리지 않는다
+ *  E plan-gpt.js · plan-gpt-*.js: 클로드 엔진·장부를 쓰지 않는다(주석 뺀 코드 · 정적 — 지피티 코드는 지피티 시험이 돌린다)
+ *  F 지피티 저장 창구 PLANGPT_ACCOUNT: users/{uid}/planGpt/notebook 만 · revision 확인 · 계정 바뀜 거절 · 로그인·승인 배선 (docs/PLAN_GPT_TAB.md)
  */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..');
 const SRC={eng:fs.readFileSync(path.join(root,'plan-session-engine.js'),'utf8'),set:fs.readFileSync(path.join(root,'plan-session-settings.js'),'utf8'),
-  plan:fs.readFileSync(path.join(root,'plan.html'),'utf8'),idx:fs.readFileSync(path.join(root,'index.html'),'utf8'),gpt:fs.readFileSync(path.join(root,'plan-gpt.js'),'utf8')};
+  plan:fs.readFileSync(path.join(root,'plan.html'),'utf8'),idx:fs.readFileSync(path.join(root,'index.html'),'utf8'),gpt:fs.readFileSync(path.join(root,'plan-gpt.js'),'utf8'),
+  gptMore:fs.readdirSync(root).filter(f=>/^plan-gpt-.+\.js$/.test(f)).map(f=>fs.readFileSync(path.join(root,f),'utf8')).join('\n')};   // 지피티가 더 만든 plan-gpt-*.js 도 같은 경계
 const fnOf=(src,marker)=>{const s=src.indexOf(marker);if(s<0)throw Error('함수 없음: '+marker);let i=src.indexOf('{',s),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(s,i+1);}throw Error(marker);};
 const loadEngine=js=>{const c={};vm.runInNewContext(js,c);return c.JKPlanSessionEngine;};
 const loadSettings=js=>{const m={exports:{}};vm.runInNewContext(js,{module:m,globalThis:{}});return m.exports;};
@@ -122,10 +124,36 @@ async function check(S){
   { const v=+((X.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1]),pv=(P.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1],iv=(X.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1];
     t('D4 지난 순위 캐시 판 ≥5 (폐지 세션 줄 다시 셈) · 두 화면 엔진 판 같음(≥5)',v>=5&&pv===iv&&+pv>=5,JSON.stringify({v,pv,iv})); }
 
-  // ── E. plan-gpt.js — 지피티 칸만
-  { const root={innerHTML:''},ctx=vm.createContext({document:{readyState:'complete',getElementById:id=>id==='planGptRoot'?root:null,addEventListener(){}}});
-    vm.runInContext(S.gpt,ctx);
-    t('E1 지피티 칸을 그린다 · 클로드 엔진·장부·플랜 함수는 건드리지 않는다',/지피티 자산플랜/.test(root.innerHTML)&&/지피티가 맡는 탭/.test(root.innerHTML)&&!/JKPlanSessionEngine|alphaLedger|liveState|renderAlphaPlan|듀얼 가드 v/.test(S.gpt.replace(/^\s*(\/\*[\s\S]*?\*\/)/,'')),root.innerHTML.slice(0,120)); }
+  // ── E. 지피티 코드 경계 — 지피티 화면은 지피티 시험이 돌린다. 여기선 클로드 엔진·장부를 안 쓰는지만 본다(주석 뺀 코드).
+  { const code=(S.gpt+'\n'+(S.gptMore||'')).replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:])\/\/[^\n]*/g,'$1');
+    const hit=code.match(/\bJKPlanSessionEngine\b|\balphaLedger\b|\bliveState\b|\brenderAlphaPlan\b|fiveYearPlanV2|\bstateV2\b|\bplanDbState\b/);
+    t('E1 plan-gpt.js · plan-gpt-*.js 는 클로드 엔진·장부(JKPlanSessionEngine · alphaLedger · liveState · renderAlphaPlan · fiveYearPlanV2 · stateV2)를 쓰지 않는다',!hit,hit&&hit[0]);
+    t('E2 지피티 진입점이 #planGptRoot 를 그린다(파일 안 글자)',/planGptRoot/.test(S.gpt)); }
+
+  // ── F. 지피티 저장 창구 — 실제 함수(planGptAccount · setPlanGptAccount)를 가짜 Firestore 로
+  { const store=new Map(),events=[],auth={currentUser:{uid:'u1'}};
+    const snap=p=>({exists:()=>store.has(p),data:()=>JSON.parse(JSON.stringify(store.get(p)))});
+    const ctx=vm.createContext({auth,db:{},doc:(db,...p)=>({path:p.join('/')}),nativeGetDoc:async r=>snap(r.path),
+      nativeRunTransaction:async(db,fn)=>fn({get:async r=>snap(r.path),set:(r,d)=>store.set(r.path,JSON.parse(JSON.stringify(d)))}),
+      CustomEvent:class{constructor(type){this.type=type;}},window:{dispatchEvent:e=>events.push(e.type)},Error,JSON,Date});
+    vm.runInContext(fnOf(S.plan,'function planGptAccount(user)')+fnOf(S.plan,'function setPlanGptAccount(user)'),ctx);
+    ctx.setPlanGptAccount({uid:'u1'});const A=ctx.window.PLANGPT_ACCOUNT;
+    t('F1 승인 뒤 창구 열림 · uid · 알림(plangpt-account)',!!A&&A.uid==='u1'&&events.join()==='plangpt-account',events.join());
+    const empty=await A.load();
+    t('F2 처음 읽기 — 빈 공책(schemaVersion 1 · revision 0)',empty.schemaVersion===1&&empty.revision===0&&Array.isArray(empty.items),JSON.stringify(empty));
+    const s1=await A.save({settings:{x:1},items:[{k:'a'}]},0);
+    t('F3 저장 — revision 0 → 1 · 자기 칸(users/u1/planGpt/notebook) 하나만 씀',s1.revision===1&&[...store.keys()].join()==='users/u1/planGpt/notebook'&&store.get('users/u1/planGpt/notebook').items[0].k==='a',[...store.keys()].join());
+    let stale='';try{await A.save({items:[]},0);}catch(e){stale=e.message;}
+    t('F4 다른 기기 저장과 겹치면(옛 revision) 거절 · 저장 안 됨',/다른 기기에서 기록이 바뀌었습니다/.test(stale)&&store.get('users/u1/planGpt/notebook').revision===1,stale);
+    const s2=await A.save({items:[{k:'b'}]},1);
+    t('F5 맞는 revision 이면 2 로',s2.revision===2);
+    auth.currentUser={uid:'u2'};let other='',other2='';try{await A.load();}catch(e){other=e.message;}try{await A.save({items:[]},2);}catch(e){other2=e.message;}
+    t('F6 계정이 바뀌면 읽기·쓰기 거절',/로그인 계정이 바뀌었습니다/.test(other)&&/로그인 계정이 바뀌었습니다/.test(other2),other+' | '+other2);
+    ctx.setPlanGptAccount(null);
+    t('F7 로그아웃 → 창구 null · 알림',ctx.window.PLANGPT_ACCOUNT===null&&events.length===2);
+    const h=S.plan.slice(S.plan.indexOf('onAuthStateChanged(auth,async user=>{'));
+    t('F8 배선 — 로그아웃 null · 다른 계정 null · 승인 취소(planLock) null · 승인 뒤 열기',/if\(!user\)\{ setPlanGptAccount\(null\);/.test(h)&&/PLANGPT_ACCOUNT\.uid!==user\.uid\)setPlanGptAccount\(null\)/.test(h)
+      &&/const planLock=acc=>\{ setPlanGptAccount\(null\);/.test(h)&&/if\(!await JKAccess\.admit\(user,planFb,\{lock:planLock\}\)\) return;\n  setPlanGptAccount\(user\);/.test(h)); }
   return bad;
 }
 
@@ -147,6 +175,10 @@ async function check(S){
     ['모의 목록: 폐지 세션도 재생','idx',s=>s.replace("if(planPaperRetired(sess)){ _tick(); continue; }","")],
     ['모의 목록: 폐지 판정이 늘 아님','idx',s=>s.replace("function planPaperRetired(sess){const E=window.JKPlanSessionEngine;return !!(E&&E.retiredReason&&E.retiredReason(sess));}","function planPaperRetired(sess){return false;}")],
     ['모의 목록: 옛 이름(역분산+Guard)','idx',s=>s.replace("bits.push(`5년 ${P.name} v${P.version}`);","bits.push('5년 역분산+Guard');")],
+    ['지피티 창구가 부모 문서(클로드 장부)에 씀','plan',s=>s.replace("const ref=doc(db,'users',user.uid,'planGpt','notebook');","const ref=doc(db,'users',user.uid);")],
+    ['지피티 창구 revision 확인 없음','plan',s=>s.replace("        if(revision!==expectedRevision)throw new Error('다른 기기에서 기록이 바뀌었습니다. 다시 불러온 뒤 저장하세요.');\n","")],
+    ['지피티 창구가 계정 바뀜을 안 봄','plan',s=>s.replace("async load(){mine();const snap=await nativeGetDoc(ref);mine();","async load(){const snap=await nativeGetDoc(ref);")],
+    ['승인 뒤 지피티 창구를 안 엶','plan',s=>s.replace("  setPlanGptAccount(user);   // 승인된 본인 — 지피티 탭 창구 열기(자기 칸만)\n","")],
     ['지피티 칸이 클로드 엔진을 읽음','gpt',s=>s.replace("var root=document.getElementById('planGptRoot');","var root=document.getElementById('planGptRoot'),E=window.JKPlanSessionEngine;")],
   ];
   let red=0;
