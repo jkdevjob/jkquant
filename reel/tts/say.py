@@ -24,8 +24,10 @@ if os.path.exists(CA):
     comm._SSL_CTX = ssl.create_default_context(cafile=CA)
 PROXY = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")
 
+TRIES = 10   # 2026-11-09: 음성 서버가 무작위로 'No audio' 를 돌려줘서 넉넉히 다시 시도한다
+
 async def one(req, line):
-    for attempt in range(4):
+    for attempt in range(TRIES):
         try:
             c = edge_tts.Communicate(line["text"], req["voice"], rate=req.get("rate", "+0%"),
                                      pitch=req.get("pitch", "+0Hz"), proxy=PROXY)
@@ -36,10 +38,10 @@ async def one(req, line):
             os.replace(tmp, line["out"])
             return
         except Exception as e:
-            if attempt == 3:
+            if attempt == TRIES - 1:
                 raise
-            print(f"  다시 시도({attempt + 1}): {e}", file=sys.stderr)
-            await asyncio.sleep(2 * (attempt + 1))
+            print(f"  다시 시도({attempt + 1}): {type(e).__name__}", file=sys.stderr)
+            await asyncio.sleep(min(2 * (attempt + 1), 8))
 
 async def main():
     req = json.load(open(sys.argv[1], encoding="utf8"))

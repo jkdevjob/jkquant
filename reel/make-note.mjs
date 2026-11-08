@@ -40,23 +40,35 @@ function run(cmd, args){ return new Promise((res,rej)=>{ const p=spawn(cmd,args,
 // 목소리: 줄마다 음성 파일을 만들고(캐시) 앞뒤 무음을 잘라 길이를 잰 뒤, 줄 시각표를 만든다
 async function makeVoice(v){
   const dir = path.join(__dirname, "out", "tts"); fs.mkdirSync(dir, { recursive:true });
-  const name = v.name || "ko-KR-HyunsuMultilingualNeural", rate = v.rate || "+6%", pitch = v.pitch || "+0Hz";
-  const lines = v.lines.map((l, i) => {
-    const key = crypto.createHash("sha1").update([name, rate, pitch, l.text].join("|")).digest("hex").slice(0, 16);
+  let name = v.name || "ko-KR-HyunsuMultilingualNeural";
+  const rate = v.rate || "+6%", pitch = v.pitch || "+0Hz";
+  const build = (nm) => v.lines.map((l, i) => {
+    const key = crypto.createHash("sha1").update([nm, rate, pitch, l.text].join("|")).digest("hex").slice(0, 16);
     return { ...l, id: l.id || `v${i}`, mp3: path.join(dir, key + ".mp3"), raw: path.join(dir, key + ".s16") };
   });
+  let lines = build(name);
   const req = path.join(dir, `req_${process.pid}.json`);
-  fs.writeFileSync(req, JSON.stringify({ voice:name, rate, pitch, lines: lines.map(l => ({ text:l.text, out:l.mp3 })) }));
   const py = fs.existsSync("/usr/bin/python3") ? "/usr/bin/python3" : "python3";
-  try { await run(py, [path.join(__dirname, "tts", "say.py"), req]); } finally { fs.rmSync(req, { force:true }); }
+  const synth = async (ls, nm) => {
+    fs.writeFileSync(req, JSON.stringify({ voice:nm, rate, pitch, lines: ls.map(l => ({ text:l.text, out:l.mp3 })) }));
+    try { await run(py, [path.join(__dirname, "tts", "say.py"), req]); } finally { fs.rmSync(req, { force:true }); }
+  };
+  try { await synth(lines, name); }
+  catch (e) {
+    // 기본 목소리가 끝내 안 나오면 영상 전체를 대체 목소리로(한 영상 안에서 목소리가 섞이지 않게)
+    const fb = v.fallback === false ? null : (v.fallback || "ko-KR-InJoonNeural");
+    if (!fb || fb === name) throw e;
+    console.warn(`  ⚠ 목소리 ${name} 합성 실패 → 대체 목소리 ${fb} 로 전체 다시 만든다`);
+    name = fb; lines = build(name);
+    await synth(lines, name);
+  }
   const trim = "silenceremove=start_periods=1:start_threshold=-45dB";
   const toRaw = (l) => runFF(["-y", "-i", l.mp3, "-af", `${trim},areverse,${trim},areverse`, "-ar", "44100", "-ac", "1", "-f", "s16le", l.raw]);
   // 합성이 중간에 끊겨 너무 짧은 음성(글자당 0.05초 미만)은 지우고 한 번 더 만든다
   const bad = lines.filter(l => fs.existsSync(l.raw) && fs.statSync(l.raw).size / 88200 < l.text.length * 0.05);
   if (bad.length){
     for (const l of bad){ console.warn(`  ⚠ 잘린 음성 다시 만듦: ${l.id}`); fs.rmSync(l.mp3, { force:true }); fs.rmSync(l.raw, { force:true }); }
-    fs.writeFileSync(req, JSON.stringify({ voice:name, rate, pitch, lines: bad.map(l => ({ text:l.text, out:l.mp3 })) }));
-    try { await run(py, [path.join(__dirname, "tts", "say.py"), req]); } finally { fs.rmSync(req, { force:true }); }
+    await synth(bad, name);
   }
   let prevEnd = null;
   for (const l of lines){

@@ -1,0 +1,328 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #5",
+  "color": "yellow"
+ },
+ "out": "queue/issues/2026-11-09_nps-claim-unclaimed.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "가수 김장훈 씨도 몰랐대요. 국민연금, 신청 안 하면 안 나온다는 거."
+   },
+   {
+    "id": "show",
+    "text": "어제 방송에서, 공단에 직접 전화해 보고서야 받을 나이가 된 걸 알았거든요.",
+    "gap": 0.35
+   },
+   {
+    "id": "rule",
+    "text": "국민연금은 원칙적으로 직접 청구해야 나와요. 구월부터는 조건이 단순한 일부만, 자동 지급 시범을 하고 있고요."
+   },
+   {
+    "id": "refund",
+    "text": "십 년을 못 채운 분이 낸 돈을 돌려받는 것도 신청해야 하는데, 아직 안 찾아간 돈이 천팔백이십구억 원이래요.",
+    "gap": 0.4
+   },
+   {
+    "id": "check",
+    "text": "부모님 몫은 없는지, 앱이나 천삼백오십오로 한 번 확인해 보세요."
+   },
+   {
+    "id": "cta",
+    "text": "팔로우해 두시면, 놓치기 쉬운 연금 이어서 알려 드릴게요.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "안 찾아간",
+     "x": 120,
+     "y": 450,
+     "size": 160,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1.0
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "국민연금",
+     "x": 120,
+     "y": 640,
+     "size": 160,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "1,829억",
+     "x": 120,
+     "y": 850,
+     "size": 180,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "circle",
+     "target": "cv3",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 10,
+     "width": 8
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "우리 부모님 몫일 수도?",
+     "x": 130,
+     "y": 1100,
+     "size": 80,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.4,
+     "dur": 0.6
+    }
+   ],
+   "start": 0
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "국민연금, 신청해야 나온다",
+     "x": 128,
+     "y": 196,
+     "size": 84,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(SBS '미운 우리 새끼' 11/8 · 김장훈, 1963년생)",
+     "x": 140,
+     "y": 315,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@show+0.3",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "r1",
+     "text": "원칙: 본인이 청구",
+     "x": 150,
+     "y": 400,
+     "size": 64,
+     "font": "bold",
+     "color": "ink",
+     "at": "@rule+0.3",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "r2",
+     "text": "9월~ 일부만 자동 지급 시범",
+     "x": 150,
+     "y": 490,
+     "size": 54,
+     "font": "bold",
+     "color": "blue",
+     "at": "@rule.end-2.6",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "r3",
+     "text": "가입 10년 못 채우면 → 반환일시금",
+     "x": 150,
+     "y": 600,
+     "size": 50,
+     "font": "bold",
+     "color": "ink",
+     "at": "@refund+0.5",
+     "dur": 0.9
+    },
+    {
+     "type": "text",
+     "id": "r4",
+     "text": "안 찾아간 돈 1,829억 원",
+     "x": 150,
+     "y": 690,
+     "size": 70,
+     "font": "bold",
+     "color": "red",
+     "at": "@refund.end-2.2",
+     "dur": 0.8
+    },
+    {
+     "type": "circle",
+     "target": "r4",
+     "at": "@refund.end-0.4",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 8,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "r5",
+     "text": "(2020년~올해 상반기 6만 5,527명 · 10년 지나면 소멸)",
+     "x": 150,
+     "y": 795,
+     "size": 34,
+     "font": "pen",
+     "color": "gray",
+     "at": "@refund.end",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 880,
+     "w": 760,
+     "h": 400,
+     "rot": -2.0,
+     "at": "@check-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "부모님 몫 확인",
+       "x": 46,
+       "y": 32,
+       "size": 64,
+       "font": "bold",
+       "color": "red",
+       "at": "@check",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "'내 곁에 국민연금' 앱",
+       "x": 46,
+       "y": 140,
+       "size": 54,
+       "font": "bold",
+       "color": "ink",
+       "at": "@check+0.8",
+       "dur": 0.7
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "전화 1355",
+       "x": 46,
+       "y": 225,
+       "size": 54,
+       "font": "bold",
+       "color": "ink",
+       "at": "@check+2.0",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m4",
+       "text": "61~64년생 63세 · 65~68년생 64세",
+       "x": 46,
+       "y": 315,
+       "size": 40,
+       "font": "bold",
+       "color": "blue",
+       "at": "@check.end-0.5",
+       "dur": 0.8
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "(아이뉴스24 8/29 · 세계일보 10/17 보도)",
+     "x": 150,
+     "y": 1330,
+     "size": 34,
+     "font": "pen",
+     "color": "gray",
+     "at": "@check.end",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1440,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2.0
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1530,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}

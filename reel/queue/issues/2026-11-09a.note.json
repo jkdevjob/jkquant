@@ -1,0 +1,351 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #4",
+  "color": "yellow"
+ },
+ "out": "queue/issues/2026-11-09_retirement-pension-db-dc-crash.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "코스피가 폭락하면, 내 퇴직금도 깎일까요?"
+   },
+   {
+    "id": "fact",
+    "text": "퇴직연금 적립금은 지난 삼 분기에만, 십일조 팔천억 원 줄었어요.",
+    "gap": 0.35
+   },
+   {
+    "id": "db",
+    "text": "그런데 디비형이면 받을 돈은 그대로예요. 퇴직 전 석 달 평균 월급에 근속연수를 곱해서 정해지거든요."
+   },
+   {
+    "id": "dc",
+    "text": "디씨형이나 아이알피는 달라요. 고른 상품 수익률이, 그대로 내 퇴직금이에요.",
+    "gap": 0.4
+   },
+   {
+    "id": "check",
+    "text": "그래서 디씨형이면, 앱에서 위험자산 비중부터 확인해 보세요. 최대 칠십 퍼센트까지 담을 수 있거든요."
+   },
+   {
+    "id": "cta",
+    "text": "팔로우해 두시면, 내 퇴직연금 얘기 이어서 보여 드릴게요.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "코스피 폭락",
+     "x": 120,
+     "y": 450,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1.0
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "내 퇴직금도",
+     "x": 120,
+     "y": 640,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "깎였을까?",
+     "x": 120,
+     "y": 850,
+     "size": 160,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "circle",
+     "target": "cv3",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 10,
+     "width": 8
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "DB냐 DC냐가 갈라요",
+     "x": 130,
+     "y": 1100,
+     "size": 80,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.4,
+     "dur": 0.6
+    }
+   ],
+   "start": 0
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "폭락장, 내 퇴직금은?",
+     "x": 128,
+     "y": 196,
+     "size": 92,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "f1",
+     "text": "퇴직연금 적립금 3분기",
+     "x": 140,
+     "y": 320,
+     "size": 46,
+     "font": "pen",
+     "color": "gray",
+     "at": "@fact+0.2",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "f2",
+     "text": "553.9조 → 542.1조",
+     "x": 150,
+     "y": 395,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@fact+1.0",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "f3",
+     "text": "−11.8조",
+     "after": "f2",
+     "gap": 26,
+     "size": 70,
+     "font": "bold",
+     "color": "red",
+     "at": "@fact.end-0.6",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "d0",
+     "text": "DB형",
+     "x": 150,
+     "y": 520,
+     "size": 76,
+     "font": "bold",
+     "color": "blue",
+     "at": "@db",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "d1",
+     "text": "받을 돈 그대로",
+     "after": "d0",
+     "gap": 30,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@db+0.9",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "d2",
+     "text": "퇴직 전 3개월 평균임금 × 근속연수",
+     "x": 150,
+     "y": 615,
+     "size": 46,
+     "font": "pen",
+     "color": "ink",
+     "at": "@db+3.5",
+     "dur": 1.0
+    },
+    {
+     "type": "text",
+     "id": "d3",
+     "text": "(운용 손실은 회사 몫)",
+     "x": 150,
+     "y": 680,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@db.end-1.0",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "c0",
+     "text": "DC형·IRP",
+     "x": 150,
+     "y": 790,
+     "size": 76,
+     "font": "bold",
+     "color": "red",
+     "at": "@dc",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "c1",
+     "text": "고른 상품 수익률이 그대로 내 퇴직금",
+     "size": 50,
+     "font": "bold",
+     "color": "ink",
+     "at": "@dc+1.8",
+     "dur": 0.7,
+     "x": 150,
+     "y": 875
+    },
+    {
+     "type": "underline",
+     "target": "c1",
+     "at": "@dc.end-0.6",
+     "dur": 0.5,
+     "color": "red",
+     "width": 6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 965,
+     "w": 760,
+     "h": 340,
+     "rot": -2.0,
+     "at": "@check-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "DC형이면 오늘 확인",
+       "x": 46,
+       "y": 32,
+       "size": 62,
+       "font": "bold",
+       "color": "red",
+       "at": "@check",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "앱에서 위험자산 비중",
+       "x": 46,
+       "y": 140,
+       "size": 56,
+       "font": "bold",
+       "color": "ink",
+       "at": "@check+0.8",
+       "dur": 0.8
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "(DC·IRP 최대 70%까지)",
+       "x": 46,
+       "y": 235,
+       "size": 48,
+       "font": "bold",
+       "color": "blue",
+       "at": "@check.end-1.6",
+       "dur": 0.8
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "(SBS Biz·머니투데이 · 금감원 통합연금포털 3분기 말)",
+     "x": 150,
+     "y": 1345,
+     "size": 34,
+     "font": "pen",
+     "color": "gray",
+     "at": "@check.end",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1440,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2.0
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1530,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}

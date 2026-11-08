@@ -1,0 +1,360 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #6",
+  "color": "mint"
+ },
+ "out": "queue/issues/2026-11-09_basic-pension-livelihood-cut.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "기초연금이 삼만 원 오르는데, 받는 돈은 그대로인 분이 칠십팔만 명이래요."
+   },
+   {
+    "id": "why",
+    "text": "생계급여를 같이 받는 분들이에요. 기초연금이 생계급여 계산에서, 백 퍼센트 소득으로 잡히거든요.",
+    "gap": 0.35
+   },
+   {
+    "id": "calc",
+    "text": "혼자 사시고 다른 소득이 없으면, 기초연금이 오른 만큼 생계급여가 줄어서 합계는 그대로예요."
+   },
+   {
+    "id": "govt",
+    "text": "국회예산정책처도 고쳐야 한다고 했고, 복지부는 국회에서 논의할 일이라고 했어요.",
+    "gap": 0.4
+   },
+   {
+    "id": "cta",
+    "text": "부모님께 해당되는지 확인해 보시고, 팔로우해 두세요.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "기초연금",
+     "x": 120,
+     "y": 450,
+     "size": 160,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1.0
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "3만 원 올라도",
+     "x": 120,
+     "y": 640,
+     "size": 140,
+     "font": "bold",
+     "color": "blue",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "그대로?",
+     "x": 120,
+     "y": 850,
+     "size": 180,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "circle",
+     "target": "cv3",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 10,
+     "width": 8
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "78만 명은 왜?",
+     "x": 130,
+     "y": 1100,
+     "size": 84,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.4,
+     "dur": 0.6
+    }
+   ],
+   "start": 0
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": -110,
+     "y": 1480,
+     "r": 160,
+     "opacity": 0.15,
+     "rot": 12
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "기초연금 +3만 원인데 그대로?",
+     "x": 128,
+     "y": 196,
+     "size": 80,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "f1",
+     "text": "기초연금·생계급여 같이 받는 노인",
+     "x": 140,
+     "y": 320,
+     "size": 46,
+     "font": "pen",
+     "color": "gray",
+     "at": "@why",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "f2",
+     "text": "78만 3천 명",
+     "x": 150,
+     "y": 395,
+     "size": 84,
+     "font": "bold",
+     "color": "red",
+     "at": "@why+0.8",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "f3",
+     "text": "(2021년 56만 8천 명 → 2025년, 국회예산정책처)",
+     "x": 150,
+     "y": 500,
+     "size": 36,
+     "font": "pen",
+     "color": "gray",
+     "at": "@why.end-1.2",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "t0",
+     "text": "1인 가구 · 다른 소득 없을 때 (2027년)",
+     "x": 150,
+     "y": 580,
+     "size": 42,
+     "font": "pen",
+     "color": "gray",
+     "at": "@calc",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "기초연금",
+     "x": 150,
+     "y": 655,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@calc+0.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "35만 → 38만",
+     "x": 470,
+     "y": 655,
+     "size": 64,
+     "font": "bold",
+     "color": "blue",
+     "at": "@calc+1.2",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "생계급여",
+     "x": 150,
+     "y": 750,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@calc+2.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "52.6만 → 49.6만",
+     "x": 470,
+     "y": 750,
+     "size": 60,
+     "font": "bold",
+     "color": "red",
+     "at": "@calc+3.0",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "합계",
+     "x": 150,
+     "y": 850,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": "@calc.end-1.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "87.6만 그대로",
+     "x": 470,
+     "y": 850,
+     "size": 68,
+     "font": "bold",
+     "color": "ink",
+     "at": "@calc.end-1.0",
+     "dur": 0.5
+    },
+    {
+     "type": "circle",
+     "target": "r3b",
+     "at": "@calc.end-0.3",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "t9",
+     "text": "(생계급여 선정기준 월 87만 5,533원 기준 단순 계산)",
+     "x": 150,
+     "y": 950,
+     "size": 34,
+     "font": "pen",
+     "color": "gray",
+     "at": "@calc.end",
+     "dur": 0.5
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 1010,
+     "w": 760,
+     "h": 330,
+     "rot": -2.0,
+     "at": "@govt-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "'줬다 뺏는 기초연금'",
+       "x": 46,
+       "y": 30,
+       "size": 60,
+       "font": "bold",
+       "color": "red",
+       "at": "@govt",
+       "dur": 0.7
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "예정처: 계산 방식 고쳐야",
+       "x": 46,
+       "y": 135,
+       "size": 52,
+       "font": "bold",
+       "color": "ink",
+       "at": "@govt+1.0",
+       "dur": 0.7
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "복지부: 국회 심의 때 논의",
+       "x": 46,
+       "y": 220,
+       "size": 52,
+       "font": "bold",
+       "color": "blue",
+       "at": "@govt.end-1.6",
+       "dur": 0.7
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1440,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2.0
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1530,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
