@@ -3,7 +3,7 @@
 // 새로 생긴 매수 · 매도만 웹 알림과 텔레그램으로 보낸다. 알림 id 는 날짜 · 전략 · 종목 · 매수/매도로 만들어 같은 알림을 두 번 보내지 않는다.
 // 사용자 요청(2026-10-13): 모든 메시지는 '[클로드 연구 시초가]' 처럼 시작하고, 실제 매수 · 매도 때만 보낸다(후보 · 매매 없음 · 요약은 보내지 않음).
 // 알림이 실패해도 주문 · 장부에는 영향이 없다(주문 경로와 따로 돈다).
-import { MAIN_DEFAULT, openingCounts, openingPick } from "./_claude_main.js";
+import { MAIN_DEFAULT, openingCounts, openingExit, openingPick } from "./_claude_main.js";
 
 const KR_PCT = v => (v >= 0 ? "+" : "") + Number(v).toFixed(2) + "%";
 const won = v => (v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("en-US"));
@@ -31,18 +31,18 @@ export function reportMsg(b) {
 export function pushEvents(live, nowMs, sent = {}) {
   const T = (live && live.tabs) || {}, d = (live && live.today) || kstDateOf(nowMs), out = [];
   const add = (id, title, body, price) => out.push({ id, title, body, tag: id.split(":").slice(0, 2).join(":"), url: "/claude", price: price ?? null });
-  // ① 시초가 — 08:56 판단 · 08:59 장전 동시호가 매수 / 15:20 종가 동시호가 매도.
+  // ① 시초가 — 08:56 판단 · 08:59 장전 동시호가 매수 / 매도(2026-11-09~ 10:00 · 그 전 15:30 종가 — _claude_main.openingExit, 장부 · 화면과 같은 표).
   // 메인 전략 매매일(통과 종목 수 ≥ 메인 기준)에 메인이 고르는 종목만 알린다 — 다른 날 · 다른 종목 주문은 체결 측정용(실시간 화면 · 장부와 같은 함수).
-  const ot = T.opening || {}, P = (ot.main && ot.main.params) || MAIN_DEFAULT.opening.params, br = (ot.decision || {}).breadth;
+  const ot = T.opening || {}, P = (ot.main && ot.main.params) || MAIN_DEFAULT.opening.params, br = (ot.decision || {}).breadth, X = openingExit(d);
   const keep = new Set(openingPick(P, ot.rows || []));
   const o = br && openingCounts(P, br.qualified) ? (ot.rows || []).filter(r => keep.has(String(r.code))) : [];
   // 정산은 주문한 종목 전부(모의투자 체결과 상관없이 — 2026-10-22 사용자). 모의계좌 주문이 안 된 종목 수는 같이 적는다.
   const nv = o.filter(r => /^모의계좌 주문 안/.test(r.vts || "")).length;
   if (o.length) add("open:" + d + ":buy", HEAD.open + " 🟢 매수", o.map(r => r.name + (r.expectedGapPct != null ? " (갭 " + KR_PCT(r.expectedGapPct) + ")" : "")).join(" · ")
-    + " — 09:00 시가 → 15:30 종가 매도" + (nv ? " · 모의계좌 주문 안 됨 " + nv + "종목(시세로 정산)" : ""));
+    + " — 09:00 시가 → " + X.sellText + (nv ? " · 모의계좌 주문 안 됨 " + nv + "종목(시세로 정산)" : ""));
   const os = o.filter(r => r.realized && r.pnlPct != null);
   if (os.length) add("open:" + d + ":sell", HEAD.open + " 🔴 매도", os.map(r => r.name + " " + KR_PCT(r.pnlPct)).join(" · ")
-    + " · 평균 " + KR_PCT(os.reduce((a, r) => a + r.pnlPct, 0) / os.length) + " — 15:30 종가");
+    + " · 평균 " + KR_PCT(os.reduce((a, r) => a + r.pnlPct, 0) / os.length) + " — " + X.label);
   // ② 데이트레이딩 — 15:21 종가 매수 / 다음 거래일 08:56 시가 매도
   for (const r of (T.daytrading && T.daytrading.rows) || []) {
     const nvs = /^모의계좌 주문 안/.test(r.vts || "") ? " · 모의계좌 주문 안 됨(시세로 정산)" : "";

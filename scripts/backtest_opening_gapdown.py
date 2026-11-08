@@ -319,10 +319,14 @@ def live_trades(by, final_last):
         led = j.get("ledger") or {}
         d = led.get("date") or f.stem
         ev = {e.get("stage"): e.get("payload") or {} for e in led.get("events", []) if e}
-        pre, rec, clo = ev.get("preopen", {}), ev.get("reconcile", {}), ev.get("close", {})
+        pre, rec, clo, x10 = ev.get("preopen", {}), ev.get("reconcile", {}), ev.get("close", {}), ev.get("exit10")
         pos = {p.get("code"): p for p in (rec.get("positions") or clo.get("positions") or [])}
         orders = {o.get("code"): o for o in pre.get("orders") or [] if o.get("side") == "buy"}
         sells = {o.get("code"): o for o in clo.get("orders") or [] if o.get("side") == "sell"}
+        # ① 10:00 매도 날(2026-11-09~, Worker exit10 단계): 매도 기준가 = 그 단계가 남긴 10:00 가격(없으면 None — 종가로 대신하지 않는다) ·
+        # 매도 주문 = 10:00 주문(접수된 것) 먼저, 없으면 15:21 남은 수량 주문
+        x10px = {x.get("code"): float(x["price"]) for x in ((x10 or {}).get("prices") or []) if x and (x.get("price") or 0) > 0}
+        sells.update({o.get("code"): o for o in ((x10 or {}).get("orders") or []) if o.get("side") == "sell" and (o.get("vts") or {}).get("ok")})
         for p in pre.get("picks") or []:
             code = p.get("code")
             b = bar.get((code, d))
@@ -330,13 +334,14 @@ def live_trades(by, final_last):
             if b:
                 o, c = b[1], b[4]
                 gap = (o / (b[4] - b[5]) - 1) * 100 if b[4] - b[5] > 0 else None
+            ref = x10px.get(code) if x10 is not None else c
             ps = pos.get(code) or {}
             bf = (ps.get("buy") or {}).get("avgPrice")
             sf = (ps.get("sell") or {}).get("avgPrice")
             exp = p.get("expectedPrice")
             pct = lambda a, z: (a / z - 1) * 100 if a and z else None  # noqa: E731
             gross = pct(sf, bf)
-            model = pct(c, o)
+            model = pct(ref, o)
             out.append(dict(
                 date=d, code=code, name=p.get("name"), strategyVersion=STRATEGY_VERSION, source="kis-vts-live",
                 expectedPrice=exp, expectedGapPct=p.get("expectedGapPct"), actualOpen=o, actualClose=c, actualGapPct=gap,
@@ -348,7 +353,8 @@ def live_trades(by, final_last):
                 sellOrderOk=bool(((sells.get(code) or {}).get("vts") or {}).get("ok")),
                 sellOrderMsg=((sells.get(code) or {}).get("vts") or {}).get("msg"),
                 buyQty=(ps.get("buy") or {}).get("qty"), buyFill=bf, sellQty=(ps.get("sell") or {}).get("qty"), sellFill=sf,
-                buySlipPct=pct(bf, o), sellSlipPct=(-pct(sf, c) if sf and c else None),
+                exitRef="10:00" if x10 is not None else "close", exitRefPrice=ref,
+                buySlipPct=pct(bf, o), sellSlipPct=(-pct(sf, ref) if sf and ref else None),
                 realizedGrossPct=gross, realizedNetPct=(gross - PARAMS["fixedCostPct"]) if gross is not None else None,
                 modelNet0tPct=(model - PARAMS["fixedCostPct"]) if model is not None else None))
     return out
@@ -362,7 +368,7 @@ def live_summary(rows):
                 actualGapQualifiesRate=(sum(1 for r in rows if r["actualGapQualifies"]) / len(rows) * 100) if rows else None,
                 openVsExpectedPct=m("openVsExpectedPct"), openVsExpected0856Pct=m("openVsExpected0856Pct"), buySlipPct=m("buySlipPct"), sellSlipPct=m("sellSlipPct"),
                 realizedNetPct=m("realizedNetPct"), modelNet0tPct=m("modelNet0tPct"),
-                note="buySlip = 매수체결가/시가-1, sellSlip = 1-매도체결가/종가 (양수 = 비용). 판정은 realizedNet 누적으로 한다.")
+                note="buySlip = 매수체결가/시가-1, sellSlip = 1-매도체결가/매도 기준가(10:00 매도 날은 10:00 기록 가격 · 그 전은 종가) (양수 = 비용). 판정은 realizedNet 누적으로 한다.")
 
 
 def main():

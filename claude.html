@@ -82,7 +82,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.26.0</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.27.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -146,13 +146,13 @@ function dayCell(z,k){z=((z||{})[k])||{};return z.days?"<span class='"+cls(z.day
 var DOC={
   opening:{title:"① D-1 갭하락 과매도 (시초가)",what:"오래 빠진 종목이 아침에 한 번 더 크게 갭하락하면, 장중에 되돌리는 경향을 노린다. 시장 전체가 투매하는 날에만 강하다.",
     pick:"전날 밤: 코스피·코스닥 보통주 중 전일 RSI(14)<30 · 전일 거래대금 20억↑ · 주가 1,000원↑ · 관리/투자주의환기·최근 거래정지·가격제한 밖 움직임 제외 → 명단. 08:56: 명단 종목의 예상체결가로 갭 −2%~−29% 인 종목 → 08:58: 갭 깊은 10종목을 다시 확인해 가장 깊은 갭 3종목.",
-    buy:"08:59 장전 동시호가 시장가(시가에 체결).",sell:"15:20~15:30 종가 동시호가 시장가(종가에 체결). 장중 손절 없음.",
+    buy:"08:59 장전 동시호가 시장가(시가에 체결).",sell:"10:00 시장가 — 그 시각 가격으로 정산(2026-11-09~ · 하루를 넘기지 않고 오전에 끝냄). 장중 손절 없음. 그 전 거래일은 15:30 종가 동시호가.",
     risk:"v2: 조건 통과 종목이 5개 이상인 날(시장 투매일)만 '매매일'로 센다. 그 밖의 날은 측정용 모의 주문만.",
     money:"하루 자금을 3종목에 똑같이. 전체 계좌의 국내 칸(30%)을 ②와 나눠 쓴다.",
-    proof:"2018~2026 677일: v2 하루 +1.33%(1.5틱, t=3.0), 9개 연도 모두 양수, 같은 날 무작위 갭하락 대비 +1.75%p.",
-    times:"08:56 확인 · 08:58 판단 · 08:59 매수 · 15:21 매도 · 15:40 체결 확인 · 텔레그램 08:59/15:40"},
+    proof:"2018~2026 677일(일봉 · 종가 매도 기준): v2 하루 +1.33%(1.5틱, t=3.0), 9개 연도 모두 양수, 같은 날 무작위 갭하락 대비 +1.75%p. 10:00 매도는 2년 60분봉으로 +1.38%(종가 매도 +1.46%) — 연구 R34.",
+    times:"08:56 확인 · 08:58 판단 · 08:59 매수 · 10:00 매도 · 15:40 장부 마감 · 알림: 매수 · 매도 때만"},
   daytrading:{title:"② 코스닥150 레버리지 하락일 야간 (데이트레이딩)",what:"지수가 하루에 크게 빠진 날 종가에 사서 다음 날 아침 시가에 판다. 급락 다음 날 아침 반등을 노린다. ETF 라 거래세가 없다.",
-    pick:"종목은 KODEX 코스닥150레버리지(233740) 하나.",buy:"15:21 예상 종가가 기준가 대비 −3% 이하이면 종가 동시호가 시장가.",sell:"다음 거래일 08:59 장전 동시호가 시장가(시가).",
+    pick:"종목은 KODEX 코스닥150레버리지(233740) 하나.",buy:"15:21 예상 종가가 기준가 대비 메인 기준(기본 −3%) 이하이면 종가 동시호가 시장가. 다음 날이 휴장(금요일 · 연휴 전)이면 사지 않는다 — 최대 24시간(2026-11-09~ · 연구 R34).",sell:"다음 거래일 08:59 장전 동시호가 시장가(시가).",
     risk:"하룻밤 보유. 손절 없음. 최악일 −13%(과거).",money:"①과 같은 날이면 국내 칸을 반씩.",
     proof:"2018-04~2026-09 연 46회, 평균 +0.40%(t=2.8), 기준을 −2→−6% 로 엄격하게 할수록 평균이 커짐, 9개 연도 중 8개 양수.",
     times:"15:21 매수 판단 · 다음날 08:59 매도 · 15:40 체결 확인 · 텔레그램 15:21(매수 판단) · 09:05(시가 매도 결과) · 15:40(체결 확정)"},
@@ -212,7 +212,8 @@ function opsBoard(tab){
 function planCard(tab,T,wl){
   var x="";
   if(tab==="opening"){var names=(wl.names||[]).map(function(n){return esc(n.name)+" <span class='sub'>RSI "+num(n.rsi14,1)+"</span>"}).join(" · ");x="<div>다음 거래일 08:56 — 명단 "+((wl.names||[]).length)+"종목("+esc(wl.basedOn||"—")+" 종가 기준)의 예상 갭을 확인합니다.</div><div class='sub' style='margin-top:6px'>"+(names||"명단 없음")+"</div>";}
-  else if(tab==="daytrading")x="<div>오늘·다음 거래일 15:21 — KODEX 코스닥150레버리지 예상 종가가 −3% 이하면 종가 매수, 다음 날 08:59 시가 매도.</div>";
+  else if(tab==="daytrading"){var th2=+((((J.lab||{}).main||{}).daytrading||{}).today||{params:{th:-3}}).params.th||-3;
+    x="<div>오늘·다음 거래일 15:21 — KODEX 코스닥150레버리지 예상 종가가 "+String(th2).replace("-","−")+"% 이하면 종가 매수, 다음 날 08:59 시가 매도. 다음 날이 휴장(금요일 · 연휴 전)이면 사지 않습니다(최대 24시간).</div>";}
   else if(tab==="crypto")x=nextSig(T.crypto||{},"하루(09시~)");
   else if(tab==="soxl")x=nextSig(T.soxl||{},"미국장");
   else if(tab==="close30"){var th5=+((((J.lab||{}).main||{}).close30||{}).today||{params:{th:0}}).params.th||0;
@@ -482,7 +483,7 @@ function nextSig(t,unit){
   return "<div class='kpis'><div class='kpi'><div class='l'>다음 "+unit+" 신호 ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.holdNext?"good":"")+"'>"+(n.holdNext?"보유":"쉼")+"</div><div class='sub'>종가 "+Math.round(n.signalClose).toLocaleString()+" · 평균 "+Math.round(n.ma).toLocaleString()+"</div></div></div>";
 }
 // 📅 오늘 탭 — 지피티 단타 오늘 탭과 같은 구성: ① 전략별 전일·당일(모두 한국시간 어제·오늘) + 누적 추이 ② 기준전략 누적 상태
-var TODAY_T=[["opening","① 시초가","시초가","그날 한국장 (15:40 마감)","15:30 종가에 팔면 확정"],["daytrading","② 데이트레이딩","데이트레이딩","그날 아침 시가에 판 결과 (전날 종가 매수분)","09:00 시가에 팔면 확정"],
+var TODAY_T=[["opening","① 시초가","시초가","그날 한국장 09:00 → 10:00 (15:40 마감)","10:00 에 팔면 확정"],["daytrading","② 데이트레이딩","데이트레이딩","그날 아침 시가에 판 결과 (전날 종가 매수분)","09:00 시가에 팔면 확정"],
   ["crypto","③ 비트코인","비트코인","그날 09:00 시작 업비트 하루 (다음 날 09:00 확정)","다음 날 09:00 확정"],["soxl","④ SOXL","SOXL","전날 밤 미국장 (한국 아침 마감)","미국장 마감 뒤 확정"],
   ["close30","⑤ 종가 30분","종가 30분","그날 한국장 15:00 → 15:30 종가 (15:40 마감)","15:30 종가에 팔면 확정"]];
 // 전일·당일 = 한국 날짜 어제·오늘(실시간 자료 날짜 기준, 없으면 밤 계산 날짜). 칸마다 밤 계산 확정 값(v)과 확정 전 실시간 값(lv)을 같이 넘긴다.
