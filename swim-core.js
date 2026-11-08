@@ -52,6 +52,8 @@
       default:return end>=t;                       // upcoming(기본): 끝나지 않은 대회
     }
   }
+  /* 지난 대회 결과(결과지 · 결과 시스템 · 기록 검색)가 붙어 있나 — 2026-11-08 */
+  function hasResults(e){return Array.isArray(e&&e.results)&&e.results.length>0;}
   const text=e=>[e.title,(e.aliases||[]).join(' '),e.region,e.venue,e.eligibility,e.events].join(' ').toLowerCase();
 
   /* f: {q,sido,sigungu,kind,sport,period,status,elig,quick} — 모두 함께 적용 */
@@ -65,9 +67,12 @@
     if(f.kind&&!kinds.includes(f.kind))return false;
     const sports=e.sports&&e.sports.length?e.sports:[e.sport||'기타'];
     if(f.sport&&!sports.includes(f.sport))return false;
-    if(!inPeriod(e,f.period||'upcoming',t))return false;
+    const res=hasResults(e),wantRes=f.status==='result'||f.quick==='results';
+    // '결과 있음'은 지난 대회를 찾는 것 — 기간을 따로 고르지 않았으면 이력 전체에서 찾는다
+    if(!inPeriod(e,wantRes&&(!f.period||f.period==='upcoming')?'all':(f.period||'upcoming'),t))return false;
     if(f.status){
-      if(f.status==='cancelled'){if(st!=='cancelled'&&st!=='postponed')return false;}
+      if(f.status==='result'){if(!res)return false;}
+      else if(f.status==='cancelled'){if(st!=='cancelled'&&st!=='postponed')return false;}
       else if(st!==f.status)return false;
     }
     if(f.elig==='adult'&&e.adult_ok!==true)return false;
@@ -79,6 +84,7 @@
       case 'elite':if(!kinds.includes('elite'))return false;break;
       case 'open':if(st!=='open')return false;break;
       case 'new':if(!(isNew(e,t,baseline)||isChanged(e,t)))return false;break;
+      case 'results':if(!res)return false;break;
     }
     return true;
   }
@@ -119,6 +125,6 @@
     size=size||20;const pages=Math.max(1,Math.ceil(list.length/size));const p=Math.min(Math.max(1,page|0),pages);
     return {page:p,pages,items:list.slice((p-1)*size,p*size),from:list.length?(p-1)*size+1:0,to:Math.min(p*size,list.length)};
   }
-  return {kstToday,addDays,addMonths,applyStatus,matches,sortList,stats,regions,paginate,inPeriod,isNew,isChanged,
+  return {kstToday,addDays,addMonths,applyStatus,matches,sortList,stats,regions,paginate,inPeriod,isNew,isChanged,hasResults,
           STATUS_LABEL,KIND_LABEL,VERIFY_LABEL};
 });

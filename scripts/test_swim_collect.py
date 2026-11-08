@@ -44,6 +44,12 @@ class FakeSession:
                 return FakeResp(v)
         return FakeResp("", 404)
 
+    def post(self, url, data=None, timeout=None):
+        """POST 쪽 넘기기(대한체육회 결과 시스템) — 열쇠는 '주소#이름=값&…'(이름순)."""
+        key = url + "#" + "&".join(f"{k}={v}" for k, v in sorted((data or {}).items()))
+        self.calls.append(key)
+        return FakeResp(self.pages[key]) if key in self.pages else FakeResp("", 404)
+
 
 def fetcher(pages):
     return m.Fetcher(session=FakeSession(pages), pause=0, tries=1)
@@ -534,6 +540,227 @@ class AlertTests(unittest.TestCase):
         self.assertTrue(msg.startswith("<b>[수영대회]"))
         self.assertIn("&lt;대회&gt;", msg)
         self.assertEqual(set(re.findall(r'href="([^"]+)"', msg)), {"https://jkquant.pages.dev/swim?id=abc123def456", "https://jkquant.pages.dev/swim"})
+
+
+# ── 지난 대회 결과(결과지) — 2026-11-08 사용자 요청. 화면에 쓰는 것은 결과 글 · 파일 · 결과 시스템의 이름과 주소뿐이다 ──
+RES_LIST = """<html><body><table>
+<tr><td><a href="http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=105&page=1">제12회 서울시연맹회장배수영대회 경기결과</a></td></tr>
+<tr><td><a href="http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=104">(다이빙)제43회 서울소년체육대회겸 제55회 전국소년체육대회 서울시 예선전</a></td></tr>
+<tr><td><a href="http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=103">2023 서울소년체육대회 대회신기록</a></td></tr>
+</table></body></html>"""
+RES_105 = """<html><body><section id="bo_v_info">작성자 수영연맹 작성일 26-07-06 16:46 조회 1,988회</section>
+<div id="bo_v_con"><p>기간</p><p>2026.06.27(토) 경영, 다이빙</p><p>경기 결과</p></div><section id="bo_v_file">
+<a href="http://www.seoulswim.or.kr/bbs/download.php?bo_table=result&wr_id=105&no=0">경영 경기결과.pdf (1.2M)</a>
+<a href="http://www.seoulswim.or.kr/bbs/download.php?bo_table=result&wr_id=105&no=1">다이빙 경기결과.xlsx (30K)</a></section></body></html>"""
+RES_104 = """<html><body><section id="bo_v_info">작성일 26-03-31 10:00</section><div id="bo_v_con"><p>2026.03.27 ~ 29 서울체육중학교</p></div>
+<a href="http://www.seoulswim.or.kr/bbs/download.php?bo_table=result&wr_id=104&no=0">다이빙 결과.pdf (300K)</a></body></html>"""
+NOTICE_LIST = """<html><body>
+<a href="http://www.seoulswim.or.kr/bbs/board.php?bo_table=schedule&wr_id=369">2026 성북구체육회장배 수영대회 개최 알림</a>
+<a href="http://www.seoulswim.or.kr/bbs/board.php?bo_table=schedule&wr_id=368">제6회 영등포구청장배 수영대회 결과 및 상장 수령 안내</a></body></html>"""
+NOTICE_368 = """<html><body>작성일 26-10-20<div id="bo_v_con"><p>대회 결과를 알려 드립니다.</p></div>
+<a href="http://www.seoulswim.or.kr/bbs/download.php?bo_table=schedule&wr_id=368&no=0">영등포구청장배 결과.pdf (1M)</a>
+<table><tr><td>다른 글: 참가신청서</td><td><a href="./Data/참가신청서_2.hwp"><img src="hwp.gif"></a></td></tr></table></body></html>"""
+NOTICE_369 = """<html><body><div id="bo_v_con"><p>일시: 2026. 11. 8.</p></div>
+<a href="http://www.seoulswim.or.kr/bbs/download.php?bo_table=schedule&wr_id=369&no=0">요강.pdf</a></body></html>"""
+BUSAN_2026 = """<html><body><table><tr><td colspan="4"><table><tr><td><img src="img/y2026.gif"></td></tr></table></td></tr>
+<tr><td>2026년 전국소년체전 선발전</td><td align="center">2026. 3. 21</td><td> </td><td><a href="./data/26-01.pdf"><img src="./img/pdf.gif"></a></td></tr>
+<tr><td>제48회 부산수영연맹회장배 수영대회</td><td>2026. 7. 4</td><td> </td><td><a href="./data/26-04.pdf"></a><a href="./data/26-05.pdf"></a></td></tr>
+</table></body></html>"""
+BUSAN_2025 = """<html><body><table><tr><td>교육감배수영대회</td><td>2025. 8.16</td><td></td><td><a href="./data/25-07.pdf"></a></td></tr></table></body></html>"""
+SR_P1 = """<html><body><table><tbody>
+<tr><td>432</td><td>제11회 광양만배 유소년 전국수영대회</td><td>광양수영장</td><td>2026.11.06~2026.11.08</td><td>2026.10.08~2026.10.27</td>
+<td><button onclick='fnEventInfo("D2","202616053")'>대회완료</button></td></tr>
+<tr><td>431</td><td>제107회 전국체육대회(경영)</td><td>제주실내수영장</td><td>2026.10.17~2026.10.22</td><td>~</td>
+<td><button onclick='fnEventInfo("D2","202615936")'>대회완료</button></td></tr>
+<tr><td>430</td><td>2027 미래 대회</td><td>어딘가</td><td>2027.01.10~2027.01.11</td><td>~</td><td><button onclick='fnEventInfo("D2","202700001")'>접수중</button></td></tr>
+</tbody></table></body></html>"""
+SR_P2 = """<html><body><table><tbody>
+<tr><td>5</td><td>제15회 김천 전국수영대회(다이빙, 수구)</td><td>김천실내수영장</td><td>2022.03.13~2022.03.17</td><td>~</td>
+<td><button onclick="fnEventInfo('D2','202200005')">대회완료</button></td></tr></tbody></table></body></html>"""
+
+
+class ResultScrapeTests(unittest.TestCase):
+    def tearDown(self):
+        os.environ["SWIM_TODAY"] = "2026-11-03"
+
+    def test_result_board(self):
+        cfg = next(b for b in m.RESULT_BOARDS if b["key"] == "seoulswim_result")
+        pages = {cfg["url"]: RES_LIST,
+                 "http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=105": RES_105,
+                 "http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=104": RES_104}
+        out = m.scrape_result_board(fetcher(pages), {}, cfg)
+        self.assertEqual([r["post_title"] for r in out], ["제12회 서울시연맹회장배수영대회 경기결과",
+                                                          "(다이빙)제43회 서울소년체육대회겸 제55회 전국소년체육대회 서울시 예선전"])   # 신기록표는 결과가 아니다
+        a, b = out
+        self.assertEqual(a["title"], "제12회 서울시연맹회장배수영대회")
+        self.assertEqual([(x["name"], x["ext"]) for x in a["files"]], [("경영 경기결과.pdf", "pdf"), ("다이빙 경기결과.xlsx", "xlsx")])
+        self.assertEqual((a["start_date"], a["posted"], a["sido"], a["tier"], a["kind"]), ("2026-06-27", "2026-07-06", "서울", "official", "files"))
+        self.assertEqual((b["title"], b["sports"]), ("제43회 서울소년체육대회겸 제55회 전국소년체육대회 서울시 예선전", ["다이빙"]))
+        self.assertEqual((b["start_date"], b["end_date"]), ("2026-03-27", "2026-03-27"),
+                         "항목 이름 없이 첫 줄에 적은 날짜(끝날 '~ 29'는 '일'이 없어 읽지 않는다 — 시작일로 잇는다)")
+        self.assertNotIn("text", a)                                       # 결과지 내용은 받지도 저장하지도 않는다
+
+    def test_notice_board_takes_only_result_posts(self):
+        cfg = next(b for b in m.RESULT_BOARDS if b["key"] == "seoulswim_notice_result")
+        pages = {cfg["url"]: NOTICE_LIST,
+                 "http://www.seoulswim.or.kr/bbs/board.php?bo_table=schedule&wr_id=368": NOTICE_368,
+                 "http://www.seoulswim.or.kr/bbs/board.php?bo_table=schedule&wr_id=369": NOTICE_369}
+        out = m.scrape_result_board(fetcher(pages), {}, cfg)
+        self.assertEqual([r["title"] for r in out], ["제6회 영등포구청장배 수영대회"])   # 대회 공고(요강)는 결과가 아니다
+        self.assertEqual(out[0]["posted"], "2026-10-20")
+        self.assertEqual([f["name"] for f in out[0]["files"]], ["영등포구청장배 결과.pdf"], "글자 없는 다른 글의 파일 아이콘은 결과지가 아니다")
+
+    def test_busan_records(self):
+        os.environ["SWIM_TODAY"] = "2026-11-08"
+        pages = {"http://www.busanswimming.kr/data01.asp?yy=2026": BUSAN_2026, "http://www.busanswimming.kr/data01.asp?yy=2025": BUSAN_2025}
+        out = m.scrape_busan_records(fetcher(pages), {})
+        self.assertEqual([(r["title"], r["start_date"], len(r["files"])) for r in out],
+                         [("2026년 전국소년체전 선발전", "2026-03-21", 1), ("제48회 부산수영연맹회장배 수영대회", "2026-07-04", 2),
+                          ("교육감배수영대회", "2025-08-16", 1)])
+        self.assertEqual(out[1]["files"][1], {"name": "제48회 부산수영연맹회장배 수영대회 기록지 2.pdf",
+                                              "url": "http://www.busanswimming.kr/data/26-05.pdf", "ext": "pdf"})
+        self.assertTrue(all(r["direct"] for r in out))                     # 글을 거치지 않고 바로 받아지는 파일
+
+    def test_sports_result_system(self):
+        os.environ["SWIM_TODAY"] = "2026-11-08"
+        url = "https://result.sports.or.kr/SW/INF201.do"
+        pages = {url + "#pageIndex=1": SR_P1, url + "#pageIndex=2": SR_P2}
+        f = fetcher(pages)
+        out = m.scrape_sports_result(f, {}, "SW")
+        self.assertEqual([(r["toCd"], r["classCd"], r["start_date"]) for r in out],
+                         [("202616053", "D2", "2026-11-06"), ("202615936", "D2", "2026-10-17"), ("202200005", "D2", "2022-03-13")])
+        self.assertEqual((out[1]["title"], out[1]["sports"]), ("제107회 전국체육대회", ["경영"]))
+        self.assertEqual(out[2]["sports"], ["다이빙", "수구"])
+        self.assertNotIn(url + "#pageIndex=3", f.s.calls, "3년보다 오래된 쪽에서 멈춘다")
+        with self.assertRaises(m.StructureError):
+            m.scrape_sports_result(fetcher({url + "#pageIndex=1": "<html><body>점검 중</body></html>"}), {}, "SW")
+
+
+class ResultMatchTests(unittest.TestCase):
+    def setUp(self):
+        os.environ["SWIM_TODAY"] = "2026-11-08"
+        mk = m.make_obs
+        obs = {
+            "gc": mk("korswim", "official", "제15회 김천 전국수영대회", start="2025-03-13", end="2025-03-17", venue="김천실내수영장"),
+            "kb": mk("korswim", "official", "2024 교보생명컵 꿈나무 체육대회", start="2024-07-29", end="2024-08-01", venue="김천실내수영장"),
+            "sn": mk("korswim", "official", "제55회 전국소년체육대회", start="2026-05-23", end="2026-05-26", venue="사직실내수영장"),
+            "dk": mk("korswim", "official", "2024 전국생활체육대축전", start="2024-04-27", end="2024-04-28", venue="문수실내수영장"),
+            "df": mk("kua", "official", "2024 전국생활체육 대축전", start="2024-04-20", place="울산", sport_force="핀수영"),
+            "sa": mk("kjaq", "official", "제20회 수애기배 전국 마스터즈 수영대회", start="2025-11-15", place="제주 제주시"),
+            "gu": mk("swimming_co_kr", "secondary", "2026 경기도의장배 수영대회", start="2026-08-01", place="경기 수원시"),
+            "up": mk("swimming_co_kr", "secondary", "2026 경기도지사배 수영대회", start="2026-12-05", place="경기 수원시"),
+            "ks": mk("korswim", "official", "제105회 전국체육대회", start="2024-10-11", end="2024-10-17", venue="김해실내수영장"),
+            "kf": mk("kua", "official", "제105회 전국체육대회", start="2024-10-11", end="2024-10-13", place="대구", sport_force="핀수영"),
+            "km": mk("korswim", "official", "제4회 김천 전국 마스터즈 수영대회", start="2026-08-29", end="2026-08-30", venue="김천실내수영장"),
+            "kc": mk("swimming_co_kr", "secondary", "제10회 김천시장배 수영대회", start="2026-06-14", place="경북 김천시"),
+        }
+        self.records = {k: {"id": k, "obs": {k: o}, "first_seen": "2026-11-01"} for k, o in obs.items()}
+        for rec in self.records.values():
+            rec["derived"] = m.derive(rec)
+
+    def tearDown(self):
+        os.environ["SWIM_TODAY"] = "2026-11-03"
+
+    def r(self, source, post_title, **kw):
+        title, hint = m.result_meet_title(post_title)
+        return dict({"key": source + ":" + post_title, "source": source, "tier": "official", "kind": "files", "title": title,
+                     "post_title": post_title, "url": "https://example/" + source, "files": [], "sports": hint, "sido": ""}, **kw)
+
+    def test_dated_results(self):
+        M = lambda x: m.match_result(self.records, x)
+        self.assertEqual(M(self.r("sports_result_sw", "제15회 김천 전국수영대회(경영)", start_date="2025-03-13", end_date="2025-03-17")), "gc",
+                         "짧은 이름('김천')도 같은 날 · 같은 회차면")
+        self.assertIsNone(M(self.r("sports_result_sw", "제20회 꿈나무 전국수영대회", start_date="2024-06-25", end_date="2024-06-27")),
+                          "한 달 다른 '교보생명컵 꿈나무 체육대회'에 붙이지 않는다(일정 변경 75일 규칙을 결과에 쓰지 않음)")
+        self.assertEqual(M(self.r("sports_result_sw", "제55회 전국소년체육대회(다이빙)", start_date="2026-05-23", end_date="2026-05-26")), "sn",
+                         "같은 날이면 종목별로 따로 올린 결과도 같은 대회")
+        self.assertEqual(M(self.r("sports_result_uw", "2024 전국생활체육 대축전", start_date="2024-04-20")), "df", "핀수영협회 결과 → 핀수영 대회")
+        self.assertEqual(M(self.r("sports_result_sw", "2024 전국생활체육대축전(경영)", start_date="2024-04-27")), "dk", "수영연맹 결과 → 경영 대회")
+        self.assertIsNone(M(self.r("sports_result_sw", "2026 경기도지사배 수영대회", start_date="2026-12-05")), "시작 안 한 대회에는 결과가 없다")
+        self.assertEqual(M(self.r("sports_result_uw", "제105회 전국체육대회", start_date="2024-10-11")), "kf",
+                         "같은 날 같은 이름이어도 핀수영협회 결과는 핀수영 대회에")
+        self.assertEqual(M(self.r("sports_result_sw", "제105회 전국체육대회(경영)", start_date="2024-10-11")), "ks")
+        self.assertIsNone(M(self.r("sports_result_sw", "김천 전국수영대회", start_date="2026-08-29")),
+                          "같은 날 김천에서 열린 마스터즈 대회에 전문선수 대회 결과를 붙이지 않는다(대회 성격이 다름)")
+        self.assertIsNone(M(self.r("sports_result_sw", "김천 수영대회", start_date="2026-06-14")),
+                          "짧은 이름('김천')이 긴 이름('김천시장배')에 들어 있을 뿐이면 회차나 시·도까지 같아야 붙인다")
+
+    def test_undated_results(self):
+        M = lambda x: m.match_result(self.records, x)
+        self.assertEqual(M(self.r("kjaq_result", "제20회 수애기배 전국 마스터즈 수영대회 경기결과", sido="제주")), "sa", "날짜 · 연도가 없으면 회차로")
+        self.assertEqual(M(self.r("gswimming_result", "2026 경기도의장배 수영대회 경기결과", sido="경기", posted="2026-08-03")), "gu")
+        self.assertIsNone(M(self.r("gswimming_result", "2025 경기도의장배 수영대회 경기결과", sido="경기", posted="2025-11-11")), "다른 해 결과")
+        self.assertIsNone(M(self.r("gswimming_result", "경기도의장배 수영대회 경기결과", sido="경기", posted="2027-09-01")),
+                          "게시일이 대회보다 반년 넘게 뒤면 다른 해 대회의 결과")
+        self.assertIsNone(M(self.r("gswimming_result", "경기도의장배 수영대회 경기결과", sido="경기")), "연도도 회차도 게시일도 없으면 붙이지 않는다")
+        self.assertIsNone(M(self.r("seoulswim_result", "제20회 수애기배 전국 마스터즈 수영대회 경기결과", sido="서울")), "다른 시·도 연맹 게시판")
+
+
+class ResultRefreshTests(unittest.TestCase):
+    """결과는 쌓아 두고 매번 다시 잇는다 · 대회 변경 이력은 만들지 않는다 · 결과 수집 실패는 대회 수집 실패로 세지 않는다."""
+    setUp, tearDown, load = RefreshTests.setUp, RefreshTests.tearDown, RefreshTests.load
+
+    def run_res(self, results, comps=None):
+        comps = comps if comps is not None else [dict(title="제7회 성동구수영연맹회장배 수영대회", start="2026-04-12", place="서울 성동구"),
+                                                 dict(title="2026 PIS 전국마스터즈 1,500m 수영대회", start="2026-02-22", place="서울 송파구"),
+                                                 dict(title="제39회 제주특별자치도수영연맹 회장배", start="2026-11-15", place="제주 제주시")]
+        def src(f, st):
+            return [m.make_obs("swimming_co_kr", "secondary", **x) for x in comps]
+        def res(f, st):
+            if isinstance(results, Exception):
+                raise results
+            return results
+        return m.refresh(fetcher=m.Fetcher(session=FakeSession({}), pause=0, tries=1),
+                         sources=[("swimming_co_kr", "secondary", "https://swimming.co.kr/", src)],
+                         result_sources=[("seoulswim_result", "official", "http://www.seoulswim.or.kr/bbs/board.php?bo_table=result", res)],
+                         do_search=False, do_confirm=False)
+
+    def test_results_published_and_kept(self):
+        os.environ["SWIM_TODAY"] = "2026-11-08"
+        entry = {"key": "seoulswim_result:p1", "source": "seoulswim_result", "tier": "official", "kind": "files",
+                 "title": "제7회 성동구수영연맹회장배수영대회", "post_title": "제7회 성동구수영연맹회장배수영대회 경기결과",
+                 "url": "http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=104", "sports": [], "sido": "서울",
+                 "files": [{"name": "성동구 결과.xls", "url": "http://www.seoulswim.or.kr/bbs/download.php?bo_table=result&wr_id=104&no=0", "ext": "xls"}],
+                 "start_date": "2026-04-12", "end_date": "2026-04-12", "posted": "2026-04-13"}
+        self.run_res([])                                                    # 기준선
+        s = self.run_res([entry])
+        doc = self.load("competitions.json")
+        c = next(x for x in doc["competitions"] if "성동구" in x["title"])
+        self.assertEqual(len(c["results"]), 1)
+        r = c["results"][0]
+        self.assertEqual(set(r), {"kind", "source", "source_name", "tier", "title", "url", "files", "direct", "posted", "start_date"},
+                         "공개 자료에는 이름 · 주소 · 날짜만(결과 내용 없음)")
+        self.assertEqual((r["kind"], r["direct"], r["files"][0]["ext"]), ("files", False, "xls"))
+        self.assertEqual(s["changed"], 0, "결과가 붙어도 대회 변경 이력 · 알림은 없다")
+        self.assertEqual(s["with_results"], 1)
+        self.assertFalse([x for x in self.load("changes.json")["changes"] if x.get("type") == "updated"])
+        st = next(x for x in self.load("sources.json")["sources"] if x["key"] == "seoulswim_result")
+        self.assertEqual((st["status"], st["group"], st["count"]), ("ok", "result", 1))
+        # 결과 수집이 실패해도 · 다음 날 목록에서 밀려나도 찾은 결과는 남는다. 대회 수집 실패로 세지 않는다.
+        s = self.run_res(IOError("connection reset"))
+        self.assertEqual((s["failed_sources"], s["result_sources_failed"]), (0, 1))
+        c = next(x for x in self.load("competitions.json")["competitions"] if "성동구" in x["title"])
+        self.assertEqual([f["name"] for f in c["results"][0]["files"]], ["성동구 결과.xls"])
+        self.run_res([])
+        c = next(x for x in self.load("competitions.json")["competitions"] if "성동구" in x["title"])
+        self.assertEqual(len(c["results"]), 1)
+
+    def test_whoisfast_records_link_only_for_ended(self):
+        os.environ["SWIM_TODAY"] = "2026-11-08"
+        def wf(f, st):
+            out = []
+            for t, d in (("2026 PIS 전국마스터즈 1,500m 수영대회", "2026-02-22"), ("제39회 제주특별자치도수영연맹 회장배", "2026-11-15")):
+                o = m.make_obs("whoisfast", "secondary", t, start=d)
+                o["records_url"] = "https://whoisfast.com/search?qtype=meet&q=" + d
+                out.append(o)
+            return out
+        m.refresh(fetcher=m.Fetcher(session=FakeSession({}), pause=0, tries=1), sources=[("whoisfast", "secondary", "https://whoisfast.com/meets", wf)],
+                  result_sources=[], do_search=False, do_confirm=False)
+        doc = self.load("competitions.json")
+        pis = next(x for x in doc["competitions"] if "PIS" in x["title"])
+        jeju = next(x for x in doc["competitions"] if "제주" in x["title"])
+        self.assertEqual([(r["kind"], r["source"], r["tier"]) for r in pis["results"]], [("link", "whoisfast_records", "secondary")])
+        self.assertEqual(jeju["results"], [], "열리지 않은 대회에는 기록 검색 링크를 붙이지 않는다")
 
 
 class PublishedDataTests(unittest.TestCase):

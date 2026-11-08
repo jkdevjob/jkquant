@@ -55,14 +55,40 @@ dialog#detail::backdrop{background:rgba(5,8,16,.72)}
 .dsec{margin-top:14px}.dsec h4{margin:0 0 6px;font-size:12px;color:var(--faint);letter-spacing:.04em}.dsec ul{margin:0;padding-left:18px;font-size:12.5px;color:var(--dim)}.dsec li{margin:3px 0;overflow-wrap:anywhere}.dsec li a{color:var(--sky)}
 .warnbox{margin-top:12px;padding:9px 11px;border-radius:9px;background:rgba(245,196,81,.08);border:1px solid rgba(245,196,81,.3);font-size:12px;color:#f1dfb4}
 .ftoggle{display:none}
+.tag.res{color:#0f1320;background:var(--sky);border-color:var(--sky)}
+.res .rbox{border:1px solid var(--border);border-radius:10px;background:var(--surf2);padding:10px 12px;margin:0 0 8px}
+.res .rtop{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}.res .rtop a{color:var(--sky);text-decoration:none}.res .rtop b{font-size:13px;color:var(--text);word-break:keep-all;overflow-wrap:anywhere}.res .rtop small{color:var(--faint);font-size:11.5px}
+.res .rfiles{list-style:none;margin:0;padding:0}.res .rfiles li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);margin:0;color:var(--text)}
+.res .fn{min-width:0;overflow-wrap:anywhere;font-size:12.5px}.res .racts{display:flex;gap:6px;flex:0 0 auto;align-items:center}
+.rbtn{display:inline-flex;align-items:center;justify-content:center;height:36px;padding:0 12px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:800;font-size:12.5px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.rbtn.sec{background:var(--surf);border-color:var(--border);color:var(--text)}.rbtn[hidden]{display:none}.rhint{color:var(--faint);font-size:11px}
+.rnote{color:var(--faint);font-size:11.5px;margin:6px 0 0}
+dialog#viewer{width:min(980px,100%);height:min(92vh,980px);height:min(92dvh,980px);margin:auto;padding:0;border:1px solid var(--border2);border-radius:14px;background:var(--surf);color:var(--text);display:none;flex-direction:column}
+dialog#viewer[open]{display:flex}dialog#viewer::backdrop{background:rgba(5,8,16,.8)}
+#viewer .dhead{align-items:center}#viewer .dhead h3{font-size:15px}
+.vtool{display:flex;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border)}.vtool[hidden]{display:none}
+.vtool input{flex:1;min-width:0;height:40px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:0 10px;outline:none}.vtool span{color:var(--faint);font-size:12px;white-space:nowrap}
+.vhits{max-height:30%;overflow:auto;padding:6px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--dim)}.vhits[hidden]{display:none}
+.vhits button{text-align:left;background:var(--surf2);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:6px 9px;cursor:pointer;overflow-wrap:anywhere}
+.vbody{flex:1;overflow:auto;padding:10px 12px 18px;-webkit-overflow-scrolling:touch}
+.vload,.verr{padding:40px 12px;text-align:center;color:var(--dim)}.verr{color:#f3c2ca}.verr a{color:var(--sky)}
+.vpage{position:relative;width:100%;max-width:900px;margin:0 auto 10px;background:#fff;border-radius:4px;overflow:hidden}.vpage canvas{display:block;width:100%;height:auto}
+.vpn{position:absolute;left:8px;top:6px;color:#888;font-size:11px}.vpage.on .vpn{display:none}
+.vtabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:8px}.vtabs button{flex:0 0 auto;border:1px solid var(--border);background:var(--surf2);color:var(--dim);border-radius:999px;padding:6px 11px;font-weight:700;cursor:pointer}.vtabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.vtable{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:12px}.vtable table{border-collapse:collapse;font-size:12px;min-width:100%}.vtable td,.vtable th{border:1px solid var(--border);padding:4px 7px;white-space:nowrap;text-align:left}.vtable th{background:var(--surf2);color:var(--dim);position:sticky;top:0}
+.vtable tr.sec td{background:rgba(139,140,240,.12);font-weight:800}
+.vres h5{margin:12px 0 6px;font-size:13px;color:var(--gold)}.vsys select{width:100%;height:44px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:0 9px}
+.vimg{display:block;max-width:100%;margin:0 auto;background:#fff}
 @media(max-width:850px){.hero{flex-direction:column;align-items:flex-start}.filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.wrap{padding:0 11px}.cards{grid-template-columns:1fr}.ftoggle{display:inline-block}.filters{display:none}.filters.on{display:grid}.hero h2{font-size:19px}
-  dialog#detail{max-height:92dvh;margin:auto 0 0;border-radius:16px 16px 0 0;width:100%;max-width:100%}.dbody .kv{grid-template-columns:76px minmax(0,1fr)}.srcrow{grid-template-columns:minmax(0,1fr) 56px}.srcrow .er{grid-column:1/-1}}
+  dialog#detail{max-height:92dvh;margin:auto 0 0;border-radius:16px 16px 0 0;width:100%;max-width:100%}.dbody .kv{grid-template-columns:76px minmax(0,1fr)}
+  dialog#viewer{width:100%;max-width:100%;height:100dvh;max-height:100dvh;border-radius:0}.res .rfiles li{flex-direction:column;align-items:stretch}.res .racts{justify-content:flex-end}.srcrow{grid-template-columns:minmax(0,1fr) 56px}.srcrow .er{grid-column:1/-1}}
 </style>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js" data-guard="1"></script>
 <script src="/jk-ui.js?v=1.1.0" defer></script>
-<script src="/swim-core.js?v=2.0.0"></script>
+<script src="/swim-core.js?v=2.1.0"></script>
+<script src="/swim-results.js?v=1.0.0"></script>
 <script type="module">
 /* 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다(판정은 jk-access.js 한 곳 · JOB·공모주와 같은 방식).
    2026-11-03 이전 판은 data-guard 로 본문만 가리고 guard() 를 부르지 않아 화면이 끝까지 비어 있었다. */
@@ -85,7 +111,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK 투자</div><h1>🏊 수영대회 <span style="font-size:12px;font-weight:400;color:var(--faint)" id="swimVer">v2.2.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK 투자</div><h1>🏊 수영대회 <span style="font-size:12px;font-weight:400;color:var(--faint)" id="swimVer">v2.3.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="전체메뉴">☰</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -123,6 +149,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
     <button type="button" data-quick="elite">🏅 전문선수</button>
     <button type="button" data-quick="open">📝 접수중</button>
     <button type="button" data-quick="new">🆕 신규·변경</button>
+    <button type="button" data-quick="results">🏁 지난 대회 결과</button>
   </div>
   <div class="searchrow">
     <input id="q" type="search" placeholder="대회명 · 수영장 · 지역 검색" aria-label="대회명 및 장소 검색" autocomplete="off">
@@ -134,7 +161,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
     <label>대회 구분<select id="kind"><option value="">전체</option><option value="masters">마스터즈·동호인</option><option value="elite">전문선수</option><option value="student">학생부</option><option value="other">기타·미확정</option></select></label>
     <label>경기 종목<select id="sport"><option value="">전체</option><option value="경영">경영</option><option value="다이빙">다이빙</option><option value="수구">수구</option><option value="아티스틱">아티스틱스위밍</option><option value="핀수영">핀수영</option><option value="오픈워터">오픈워터</option><option value="기타">기타</option></select></label>
     <label>개최 기간<select id="period"><option value="upcoming">예정 전체</option><option value="month">이번 달</option><option value="next">다음 달</option><option value="3m">3개월 이내</option><option value="past">종료된 대회</option><option value="all">전체(이력 포함)</option></select></label>
-    <label>접수 상태<select id="status"><option value="">전체</option><option value="soon">접수예정</option><option value="open">접수중</option><option value="closed">마감</option><option value="unknown">미확정</option><option value="cancelled">취소·연기</option></select></label>
+    <label>접수 상태<select id="status"><option value="">전체</option><option value="soon">접수예정</option><option value="open">접수중</option><option value="closed">마감</option><option value="unknown">미확정</option><option value="cancelled">취소·연기</option><option value="result">결과 있음(지난 대회)</option></select></label>
     <label>참가 자격<select id="elig"><option value="">전체</option><option value="adult">성인(동호인) 가능</option><option value="student">학생 가능</option><option value="elite">전문선수 대회</option><option value="unknown">자격 미확정</option></select></label>
     <label>정렬<select id="sort"><option value="date">개최일 빠른 순</option><option value="date_desc">개최일 늦은 순</option><option value="deadline">접수 마감 임박순</option><option value="recent">최근 등록순</option><option value="changed">최근 변경순</option><option value="region">지역순</option><option value="name">대회명순</option></select></label>
     <div class="act"><button type="button" class="btn" id="reset">초기화</button></div>
@@ -150,11 +177,11 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 <script>
 (function(){
 'use strict';
-const C=window.SwimCore,$=id=>document.getElementById(id);
+const C=window.SwimCore,R=window.SwimResults,$=id=>document.getElementById(id);
 const RAW='https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/swim/';
 const FIELDS=['sido','sigungu','kind','sport','period','status','elig','sort'];
 const PAGE=20;
-let all=[],baseline='',page=1,quick='',T=C.kstToday();
+let all=[],baseline='',page=1,quick='',T=C.kstToday(),cur=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeUrl=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.href:''}catch(e){return ''}};
 const md=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')?(+d.slice(5,7))+'/'+(+d.slice(8,10)):'';
@@ -177,6 +204,7 @@ function card(e){
   tags.push('<span class="tag">'+esc((e.sports||[e.sport]).join('·'))+'</span>');
   tags.push('<span class="tag v-'+esc(e.verification)+'">'+esc(C.VERIFY_LABEL[e.verification]||'미확정')+'</span>');
   if(!safeUrl(e.official_url)&&(e.guide_links||[]).length)tags.push('<span class="tag">요강 링크</span>');
+  if(R.hasResults(e)&&R.isPast(e,T))tags.push('<span class="tag res">🏁 결과</span>');
   return '<button type="button" class="card" data-id="'+esc(e.id)+'"><div class="tags">'+tags.join('')+'</div><h3>'+esc(e.title)+'</h3>'+
     '<dl class="kv"><dt>개최일</dt><dd class="dd-strong">'+esc(period(e))+'</dd><dt>장소</dt><dd>'+esc(e.venue||'미확정')+(e.pool?' · '+esc(e.pool):'')+'</dd>'+
     '<dt>접수</dt><dd>'+esc(applyText(e))+'</dd><dt>참가 자격</dt><dd'+(e.eligibility?'':' class="dd-warn"')+'>'+esc(e.eligibility||'요강 확인 필요(미확정)')+'</dd></dl></button>';
@@ -184,7 +212,8 @@ function card(e){
 function filters(){const f={q:$('q').value.trim(),quick};FIELDS.forEach(k=>f[k]=$(k).value);return f;}
 function activeCount(f){return FIELDS.filter(k=>k!=='sort'&&f[k]&&!(k==='period'&&f[k]==='upcoming')).length;}
 function render(){
-  const f=filters(),list=C.sortList(all.filter(e=>C.matches(e,f,T,baseline)),f.sort,T),pg=C.paginate(list,page,PAGE);
+  const f=filters(),wantRes=quick==='results'||f.status==='result';
+  const list=C.sortList(all.filter(e=>C.matches(e,f,T,baseline)),wantRes&&f.sort==='date'?'date_desc':f.sort,T),pg=C.paginate(list,page,PAGE);   // 지난 대회 결과는 최근 대회부터
   page=pg.page;
   $('cards').innerHTML=pg.items.length?pg.items.map(card).join(''):'<div class="empty">조건에 맞는 대회가 없습니다.<br>개최 기간을 \'전체(이력 포함)\'로 바꾸거나 필터를 초기화해 보세요.</div>';
   $('resultText').textContent='검색 결과 '+list.length.toLocaleString()+'건'+(list.length?' · '+pg.from+'–'+pg.to+' 표시':'');
@@ -221,6 +250,7 @@ function openDetail(id,push){
   const guides=(e.guide_links||[]).map(g=>({u:safeUrl(g.url),host:g.host})).filter(g=>g.u);
   h+='</dl><div class="links">'+(off?'<a href="'+esc(off)+'" target="_blank" rel="noopener noreferrer">공식 공고 ↗</a>':'')+(ap?'<a href="'+esc(ap)+'" target="_blank" rel="noopener noreferrer">참가 신청 ↗</a>':'')+
     guides.map(g=>'<a class="'+(off?'sec':'')+'" href="'+esc(g.u)+'" target="_blank" rel="noopener noreferrer">요강 보기 ↗ <small>'+esc(guideHost(g.host))+'</small></a>').join('')+'</div>';
+  h+=R.section(e,T);                               // 지난 대회 결과(결과지 받기 · 보기 · 종목별 결과)
   if(!off&&!guides.length)h+='<div class="warnbox">공식 공고 원문 링크를 아직 찾지 못했습니다. 아래 출처에서 확인하세요.</div>';
   const warn=(e.warnings||[]).slice();if(e.conflicts){if(e.conflicts.dates)warn.push('출처마다 개최일이 다름: '+e.conflicts.dates.join(' / '));if(e.conflicts.apply)warn.push('출처마다 접수 기간이 다름: '+e.conflicts.apply.join(' / '));if(e.conflicts.pool)warn.push('출처마다 수영장 규격이 다름: '+e.conflicts.pool.join(' / '));}
   if(warn.length)h+='<div class="warnbox">'+warn.map(esc).join('<br>')+'</div>';
@@ -231,7 +261,7 @@ function openDetail(id,push){
   const shownFields=c=>Object.entries(c.fields||{}).filter(([k])=>LABEL[k]);   // 없어진 항목(예: 예전 자유형 판정) 이력은 보이지 않는다
   const ch=(e.changes||[]).filter(c=>c&&c.type!=='baseline'&&(c.type==='new'||shownFields(c).length));
   if(ch.length)h+='<div class="dsec"><h4>변경 이력</h4><ul>'+ch.slice().reverse().map(c=>'<li>'+esc(ymd(c.date))+' · '+(c.type==='new'?'신규 등록':shownFields(c).map(([k,v])=>esc(LABEL[k]||k)+' '+esc(fmt(v[0]))+' → '+esc(fmt(v[1]))).join(', '))+'</li>').join('')+'</ul></div>';
-  $('dBody').innerHTML=h;
+  $('dBody').innerHTML=h;cur=e;
   const d=$('detail');if(!d.open){if(d.showModal)d.showModal();else d.setAttribute('open','');}
   $('dBody').scrollTop=0;
   if(push!==false){const u=new URL(location.href);u.searchParams.set('id',id);history.pushState({id},'',u);}
@@ -239,7 +269,7 @@ function openDetail(id,push){
 const LABEL={title:'대회명',start_date:'시작일',end_date:'종료일',venue:'장소',sido:'시·도',sigungu:'시·군·구',apply_open:'접수 시작',apply_close:'접수 마감',status:'상태',apply_closed:'조기 마감',events:'종목',fee:'참가비',eligibility:'자격',pool:'규격',official_url:'공식 링크',apply_url:'신청 링크',verification:'확인 상태'};
 const guideHost=h=>/cafe\.naver/.test(h||'')?'네이버 카페':/blog\.naver/.test(h||'')?'네이버 블로그':/cafe\.daum/.test(h||'')?'다음 카페':/instagram/.test(h||'')?'인스타그램':String(h||'').replace(/^www\./,'');
 const fmt=v=>v===true?'예':v===false?'아니오':v==null||v===''?'없음':String(v).slice(0,40);
-function closeDetail(push){const d=$('detail');if(d.open){if(d.close)d.close();else d.removeAttribute('open');}
+function closeDetail(push){R.close();const d=$('detail');if(d.open){if(d.close)d.close();else d.removeAttribute('open');}
   if(push!==false&&new URL(location.href).searchParams.has('id')){const u=new URL(location.href);u.searchParams.delete('id');history.pushState({},'',u);}}
 function setQuick(v){quick=v;document.querySelectorAll('#quick button').forEach(b=>{const on=b.dataset.quick===v;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});page=1;render();}
 FIELDS.forEach(k=>$(k).addEventListener('change',()=>{if(k==='sido'){$('sigungu').value='';fillSigungu();}page=1;render();}));
@@ -250,16 +280,18 @@ $('ftoggle').addEventListener('click',()=>{const on=$('filters').classList.toggl
 $('pager').addEventListener('click',ev=>{const b=ev.target.closest('button[data-p]');if(!b||b.disabled)return;page=+b.dataset.p;render();$('resultText').scrollIntoView({behavior:'smooth',block:'start'});});
 $('cards').addEventListener('click',ev=>{const c=ev.target.closest('.card');if(c)openDetail(c.dataset.id);});
 $('dClose').addEventListener('click',()=>closeDetail());
+$('dBody').addEventListener('click',ev=>{if(cur&&R.click(ev,cur))ev.preventDefault();});
 $('detail').addEventListener('click',ev=>{if(ev.target===$('detail'))closeDetail();});
 $('detail').addEventListener('cancel',ev=>{ev.preventDefault();closeDetail();});
 window.addEventListener('popstate',()=>{const id=new URL(location.href).searchParams.get('id');if(id)openDetail(id,false);else closeDetail(false);});
 $('healthBtn').addEventListener('click',()=>{const on=$('srcList').classList.toggle('on');$('healthBtn').setAttribute('aria-expanded',on);$('healthBtn').textContent=on?'닫기':'수집처 보기';});
 const kst=s=>{if(!s)return '';const d=new Date(s);if(isNaN(d))return String(s).slice(0,16);return new Date(d.getTime()+9*36e5).toISOString().slice(0,16).replace('T',' ');};
 function renderHealth(src){
-  const list=(src&&src.sources)||[],main=list.filter(s=>s.tier!=='unverified'&&s.key!=='official_link'),bad=main.filter(s=>s.status!=='ok');
+  const list=(src&&src.sources)||[],main=list.filter(s=>s.tier!=='unverified'&&s.key!=='official_link'&&s.group!=='result'),bad=main.filter(s=>s.status!=='ok');
+  const resSrc=list.filter(s=>s.group==='result'),resOk=resSrc.filter(s=>s.status==='ok').length;
   $('health').classList.toggle('bad',!!bad.length);
-  $('healthText').textContent=list.length?('자동 수집 '+(main.length-bad.length)+'/'+main.length+'곳 정상'+(bad.length?' · 실패: '+bad.map(s=>s.name.replace(/ (대회일정|공지사항)$/,'')).join(', '):'')+' · 마지막 수집 '+kst(src.updated_at)):'수집 상태 정보를 읽지 못했습니다';
-  $('srcList').innerHTML=list.map(s=>'<div class="srcrow"><span class="nm">'+(safeUrl(s.url)?'<a href="'+esc(safeUrl(s.url))+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a>':esc(s.name))+'</span><span class="'+(s.status==='ok'?'ok':'ng')+'">'+(s.status==='ok'?'정상 '+(s.count||0)+'건':s.status==='blocked'?'수집 금지':'실패')+'</span><span class="er">'+esc(s.status==='ok'?(s.warning||'성공 '+kst(s.last_success)):(s.error||'')+(s.last_success?' · 마지막 성공 '+kst(s.last_success):' · 성공 기록 없음'))+'</span></div>').join('');
+  $('healthText').textContent=list.length?('자동 수집 '+(main.length-bad.length)+'/'+main.length+'곳 정상'+(bad.length?' · 실패: '+bad.map(s=>s.name.replace(/ (대회일정|공지사항)$/,'')).join(', '):'')+(resSrc.length?' · 결과지 '+resOk+'/'+resSrc.length+'곳':'')+' · 마지막 수집 '+kst(src.updated_at)):'수집 상태 정보를 읽지 못했습니다';
+  $('srcList').innerHTML=list.map(s=>'<div class="srcrow"><span class="nm">'+(safeUrl(s.url)?'<a href="'+esc(safeUrl(s.url))+'" target="_blank" rel="noopener noreferrer">'+esc(s.name)+'</a>':esc(s.name))+'</span><span class="'+(s.status==='ok'?'ok':'ng')+'">'+(s.status==='ok'?(s.group==='result'?'결과 ':'정상 ')+(s.count||0)+'건':s.status==='blocked'?'수집 금지':'실패')+'</span><span class="er">'+esc(s.status==='ok'?(s.warning||'성공 '+kst(s.last_success)):(s.error||'')+(s.last_success?' · 마지막 성공 '+kst(s.last_success):' · 성공 기록 없음'))+'</span></div>').join('');
 }
 function renderLeads(doc){
   const L=((doc&&doc.leads)||[]).filter(x=>!x.matched_id);
