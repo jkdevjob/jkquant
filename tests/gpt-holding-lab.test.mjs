@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {advanceHoldingLab,emptyHoldingLab,holdingPublic,holdingMs,HOLDING_VERSION,mainHoldingParams} from '../functions/api/_gpt-holding-lab.js';
 import {closingWindow,chooseClosingSignals} from '../functions/api/_closing30.js';
-import {closingBrokerPlans,validateBrokerPlan} from '../functions/api/_research-orders.js';
+import {closingBrokerPlans,soxlBrokerPlans,validateBrokerPlan} from '../functions/api/_research-orders.js';
 import {closingRecords} from '../functions/api/_trade-history.js';
 import {readHoldingState,writeHoldingState} from '../functions/api/_gpt-holding-storage.js';
 import {rebreakTrade} from '../functions/api/_opening.js';
@@ -146,6 +146,25 @@ test('trade-partitioned durable storage reloads all source identities without a 
  await writeHoldingState(storage,st,null);assert.equal(values.get('holdingLab').arms.no_time.trades.length,0);
  const restored=await readHoldingState(storage);assert.deepEqual(restored.arms.no_time.trades,st.arms.no_time.trades);
  await writeHoldingState(storage,restored,restored);assert.equal([...values.keys()].filter(k=>k.startsWith('holdingTrade:')).length,4);
+});
+test('SOXL main respects an actual early close and VTS exit expires before that session ends',async()=>{
+ const src=fs.readFileSync(new URL('../worker/global-intraday-scheduler/src/index.js',import.meta.url),'utf8');
+ const load=s=>import('data:text/javascript;base64,'+Buffer.from(s.replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=class {};').replaceAll('../../../functions/api/',new URL('../functions/api/',import.meta.url).href)+'\nexport {soxlSessionParams};').toString('base64'));
+ async function probe(m){
+  const d='2026-11-27',entryMs=Date.parse(d+'T11:35:00-05:00'),end=Date.parse(d+'T13:00:00-05:00');
+  const bars=Array.from({length:17},(_,i)=>({date:d,ms:entryMs+i*300000,sessionEndMs:end,o:100,h:100,l:100,c:100}));
+  const p=m.soxlSessionParams(mainHoldingParams('soxl',d,{maxHoldBars:24,stopPct:10,takeProfitPct:20}),bars,d);
+  const t=m.orbExit(bars,{hm:1135,ms:entryMs,o:100},end+2000,p,960);
+  assert.equal(t.deadlineMs,end);assert.equal(t.exit.bar.ms+300000,end);
+  assert.throws(()=>m.soxlSessionParams(p,[],d),/unconfirmed/);
+  const ledger={date:d,strategy:'soxl',mode:'server-live-paper-no-order',trades:[{id:'early',entryMs,entryPrice:100,deadlineMs:end,sessionEndMs:end,status:'open'}]};
+  const [sell]=soxlBrokerPlans(ledger,end-120000).filter(x=>x.side==='sell');
+  assert.equal(Date.parse(sell.dueAt),end-120000);assert(Date.parse(sell.expiresAt)<end);
+  assert.notEqual(validateBrokerPlan(sell,end),'');
+ }
+ await probe(await load(src));
+ const mutant=src.replace('params.sessionEndMs>0?params.sessionEndMs:Infinity','Infinity');assert.notEqual(mutant,src);
+ await assert.rejects(async()=>probe(await load(mutant)),assert.AssertionError);
 });
 test('09:30 opening exit uses the already completed 09:29 bar and rejects a fresh 09:29 entry',()=>{
  const prices=[103,103,103,104,103.6,104.2,...Array(24).fill(104.1)];

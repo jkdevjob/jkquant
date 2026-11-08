@@ -51,9 +51,10 @@ export function soxlBrokerPlans(ledger,now=Date.now()){
  if(!ledger||ledger.mode!=='server-live-paper-no-order'||ledger.strategy!=='soxl')return [];
  return (ledger.trades||[]).flatMap(x=>{
   const out=[];if(!x.id)return out;
-  if(x.entryMs>0&&x.entryPrice>0&&x.deadlineMs>0&&now>=x.entryMs)out.push(plan('gpt_soxl',ledger,x,'buy',x.entryMs,x.entryMs+6*60000,{exitDueAt:iso(x.deadlineMs)}));
-  const due=x.status==='closed'&&x.exitMs>0?x.exitMs+5*60000:x.deadlineMs;
-  if(due>0&&now>=due)out.push(plan('gpt_soxl',ledger,x,'sell',due,due+3*60000,{source:{tradeId:x.id,reason:x.status==='closed'?x.reason:'broker_holding_deadline'}}));
+  const sessionDeadline=x.sessionEndMs>0?x.sessionEndMs-2*60000:Infinity;
+  if(x.entryMs>0&&x.entryPrice>0&&x.deadlineMs>0&&now>=x.entryMs&&now<sessionDeadline)out.push(plan('gpt_soxl',ledger,x,'buy',x.entryMs,Math.min(x.entryMs+6*60000,sessionDeadline),{exitDueAt:iso(Math.min(x.deadlineMs,sessionDeadline))}));
+  const due=Math.min(x.status==='closed'&&x.exitMs>0?x.exitMs+5*60000:x.deadlineMs,sessionDeadline);
+  if(due>0&&now>=due)out.push(plan('gpt_soxl',ledger,x,'sell',due,Math.min(due+3*60000,x.sessionEndMs>0?x.sessionEndMs-1:Infinity),{source:{tradeId:x.id,reason:x.status==='closed'?x.reason:'broker_holding_deadline'}}));
   return out;
  });
 }

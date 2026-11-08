@@ -282,7 +282,7 @@ function paperLedger(strategy,date,t,opts={}){
       id:strategy+":"+date+":"+String(t.signal&&t.signal.time||""),
       strategyVersion:version,mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t.params||null,status:waiting?"pending":(t.exit?"closed":unverified?"unverified":"open"),
       signalTime:t.signal&&t.signal.time||null,entryTime:t.entry&&t.entry.time||null,
-      signalMs:t.signal?.ms||null,entryMs:t.entry?.ms||null,entryHm:t.entry?.hm??null,exitMs:t.exit?.bar?.ms||null,deadlineMs:t.deadlineMs||null,
+      signalMs:t.signal?.ms||null,entryMs:t.entry?.ms||null,entryHm:t.entry?.hm??null,exitMs:t.exit?.bar?.ms||null,deadlineMs:t.deadlineMs||null,sessionEndMs:t.params?.sessionEndMs||null,
       firstRecordedAt:opts.previous?.trades?.[0]?.firstRecordedAt||new Date().toISOString(),
       exitTime:t.exit&&t.exit.bar&&t.exit.bar.time||null,
       entryPrice,exitPrice,currentPrice,
@@ -384,7 +384,7 @@ function barCompleted(tMs,now){return Number.isFinite(tMs)&&tMs+FIVE<=now-1500;}
 function pct(a,b){return b>0?(a/b-1)*100:null;}
 function orbExit(bars,entry,now,params,sessionEndMinute){
   const minute=Math.floor(entry.hm/100)*60+entry.hm%100;
-  const deadline=Math.min(entry.ms+params.maxHoldBars*FIVE,entry.ms+(sessionEndMinute-minute)*60_000);
+  const deadline=Math.min(entry.ms+params.maxHoldBars*FIVE,entry.ms+(sessionEndMinute-minute)*60_000,params.sessionEndMs>0?params.sessionEndMs:Infinity);
   const stop=entry.o*(1-params.stopPct/100),target=entry.o*(1+params.takeProfitPct/100);
   let exit=null,currentBar=null;
   for(const b of bars){
@@ -400,6 +400,12 @@ function orbExit(bars,entry,now,params,sessionEndMinute){
   return {exit,currentBar:exit?exit.bar:(currentBar||{...entry,c:entry.o}),stop,tp:target,deadlineMs:deadline};
 }
 
+function soxlSessionParams(params,bars,date){
+  if(!params.holdingPolicyVersion)return params;
+  const end=bars.find(b=>b.date===date&&b.sessionEndMs>0)?.sessionEndMs;
+  if(!end||parts(end,'America/New_York').date!==date)throw Error('SOXL regular session end metadata unconfirmed');
+  return {...params,sessionEndMs:end};
+}
 async function fetchBtc(targetDate){
   // Upbit 5분봉은 요청당 최대 200개라 22:00까지 보면 한 페이지로 자정 봉이 잘린다.
   // targetDate의 00:00 KST 봉을 확보할 때까지 최대 3페이지를 뒤로 넘긴다.
@@ -594,7 +600,7 @@ async function runSoxl(env,now){
     return;
   }
   const mainVariant=await mainVariantForDate(env,"soxl",n.date),vp=variantParams("soxl",mainVariant);
-  vp.params=mainHoldingParams('soxl',n.date,vp.params);
+  vp.params=soxlSessionParams(mainHoldingParams('soxl',n.date,vp.params),bars,n.date);
   const previous=await readPaper(env,"soxl",n.date),t=storedOrbTrade("soxl",n.date,previous,soxlTrade(bars,now,n.date,vp.params),bars,now,vp.params);
   const saved=await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name+(n.date>=HOLDING_START?"#cap90-v1":""),mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.20,previous,bars,now,extraVariants:await researchVariantNames("soxl")}));
   try{await sendResearchPlans(env,soxlBrokerPlans(saved,now));}
@@ -703,7 +709,8 @@ async function refreshPaper(env,strategy,date,now=Date.now()){
   const main=await mainVariantForDate(env,strategy,date),vp=variantParams(strategy,main);
   const bars=strategy==='crypto'?await fetchBtc(date):await fetchSoxl();
   if(!bars.some(b=>b.date===date&&b.hm===(strategy==='crypto'?0:930)))throw Error('session opening bar unavailable');
-  const p=previous?.strategyParams||mainHoldingParams(strategy,date,vp.params);
+  const baseParams=previous?.strategyParams||mainHoldingParams(strategy,date,vp.params);
+  const p=strategy==='soxl'?soxlSessionParams(baseParams,bars,date):baseParams;
   const t=storedOrbTrade(strategy,date,previous,(strategy==='crypto'?btcTrade:soxlTrade)(bars,now,date,p),bars,now,p);
   const ledger=paperLedger(strategy,date,t,{currency:strategy==='crypto'?'KRW':'USD',timezone:tz,
     version:previous?.strategyVersion||(strategy==='crypto'?BTC_STRATEGY_VERSION:SOXL_STRATEGY_VERSION)+'@'+main+(date>=HOLDING_START?(strategy==='crypto'?'#cap60-v1':'#cap90-v1'):''),
