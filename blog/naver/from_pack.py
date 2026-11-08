@@ -41,7 +41,7 @@ def main():
         attr += ['출처: ' + a(l['url']) for l in links[1:]]
         attr.append('자료: ' + ' · '.join(l['label'] for l in links))
         blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': attr})
-    out = {'title': pk['title'], 'blocks': blocks, 'tags': pk['tags'], 'topic': pk.get('topic') or '비즈니스·경제'}
+    out = {'title': pk['title'], 'blocks': blocks, 'tags': pk['tags'], 'topic': pk.get('topic') or '비즈니스·경제', 'category': pk.get('category') or ''}
     dst = os.path.join(HERE, 'posts', f'{date}_{slug}.json')
     if os.path.exists(dst):
         sys.exit('already exists: ' + dst)

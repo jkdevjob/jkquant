@@ -15,6 +15,15 @@ const TOPIC=post.topic||'비즈니스·경제';
     await f.getByText(TOPIC,{exact:true}).first().click(); await p.waitForTimeout(300);
     await f.getByRole('button',{name:'확인',exact:true}).last().click(); await p.waitForTimeout(1000);
   }
+  // category (post.category, 예: 'IT·과학'). 없으면 지금 선택된 것을 그대로 둔다. 이름이 목록에 없으면 설정 불일치로 멈춘다.
+  const CAT=post.category||'';
+  const catNow=async()=>((await L.locator('button[class*="selectbox_button"]').first().innerText().catch(()=>''))||'').trim();
+  if(CAT && (await catNow())!==CAT){
+    await L.locator('button[class*="selectbox_button"]').first().click(); await p.waitForTimeout(700);
+    const opt=L.locator('[class*="selectbox_list"] , [role="listbox"]').getByText(CAT,{exact:true}).first();
+    if(await opt.count()) { await opt.click(); await p.waitForTimeout(700); }
+    else console.log('CATEGORY NOT FOUND:',CAT,'| options:',(await L.locator('[class*="selectbox_list"], [role="listbox"]').first().innerText().catch(()=>'?')).replace(/\n+/g,' / '));
+  }
   // tags
   const tags=()=>f.evaluate(()=>[...document.querySelectorAll('[class*="layer_publish"] span[id^="tag-item-"]')].map(x=>x.getAttribute('aria-label')));
   const inp=f.locator('#tag-input'); await inp.click();
@@ -25,7 +34,7 @@ const TOPIC=post.topic||'비즈니스·경제';
     return {public:g('open_public'),comment:g('publish-option-comment'),sympathy:g('publish-option-sympathy'),search:g('publish-option-search'),setDefault:g('set-default'),notice:g('set-notice'),now:g('radio_time1'),
       cat:l.querySelector('button[class*="selectbox_button"]').innerText.trim(),topic:(l.innerText.match(/주제\n(.+)/)||[])[1],tags:[...l.querySelectorAll('span[id^="tag-item-"]')].map(x=>x.getAttribute('aria-label'))}});
   console.log(JSON.stringify(st));
-  const ok=st.public&&st.comment&&st.sympathy&&st.search&&!st.setDefault&&!st.notice&&st.now&&['핫이슈 분석','경제','게시판'].includes(st.cat)&&(st.topic||'').includes(TOPIC)&&JSON.stringify(st.tags)===JSON.stringify(post.tags);
+  const ok=st.public&&st.comment&&st.sympathy&&st.search&&!st.setDefault&&!st.notice&&st.now&&(CAT? st.cat===CAT : ['핫이슈 분석','경제','게시판'].includes(st.cat))&&(st.topic||'').includes(TOPIC)&&JSON.stringify(st.tags)===JSON.stringify(post.tags);
   await p.screenshot({path:'pub_settings.png'});
   if(!ok){ console.log('SETTINGS MISMATCH — not publishing'); await b.close(); return; }
   if(!GO){ console.log('settings ok, stopped before publish'); await b.close(); return; }
