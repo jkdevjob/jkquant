@@ -9,6 +9,17 @@
 - Worker `wrangler deploy --dry-run`(opening-scheduler): 빌드 OK(131 KiB) — `_claude_main.js` 가 `_krx_calendar.js` 를 새로 가져와도 묶인다.
 - `node scripts/check-before-push.cjs`(87ea0b58): **57단계 전부 PASS** — D-1 단계 Python 91 OK · JS 68 ALL PASS · 변이 **399종 모두 잡힘**(PY 145 · JS 254) · 전체 회귀 2828 PASS / 0 FAIL · 스케줄 정책 · CI 안전검사(cron 한 줄 `0,5-31,40,56 0,1,6,9,15,20,21,23 * * *`).
 - 미확인(운영): 11/09(월) 10:00 Worker `gapdown_exit10` 실행 · 장부 `exit10.prices` · 15:40 장부 `exitRule: exit10` · 10:00 매도 알림 / ② 첫 금요일 11/13 15:21 `no_signal_next_day_closed_max24h` + `shadow` — 11/10 06:50 확인 예약. 한투 1분봉 이름이 시작 · 끝 시각 중 어느 쪽인지(예비 가격 1분 안 차이).
+
+## 2026-11-08 · 자산플랜 v2.0.0 — 클로드/지피티 탭 · 듀얼 가드 · 폐지 (v3.117.7)
+
+- `scripts/check-plan-claude-tab.cjs`: ALL PASS · 변이 14/14 빨간불 — 기본 규칙 결과 = 개편 전 엔진(목돈 총액 112,072.66 · 체결 8 / 월 500$ 128,292.51 · 체결 82 · 장부·평가액 해시 같음) · 10/15/20년 · exp1 · exp2 재생 거절 · 폐지 세션 5개 숨김 · 폐지 세션 선택 → 현재 투자중 · 탭 전환(#gpt) · 모의 목록 이름 · 지피티 칸 분리.
+- `scripts/check-plan-evidence.cjs`: PASS + 변이 4/4 — 띠 '유지 · 63.3% → 70.0% · 몫 9.6%p · Guard ON +24.49% · 다음 OFF $62.82' / TQQQ 62.2 → 'OFF 전환 · TQQQ 매도 38주 · 다음 ON $64.09' · 화면에 남은 exp1 값은 무시.
+- `scripts/check-plan-warmup.cjs`: 5 groups PASS · 변이 4/4 — 상장일 SGOV 이동은 Guard OFF 5년 자료(현금 30%)로 봄: 정상은 상장 다음 거래일 · 변이는 9개월 뒤.
+- `scripts/check-plan-signal-fill.cjs`: 5 groups PASS (5년 · 10/15/20 거절 · 미래 종가 변이 빨간불).
+- 전체 회귀 `node regression-check.js index.html backtest.html testdata`: 1차 2816 PASS / 3 FAIL(옛 값 고정 검사 — 캐시 판 4 · 10/15/20년 안내 숨김 줄 · 플랜 버전 v1.x 만 허용) → 고친 뒤 **2819 PASS / 0 FAIL**.
+- 브라우저 스모크(로컬 · 가짜 로그인/DB · 실제 일봉 ~11-06): 폰 390px · PC 1280px 콘솔 오류 0 · 가로 넘침 없음 · 띠 '유지 · TECL 14.4% → 14.7% · Guard OFF −18.77% · ON $64.97 초과' · 폐지 세션 3개 숨김 · 현재 플랜에 저장된 exp1 은 무시(기본 판정) · 지피티 탭 전환 · #gpt.
+- 미확인: 실제 사용자 원장에서의 화면 · 매일 연구 첫 실행 결과.
+
 ## 2026-11-07 · 자산플랜 연말 세금 점검 카드 · v3.117.6 (플랜 v1.47.0)
 
 - `scripts/check-plan-tax.cjs`: PASS — A1 결제일(12-30→12-31 · 12-31→01-04 · 2022 T+2) · A2 마지막 체결일(2023 12-27 · 2024 12-30 · 2026 12-30 · 2028 12-28) · A3 환율 찾기 · A4 선입선출 312,116원/248.65$ · 이동평균 269,398.5원/223.5$ · 남은 lot 435,435원 · A5 12-31 매도는 다음 해 · A6 수량 = 화면 alphaLedgerCalc(현금·보정 기록 포함) · A7 공제 채우기 최대 n(≤ 225만원 · n+1 넘음) · A8 손실 상계 298,188원(순 287,388원) · A9 환율 함정(달러 손실 · 원화 이익 → 제안 없음) · A10 평단 미등록 제외 · B1~B3 화면 연결(실제 renderTaxCheck 실행 · '공제 채우기 가능' · 마감 2026-12-30). 변이 4/4 빨간불(시작잔고 원가 지금 환율 · 결제일 = 체결일 · 선입선출 대신 이동평균 · 공제 여유 없앰).
