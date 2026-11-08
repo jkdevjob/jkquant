@@ -12371,7 +12371,11 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        &&['OnbidPbancListSrvc2/getPbancList2','OnbidPbancCltrDtlSrvc2/getPbancCltrInf2','OnbidPbancBidRsltDtlSrvc2/getPbancBidRsltDtl2'].every(x=>onc.indexOf(x)>0)&&(onc.match(/https:\/\/[a-z.]+/g)||[]).every(u=>u==='https://apis.data.go.kr')
        &&!onc.split('\n').some(l=>/print\(/.test(l)&&/\bkey\b/.test(l)));
     const OB=fs.existsSync(__d+'/data/realestate/claude/onbid.json')?JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/onbid.json','utf8')):null;
-    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원 · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||'')&&(x.appraisal==null||x.appraisal<1e7))&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))));
+    /* 금액 만원 확인은 물건 하나의 상한이 아니라 중앙값으로 — 2026-11-08 자료에 대전 중구 유천동 '60필지 토지 및 건물'(감정가 1,258억원 = 12,584,244만원)이
+       들어와 물건별 상한(1억 만원 미만)에 걸렸다(자료는 맞다). 원 단위였다면 어떤 부동산이든 중앙값이 1,000만 이상 — 중앙값 100만(=100억원) 미만이면 만원이다. */
+    const obAp=OB&&Array.isArray(OB.items)?OB.items.map(x=>x.appraisal).filter(v=>v!=null).sort((a,b)=>a-b):[],obMed=obAp.length?obAp[Math.floor((obAp.length-1)/2)]:0;
+    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원(중앙값 100억원 미만 · 물건마다 0 이상 유한) · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||'')&&(x.appraisal==null||(Number.isFinite(x.appraisal)&&x.appraisal>=0)))
+       &&obMed<1e6&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))), '감정가 중앙값 '+obMed+'만원 · 물건 '+((OB&&OB.items||[]).length));
     ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 안내',
        /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI));
   }
@@ -12728,8 +12732,8 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-08 — 5년 규칙 벌(새 규칙·공격형) 시험 2개(check-plan-rules-exp · check-plan-rules-session)는 규칙 폐지와 함께 빠졌다.
      폐지 자체(규칙 하나 · 10·15·20년 거절 · 폐지 세션 숨김 · 기본 결과 = 개편 전 엔진)와 클로드/지피티 탭은 check-plan-claude-tab 이 본다. */
   const pct=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-claude-tab.cjs')],{encoding:'utf8'});
-  ok('자산플랜 v2 🤖 클로드/⚡ 지피티 탭 · 5년 듀얼 가드 하나: 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·탭 전환·폐지 세션 숨김·모의 목록·변이 14종',
-     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 14/14 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
+  ok('자산플랜 v2 🤖 클로드/⚡ 지피티 탭 · 5년 듀얼 가드 하나: 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·탭 전환·폐지 세션 숨김·모의 목록·지피티 저장 창구·변이 18종',
+     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 18/18 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
   /* 2026-11-08 — 입금 맞춤: 모의 엔진은 입금일 전체 맞춤(force)인데 운영 화면은 신호 없으면 현금으로 두던 갈림을 고침(plan 2.0.1) */
   const pdp=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-deposit.cjs')],{encoding:'utf8'});
   ok('자산플랜 입금 맞춤: 마지막 체결 뒤 입금 → 전체 맞춤 · 운영 주문표 = 모의 엔진 입금일 체결(21일 전부) · 변이 6종',
