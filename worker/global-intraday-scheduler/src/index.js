@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import {mainHoldingParams,HOLDING_START,HOLDING_VERSION} from "../../../functions/api/_gpt-holding-lab.js";
 import {soxlBrokerPlans,sendResearchPlans,reconcileResearchBroker,RESEARCH_BROKER_VERSION} from "../../../functions/api/_research-orders.js";
 
 // Cloudflare Worker — BTC + SOXL intraday research signal scheduler
@@ -112,6 +113,7 @@ export class PaperStore extends DurableObject{
       const map=strategy==="crypto"?BTC_VARIANTS:strategy==="soxl"?SOXL_VARIANTS:null;
       const resolved=variantParams(strategy,variant);
       if(!map||!variant||resolved.name!==variant)return json({ok:false,error:"unsupported strategy/variant"},400);
+      if(String(b.effectiveFrom||'')>=HOLDING_START&&resolved.params.maxHoldBars>(strategy==='crypto'?12:18))return json({ok:false,error:'보유시간 연장형은 독립 그림자에서만 비교합니다'},409);
       const prev=(await this.ctx.storage.get("strategyConfig"))||{schema:2,strategy,selectedVariant:"baseline",history:[]};
       const at=new Date().toISOString(),effectiveFrom=String(b&&b.effectiveFrom||"");
       const entry={at,effectiveFrom,previousVariant:String(b&&b.previousVariant||prev.selectedVariant||"baseline"),selectedVariant:variant,
@@ -507,7 +509,7 @@ async function fetchSoxl(){
       return ts.map((t,i)=>{
         const p=parts(t*1000,"America/New_York");
         return {ms:t*1000,date:p.date,hm:p.hm,time:String(p.hh).padStart(2,"0")+":"+String(p.mm).padStart(2,"0"),
-          o:+(O[i]??C[i])||0,h:+(H[i]??C[i])||0,l:+(L[i]??C[i])||0,c:+C[i]||0,v:+V[i]||0};
+          sessionEndMs:(z.meta?.currentTradingPeriod?.regular?.end||0)*1000,o:+(O[i]??C[i])||0,h:+(H[i]??C[i])||0,l:+(L[i]??C[i])||0,c:+C[i]||0,v:+V[i]||0};
       }).filter(x=>x.c>0&&x.hm>=930&&x.hm<1600).sort((a,b)=>a.ms-b.ms);
     }catch(e){last=e;await sleep(200);}
   }
@@ -546,6 +548,7 @@ async function runBtc(env,now){
   // 신규 진입은 00:05~22:00 KST. 22:00 진입분은 최대 60분 청산까지 계속 추적한다.
   if(k.hm<5)return;
   const mainVariant=await mainVariantForDate(env,"crypto",k.date),vp=variantParams("crypto",mainVariant);
+  vp.params=mainHoldingParams('crypto',k.date,vp.params);
   const minute=Math.min(1439,22*60+vp.params.maxHoldBars*5+5);
   const trackEnd=Math.floor(minute/60)*100+minute%60;
   if(k.hm>Math.max(trackEnd,2359))return;
@@ -554,7 +557,7 @@ async function runBtc(env,now){
   const decision=t
     ? {code:t.waiting?"qualified_wait":"qualified_signal",reason:t.waiting?"조건 충족 신호 발생 · 다음 5분봉 시가 진입 대기":"돌파·거래량·VWAP 조건 충족"}
     : btcNoTradeDecision(bars,now,k.date,vp.params);
-  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.14,decision,previous,bars,now,extraVariants:await researchVariantNames("crypto")}));
+  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name+(k.date>=HOLDING_START?"#cap60-v1":""),mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.14,decision,previous,bars,now,extraVariants:await researchVariantNames("crypto")}));
   if(!t||t.waiting||!Number.isFinite(t.entry?.ms)||!Number.isFinite(t.vr))return;
   await alert(env,{
     strategy:"crypto",stage:"buy",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+mainVariant+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time,eventAt:new Date(t.entry.ms).toISOString(),
@@ -591,8 +594,9 @@ async function runSoxl(env,now){
     return;
   }
   const mainVariant=await mainVariantForDate(env,"soxl",n.date),vp=variantParams("soxl",mainVariant);
+  vp.params=mainHoldingParams('soxl',n.date,vp.params);
   const previous=await readPaper(env,"soxl",n.date),t=storedOrbTrade("soxl",n.date,previous,soxlTrade(bars,now,n.date,vp.params),bars,now,vp.params);
-  const saved=await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.20,previous,bars,now,extraVariants:await researchVariantNames("soxl")}));
+  const saved=await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name+(n.date>=HOLDING_START?"#cap90-v1":""),mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.20,previous,bars,now,extraVariants:await researchVariantNames("soxl")}));
   try{await sendResearchPlans(env,soxlBrokerPlans(saved,now));}
   catch(e){console.error(JSON.stringify({type:'soxl_broker_error',date:n.date,error:String(e.message||e)}));}
   if(!t||t.waiting||!Number.isFinite(t.entry?.ms)||!Number.isFinite(t.vr))return;
@@ -699,10 +703,10 @@ async function refreshPaper(env,strategy,date,now=Date.now()){
   const main=await mainVariantForDate(env,strategy,date),vp=variantParams(strategy,main);
   const bars=strategy==='crypto'?await fetchBtc(date):await fetchSoxl();
   if(!bars.some(b=>b.date===date&&b.hm===(strategy==='crypto'?0:930)))throw Error('session opening bar unavailable');
-  const p=previous?.strategyParams||vp.params;
+  const p=previous?.strategyParams||mainHoldingParams(strategy,date,vp.params);
   const t=storedOrbTrade(strategy,date,previous,(strategy==='crypto'?btcTrade:soxlTrade)(bars,now,date,p),bars,now,p);
   const ledger=paperLedger(strategy,date,t,{currency:strategy==='crypto'?'KRW':'USD',timezone:tz,
-    version:previous?.strategyVersion||(strategy==='crypto'?BTC_STRATEGY_VERSION:SOXL_STRATEGY_VERSION)+'@'+main,
+    version:previous?.strategyVersion||(strategy==='crypto'?BTC_STRATEGY_VERSION:SOXL_STRATEGY_VERSION)+'@'+main+(date>=HOLDING_START?(strategy==='crypto'?'#cap60-v1':'#cap90-v1'):''),
     mainVariant:main,params:p,friction:strategy==='crypto'?.14:.20,previous,bars,now,extraVariants:await researchVariantNames(strategy)});
   if(!previous&&date<today)ledger.mode='historical-research-import-no-order';
   ledger.refreshSource='authenticated-source-refresh-no-alert-no-order';
@@ -730,7 +734,7 @@ export default {
       if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
       return json({ok:true,version:RESEARCH_BROKER_VERSION,strategies:['gpt_soxl'],unsupported:['gpt_crypto'],environment:'vts',settings:'opening-scheduler /paper-settings'});
     }
-    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",executionModelVersion:"orb_completed_candle_deadline_v2",schedule:"every minute · BTC 00:05 KST close ⑤⑥ · SOXL 16:05 ET close ⑤⑥",strategies:["crypto","soxl"],paperStore:"Durable Object SQLite + per-strategy date index",crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"baseline 23:05 KST · long variants through 23:59 + 00:05 previous-session finalization"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order",manualPromotion:"owner button -> next session lock"});
+    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",holdingPolicy:{version:HOLDING_VERSION,evaluationStart:HOLDING_START,cryptoMaxMinutes:60,soxlMaxMinutes:90,paperOnly:true},executionModelVersion:"orb_completed_candle_deadline_v2",schedule:"every minute · BTC 00:05 KST close ⑤⑥ · SOXL 16:05 ET close ⑤⑥",strategies:["crypto","soxl"],paperStore:"Durable Object SQLite + per-strategy date index",crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"baseline 23:05 KST · long variants through 23:59 + 00:05 previous-session finalization"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order",manualPromotion:"owner button -> next session lock"});
     if(u.pathname==="/runtime"){
       if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
       return json({ok:true,runtime:await runtimeStore(env)});
@@ -748,9 +752,11 @@ export default {
     if(u.pathname==="/bars"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
-      if(strategy!=="soxl")return json({ok:false,error:"unsupported strategy"},400);
-      const bars=await fetchSoxl();
-      return json({ok:true,strategy:"soxl",symbol:"SOXL",source:"Yahoo via Cloudflare Worker",fetchedAt:new Date().toISOString(),bars});
+      if(!["soxl","crypto"].includes(strategy))return json({ok:false,error:"unsupported strategy"},400);
+      const date=u.searchParams.get("date")||parts(Date.now(),strategy==='crypto'?'Asia/Seoul':'America/New_York').date;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"invalid date"},400);
+      const bars=strategy==='soxl'?await fetchSoxl():await fetchBtc(date);
+      return json({ok:true,strategy,symbol:strategy==='soxl'?'SOXL':'KRW-BTC',source:strategy==='soxl'?'Yahoo via operating Worker':'Upbit via operating Worker',fetchedAt:new Date().toISOString(),bars});
     }
     if(u.pathname==="/config"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);

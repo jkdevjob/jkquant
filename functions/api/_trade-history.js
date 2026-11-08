@@ -76,15 +76,15 @@ export function closingRecords(ledger){
   if(!ledger?.date)return [];
   const by=new Map();
   for(const e of (ledger.events||[]).slice().sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))){
-    if(!['day','overnight'].includes(e.kind)||!e.variant||!e.code)continue;
-    const strategy=e.kind==='day'?'closing30':'closing_bet',key=[strategy,ledger.date,e.variant,e.code].join(':');
+    if(!['day','hour','overnight'].includes(e.kind)||!e.variant||!e.code)continue;
+    const strategy=e.kind==='overnight'?'closing_bet':'closing30',variant=e.kind==='hour'?'hour_'+e.variant:e.variant,key=[strategy,ledger.date,variant,e.code].join(':');
     let r=by.get(key);
     if(!r){r=record(strategy,{id:key,date:ledger.date,code:e.code,name:e.name,strategyVersion:e.decisionVersion,
-      strategyParams:e.strategyParams||e.signal?.strategyParams,capturedAt:e.createdAt,entryTime:null,status:'signal'},e.variant,'server-paper','baseline');by.set(key,r);}
+      strategyParams:e.strategyParams||e.signal?.strategyParams,capturedAt:e.createdAt,entryTime:null,status:'signal'},variant,'server-paper','baseline');by.set(key,r);}
     r.events.push({id:e.id,stage:e.stage,at:e.createdAt,source:e.source,price:number(e.price)});
     if(e.stage==='signal'){r.signalTime=e.signal?.cutoffTime||e.createdAt;r.evidence=e.signal||null;}
     if(e.stage==='buy'){r.entryTime=e.priceAt||e.createdAt;r.entryPrice=number(e.price);r.status=r.entryPrice>0?'open':'unverified';}
-    if(e.stage==='sell'){r.exitTime=e.priceAt||e.createdAt;r.exitPrice=number(e.price);r.pnl=number(e.pnl);r.reason=e.kind==='day'?'closing_price':'next_session_open';r.status=r.entryPrice>0&&r.exitPrice>0&&r.pnl!==null?'closed':'unverified';}
+    if(e.stage==='sell'){r.exitTime=e.priceAt||e.createdAt;r.exitPrice=number(e.price);r.pnl=number(e.pnl);r.reason=e.kind==='overnight'?'next_session_open':e.decisionVersion==='closing30_1515_v2'?'15:15_exit':'closing_price';r.status=r.entryPrice>0&&r.exitPrice>0&&r.pnl!==null?'closed':'unverified';}
   }
   return [...by.values()];
 }

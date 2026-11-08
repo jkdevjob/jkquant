@@ -1,3 +1,4 @@
+import {HOLDING_START} from './_gpt-holding-lab.js';
 // Cloudflare Pages Function — /api/opening-monitor
 // 브라우저 없이 시초가 눌림→재돌파 기준전략을 서버에서 감시하고 Telegram으로 매수/매도 신호를 보낸다.
 // 연구용 shadow 전략은 같은 분봉/같은 엔진으로 동시에 계산하지만 실제 알림/주문에는 영향을 주지 않고 기록만 한다.
@@ -81,10 +82,10 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="bas
     generatedOpeningVariants()
   ]);
   const universe=(uj.universe||[]).filter((_,i)=>i%shards===shard);
-  const shadowVariants=[...SHADOW_VARIANTS,...generated.filter(v=>!SHADOW_VARIANTS.some(s=>s.name===v.name))];
+  const shadowVariants=[...SHADOW_VARIANTS.filter(v=>now.date<HOLDING_START||v.name!=="hold_to_next_open"),...generated.filter(v=>!SHADOW_VARIANTS.some(s=>s.name===v.name))];
   const trades=[],baselineTrades=[],shadow=emptyShadow(shadowVariants),errors=[];let idx=0;
   const frictionCalibration=await openingVtsCalibration(origin);
-  const mainDef=mainVariantDef(mainVariant);
+  const mainDef=mainVariantDef(mainVariant),beforeDeadline=now.date>=HOLDING_START;
 
   async function worker(){
     while(idx<universe.length){
@@ -100,14 +101,14 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="bas
         const meta=dailyMeta(dj,now.date);
         if(!meta)continue;
 
-        const canonical=rebreakTrade(rows,meta,cutoffHm,{frictionCalibration});
+        const canonical=rebreakTrade(rows,meta,cutoffHm,{frictionCalibration,beforeDeadline});
         if(canonical)baselineTrades.push({code:u.code,name:u.name||u.code,variant:"baseline",mainVariant:"baseline",...canonical});
 
-        const operational=mainDef.name==="baseline"?canonical:rebreakTrade(rows,meta,cutoffHm,{...mainDef.params,frictionCalibration});
+        const operational=mainDef.name==="baseline"?canonical:rebreakTrade(rows,meta,cutoffHm,{...mainDef.params,frictionCalibration,beforeDeadline});
         if(operational)trades.push({code:u.code,name:u.name||u.code,variant:mainDef.name,mainVariant:mainDef.name,...operational});
 
         for(const v of shadowVariants){
-          const tr=rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration});
+          const tr=rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration,beforeDeadline});
           if(tr)shadow[v.name].trades.push({code:u.code,name:u.name||u.code,variant:v.name,...tr});
         }
       }catch(e){
@@ -169,7 +170,7 @@ export async function onRequestGet({request,env}){
     const requested=parseInt(targetRaw,10);
     const minute=requested%100;
     const valid=Number.isFinite(requested)&&Math.floor(requested/100)===9&&minute>=0&&minute<60&&requested>=904&&requested<=930;
-    if(!valid||requested>now.targetHm){
+    if(!valid||(requested>now.targetHm&&!(now.date>=HOLDING_START&&now.hm===930&&requested===930))){
       return new Response(JSON.stringify({ok:false,error:"invalid_or_unfinished_targetHm",requested,latestCompleted:now.targetHm}),{status:400,headers:JH});
     }
     liveTargetHm=requested;

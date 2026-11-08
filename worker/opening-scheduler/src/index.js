@@ -1,4 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
+import {readHoldingState,writeHoldingState} from "../../../functions/api/_gpt-holding-storage.js";
+import {closingWindow} from "../../../functions/api/_closing30.js";
+import {HOLDING_RULES,HOLDING_START,HOLDING_VERSION,holdingClock,holdingMs,emptyHoldingLab,advanceHoldingLab,holdingPublic,CLOSING_VERSION} from "../../../functions/api/_gpt-holding-lab.js";
 import { krxDay } from "../../../functions/api/_krx_calendar.js";   // KRX 휴장일 — 주문 경로(Pages)와 같은 목록
 import {marketDayCache} from "../../../functions/api/_market-day-cache.js";
 import {defaultPaperSettings,changePaperSettings} from "../../../functions/api/_paper-trading.js";
@@ -105,7 +108,10 @@ export class OpeningSignalStore extends DurableObject {
   async alarm(){
     try{await claudePushWatch(this.env,Date.now(),(op,b)=>this.pushOp(op,b||{}));}
     catch(e){console.error(JSON.stringify({type:"claude_push_error",error:String(e.message||e)}));}
-    finally{await this.ctx.storage.setAlarm(nextPushAt(Date.now()));}
+    finally{
+      try{await runGptHoldingLab(this.env,Date.now());}catch(e){console.error(JSON.stringify({type:'gpt_holding_error',error:String(e.message||e)}));}
+      await this.ctx.storage.setAlarm(nextPushAt(Date.now()));
+    }
   }
   async pushOp(op,b){
     const st=this.ctx.storage,json=o=>o;
@@ -158,6 +164,16 @@ export class OpeningSignalStore extends DurableObject {
   }
   async fetch(request){
     const u=new URL(request.url);
+    if(u.pathname==='/holding-lab'){
+      if(request.method==='GET')return json({ok:true,state:await readHoldingState(this.ctx.storage)});
+      if(request.method!=='POST')return json({ok:false,error:'method not allowed'},405);
+      const input=await request.json();
+      const state=await this.ctx.storage.transaction(async tx=>{
+        const before=await readHoldingState(tx),next=advanceHoldingLab(before,input);
+        await writeHoldingState(tx,next,before);return next;
+      });
+      return json({ok:true,state});
+    }
     if(u.pathname==='/market-day')return marketDayCache(this.ctx.storage,request);
     if(u.pathname.startsWith('/research-')){
       if(request.method==='GET')return researchBroker(this.ctx.storage,this.env,request);
@@ -199,6 +215,7 @@ export class OpeningSignalStore extends DurableObject {
       const b=await request.json();
       const variant=String(b&&b.variant||"");
       if(!variant)return json({ok:false,error:"variant required"},400);
+      if(variant==='hold_to_next_open'&&String(b.effectiveFrom||'')>=HOLDING_START)return json({ok:false,error:'시초가 메인은 09:30 청산 · 연장은 독립 그림자 전용'},409);
       const prev=(await this.ctx.storage.get("strategyConfig"))||{schema:2,strategy:"opening",selectedVariant:"baseline",history:[]};
       const at=new Date().toISOString(),effectiveFrom=String(b&&b.effectiveFrom||"");
       const entry={at,effectiveFrom,previousVariant:String(b&&b.previousVariant||prev.selectedVariant||"baseline"),selectedVariant:variant,
@@ -233,7 +250,8 @@ export class OpeningSignalStore extends DurableObject {
         if(old)return JSON.stringify(old)===JSON.stringify(e)?json({ok:true,duplicate:true}):json({ok:false,error:'immutable execution event'},409);
         if(e.phase==='intent'){
           const main=ledger.mainVariant||'baseline',events=(ledger.events||[]).filter(x=>x.variant===main);
-          const allowed=new Set(events.flatMap(x=>openingOrderRefs(ledger.date,x.stage==='buy'?[x.signal]:[],x.stage==='sell'?[x.signal]:[])).map(x=>x.signalId));
+          const deadlineRequest=x=>x.stage==='sell_request'&&x.targetHm===930&&x.signal?.finalExitUnverified===true&&events.some(b=>b.stage==='buy'&&b.code===x.code&&b.signal?.entryTime===x.signal?.entryTime);
+          const allowed=new Set(events.flatMap(x=>openingOrderRefs(ledger.date,x.stage==='buy'?[x.signal]:[],x.stage==='sell'||deadlineRequest(x)?[x.signal]:[])).map(x=>x.signalId));
           if(!Array.isArray(e.requests)||!e.requests.length||e.requests.length>40||e.requests.some(x=>!allowed.has(x.signalId)))return json({ok:false,error:'order intent requires original main signal'},409);
         }else{
           const intent=journal.find(x=>x.phase==='intent'&&x.id===e.attemptId);
@@ -431,17 +449,17 @@ export function openingUnmatchedExits(ledger,mainVariant){
     .map(([,x])=>({...x,exitTime:930,exitPrice:null,pnl:null,
       reason:"09:30 종료 매도 원본 누락 · 모의주문/체결 확인 필요",finalExitUnverified:true}));
 }
-export async function forceOpeningSessionClose(env,date,mainVariant,target){
+export async function forceOpeningSessionClose(env,date,mainVariant,target,{orderOnly=false}={}){
   if(target!==930)return {count:0};
   const ledger=await readLedger(env,date);
   const missing=openingUnmatchedExits(ledger,mainVariant);
   if(!missing.length)return {count:0};
   const now=Date.now();
   // 원본 보관 실패 시 주문하지 않는다. 이전 매도/다른 전략을 절대로 다시 팔지 않는다.
-  await appendLedger(env,{scanId:(ledger.scans||[]).at(-1)?.id||date+":opening:final-exit-check",date,mainVariant,
+  await appendLedger(env,{scanId:orderOnly?date+':opening:deadline-request':(ledger.scans||[]).at(-1)?.id||date+":opening:final-exit-check",date,mainVariant,
     scheduledTime:now,capturedAt:new Date(now).toISOString(),targetHm:930,
     partial:false,okShards:0,quoteErrors:0,events:missing.map(x=>
-      liveEvent(date,930,"sell",mainVariant,x,{channel:"telegram",sent:false,reason:"final_exit_unverified"},null))});
+      liveEvent(date,930,orderOnly?'sell_request':"sell",mainVariant,x,{channel:"telegram",sent:false,reason:"final_exit_unverified"},null))});
   let exec;
   try{exec=await executeVts(env,date,[],missing);}
   catch(e){console.error(JSON.stringify({type:"opening_final_exit_vts_failed",date,count:missing.length,error:String(e.message||e)}));return {count:missing.length,ok:false,error:String(e.message||e)};}
@@ -542,8 +560,8 @@ async function runMinute(controller,env){
   if(!env.SIGNAL_STORE)throw new Error("SIGNAL_STORE binding missing");
   const scheduled=Number(controller.scheduledTime)||Date.now();
   const lag=Math.max(0,Date.now()-scheduled);
-  const target=targetHm(scheduled);
   const kst=kstParts(scheduled);
+  const target=kst.date>=HOLDING_START&&kst.hm===930?930:targetHm(scheduled);
 
   if(lag>MAX_SCAN_LAG_MS){
     console.warn(JSON.stringify({type:"skip",reason:"cron_too_late",lagMs:lag,scheduledTime:scheduled,targetHm:target}));
@@ -551,6 +569,12 @@ async function runMinute(controller,env){
   }
 
   const mainVariant=await mainVariantForDate(env,kst.date);
+  // Submit the owned-position deadline exit at 09:30 BEFORE slow quote scans.
+  // Price evidence follows separately; never turn an order attempt into a fill.
+  if(kst.date>=HOLDING_START&&kst.hm===930){
+    try{await forceOpeningSessionClose(env,kst.date,mainVariant,930,{orderOnly:true});}
+    catch(e){console.error(JSON.stringify({type:'opening_deadline_order_unconfirmed',date:kst.date,error:String(e.message||e)}));}
+  }
   const settled=await Promise.allSettled(Array.from({length:SHARDS},(_,shard)=>scanOne(env,shard,target,mainVariant)));
   const ok=settled.filter(x=>x.status==="fulfilled").map(x=>x.value);
   const failed=settled.filter(x=>x.status==="rejected").map(x=>String(x.reason?.message||x.reason));
@@ -642,9 +666,17 @@ export function scheduleRoute(ms){
   if(g("weekday")==="Sat"||g("weekday")==="Sun")return null;
   const hm=+g("hour")*100+ +g("minute");
   if(hm>=905&&hm<=931)return "opening";
-  if(hm===1506)return "closing_day_signal";
-  if(hm===1507)return "closing_day_entry";
-  if(hm===1522)return "closing_overnight_signal";
+  if(holdingClock(ms).date>=HOLDING_START){
+    if(hm===1414)return 'closing_hour_signal';
+    if(hm===1415)return 'closing_hour_entry';
+    if(hm===1444)return 'closing_day_signal';
+    if(hm===1445)return 'closing_day_entry';
+    if(hm===1515)return 'research_close';
+    if(hm===1516)return 'closing_settle';
+  }
+  if(holdingClock(ms).date<HOLDING_START&&hm===1506)return "closing_day_signal";
+  if(holdingClock(ms).date<HOLDING_START&&hm===1507)return "closing_day_entry";
+  if(holdingClock(ms).date<HOLDING_START&&hm===1522)return "closing_overnight_signal";
   if(hm===1523)return "research_close";
   if(hm===906)return "opening"; // 병렬로 종가 베팅의 전일 종목 시가 청산
   if(hm===1500)return "gapdown_c30";               // ⑤ 종가 30분 — 15:00 판단 · 매수(15:21 매도 · 15:40 체결 조회는 아래 ①② 단계에 붙어 돈다)
@@ -678,7 +710,7 @@ function closingEvent(date,kind,variant,code,stage,price=null,meta={}){
     name:meta.name||code,stage,targetHm:meta.targetHm||null,
     createdAt:new Date().toISOString(),price:price??null,
     source:meta.source||"paper-only",pnl:meta.pnl??null,
-    signal:meta.signal||null,strategyParams:meta.strategyParams||null,priceAt:meta.priceAt||null,decisionVersion:"closing30_v1",
+    signal:meta.signal||null,strategyParams:meta.strategyParams||null,priceAt:meta.priceAt||null,decisionVersion:closingWindow(kind,date)?.version||'closing30_v1',
     orderStatus:"paper_only_no_broker_order",state:stage==="signal"?"candidate":"paper_filled"};
 }
 async function closingApi(env,params){
@@ -690,7 +722,7 @@ async function closingApi(env,params){
   return j;
 }
 async function closingAlert(env,date,e,stage){
-  if(e.variant!=="baseline")return;
+  if(e.variant!=="baseline"||e.kind==='hour')return;
   const lines=[
     e.name+" ("+e.code+") · "+(e.kind==="day"?"종가 30분 당일청산":"종가 베팅 · 익일 시가청산"),
     "모의체결 "+Number(e.price).toLocaleString("ko-KR")+"원 · "+e.source,
@@ -719,8 +751,9 @@ async function runClosing30(route,controller,env){
   const scheduled=Number(controller.scheduledTime)||Date.now(),now=Date.now();
   if(Math.max(0,now-scheduled)>MAX_SCAN_LAG_MS)throw Error("closing30 scheduled invocation stale");
   const today=kstParts(scheduled).date,hm=kstHm(scheduled);
-  if(route==="closing_day_signal"||route==="closing_overnight_signal"){
-    const kind=route==="closing_day_signal"?"day":"overnight";
+  if(route==="closing_day_signal"||route==="closing_hour_signal"||route==="closing_overnight_signal"){
+    const kind=route==='closing_hour_signal'?'hour':route==="closing_day_signal"?"day":"overnight";
+    if(!closingWindow(kind,today))return;
     const j=await closingApi(env,{op:"scan",kind,date:today});
     const events=(j.signals||[]).map(x=>closingEvent(today,kind,x.variant,x.code,"signal",null,{
       name:x.name,source:"15시 완성봉 관측",targetHm:hm,signal:x.signal,strategyParams:x.strategyParams}));
@@ -733,9 +766,10 @@ async function runClosing30(route,controller,env){
   const prior=route==="closing_overnight_exit"?await lastOpenDate(env,today):today;
   const ledger=await readLedger(env,prior,"closing30");
   if(!ledger){console.warn(JSON.stringify({type:"closing30_missing_signal_ledger",date:prior,route}));return;}
-  if((ledger.scans||[]).some(x=>x.partial))throw Error("partial input: do not fill unverified signals");
-  const cases=route==="closing_day_entry"?[["day","signal","buy","day_entry"]]:
-    route==="closing_settle"?[["day","buy","sell","day_exit"],["overnight","signal","buy","overnight_entry"]]:
+  if((ledger.scans||[]).some(x=>x.partial&&((route==='closing_hour_entry'&&String(x.id||x.scanId||'').includes('closing_hour'))||(route==='closing_day_entry'&&!String(x.id||x.scanId||'').includes('closing_hour')))))throw Error('partial input: do not fill unverified signals');
+  const modern=today>=HOLDING_START;
+  const cases=route==='closing_hour_entry'?[['hour','signal','buy','hour_entry']]:route==="closing_day_entry"?[["day","signal","buy","day_entry"]]:
+    route==="closing_settle"?(modern?[["day","buy","sell","day_exit"],['hour','buy','sell','hour_exit']]:[["day","buy","sell","day_exit"],["overnight","signal","buy","overnight_entry"]]):
     [["overnight","buy","sell","overnight_exit"]];
   for(const [kind,sourceStage,destStage,priceStage] of cases){
     const previous=closingEntries(ledger,kind,sourceStage),already=new Set(closingEntries(ledger,kind,destStage)
@@ -1103,6 +1137,70 @@ export async function claudePushWatch(env,nowMs=Date.now(),call=(op,b)=>pushStor
   return {events:evs.length,fresh:msgs.length,...out,telegram};
 }
 
+function holdingStore(env,strategy){return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName('__gpt_holding__:'+strategy));}
+async function holdingJson(url,env){
+ const r=await fetch(url,{headers:{'x-monitor-key':env.MONITOR_KEY,accept:'application/json'},signal:AbortSignal.timeout(25000)}),j=await r.json();
+ if(!r.ok||!j.ok)throw Error(j.error||'holding input HTTP '+r.status);return j;
+}
+function holdingSeeds(strategy,ledger){
+ if(!ledger)return [];
+ const opening=strategy==='opening',main=ledger.mainVariant||'baseline';
+ const rows=opening?(ledger.events||[]).filter(e=>e.stage==='buy'&&e.variant===main).map(e=>{
+  const x=e.signal||{},sell=(ledger.events||[]).find(y=>y.stage==='sell'&&y.variant===main&&y.code===e.code&&y.signal?.entryTime===x.entryTime)?.signal;
+  return {...x,id:e.id,code:e.code,name:e.name,strategyVersion:e.strategyVersion,strategyParams:e.strategyParams,exitPrice:sell?.exitPrice,exitTime:sell?.exitTime,pnl:sell?.pnl,exitUnverified:sell?.evidence?.finalExitPriceUnconfirmed||sell?.finalExitUnverified};
+ }):ledger.trades||[];
+ return rows.filter(x=>x.entryPrice>0).map(x=>{
+  const p=x.strategyParams||ledger.strategyParams||{};
+  const entryMs=x.entryMs||(strategy==='soxl'?null:holdingMs(ledger.date,+x.entryTime));
+  const exitMs=x.exitMs?x.exitMs+300000:x.exitTime&&strategy!=='soxl'?holdingMs(ledger.date,+x.exitTime):null;
+  return {id:x.id,sourceId:strategy+':'+ledger.date+':'+x.id,code:x.code||(strategy==='crypto'?'KRW-BTC':'SOXL'),name:x.name,
+   date:ledger.date,entryMs,entryPrice:+x.entryPrice,exitMs,exitPrice:x.exitPrice,pnlPct:x.pnl??x.pnlPct,exitUnverified:!!x.exitUnverified,
+   strategyVersion:x.strategyVersion||ledger.strategyVersion,params:p,closeOnly:opening,slots:strategy==='opening'||strategy==='daytrading'?3:1,
+   stopPct:x.stopPct||p.stopPct||p.stop||ledger.stopPct,takeProfitPct:x.takeProfitPct||p.takeProfitPct||p.takeProfit||ledger.takeProfitPct,
+   frictionPct:x.frictionPct??x.friction?.totalPct??x.evidence?.frictionPct??ledger.frictionPct,
+   mode:opening||ledger.mode==='server-live-paper-no-order'?'live':'import'};
+ });
+}
+export async function runGptHoldingLab(env,now=Date.now()){
+ if(holdingClock(now).date<HOLDING_START)return;
+ const results=await Promise.allSettled(Object.keys(HOLDING_RULES).map(async strategy=>{
+  const clock=holdingClock(now-(strategy==='crypto'&&holdingClock(now).hm<6?86400000:0),strategy==='soxl'?'America/New_York':'Asia/Seoul');
+  if(strategy==='opening'&&(clock.hm<905||clock.hm>1005))return;
+  if(strategy==='daytrading'&&(clock.hm<900||clock.hm>1545))return;
+  if(strategy==='soxl'&&(clock.hm<930||clock.hm>1605))return;
+  if(['opening','daytrading'].includes(strategy)&&!await krMarketOpen(env,clock.date))return;
+  const store=holdingStore(env,strategy),old=await store.fetch('https://holding.internal/holding-lab').then(r=>r.json());
+  const active=Object.values(old.state?.arms||{}).flatMap(a=>a.trades||[]).filter(t=>t.status!=='closed');
+  let ledger,bars=[],errors=[],sources=[],sessionEndMs;
+  if(strategy==='opening'||strategy==='daytrading'){
+   ledger=strategy==='opening'?await readLedger(env,clock.date):(await holdingJson('https://jkquant-daytrading-scheduler.mumae4.workers.dev/paper?date='+clock.date,env)).ledger;
+   const seeds=holdingSeeds(strategy,ledger),codes=[...new Set([...active.map(t=>t.code),...seeds.filter(t=>now-t.entryMs<600000).map(t=>t.code)])].slice(0,10),from={};
+   for(const code of codes){const rows=active.filter(t=>t.code===code);from[code]=Math.min(...rows.map(t=>t.lastBarMs&&holdingClock(t.lastBarMs).date===clock.date?holdingClock(t.lastBarMs+60000).hm:900),...seeds.filter(t=>t.code===code).map(t=>holdingClock(t.entryMs).hm),1519);}
+   if(codes.length){const q=new URLSearchParams({strategy,date:clock.date,codes:JSON.stringify(codes),from:JSON.stringify(from)}),data=await holdingJson(baseUrl(env)+'/api/gpt-holding-quotes?'+q,env);bars=data.bars;errors=data.errors;sources=data.sources;}
+   sessionEndMs=holdingMs(clock.date,strategy==='opening'?1000:1531);
+  }else{
+   const upstream='https://jkquant-global-intraday-scheduler.mumae4.workers.dev';
+   ledger=(await holdingJson(upstream+'/paper?strategy='+strategy+'&date='+clock.date,env)).ledger;
+   const data=await holdingJson(upstream+'/bars?strategy='+strategy+'&date='+clock.date,env);
+   bars=(data.bars||[]).map(b=>({...b,code:strategy==='crypto'?'KRW-BTC':'SOXL',durationMs:300000}));
+   sources=[{source:data.source,fetchedAt:data.fetchedAt}];
+   sessionEndMs=strategy==='crypto'?holdingMs(clock.date,2400):bars.find(b=>b.date===clock.date&&b.sessionEndMs)?.sessionEndMs;
+  }
+  const seeds=holdingSeeds(strategy,ledger);
+  const heldCodes=[...new Set(active.map(t=>t.code))];
+  const complete=!!sessionEndMs&&(heldCodes.length?heldCodes.every(code=>bars.some(b=>b.code===code&&b.date===clock.date&&b.ms+b.durationMs===sessionEndMs)):!!ledger&&!(ledger.scans||[]).some(x=>x.partial))&&!errors.length;
+  const sessionDates=strategy==='opening'||strategy==='daytrading'?[clock.date]:[...new Set(bars.map(b=>b.date))];
+  const input={strategy,now,sessionDate:clock.date,sessionDates,sessionEndMs,sessionComplete:complete,seeds,bars,errors,sources};
+  const saved=await store.fetch('https://holding.internal/holding-lab',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(input)});
+  if(!saved.ok)throw Error('holding state write failed');
+ }));
+ for(let i=0;i<results.length;i++)if(results[i].status==='rejected'){
+  const strategy=Object.keys(HOLDING_RULES)[i],error=String(results[i].reason?.message||results[i].reason);
+  console.error(JSON.stringify({type:'gpt_holding_source_error',strategy,error}));
+  await holdingStore(env,strategy).fetch('https://holding.internal/holding-lab',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({strategy,now,sessionDate:holdingClock(now,strategy==='soxl'?'America/New_York':'Asia/Seoul').date,seeds:[],bars:[],errors:[{error}],sources:[]})});
+ }
+}
+
 export default {
   async scheduled(controller,env,ctx){
     const at=Number(controller.scheduledTime)||Date.now();
@@ -1123,11 +1221,11 @@ export default {
     }
     // Original closing signals are persisted at 15:22. Orders precede the 15:30 close.
     const brokerHm=kstHm(at);
-    if(krRoute&&brokerHm===1523){
+    if(krRoute&&brokerHm===(holdingClock(at).date>=HOLDING_START?1515:1523)){
       ctx.waitUntil(runClosingBroker(env,'day','sell',kstParts(at).date));
-      ctx.waitUntil(runClosingBroker(env,'overnight','buy',kstParts(at).date));
-      ctx.waitUntil(runTenbaggerBroker(env,kstParts(at).date));
+      if(holdingClock(at).date<HOLDING_START)ctx.waitUntil(runClosingBroker(env,'overnight','buy',kstParts(at).date));
     }
+    if(krRoute&&brokerHm===1523)ctx.waitUntil(runTenbaggerBroker(env,kstParts(at).date));
     if(krRoute&&brokerHm===856)ctx.waitUntil(runClosingBroker(env,'overnight','sell',kstParts(at).date));
     if(route==="claude_soxl"){
       const date=nyDate(at);
@@ -1148,7 +1246,7 @@ export default {
     else if(route&&route.startsWith("closing_"))ctx.waitUntil(runClosing30(route,controller,env));
     else if(route&&route.startsWith("gapdown_")){
       ctx.waitUntil(runGapdown(route.slice(8),controller,env));
-      if(route==="gapdown_reconcile")ctx.waitUntil(runClosing30("closing_settle",controller,env));
+      if(route==="gapdown_reconcile"&&kstParts(at).date<HOLDING_START)ctx.waitUntil(runClosing30("closing_settle",controller,env));
     }
   },
   async fetch(request,env){
@@ -1157,6 +1255,18 @@ export default {
       if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
       if(!['GET','POST'].includes(request.method))return json({ok:false,error:'method not allowed'},405);
       return store(env,'__market_days__').fetch(new Request('https://opening-signal.internal/market-day'+u.search,request));
+    }
+    if(u.pathname==='/holding-lab'){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      if(request.method!=='GET')return json({ok:false,error:'read only'},405);
+      const strategy=u.searchParams.get('strategy')||'all';
+      if(strategy!=='all'&&!HOLDING_RULES[strategy])return json({ok:false,error:'unsupported strategy'},400);
+      const labs=[];
+      for(const name of strategy==='all'?Object.keys(HOLDING_RULES):[strategy]){
+        const r=await holdingStore(env,name).fetch('https://holding.internal/holding-lab'),j=await r.json();
+        labs.push(holdingPublic(j.state||emptyHoldingLab(name)));
+      }
+      return json({ok:true,version:HOLDING_VERSION,evaluationStart:HOLDING_START,paperOnly:true,labs});
     }
     if(u.pathname==='/broker-status'){
       if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
@@ -1255,6 +1365,7 @@ export default {
     return json({
       ok:true,
       service:"jkquant-opening-scheduler",
+      gptHolding:{version:HOLDING_VERSION,evaluationStart:HOLDING_START,paperOnly:true,closingVersion:CLOSING_VERSION,closingEntry:1445,closingExit:1515,shadowEntry:1415},
       schedule:"opening 09:05-09:31 · gapdown 08:56/15:21/15:40 · duel 18:10 KST · crypto close 00:05 · SOXL close 16:05 ET",
       mode:"Cloudflare Cron -> Pages opening-monitor -> immutable signal ledger -> KIS VTS",
       signalLedger:"Durable Object /events (authorized)"

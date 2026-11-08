@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.48.2</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.49.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -347,6 +347,7 @@ canvas{display:block;width:100%;height:auto}
 </div></div>
 
   <div id="strategy_daily" class="strategy-pane on">
+    <div class="card" id="holding_lab_daily"><h3>보유시간 비교 · 독립 그림자 장부</h3><div class="sub">2026-11-09부터 전향 관찰 · 최초 신호 전에는 미검증</div></div>
     <div class="card" id="gpt_morning_card">
       <h3><span class="dot"></span>🔬 아침 연구 리포트 <span class="sub">매일 08:00 · 전체 탭</span></h3>
       <div id="gpt_morning_body"><p class="sub">보고서를 불러오는 중…</p></div>
@@ -363,10 +364,10 @@ canvas{display:block;width:100%;height:auto}
         <span class="sub" id="daily_results_meta">불러오는 중…</span>
       </div>
       <div id="daily_results_body"><p class="sub">전략별 오늘 결과를 불러오는 중…</p></div>
-      <p class="note">목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 자금배분이 정해지기 전에는 단순 합산하지 않습니다.<br><b>보유 원칙:</b> 현재 4개 기준전략은 모두 당일청산·오버나이트 금지입니다. 향후 예외 후보도 별도 검증을 거쳐 최대 5거래일까지만 허용하며 6거래일 이상은 단타 전략에서 제외합니다.</p>
+      <p class="note">목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 자금배분이 정해지기 전에는 단순 합산하지 않습니다.<br><b>보유 원칙:</b> 메인은 시초가 09:30 · 데이 15:10 · BTC 최대 60분 · SOXL 최대 90분/같은 미국 거래일 · 종가형 15:15 청산입니다. 연장 보유와 시간 제한 없는 비교는 주문 없이 별도 그림자 모의장부에 기록합니다. 텐배거는 기존 중장기 규칙을 유지합니다.</p>
     </div>
     <div class="card" id="daily_closing30_card">
-      <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">개별 주식 · 당일 종가 / 익일 시가 · 독립 모의연구</span></h3>
+      <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">15:15 청산 · 30분/60분 비교 · 이전 버전 이력 보존</span></h3>
       <p class="lead">메인+10개 그림자 전략을 별도 원본 장부로 매일 검증합니다. 종가 베팅은 익일 시가가 관측되기 전에는 수익을 확정하지 않습니다.</p>
       <div id="daily_closing30_status" class="sub">종가 연구 결과 불러오는 중…</div>
       <button class="ghostbtn sm" onclick="showStrategy('closing30')">종가 전략·모든 거래이력 보기 →</button>
@@ -418,20 +419,20 @@ canvas{display:block;width:100%;height:auto}
   </div>
 
   <div id="strategy_closing30" class="strategy-pane">
-    <div class="strategy-head">🌇 종가 30분 · 당일 청산 + 개별 종목 종가 베팅(다음 거래일 시가 청산)</div>
+    <div class="strategy-head">🌇 종가 30분 · 14:45→15:15 / 1시간 그림자 · 14:15→15:15</div>
     <div class="row"><button class="ghostbtn sm" onclick="openTradeHistory('closing30')">종가 30분 전체 이력 / CSV</button><button class="ghostbtn sm" onclick="openTradeHistory('closing_bet')">개별 종목 종가 베팅 전체 이력 / CSV</button></div>
     <div class="card">
       <h3><span class="dot"></span>🌇 종가 30분 연구 <span class="sub">메인 + 그림자 10개 · 서버 자동 실행 · 한투 모의는 설정에서 ON</span></h3>
-      <p class="lead">기준전략은 15시까지 하락한 개별 종목을 유동성 순으로 선정합니다. <b>당일청산형</b>은 15:06 신호 → 15:07 모의매수 → 15:40 당일 종가 확인으로 종료합니다.
-       <b>종가 베팅형</b>은 15:22 신호 → 15:40 종가 매수가 확정 → 다음 거래일 09:06 시가 확인으로 청산합니다.
-       신호는 그 시점까지 완료된 분봉만 사용합니다. 종가 단일가나 다음 날 시가를 미리 알아내는 백테스트 오류를 금지합니다.</p>
-      <div class="warn"><b>연구용:</b> 15:07의 가상 매수가격과 15:30 종가/익일 시가는 실거래 체결을 보장하지 않습니다. 한투 모의투자는 설정에서 켠 이후의 메인 신호만 별도 주문합니다. 15:23 종가 동시호가 주문과 다음 거래일 08:56 시가 동시호가 주문은 연구 기준가격과 다를 수 있습니다. 전체 매매이력에 주문·체결·미확정 상태를 따로 기록합니다. 거래비용 왕복 0.23%는 초기 보수적 가정이며, 별도 실측 검증이 필요합니다.</div>
+      <p class="lead"><b>2026-11-09부터</b> 30분형은 <b>14:44 신호 → 14:45 진입 → 15:15 청산</b>입니다. 1시간형은 <b>14:14 신호 → 14:15 진입 → 같은 15:15 청산</b>을 별도 그림자로 관찰합니다. 진입 판단은 각 시점 이전 완료 봉만 사용합니다.</p>
+      <p class="note">메인만 기존 설정에 따른 한투 모의주문을 사용합니다. 1시간형은 주문·개별 알림 없이 기록만 남기며 자동 승격하지 않습니다. 이전 15:30 종가형·익일시가형의 기록과 손익은 당시 버전으로 보존합니다. 새 익일시가 진입은 중단합니다. 종료 시세/체결이 없으면 청산 완료가 아니라 미확인입니다.</p>
+      <div class="warn"><b>연구용:</b> 완료 분봉의 연구 기준가격은 실제 주문 체결과 다릅니다. 15:15 청산 주문·체결·잔여 보유는 별도로 확인합니다. 한투 모의투자는 설정에서 켠 이후의 메인 신호만 별도 주문합니다. 이전 버전의 종가 동시호가/익일 시가 청산과 새 15:15 청산 결과를 합산해 개선 성과로 해석하지 않습니다. 전체 매매이력에 주문·체결·미확정 상태를 따로 기록합니다. 거래비용 왕복 0.23%는 초기 보수적 가정이며, 별도 실측 검증이 필요합니다.</div>
       <div class="out" id="closing30_summary" style="margin-top:12px"><div class="outbox"><div class="ol">상태</div><div class="ov">원본 조회 전</div></div></div>
     </div>
     <div class="card">
       <h3><span class="dot"></span>📚 전략별 전체 모의 매매이력 <span class="sub">메인 · 그림자 · 승격 이전 이력까지</span></h3>
       <div class="row" style="margin-bottom:10px;align-items:flex-end">
-        <div class="fld"><label>유형</label><select id="closing30_kind" onchange="loadClosing30History()"><option value="all">전체</option><option value="day">당일 종가 청산</option><option value="overnight">종가 베팅 · 익일 시가</option></select></div>
+        <div class="fld"><label>유형</label><select id="closing30_kind" onchange="loadClosing30History()"><option value="all">전체</option><option value="day">30분형 · 버전별 이력</option><option value="hour">1시간 그림자 · 15:15 청산</option><option value="overnight">이전 익일시가형 · 신규 중단</option></select></div>
+        <div class="fld"><label>규칙 버전</label><select id="closing30_version" onchange="loadClosing30History()"><option value="current">새 15:15 청산형</option><option value="legacy">이전 버전</option><option value="all">전체 · 비교 참고</option></select></div>
         <div class="fld"><label>메인/그림자</label><select id="closing30_variant" onchange="loadClosing30History()"><option value="all">전체</option></select></div>
         <div class="fld"><label>종료일</label><input type="date" id="closing30_to" onchange="loadClosing30History()"></div>
         <div class="fld"><label>조회 기간</label><select id="closing30_days" onchange="loadClosing30History()"><option value="7">7일</option><option value="14" selected>14일</option><option value="31">31일</option></select></div>
@@ -448,6 +449,7 @@ canvas{display:block;width:100%;height:auto}
   </div>
 
   <div id="strategy_opening" class="strategy-pane">
+    <div class="card" id="holding_lab_opening"><h3>보유시간 비교 · 독립 그림자 장부</h3><div class="sub">2026-11-09부터 전향 관찰 · 최초 신호 전에는 미검증</div></div>
     <div class="strategy-head">실시간 시초가 돌파 감시 → 백테스트 → 분봉 아카이브</div>
     <div id="main_strategy_state_opening" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
@@ -550,6 +552,7 @@ canvas{display:block;width:100%;height:auto}
   </div>
 
   <div id="strategy_daytrading" class="strategy-pane">
+    <div class="card" id="holding_lab_daytrading"><h3>보유시간 비교 · 독립 그림자 장부</h3><div class="sub">2026-11-09부터 전향 관찰 · 최초 신호 전에는 미검증</div></div>
     <div class="strategy-head">10:00 유니버스 고정 → 장중 신호 → 다음 분 시가 모의진입 → 장마감 누적검증</div>
     <div id="main_strategy_state_daytrading" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
@@ -630,6 +633,7 @@ canvas{display:block;width:100%;height:auto}
 
 
   <div id="strategy_crypto" class="strategy-pane">
+    <div class="card" id="holding_lab_crypto"><h3>보유시간 비교 · 독립 그림자 장부</h3><div class="sub">2026-11-09부터 전향 관찰 · 최초 신호 전에는 미검증</div></div>
     <div class="strategy-head">Upbit KRW-BTC · 5분봉 · 00:00 KST 기준 · 신규진입 22:00까지 · 연구/검증 전용</div>
     <div id="main_strategy_state_crypto" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
@@ -699,6 +703,7 @@ canvas{display:block;width:100%;height:auto}
 
 
   <div id="strategy_soxl" class="strategy-pane">
+    <div class="card" id="holding_lab_soxl"><h3>보유시간 비교 · 독립 그림자 장부</h3><div class="sub">2026-11-09부터 전향 관찰 · 최초 신호 전에는 미검증</div></div>
     <div class="strategy-head">SOXL · 미국 정규장 5분봉 · ET · 연구/검증 전용</div>
     <div id="main_strategy_state_soxl" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
     <div class="card">
@@ -2038,7 +2043,7 @@ async function loadClosing30History(){
   msg.textContent='종가 연구 서버 장부 조회 중…';
   try{
     const token=await me.getIdToken();
-    const q=new URLSearchParams({kind:$('closing30_kind').value,variant:$('closing30_variant').value,days:$('closing30_days').value});
+    const q=new URLSearchParams({kind:$('closing30_kind').value,variant:$('closing30_variant').value,days:$('closing30_days').value,version:$('closing30_version').value});
     if($('closing30_to').value)q.set('to',$('closing30_to').value);
     const r=await fetch('/api/closing30-history?'+q.toString(),{cache:'no-store',headers:{Authorization:'Bearer '+token}});
     const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'HTTP '+r.status);
@@ -2052,7 +2057,7 @@ async function loadClosing30History(){
       '<div class="outbox"><div class="ol">청산 완료</div><div class="ov">'+z.closed+'</div></div>'+
       '<div class="outbox"><div class="ol">미청산/가격 확인필요</div><div class="ov">'+(z.open+z.missing)+'</div></div>'+
       '<div class="outbox"><div class="ol">검증 거래 평균순익</div><div class="ov">'+format(z.avgPnl)+'</div></div>';
-    const title=x=>x.kind==='day'?'당일 종가 청산':'종가 베팅 → 익일 시가';
+    const title=x=>x.kind==='hour'?'1시간 그림자':x.kind==='day'?'30분형':'이전 익일시가형';
     body.innerHTML=j.sourceWarnings.length?'<div class="warn">'+esc(j.sourceWarnings.slice(0,4).join(' / '))+'</div>':'';
     if(!j.trades.length)body.innerHTML+='<div class="warn">확정된 거래가 없거나 첫 연구 세션을 기다리고 있습니다. 기록이 없다는 이유로 수익률 0%로 간주하지 않습니다.</div>';
     else body.innerHTML+='<div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>전략</th><th>그림자ID</th><th>종목</th><th>매수</th><th>매도</th><th>손익</th><th>상태</th></tr></thead><tbody>'+
@@ -2832,7 +2837,25 @@ async function loadShadowRankings(force=false){
   }
 }
 
+async function loadHoldingTimeLab(name='all'){
+ const target=name==='all'?'daily':name,el=$('holding_lab_'+target);if(!el||!me)return;
+ const labels={opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL'};
+ const fmt=x=>x==null?'미검증':Number(x).toFixed(3)+'%';
+ try{
+  const token=await me.getIdToken(),r=await fetch('/api/gpt-holding-lab?strategy='+name,{headers:{Authorization:'Bearer '+token},cache:'no-store'}),j=await r.json();
+  if(!r.ok||!j.ok)throw Error(j.error||'HTTP '+r.status);
+  el.innerHTML='<h3>보유시간 비교 · 독립 그림자 장부</h3><button class="ghostbtn" onclick="loadHoldingTimeLab(\''+name+'\')">새로고침</button><p class="note">'+esc(j.evaluationStart)+'부터 실제 메인 진입을 고정해 비교합니다. 손절·익절·비용은 진입 시 고정합니다. 연장형은 주문·개별 알림·자동 승격이 없습니다. 미청산 평가를 포함한 모의자본이며 증권사 체결 성과가 아닙니다. MDD는 5분 관찰값입니다.</p>'+
+   (j.labs||[]).map(l=>'<h4>'+esc(labels[l.strategy]||l.strategy)+' · '+esc(l.currency)+' '+Number(l.capital).toLocaleString('ko-KR')+'씩 · '+esc(l.updatedAt?scalpingKstStamp(l.updatedAt):'첫 관찰 대기')+'</h4>'+
+    (l.errors?.length?'<div class="warn">원천 확인 필요 · '+esc(l.errors.map(x=>x.error||'자료 누락').join(' / '))+'</div>':'')+
+    '<div class="htable-wrap"><table class="htable"><thead><tr><th>청산 규칙</th><th>모의 평가수익</th><th>일평균</th><th>PF</th><th>관찰 MDD</th><th>최악일</th><th>완료일/청산</th><th>보유/미확인</th></tr></thead><tbody>'+
+    l.arms.map(a=>{const z=a.summary||{};return '<tr><td>'+esc(a.label)+'</td><td>'+fmt(z.returnPct)+'</td><td>'+fmt(z.avgDailyReturnPct)+'</td><td>'+(z.profitFactor==null?(z.noLossSample?'손실 표본 없음':'미검증'):z.profitFactor.toFixed(3))+'</td><td>'+fmt(z.mddPct)+'</td><td>'+fmt(z.worstDay)+'</td><td>'+z.observedDays+'/'+z.closed+'</td><td>'+z.open+'/'+z.unverified+'</td></tr>';}).join('')+'</tbody></table></div>'+
+    '<details><summary>진입·청산 이력과 당시 버전</summary>'+l.arms.map(a=>'<h4>'+esc(a.label)+'</h4><p class="sub">자본 점유/늦은 원본으로 제외 '+a.summary.skipped+'건</p>'+(a.trades.length?'<div class="htable-wrap"><table class="htable"><thead><tr><th>종목·버전</th><th>진입</th><th>청산/최근 평가</th><th>순손익</th><th>상태</th></tr></thead><tbody>'+a.trades.slice(0,30).map(t=>'<tr><td>'+esc(t.name||t.code)+'<div class="sub">'+esc(t.sourceVersion)+'</div></td><td>'+esc(scalpingKstStamp(new Date(t.entryMs).toISOString()))+'<div class="sub">'+histPrice(l.strategy,t.entryPrice)+'</div></td><td>'+esc(t.exitMs?scalpingKstStamp(new Date(t.exitMs).toISOString()):t.priceAt?scalpingKstStamp(t.priceAt):'미확인')+'<div class="sub">'+histPrice(l.strategy,t.exitPrice||t.markPrice)+'</div></td><td>'+fmt(t.pnlPct)+'</td><td>'+esc(t.status+(t.dataIssue?' · '+t.dataIssue:'')+(t.sourceRevision?' · 원천 수정 감지':''))+'</td></tr>').join('')+'</tbody></table></div>':'<p class="sub">등록된 전향 진입 없음 · 미검증</p>')).join('')+'</details>').join('');
+ }catch(e){el.innerHTML='<h3>보유시간 비교</h3><div class="warn">조회 미확인 · '+esc(e.message||e)+'</div>';}
+}
+let HOLDING_LAB_TIMER=null;
 function showStrategy(name){
+  if(HOLDING_LAB_TIMER)clearInterval(HOLDING_LAB_TIMER);
+  if(['daily','opening','daytrading','crypto','soxl'].includes(name))HOLDING_LAB_TIMER=setInterval(()=>{if(!document.hidden)void loadHoldingTimeLab(name==='daily'?'all':name);},60000);
   const active=['opening','daytrading','crypto','soxl'];
   const tabs=['daily','duel','tenbagger','closing30','closing_bet','trades',...active];
   if(!tabs.includes(name))name='daily';
@@ -2840,6 +2863,7 @@ function showStrategy(name){
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
   const p=$('strategy_'+(name==='closing_bet'?'closing30':name)); if(p)p.classList.add('on');
   SCALP_PREFS.strategyTab=name;if(me)void cloudSave();
+  if(name==='daily'||active.includes(name))void loadHoldingTimeLab(name==='daily'?'all':name);
   if(name==='trades')loadTradeHistory(1);
   if(name==='duel'){ loadScalpingDuel(false); }
   if(name==='tenbagger'){window.TenbaggerResearch?.boot();}

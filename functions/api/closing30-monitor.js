@@ -1,7 +1,7 @@
 // GET /api/closing30-monitor?op=scan&kind=day|overnight, or ?op=prices&stage=...
 // Internal scheduled paper-only signal/pricing. No broker orders and no post-cutoff input in signal selection.
 import {minuteVolume} from "./_opening.js";
-import {closeHm,snapAt,closeFeature,chooseClosingSignals} from "./_closing30.js";
+import {closeHm,snapAt,closeFeature,chooseClosingSignals,closingWindow} from "./_closing30.js";
 const JSON_H={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const respond=(obj,status=200)=>new Response(JSON.stringify(obj),{status,headers:JSON_H});
 function permitted(req,env){const key=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"");return !!key&&req.headers.get("x-monitor-key")===key;}
@@ -65,9 +65,11 @@ export async function onRequestGet({request,env}){
  const today=kst(),date=u.searchParams.get("date")||today.date,origin=authOrigin(request);
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return respond({ok:false,error:"invalid date"},400);
  if(op==="scan"||op==="feature-batch"){
-  if(!["day","overnight"].includes(kind))return respond({ok:false,error:"kind"},400);
-  if(date!==today.date||today.hm<(kind==="day"?1505:1521))return respond({ok:false,error:"not due"},409);
-  const cutoff=kind==="day"?1504:1520;
+  if(!["day","hour","overnight"].includes(kind))return respond({ok:false,error:"kind"},400);
+  const window=closingWindow(kind,date);
+  if(!window)return respond({ok:true,date,kind,blocked:true,reason:'retired_overnight_no_new_entries',signals:[]});
+  if(date!==today.date||today.hm<(window.version==='closing30_v1'?(kind==='day'?1505:1521):window.signalHm)||(window.version!=='closing30_v1'&&today.hm>window.entryHm))return respond({ok:false,error:"not due"},409);
+  const cutoff=window.cutoff;
   let symbols;
   if(op==="feature-batch"){
    symbols=inputs(u,true);if(!symbols)return respond({ok:false,error:"invalid feature batch"},400);
@@ -90,13 +92,15 @@ export async function onRequestGet({request,env}){
   // Universe source unavailable/partial: record degraded and never imply no-trade.
   const partial=errors.length>0||output.length===0;
   return respond({ok:true,date,kind,partial,errors,scanned:symbols.length,valid:output.length,
-   signals:chooseClosingSignals(output,kind,3),cutoff,source:"minute snapshot; no post-cutoff data"});
+   signals:chooseClosingSignals(output,kind,3,date),cutoff,source:"minute snapshot; no post-cutoff data"});
  }
  if(op==="prices"||op==="price-batch"){
   const stage=u.searchParams.get("stage");
-  if(!["day_entry","day_exit","overnight_entry","overnight_exit"].includes(stage))return respond({ok:false,error:"stage"},400);
+  if(!["day_entry","day_exit","hour_entry","hour_exit","overnight_entry","overnight_exit"].includes(stage))return respond({ok:false,error:"stage"},400);
   if(date!==today.date)return respond({ok:false,error:"pricing only current session"},409);
-  const allowed={day_entry:1507,day_exit:1540,overnight_entry:1540,overnight_exit:906};
+  const w=closingWindow(stage.startsWith('hour')?'hour':'day',date);
+  if(stage==='overnight_entry'&&!closingWindow('overnight',date))return respond({ok:false,error:'overnight entries retired'},409);
+  const allowed={day_entry:w.entryHm,day_exit:w.settleHm,hour_entry:1415,hour_exit:1516,overnight_entry:1540,overnight_exit:906};
   if(today.hm<allowed[stage])return respond({ok:false,error:"stage not settled"},409);
   const codes=op==="price-batch"?inputs(u,false):[...new Set(String(u.searchParams.get("codes")||"").split(",").filter(x=>/^\d{6}$/.test(x)))].slice(0,35);
   if(!codes)return respond({ok:false,error:"invalid price batch"},400);
@@ -104,17 +108,19 @@ export async function onRequestGet({request,env}){
    const q=await quote(origin,code),day=sessionDaily(q.daily,date);
    if(!day)return null;
    let price=null,source="";
-   if(stage==="day_entry"){
-    // 15:06 관측 봉(이미 완료된 다음 봉)을 모의 체결가로 사용한다.
-    const b=snapAt(q.minutes.filter(x=>String(x.t).startsWith(date)),1506).find(x=>closeHm(x.t)===1506);
-    price=b?.close>0?+b.close:null;source="15:06 완료 분봉 종가 대용";
+   const model=stage.startsWith('hour')?'hour':'day',cw=closingWindow(model,date);
+   if(stage==='day_entry'||stage==='hour_entry'||((stage==='day_exit'||stage==='hour_exit')&&cw?.version==='closing30_1515_v2')){
+    const minute=stage.endsWith('entry')?cw.entryPriceHm:cw.exitPriceHm;
+    const b=snapAt(q.minutes.filter(x=>String(x.t).startsWith(date)),minute).find(x=>closeHm(x.t)===minute);
+    price=b?.close>0?+b.close:null;source=String(minute).padStart(4,'0')+' 완료 분봉 종가 대용 · 주문 체결과 구분';
    }else if(stage==="overnight_exit"){
     price=day.open;source="익일 공식 일봉 시가 (09:06 이후)";
    }else{
     // 15:30 종가 단일가 확정 후 15:40만 사용. 장중에는 절대로 종가를 입력에 쓰지 않는다.
     price=day.close;source="15:30 종가 단일가 (15:40 이후)";
    }
-   const priceHm=stage==="day_entry"?"15:06":stage==="overnight_exit"?"09:00":"15:30";
+   const hm=(stage==='day_entry'||stage==='hour_entry')?cw.entryPriceHm:(stage==='day_exit'||stage==='hour_exit')&&cw?.version==='closing30_1515_v2'?cw.exitPriceHm:null;
+   const priceHm=hm?String(hm).padStart(4,'0').replace(/(..)(..)$/,'$1:$2'):stage==='overnight_exit'?'09:00':'15:30';
    return price>0?{code,price,source,priceAt:date+"T"+priceHm+":00+09:00"}:null;
   },2);
   return respond({ok:true,date,stage,prices:output,errors,missing:codes.length-output.length});

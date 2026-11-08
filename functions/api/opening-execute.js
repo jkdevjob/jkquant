@@ -1,3 +1,4 @@
+import {HOLDING_START} from './_gpt-holding-lab.js';
 // Cloudflare Pages Function — POST /api/opening-execute
 // 시초가 기준전략 신호를 내부 모의체결 기준값과 함께 기록하면서 KIS VTS 시장가 주문을 순차 전송한다.
 // 실계좌 경로는 없다. 5개 감시 shard가 병렬로 계산한 이벤트를 workflow가 한 번에 모아 이 endpoint로 보낸다.
@@ -131,10 +132,10 @@ export async function onRequestPost({request,env}){
   if(date!==clock.date)return json({ok:false,error:"오늘 장중 신호만 VTS 자동주문할 수 있습니다.",today:clock.date,date},400);
 
   const rawBuys=uniq(b.buyEvents,"buy",date),rawSells=uniq(b.sellEvents,"sell",date);
-  const buys=rawBuys.filter(x=>freshEvent(x,"buy",clock));
+  const buys=rawBuys.filter(x=>freshEvent(x,"buy",clock)&&(date<HOLDING_START||clock.hm<930));
   const sells=rawSells.filter(x=>freshEvent(x,"sell",clock));
   const stale=[
-    ...rawBuys.filter(x=>!freshEvent(x,"buy",clock)).map(x=>({side:"buy",x,ageMin:eventAgeMin(x,"buy",clock)})),
+    ...rawBuys.filter(x=>!freshEvent(x,"buy",clock)||(date>=HOLDING_START&&clock.hm>=930)).map(x=>({side:"buy",x,ageMin:eventAgeMin(x,"buy",clock)})),
     ...rawSells.filter(x=>!freshEvent(x,"sell",clock)).map(x=>({side:"sell",x,ageMin:eventAgeMin(x,"sell",clock)}))
   ];
   const amount=budget({...env,SCALPING_VTS_BUDGET:permission.budget}),events=stale.map(({side,x,ageMin})=>({

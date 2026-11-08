@@ -20,6 +20,8 @@ OUT=Path("data/nightly-research")
 KEY=os.environ.get("KEY") or os.environ.get("AUTOTRADE_KEY") or ""
 WORKER=(os.environ.get("CLOSING_WORKER_URL") or "https://jkquant-opening-scheduler.mumae4.workers.dev").rstrip("/")
 FEE=.23
+CURRENT_VERSION="closing30_1515_v2"
+START="2026-11-09"
 
 def needs_refresh(path, recent=False):
     if recent or not path.is_file():return True
@@ -61,11 +63,11 @@ def flatten(day):
     if not day or not isinstance(day.get("events"),list):return []
     by={}
     for e in day["events"]:
-        if e.get("stage") not in ("signal","buy","sell") or e.get("kind") not in ("day","overnight"):continue
+        if e.get("stage") not in ("signal","buy","sell") or e.get("kind") not in ("day","hour","overnight"):continue
         k=(e.get("kind"),e.get("variant"),e.get("code"))
         if not all(k):continue
         t=by.setdefault(k,{"date":day.get("date"),"kind":k[0],"variant":k[1],"code":k[2],
-                           "name":e.get("name") or k[2],"state":"signal","entryPrice":None,"exitPrice":None,"pnl":None})
+                           "strategyVersion":e.get("decisionVersion") or "closing30_v1","params":e.get("strategyParams"),"name":e.get("name") or k[2],"state":"signal","entryPrice":None,"exitPrice":None,"pnl":None})
         if e["stage"]=="buy":
             t["entryPrice"]=e.get("price");t["entryTime"]=e.get("createdAt");t["state"]="open"
         elif e["stage"]=="sell":
@@ -96,11 +98,33 @@ def stats(rows,calendar_days):
       "secondHalfAvg":statistics.mean(second) if second else None,
       "unsettled":len(rows)-len(closed)}
 
+
+def archive_holding(now):
+    """Read original forward evidence only; never runs a second trading engine."""
+    if not KEY:return {"ok":False,"error":"holding archive monitor key missing"}
+    try:
+        r=subprocess.run(["curl","--fail","--silent","--show-error","--max-time","30",
+          "--user-agent","JKQuant-holding-archive/1.0","-H","x-monitor-key: "+KEY,
+          "https://jkquant.pages.dev/api/gpt-holding-archive"],capture_output=True,text=True,timeout=35)
+        if r.returncode:raise ValueError("holding archive HTTP/network failure")
+        data=json.loads(r.stdout)
+        if not data.get("ok") or not isinstance(data.get("labs"),list):raise ValueError("holding archive schema failure")
+        data["archivedAt"]=now.isoformat()
+        root=Path("data/gpt-holding");root.mkdir(parents=True,exist_ok=True)
+        # Each snapshot is append-only. latest is an index/input, not a rewritten trade record.
+        snapshot=root/(now.strftime("%Y-%m-%dT%H%M%S%f")+".json")
+        snapshot.write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
+        (root/"latest.json").write_text(json.dumps(data,ensure_ascii=False,indent=2),encoding="utf-8")
+        return {"ok":True,"snapshot":str(snapshot),"labs":len(data["labs"])}
+    except Exception as e:return {"ok":False,"error":str(e)[:160]}
+
 def main():
     now=dt.datetime.now(KST)
+    holding_archive=archive_holding(now)
     days=[(now.date()-dt.timedelta(days=i)).isoformat() for i in range(40)]
     RAW.mkdir(parents=True,exist_ok=True);OUT.mkdir(parents=True,exist_ok=True)
     errors=[];received=0
+    if not holding_archive.get("ok"):errors.append({"scope":"gpt-holding","error":holding_archive.get("error")})
     # Refresh last 5 days (late overnight fills) plus any day whose immutable copy is absent.
     wanted=[d for d in days if needs_refresh(RAW/(d+".json"),d>=days[4])]
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
@@ -117,12 +141,14 @@ def main():
             except Exception as e:errors.append({"date":d,"error":str(e)})
     all_rows=[x for d in all_days for x in flatten(d)]
     variants=[]
-    for kind in ("day","overnight"):
+    legacy_rows=[x for x in all_rows if x.get("strategyVersion")!=CURRENT_VERSION]
+    current_rows=[x for x in all_rows if x.get("strategyVersion")==CURRENT_VERSION]
+    for kind in ("day","hour","overnight"):
         names=["baseline","dip_1","dip_2","dip_3","dip_volume","dip_vol2","momentum","up_1","up_volume","flat","all"]
         for name in names:
-            v=[x for x in all_rows if x["kind"]==kind and x["variant"]==name]
+            v=[x for x in (current_rows if now.date().isoformat()>=START else all_rows) if x["kind"]==kind and x["variant"]==name]
             x=stats(v,sorted(days))
-            is_valid=(x["trades"]>=30 and x["observedDays"]>=20
+            is_valid=(kind=="day" and x["trades"]>=30 and x["observedDays"]>=20
               and x["avgPnl"] is not None and x["avgPnl"]>0
               and x["profitFactor"] is not None and x["profitFactor"]>=1.1
               and x["firstHalfAvg"] is not None and x["firstHalfAvg"]>0
@@ -137,7 +163,7 @@ def main():
     strategies=lifecycle.setdefault("strategies",{})
     previous=strategies.get("closing30") or {}
     winners={}
-    for kind in ("day","overnight"):
+    for kind in ("day","hour","overnight"):
         best=max((v for v in variants if v["kind"]==kind and v["eligibleToPromote"]),
           key=lambda v:v["summary"]["avgPnl"],default=None)
         prior=previous.get(kind) or {}
@@ -152,9 +178,10 @@ def main():
       "updatedAt":now.isoformat(),"paperOnly":True,"autoChange":False}
     lifecycle_path.write_text(json.dumps(lifecycle,ensure_ascii=False,indent=2),encoding="utf-8")
     report={"schema":1,"date":now.date().isoformat(),"generatedAt":now.isoformat(),"status":"degraded" if errors else "collecting" if not all_rows else "research",
-      "mode":"close30-paper-shadow-nightly","archiveDays":len(all_days),"freshLedgers":received,"errors":errors[:12],
+      "mode":"close30-paper-shadow-nightly","holdingArchive":holding_archive,"archiveDays":len(all_days),"freshLedgers":received,"errors":errors[:12],
       "sourceRule":"Actual signal-time Durable Object evidence, no post-hoc signal reconstruction",
-      "feesPct":FEE,"mainVariant":"baseline","variants":variants,
+      "feesPct":FEE,"mainVariant":"baseline","strategyVersion":CURRENT_VERSION,"evaluationStart":START,"variants":variants,
+      "legacy":{"trades":len(legacy_rows),"summary":stats(legacy_rows,sorted(days)),"excludedFromCurrentRanking":now.date().isoformat()>=START},
       "candidates":[v for v in variants if v["eligibleToPromote"]],
       "promotion":winners,"fullPaperTradeCount":len(all_rows)}
     (OUT/"closing30.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
