@@ -206,7 +206,7 @@ def attach_results(items, rows):
         c = by.get((it["cltrMngNo"], str(it["round"] or "")))
         if not c:
             continue
-        it["result"] = {"status": c.get("pbctStatNm"), "win": man(c.get("scfbAmt")), "bidders": c.get("vldBddrNope"),
+        it["result"] = {"status": stat_name(c.get("pbctStatNm"), c.get("pbctStatCd")), "win": man(c.get("scfbAmt")), "bidders": c.get("vldBddrNope"),
                         "invalid": c.get("nfctBddrNope"), "winOverMin": c.get("lowstBidCtrsScfbPrcRto"), "opbd": when(c.get("cltrOpbdDt"))}
         if it["appraisal"] and it["result"]["win"]:
             it["result"]["winApp"] = round(it["result"]["win"] / it["appraisal"], 4)
@@ -217,6 +217,8 @@ def attach_results(items, rows):
 def merge(old_items, new_items):
     """같은 물건·회차는 새 값으로, 결과는 한 번 들어오면 지우지 않는다. 이번에 안 보인 끝난 물건도 남긴다(통계용)."""
     keep = {x["id"]: x for x in old_items or []}
+    for x in keep.values():   # 지난 수집이 남긴 상태 코드(0001 등)도 이름으로 — 이번에 안 보인 물건은 다시 안 받는다
+        x["status"] = stat_name(x.get("status"), None)
     for it in new_items:
         prev = keep.get(it["id"])
         if prev and prev.get("result") and not it.get("result"):

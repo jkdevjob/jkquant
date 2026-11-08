@@ -190,5 +190,15 @@ try:
 except O.ApiError:
     ok("② 물건정보가 403 이면 멈춘다(쓸 자료가 없다)", True)
 
+# 첫 실제 수집이 남긴 상태 코드 — 이번에 안 보인 물건도 이름으로(다시 받지 않으니 쌓을 때 바꾼다)
+old_codes = [{"id": "K1-1-1", "bidEnd": "2026-10-01 17:00", "status": "0001", "result": None},
+             {"id": "K2-1-1", "bidEnd": "2026-10-02 17:00", "status": "낙찰", "result": {"status": "낙찰", "win": 100}}]
+mg = {x["id"]: x for x in O.merge(old_codes, [{"id": "K3-1-1", "bidEnd": "2026-11-20 17:00", "status": "입찰진행중", "result": None}])}
+ok("쌓기: 지난 자료의 상태 코드(0001)도 이름으로 · 이름 · 결과는 그대로", mg["K1-1-1"]["status"] == "입찰준비중" and mg["K2-1-1"]["status"] == "낙찰"
+   and mg["K2-1-1"]["result"]["win"] == 100 and mg["K3-1-1"]["status"] == "입찰진행중", [x["status"] for x in mg.values()])
+ri = [{"cltrMngNo": "R1", "round": "2", "appraisal": 1000, "result": None}]
+O.attach_results(ri, [{"pbctNsq": "2", "cltrBidRsltClgList": [{"cltrMngNo": "R1", "pbctNsq": "2", "pbctStatNm": "", "pbctStatCd": "0003", "scfbAmt": "0"}]}])
+ok("결과 상태도 코드면 이름으로", ri[0]["result"]["status"] == "입찰마감", ri[0]["result"])
+
 print("\n결과: %d PASS / %d FAIL" % (passed, failed))
 sys.exit(1 if failed else 0)

@@ -141,6 +141,8 @@ const CONB_MUTS=[
   ['③ 403 이어도 계속 부름','            warnings.append("rsltForbidden")\n            break','            warnings.append("rsltForbidden")\n            continue'],
   ['공고 목록을 60쪽에서 자름','        if not its or len(out) >= total or page >= 300:','        if not its or len(out) >= total or page >= 60:'],
   ['상태 코드를 그대로','    if re.fullmatch(r"\\d{4}", v):\n        return STAT.get(v, "상태 " + v)\n','' ],
+  ['쌓을 때 지난 상태 코드를 그대로','        x["status"] = stat_name(x.get("status"), None)','        pass'],
+  ['결과 상태 코드를 그대로','"status": stat_name(c.get("pbctStatNm"), c.get("pbctStatCd")), "win"','"status": c.get("pbctStatNm"), "win"'],
   ['인증키 오류를 자료 없음으로','        if c in ("03",):\n            return EMPTY\n        raise (LimitError','        if True:\n            return EMPTY\n        raise (LimitError']
 ];
 const CAPT_MUTS=[

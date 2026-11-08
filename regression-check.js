@@ -12371,7 +12371,14 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        &&['OnbidPbancListSrvc2/getPbancList2','OnbidPbancCltrDtlSrvc2/getPbancCltrInf2','OnbidPbancBidRsltDtlSrvc2/getPbancBidRsltDtl2'].every(x=>onc.indexOf(x)>0)&&(onc.match(/https:\/\/[a-z.]+/g)||[]).every(u=>u==='https://apis.data.go.kr')
        &&!onc.split('\n').some(l=>/print\(/.test(l)&&/\bkey\b/.test(l)));
     const OB=fs.existsSync(__d+'/data/realestate/claude/onbid.json')?JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/onbid.json','utf8')):null;
-    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원 · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||'')&&(x.appraisal==null||x.appraisal<1e7))&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))));
+    // 금액 단위(만원) — 물건 하나의 크기로 정하지 않는다(교보자산신탁 유천동 61필지 일괄매각 감정가 1,258억이 실제로 있다).
+    // 원을 만원으로 안 바꾸면 모든 값이 1만 배 → 가운데값이 100억(1e6 만원)을 넘거나 한 건이라도 1조(1e8 만원)를 넘는다.
+    const obUnit=o=>{ const v=o.items.map(x=>x.appraisal).filter(x=>x!=null).sort((a,b)=>a-b),m=o.items.map(x=>x.minPrice).filter(x=>x!=null);
+      return v.concat(m).every(x=>x>=0&&x<1e8)&&(!v.length||v[Math.floor((v.length-1)/2)]<1e6); };
+    ok('온비드 금액 단위 검사: 만원이면 통과(1,258억 큰 물건 포함) · 원 그대로면 걸림(최저가만 원 그대로 · 작은 값만 여럿)',
+       obUnit({items:[{appraisal:57200,minPrice:34440},{appraisal:12584244,minPrice:7680000},{appraisal:47,minPrice:null}]})
+       &&!obUnit({items:[{appraisal:57200,minPrice:344400000}]})&&!obUnit({items:[{appraisal:27000000},{appraisal:57200000},{appraisal:28000000,minPrice:null}]}));
+    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원 · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||''))&&obUnit(OB)&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))));
     ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 묶기(onbidGroups)·요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 · 입찰결과 권한 안내',
        /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidGroups\(/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI)&&/rsltForbidden/.test(aucUI));
   }
