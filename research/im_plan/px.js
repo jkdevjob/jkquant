@@ -13,7 +13,7 @@ const ind={
 function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||10000, fee=o.fee??.0025, tax=o.tax??true, band=o.band??0.05;
   const i0=Math.max(dates.findIndex(d=>d>=(o.from||'0')), o.warm||260), i1=o.to?dates.findLastIndex(d=>d<=o.to):dates.length-1;
   let cash=cap, q={}, basis={}, yearPnl=0, yr=null, lastIrx=0, prevDate=null; syms.forEach(s=>{q[s]=0;basis[s]=0;});
-  const eq=[]; const KRW=1350, DED=250e4/KRW; let turn=0;
+  const eq=[]; const KRW=1350, DED=250e4/KRW*(o.dedMul??1); let turn=0;   // o.dedMul(11-08): 공제 배율 — 한 사람 공제를 여러 계좌가 비중만큼 나눠 쓸 때(trio_exact)
   const st={}; // 규칙 상태(히스테리시스 등)
   // o.deferDec(11-08): {sym, days, taxable} — 그해 남은 거래일이 days 보다 적을 때 sym 의 '이익 나는' 매도를 다음 해 첫 거래일로 미룬다(목표는 그대로라 해가 바뀌면 보통 규칙이 다시 판다). taxable 이면 공제를 넘는 이익일 때만. 안 주면 기존과 같다.
   const remY=o.deferDec?(()=>{ const r=new Array(dates.length).fill(0); for(let k=dates.length-2;k>=0;k--) r[k]=dates[k+1].slice(0,4)===dates[k].slice(0,4)?r[k+1]+1:0; return r; })():null; let deferN=0;
