@@ -2,23 +2,34 @@
 'use strict';
 
 const DEFAULTS={
-  5:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01},
-  10:{trendMA:250,bullWeight:.80,dipWeights:[0,.20,.40,.60],rsi:[40,35,30],dd:[-.12,-.22,-.32]},
-  15:{center:.60,lo:.40,hi:.80},
-  20:{winnerWeight:.40,m9Weight:.30,m12Weight:.70}
+  5:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01}
 };
 const FEE_RATE=.001;
-/* 5년 플랜 규칙 벌 — 플랜 화면(renderAlphaPlan)과 모의 재생(replay)이 같은 alphaDecide 로 판정한다 (같은 걸 두 군데서 세지 않는다).
-   base: 공식(지금) 규칙. exp1: '실험적 확장'(2026-11 연구 · 공식 규칙 아님 · 켤 때만) —
-     Guard 끄기 −1% → −3% · TECL 슬리브 밴드 10%p 대칭 → 줄일 때 1%p(전체 0.7%p)·늘릴 때 15%p(전체 10.5%p) ·
-     TQQQ 를 Guard 바뀔 때만이 아니라 해마다 첫 거래일에도 30% 와 2%p 넘게 벌어졌으면 30% 로.
-   연구값(2011~ 앱 조건 1만$): 30.4/48.4 → 30.8/41.6 · 합성 2000~ 13.5/82.3 → 14.4/77.6 (research/im_plan/RESEARCH_LOG.md '앱 반영안'). */
+/* 🤖 클로드 탭 5년 플랜 — '듀얼 가드' (2026-11-08 사용자: "현재 5년 플랜 전략 이름도 정하고 · 넌 클로드 탭만 담당").
+   TECL 은 변동성으로 크기를 정하고(역분산 · 변동성 가드), TQQQ 는 추세로 켜고 끈다(SMA225 · 추세 가드) — 두 겹의 가드.
+   화면(plan.html)·모의 목록(index.html)이 이 이름과 판 번호를 함께 쓴다(같은 걸 두 군데서 세지 않는다). */
+const STRATEGY={key:'dualGuard',name:'듀얼 가드',owner:'claude',version:'1.0',since:'2026-11-08',
+  summary:'TECL 역분산 70% + TQQQ 추세 Guard 30% + SGOV'};
+/* 5년 플랜 규칙 — 플랜 화면(renderAlphaPlan)과 모의 재생(replay)이 같은 alphaDecide 로 판정한다 (같은 걸 두 군데서 세지 않는다).
+   규칙은 하나(base)뿐이다. 2026-11-08 폐지: exp1 '새 규칙'·exp2 '공격형' — 앱 엔진(전일 종가 주수)·세후로 다시 재니 기본보다 낫지 않았다
+   (2011-04~2026-11 · 2만$ 거치 세후 연 30.9/29.9/30.7% · MDD 40.6/38.1/42.1% · research/im_plan/RESEARCH_LOG.md 11-08 정정).
+   10·15·20년 플랜도 같은 날 사용자 지시로 폐지. 예전에 그 규칙·기간으로 만든 세션은 지우지 않고 목록에서 숨긴다(retiredReason). */
 const ALPHA_RULES={
-  base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false},
-  exp1:{key:'exp1',name:'새 규칙 (실험적 확장)',guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15,tqReb:.02,exp:true},
-  exp2:{key:'exp2',name:'공격형 (실험적 확장)',guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15,tqReb:.02,s0:.60,exp:true}   // 새 규칙 + TECL 목표 변동성 .55 → .60 (2026-11-07 연구: 2011~ 1만$ 30.4/41.6 → 30.9/46.1 · 5년 ×4.68 → ×4.91 · .65 부터는 수익이 안 늘고 낙폭만 늘어 공격 다이얼의 끝). s0 가 없는 벌은 공식 .55.
+  base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false}
 };
-function alphaRules(key){return ALPHA_RULES[String(key||'')]||ALPHA_RULES.base;}
+const RETIRED={
+  horizons:{10:'10년 추세+폭락매수',15:'15년 Shannon',20:'20년 듀얼모멘텀'},
+  rules:{exp1:'새 규칙',exp2:'공격형'}
+};
+function alphaRules(key){return ALPHA_RULES.base;}   // 규칙은 기본 하나 — 예전 세션에 적힌 exp1·exp2 도 판정에는 쓰지 않는다
+/* 세션이 폐지된 기간·규칙으로 만들어졌으면 그 이름을, 아니면 '' — 플랜 화면 세션 목록과 모의 목록이 같은 함수로 거른다 */
+function retiredReason(x){
+  if(!x)return '';
+  const h=+(x.horizon??(x.settings&&x.settings.horizon)??5);
+  if(h!==5)return RETIRED.horizons[h]||(h+'년 플랜');
+  const r=String((x.settings&&x.settings.alphaRules)||x.alphaRules||x.rules||'');
+  return RETIRED.rules[r]||'';
+}
 /* 다음 거래일(평일 기준)이 해가 바뀐 첫 거래일인가 — 1월 1일은 휴장이라 평일로 넘겨도 새해 첫 거래일은 1월 안에 있다. */
 function yearDoneAt(dateStr){
   const d=new Date(String(dateStr||'')+'T00:00:00Z');if(isNaN(d))return false;const y=d.getUTCFullYear();
@@ -46,40 +57,11 @@ function sma(a,n){
   for(let i=0;i<a.length;i++){s+=+a[i]||0;if(i>=n)s-=+a[i-n]||0;if(i>=n-1)out[i]=s/n;}
   return out;
 }
-function rsi(a,n){
-  const out=Array(a.length).fill(null);let ag=0,al=0;
-  for(let i=1;i<a.length;i++){
-    const z=a[i]-a[i-1],gg=Math.max(z,0),ll=Math.max(-z,0);
-    if(i<=n){ag+=gg;al+=ll;if(i===n){ag/=n;al/=n;out[i]=100-100/(1+(al===0?100:ag/al));}}
-    else{ag=(ag*(n-1)+gg)/n;al=(al*(n-1)+ll)/n;out[i]=100-100/(1+(al===0?100:ag/al));}
-  }
-  return out;
-}
 function realizedVol(a,idx,n){
   if(idx<n)return null;const r=[];
   for(let i=idx-n+1;i<=idx;i++){const p=+a[i-1],c=+a[i];if(!(p>0&&c>0))return null;r.push(c/p-1);}
   const m=r.reduce((x,y)=>x+y,0)/r.length,v=r.reduce((x,y)=>x+(y-m)*(y-m),0)/r.length;
   return Math.sqrt(Math.max(v,0)*252);
-}
-function monthDoneAt(dateStr){
-  const d=new Date(String(dateStr||'')+'T00:00:00Z');if(isNaN(d))return false;const m=d.getUTCMonth();
-  do{d.setUTCDate(d.getUTCDate()+1);}while(d.getUTCDay()===0||d.getUTCDay()===6);
-  return d.getUTCMonth()!==m;
-}
-function latestCompletedMonthIndex(rows,upto){
-  let i=upto;if(i<0)return -1;
-  const settled=String(rows[i].date||'');
-  if(monthDoneAt(settled))return i;
-  const cur=settled.slice(0,7);
-  while(i>=0&&String(rows[i].date||'').slice(0,7)===cur)i--;
-  return i;
-}
-function momentumPoint(rows,closes,idx){
-  if(idx<252)return null;
-  const p=+closes[idx],p189=+closes[idx-189],p252=+closes[idx-252];
-  if(!(p>0&&p189>0&&p252>0))return null;
-  const m9=p/p189-1,m12=p/p252-1,score=.3*m9+.7*m12;
-  return {date:rows[idx].date,p,m9,m12,score,ok:m12>0};
 }
 function mapRows(rows){
   const m=new Map();
@@ -147,18 +129,19 @@ function targetOrders(target,pos,px,cash,date,signalDate,ledger,seq){
 }
 function replay(opt){
   opt=opt||{};
-  const horizon=[5,10,15,20].includes(+opt.horizon)?+opt.horizon:5;
-  const RULES=alphaRules(opt.rules);   // 5년 규칙 벌(base 기본 · exp1 실험적 확장) — 안 주면 예전과 같다
   const start=String(opt.startDate||''),end=String(opt.endDate||'');
   const principal=Math.max(0,+opt.principal||0),monthlyAdd=Math.max(0,+opt.monthlyAdd||0);
+  /* 폐지된 기간·규칙(10·15·20년 · 새 규칙 · 공격형)은 다른 규칙으로 몰래 다시 계산하지 않는다 — 오류로 돌려준다 */
+  const gone=retiredReason({horizon:opt.horizon==null?5:opt.horizon,rules:opt.rules});
+  if(gone)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'폐지된 플랜 — '+gone,retired:gone};
+  const horizon=5,RULES=alphaRules(opt.rules);
   if(!start||!(principal>0))return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'시작일 또는 원금 없음'};
   const S=commonSeries(opt.tecl,opt.tqqq,opt.sgov,end);
   if(!S.dates.length)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'공통 시세 없음'};
   const startIdx=S.dates.findIndex(d=>d>=start);
   if(startIdx<0)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'시작일 이후 시세 없음'};
 
-  const tma225=sma(S.tqqq,225),tma250=sma(S.tqqq,250),trsi=rsi(S.tqqq,14);
-  const teclRows=S.dates.map((d,k)=>({date:d,close:S.tecl[k]})),tqqqRows=S.dates.map((d,k)=>({date:d,close:S.tqqq[k]}));
+  const tma225=sma(S.tqqq,225);
   const div={TECL:mapDiv(opt.teclDiv),TQQQ:mapDiv(opt.tqqqDiv),SGOV:mapDiv(opt.sgovDiv)};
   const ledger=initialLedger(start,principal),pos={TECL:0,TQQQ:0,SGOV:0};
   let cash=principal,inflow=principal,nTrade=0,seq=1,lastMonth=start.slice(0,7),lastDecision=null;
@@ -187,73 +170,23 @@ function replay(opt){
       // SGOV 가 막 상장한 날(전일 확정 기준): 그동안 현금으로 둔 돈을 한 번 SGOV 로 옮긴다.
       const sgNew=sp.SGOV>0&&!(p>0&&S.sgov[p-1]>0)&&cash>0;
 
-      if(horizon===5){
-        const D=DEFAULTS[5],sigma=realizedVol(S.tecl,p,D.ivsLook),mv=tma225[p];
-        if(sigma>0&&mv>0){
-          const s0=RULES.s0??D.ivsS0,w=Math.min(1,(s0*s0)/(sigma*sigma));   // 규칙 벌의 TECL 목표 변동성(exp2 공격형 .60) · 없으면 공식 .55
-          const sleeveNow=((pos.TECL*sp.TECL)/Math.max(total,1))/Math.max(D.teclWeight,1e-9);
-          // 판정은 공용 alphaDecide (플랜 화면과 같은 글자). 해 첫 거래일 = 체결일 i 와 신호일 p 의 해가 다름.
-          const dec=alphaDecide({rules:RULES,w,sleeveNow,teclQty:pos.TECL,tqqqQty:pos.TQQQ,tqqqClose:sp.TQQQ,sma:mv,
-            tqqqWeight:(pos.TQQQ*sp.TQQQ)/Math.max(total,1),guardWeight:D.guardWeight,yearStart:date.slice(0,4)!==S.dates[p].slice(0,4)});
-          const {teclHit,guard,guardFlip,tqReb}=dec;
-          const first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-          need=teclHit||guardFlip||tqReb||force||first||sgNew;
-          if(need){
-            const tt=(teclHit||force||first)?Math.max(0,Math.floor(total*D.teclWeight*w/sp.TECL)):pos.TECL;
-            const tq=(guardFlip||tqReb||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/sp.TQQQ)):0):pos.TQQQ;
-            const ts=sgQty(total-tt*sp.TECL-tq*sp.TQQQ);
-            targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
-          }
-          meta={horizon,rules:RULES.key,s0,sigma,w,sleeveNow,guard,teclHit,guardFlip,tqReb};
-        }
-      }else if(horizon===10){
-        const D=DEFAULTS[10],mv=tma250[p],bull=mv>0&&sp.TQQQ>=mv;
-        let bearStart=-1,stage=0,ath=-Infinity;
-        for(let k=0;k<=p;k++){
-          ath=Math.max(ath,S.tqqq[k]);
-          if(k>0&&tma250[k]!=null&&tma250[k-1]!=null&&S.tqqq[k]<tma250[k]&&S.tqqq[k-1]>=tma250[k-1]){bearStart=k;stage=0;}
-        }
-        if(!bull&&bearStart>=0){
-          let mx=-Infinity;for(let k=0;k<bearStart;k++)mx=Math.max(mx,S.tqqq[k]);
-          for(let k=bearStart;k<=p;k++){
-            mx=Math.max(mx,S.tqqq[k]);const dd=S.tqqq[k]/mx-1,r=trsi[k];
-            if(r!=null&&r<=D.rsi[0]&&dd<=D.dd[0])stage=Math.max(stage,1);
-            if(r!=null&&r<=D.rsi[1]&&dd<=D.dd[1])stage=Math.max(stage,2);
-            if(r!=null&&r<=D.rsi[2]&&dd<=D.dd[2])stage=Math.max(stage,3);
-          }
-        }
-        const risk=bull?D.bullWeight:D.dipWeights[stage],curQ=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-        need=pos.TECL>0||Math.abs(curQ-risk)>.05||force||first||sgNew;
+      const D=DEFAULTS[5],sigma=realizedVol(S.tecl,p,D.ivsLook),mv=tma225[p];
+      if(sigma>0&&mv>0){
+        const s0=D.ivsS0,w=Math.min(1,(s0*s0)/(sigma*sigma));
+        const sleeveNow=((pos.TECL*sp.TECL)/Math.max(total,1))/Math.max(D.teclWeight,1e-9);
+        // 판정은 공용 alphaDecide (플랜 화면과 같은 글자).
+        const dec=alphaDecide({rules:RULES,w,sleeveNow,teclQty:pos.TECL,tqqqQty:pos.TQQQ,tqqqClose:sp.TQQQ,sma:mv,
+          tqqqWeight:(pos.TQQQ*sp.TQQQ)/Math.max(total,1),guardWeight:D.guardWeight,yearStart:date.slice(0,4)!==S.dates[p].slice(0,4)});
+        const {teclHit,guard,guardFlip,tqReb}=dec;
+        const first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
+        need=teclHit||guardFlip||tqReb||force||first||sgNew;
         if(need){
-          const tq=Math.max(0,Math.floor(total*risk/sp.TQQQ));
-          const ts=sgQty(total-tq*sp.TQQQ);
-          targetShares={TECL:0,TQQQ:tq,SGOV:ts};
-        }
-        meta={horizon,bull,stage,risk,sma:mv,rsi:trsi[p],ath};
-      }else if(horizon===15){
-        const D=DEFAULTS[15],cur=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-        need=pos.TECL>0||cur<D.lo||cur>D.hi||force||first||sgNew;
-        if(need){
-          const tq=Math.max(0,Math.floor(total*D.center/sp.TQQQ));
-          const ts=sgQty(total-tq*sp.TQQQ);
-          targetShares={TECL:0,TQQQ:tq,SGOV:ts};
-        }
-        meta={horizon,current:cur,center:D.center,lo:D.lo,hi:D.hi};
-      }else{
-        const D=DEFAULTS[20];
-        /* 공통 거래일 배열로 월말·모멘텀을 계산한다. */
-        const mi=latestCompletedMonthIndex(teclRows,p),tm=momentumPoint(teclRows,S.tecl,mi),qm=momentumPoint(tqqqRows,S.tqqq,mi);
-        let winner='SGOV';
-        if(tm&&tm.ok&&qm&&qm.ok)winner=tm.score>=qm.score?'TECL':'TQQQ';else if(tm&&tm.ok)winner='TECL';else if(qm&&qm.ok)winner='TQQQ';
-        const curT=pos.TECL*sp.TECL/Math.max(total,1),curQ=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
-        need=force||first||sgNew||(winner==='TECL'?(pos.TQQQ>0||Math.abs(curT-D.winnerWeight)>.05):(winner==='TQQQ'?(pos.TECL>0||Math.abs(curQ-D.winnerWeight)>.05):(pos.TECL>0||pos.TQQQ>0)));
-        if(need){
-          const tt=winner==='TECL'?Math.max(0,Math.floor(total*D.winnerWeight/sp.TECL)):0;
-          const tq=winner==='TQQQ'?Math.max(0,Math.floor(total*D.winnerWeight/sp.TQQQ)):0;
+          const tt=(teclHit||force||first)?Math.max(0,Math.floor(total*D.teclWeight*w/sp.TECL)):pos.TECL;
+          const tq=(guardFlip||tqReb||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/sp.TQQQ)):0):pos.TQQQ;
           const ts=sgQty(total-tt*sp.TECL-tq*sp.TQQQ);
           targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
         }
-        meta={horizon,winner,tecl:tm,tqqq:qm};
+        meta={horizon,rules:RULES.key,s0,sigma,w,sleeveNow,guard,teclHit,guardFlip,tqReb};
       }
 
       if(need){
@@ -270,5 +203,5 @@ function replay(opt){
   return {horizon,rules:RULES.key,orderSizingVersion:2,ledger,nav,stats:stats(nav,nTrade),lastDecision,last:nav[nav.length-1]||null,error:''};
 }
 
-g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',DEFAULTS,ALPHA_RULES,alphaRules,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,replay,stats};
+g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,retiredReason,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,replay,stats};
 })(typeof window!=='undefined'?window:globalThis);

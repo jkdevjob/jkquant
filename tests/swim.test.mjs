@@ -97,9 +97,9 @@ test('페이지 — 로그인 승인 가드를 실제로 부른다(이전 판: �
   assert.doesNotMatch(mutated, /JKAccess\.guard\(/, '변이: guard 호출을 빼면 이 시험이 잡는다');
 });
 
-test('페이지 — 빠른 검색 5종 · 필터 · 정렬 7종 · 버전 · 공용 계산 · 상세 링크', () => {
-  for (const q of ['', 'masters', 'elite', 'open', 'new']) assert.ok(html.includes(`data-quick="${q}"`), q);
-  assert.equal((html.match(/data-quick="/g) || []).length, 5, '빠른 검색 5종(자유형 50·100 삭제 2026-11-04)');
+test('페이지 — 빠른 검색 6종 · 필터 · 정렬 7종 · 버전 · 공용 계산 · 상세 링크', () => {
+  for (const q of ['', 'masters', 'elite', 'open', 'new', 'results']) assert.ok(html.includes(`data-quick="${q}"`), q);
+  assert.equal((html.match(/data-quick="/g) || []).length, 6, '빠른 검색 6종(자유형 50·100 삭제 2026-11-04 · 지난 대회 결과 추가 2026-11-08)');
   assert.doesNotMatch(html, /자유형 50m|free50|id="free"/, '자유형 50·100 기능은 화면에서 완전히 뺀다');
   for (const id of ['q', 'sido', 'sigungu', 'kind', 'sport', 'period', 'status', 'elig', 'sort', 'reset', 'pager', 'detail', 'health'])
     assert.ok(html.includes(`id="${id}"`), id);
@@ -208,6 +208,222 @@ test('웹 알림 — 변이: 기준선 없음 · 장소를 변경으로 안 봄 
     const file = new URL('../worker/presale-alert/src/__mut_swim_' + process.pid + '.mjs', import.meta.url);
     fs.writeFileSync(file, src.replace(a, b));
     try { await assert.rejects(swimAlertFlow(file.href), assert.AssertionError, name + ' 변이를 잡아야 한다'); }
+    finally { fs.unlinkSync(file); }
+  }
+});
+
+// ── 지난 대회 결과(2026-11-08 사용자: "결과지 다운로드 또는 파일 읽어서 내용 볼 수 있게") ──
+// 결과지 내용은 저장소에 없다. 화면은 이름 · 주소만 받아 /api/swim-file · /api/swim-result 로 원래 사이트에서 가져온다.
+const RS = require('../swim-results.js');
+const PAST = E({ id: 'p', title: '제7회 성동구수영연맹회장배 수영대회', start_date: '2026-04-12', end_date: '2026-04-12', apply_open: '', apply_close: '',
+  results: [
+    { kind: 'system', source: 'sports_result_sw', source_name: '대한수영연맹 경기결과', tier: 'official', title: 'x', url: 'https://result.sports.or.kr/SW/INF201.do', sys: 'SW', classCd: 'D2', toCd: '202616053' },
+    { kind: 'files', source: 'seoulswim_result', source_name: '서울 결과', tier: 'official', title: '성동구 경기결과 <b>', url: 'http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=104', posted: '2026-04-13',
+      files: [{ name: '결과.pdf', url: 'http://www.seoulswim.or.kr/bbs/download.php?bo_table=result&wr_id=104&no=0', ext: 'pdf' },
+              { name: '결과.hwp', url: 'http://www.seoulswim.or.kr/bbs/download.php?bo_table=result&wr_id=104&no=1', ext: 'hwp' }] },
+    { kind: 'link', source: 'whoisfast_records', source_name: 'Whoisfast 기록 검색', tier: 'secondary', title: '기록 검색', url: 'https://whoisfast.com/search?qtype=meet&q=a' },
+    { kind: 'link', source: 'x', title: '나쁜 링크', url: 'javascript:alert(1)' },
+    { kind: 'system', sys: 'XX', classCd: 'D2', toCd: '1' },
+  ] });
+
+test('결과 — 필터: 결과 있음 · 빠른 검색(지난 대회 결과)은 기간을 따로 안 골랐으면 이력 전체에서', () => {
+  const L = [...LIST, PAST];
+  const ids = f => L.filter(e => C.matches(e, f, T, '2026-11-02')).map(e => e.id);
+  assert.deepEqual(ids({ status: 'result' }), ['p']);
+  assert.deepEqual(ids({ quick: 'results' }), ['p']);
+  assert.deepEqual(ids({ quick: 'results', period: 'month' }), [], '기간을 고르면 그 기간 안에서만');
+  assert.deepEqual(ids({}), ['a', 'b', 'c', 'e'], '기본 목록은 그대로');
+  assert.equal(C.hasResults(PAST), true);
+  assert.equal(C.hasResults(E()), false);
+});
+
+test('결과 — 상세 칸: 결과 시스템 · 파일(보기 · 받기) · 기록 검색, 형식이 틀린 항목은 버린다', () => {
+  assert.equal(RS.list(PAST).length, 3, '자바스크립트 주소 · 모르는 결과 시스템은 버린다');
+  const h = RS.section(PAST, '2026-11-08');
+  assert.match(h, /🏁 대회 결과/);
+  assert.match(h, /data-res="sys" data-i="0"/);
+  assert.match(h, /data-res="view" data-i="1" data-j="0"/, 'PDF 는 보기');
+  assert.doesNotMatch(h, /data-res="view" data-i="1" data-j="1"/, '한글 파일은 받기만');
+  assert.ok(h.includes('href="/api/swim-file?u=' + encodeURIComponent('http://www.seoulswim.or.kr/bbs/download.php?bo_table=result&wr_id=104&no=1').replace(/&/g, '&amp;') + '"'), '받기는 중계 함수로');
+  assert.ok(h.includes('성동구 경기결과 &lt;b&gt;'), '글 제목은 글자로만');
+  assert.ok(h.includes('https://whoisfast.com/search?qtype=meet&amp;q=a'));
+  assert.doesNotMatch(h, /javascript:/);
+  assert.match(RS.section(E({ start_date: '2026-04-01', end_date: '2026-04-01', results: [] }), '2026-11-08'), /아직 결과지를 찾지 못했습니다/, '지난 대회인데 결과가 없으면 안내');
+  assert.equal(RS.section(E(), '2026-11-03'), '', '열리지 않은 대회에는 결과 칸이 없다');
+  assert.equal(RS.sysQuery(PAST.results[0], 'round', { kind: 'S', dc: 'D2S01', rh: '9' }), '/api/swim-result?sys=SW&classCd=D2&toCd=202616053&op=round&kind=S&dc=D2S01&rh=9');
+  assert.deepEqual(['pdf', 'xlsx', 'xls', 'png', 'hwp', 'zip'].map(RS.viewKind), ['pdf', 'sheet', 'sheet', 'image', '', '']);
+});
+
+test('결과 — 페이지: 빠른 검색 · 상태 필터 · 상세 결과 칸 · 보기 창 연결 · 카드 표시', () => {
+  assert.ok(html.includes('data-quick="results"'));
+  assert.ok(html.includes('<option value="result">결과 있음(지난 대회)</option>'));
+  assert.ok(html.includes('<script src="/swim-results.js?v='));
+  assert.match(html, /h\+=R\.section\(e,T\);/);
+  assert.match(html, /\$\('dBody'\)\.addEventListener\('click',ev=>\{if\(cur&&R\.click\(ev,cur\)\)/, '상세 본문에 한 번만 붙인 위임 처리기');
+  assert.match(html, /tag res">🏁 결과/);
+  const src = fs.readFileSync('swim-results.js', 'utf8');
+  assert.ok(src.includes("const PDFJS='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/'"), 'pdf.js 판 고정(한글 CMap 포함)');
+  assert.ok(src.includes("cMapUrl:PDFJS+'cmaps/'"), '한글 PDF 는 CMap 이 있어야 글자가 보인다');
+  assert.ok(src.includes("const XLSXJS='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'"));
+  assert.doesNotMatch(src, /innerHTML\s*=\s*[^;]*\b(?:html|text)\b\s*[;+]/, '원래 사이트의 HTML 을 그대로 넣지 않는다');
+});
+
+// ── 결과 중계 함수: 공개 자료에 있는 결과만 · 그누보드 글 → 파일 · 안내 화면 거르기 · 결과 시스템 표 풀기 ──
+const DOCX = { schema_version: 2, competitions: [PAST, E({ id: 'q', results: [{ kind: 'files', direct: true, url: 'http://www.busanswimming.kr/data01.asp',
+  files: [{ name: '부산 기록지.pdf', url: 'http://www.busanswimming.kr/data/26-04.pdf', ext: 'pdf' }] }] })] };
+const PDFB = new TextEncoder().encode('%PDF-1.7\n' + 'x'.repeat(200));
+function upstream(map) {
+  const calls = [];
+  const fetchImpl = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
+    const v = map[String(url)];
+    if (!v) return new Response('nf', { status: 404 });
+    return typeof v === 'function' ? v(init) : v.clone();
+  };
+  return { calls, fetchImpl };
+}
+async function fileFlow(file = '../functions/api/swim-file.js') {
+  const F = await import(file);
+  const loader = async () => DOCX;
+  const get = (u, up) => F.handle(new Request('https://jkquant.pages.dev/api/swim-file?u=' + encodeURIComponent(u)), { fetchImpl: up.fetchImpl, docLoader: loader });
+  const post = 'http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=104', pdf = 'http://www.seoulswim.or.kr/bbs/download.php?bo_table=result&wr_id=104&no=0';
+  // ① 그누보드: 글을 먼저 열어 받은 쿠키로 파일을 받는다
+  // 경기도 연맹처럼 글을 열며 세션 쿠키를 새로 바꿔 두 번 보내면 나중 값만 써야 한다(앞의 값을 함께 보내면 PHP 가 버려진 세션을 읽음)
+  const sessOk = init => { const ck = (init.headers && init.headers.cookie) || ''; return /(^|; )PHPSESSID=abc123(;|$)/.test(ck) && !/PHPSESSID=old/.test(ck) && /(^|; )v=1(;|$)/.test(ck); };
+  let up = upstream({ [post]: new Response('<html>글</html>', { headers: [['set-cookie', 'PHPSESSID=old; path=/'], ['set-cookie', 'v=1; path=/'], ['set-cookie', 'PHPSESSID=abc123; path=/; HttpOnly']] }),
+    [pdf]: init => (sessOk(init) && init.headers.referer === post) ? new Response(PDFB, { headers: { 'content-type': 'file/unknown' } })
+      : new Response('<script>alert("잘못된 접근입니다.")</script>', { headers: { 'content-type': 'text/html' } }) });
+  let r = await get(pdf, up);
+  assert.equal(r.status, 200, '글 → 파일 순서로 받는다');
+  assert.deepEqual(up.calls.map(c => c.url), [post, pdf]);
+  assert.equal(r.headers.get('content-type'), 'application/pdf');
+  assert.match(r.headers.get('content-disposition'), /^attachment; filename="[^"]*\.pdf"; filename\*=UTF-8''%EA%B2%B0%EA%B3%BC\.pdf$/);
+  assert.match(r.headers.get('content-security-policy'), /sandbox/);
+  assert.equal(new TextDecoder().decode((await r.arrayBuffer()).slice(0, 4)), '%PDF');
+  // ② 원래 사이트가 파일 대신 안내 화면을 보내면 넘기지 않는다
+  up = upstream({ [post]: new Response('글'), [pdf]: new Response('<script>alert("잘못된 접근입니다.")</script>', { headers: { 'content-type': 'text/html' } }) });
+  r = await get(pdf, up);
+  assert.equal(r.status, 502);
+  assert.equal((await r.json()).source, post, '원문 글로 가는 길을 알려 준다');
+  // ③ 공개 자료에 없는 주소는 대신 받아 주지 않는다(열린 중계 금지)
+  up = upstream({ 'https://evil.example/x.pdf': new Response(PDFB) });
+  r = await get('https://evil.example/x.pdf', up);
+  assert.equal(r.status, 403);
+  assert.equal(up.calls.length, 0);
+  // ④ 바로 받아지는 파일(부산 기록지)은 글을 거치지 않는다
+  up = upstream({ 'http://www.busanswimming.kr/data/26-04.pdf': new Response(PDFB) });
+  r = await get('http://www.busanswimming.kr/data/26-04.pdf', up);
+  assert.equal(r.status, 200);
+  assert.deepEqual(up.calls.map(c => c.url), ['http://www.busanswimming.kr/data/26-04.pdf']);
+  // ⑤ 글 주소가 다른 주소로 넘기면(302) 그 사이에 받은 쿠키도 모은다
+  const moved = 'http://www.seoulswim.or.kr/bbs/board.php?bo_table=result&wr_id=104&v=2';
+  up = upstream({ [post]: new Response('', { status: 302, headers: [['location', moved], ['set-cookie', 'v=1; path=/']] }),
+    [moved]: init => new Response('글', { headers: [['set-cookie', 'PHPSESSID=abc123; path=/']] }),
+    [pdf]: init => sessOk(init) ? new Response(PDFB) : new Response('<script>alert("잘못된 접근입니다.")</script>', { headers: { 'content-type': 'text/html' } }) });
+  r = await get(pdf, up);
+  assert.equal(r.status, 200, '넘겨진 주소에서 받은 쿠키까지 모아 보낸다');
+  assert.deepEqual(up.calls.map(c => c.url), [post, moved, pdf]);
+  return F;
+}
+test('결과 중계(파일) — 그누보드 글 → 파일 · 안내 화면 거르기 · 목록에 없는 주소 거절 · 바로 받기', async () => {
+  const F = await fileFlow();
+  assert.equal(F.sniffOk('pdf', PDFB), true);
+  assert.equal(F.sniffOk('xlsx', new Uint8Array([0x50, 0x4b, 3, 4, 0])), true);
+  assert.equal(F.sniffOk('xls', new Uint8Array([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])), true);
+  assert.equal(F.sniffOk('pdf', new TextEncoder().encode('<html>점검 중</html>')), false);
+  assert.equal(F.cookieHeader(new Headers([['set-cookie', 'a=1; path=/'], ['set-cookie', 'b=2; HttpOnly']])), 'a=1; b=2');
+  assert.equal(F.cookieHeader(new Headers([['set-cookie', 's=old'], ['set-cookie', 'b=2'], ['set-cookie', 's=new']])), 'b=2; s=new', '같은 이름은 나중 값');
+});
+
+const EV_HTML = `<table><tbody><!-- <tr onclick="javascript:fnEventSchedule(&#34;Q&#34;,&#34;D2Q99&#34;)"><td>주석</td></tr> -->
+<tr style="cursor:pointer;" onclick="javascript:fnEventSchedule(&#34;S&#34;,&#34;D2S01&#34;)"><td>남자유년부</td><td>자유형50m</td><td>개인</td><td class="tar">58</td><td></td></tr>
+<tr onclick="javascript:fnEventSchedule(&#34;U&#34;,&#34;D2U64&#34;)"><td>남자초등부</td><td>혼계영200m</td><td>단체</td><td>33</td><td>8</td></tr></tbody></table>`;
+const RO_HTML = `<table><tbody><tr><td> 2026.11.06 </td><td class="tac"> 예선 </td><td><button onclick="fnStartList(&#34;1&#34;)">보기</button></td>
+<td><button onclick="fnGameResult(&#34;1&#34;)">보기</button></td></tr><tr><td>2026.11.06</td><td>결승</td><td></td><td><button onclick="fnGameResult(&#34;9&#34;)">보기</button></td></tr>
+<tr><td>2025.11.02</td><td>결승Final</td><td><button onclick="fnGameResult(
+  '379000',
+  '37OTA', 'O')">보기</button></td></tr></tbody></table>`;
+const RD_HTML = `<table class="mob-table"><caption>경기정보</caption><tbody><tr><th>종별/세부종목</th><td>자유형50m</td></tr></tbody></table>
+<table class="table-hover"><caption> </caption><thead><tr><th>순위</th><th>레인</th><th colspan="3">소속(시도)</th><th colspan="2">이름(학년)</th><th>예선기록</th><th>기록</th><th>비고</th></tr></thead>
+<tbody><!-- <tr><td colspan="6"><strong>결승</strong></td></tr> -->
+<tr><td>1</td><td>4</td><td colspan="3">가나스포츠(인천)</td><td colspan="2"><a href="javascript:fnViewHistory('1');"> 홍길동(4) </a></td><td>00:30.28</td><td><a href="#">00:30.13</a></td><td></td></tr>
+<tr id="subResultHeader01_1" style="display: none;"><th>50M</th><th>100M</th></tr><tr id="subResultBody01_1" style="display: none;"><td>00:30.13</td><td></td></tr>
+<tr><td colspan="10" class="left"><strong>결승Final</strong></td></tr>
+<tr><td>2</td><td>5</td><td colspan="3">다라클럽(서울)</td><td colspan="2">김가람(4)</td><td>00:31.00</td><td>00:30.90</td><td>&nbsp;</td></tr></tbody></table>`;
+async function resultFlow(file = '../functions/api/swim-result.js') {
+  const M = await import(file);
+  const loader = async () => DOCX;
+  const calls = [];
+  const fetchImpl = async (url, init) => { calls.push({ url, body: init && init.body }); return new Response(/INF202/.test(url) ? EV_HTML : /INF301/.test(url) ? RO_HTML : RD_HTML); };
+  const get = q => M.handle(new Request('https://jkquant.pages.dev/api/swim-result?' + q), { fetchImpl, docLoader: loader });
+  let r = await get('sys=SW&classCd=D2&toCd=202616053&op=events');
+  let j = await r.json();
+  assert.equal(r.status, 200);
+  assert.deepEqual(j.events.map(e => [e.kind, e.dc, e.group, e.event, e.type, e.entries, e.teams]),
+    [['S', 'D2S01', '남자유년부', '자유형50m', '개인', '58', ''], ['U', 'D2U64', '남자초등부', '혼계영200m', '단체', '33', '8']], '주석 처리된 줄은 읽지 않는다');
+  j = await (await get('sys=SW&classCd=D2&toCd=202616053&op=rounds&kind=S&dc=D2S01')).json();
+  assert.deepEqual(j.rounds, [{ rh: '1', dc: '', kind: '', date: '2026.11.06', label: '예선' }, { rh: '9', dc: '', kind: '', date: '2026.11.06', label: '결승' },
+    { rh: '379000', dc: '37OTA', kind: 'O', date: '2025.11.02', label: '결승Final' }], 'SW 열쇠 하나 · UW 열쇠 셋');
+  j = await (await get('sys=SW&classCd=D2&toCd=202616053&op=round&kind=S&dc=D2S01&rh=9')).json();
+  assert.equal(j.tables.length, 1, '경기정보 표는 결과 표가 아니다');
+  assert.deepEqual(j.tables[0].head, ['순위', '레인', '소속(시도)', '이름(학년)', '예선기록', '기록', '비고']);
+  assert.deepEqual(j.tables[0].rows, [{ cells: ['1', '4', '가나스포츠(인천)', '홍길동(4)', '00:30.28', '00:30.13', ''] }, { section: '결승Final' },
+    { cells: ['2', '5', '다라클럽(서울)', '김가람(4)', '00:31.00', '00:30.90', ''] }], '숨긴 구간 기록 줄은 빼고 · 구역 이름은 따로');
+  assert.match(calls.at(-1).body, /rhCd=9/);
+  assert.match(calls.at(-1).body, /gubun=T/);
+  assert.equal(calls.at(-1).url, 'https://result.sports.or.kr/SW/INF306.do');
+  r = await get('sys=SW&classCd=D2&toCd=999999999&op=events');
+  assert.equal(r.status, 403, '공개 자료에 없는 대회는 중계하지 않는다');
+  r = await get('sys=SW&classCd=D2&toCd=202616053&op=round&kind=S&dc=D2S01&rh=1;drop');
+  assert.equal(r.status, 400, '열쇠 형식 검사');
+  r = await get('sys=SW&classCd=D2&toCd=202616053&op=delete');
+  assert.equal(r.status, 400);
+  return calls;
+}
+test('결과 중계(결과 시스템) — 종목 · 경기 · 순위표를 글자로만 풀기 · 목록에 없는 대회 거절 · 열쇠 형식 검사', async () => {
+  await resultFlow();
+});
+
+async function freshFlow(file = '../functions/api/swim-file.js') {
+  const F = await import(file), S = await import('../functions/api/_swim_results.js');
+  S._setDocForTest(null);
+  const OLD = { schema_version: 2, competitions: [] }, calls = [];
+  const loader = async (origin, o = {}) => { calls.push(!!o.force); return o.force ? DOCX : OLD; };
+  const pdf = 'http://www.busanswimming.kr/data/26-04.pdf';
+  const up = upstream({ [pdf]: new Response(PDFB) });
+  const get = u => F.handle(new Request('https://jkquant.pages.dev/api/swim-file?u=' + encodeURIComponent(u)), { fetchImpl: up.fetchImpl, docLoader: loader });
+  let r = await get(pdf);
+  assert.equal(r.status, 200, '기억해 둔 자료가 예전 것이어도 새로 읽어 방금 올라온 결과를 찾는다');
+  assert.deepEqual(calls, [false, true]);
+  r = await get('https://evil.example/a.pdf');
+  r = await get('https://evil.example/b.pdf');
+  assert.equal(r.status, 403);
+  assert.deepEqual(calls, [false, true, false, false], '새로 읽기는 1분에 한 번만 — 아무 주소로 두드려도 원본을 계속 읽지 않는다');
+  S._setDocForTest(null);
+}
+test('결과 중계 — 수집이 방금 올린 결과: 예전 자료면 한 번 새로 읽어 찾기(1분에 한 번)', async () => { await freshFlow(); });
+
+test('결과 중계 — 변이: 목록 확인 없음 · 글을 안 거침 · 안내 화면을 그대로 · 숨긴 줄 포함 → 빨간불', async () => {
+  const cases = [
+    ['functions/api/swim-file.js', fileFlow, '목록 확인 없음(열린 중계)', '  if (!ent) return json({ ok: false, error: "수영대회 결과 목록에 없는 파일입니다" }, 403);',
+      '  if (!ent) { const x = new URL(want); return new Response(await (await fetchImpl(want)).arrayBuffer(), { status: 200 }); }'],
+    ['functions/api/swim-file.js', fileFlow, '글을 거치지 않음', '  if (ent.post) {', '  if (false) {'],
+    ['functions/api/swim-file.js', fileFlow, '안내 화면을 결과지로', '    if (!sniffOk(ext, buf))', '    if (false)'],
+    ['functions/api/swim-file.js', fileFlow, '같은 이름 쿠키의 앞 값을 씀(둘 다 보내면 PHP 가 앞 값을 읽는 것과 같음)',
+      '    jar.delete(kv.slice(0, i));                    // 같은 이름은 나중 값(자리도 뒤로)\n    jar.set(kv.slice(0, i), kv.slice(i + 1));',
+      '    if (!jar.has(kv.slice(0, i))) jar.set(kv.slice(0, i), kv.slice(i + 1));'],
+    ['functions/api/swim-file.js', fileFlow, '넘겨진 주소를 안 따라감(중간 쿠키 버림)', '      if (!loc) break;', '      break;'],
+    ['functions/api/swim-file.js', freshFlow, '예전 자료만 보고 거절(새로 읽기 없음)', '  try { ent = await findFresh(u.origin, d => findFile(d, want), { fetchImpl, docLoader }); }',
+      '  try { ent = findFile(await docLoader(u.origin, { fetchImpl }), want); }'],
+    ['functions/api/swim-result.js', resultFlow, '숨긴 구간 기록 줄 포함', '      if (/\\bid\\s*=\\s*["\']?subResult/i.test(r[1]) || /display\\s*:\\s*none/i.test(r[1])) continue;', ''],
+    ['functions/api/swim-result.js', resultFlow, '목록에 없는 대회도 중계', '  if (!known) return json({ ok: false, error: "수영대회 결과 목록에 없는 대회입니다" }, 403);', ''],
+  ];
+  for (const [path, flow, name, a, b] of cases) {
+    const src = fs.readFileSync(path, 'utf8');
+    assert.equal(src.split(a).length - 1, 1, name + ' 변이 위치');
+    const file = new URL('../' + path.replace(/[^/]+$/, '__mut_swim_' + process.pid + '.mjs'), import.meta.url);
+    fs.writeFileSync(file, src.replace(a, b));
+    try { await assert.rejects(flow(file.href), assert.AssertionError, name + ' 변이를 잡아야 한다'); }
     finally { fs.unlinkSync(file); }
   }
 });

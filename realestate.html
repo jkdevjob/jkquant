@@ -61,7 +61,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.11.2</span></h1></div>
+  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.13.1</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -88,11 +88,14 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
     <button class="tab on" data-tab="gpt">⚡ 지피티</button>
   </div>
   <section class="pane" id="pane-claude" hidden><div id="rec-root" class="rec">클로드 분석을 불러오는 중…</div></section>
-  <!-- 🤖 클로드 탭 전용 — 계산 realestate-claude-engine.js(지수 분석) · realestate-claude-apt.js(아파트 매매 전략) · 화면 realestate-claude.js · 자료 data/realestate/claude/ -->
+  <!-- 🤖 클로드 탭 전용 — 계산 realestate-claude-engine.js(지수 분석) · realestate-claude-apt.js(아파트 매매 전략) · realestate-claude-auction.js(경매) · 화면 realestate-claude.js · realestate-claude-auction-ui.js · 내 장부 저장 realestate-claude-account.js · 자료 data/realestate/claude/ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
   <script src="/realestate-claude-engine.js" defer></script>
   <script src="/realestate-claude-apt.js" defer></script>
+  <script src="/realestate-claude-auction.js" defer></script>
+  <script src="/realestate-claude-auction-ui.js" defer></script>
   <script src="/realestate-claude.js" defer></script>
+  <script type="module" src="/realestate-claude-account.js"></script>
   <section class="pane" id="pane-gpt"><div id="gpt-re-root">GPT 부동산 분석을 불러오는 중…</div></section>
   <!-- ⚡ GPT 탭 전용 — 클로드 엔진/자료와 분리 -->
   <script src="/realestate-gpt-engine.js" defer></script>

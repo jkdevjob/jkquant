@@ -17,8 +17,8 @@ function ok(v,msg){if(!v){console.error('✗ '+msg);process.exit(1);}console.log
 
 const ow=JSON.parse(openingWr);
 ok(ow.triggers?.crons?.length===1
-  &&ow.triggers.crons[0]==='0,5-31,40,56 0,6,9,15,20,21,23 * * *',
-  'opening worker keeps one Cloudflare cron and includes 18:10 KST duel slot');
+  &&ow.triggers.crons[0]==='0,5-31,40,56 0,1,6,9,15,20,21,23 * * *',
+  'opening worker keeps one Cloudflare cron and includes 18:10 KST duel slot + 10:00 KST ① exit slot');
 
 ok(opening.includes('if(hm===1810)return "duel"')
   &&opening.includes('/api/scalping-duel')

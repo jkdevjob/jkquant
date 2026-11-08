@@ -7,7 +7,7 @@
 //  하루 마감 장부 계산(op=close)은 그대로 — Worker 가 Durable Object 에 한 번만 저장하고 밤 계산 · 대결 비교가 그 장부를 읽는다.
 import { ledger, quote, barOn } from "./claude-live.js";
 import { openingDay, etfDay, coinDay, soxlDay, close30Day } from "./_claude_day.js";
-import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts } from "./_claude_main.js";
+import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts, openingExit, openingExitPrices } from "./_claude_main.js";
 import { REPORT_HEAD } from "./_claude_push.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
@@ -38,7 +38,7 @@ export function compose(kind,date,live,extra={}){
       const cnt=b?(b.qualified==null?!!b.v2Signal:openingCounts(M.params,b.qualified)):false;
       L.push("① 갭하락 과매도 — 모의 매수 "+o.rows.length+"종목"+(b?" (통과 "+b.qualified+"개 · "+(isDef?"v2":"메인")+" 매매일 "+(cnt?"예":"아니오")+")":""));
       for(const r of o.rows)L.push(" · "+r.name+" "+n(r.buyPrice)+(r.buyPriceKind==="예상"?"(예상)":"")+" 갭 "+p(r.expectedGapPct)+(r.status==="주문 실패"?" ⚠️주문 실패":""));
-      L.push("→ 15:30 종가 동시호가에 매도");
+      L.push(openingExit(date).kind==="exit10"?"→ 10:00 에 매도":"→ 15:30 종가 동시호가에 매도");
     }else L.push(dec.reason==="krx_holiday"?"🔒 국내 휴장일 — ①② 시세 조회·주문 없음":"① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");
     for(const r of (d.rows||[]).filter(x=>x.sellTime&&String(x.sellTime).includes("시가")))L.push("② ETF 야간 — 전날 종가 매수분 시가 매도 ("+r.status+")");
   }else if(kind==="etfbuy"){
@@ -110,6 +110,29 @@ async function barsOf(origin,codes,dates){
   for(const c of codes){const q=await quote(origin,c);for(const d of dates){const b=barOn(q,d);if(b)(out[c]=out[c]||{})[d]=b;}}
   return out;
 }
+// ① 10:00 매도 가격 예비(2026-11-09~) — Worker 10:00 단계 기록이 없는 종목만, 한투 분봉(op=minhist · 읽기 전용 · 15:40 마감 때 한 번)에서
+// 그날 10:00:00 까지의 마지막 1분봉 종가. 09:59 봉보다 이르면(분봉이 모자람) 쓰지 않는다. 출처(source)를 남겨 장부가 스스로 말하게 한다.
+export function minuteExit(bars,date,hhmmss="100000"){
+  const sec=t=>+t.slice(0,2)*3600+ +t.slice(2,4)*60+ +t.slice(4,6),hh=x=>[Math.floor(x/3600),Math.floor(x/60)%60,x%60].map(v=>String(v).padStart(2,"0")).join("");
+  const d=String(date||"").replace(/-/g,""),lo=hh(sec(hhmmss)-60);       // 1분 전(10:00 → 09:59:00)
+  const ok=(Array.isArray(bars)?bars:[]).filter(b=>b&&String(b.t||"").length>=14&&String(b.t).slice(0,8)===d&&String(b.t).slice(8,14)<=hhmmss&&+b.c>0)
+    .sort((a,b)=>String(a.t)<String(b.t)?-1:1);
+  const last=ok[ok.length-1];
+  return last&&String(last.t).slice(8,14)>=lo?{price:+last.c,at:String(last.t),source:"kis-minhist"}:null;
+}
+export async function exitFallback(origin,date,codes,fetchImpl=(u,i)=>fetch(u,i),wait=ms=>new Promise(r=>setTimeout(r,ms))){
+  const out={};
+  for(const c of codes){
+    try{
+      const r=await fetchImpl(origin+"/api/kis?op=minhist&code="+encodeURIComponent(c)+"&date="+date.replace(/-/g,"")+"&hour=100000",{headers:{Accept:"application/json"}});
+      const j=await r.json().catch(()=>({}));
+      const m=r.ok&&!j.error?minuteExit(j.bars,date):null;
+      if(m)out[c]=m;
+    }catch(e){}
+    await wait(1100);                                             // 한투 모의투자 초당 2건 한도 안쪽
+  }
+  return out;
+}
 export async function closeDay(origin,env,strategy,date){
   const cfg=await loadMainEvents(env);                       // 그날 메인 전략(승격 기록). 못 읽으면 기본 메인 — 장부에 그 사실을 남긴다
   const tag=r=>r&&Object.assign(r,cfg.ok?{}:{mainWarn:"메인 기록 읽기 실패("+cfg.error+") — 기본 메인으로 계산"});
@@ -121,7 +144,9 @@ async function closeDay0(origin,env,strategy,date,events){
     const st=Object.fromEntries(((l&&l.events)||[]).map(e=>[e.stage,e.payload||{}]));
     const codes=[...new Set((((st.preopen||{}).picks)||[]).map(p=>String(p.code)))].slice(0,5);
     const bb=await barsOf(origin,codes,[date]),bars=Object.fromEntries(Object.entries(bb).map(([c,v])=>[c,v[date]]));
-    return openingDay(date,l,await krOpenOn(origin,date),{},mainFor(events,"opening",date),bars);
+    const have=openingExitPrices(st),miss=openingExit(date).kind==="exit10"?codes.filter(c=>!have[c]):[];
+    const fb=miss.length?await exitFallback(origin,date,miss):{};       // 10:00 기록이 빠진 종목만(보통은 없음)
+    return openingDay(date,l,await krOpenOn(origin,date),{},mainFor(events,"opening",date),bars,fb);
   }
   if(strategy==="daytrading"){                                // 전날 주문한 건 — 전날 공식 종가 → 오늘 공식 시가
     const l=await ledger(env,date);let prev=null,pd=null;

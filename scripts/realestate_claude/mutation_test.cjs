@@ -9,6 +9,8 @@ const TCOL=fs.readFileSync(path.join(__dirname,'test_collect.py'),'utf8');
 const APT=fs.readFileSync(path.join(ROOT,'realestate-claude-apt.js'),'utf8');
 const CAPT=fs.readFileSync(path.join(__dirname,'collect_apt.py'),'utf8'),TCAPT=fs.readFileSync(path.join(__dirname,'test_collect_apt.py'),'utf8');
 const CPRE=fs.readFileSync(path.join(__dirname,'collect_presale.py'),'utf8'),TCPRE=fs.readFileSync(path.join(__dirname,'test_collect_presale.py'),'utf8');
+const AUC=fs.readFileSync(path.join(ROOT,'realestate-claude-auction.js'),'utf8');
+const CONB=fs.readFileSync(path.join(__dirname,'collect_onbid.py'),'utf8'),TCONB=fs.readFileSync(path.join(__dirname,'test_collect_onbid.py'),'utf8');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'rec-mut-'));
 const ENGINE_MUTS=[
   ['결정에 한 달 뒤 자료(룩어헤드)','    const d=k-o.lag,ch=choose(d,plan.pos)','    const d=k-o.lag+1,ch=choose(d,plan.pos)'],
@@ -104,6 +106,45 @@ const APT_MUTS=[
   ['장부가 금리 없는 달도 씀',"    if(marketAt(A,k,po).rateUp==null){ waitFor=kym(k); break; }      // 금리 자료 기다림 — 이 달부터는 다음 갱신 때\n",""],
   ['조정대상지역 세종 시작을 2017년으로',"if(u.city==='세종') return k>=ymk('2016-11')&&k<=ymk('2022-11');","if(u.city==='세종') return k>=ymk('2017-11')&&k<=ymk('2022-11');"]
 ];
+const AUC_MUTS=[
+  ['유찰 저감을 한 번 더',"  for(let i=1;i<r;i++) p=Math.floor(p*(1-c)+1e-9);","  for(let i=0;i<r;i++) p=Math.floor(p*(1-c)+1e-9);"],
+  ['재매각 보증금도 10%',"out.deposit=minPrice==null?null:Math.round(minPrice*(c.resale?o.redepositRate:o.depositRate));","out.deposit=minPrice==null?null:Math.round(minPrice*o.depositRate);"],
+  ['같은 날 전입도 대항력으로',"    if(t.moveIn>=base){","    if(t.moveIn>base){"],
+  ['확정일자 같은 날도 먼저로',"    if(t.claimed&&isDate(t.fixed)&&t.fixed<base){","    if(t.claimed&&isDate(t.fixed)&&t.fixed<=base){"],
+  ['배당요구 안 한 보증금을 최소에 안 넣음',"      lo+=dep; hi+=dep; if(dep>0) level='danger';","      hi+=dep; if(dep>0) level='danger';"],
+  ['특수 권리 무시',"  if(red.length) level='danger';\n",""],
+  ['취득세를 총비용에서 뺌',"function sumCosts(c){ return c.acq+c.legal+c.moveOut+c.repair+c.arrears+c.assume; }","function sumCosts(c){ return c.legal+c.moveOut+c.repair+c.arrears+c.assume; }"],
+  ['떠안는 돈을 총비용에서 뺌',"function sumCosts(c){ return c.acq+c.legal+c.moveOut+c.repair+c.arrears+c.assume; }","function sumCosts(c){ return c.acq+c.legal+c.moveOut+c.repair+c.arrears; }"],
+  ['대출 추정을 감정가 70%로',"Math.round(Math.min(bid*o.loanBidRate,appraisal*o.loanAppRate))","Math.round(Math.min(bid*o.loanBidRate,appraisal*o.loanBidRate))"],
+  ['목표 입찰가에 비용 빼먹음',"function maxBidFor(market,target,o,assume){\n  const cap=market*(1-target);","function maxBidFor(market,target,o,assume){\n  const cap=market*(1-target)+500;"],
+  ['2년 뒤를 1년 세율로',"out.y2=sellAt(total,market,loan,o,o.years*12,k);","out.y2=sellAt(total,market,loan,o,12,k);"],
+  ['이자를 안 뺌',"  const back=market-broker-tax-hold-interest-loan;","  const back=market-broker-tax-hold-loan;"],
+  ['결과를 덮어쓸 수 있음',"  if(cs.result) throw new Error('이미 결과가 있습니다(지난 기록은 고치지 않음)');\n",""],
+  ['결과 뒤에도 입찰가 바꿈',"  if(cs.result) throw new Error('결과를 넣은 사건은 입찰가를 바꿀 수 없습니다');\n",""],
+  ['같은 값을 이긴 것으로',"won:my>win?true:my===win?'tie':false","won:my>=win?true:false"],
+  ['재공매를 낙찰로 둠',"state:next?'open':sold?'sold':'done'","state:sold?'sold':next?'open':'done'"],
+  ['취소된 예정 회차를 진행 중으로',"const ENDED=/낙찰|유찰|취소|입찰마감|수의계약|개찰중|매각|종결|중지/;","const ENDED=/낙찰|유찰|입찰마감|수의계약|개찰중|매각|종결|중지/;"],
+  ['마감일 지난 회차를 진행 중으로',"(!r.bidEnd||String(r.bidEnd).slice(0,10)>=today)","true"],
+  ['낙찰 전 회차를 다음으로',"const next=rs.find((r,i)=>i>ls&&","const next=rs.find((r,i)=>"],
+  ['최저가 아래 입찰도 저장',"  if(a.warn.indexOf('belowMin')>=0) throw new Error('입찰가가 최저가보다 낮으면 무효입니다');\n",""]
+];
+const CONB_MUTS=[
+  ['대전·세종 아닌 물건도 남김','        mine = [norm_item(it, n) for it in its if in_area(it.get("cltrAdr"))]','        mine = [norm_item(it, n) for it in its]'],
+  ['원을 만원으로 잘못 바꿈','    return int(round(v / 10000)) if v > 0 else None','    return int(round(v / 1000)) if v > 0 else None'],
+  ['지난 물건을 지움','    keep = {x["id"]: x for x in old_items or []}','    keep = {}'],
+  ['지난 결과를 지움','        if prev and prev.get("result") and not it.get("result"):','        if False:'],
+  ['개찰 전 공고도 결과를 물음','        if mine and str(n.get("cltrOpbdDt") or "") <= now:','        if mine:'],
+  ['한도 초과면 다 버림','            print(str(e), file=sys.stderr)\n            limited = True\n            break\n        except ApiError:   # 인증키·권한 오류(403 포함)는 멈춘다\n            raise','            raise\n        except ApiError:   # 인증키·권한 오류(403 포함)는 멈춘다\n            raise'],
+  ['인코딩된 키를 또 인코딩','    return urllib.parse.unquote(k) if "%" in k else k','    return k'],
+  ['한 건짜리 응답을 못 읽음','    if isinstance(its, dict):\n        its = [its]\n    return its, int','    return its, int'],
+  ['403 도 재시도',"            if e.code == 403:   # 권한 없음은 다시 해도 같다 — 바로 알린다\n                raise Forbidden","            if False:\n                raise Forbidden"],
+  ['③ 403 이어도 계속 부름','            warnings.append("rsltForbidden")\n            break','            warnings.append("rsltForbidden")\n            continue'],
+  ['공고 목록을 60쪽에서 자름','        if not its or len(out) >= total or page >= 300:','        if not its or len(out) >= total or page >= 60:'],
+  ['상태 코드를 그대로','    if re.fullmatch(r"\\d{4}", v):\n        return STAT.get(v, "상태 " + v)\n','' ],
+  ['쌓을 때 지난 상태 코드를 그대로','        x["status"] = stat_name(x.get("status"), None)','        pass'],
+  ['결과 상태 코드를 그대로','"status": stat_name(c.get("pbctStatNm"), c.get("pbctStatCd")), "win"','"status": c.get("pbctStatNm"), "win"'],
+  ['인증키 오류를 자료 없음으로','        if c in ("03",):\n            return EMPTY\n        raise (LimitError','        if True:\n            return EMPTY\n        raise (LimitError']
+];
 const CAPT_MUTS=[
   ['84㎡ 대표 타입을 세대수 대신 첫 타입',"    t84.sort(key=lambda t: (-(t.get(\"세대수\") or 0), t.get(\"면적일련번호\") or 0))","    pass"],
   ['시세 같은 달 두 번 검사 없음','        if m in rows:\n            raise RuntimeError("시세 같은 달 두 번: %s" % m)','        if False:\n            raise RuntimeError("x")'],
@@ -143,7 +184,15 @@ for(const [name,a,b] of APT_MUTS){
   const r=cp.spawnSync(process.execPath,[path.join(ROOT,'scripts','test_realestate_claude_apt.cjs')],{encoding:'utf8',env:Object.assign({},process.env,{REC_APT:f})});
   if(r.status!==0){ killed++; console.log('  ✓ 잡힘: '+name); } else { bad.push(name); console.log('  ✗ 살아남음: '+name); }
 }
-for(const [muts,src,test,file,tfile] of [[CAPT_MUTS,CAPT,TCAPT,'collect_apt.py','test_collect_apt.py'],[CPRE_MUTS,CPRE,TCPRE,'collect_presale.py','test_collect_presale.py']]){
+for(const [name,a,b] of AUC_MUTS){
+  total++;
+  const aa=a.replace(/\\n/g,'\n'),bb=b.replace(/\\n/g,'\n');
+  if(AUC.split(aa).length!==2){ bad.push(name+' (원문 못 찾음)'); console.log('  ✗ 원문 못 찾음: '+name); continue; }
+  const f=path.join(tmp,'auction.js'); fs.writeFileSync(f,AUC.replace(aa,bb).replace("require('./realestate-claude-apt.js')","require("+JSON.stringify(path.join(ROOT,'realestate-claude-apt.js'))+")").replace("require('./realestate-claude-engine.js')","require("+JSON.stringify(path.join(ROOT,'realestate-claude-engine.js'))+")"));
+  const r=cp.spawnSync(process.execPath,[path.join(ROOT,'scripts','test_realestate_claude_auction.cjs')],{encoding:'utf8',env:Object.assign({},process.env,{REC_AUC:f})});
+  if(r.status!==0){ killed++; console.log('  ✓ 잡힘: '+name); } else { bad.push(name); console.log('  ✗ 살아남음: '+name); }
+}
+for(const [muts,src,test,file,tfile] of [[CAPT_MUTS,CAPT,TCAPT,'collect_apt.py','test_collect_apt.py'],[CPRE_MUTS,CPRE,TCPRE,'collect_presale.py','test_collect_presale.py'],[CONB_MUTS,CONB,TCONB,'collect_onbid.py','test_collect_onbid.py']]){
   for(const [name,a,b] of muts){
     total++;
     const aa=a.replace(/\\n/g,'\n'),bb=b.replace(/\\n/g,'\n');

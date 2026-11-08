@@ -126,13 +126,14 @@ class Fetcher:
         rp = self.robots[base]
         return rp is None or rp.can_fetch(UA_TOKEN, url)
 
-    def get(self, url, max_bytes=8_000_000):
+    def get(self, url, max_bytes=8_000_000, data=None):
+        """data 가 있으면 POST(대한체육회 결과 시스템 목록은 POST 로만 쪽을 넘긴다). robots · 재시도 규칙은 같다."""
         if not self.allowed(url):
             raise RobotsDenied(url)
         last = None
         for i in range(self.tries):
             try:
-                r = self.s.get(url, timeout=25)
+                r = self.s.post(url, data=data, timeout=25) if data is not None else self.s.get(url, timeout=25)
                 if r.status_code >= 500:
                     raise IOError(f"HTTP {r.status_code}")
                 r.raise_for_status()
@@ -148,9 +149,9 @@ class Fetcher:
                 time.sleep(1.5 * (i + 1))
         raise last
 
-    def soup(self, url):
+    def soup(self, url, data=None):
         from bs4 import BeautifulSoup
-        r = self.get(url)
+        r = self.get(url, data=data)
         return BeautifulSoup(r.content, "html.parser"), r
 
 
@@ -992,15 +993,18 @@ def scrape_whoisfast(f, state):
             elif not venue:
                 venue = p
         badge = clean(li.select_one(".badge").get_text(" ", strip=True)) if li.select_one(".badge") else ""
-        link = ""
+        link = records = ""
         for a in li.select(".meet-links a[href]"):
             if "요강" in a.get_text():
                 link = a["href"]
+            elif "기록" in a.get_text() and "/search" in a["href"]:
+                records = urljoin("https://whoisfast.com/", a["href"])   # 지난 대회 '기록 검색'(마스터즈 기록 · 이름은 가려 보임)
         obs = make_obs("whoisfast", "secondary", t_el.get_text(" ", strip=True), start=ds[0] if ds else "",
                        end=ds[-1] if ds else "", venue=venue, place=place, url=url, official_url=link,
                        apply_close=apply_close, kind_hint="masters",
                        status="cancelled" if "취소" in badge else ("postponed" if "연기" in badge else ""))
         if obs and obs["start_date"]:
+            obs["records_url"] = records if records.startswith("https://whoisfast.com/search?") else ""
             out.append(obs)
     if not out:
         raise StructureError("whoisfast 날짜가 있는 대회 0건")
@@ -1439,9 +1443,10 @@ def write_json(path, obj):
     return False
 
 
-def public_record(rid, rec, related=None):
+def public_record(rid, rec, related=None, results=None):
     d = dict(rec["derived"])
     d["related"] = related or []
+    d["results"] = results or []                     # 지난 대회 결과지 · 결과 시스템 · 기록 검색(이름 · 주소만)
     d["id"] = rid
     d["first_seen"] = rec.get("first_seen", "")
     d["last_changed"] = rec.get("last_changed", rec.get("first_seen", ""))
@@ -1461,6 +1466,355 @@ def diff(old, new):
     return out
 
 
+# ───────────────────────── 지난 대회 결과(결과지) ─────────────────────────
+# 2026-11-08 사용자: "지난 대회는 결과지 다운로드 또는 파일 읽어서 내용 볼 수 있게".
+# 결과지 '내용'(선수 이름 · 소속 · 기록 — 학생 포함)은 공개 저장소에 옮겨 적지 않는다. 여기서는 결과 글 · 파일 · 결과 시스템의
+# 이름과 주소만 모아 같은 대회에 잇고, 화면이 열 때마다 원래 사이트에서 가져온다(/api/swim-file · /api/swim-result).
+RESULT_WORDS = re.compile(r"결과|기록\s*(?:지|표|집)|종합\s*기록|성적\s*표|성적|순위\s*표")
+_RESULT_NOT = re.compile(r"신기록|경기\s*순서|출전\s*선수|명단|프로그램|요강|신청|대진표|조\s*편성")
+_RESULT_STRIP = re.compile(
+    r"(?:경기\s*)?결과(?:\s*(?:및|와)\s*상장\s*수령)?|기록\s*(?:지|표|집)|종합\s*기록|성적\s*표|성적|순위\s*표|"
+    r"수정\s*공지|공지|안내|알림|입니다|\(\s*\)")
+_DISC = r"경영|다이빙|수구|아티스틱(?:\s*스위밍)?|오픈\s*워터(?:\s*스위밍)?|핀\s*수영"
+_DISC_PAREN = re.compile(r"[(\[]\s*((?:" + _DISC + r")(?:\s*[,·/]\s*(?:" + _DISC + r"))*)\s*[)\]]")
+_POSTED = re.compile(r"(?:작성일|등록일)\s*[:：]?\s*(\d{2,4})[-./](\d{1,2})[-./](\d{1,2})")
+_FILE_EXT = re.compile(r"\.(pdf|xlsx|xls|hwpx|hwp|docx|doc|zip|jpe?g|png|gif)(?![A-Za-z0-9])", re.I)
+BOARD_SIDO = {"seoulswim": "서울", "gswimming": "경기", "busanswim": "부산", "djswim": "대전", "jnsf": "전남", "gwswim": "강원", "kjaq": "제주"}
+# 결과만 올리는 게시판(robots.txt 허용 · 2026-11-08 확인). 시·도 연맹 게시판의 결과는 그 시·도 대회에만 붙인다.
+RESULT_BOARDS = [
+    {"key": "seoulswim_result", "sido": "서울", "url": "http://www.seoulswim.or.kr/bbs/board.php?bo_table=result",
+     "link": r"bo_table=result&wr_id=\d+", "content": "#bo_v_con"},
+    {"key": "gswimming_result", "sido": "경기", "url": "http://www.gswimming.com/32", "link": r"gswimming\.com/32/\d+", "content": "#bo_v_con"},
+    {"key": "jnsf_result", "sido": "전남", "url": "http://www.jnsf.kr/board.php?bo=result", "link": r"board\.php\?bo=result&no=\d+",
+     "content": "article"},
+    {"key": "gwswim_result", "sido": "강원", "url": "https://gwswim.or.kr/bbs/board.php?bo_table=503", "link": r"bo_table=503&wr_id=\d+",
+     "content": "#bo_v_con"},
+    {"key": "kjaq_result", "sido": "제주", "url": "https://www.kjaq.kr/32", "link": r"kjaq\.kr/32/\d+", "content": "#bo_v_con"},
+] + [  # 대회 공지 게시판에 올라온 결과 글(부산 '종합성적표' · 대전 '경기결과' 등) — 제목이 결과인 글만
+    {**b, "key": b["key"] + "_notice_result", "sido": BOARD_SIDO[b["key"]], "titles": "result"} for b in BOARDS
+]
+SPORTS_RESULT = {"SW": "sports_result_sw", "UW": "sports_result_uw"}
+FEDERATION.update({"sports_result_sw": "swim", "sports_result_uw": "fin"})   # 수영연맹 결과를 핀수영 대회에 붙이지 않는다
+SOURCE_NAMES.update({
+    "seoulswim_result": "서울특별시수영연맹 대회결과", "gswimming_result": "경기도수영연맹 대회기록실",
+    "jnsf_result": "전남수영연맹 대회결과지", "gwswim_result": "강원특별자치도수영연맹 대회기록실",
+    "kjaq_result": "제주특별자치도수영연맹 대회기록", "busanswim_result": "부산광역시수영연맹 기록지",
+    "sports_result_sw": "대한수영연맹 경기결과(대한체육회 결과 시스템)",
+    "sports_result_uw": "대한수중핀수영협회 경기결과(대한체육회 결과 시스템)",
+    "whoisfast_records": "Whoisfast 기록 검색",
+    **{b["key"] + "_notice_result": SOURCE_NAMES[b["key"]] + "(결과 글)" for b in BOARDS},
+})
+
+
+def is_result_title(t):
+    t = clean(t)
+    if not RESULT_WORDS.search(t):
+        return False
+    return not (_RESULT_NOT.search(t) and not re.search(r"결과|기록\s*[지표]", t))
+
+
+def result_meet_title(t):
+    """결과 글 제목 → (대회명, 종목 힌트). '경기결과' · '(기록지)' · '(다이빙)' 같은 꼬리를 뗀다."""
+    t = clean(t)
+    hint = []
+    for mm in _DISC_PAREN.finditer(t):
+        hint += [name for name, pat in SPORTS if re.search(pat, mm.group(1))]
+    t = _RESULT_STRIP.sub(" ", _DISC_PAREN.sub(" ", t))
+    return tidy_title(clean(t)).strip(" -·:,"), sorted(set(hint))
+
+
+def posted_date(text):
+    """게시판 글의 '작성일 26-07-06' · '등록일 2026.09.14'."""
+    m_ = _POSTED.search(text or "")
+    if not m_:
+        return ""
+    y = int(m_.group(1))
+    return iso(y + 2000 if y < 100 else y, m_.group(2), m_.group(3))
+
+
+def file_ext(name, url=""):
+    m_ = _FILE_EXT.search(name or "") or _FILE_EXT.search(url or "")
+    return m_.group(1).lower().replace("jpeg", "jpg") if m_ else ""
+
+
+def result_files(soup, page_url):
+    """결과 글의 첨부 파일. 링크 글자에 파일 이름(.pdf · .xlsx …)이 적힌 것만 — 부산 연맹 글 화면 아래의 다른 글 목록에는
+    글자 없는 파일 아이콘 링크가 수십 개 있어, 그것까지 잡으면 남의 글 파일이 이 대회 결과지로 붙는다(2026-11-08 실제 확인)."""
+    out, seen = [], set()
+    for a in soup.find_all("a", href=True):
+        name = clean(a.get_text(" ", strip=True))
+        ext = file_ext(name)
+        if not ext:
+            continue
+        href = urljoin(page_url, a["href"])
+        if href in seen or not re.search(r"download|/data/file/|DataFile|/Data/|files?/|attach|\.(?:pdf|hwpx?|xlsx?|docx?|zip)$", href, re.I):
+            continue
+        seen.add(href)
+        name = re.sub(r"^\s*(?:PDF|XLSX?|HWPX?|ZIP)\s+(?=\S)", "", name)
+        name = re.sub(r"\s*(?:\(\d+(?:\.\d+)?\s*[KMG]B?\)|\[\d+\]|\d+(?:\.\d+)?\s*[KMG]B)(?:\s*\[\d+\])?\s*$", "", name, flags=re.I)
+        out.append({"name": clean(name)[:120] or ("결과." + ext), "url": href, "ext": ext})
+    return out[:12]
+
+
+def _result_stale(c):
+    """결과 글 캐시: 파일을 찾은 글은 7일(정정 글 대비), 못 읽은 글은 하루 뒤 다시 본다."""
+    if not c:
+        return True
+    days = 7 if c.get("files") else 1
+    return c.get("at", "") <= (today() - timedelta(days=days)).isoformat()
+
+
+def scrape_result_board(f, state, cfg, detail_limit=12):
+    """결과 게시판 → 결과 글 목록(첨부 파일 이름 · 주소, 본문의 대회 날짜, 게시일). 파일 내용은 받지 않는다."""
+    soup, _ = f.soup(cfg["url"])
+    links, seen = [], set()
+    for a in soup.find_all("a", href=True):
+        href = _canon_board_url(urljoin(cfg["url"], a["href"]))
+        t = clean(a.get_text(" ", strip=True))
+        if not re.search(cfg["link"], href) or href in seen or len(t) < 6:
+            continue
+        seen.add(href)
+        links.append((t, href))
+    if not links:
+        raise StructureError("결과 게시판 목록 링크 형식을 찾지 못함")
+    cache = state.setdefault("cache", {}).setdefault("result", {})
+    out, fetched = [], 0
+    for t, href in links:
+        if cfg.get("titles") == "result" and not is_result_title(t):
+            continue                                # 대회 공지 게시판: 제목이 결과인 글만
+        if _RESULT_NOT.search(t) and not is_result_title(t):
+            continue                                # 결과 게시판에도 섞인 신기록표 · 경기순서 · 명단은 결과가 아니다
+        c = cache.get(href)
+        if _result_stale(c) and fetched < detail_limit:
+            fetched += 1
+            try:
+                ds, _ = f.soup(href)
+                lines = block_text(content_node(ds, cfg.get("content")))
+                posted = posted_date(clean(ds.get_text(" ", strip=True)))
+                nf = notice_fields(lines, int(posted[:4]) if posted else today().year)
+                start, end = nf["start_date"], nf["end_date"]
+                if not start:                       # '2026.03.27 ~ 29 서울체육중학교'처럼 항목 이름 없이 첫 줄에 적은 날짜
+                    start, end = date_range(" ".join(lines[:3]), int(posted[:4]) if posted else today().year)
+                if start and posted and not (start <= posted and days_between(start, posted) <= 200):
+                    start = end = ""                # 게시일보다 뒤이거나 반년 넘게 앞선 날짜는 대회 날짜가 아니다
+                c = {"at": today().isoformat(), "files": result_files(ds, href),
+                     "start_date": start, "end_date": end or start, "posted": posted}
+            except Exception as exc:
+                c = dict(c or {}, at=today().isoformat(), error=type(exc).__name__)
+            cache[href] = c
+        if not c or not c.get("files"):
+            continue
+        title, hint = result_meet_title(t)
+        if not title:
+            continue
+        out.append({"key": cfg["key"] + ":" + href, "source": cfg["key"], "tier": "official", "kind": "files",
+                    "title": title, "post_title": t, "url": href, "files": c["files"], "sports": hint,
+                    "sido": cfg.get("sido", ""), "start_date": c.get("start_date", ""),
+                    "end_date": c.get("end_date", "") or c.get("start_date", ""), "posted": c.get("posted", "")})
+    return out
+
+
+def scrape_busan_records(f, state, years=2):
+    """부산광역시수영연맹 '기록지' — 연도별 표(대회명 · 날짜 · PDF). 파일 주소로 바로 받아진다(글을 거치지 않음)."""
+    out = []
+    for yy in range(today().year, today().year - years, -1):
+        url = f"http://www.busanswimming.kr/data01.asp?yy={yy}"
+        soup, _ = f.soup(url)
+        for tr in soup.find_all("tr"):
+            if tr.find("table"):
+                continue
+            tds = tr.find_all("td", recursive=False)
+            pdfs = [a for a in tr.find_all("a", href=True) if re.search(r"\.pdf$", a["href"], re.I)]
+            if len(tds) < 3 or not pdfs:
+                continue
+            name = clean(tds[0].get_text(" ", strip=True))
+            ds = parse_dates(tds[1].get_text(" ", strip=True), yy)
+            if not name or not ds:
+                continue
+            files = [{"name": f"{name} 기록지{'' if len(pdfs) == 1 else ' ' + str(i + 1)}.pdf", "url": urljoin(url, a["href"]), "ext": "pdf"}
+                     for i, a in enumerate(pdfs)]
+            title, hint = result_meet_title(name)
+            out.append({"key": "busanswim_result:" + files[0]["url"], "source": "busanswim_result", "tier": "official",
+                        "kind": "files", "title": title, "post_title": name, "url": url, "files": files, "sports": hint,
+                        "sido": "부산", "start_date": ds[0], "end_date": ds[-1], "posted": "", "direct": True})
+    if not out:
+        raise StructureError("부산 기록지 표에서 대회 줄(이름 · 날짜 · PDF)을 찾지 못함")
+    return out
+
+
+_EVENT_INFO = re.compile(r"fnEventInfo\(\s*[\"'](\w+)[\"']\s*,\s*[\"'](\d+)[\"']")
+
+
+def scrape_sports_result(f, state, sys_code, max_pages=14, years=3):
+    """대한체육회 경기결과 시스템(result.sports.or.kr) 대회 목록 — 대회별 결과 화면 열쇠(classCd · toCd)만 모은다.
+    SW = 대한수영연맹, UW = 대한수중핀수영협회. 목록은 POST 로 쪽을 넘긴다(robots.txt 없음 = 허용)."""
+    key, url = SPORTS_RESULT[sys_code], f"https://result.sports.or.kr/{sys_code}/INF201.do"
+    t, cutoff = today().isoformat(), (today() - timedelta(days=366 * years)).isoformat()
+    out, seen = [], set()
+    for page in range(1, max_pages + 1):
+        soup, _ = f.soup(url, data={"pageIndex": str(page)})
+        got, oldest = 0, "9999"
+        for tr in soup.select("table tbody tr"):
+            tds = tr.find_all("td")
+            btn = tr.find(attrs={"onclick": _EVENT_INFO})
+            if len(tds) < 5 or btn is None:
+                continue
+            m_ = _EVENT_INFO.search(btn["onclick"])
+            name, ds = clean(tds[1].get_text(" ", strip=True)), parse_dates(tds[3].get_text(" ", strip=True))
+            if not name or not ds:
+                continue
+            got += 1
+            oldest = min(oldest, ds[0])
+            if m_.group(2) in seen or ds[0] > t:
+                continue                            # 아직 시작 안 한 대회는 결과가 없다
+            seen.add(m_.group(2))
+            title, hint = result_meet_title(name)
+            sports, inferred = sports_for(name)
+            out.append({"key": f"{key}:{m_.group(2)}", "source": key, "tier": "official", "kind": "system", "sys": sys_code,
+                        "classCd": m_.group(1), "toCd": m_.group(2), "title": title, "post_title": name, "url": url,
+                        "venue": clean(tds[2].get_text(" ", strip=True)), "start_date": ds[0], "end_date": ds[-1],
+                        "sports": hint or ([] if inferred else sports), "sido": "",
+                        "state": clean(btn.get_text(" ", strip=True))[:12]})
+        if not got:
+            if page == 1:
+                raise StructureError("대회 목록 표(fnEventInfo)를 찾지 못함")
+            break
+        if oldest < cutoff:
+            break
+    return out
+
+
+def _result_common(p, d):
+    """결과 ↔ 대회 공통 조건: 연맹(수영연맹 ↔ 핀수영협회) · 회차 · 시·도 · 대회 성격이 서로 다르지 않다."""
+    fa, fb = federations(p), federations(d)
+    if fa and fb and not (fa & fb):
+        return False
+    ea, eb = edition(p["title"]), edition(d.get("title"))
+    if ea and eb and ea != eb:
+        return False
+    if p.get("sido") and d.get("sido") and p["sido"] != d["sido"]:
+        return False
+    return not kind_conflict(p["title"], d.get("title", ""))
+
+
+def _result_date_match(p, d):
+    """날짜를 아는 결과(결과 시스템 · 부산 기록지 · 본문에 일시가 있는 글): 실제 대회 날짜가 3일 안으로 맞아야 한다.
+    대회 묶기의 '같은 해 75일 안 일정 변경' 규칙은 쓰지 않는다 — 결과의 날짜는 실제로 열린 날이다
+    (그 규칙이면 6월 '꿈나무 전국수영대회' 결과가 7월 '교보생명컵 꿈나무 체육대회'에 붙었다)."""
+    gap = gap_days(p, d)
+    if gap is None or gap > 3 or not _result_common(p, d):
+        return False
+    sa, sb = set(p.get("sports") or []), explicit_sports(d)
+    if gap > 1 and sa and sb and not (sa & sb):
+        return False                                # 같은 날이면 종목별로 따로 올린 결과(경영 · 다이빙 …)도 같은 대회
+    ta, tb = p["title"], d.get("title", "")
+    sim, short = title_sim(ta, tb), min(len(core_key(ta)), len(core_key(tb)))
+    same_sido = bool(p.get("sido")) and p.get("sido") == d.get("sido")
+    same_ed = bool(edition(ta)) and edition(ta) == edition(tb)
+    if sim >= 0.9:
+        return short > 2 or (gap <= 1 and (same_sido or same_ed))     # '김천' · '동아'처럼 짧은 이름은 회차나 시·도까지 같아야
+    if sim >= 0.6 and gap <= 1 and same_sido:
+        return True
+    ov = overlap(ta, tb)
+    if gap <= 1 and same_sido and same_ed and ov >= 0.5:
+        return True                                 # 같은 날 · 같은 시·도 · 같은 회차: '전국체육대회 서울시 선발전' ↔ '전국체전 서울시 대표 선발전'
+    return gap <= 1 and short >= 4 and ov >= 0.7 and (same_sido or same_ed)
+
+
+def _result_name_match(p, d, posted):
+    """날짜 없는 결과 글: 이름이 거의 같고(포함 관계 · 또는 회차가 같고 글자쌍이 대부분 겹침) 연맹 · 회차 · 지역 · 성격 · 종목이 맞고,
+    게시일(없으면 제목의 연도, 그것도 없으면 회차)로 어느 해 대회인지 정해질 때만 붙인다."""
+    ta, tb = p["title"], d.get("title", "")
+    ea, eb = edition(ta), edition(tb)
+    if not (title_sim(ta, tb) >= 0.9 or (ea and ea == eb and overlap(ta, tb) >= 0.75)):
+        return False
+    if not _result_common(p, d):
+        return False
+    sa, sb = set(p.get("sports") or []), explicit_sports(d)
+    if sa and sb and not (sa & sb):
+        return False
+    s0, y = d["start_date"], re.search(r"(20\d{2})", p["title"])
+    if y and s0[:4] != y.group(1):
+        return False
+    if posted:
+        return s0 <= posted and days_between(s0, posted) <= 200      # 결과는 대회 뒤 반년 안에 올라온다
+    return bool(y or (ea and eb))                   # 연도도 회차도 없으면 어느 해 대회인지 모른다
+
+
+def match_result(records, r):
+    """결과 한 건 → 같은 대회 id(없으면 None). 날짜를 알면 대회 묶기 규칙(same_meet) 그대로, 모르면 이름 · 게시일로."""
+    t = today().isoformat()
+    probe = {"title": r["title"], "start_date": r.get("start_date") or "", "end_date": r.get("end_date") or r.get("start_date") or "",
+             "sido": r.get("sido", ""), "sigungu": "", "source": r["source"], "sports": r.get("sports") or [], "sports_inferred": False}
+    best, score = None, -9.0
+    for rid, rec in records.items():
+        d = rec.get("derived") or {}
+        if not d.get("start_date") or d["start_date"] > t:
+            continue                                # 결과는 시작한 대회에만
+        if probe["start_date"]:
+            if not _result_date_match(probe, d):
+                continue
+            s = title_sim(probe["title"], d["title"]) - (gap_days(probe, d) or 0) / 100
+        else:
+            if not _result_name_match(probe, d, r.get("posted", "")):
+                continue
+            s = title_sim(probe["title"], d["title"])
+        if s > score:
+            best, score = rid, s
+    return best
+
+
+def public_result(r):
+    out = {"kind": r["kind"], "source": r["source"], "source_name": SOURCE_NAMES.get(r["source"], r["source"]),
+           "tier": r.get("tier", "official"), "title": r.get("post_title") or r.get("title", ""), "url": r.get("url", "")}
+    if r["kind"] == "files":
+        out["files"] = [dict(x) for x in r.get("files", [])[:12]]
+        out["direct"] = bool(r.get("direct"))       # 파일 주소로 바로 받아짐(게시판 글을 먼저 열지 않아도 됨)
+    elif r["kind"] == "system":
+        out.update(sys=r["sys"], classCd=r["classCd"], toCd=r["toCd"])
+    for k in ("posted", "start_date"):
+        if r.get(k):
+            out[k] = r[k]
+    return out
+
+
+def attach_results(records, store):
+    """모아 둔 결과(store) 전부를 지금의 대회 목록에 다시 잇는다 — 잇는 규칙이 바뀌어도 앞뒤가 맞고, 수집이 실패한 날도 예전 결과가 남는다.
+    whoisfast '기록 검색'은 그 대회의 whoisfast 관측에서 가져온다(끝난 대회만)."""
+    t = today().isoformat()
+    out = {}
+    for key in sorted(store):
+        rid = match_result(records, store[key])
+        if rid:
+            out.setdefault(rid, []).append(public_result(store[key]))
+    for rid, rec in records.items():
+        d = rec.get("derived") or {}
+        if (d.get("end_date") or d.get("start_date") or "9999") >= t:
+            continue
+        for o in rec.get("obs", {}).values():
+            u = o.get("records_url") or ""
+            if u and not any(x.get("url") == u for x in out.get(rid, [])):
+                out.setdefault(rid, []).append({"kind": "link", "source": "whoisfast_records", "tier": "secondary",
+                                                "source_name": SOURCE_NAMES["whoisfast_records"], "title": "기록 검색", "url": u})
+    order = {"system": 0, "files": 1, "link": 2}
+    for rid, lst in out.items():
+        seen, uniq = set(), []
+        for x in sorted(lst, key=lambda x: (order.get(x["kind"], 9), -TIER_RANK.get(x["tier"], 0), x.get("posted", ""), x.get("url", ""))):
+            sig = (x["kind"], x.get("toCd") or x.get("url"))
+            if sig not in seen:
+                seen.add(sig)
+                uniq.append(x)
+        out[rid] = uniq[:12]
+    return out
+
+
+RESULT_SOURCES = [(b["key"], "official", b["url"], (lambda cfg: lambda f, st: scrape_result_board(f, st, cfg))(b)) for b in RESULT_BOARDS] + [
+    ("busanswim_result", "official", "http://www.busanswimming.kr/data01.asp", lambda f, st: scrape_busan_records(f, st)),
+    ("sports_result_sw", "official", "https://result.sports.or.kr/SW/INF201.do", lambda f, st: scrape_sports_result(f, st, "SW")),
+    ("sports_result_uw", "official", "https://result.sports.or.kr/UW/INF201.do", lambda f, st: scrape_sports_result(f, st, "UW")),
+]
+
+
 SOURCES = [
     ("korswim", "official", "https://www.korswim.co.kr/11", lambda f, st: scrape_korswim(f, st)),
     ("kua", "official", "https://www.kua.or.kr/competition-info/schedule", lambda f, st: scrape_kua(f, st)),
@@ -1470,7 +1824,7 @@ SOURCES = [
 ]
 
 
-def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=True):
+def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=True, result_sources=None):
     t = today().isoformat()
     started = now_iso()
     comp_path, state_path = DATA_DIR / "competitions.json", DATA_DIR / "state.json"
@@ -1567,6 +1921,33 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
             if len(related[ld["matched_id"]]) < 5:
                 related[ld["matched_id"]].append({"title": ld["title"], "url": ld["url"], "host": ld.get("host", ""),
                                                   "official_host": bool(ld.get("official_host"))})
+    # 지난 대회 결과 — 결과 글 · 파일 · 결과 시스템의 이름과 주소만(내용은 저장하지 않음). 한 번 찾은 결과는 쌓아 두고
+    # (게시판 목록에서 밀려나도 · 수집이 실패해도) 매번 지금 대회 목록에 다시 잇는다.
+    store = state.setdefault("results", {})
+    if result_sources is None:
+        result_sources = RESULT_SOURCES if sources is None else []
+    for key, tier, url, fn in result_sources:
+        prev = prev_status.get(key, {})
+        st = {"key": key, "name": SOURCE_NAMES.get(key, key), "tier": tier, "url": url, "group": "result",
+              "last_attempt": started, "last_success": prev.get("last_success", "")}
+        try:
+            got = fn(f, state)
+            for r in got:
+                r["first_seen"] = store.get(r["key"], {}).get("first_seen") or t
+                store[r["key"]] = r
+            st.update(status="ok", count=len(got), error="", last_success=started)
+        except RobotsDenied:
+            st.update(status="blocked", count=0, error="robots.txt 가 수집을 허용하지 않음")
+        except StructureError as exc:
+            st.update(status="failed", count=0, error="구조 변경 의심: " + str(exc))
+        except Exception as exc:
+            st.update(status="failed", count=0, error=f"{type(exc).__name__}: {str(exc)[:160]}")
+        statuses.append(st)
+        print(f"[{st['status']}] {st['name']}: 결과 {st.get('count', 0)}건 {st.get('error', '')}", flush=True)
+    old = (today() - timedelta(days=4 * 366)).isoformat()
+    for k in [k for k, r in store.items() if (r.get("start_date") or r.get("posted") or r.get("first_seen") or t) < old]:
+        store.pop(k)                                # 4년 넘은 결과는 목록에서 뺀다(대회 이력은 그대로)
+    attached = attach_results(records, store)
     # 변경 감지
     n_new = n_changed = 0
     for rid, rec in records.items():
@@ -1591,8 +1972,8 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
             n_changed += 1
     if migrated_note:
         changes.append({"date": t, "type": "migration", "note": migrated_note, "count": len(records)})
-    ok = [s for s in statuses if s["status"] == "ok" and s["key"] not in ("search_lead", "official_link")]
-    pub = sorted((public_record(rid, rec, related.get(rid)) for rid, rec in records.items()),
+    ok = [s for s in statuses if s["status"] == "ok" and s["key"] not in ("search_lead", "official_link") and s.get("group") != "result"]
+    pub = sorted((public_record(rid, rec, related.get(rid), attached.get(rid)) for rid, rec in records.items()),
                  key=lambda e: (e["start_date"], e["title"]))
     payload = {"schema_version": SCHEMA, "range": "대한민국 전국 17개 시·도", "baseline_date": baseline,
                "data_changed_at": prev_public.get("data_changed_at", ""), "count": len(pub), "competitions": pub}
@@ -1611,8 +1992,11 @@ def refresh(fetcher=None, search=None, sources=None, do_search=True, do_confirm=
                                 "count": len(leads), "leads": leads})
     total_ok = len(ok)
     summary = {"started": started, "finished": now_iso(), "ok_sources": total_ok,
-               "failed_sources": sum(1 for s in statuses if s["status"] != "ok"),
+               "failed_sources": sum(1 for s in statuses if s["status"] != "ok" and s.get("group") != "result"),
                "total": len(pub), "new": n_new if not migrated_note else 0, "changed": n_changed,
+               "result_sources_ok": sum(1 for s in statuses if s.get("group") == "result" and s["status"] == "ok"),
+               "result_sources_failed": sum(1 for s in statuses if s.get("group") == "result" and s["status"] != "ok"),
+               "with_results": sum(1 for x in pub if x.get("results")),
                "http_requests": getattr(f, "count", 0), "data_saved": bool(ok)}
     last_ok = max([s.get("last_success", "") for s in statuses] + [""])
     write_json(status_path, {"schema_version": SCHEMA, "updated_at": started, "last_success_at": last_ok,

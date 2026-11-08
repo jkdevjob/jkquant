@@ -3,6 +3,7 @@
 // 모두 이 파일 하나로 "그 날짜에 유효한 메인"을 고른다. 밤 계산(scripts/claude_lab.py MAIN_DEFAULT)과 기본값이 같아야 한다(회귀가 비교).
 // ⑤ close30(2026-10-22 사용자 요청 "종가 전략도 탭에 추가하고 다른 전략이랑 동일하게 적용") — 15:00 판단 → 15:30 종가 청산, ⑤ VTS 주문도 이 기록을 읽는다.
 import { readPaperSettings } from "./_paper-trading.js";
+import { krxDay } from "./_krx_calendar.js";
 
 export const WORKER = "https://jkquant-opening-scheduler.mumae4.workers.dev";
 export const TABS = ["opening", "daytrading", "crypto", "soxl", "close30"];
@@ -109,6 +110,31 @@ export async function loadMainEvents(env, timeoutMs = 4000) {
   finally { if (t) clearTimeout(t); }
 }
 
+// ① 매도 시각 — 2026-11-09 거래일부터 10:00 에 판다(2026-11-08 사용자 "1은 10시" · 연구 R34: 2년 60분봉 10:00 매도 +1.38% ≈ 종가 +1.46%,
+// 하루를 넘기지 않고 오전에 끝낸다). 그 전 거래일은 그때 규칙(15:30 종가)대로 둔다 — 과거 기록을 새 규칙으로 다시 계산하지 않는다.
+// Worker 10:00 단계(exit10) · 하루 마감 장부(_claude_day) · 실시간 화면(claude-live) · 알림(_claude_push)이 이 표 하나로 고른다.
+export const OPENING_EXIT10_FROM = "2026-11-09";
+export function openingExit(date) {
+  return String(date || "") >= OPENING_EXIT10_FROM
+    ? { kind: "exit10", label: "10:00 매도", sellText: "10:00 매도", exitTime: "10:00 매도", until: "10:00 에 팔면 확정", reason: "10:00 청산" }
+    : { kind: "close", label: "15:30 종가", sellText: "15:30 종가 매도", exitTime: "15:30 종가(동시호가)", until: "15:30 종가에 팔면 확정", reason: "종가 청산" };
+}
+// 그날 ① 10:00 매도 가격 — Worker 10:00 단계(exit10)가 Pages 에서 받아 gapdown 장부에 남긴 값. st = 장부 단계별 payload. {종목코드: {price, at, source}}
+export function openingExitPrices(st) {
+  const out = {};
+  for (const x of ((st && st.exit10 && st.exit10.prices) || [])) if (x && /^\d{6}$/.test(String(x.code || "")) && +x.price > 0) out[String(x.code)] = { price: +x.price, at: x.at || null, source: "exit10" };
+  return out;
+}
+// ② 최대 24시간 — 2026-11-09 부터 다음 달력일이 휴장인 날(금요일 · 연휴 전)은 15:21 에 사지 않는다(2026-11-08 사용자 "2는 무조건 수익률 좋은걸로" ·
+// 연구 R34 ②-24: 137매매 +0.93%/매매 · MDD −24.4% vs 제한 없음 170매매 +0.68% · −30.3% — 주말 · 연휴를 넘긴 33매매는 평균 −0.34%).
+// 메인 기준(th)과 별개인 탭 규칙이다(승격 변수 아님). 제한 없는 판은 15:21 장부에 그림자(shadow)로만 남긴다. 밤 계산(claude_lab etf_24h)과 같은 정의.
+export const ETF_MAX24_FROM = "2026-11-09";
+export function etfMax24(date) {
+  const d = String(date || "");
+  if (!(d >= ETF_MAX24_FROM)) return { on: false, ok: true, next: null };
+  const next = new Date(Date.parse(d + "T00:00:00Z") + 864e5).toISOString().slice(0, 10), k = krxDay(next);
+  return { on: true, ok: !k.closed, next, nextClosed: k.closed ? k.reason : "" };
+}
 // ① 회계: 그날 메인 기준 매매일인지(통과 종목 수) · 장부에 넣을 종목(깊은 갭 topK, gapMax 이하). 주문은 그대로 깊은 3종목(측정용 포함)이다.
 export function openingCounts(p, qualified) { return (Number(qualified) || 0) >= (p.minQ || 5); }
 export function openingPick(p, picks) {
