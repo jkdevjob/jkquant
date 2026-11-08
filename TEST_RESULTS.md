@@ -12,6 +12,16 @@
 - main(#606 부동산 경매) 병합 뒤(74c5782c) 다시 `check-before-push.cjs`: **57단계 전부 PASS** · 변이 모두 잡힘 · 전체 회귀 **2822 PASS / 0 FAIL**.
 - 미확인(운영): 11/09(월) 10:00 Worker `gapdown_exit10` 실행 · 장부 `exit10.prices` · 15:40 장부 `exitRule: exit10` · 10:00 매도 알림 / ② 첫 금요일 11/13 15:21 `no_signal_next_day_closed_max24h` + `shadow` — 11/10 06:50 확인 예약. 한투 1분봉 이름이 시작 · 끝 시각 중 어느 쪽인지(예비 가격 1분 안 차이).
 
+## 2026-11-08 · 자산플랜 입금 맞춤 · 플랜 v2.0.1
+
+- `scripts/check-plan-deposit.cjs`: ALL PASS · 변이 6/6 빨간불(맞춤 없음 · TECL 안 맞춤 · TQQQ 안 맞춤 · 체결 뒤에도 안 끝남 · 배당도 맞춤 · 입금 합 대신 마지막만).
+  - 판정 8: 빈 장부 · 체결 뒤 입금 · 입금 뒤 체결 · 입금 두 번 합 · 같은 날 기록 순서 · 날짜 우선 · 배당/출금/0원 제외.
+  - 화면 값: TECL 68 · TQQQ 38 · SGOV 2 · 현금 74.5(1만$) · 밴드·Guard 안 → 입금 없으면 주문 0 / 입금 300$ → SGOV 매도 1 · TECL 매수 4(TQQQ 1주는 수수료 몫 부족) · 배당 300$ 는 맞춤 없음.
+  - 모의 엔진과 같음: 합성 시세(입금일 종가 = 전일 종가) 월 500$ 입금 21번 — 엔진이 21번 모두 매매했고 운영 주문표가 21번 모두 같음(종목·방향·주수).
+- `check-plan-evidence.cjs` 4/4 · `check-plan-signal-fill.cjs` 5 groups · `check-plan-claude-tab.cjs` 14/14 그대로 PASS.
+- 로컬 브라우저 스모크(가짜 로그인·DB · 실제 일봉 ~11-06 · 입금 210$ 기록): 판단 '리밸런싱/상태조정 · 입금 맞춤' · 주문 SGOV 매수 6주 · 오류 0 · 가로 넘침 없음(390px).
+- v2.0.0 배포 확인(11-08): PR #605 병합 aaa681e · curl plan v2.0.0 · index v3.117.7 · plan-gpt.js 200 · 배포 엔진 STRATEGY·retiredReason 포함 · 10년 탭 없음.
+
 ## 2026-11-08 · 부동산 클로드 🔨 경매 칸 · 부동산 v1.12.0
 
 - `node scripts/test_realestate_claude_auction.cjs`: **43 PASS / 0 FAIL** (손 계산 값: 2.3억 입찰 → 총 2억 3,653만 · 할인 15.5% · 내 돈 7,553만 · 2년 뒤 +2,691만 · 1년 뒤 세금 2,788만 · 목표 입찰가 2억 3,145만 경계).

@@ -328,7 +328,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v2.0.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v2.0.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -403,7 +403,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
         <div class="sub" id="alphaRefreshTime">시세 자동 갱신 중…</div>
         <div class="sub" id="alphaStartState">현재 계좌 기준 주문을 계산하는 중…</div>
         <div class="path-orders" id="alphaActions"><div class="liveitem wait">시세를 불러오면 주문 수량을 계산합니다.</div></div>
-        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 몫 안의 목표비율과 10%p를 초과해 벌어질 때, TQQQ는 Guard 상태가 바뀔 때 거래합니다.</div>
+        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 몫 안의 목표비율과 10%p를 초과해 벌어질 때, TQQQ는 Guard 상태가 바뀔 때 거래합니다. 입금을 기록하면 다음 주문에서 전체를 목표 비중으로 맞춥니다.</div>
         <div class="btnrow"><button class="btn gold" id="alphaRecordFill" disabled>✅ 오늘 주문 체결 반영</button></div>
         <div class="alpha-fill-panel" id="alphaFillPanel" hidden>
           <div class="alpha-account-head"><div><b>오늘 주문 체결 반영</b><div class="alpha-ledger-note">주문수량은 자동 입력됩니다. 부분체결이면 실제 수량으로 줄이고 실제 체결가만 확인하세요. 미체결은 수량 0.</div></div>
@@ -931,6 +931,7 @@ function renderHorizonCopy(){
   if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>'+P.name+' v'+P.version+' · 두 겹의 가드</strong><br>'
     +'<b>① 변동성 가드 (TECL)</b> — 전체 자산의'+tw+'%를 TECL 몫으로 정하고, 최근'+D.ivsLook+'거래일 변동성에 따라 그 안의 투자비율을 조절합니다(흔들림이 크면 덜 담는다). 목표와 현재 비율의 차이가 <b>10%p를 초과</b>하면 리밸런싱합니다. <b>TECL 목표100%는 전체 자산의'+tw+'%</b>를 뜻합니다.<br>'
     +'<b>② 추세 가드 (TQQQ)</b> — TQQQ'+gw+'%는 SMA'+D.guardMA+' ±1.0% 경계를 넘을 때만 켜고(ON) 끕니다(OFF). 남는 금액은 SGOV에 둡니다.<br>'
+    +'<b>입금</b> — 입금을 기록하면 다음 주문에서 TECL·TQQQ·SGOV 전체를 목표 비중으로 맞춥니다(모의 계산과 같은 규칙).<br>'
     +'<span class="sub">🤖 클로드 탭 전략 · 판 '+P.version+' ('+(P.since||'2026-11-08')+'~). 매일 연구로 검증하고, 규칙을 바꿀 때는 판 번호를 올려 예전 기록과 섞지 않습니다. 10·15·20년 플랜과 새 규칙·공격형은 2026-11-08 폐지했습니다(예전 세션은 지우지 않고 숨김).</span>';
   if($('alphaValidation'))$('alphaValidation').innerHTML='<b>앱 엔진과 같은 체결로 다시 잰 값</b><br><span class="sub">전일 확정종가로 주수 · 다음 거래일 종가 체결 · 수수료 0.1% · 해외주식 양도세 22%(250만원 공제) 세후 · 2011-04~2026-11 시작 · 2만$ 거치: 전 구간 연 30.9% · MDD 40.6%. 같은 조건에서 새 규칙 29.9%/38.1% · 공격형 30.7%/42.1%로 기본보다 낫지 않아 폐지했습니다(연구 2026-11-08).</span><br>'
     +'<b>⚠️ 과거 롤링 연구치 재검증 대기</b><br><span class="sub">기존 137개 시작구간 CAGR/MDD는 주문 수량을 미확정 다음날 종가로 계산한 현재 모의 체결규칙과 동일한 조건에서 다시 검증되지 않았습니다. 주문수량 규칙 v2 적용 후 전체·롤링 검증 전에는 공식 성과로 표시하지 않습니다. 운영 전략 기본값은 그대로입니다.</span>';
@@ -2244,7 +2245,8 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   const yearStart=!!(E.yearDoneAt&&E.yearDoneAt(qTqqq.settled.date));
   const dec=E.alphaDecide({rules:AR,w,sleeveNow,teclQty:tq,tqqqQty:qq,tqqqClose:qs,sma,tqqqWeight:(qq*qs)/signalTotal,guardWeight:D.guardWeight,yearStart});
   const teclHit=dec.teclHit,upper=dec.upper,lower=dec.lower,guard=dec.guard,guardFlip=dec.guardFlip,tqReb=dec.tqReb;
-  const needRebalance=teclHit||guardFlip||tqReb||horizonRebalancePending||(!tq&&!qq&&!sq);
+  const dep=alphaDepositPending(),force=!!dep;   // 입금 맞춤 — 모의 엔진의 force(입금일 전체 맞춤)와 같은 규칙
+  const needRebalance=teclHit||guardFlip||tqReb||force||horizonRebalancePending||(!tq&&!qq&&!sq);
 
   // 사용자가 주문 판단 근거를 직접 검증할 수 있도록 계산값과 그래프를 함께 노출한다.
   const gap=Math.abs(w-sleeveNow),bandLo=Math.max(0,w-D.ivsBand),bandHi=Math.min(1,w+D.ivsBand);
@@ -2274,20 +2276,21 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     ? 'TECL 첫 진입이라 목표비중으로 맞춥니다.'
     : teclHit
       ? 'TECL 슬리브 현재 '+(sleeveNow*100).toFixed(1)+'%와 목표 '+(w*100).toFixed(1)+'%의 차이 '+(gap*100).toFixed(1)+'%p가 기준 '+(teclBandNow*100).toFixed(1)+'%p를 넘었습니다.'
-      : 'TECL 차이 '+(gap*100).toFixed(1)+'%p가 기준 '+(teclBandNow*100).toFixed(1)+'%p 안이라 유지합니다.';
+      : 'TECL 차이 '+(gap*100).toFixed(1)+'%p가 기준 '+(teclBandNow*100).toFixed(1)+'%p 안'+(force?'이지만 입금 맞춤으로 목표에 맞춥니다.':'이라 유지합니다.');
   const guardReason=guardFlip
     ? (guard==='ON'
         ? 'TQQQ 종가 '+usd(qs)+'가 ON 경계 '+usd(upper)+'를 넘어 Guard ON으로 전환합니다.'
         : 'TQQQ 종가 '+usd(qs)+'가 OFF 경계 '+usd(lower)+' 아래라 Guard OFF로 대피합니다.')
-    : 'TQQQ Guard '+guard+' 유지 · 종가 '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+'.';
+    : 'TQQQ Guard '+guard+' 유지 · 종가 '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+(force?' · 입금 맞춤으로 '+(guard==='ON'?(D.guardWeight*100).toFixed(0)+'%':'0%')+' 목표에 맞춥니다':'')+'.';
+  const depReason=force?'입금('+dep.date+') '+usd2(dep.amount)+' 뒤 체결 기록이 없어 전체를 목표 비중으로 맞춥니다 — 모의 계산과 같은 규칙.':'';
   if($('alphaDecision')){
     $('alphaDecision').className='alpha-decision'+(needRebalance?' go':'');
-    $('alphaDecision').innerHTML='<b>오늘 판단: '+(needRebalance?'리밸런싱/상태조정':'유지')+'</b><br>'+teclReason+'<br>'+guardReason+'<br><span class="sub">판정일 '+qTecl.settled.date+' 확정종가 기준 · 장중가격은 신호가 아니라 주문수량 추정에만 사용</span>';
+    $('alphaDecision').innerHTML='<b>오늘 판단: '+(needRebalance?'리밸런싱/상태조정':'유지')+'</b><br>'+teclReason+'<br>'+guardReason+(force?'<br>'+depReason:'')+'<br><span class="sub">판정일 '+qTecl.settled.date+' 확정종가 기준 · 장중가격은 신호가 아니라 주문수량 추정에만 사용</span>';
   }
 
   // 확정종가로 목표 주수를 미리 계산한다. 다음 거래일 체결가는 주문 시점에는 알 수 없다.
-  const targetTq=(teclHit||horizonRebalancePending)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/ts)):tq;
-  const targetQq=(guardFlip||tqReb||horizonRebalancePending)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qs)):0):qq;
+  const targetTq=(teclHit||force||horizonRebalancePending)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/ts)):tq;
+  const targetQq=(guardFlip||tqReb||force||horizonRebalancePending)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qs)):0):qq;
   const targetSq=needRebalance?Math.max(0,Math.floor(Math.max(0,signalTotal-targetTq*ts-targetQq*qs)/ss)):sq;
 
   // 수수료까지 예약해 '화면 수량 그대로' 넣었을 때 현금 부족 주문이 되지 않게 매도→위험자산 매수→SGOV 순서로 제한한다.
@@ -2314,7 +2317,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     '<b>'+activeHorizon+'년 목표 보유금액:</b> TECL '+usd(teclAmt)+' · TQQQ '+usd(tqqqAmt)+' · SGOV '+usd(sgovAmt)+' · 잔여현금 약 '+usd(Math.max(0,signalTotal-teclAmt-tqqqAmt-sgovAmt))+
     '<br><b>목표비중:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 신호기준 평가액 '+usd(signalTotal)+
     '<br><b>오늘 매수금액:</b> TECL '+usd(buyMap.TECL)+' · TQQQ '+usd(buyMap.TQQQ)+' · SGOV '+usd(buyMap.SGOV)+' · 합계 '+usd(totalBuy)+' · <b>수수료 포함 필요현금 약 '+usd(totalNeed)+'</b>'+
-    '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+
+    '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+(force?' · 입금 맞춤 '+usd2(dep.amount):'')+
     '<br><span class="sub">목표 주수는 전일 확정종가로 계산하며, 매수가능 주수와 거래금액은 현재가·수수료(0.1%)로 추정합니다. 실제 체결가가 달라지면 매수량이 감소할 수 있습니다.</span>';
   // 실제 매매결과를 바꾸지 않고, 확정 종가 기준 판단과 발주 가능 건수를 구분해 표시한다.
   const guide=$('alphaGuide');
@@ -2344,7 +2347,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
       +'신호는 확정 종가, 주문 수량·금액은 현재가 추정입니다. SGOV는 남는 투자금을 보유하며 정수 주수·수수료에 따라 실제 주문이 달라집니다.</div>';
   }
   renderDualGuardStrip({orders:orders.length,orderText:orders.map(o=>o.sym+' '+(o.side==='buy'?'매수 ':'매도 ')+o.qty+'주').join(' · '),need:needRebalance,
-    teclNow:curTeclW,teclTarget:D.teclWeight*w,teclHit,gap,band:D.ivsBand,guard,guardFlip,dist:guardDist,ma:D.guardMA,upper,lower,date:qTecl.settled.date});
+    teclNow:curTeclW,teclTarget:D.teclWeight*w,teclHit,gap,band:D.ivsBand,guard,guardFlip,dist:guardDist,ma:D.guardMA,upper,lower,date:qTecl.settled.date,dep});
   if(horizonRebalancePending)horizonRebalancePending=false;
 }
 /* 🤖 듀얼 가드 한눈에 — 오늘 판단 · TECL(전체 자산 기준) · TQQQ Guard · 다음 Guard 경계.
@@ -2355,7 +2358,7 @@ function renderDualGuardStrip(o){
   if(!o){el.innerHTML=chip('오늘 판단','—','시세를 불러오는 중…')+chip('① TECL · 전체 자산','—','현재 → 목표')+chip('② TQQQ Guard','—','SMA225 대비')+chip('다음 Guard 경계','—','확정 종가 기준');return;}
   const pp=v=>(v*100).toFixed(1)+'%';
   el.innerHTML=
-    chip('오늘 판단 · '+o.date+' 신호',o.orders?'주문 '+o.orders+'건':o.need?'조정 0건':'유지',o.orders?o.orderText:o.need?'조건은 충족 · 정수 주수·현금 때문에 실제 주문 없음':'TECL 밴드·Guard 모두 유지 구간',o.orders?'go':'')
+    chip('오늘 판단 · '+o.date+' 신호',o.orders?'주문 '+o.orders+'건':o.need?'조정 0건':'유지',(o.dep?'입금 맞춤 '+usd2(o.dep.amount)+' · ':'')+(o.orders?o.orderText:o.need?'조건은 충족 · 정수 주수·현금 때문에 실제 주문 없음':'TECL 밴드·Guard 모두 유지 구간'),o.orders?'go':'')
    +chip('① TECL · 전체 자산',pp(o.teclNow)+' → '+pp(o.teclTarget),o.teclHit?'TECL 몫 기준 '+(o.gap*100).toFixed(1)+'%p 차이 · 이번에 조정':'TECL 몫 기준 '+(o.gap*100).toFixed(1)+'%p 차이 · '+(o.band*100).toFixed(0)+'%p 넘으면 조정')
    +chip('② TQQQ Guard',o.guard+(o.guardFlip?' 전환':''),'SMA'+o.ma+' 대비 '+(o.dist>=0?'+':'')+o.dist.toFixed(2)+'%',o.guard==='ON'?'on':'off')
    +chip('다음 Guard 경계',o.guard==='ON'?'OFF '+usd2(o.lower)+' 미만':'ON '+usd2(o.upper)+' 초과','확정 종가 기준 · SMA'+o.ma+'가 매일 움직여 경계도 바뀜');
@@ -2593,6 +2596,19 @@ function localSave(){
 function alphaEventList(ledger=alphaLedger){
   return (Array.isArray(ledger&&ledger.events)?ledger.events:[]).map((e,i)=>({...e,_i:i}))
     .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||a._i-b._i);
+}
+/* 입금 맞춤 — 모의 엔진(plan-session-engine.js replay)은 입금이 들어온 날 전체를 목표 비중으로 맞춘다(force).
+   운영 화면도 같은 규칙: 마지막 체결 뒤에 들어온 입금(dep)이 있으면 그 돈은 아직 안 맞춘 돈 → 다음 주문표에서 전체 맞춤.
+   예전엔 이 규칙이 운영 화면에 없어, 입금이 TECL 밴드·Guard 신호를 안 건드리면 다음 신호까지 현금으로 남았다(2026-11-08 · 모의와 갈림).
+   순서는 장부 순서(날짜 → 기록 순) — 같은 날이라도 입금보다 먼저 적은 체결은 그 입금을 맞춘 것이 아니다. 기록이 스스로 말하게 한다.
+   반환: 맞출 입금이 있으면 {date: 마지막 입금일, amount: 마지막 체결 뒤 입금 합}, 없으면 null. 배당·출금·잔고 맞춤은 해당 없음. */
+function alphaDepositPending(ledger=alphaLedger){
+  let dep=null;
+  for(const e of alphaEventList(ledger)){
+    if(e.type==='cash'&&e.kind==='dep'&&+e.amount>0)dep={date:String(e.date||''),amount:(dep?dep.amount:0)+(+e.amount)};
+    else if(e.type==='trade')dep=null;
+  }
+  return dep;
 }
 function alphaLedgerCalc(ledger=alphaLedger){
   const b=ledger&&ledger.base?ledger.base:{};
