@@ -1,5 +1,12 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-08 · 부동산 클로드 🏛️ 온비드 공매 수집 · 부동산 v1.13.0
+
+- `python scripts/realestate_claude/test_collect_onbid.py`: **22 PASS / 0 FAIL**(가짜 API: 응답 모양 · 인증키/한도/자료 없음 · 대전·세종만 · 원→만원 · 결과 붙이기 · 예전 결과 지키기 · 쌓기 · 한도 초과 2 · 인증 오류 시 파일 그대로).
+- `node scripts/test_realestate_claude_auction.cjs`: **47 PASS**. 변이: 수집기 9종 추가 — 처음 돌렸을 때 '지난 결과를 지움'이 살아남아 시험을 보강한 뒤 잡힘.
+- Chromium 360px(가짜 onbid.json): 진행 중 · 끝난 결과(낙찰 4.3억 · 86% · 6명) · 아파트만 끄기 · 분석에 넣기(물건번호·감정가·최저가) — 가로 넘침 0.
+- 실제 키로 돌린 결과는 병합 뒤 손 실행으로 확인(아래 갱신).
+
 ## 2026-11-08 · 자산플랜 입금 맞춤 · 플랜 v2.0.1
 
 - `scripts/check-plan-deposit.cjs`: ALL PASS · 변이 6/6 빨간불(맞춤 없음 · TECL 안 맞춤 · TQQQ 안 맞춤 · 체결 뒤에도 안 끝남 · 배당도 맞춤 · 입금 합 대신 마지막만).

@@ -100,5 +100,21 @@ console.log('[부동산 클로드 경매] 모의입찰 장부');
   ok('장부 요약: 4건 · 결과 3 · 낙찰 2 · 유찰 1 · 이겼을 것 1 · 평균 낙찰가율', S.n===4&&S.done===3&&S.sold===2&&S.unsold===1&&S.won===1&&near(S.avgWinApp,(23500+22000)/2/30000)&&near(S.avgWonDisc,c.snap.disc), JSON.stringify(S));
 }
 
+console.log('[부동산 클로드 경매] 온비드 공매 요약 · 분석 칸으로');
+{
+  const its=[
+    {name:'둔산동 ○○아파트',usage:'토지/건물 > 주거용건물 > 아파트',appraisal:50000,minPrice:40000,fails:2,bidEnd:'2026-10-29 17:00',onbidCltrno:'2026-0001-001',addr:'대전 서구',result:{status:'낙찰',win:43000,winApp:0.86,bidders:6}},
+    {name:'한솔동 ○○아파트',usage:'주거용건물 > 아파트',appraisal:30000,result:{status:'낙찰',win:24000,winApp:0.8,bidders:2}},
+    {name:'유성 상가',usage:'상가용및업무용건물',appraisal:20000,result:{status:'유찰'}},
+    {name:'세종 토지',usage:'토지 > 대지',appraisal:10000,result:null}];
+  const all=U.onbidSummary(its),apt=U.onbidSummary(its,true);
+  ok('공매 요약: 4건 · 끝난 3 · 낙찰 2 · 유찰 1 · 평균 낙찰가율 83% · 평균 입찰자 4명', all.n===4&&all.done===3&&all.sold===2&&all.unsold===1&&near(all.avgWinApp,0.83)&&near(all.avgBidders,4), JSON.stringify(all));
+  ok('아파트만: 2건 · 둘 다 낙찰', apt.n===2&&apt.sold===2&&apt.open===0);
+  const c=U.onbidToCase(its[0]);
+  ok('분석 칸으로: 온비드 물건번호 · 감정가 · 공고 최저가 · 유찰 횟수 · 입찰 마감일', c.court==='온비드 공매'&&c.caseNo==='2026-0001-001'&&c.appraisal===50000&&c.minPrice===40000&&c.fails===2&&c.saleDate==='2026-10-29');
+  const a=U.analyze({appraisal:c.appraisal,minPrice:c.minPrice,round:c.fails+1,bid:42000,market:52000},{},NOW);
+  ok('공고 최저가가 있으면 그 값을 쓴다(저감 계산 안 함)', a.minPrice===40000&&a.deposit===4000);
+}
+
 console.log(`\n결과: ${pass} PASS / ${fail} FAIL`);
 process.exit(fail?1:0);
