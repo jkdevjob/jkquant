@@ -11,8 +11,7 @@ const LINKS=[
   ['온비드(캠코 공매)','https://www.onbid.co.kr/','법원경매가 아닌 공매 — 인터넷으로 입찰합니다'],
   ['KB부동산(시세)','https://kbland.kr/','단지 시세·실거래 확인']
 ];
-const S={sub:'guide',form:null,book:null,bookErr:null,busy:false,msg:null,q:''};
-const DRAFT='rec-auc-draft-v1';
+const S={sub:'guide',form:null,book:null,bookErr:null,busy:false,msg:null,q:''};   // 입력 중인 사건은 이 창에서만 기억(브라우저 영구저장 금지) — 저장은 내 계정 장부로
 const CSS=`
 .rec .auc .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 10px;margin:6px 0 10px}
 .rec .auc label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--dim);font-weight:700}
@@ -36,8 +35,8 @@ let C=null;   // 화면 도우미(realestate-claude.js 가 넘김): A · X · es
 /* ── 입력 상태 ── */
 function blankForm(){ return {court:'대전지방법원',caseNo:'',itemNo:1,saleDate:'',name:'',complexId:null,area:'',appraisal:'',fails:'1',minPrice:'',resale:false,market:'',marketSrc:'',
   base:'',tenants:[{deposit:'',moveIn:'',fixed:'',claimed:false}],flags:{},legal:String(U.DEFAULTS.legal),moveOut:String(U.DEFAULTS.moveOut),repair:'0',arrears:'0',loan:'',loanRate:String(U.DEFAULTS.loanRate),bid:'',memo:''}; }
-function loadDraft(){ try{ const s=localStorage.getItem(DRAFT); if(s) return Object.assign(blankForm(),JSON.parse(s)); }catch(e){} return blankForm(); }
-function saveDraft(){ try{ localStorage.setItem(DRAFT,JSON.stringify(S.form)); }catch(e){} }
+function loadDraft(){ return blankForm(); }
+function saveDraft(){}
 const n=v=>{ if(v==null||v==='') return null; const x=+String(v).replace(/[, ]/g,''); return isFinite(x)?x:null; };
 function caseInput(f){
   const tenants=(f.tenants||[]).filter(t=>n(t.deposit)!=null||t.moveIn).map(t=>({deposit:n(t.deposit)||0,moveIn:t.moveIn||'',fixed:t.fixed||'',claimed:!!t.claimed}));
