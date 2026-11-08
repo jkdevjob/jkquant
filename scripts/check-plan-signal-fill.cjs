@@ -13,7 +13,7 @@ const E=ctx.JKPlanSessionEngine;
 function eq(a,b){assert.equal(JSON.stringify(a),JSON.stringify(b));}
 assert.equal(E.VERSION,2);assert.equal(E.ORDER_SIZING_BASIS,'previous-settled-close');
 assert.match(pl,/plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/);assert.match(idx,/plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/);   // 캐시 판은 모의 규칙 v2 이상이면 된다(엔진이 바뀔 때마다 올린다 — plan 1.44.0 에서 3)
-// All horizon planned trade sizes are determined only with the previously settled price.
+// Planned trade sizes are determined only with the previously settled price (5-year plan only — 10/15/20 retired 2026-11-08).
 const fixed=s=>{assert(!/\b(?:ep\.TECL|ep\.TQQQ|ep\.SGOV)\b/.test(s));};
 for(const part of [...js.matchAll(/if\(need\)\{\s*const (?:tt|tq)=([\s\S]*?)\s*targetShares=\{TECL:[\s\S]*?\};\s*\}/g)])fixed(part[0].replace(/targetOrders[\s\S]*$/,''));
 const lines=[],t=new Date('2022-01-03T00:00:00Z');let n=0;
@@ -37,7 +37,7 @@ function run(y,mut={},end=execDate){
  return E.replay(data);
 }
 let checks=0;
-for(const h of [5,10,15,20]){
+for(const h of [5]){
   const a=run(h),b=run(h,{TECL:1.23,TQQQ:1.10,SGOV:1.02});
   assert.equal(a.error,'');assert.equal(b.error,'');
   eq(a.lastDecision.target,b.lastDecision.target);
@@ -54,6 +54,13 @@ for(const h of [5,10,15,20]){
   assert.notEqual(a.stats.total,b.stats.total,'closing fill prices must affect P&L');
   checks++;
 }
+// Retired horizons are refused — never silently replayed under another rule set.
+for(const h of [10,15,20]){
+  const r=run(h);
+  assert.match(r.error,/^폐지된 플랜 — /);assert.equal(r.stats,null);assert.equal(r.nav.length,0);
+  assert.equal(r.ledger.events.length,0);
+}
+checks++;
 const cashBase=run(5),cashGap=run(5,{TECL:1.50,TQQQ:1.50,SGOV:1.50});
 eq(cashBase.lastDecision.target,cashGap.lastDecision.target);
 assert(cashGap.nav[0].cash>=0);
@@ -66,9 +73,7 @@ checks++;
 assert.match(pl,/Math\.floor\(signalTotal\*D\.teclWeight\*w\/ts\)/);
 assert.match(pl,/Math\.floor\(signalTotal\*D\.guardWeight\/qs\)/);
 assert.match(pl,/Math\.floor\(Math\.max\(0,signalTotal-targetTq\*ts-targetQq\*qs\)\/ss\)/);
-assert.match(pl,/Math\.floor\(total\*targetW\.TECL\/ts\)/);
-assert.match(pl,/Math\.floor\(total\*targetW\.TQQQ\/qs\)/);
-assert.match(pl,/Math\.floor\(Math\.max\(0,total-targetTq\*ts-targetQq\*qs\)\/ss\)/);
+assert(!/function renderAlternativePlan/.test(pl),'10/15/20-year order screen removed');
 checks++;
 // Verify the regression's detection power: mutate a real formula back to forbidden next-close sizing.
 const mutant=js.replace('Math.floor(total*D.teclWeight*w/sp.TECL)','Math.floor(total*D.teclWeight*w/ep.TECL)');
@@ -82,4 +87,4 @@ const opts={
 const good=E.replay(opts),broken=bad.replay(opts);
 assert.notEqual(good.lastDecision.target.TECL,broken.lastDecision.target.TECL,'regression detects future-close divisor');
 checks++;
-console.log('PLAN FILL LOOKAHEAD: '+checks+' groups PASS · horizons 5/10/15/20 · mutation red-check · cash & settlement correct');
+console.log('PLAN FILL LOOKAHEAD: '+checks+' groups PASS · horizon 5 · 10/15/20 retired refused · mutation red-check · cash & settlement correct');

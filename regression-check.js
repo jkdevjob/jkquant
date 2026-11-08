@@ -2198,7 +2198,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /onclick="refreshPaperViewButton\(\)"/.test(idx)
      && /const repaired=await paperRepairCommonStarts\(\)/.test(rvFast));
   ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
-     /const PAPER_VIEW_CACHE_VER=4;/.test(idx)
+     +((idx.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1])>=5   // 판은 계산이 바뀔 때마다 오른다(5: 폐지된 자산플랜 세션 줄 빼기 · 2026-11-08)
      && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
      && /x\.day===paperKstDate\(\)/.test(extractFn(idx,'function paperViewCacheFresh(x)'))
      && /if\(!force&&paperViewCacheFresh\(current\)\)return/.test(rvFast));
@@ -8338,32 +8338,18 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /137개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
-  ok('자산플랜 기간 탭 — 5·10·15·20년 + B안 화면 제거',
-     /id="horizonTabs"/.test(pl)
-     && [5,10,15,20].every(y=>new RegExp('data-horizon="'+y+'"').test(pl))
+  ok('자산플랜 담당 탭 — 🤖 클로드 · ⚡ 지피티 (기간 탭 5·10·15·20년은 2026-11-08 폐지) + B안 화면 제거',
+     /<nav class="plan-tabs" id="aiTabs"/.test(pl)
+     && /data-ai="claude"/.test(pl) && /data-ai="gpt"/.test(pl)
+     && !/data-horizon=/.test(pl) && !/id="horizonTabs"/.test(pl)
      && !/data-ptab="classic"[^>]*>/.test(pl)
      && /data-ppanel="classic" hidden aria-hidden="true" style="display:none"/.test(pl));
-  ok('기간별 전략은 옵션변경이 아니라 서로 다른 엔진',
-     /5:\{years:5,key:'ivsGuard'/.test(pl)
-     && /10:\{years:10,key:'trendDip'/.test(pl)
-     && /15:\{years:15,key:'shannon'/.test(pl)
-     && /20:\{years:20,key:'dualMomentum'/.test(pl)
-     && /if\(activeHorizon!==5\)\{renderAlternativePlan/.test(pl));
-  ok('10년 — TQQQ SMA250 추세 + RSI\/ATH 3단계 폭락매수 최적값',
-     /indicatorSeries\(closes,250\)/.test(pl)
-     && /r<=40&&dd<=-\.12/.test(pl) && /r<=35&&dd<=-\.22/.test(pl) && /r<=30&&dd<=-\.32/.test(pl)
-     && /const risk=bull\?\.80:\[0,\.20,\.40,\.60\]\[stage\]/.test(pl));
-  ok('15년 — Shannon 60:40 · 40~80% 밴드 밖에서만 복원 최적값',
-     /const cur=qq\*qs\/total,target=\.60,lo=\.40,hi=\.80/.test(pl)
-     && /targetW=need\?\{TECL:0,TQQQ:\.60,SGOV:\.40\}/.test(pl)
-     && /SMA·RSI·모멘텀 사용 안 함/.test(pl));
-  ok('20년 — 직전 월말 9M\/12M 듀얼모멘텀 + 12M 절대모멘텀 + SGOV 최적값',
-     /function _latestCompletedMonthIndex/.test(pl)
-     && /const m9=p\/p189-1,m12=p\/p252-1,score=\.3\*m9\+\.7\*m12/.test(pl)
-     && /ok:m12>0/.test(pl)
-     && /winner==='TECL'\?\{TECL:\.40,TQQQ:0,SGOV:\.60\}:winner==='TQQQ'\?\{TECL:0,TQQQ:\.40,SGOV:\.60\}:\{TECL:0,TQQQ:0,SGOV:1\}/.test(pl));
-  ok('10·15·20년 최적화 결과 문구가 화면에 고정',
-     /10년 백테스트 최적값/.test(pl) && /15년 백테스트 최적값/.test(pl) && /20년 백테스트 최적값/.test(pl));
+  ok('5년 듀얼 가드 하나 — 10·15·20년 엔진 화면(추세+폭락매수 · Shannon · 듀얼모멘텀) 폐지',
+     /5:\{years:5,key:'dualGuard'/.test(pl)
+     && !/10:\{years:10/.test(pl) && !/15:\{years:15/.test(pl) && !/20:\{years:20/.test(pl)
+     && !/function renderAlternativePlan/.test(pl) && !/function _latestCompletedMonthIndex/.test(pl)
+     && !/indicatorSeries\(closes,250\)/.test(pl) && !/targetW=need\?\{TECL:0,TQQQ:\.60,SGOV:\.40\}/.test(pl)
+     && !/10년 백테스트 최적값|15년 백테스트 최적값|20년 백테스트 최적값/.test(pl));
   ok('PATH A 리밸런싱 근거 UI — σ15·목표\/현재·밴드 게이지·Guard 차트·판단문장',
      /id="alphaSigma"/.test(pl)
      && /id="alphaTargetW"/.test(pl)
@@ -8390,10 +8376,11 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && !(b90.gap>.10)&&b89.gap>.10);
   ok('PATH A 표시판정 111%면 상단 초과',
      b111.gap>.10&&b111.side==='초과'&&near(b111.high,1.1,1e-12));
-  ok('PATH A 판단 UI는 그래프 전·5년 외 안내 숨김',
+  ok('PATH A 판단 UI는 그래프 전 · 안내는 처음엔 숨기고 5년 판정이 끝나면 연다 (10·15·20년 화면 폐지)',
      pl.indexOf('id="alphaDecision"')<pl.indexOf('class="alpha-charts"')
      && /id="alphaGuide" hidden/.test(pl)
-     && /if\(\$\('alphaGuide'\)\)\{\$\('alphaGuide'\)\.hidden=true/.test(pl));
+     && /guide\.hidden=false/.test(extractFn(pl,'function renderAlphaPlan(qTecl,qTqqq,qSgov)'))
+     && !/function renderAlternativePlan/.test(pl));
   ok('PATH A SMA225 범례와 주문0건 안내',
      /<span>— SMA225<\/span>/.test(pl)&&!/— SMA200<\/span>/.test(pl)
      && /조건 충족 · 정수주수·현금 등을 반영한 실제 주문 0건/.test(pl));
@@ -10059,15 +10046,9 @@ console.log('\n[127] 제14차 — 무매 전량 익절 뒤 같은 날 LOC 재매
 console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장부 현금 기록 · 표시 문구');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
-  /* ① 직전 월말 — 평일 자료를 만들어 확정 봉 날짜마다 어느 달 말을 쓰는지 본다 */
-  { const MF=new Function(optFn(pl,'function _monthDoneAt(dateStr)')+'\n'+extractFn(pl,'function _latestCompletedMonthIndex(rows,settledDate)')+'\nreturn _latestCompletedMonthIndex;')();
-    const rowsTo=last=>{ const out=[], d=new Date('2026-08-24T00:00:00Z'); for(;;){ const s=d.toISOString().slice(0,10); if(s>last) break; if(![0,6].includes(d.getUTCDay())) out.push({date:s,close:100}); d.setUTCDate(d.getUTCDate()+1); } return out; };
-    const at=last=>{ const R=rowsTo(last), i=MF(R,last); return i>=0?R[i].date:null; };
-    const T=[['2026-09-30','2026-09-30','9-30(수) 월말 확정 → 9월 끝'],['2026-09-29','2026-08-31','9-29 → 아직 9월 중 → 8월 말'],
-             ['2026-10-01','2026-09-30','10-01 → 9월 말'],['2026-10-30','2026-10-30','10-30(금) → 다음 평일 11-02 → 10월 끝'],['2026-10-29','2026-09-30','10-29 → 9월 말']];
-    const bad=T.filter(([l,exp])=>at(l)!==exp);
-    ok('① 20년 직전 월말 — 월말 종가가 확정되면 그달이 끝난 달 (9-30 → 9-30 · 9-29 → 8-31 · 10-01 → 9-30 · 10-30(금) → 10-30 · 10-29 → 9-30)',
-       bad.length===0, bad.map(([l,e])=>l+' → '+at(l)+' (기대 '+e+')').join(' / ')); }
+  /* ① 20년 듀얼모멘텀 월말 신호 — 20년 플랜 폐지(2026-11-08)로 함수째 빠졌다. 남은 흔적이 없는지만 본다 */
+  ok('① 20년 월말 신호 함수 폐지 (_monthDoneAt · _latestCompletedMonthIndex · _momentumPoint 없음)',
+     !/function _monthDoneAt|function _latestCompletedMonthIndex|function _momentumPoint/.test(pl));
 
   /* ② 장부 계산 — 현금 기록은 현금만 바꾸고, 입출금 순액·배당 합을 따로 든다 */
   const L0={base:{date:'2026-09-01',tecl:0,tqqq:0,sgov:0,cash:1000},events:[
@@ -10118,16 +10099,13 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
        pg.ready && pg.base===15000 && Math.abs(pg.ratio-0.2)<1e-12, JSON.stringify(pg)); }
 
   /* ③ 표시 문구 */
-  { const alt=extractFn(pl,'function renderAlternativePlan(qTecl,qTqqq,qSgov)');
-    ok('③ 10년 근거 칸 — SMA250 값을 SMA250 이라고 적는다 (기간전략 엔진에 SMA200 글자 없음)',
-       /'종가 '\+usd\(qs\)\+' \/ SMA250 '\+usd\(sma\)/.test(alt) && !/SMA200/.test(alt)); }
   ok('③ 계좌 합계 — 손익률 칸은 평가손익률(보유분) · 정규장일 때만 실시간 · 현금 기록 칸과 버튼 연결',
      /<div class="k">평가손익률 \(보유분\)<\/div><div class="v" id="alphaReturnTotal">/.test(pl) && !/<div class="k">전체 손익률<\/div>/.test(pl)
      && /L\.marketState==='REGULAR'\?'실시간 ':'최근가 '/.test(extractFn(pl,'function renderAlphaLedger()'))
      && /id="alphaCashRec"/.test(pl) && /\$\("alphaCashAdd"\)\.addEventListener\("click",alphaAddCashEvent\)/.test(pl)
      && /if\(e\.type==='cash'\)\{const amt=/.test(extractFn(pl,'function renderAlphaLedger()')));
-  ok('③ 화면 검증 문구 — 10·15·20년 독립 재현과 2000~2009년 시작 합성 스트레스(10년 −98.7% · 15년 −98.0% · 20년 −39.6% · 5년은 fe11b78 새 파라미터로 바뀜)',
-     (pl.match(/독립 재현/g)||[]).length>=3 && /MDD 최악 −98\.7%/.test(pl) && /MDD 최악 −98\.0%/.test(pl) && /MDD 최악 −39\.6%/.test(pl));
+  ok('③ 화면 검증 문구 — 5년 듀얼 가드는 앱 엔진과 같은 체결로 다시 잰 값(세후 연 30.9% · MDD 40.6%)과 롤링 재검증 대기를 함께 적는다 (10·15·20년 문구 폐지)',
+     /앱 엔진과 같은 체결로 다시 잰 값/.test(pl) && /연 30\.9% · MDD 40\.6%/.test(pl) && /137개 시작구간/.test(pl) && !/MDD 최악 −98\.7%/.test(pl));
 }
 
 /* ════ 129. 자산플랜 현재가 — 페이지 새로고침마다 캐시 우회 + 총자산도 현재가 사용 ════ */
@@ -10139,7 +10117,7 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   ok('현재가 — 1분봉 없이(intraday=0) Pages 60초 캐시 재사용(캐시 우회·no-store 없음) · 요청마다 7·10초 상한 — check-login-quote-paper.cjs 와 같은 규칙',
      /intraday=0'/.test(fq) && !/_ts=/.test(fq) && !/cache:'no-store'/.test(fq) && /for\(const ms of \[7000,10000\]\)/.test(fq) && /Promise\.race\(\[p,lim\]\)/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
-  ok('자산플랜 버전 — 개선 70/30 이후 버전 표기 (숫자는 올라가므로 x.y.z 형식만 본다)', /자산플랜 <span class="ver">v1\.(3[2-9]|[4-9]\d)\.\d+<\/span>/.test(pl));
+  ok('자산플랜 버전 — 개선 70/30 이후 버전 표기 (숫자는 올라가므로 x.y.z 형식만 본다)', /자산플랜 <span class="ver">v(?:1\.(?:3[2-9]|[4-9]\d)|[2-9]\.\d+|[1-9]\d+\.\d+)\.\d+<\/span>/.test(pl));   // v2.0.0 (2026-11-08 클로드/지피티 탭 개편)부터 첫 자리가 2
 }
 
 /* ════ 130. 무매 자동주문 — 크론이 주문 창 안에 떨어진다 · 주문 직전 선점 · 공개 로그 ════
@@ -10650,13 +10628,13 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   const pePath=__d+'/plan-session-engine.js', pe=fs.existsSync(pePath)?fs.readFileSync(pePath,'utf8'):'';
 
-  ok('A 자산플랜 5/10/15/20 전략 탭 아래에 공통 세션바와 +세션 모달',
+  ok('A 자산플랜 🤖 클로드 탭 안에 공통 세션바와 +세션 모달 (기간 탭 폐지)',
      /id="assetSessionCard"/.test(pl) && /id="assetSessionChips"/.test(pl)
      && /id="assetSessionAdd"/.test(pl) && /id="assetSessionModal"/.test(pl)
-     && /data-horizon="5"/.test(pl) && /data-horizon="10"/.test(pl) && /data-horizon="15"/.test(pl) && /data-horizon="20"/.test(pl));
+     && pl.indexOf('id="pane-claude"')>=0 && pl.indexOf('id="pane-claude"')<pl.indexOf('id="assetSessionCard"') && !/data-horizon=/.test(pl));
 
-  ok('B 세션은 horizon별 분리되고 현재 투자중 플랜은 Firebase 원장과 분리',
-     /filter\(x=>x&&\+x\.horizon===\+h\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
+  ok('B 세션은 5년만 · 폐지된 기간·규칙 세션은 숨기고(planRetired) 현재 투자중 플랜은 Firebase 원장과 분리',
+     /filter\(x=>x&&\+x\.horizon===\+h&&!planRetired\(x\)\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
      && /fiveYearPlanV2/.test(pl)
      && /if\(x&&!x\.paper\)syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave(')));
 
@@ -10741,7 +10719,11 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
     }
     const T=rows.map(x=>({date:x.date,close:x.tecl})),Q=rows.map(x=>({date:x.date,close:x.tqqq})),G=rows.map(x=>({date:x.date,close:x.sgov}));
     const start=rows[330].date;
-    for(const y of [5,10,15,20]){
+    for(const y of [10,15,20]){   // 2026-11-08 폐지 — 다른 규칙으로 몰래 재생하지 않고 거절한다
+      const R=E.replay({horizon:y,startDate:start,principal:10000,monthlyAdd:100,tecl:T,tqqq:Q,sgov:G});
+      ok('J '+y+'년 모의 — 폐지된 플랜이라 재생 거절(거래 없음)',R&&/^폐지된 플랜 — /.test(R.error)&&R.stats===null&&R.ledger.events.length===0,R&&R.error);
+    }
+    for(const y of [5]){
       const R=E.replay({horizon:y,startDate:start,principal:10000,monthlyAdd:100,tecl:T,tqqq:Q,sgov:G});
       ok('J '+y+'년 모의 — NAV/성과/거래 생성',
          R&&R.stats&&R.nav.length>250&&R.stats.total>0&&R.stats.inflow>10000&&R.stats.nTrade>0,
@@ -10774,8 +10756,8 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
 {
   const {spawnSync}=require('child_process');
   const r=spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-signal-fill.cjs')],{encoding:'utf8',timeout:20000});
-  ok('H2 자산플랜 전일 확정가 주문수량 · 미래 종가 변이 검증 5/10/15/20년',
-    r.status===0&&(r.stdout||'').includes('PLAN FILL LOOKAHEAD: 7 groups PASS'),
+  ok('H2 자산플랜 전일 확정가 주문수량 · 미래 종가 변이 검증 5년 (10/15/20년 거절)',
+    r.status===0&&(r.stdout||'').includes('PLAN FILL LOOKAHEAD: 5 groups PASS'),
     String(r.stdout||'')+String(r.stderr||''));
   const plan=fs.readFileSync(path.join(__d,'plan.html'),'utf8');
   const shared=fs.readFileSync(path.join(__d,'plan-session-engine.js'),'utf8');
@@ -12714,12 +12696,13 @@ console.log('\n[37-조회] 모의 성과 첫 진입 — 오늘 결과 없으면 
 
 Promise.all(PENDING).then(()=>{
   const rec=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-inf-record-quantity.cjs'),IDX],{encoding:'utf8'});
-  const pr=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-rules-exp.cjs')],{encoding:'utf8'});
-  ok('5년 플랜 규칙 벌(새 규칙 실험적 확장): 판정·재생 동일성·Guard −3%·TECL 비대칭·해 첫 거래일 30%·변이 5종',pr.status===0,(pr.stdout||'')+(pr.stderr||''));
-  const prs=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-rules-session.cjs')],{encoding:'utf8'});
+  /* 2026-11-08 — 5년 규칙 벌(새 규칙·공격형) 시험 2개(check-plan-rules-exp · check-plan-rules-session)는 규칙 폐지와 함께 빠졌다.
+     폐지 자체(규칙 하나 · 10·15·20년 거절 · 폐지 세션 숨김 · 기본 결과 = 개편 전 엔진)와 클로드/지피티 탭은 check-plan-claude-tab 이 본다. */
+  const pct=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-claude-tab.cjs')],{encoding:'utf8'});
+  ok('자산플랜 v2 🤖 클로드/⚡ 지피티 탭 · 5년 듀얼 가드 하나: 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·탭 전환·폐지 세션 숨김·모의 목록·변이 14종',
+     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 14/14 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
   ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
-  ok('자산플랜 세션 설정 5년 규칙: 세션마다 저장·모달 저장·화면 반영·칩·모의투자 목록·변이 5종',prs.status===0,(prs.stdout||'')+(prs.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));

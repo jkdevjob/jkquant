@@ -24,7 +24,7 @@ function update(session,input,options){
   x.name=String(input.name||'').trim()||x.name||x.horizon+'년 세션';
   x.paper=paper;x.simStart=paper?start:'';
   x.settings={...st,startCapital:restoring?+liveBase.startCapital:cap,monthlyAdd:monthly,targetCapital:target,startDate:restoring?liveBase.startDate:start};
-  if(input.rules!=null){const rk=String(input.rules);x.settings.alphaRules=(rk==='exp1'||rk==='exp2')?rk:'base';}   // 5년 규칙 벌(기본 base · exp1 실험적 확장) — 세션마다 저장 · 안 주면 기존 값 그대로
+  x.settings.alphaRules='base';   // 규칙은 기본 하나(2026-11-08 새 규칙·공격형 폐지) — 무엇을 넘겨도 base 로 저장한다
   const end=new Date(x.settings.startDate+'T00:00:00Z');end.setUTCFullYear(end.getUTCFullYear()+Number(x.horizon));
   x.settings.targetDate=end.toISOString().slice(0,10);
   if(paper)x.paperFxRate=Number(o.fx);
