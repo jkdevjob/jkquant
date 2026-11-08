@@ -59,12 +59,16 @@ async function login(){
 }
 
 async function publish(){
-  const files=fs.readdirSync(POSTS).filter(f=>f.startsWith(DATE+'_')&&f.endsWith('.json')).sort();
+  // 하루 최대 3개(사용자 지시 2026-11-08). 한 번 실행에 1개만 올린다 — 30분마다 돌므로 글 사이 간격이 자연히 생긴다.
+  const files=fs.readdirSync(POSTS).filter(f=>f.startsWith(DATE+'_')&&f.endsWith('.json'));
   if(!files.length){ log('NO_POST',DATE,'(오늘 원고가 아직 저장소에 없음)'); status({result:'NO_POST'}); return; }
-  const postFile=path.join(POSTS,files[0]); const post=JSON.parse(fs.readFileSync(postFile,'utf8'));
-  if(post.published){ log('ALREADY',post.published.url); status({result:'ALREADY',url:post.published.url}); return; }
-  const found=(await naverList()).find(x=>x.title===post.title);
-  if(found){ const url=`https://blog.naver.com/${BLOG}/${found.logNo}`; log('ALREADY_ON_NAVER',url); status({result:'ALREADY',url}); return; }
+  const list=await naverList();
+  const todo=files.map(f=>({f,post:JSON.parse(fs.readFileSync(path.join(POSTS,f),'utf8'))}))
+    .filter(x=>!x.post.published && !list.some(y=>y.title===x.post.title))
+    .sort((a,b)=>(a.post.priority||1)-(b.post.priority||1)||a.f.localeCompare(b.f));
+  if(!todo.length){ log('ALREADY','오늘 원고',files.length,'개 모두 올라감'); status({result:'ALREADY',count:files.length}); return; }
+  const postFile=path.join(POSTS,todo[0].f); const post=todo[0].post;
+  log('PICK',todo[0].f,'(남은',todo.length,'개 중 우선순위',post.priority||1,')');
 
   const ctx=await launch(true);
   try{

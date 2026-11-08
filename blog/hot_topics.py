@@ -16,7 +16,9 @@ UA = {'User-Agent': 'Mozilla/5.0 (blog topic research)'}
 SENSITIVE = '사망 숨져 숨진 숨졌 살해 살인 흉기 피살 성폭 성범죄 자살 극단 투신 실종 시신 학대 폭행 참사 유족'.split()
 STOP = set('''속보 단독 종합 영상 사진 포토 자막뉴스 현장 오늘 어제 내일 이번 지난 올해 내년 이후 이전 관련 위해 대한 통해 때문 정도 가장 모두 다시
  결국 무슨 일이 왜 이유 이게 그냥 진짜 만에 만원 억원 조원 달러 대해 발표 공개 논란 확인 사실 전망 분석 우려 기대 가능성 상황 문제 여부 이상 이하
- 하는 하고 했다 한다 있다 없다 된다 됐다 위한 대로 까지 부터 에서 으로 에게 the and 기자 뉴스 보도 입장 발언 주장 이날 당시 최대 최고 최초 역대'''.split())
+ 하는 하고 했다 한다 있다 없다 된다 됐다 위한 대로 까지 부터 에서 으로 에게 the and 기자 뉴스 보도 입장 발언 주장 이날 당시 최대 최고 최초 역대
+ 하루 이제 나왔다 되나 아냐 어디 뛰었다 직격 놓고 제안 정부 국민 시대 직접 결정 공개 사람 생각 지금 정말 이렇게 그런데 하지만
+ 20대 30대 40대 50대 60대 70대 80대 여성 남성 남편 아내 아들 엄마 아빠 1만 2만 3만 10만 100만 서울 한국'''.split())
 ECON_WORDS = ('금리 환율 코스피 코스닥 증시 주가 주식 유가 원유 반도체 수출 물가 부동산 아파트 집값 전세 대출 연금 세금 관세 달러 비트코인 '
               '금값 실적 연준 한은 국채 경제 고용 소비 투자 ETF 배당 은행 보험 월급 임금 예산 재정 GDP 성장률').split()
 
@@ -55,7 +57,7 @@ def tokens(title):
 
 
 def clusters(boxes, top=12):
-    """같은 기사들에 함께 나오는 낱말은 한 이슈로 묶는다. 점수 = 그 이슈를 상위 5개에 올린 서로 다른 언론사 수."""
+    """같은 이슈의 낱말을 한 묶음으로. 점수 = 대표 낱말이 들어간 기사를 상위 5개에 올린 서로 다른 언론사 수(합집합으로 부풀리지 않음)."""
     items_by_tok = defaultdict(set)
     meta = {}
     for name, items in boxes:
@@ -65,22 +67,18 @@ def clusters(boxes, top=12):
             for w in tokens(title):
                 items_by_tok[w].add(key)
     ranked = sorted(items_by_tok.items(), key=lambda kv: (-len({k[0] for k in kv[1]}), kv[0]))
-    groups = []  # [labels, item set]
+    groups = []
     for w, its in ranked:
         if len({k[0] for k in its}) < 2:
             break
         for g in groups:
-            inter = len(its & g[1])
-            if inter / len(its) >= 0.5:
-                g[0].append(w); g[1] |= its
+            ov = len(its & g['items'])
+            if ov / len(its) >= 0.6 and ov / len(g['items']) >= 0.3:
+                g['labels'].append(w)
                 break
         else:
-            groups.append([[w], set(its)])
-    out = []
-    for labels, its in groups:
-        presses = {k[0] for k in its}
-        hs = sorted(meta[k] for k in its)
-        out.append((' · '.join(labels[:4]), len(presses), hs))
+            groups.append({'labels': [w], 'items': set(its)})
+    out = [(' · '.join(g['labels'][:4]), len({k[0] for k in g['items']}), sorted(meta[k] for k in g['items'])) for g in groups]
     out.sort(key=lambda x: -x[1])
     return out[:top]
 
