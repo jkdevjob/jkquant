@@ -33,10 +33,11 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
     // 매도 먼저
     // o.frac: 소수 주 — 합성 자료처럼 1주 값이 원금보다 비쌀 때(2000년 합성 TQQQ 67,137$) 정수 주가 매매 자체를 막는 왜곡을 없앤다
     const shares=x=>o.frac?x:Math.floor(x);   // o.cnt={}: 매매 기록(종목별 [날짜, 's'|'b', 금액/총자산]) — 안 주면 계산은 그대로
-    for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n;
+    // o.sizePrev(11-08): 주수를 전일 종가로 정한다(앱 플랜 엔진 ORDER_SIZING_BASIS 'previous-settled-close' 와 같게) — 안 주면 기존(당일 종가)
+    for(const s of todo){ const want=shares(tot*(tgt[s]||0)/(o.sizePrev?pp[s]:px[s])); if(want<q[s]){ const n=q[s]-want, g=n*px[s], b=basis[s]/q[s]*n;
       if(o.deferDec&&s===o.deferDec.sym&&want>0&&remY[k]<o.deferDec.days){ const gain=g-g*fee-b; if(gain>0&&(!o.deferDec.taxable||yearPnl+gain>DED)){ deferN++; continue; } }   // 12월 이연(전량 청산 = Guard·규칙 0 목표는 미루지 않음)
       cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'s',g/tot]); } }
-    for(const s of todo){ const want=shares(tot*(tgt[s]||0)/px[s]); if(want>q[s]){ const n=Math.min(want-q[s],shares(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'b',g/tot]); } } }
+    for(const s of todo){ const want=shares(tot*(tgt[s]||0)/(o.sizePrev?pp[s]:px[s])); if(want>q[s]){ const n=Math.min(want-q[s],shares(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'b',g/tot]); } } }
     // o.harvest(11-07): 연말(그해 마지막 거래일 종가) 실현손익을 250만원 공제(DED)에 맞춘다 — 공제 미달이면 평가이익을 팔고 바로 되사 공제를 채움(원가 상향 · 미래 세금↓) · 공제 초과면 평가손실을 팔고 되사 상계(이월공제 없음 → 공제까지만). 수수료 양쪽. 안 주면 기존과 같다.
     if(o.harvest&&(k===i1||dates[k+1].slice(0,4)!==d.slice(0,4))){ const H=o.harvest; let gH=0,lH=0;
       for(const s of syms){ if(!(q[s]>0)) continue; const avg=basis[s]/q[s], p0=px[s];

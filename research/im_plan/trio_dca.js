@@ -18,16 +18,17 @@ const HOOK=()=>{ const patch=(name,from,to)=>{ let s=window[name].toString(); if
   patch('runIVS','if(i%10===0)snap.push([d,eq]);','window.__EQ.push([d,eq]);if(i%10===0)snap.push([d,eq]);');
   patch('costOf','deduct:COST_DEDUCT,','deduct:COST_DEDUCT*(window.__DEDW??1),'); };
 const PXC={}; const pxPrep=syms=>PXC[syms.join()]||(PXC[syms.join()]=prep(syms));
-const pxRun=(spec,cap,from,to,w,dep)=>{ const P=pxPrep(spec.px), R=spec.rule(P); const o=Object.assign({cap,from,to,fee:spec.fee??FEE,tax:true,dedMul:w,frac:spec.px.some(x=>/^SYN/.test(x))},R); if(dep) o.dep={perDay:dep};
+const pxRun=(spec,cap,from,to,w,dep)=>{ const P=pxPrep(spec.px), R=spec.rule(P); const o=Object.assign({cap,from,to,fee:spec.fee??FEE,tax:true,dedMul:w,frac:spec.px.some(x=>/^SYN/.test(x)),sizePrev:!!process.env.SIZEPREV},R); if(dep) o.dep={perDay:dep};   // SIZEPREV=1: 주수를 전일 종가로(앱 플랜 엔진과 같게 · 11-08)
   const m=toMap(sim(P,o).eq); return dep?{m,flows:o.flows}:m; };
 const PB={gsb:1e9}, PN={gbOn:.01,gbOff:.03,sbDn:.01,sbUp:.15,gReb:'y'}, PX=Object.assign({s0:.60},PN);
 const LEGS={ IM:{app:'IM',tkr:'SOXL'}, IVS_Uc:{app:'IVS',tkr:'USD',ivs:[.55,40,.15,'iv','cash']},   // 섀넌 USD = 앱 기본값(s0 55 · 40일 · 밴드 15%p · 단기국채)
   P5:{px:C=>({px:[C.E,C.T],rule:P=>mk(P,C.E,C.T,PB),fee:.001}), plan:true}, P5N:{px:C=>({px:[C.E,C.T],rule:P=>mk(P,C.E,C.T,PN),fee:.001}), plan:true}, P5X:{px:C=>({px:[C.E,C.T],rule:P=>mk(P,C.E,C.T,PX),fee:.001}), plan:true},
   H_G:{px:()=>({px:['GOLDX'],rule:hold('GOLDX')})} };
 const LUMPS={ L0:[['IM',1/3],['P5',2/3]], L7:[['IM',1/3],['P5N',2/3]], L1:[['P5N',1]], L2:[['P5N',5/6],['IVS_Uc',1/6]], L3:[['P5N',2/3],['IVS_Uc',1/3]],
-  L4:[['P5X',5/6],['IVS_Uc',1/6]], L5:[['IM',1/6],['P5X',5/6]], L6:[['P5N',5/6],['H_G',1/6]], L8:[['P5N',2/3],['IVS_Uc',1/6],['H_G',1/6]] };
+  L4:[['P5X',5/6],['IVS_Uc',1/6]], L5:[['IM',1/6],['P5X',5/6]], L6:[['P5N',5/6],['H_G',1/6]], L8:[['P5N',2/3],['IVS_Uc',1/6],['H_G',1/6]],
+  L9:[['P5',5/6],['IVS_Uc',1/6]], L10:[['P5',1]], L11:[['P5',2/3],['IVS_Uc',1/3]], L12:[['P5X',1]] };
 const LNAME={L0:'지금: 무매 1만 + 플랜(기본) 2만',L7:'무매 1/3 + 플랜(새 규칙) 2/3',L1:'플랜(새 규칙) 100%',L2:'플랜(새) 5/6 + 섀넌 USD 1/6',L3:'플랜(새) 2/3 + 섀넌 USD 1/3',
-  L4:'플랜(공격형) 5/6 + 섀넌 USD 1/6',L5:'무매 1/6 + 플랜(공격형) 5/6',L6:'플랜(새) 5/6 + 금 1/6',L8:'플랜(새) 2/3 + 섀넌 USD 1/6 + 금 1/6'};
+  L4:'플랜(공격형) 5/6 + 섀넌 USD 1/6',L5:'무매 1/6 + 플랜(공격형) 5/6',L6:'플랜(새) 5/6 + 금 1/6',L8:'플랜(새) 2/3 + 섀넌 USD 1/6 + 금 1/6',L9:'플랜(기본) 5/6 + 섀넌 USD 1/6',L10:'플랜(기본) 100%',L11:'플랜(기본) 2/3 + 섀넌 USD 1/3',L12:'플랜(공격형) 100%'};
 const DCAS={ BASKET:{USD:2,ROM:2,QLD:2,GOLD:1,TSLA:1}, LEV3:{USD:1,ROM:1,QLD:1}, USD:{USD:1}, ROM:{ROM:1}, QLD:{QLD:1}, TQQQ:{TQQQ:1}, QQQ:{QQQ:1}, SPY:{SPY:1}, GOLD:{GOLD:1}, TSLA:{TSLA:1},
   QLD_G2:{QLD:8,GOLD:2}, QLD_G3:{QLD:7,GOLD:3}, USD_G3:{USD:7,GOLD:3}, QQQ_G3:{QQQ:7,GOLD:3}, SPY_G3:{SPY:7,GOLD:3}, LEV_G2:{USD:8/3,ROM:8/3,QLD:8/3,GOLD:2}, CASH:{CASH:1}, PLAN:'plan', PROP:'prop' };
 const DNAME={BASKET:'지금 바구니',LEV3:'USD·ROM·QLD 같은 비율',USD:'USD',ROM:'ROM',QLD:'QLD',TQQQ:'TQQQ',QQQ:'QQQ',SPY:'SPY',GOLD:'금(GLDM)',TSLA:'TSLA',QLD_G2:'QLD 8 + 금 2',QLD_G3:'QLD 7 + 금 3',USD_G3:'USD 7 + 금 3',
