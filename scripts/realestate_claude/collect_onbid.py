@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -44,6 +45,13 @@ class LimitError(ApiError):
     """하루 호출 한도를 넘음(코드 22) — 여기서 멈추고 받은 만큼 저장한다."""
 
 
+class Forbidden(ApiError):
+    """HTTP 403 — 이 API 는 활용신청이 승인되지 않았다(키는 다른 API 에서 동작할 수 있음)."""
+
+
+STAT = {"0001": "입찰준비중", "0002": "입찰진행중", "0003": "입찰마감", "0006": "개찰중"}   # 이름 대신 코드가 올 때
+
+
 def key_from_env():
     k = (os.environ.get("DATA_GO_KR_KEY") or "").strip()
     return urllib.parse.unquote(k) if "%" in k else k        # 인코딩된 키를 넣어도 한 번만 인코딩되게
@@ -61,6 +69,11 @@ def get_json(url, params, tries=3):
             return parse(text)
         except ApiError:
             raise
+        except urllib.error.HTTPError as e:
+            if e.code == 403:   # 권한 없음은 다시 해도 같다 — 바로 알린다
+                raise Forbidden("%s: HTTP 403 — 공공데이터포털에서 이 API 활용신청 승인을 확인하세요" % url.rsplit("/", 1)[-1])
+            last = e
+            time.sleep(2 ** a)
         except Exception as e:  # 네트워크·일시 오류만 재시도
             last = e
             time.sleep(2 ** a)
@@ -138,7 +151,7 @@ def list_notices(key, start, end, getj=get_json):
                             "prptDivCd": PRPT, "opbdDtStart": start, "opbdDtEnd": end})
         its, total = items_of(d)
         out += its
-        if not its or len(out) >= total or page >= 60:
+        if not its or len(out) >= total or page >= 300:   # 전국 공고가 1만 줄을 넘는다(2026-11: 13,078줄) — 끝까지 읽는다
             return out, total
         page += 1
 
@@ -156,6 +169,17 @@ def pick_notices(notices, budget):
     return uniq[:budget], len(uniq), sum(1 for n in uniq if hint(n))
 
 
+def stat_name(nm, cd):
+    """입찰결과 이름 — 이름 칸에 코드(0001 등)가 오면 이름으로 바꾼다."""
+    v = str(nm or "").strip()
+    if re.fullmatch(r"\d{4}", v):
+        return STAT.get(v, "상태 " + v)
+    if v:
+        return v
+    c = str(cd or "").strip()
+    return STAT.get(c, ("상태 " + c) if c else None)
+
+
 def norm_item(it, notice):
     return {
         "id": "%s-%s-%s" % (it.get("cltrMngNo"), it.get("pbctNsq") or notice.get("pbctNsq") or "", it.get("pbctCdtnNo") or ""),
@@ -167,7 +191,7 @@ def norm_item(it, notice):
         "round": it.get("pbctNsq") or notice.get("pbctNsq"), "fails": it.get("usbdNft"), "batch": it.get("batcBidYn") == "Y",
         "appraisal": man(it.get("apslEvlAmt")), "minPrice": man(it.get("lowstBidPrcIndctCont")),
         "minRatio": it.get("apslPrcCtrsLowstBidRto"), "bidStart": when(it.get("cltrBidBgngDt")), "bidEnd": when(it.get("cltrBidEndDt")),
-        "opbd": when(notice.get("cltrOpbdDt")), "status": it.get("pbctStatNm"), "result": None,
+        "opbd": when(notice.get("cltrOpbdDt")), "status": stat_name(it.get("pbctStatNm"), it.get("pbctStatCd")), "result": None,
     }
 
 
@@ -182,7 +206,7 @@ def attach_results(items, rows):
         c = by.get((it["cltrMngNo"], str(it["round"] or "")))
         if not c:
             continue
-        it["result"] = {"status": c.get("pbctStatNm"), "win": man(c.get("scfbAmt")), "bidders": c.get("vldBddrNope"),
+        it["result"] = {"status": stat_name(c.get("pbctStatNm"), c.get("pbctStatCd")), "win": man(c.get("scfbAmt")), "bidders": c.get("vldBddrNope"),
                         "invalid": c.get("nfctBddrNope"), "winOverMin": c.get("lowstBidCtrsScfbPrcRto"), "opbd": when(c.get("cltrOpbdDt"))}
         if it["appraisal"] and it["result"]["win"]:
             it["result"]["winApp"] = round(it["result"]["win"] / it["appraisal"], 4)
@@ -193,6 +217,8 @@ def attach_results(items, rows):
 def merge(old_items, new_items):
     """같은 물건·회차는 새 값으로, 결과는 한 번 들어오면 지우지 않는다. 이번에 안 보인 끝난 물건도 남긴다(통계용)."""
     keep = {x["id"]: x for x in old_items or []}
+    for x in keep.values():   # 지난 수집이 남긴 상태 코드(0001 등)도 이름으로 — 이번에 안 보인 물건은 다시 안 받는다
+        x["status"] = stat_name(x.get("status"), None)
     for it in new_items:
         prev = keep.get(it["id"])
         if prev and prev.get("result") and not it.get("result"):
@@ -224,7 +250,7 @@ def main(getj=get_json, out=OUT, today=None):
             print(str(e), file=sys.stderr)
             limited = True
             break
-        except ApiError:
+        except ApiError:   # 인증키·권한 오류(403 포함)는 멈춘다
             raise
         except Exception as e:  # 한 공고 실패는 그 공고만
             failed.append(n.get("pbancMngNo"))
@@ -234,10 +260,14 @@ def main(getj=get_json, out=OUT, today=None):
         items += mine
         if mine and str(n.get("cltrOpbdDt") or "") <= now:
             closed.append(n)
-    rows = []
+    rows, warnings = [], []
     for n in ([] if limited else closed[:RSLT_BUDGET]):
         try:
             rows += items_of(getj(RSLT_URL, {"serviceKey": key, "pageNo": 1, "numOfRows": 100, "resultType": "json", "pbancMngNo": n["pbancMngNo"]}))[0]
+        except Forbidden as e:   # ③ 만 승인이 안 됨 — 한 번 알고 그만 부른다(나머지 자료는 그대로)
+            print(str(e), file=sys.stderr)
+            warnings.append("rsltForbidden")
+            break
         except LimitError as e:
             print(str(e), file=sys.stderr)
             limited = True
@@ -253,7 +283,7 @@ def main(getj=get_json, out=OUT, today=None):
     print("대전·세종 물건 %d건(결과 %d) · 쌓인 것 %d건 · 실패 %d" % (len(items), got, len(merged), len(failed)), file=sys.stderr)
     doc = {"schemaVersion": 1, "updated": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "source": "한국자산관리공사 차세대 온비드 오픈API(공공데이터포털) — 공고목록 · 공고상세 물건정보 · 공고 입찰결과상세",
-           "window": {"opbdStart": start, "opbdEnd": end}, "noticeTotal": total, "noticesChecked": len(picked), "items": merged}
+           "window": {"opbdStart": start, "opbdEnd": end}, "noticeTotal": total, "noticesChecked": len(picked), "warnings": warnings, "items": merged}
     strip = lambda d: json.dumps({k: v for k, v in (d or {}).items() if k != "updated"}, sort_keys=True, ensure_ascii=False)
     if strip(doc) != strip(old):
         os.makedirs(os.path.dirname(out), exist_ok=True)

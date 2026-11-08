@@ -12371,13 +12371,21 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
        &&['OnbidPbancListSrvc2/getPbancList2','OnbidPbancCltrDtlSrvc2/getPbancCltrInf2','OnbidPbancBidRsltDtlSrvc2/getPbancBidRsltDtl2'].every(x=>onc.indexOf(x)>0)&&(onc.match(/https:\/\/[a-z.]+/g)||[]).every(u=>u==='https://apis.data.go.kr')
        &&!onc.split('\n').some(l=>/print\(/.test(l)&&/\bkey\b/.test(l)));
     const OB=fs.existsSync(__d+'/data/realestate/claude/onbid.json')?JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/onbid.json','utf8')):null;
-    /* 금액 만원 확인은 물건 하나의 상한이 아니라 중앙값으로 — 2026-11-08 자료에 대전 중구 유천동 '60필지 토지 및 건물'(감정가 1,258억원 = 12,584,244만원)이
-       들어와 물건별 상한(1억 만원 미만)에 걸렸다(자료는 맞다). 원 단위였다면 어떤 부동산이든 중앙값이 1,000만 이상 — 중앙값 100만(=100억원) 미만이면 만원이다. */
+    // 금액 단위(만원) — 물건 하나의 크기로 정하지 않는다(교보자산신탁 유천동 61필지 일괄매각 감정가 1,258억 = 12,584,244만원이 실제로 있다 · 자료는 맞다).
+    // 원을 만원으로 안 바꾸면 모든 값이 1만 배 → 가운데값이 100억(1e6 만원)을 넘거나 한 건이라도 1조(1e8 만원)를 넘는다.
+    // #611 이 같은 빨간불을 가운데값으로 먼저 고쳤다 — 여기서 하나로 합쳤다(가운데값 · 한 건 1조 미만 · 최저가도 · 0 이상 유한한 수).
+    const obUnit=o=>{ const v=o.items.map(x=>x.appraisal).filter(x=>x!=null).sort((a,b)=>a-b),m=o.items.map(x=>x.minPrice).filter(x=>x!=null);
+      return v.concat(m).every(x=>Number.isFinite(x)&&x>=0&&x<1e8)&&(!v.length||v[Math.floor((v.length-1)/2)]<1e6); };
     const obAp=OB&&Array.isArray(OB.items)?OB.items.map(x=>x.appraisal).filter(v=>v!=null).sort((a,b)=>a-b):[],obMed=obAp.length?obAp[Math.floor((obAp.length-1)/2)]:0;
-    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원(중앙값 100억원 미만 · 물건마다 0 이상 유한) · 인증키 흔적 없음', !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||'')&&(x.appraisal==null||(Number.isFinite(x.appraisal)&&x.appraisal>=0)))
-       &&obMed<1e6&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))), '감정가 중앙값 '+obMed+'만원 · 물건 '+((OB&&OB.items||[]).length));
-    ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 안내',
-       /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI));
+    ok('온비드 금액 단위 검사: 만원이면 통과(1,258억 큰 물건 포함) · 원 그대로면 걸림(최저가만 원 그대로 · 작은 값만 여럿) · 글자 금액도 걸림',
+       obUnit({items:[{appraisal:57200,minPrice:34440},{appraisal:12584244,minPrice:7680000},{appraisal:47,minPrice:null}]})
+       &&!obUnit({items:[{appraisal:57200,minPrice:344400000}]})&&!obUnit({items:[{appraisal:27000000},{appraisal:57200000},{appraisal:28000000,minPrice:null}]})
+       &&!obUnit({items:[{appraisal:'57200',minPrice:34440}]}));
+    ok('온비드 자료(있으면): 대전·세종 물건만 · 금액 만원(가운데값 100억 미만 · 한 건 1조 미만 · 0 이상 유한) · 인증키 흔적 없음',
+       !OB||(Array.isArray(OB.items)&&OB.items.every(x=>x.id&&/^\s*(대전|세종)/.test(x.addr||''))&&obUnit(OB)&&!/serviceKey|DATA_GO_KR_KEY/.test(JSON.stringify(OB))),
+       '감정가 가운데값 '+obMed+'만원 · 물건 '+((OB&&OB.items||[]).length));
+    ok('🏛️ 온비드 칸: 수집 자료를 읽어 엔진 묶기(onbidGroups)·요약(onbidSummary)·분석 칸 넘기기(onbidToCase)만 — 공매는 인도명령 없음 · 입찰결과 권한 안내',
+       /fetch\('\/data\/realestate\/claude\/onbid\.json'/.test(aucUI)&&/U\.onbidGroups\(/.test(aucUI)&&/U\.onbidSummary\(/.test(aucUI)&&/U\.onbidToCase\(/.test(aucUI)&&/인도명령이 없습니다/.test(aucUI)&&/rsltForbidden/.test(aucUI));
   }
   ok('내 경매 장부는 승인된 본인 문서(users/{uid}/realestateClaude/auction)에만 · 페이지의 Firebase 앱을 그대로(getApp) · 저장 때 revision 확인 · 계정 바뀌면 멈춤',
      /getApp\(\)/.test(acc)&&!/initializeApp|initializeFirestore/.test(acc)&&/doc\(db, "users", user\.uid, COL, DOC\)/.test(acc)&&/const COL = "realestateClaude", DOC = "auction";/.test(acc)

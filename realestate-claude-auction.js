@@ -16,7 +16,7 @@ const {acqRate,brokerRate,gainTax}=APT;
 const BASE=(typeof module!=='undefined'&&module.exports)?require('./realestate-claude-engine.js'):g.JKRealEstateClaude;
 const {ymk}=BASE;
 
-const VERSION='1.1.0';
+const VERSION='1.2.0';
 /* 가정 — 화면에서 바꿀 수 있다. 근거 없는 값은 '가정'으로 보이게 한다 */
 const DEFAULTS={
   cut:0.30,           // 유찰 1번마다 최저가 저감률 — 대전지방법원 30%(법원·사건마다 다름 · 매각공고 확인)
@@ -193,19 +193,38 @@ function ledgerSummary(cases){
 /* ── 온비드 공매(수집기가 만든 onbid.json) — 끝난 물건 결과 요약 · 🧮 분석 칸으로 넘길 입력 ──
    공매는 경매와 달리 인도명령이 없다(점유자가 안 나가면 명도소송) — 화면 안내에 쓴다. 금액 단위는 만원(수집기가 바꿔 둠). */
 function isApt(x){ return /아파트/.test(String(x&&x.usage||'')+' '+String(x&&x.name||'')); }
-function onbidSummary(items,onlyApt){
-  const its=(items||[]).filter(x=>!onlyApt||isApt(x));
-  const done=its.filter(x=>x.result&&x.result.status),sold=done.filter(x=>x.result.win>0);
-  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
-  return {n:its.length,open:its.length-done.length,done:done.length,sold:sold.length,unsold:done.length-sold.length,
-    avgWinApp:avg(sold.filter(x=>x.result.winApp>0).map(x=>x.result.winApp)),avgBidders:avg(sold.filter(x=>x.result.bidders!=null).map(x=>+x.result.bidders))};
+/* 같은 물건(물건관리번호)의 회차들을 한 물건으로 묶는다 — 공매는 매주 회차가 바뀌며 최저가가 내려간다.
+   상태: 마지막 낙찰 뒤에 아직 끝나지 않은(끝난 상태가 아니고 입찰 마감일이 오늘 이후인) 회차가 있으면 open(재공매 포함)
+         · 아니고 낙찰된 회차가 있으면 sold · 아니면 done */
+const ENDED=/낙찰|유찰|취소|입찰마감|수의계약|개찰중|매각|종결|중지/;
+function onbidGroups(items,today){
+  const by={},out=[];
+  for(const x of items||[]){ const k=x.cltrMngNo||x.id; (by[k]=by[k]||[]).push(x); }
+  for(const k of Object.keys(by)){
+    const rs=by[k].slice().sort((a,b)=>String(a.bidEnd||'').localeCompare(String(b.bidEnd||''))||((+a.round||0)-(+b.round||0)));
+    let ls=-1; rs.forEach((r,i)=>{ if(/낙찰/.test(r.status||'')||(r.result&&r.result.win>0)) ls=i; });
+    const latest=rs[rs.length-1],sold=ls>=0?rs[ls]:null;
+    const next=rs.find((r,i)=>i>ls&&!ENDED.test(r.status||'')&&(!r.bidEnd||String(r.bidEnd).slice(0,10)>=today))||null;
+    const app=Math.max.apply(null,rs.map(r=>+r.appraisal||0))||null,cur=next||sold||latest;
+    out.push({key:k,name:latest.name,addr:latest.addr,usage:latest.usage,prpt:latest.prpt,org:latest.org,branch:latest.branch,onbidCltrno:latest.onbidCltrno,
+      apt:isApt(latest),appraisal:app,rounds:rs,next,sold,state:next?'open':sold?'sold':'done',minNow:cur.minPrice!=null?cur.minPrice:null,
+      win:sold&&sold.result&&sold.result.win>0?sold.result.win:null,bidders:sold&&sold.result?sold.result.bidders:null});
+  }
+  return out.sort((a,b)=>(a.state==='open'?0:1)-(b.state==='open'?0:1)||(a.state==='open'?String(a.next.bidEnd||'').localeCompare(String(b.next.bidEnd||'')):String(b.rounds[b.rounds.length-1].bidEnd||'').localeCompare(String(a.rounds[a.rounds.length-1].bidEnd||''))));
 }
-function onbidToCase(x){
-  return {court:'온비드 공매',caseNo:String(x.onbidCltrno||x.cltrMngNo||''),itemNo:1,name:x.name||'',address:x.addr||'',
-    appraisal:x.appraisal,minPrice:x.minPrice,fails:x.fails||0,saleDate:String(x.bidEnd||'').slice(0,10)};
+function onbidSummary(groups,onlyApt){
+  const gs=(groups||[]).filter(x=>!onlyApt||x.apt),sold=gs.filter(x=>x.state==='sold'),priced=sold.filter(x=>x.win>0&&x.appraisal>0);
+  const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  return {n:gs.length,open:gs.filter(x=>x.state==='open').length,sold:sold.length,done:gs.filter(x=>x.state==='done').length,priced:priced.length,
+    avgWinApp:avg(priced.map(x=>x.win/x.appraisal)),avgBidders:avg(sold.filter(x=>x.bidders!=null).map(x=>+x.bidders))};
+}
+function onbidToCase(g){
+  const r=g.next||g.sold||g.rounds[g.rounds.length-1];
+  return {court:'온비드 공매',caseNo:String(g.onbidCltrno||g.key||''),itemNo:1,name:g.name||'',address:g.addr||'',
+    appraisal:g.appraisal,minPrice:r.minPrice,fails:r.fails||0,saleDate:String(r.bidEnd||'').slice(0,10)};
 }
 
-const API={VERSION,DEFAULTS,FLAGS,minPriceAt,schedule,rights,costsAt,maxBidFor,analyze,newCase,editBid,setResult,ledgerSummary,isApt,onbidSummary,onbidToCase};
+const API={VERSION,DEFAULTS,FLAGS,minPriceAt,schedule,rights,costsAt,maxBidFor,analyze,newCase,editBid,setResult,ledgerSummary,isApt,onbidGroups,onbidSummary,onbidToCase};
 if(typeof module!=='undefined'&&module.exports) module.exports=API;
 g.JKREAuction=API;
 })(typeof globalThis!=='undefined'?globalThis:this);

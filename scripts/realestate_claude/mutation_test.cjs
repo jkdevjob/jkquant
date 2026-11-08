@@ -122,6 +122,10 @@ const AUC_MUTS=[
   ['결과를 덮어쓸 수 있음',"  if(cs.result) throw new Error('이미 결과가 있습니다(지난 기록은 고치지 않음)');\n",""],
   ['결과 뒤에도 입찰가 바꿈',"  if(cs.result) throw new Error('결과를 넣은 사건은 입찰가를 바꿀 수 없습니다');\n",""],
   ['같은 값을 이긴 것으로',"won:my>win?true:my===win?'tie':false","won:my>=win?true:false"],
+  ['재공매를 낙찰로 둠',"state:next?'open':sold?'sold':'done'","state:sold?'sold':next?'open':'done'"],
+  ['취소된 예정 회차를 진행 중으로',"const ENDED=/낙찰|유찰|취소|입찰마감|수의계약|개찰중|매각|종결|중지/;","const ENDED=/낙찰|유찰|입찰마감|수의계약|개찰중|매각|종결|중지/;"],
+  ['마감일 지난 회차를 진행 중으로',"(!r.bidEnd||String(r.bidEnd).slice(0,10)>=today)","true"],
+  ['낙찰 전 회차를 다음으로',"const next=rs.find((r,i)=>i>ls&&","const next=rs.find((r,i)=>"],
   ['최저가 아래 입찰도 저장',"  if(a.warn.indexOf('belowMin')>=0) throw new Error('입찰가가 최저가보다 낮으면 무효입니다');\n",""]
 ];
 const CONB_MUTS=[
@@ -130,9 +134,15 @@ const CONB_MUTS=[
   ['지난 물건을 지움','    keep = {x["id"]: x for x in old_items or []}','    keep = {}'],
   ['지난 결과를 지움','        if prev and prev.get("result") and not it.get("result"):','        if False:'],
   ['개찰 전 공고도 결과를 물음','        if mine and str(n.get("cltrOpbdDt") or "") <= now:','        if mine:'],
-  ['한도 초과면 다 버림','            print(str(e), file=sys.stderr)\n            limited = True\n            break\n        except ApiError:\n            raise','            raise\n        except ApiError:\n            raise'],
+  ['한도 초과면 다 버림','            print(str(e), file=sys.stderr)\n            limited = True\n            break\n        except ApiError:   # 인증키·권한 오류(403 포함)는 멈춘다\n            raise','            raise\n        except ApiError:   # 인증키·권한 오류(403 포함)는 멈춘다\n            raise'],
   ['인코딩된 키를 또 인코딩','    return urllib.parse.unquote(k) if "%" in k else k','    return k'],
   ['한 건짜리 응답을 못 읽음','    if isinstance(its, dict):\n        its = [its]\n    return its, int','    return its, int'],
+  ['403 도 재시도',"            if e.code == 403:   # 권한 없음은 다시 해도 같다 — 바로 알린다\n                raise Forbidden","            if False:\n                raise Forbidden"],
+  ['③ 403 이어도 계속 부름','            warnings.append("rsltForbidden")\n            break','            warnings.append("rsltForbidden")\n            continue'],
+  ['공고 목록을 60쪽에서 자름','        if not its or len(out) >= total or page >= 300:','        if not its or len(out) >= total or page >= 60:'],
+  ['상태 코드를 그대로','    if re.fullmatch(r"\\d{4}", v):\n        return STAT.get(v, "상태 " + v)\n','' ],
+  ['쌓을 때 지난 상태 코드를 그대로','        x["status"] = stat_name(x.get("status"), None)','        pass'],
+  ['결과 상태 코드를 그대로','"status": stat_name(c.get("pbctStatNm"), c.get("pbctStatCd")), "win"','"status": c.get("pbctStatNm"), "win"'],
   ['인증키 오류를 자료 없음으로','        if c in ("03",):\n            return EMPTY\n        raise (LimitError','        if True:\n            return EMPTY\n        raise (LimitError']
 ];
 const CAPT_MUTS=[
