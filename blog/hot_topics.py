@@ -7,12 +7,15 @@ usage: python3 -I blog/hot_topics.py [--econ]
   3) 구글 트렌드 한국 급상승 검색어(대략 검색량)
   '언론사 수'가 많을수록 어제 가장 뜨거웠던 이슈다. 사건·사고(사망·범죄 등)는 [주의] 표시: 피해자·사생활·추측을 다루지 않는다.
   --econ 을 주면 예전처럼 경제 낱말이 든 기사만 따로 보여 준다.
+  ★ 표시 = 경제·비즈니스가 아닌 분야도 쓸 수 있는 '정말 핫이슈' 크기(사용자 지시 2026-11-09, GUIDE 1장):
+    '많이 본 뉴스' 언론사 12곳 이상, 또는 구글 트렌드 5,000+ 이상. 자동완성 검색어(keywords.py)까지 있어야 쓴다.
 숫자(순위·언론사 수·검색량)는 이 출력에 있는 것만 근거로 쓴다. 지어내지 않는다.
 """
 import html, re, sys, urllib.request
 from collections import Counter, defaultdict
 
 UA = {'User-Agent': 'Mozilla/5.0 (blog topic research)'}
+HOT_PRESS, HOT_TRAFFIC = 12, 5000  # ★ 기준(사용자 지시 2026-11-09): 경제 밖 분야는 이 크기 이상만
 SENSITIVE = '사망 숨져 숨진 숨졌 살해 살인 흉기 피살 성폭 성범죄 자살 극단 투신 실종 시신 학대 폭행 참사 유족'.split()
 STOP = set('''속보 단독 종합 영상 사진 포토 자막뉴스 현장 오늘 어제 내일 이번 지난 올해 내년 이후 이전 관련 위해 대한 통해 때문 정도 가장 모두 다시
  결국 무슨 일이 왜 이유 이게 그냥 진짜 만에 만원 억원 조원 달러 대해 발표 공개 논란 확인 사실 전망 분석 우려 기대 가능성 상황 문제 여부 이상 이하
@@ -87,10 +90,11 @@ def flag(title):
     return ' [주의:사건·사고]' if any(s in title for s in SENSITIVE) else ''
 
 
-def print_clusters(label, boxes):
+def print_clusters(label, boxes, star=False):
     print(f'== {label} — 여러 언론사 상위 5개에 겹친 이슈(언론사 수 순)')
     for w, n, hs in clusters(boxes):
-        print(f'  ◆ {w}  (언론사 {n}곳)')
+        mark = f'  ★{HOT_PRESS}곳+ (경제 밖 분야도 가능)' if star and n >= HOT_PRESS else ''
+        print(f'  ◆ {w}  (언론사 {n}곳){mark}')
         for rank, name, title, url in hs[:3]:
             print(f'     - [{name} {rank}위] {title}{flag(title)}  {url}')
 
@@ -110,7 +114,7 @@ def main():
     econ = '--econ' in sys.argv
     try:
         pop = naver_boxes('https://news.naver.com/main/ranking/popularDay.naver')
-        print_clusters('1) 네이버 많이 본 뉴스', pop)
+        print_clusters('1) 네이버 많이 본 뉴스', pop, star=True)
     except Exception as e:
         pop = []
         print('  (많이 본 뉴스 가져오기 실패:', e, ')')
@@ -124,7 +128,9 @@ def main():
     try:
         for title, traffic, news in trends()[:20]:
             n0 = news[0] if news else ''
-            print(f'  - {title} ({traffic}) — {n0}{flag(n0)}')
+            vol = int(re.sub(r'\D', '', traffic) or 0)
+            mark = f'  ★{HOT_TRAFFIC}+ (경제 밖 분야도 가능)' if vol >= HOT_TRAFFIC else ''
+            print(f'  - {title} ({traffic}) — {n0}{flag(n0)}{mark}')
     except Exception as e:
         print('  (가져오기 실패:', e, ')')
     if econ and pop:
