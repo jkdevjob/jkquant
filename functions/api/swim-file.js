@@ -2,7 +2,7 @@
 // 수집기가 공개 자료에 올린 결과 파일만 원래 사이트에서 받아 그대로 넘긴다(저장소에 복사하지 않음 · 엣지 캐시 6시간).
 // 그누보드 게시판은 글을 먼저 열어야 받기가 허용된다(바로 받으면 '잘못된 접근입니다' 안내 화면) → 글 → 파일 순서로 같은 쿠키로 받는다.
 // 받은 바이트가 파일 형식(PDF · 엑셀 · 한글 · 그림)과 맞지 않으면 넘기지 않는다 — 안내 화면을 결과지로 내려보내지 않는다.
-import { swimDoc, findFile, json, edgeCache } from "./_swim_results.js";
+import { swimDoc, findFile, findFresh, json, edgeCache } from "./_swim_results.js";
 
 export const TYPES = {
   pdf: "application/pdf", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xls: "application/vnd.ms-excel",
@@ -82,9 +82,9 @@ export async function fetchUpstream(ent, fetchImpl = fetch) {
 export async function handle(request, { fetchImpl = fetch, waitUntil = null, docLoader = swimDoc } = {}) {
   const u = new URL(request.url), want = u.searchParams.get("u") || "";
   if (!/^https?:\/\/\S/.test(want)) return json({ ok: false, error: "파일 주소가 없습니다" }, 400);
-  let doc;
-  try { doc = await docLoader(u.origin, { fetchImpl }); } catch (e) { return json({ ok: false, error: "수영대회 자료를 읽지 못했습니다" }, 503); }
-  const ent = findFile(doc, want);
+  let ent;
+  try { ent = await findFresh(u.origin, d => findFile(d, want), { fetchImpl, docLoader }); }
+  catch (e) { return json({ ok: false, error: "수영대회 자료를 읽지 못했습니다" }, 503); }
   if (!ent) return json({ ok: false, error: "수영대회 결과 목록에 없는 파일입니다" }, 403);
   const ext = String(ent.file.ext || "").toLowerCase();
   if (!TYPES[ext]) return json({ ok: false, error: "지원하지 않는 파일 형식" }, 415);
