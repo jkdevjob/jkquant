@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 운영</title>
-<script src="/plan-session-engine.js?v=4"></script>
+<script src="/plan-session-engine.js?v=5"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.1.0" defer></script>
@@ -593,7 +593,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.117.6</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.117.7</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1701,7 +1701,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.117.6</b> · 2026-11-07</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.117.7</b> · 2026-11-08</div>
   </footer>
 </div>
 
@@ -7404,6 +7404,9 @@ async function loadPlanPaperData(force){
   }
   return PLAN_PAPER_QUOTES;
 }
+/* 폐지된 자산플랜(10·15·20년 · 새 규칙 · 공격형 — 2026-11-08 사용자 지시) 세션인가. 판정은 엔진 한 곳(retiredReason) —
+   플랜 화면 세션 목록과 같은 함수. 세션 기록은 지우지 않고 모의 목록·재생에서만 뺀다. */
+function planPaperRetired(sess){const E=window.JKPlanSessionEngine;return !!(E&&E.retiredReason&&E.retiredReason(sess));}
 function replayPlanPaper(sess){
   if(!window.JKPlanSessionEngine||!sess||!sess.settings)return null;
   const T=PLAN_PAPER_QUOTES.TECL,Q=PLAN_PAPER_QUOTES.TQQQ,G=PLAN_PAPER_QUOTES.SGOV;
@@ -7971,9 +7974,10 @@ function paperOpts(tab, st){
               `mid ${amt(S0.mid!=null?S0.mid:50)}`,
               `deep ${amt(S0.deep!=null?S0.deep:100)}`);
   }else if(tab==='plan'){
-    const H={5:'역분산+Guard',10:'추세+폭락매수',15:'Shannon 60:40',20:'Dual Momentum'},y=+S0.horizon||5;
-    bits.push(`${y}년 ${H[y]||'자산플랜'}`);
-    if(y===5&&S0.alphaRules&&S0.alphaRules!=='base')bits.push(S0.alphaRules==='exp2'?'공격형(실험적)':'새 규칙(실험적)');   // 5년 규칙 벌 — 기본·새 규칙 모의 세션을 목록에서 구분
+    /* 🤖 클로드 탭 5년 플랜 하나 — 이름·판은 엔진(plan-session-engine.js STRATEGY)이 정본(플랜 화면과 같은 글자).
+       10·15·20년 · 새 규칙 · 공격형 세션은 2026-11-08 폐지 — 목록에 올리지 않는다(planPaperRetired). */
+    const PE=typeof window!=='undefined'&&window.JKPlanSessionEngine,P=(PE&&PE.STRATEGY)||{name:'듀얼 가드',version:'1.0'};
+    bits.push(`5년 ${P.name} v${P.version}`);
     if(+S0.monthlyAdd>0)bits.push(`월 ${amt(S0.monthlyAdd)}`);else bits.push('목돈');
   }
   return bits;
@@ -8085,7 +8089,7 @@ async function paperPrefetchQuotes(){
     const box=S&&S[tab], ss=(box&&box.sessions)||[];
     for(const sess of ss){
       if(!sess||!sess.paper)continue;
-      if(tab==='plan'){ ['TECL','TQQQ','SGOV'].forEach(x=>px.add(x)); continue; }
+      if(tab==='plan'){ if(!planPaperRetired(sess)) ['TECL','TQQQ','SGOV'].forEach(x=>px.add(x)); continue; }
       const st=sess.settings||{}, sym=String(st.ticker||'').toUpperCase();
       if(sym)px.add(sym);
       if(sym && (tab==='dca'||divCashOn(st)))dv.add(sym);
@@ -8130,6 +8134,7 @@ async function paperFillAll(){
       for(const sess of targets){
         await paperBreathe();                 // 세션 사이 — 화면 그릴 틈
         if(tab==='plan'){
+          if(planPaperRetired(sess)){ _tick(); continue; }   // 폐지된 플랜 세션 — 목록에서 뺀다(기록은 그대로)
           try{
             await loadPlanPaperData(false);replayPlanPaper(sess);
             const r=paperStatPlan(sess);if(r){r.label=label;rows.push(r);}
@@ -8240,7 +8245,7 @@ function paperFxFallback(){
    - 평소 모의 페이지를 열 때는 저장된 표를 즉시 보여 주고 전 전략 재생을 다시 하지 않는다.
    - 하루가 바뀌었거나 원장이 바뀌면 백그라운드에서 한 번만 증분 갱신한다.
    - 전체 적용/오늘 갱신은 force=true로 명시적으로 다시 계산한다. */
-const PAPER_VIEW_CACHE_VER=4;   // 4: VR 저장 중 첫 매수 누락 복구 — 이전 성과 순위를 다시 계산한다 (2026-11-05)
+const PAPER_VIEW_CACHE_VER=5;   // 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
 let _paperViewRefreshPromise=null;
 function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
 function paperViewSig(){
