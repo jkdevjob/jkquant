@@ -503,7 +503,7 @@
       "schema": 1,
       "candidateFactory": "prospective-mixed-radix-v2",
       "minimumActive": 10,
-      "candidatePoolSize": 25,
+      "candidatePoolSize": 26,
       "activeCandidates": [
         "vol_1.0",
         "vol_1.5",
@@ -529,7 +529,8 @@
         "cf_g0002",
         "cf_g0003",
         "cf_g0004",
-        "cf_g0005"
+        "cf_g0005",
+        "cf_g0006"
       ],
       "generatedPool": [
         {
@@ -601,23 +602,23 @@
           "status": "incubating",
           "liveCompatible": true,
           "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
-        }
-      ],
-      "generatedCandidates": [
+        },
         {
-          "name": "cf_g0001",
-          "generation": 1,
+          "name": "cf_g0006",
+          "generation": 6,
           "params": {
-            "range_bars": 1,
+            "range_bars": 6,
             "volume_mult": 0.9,
             "max_hold_bars": 6,
             "entry_cutoff_min": 1075
           },
-          "createdAfter": "2026-10-03",
+          "createdAfter": "2026-11-07",
           "status": "incubating",
           "liveCompatible": true,
           "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
-        },
+        }
+      ],
+      "generatedCandidates": [
         {
           "name": "cf_g0002",
           "generation": 2,
@@ -673,10 +674,24 @@
           "status": "incubating",
           "liveCompatible": true,
           "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        },
+        {
+          "name": "cf_g0006",
+          "generation": 6,
+          "params": {
+            "range_bars": 6,
+            "volume_mult": 0.9,
+            "max_hold_bars": 6,
+            "entry_cutoff_min": 1075
+          },
+          "createdAfter": "2026-11-07",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
         }
       ],
-      "factoryGeneration": 5,
-      "lastFactoryDate": "2026-10-31",
+      "factoryGeneration": 6,
+      "lastFactoryDate": "2026-11-07",
       "retired": [
         {
           "name": "no_vwap",
@@ -703,19 +718,20 @@
         "stop_0.6_tp_1.2": 0,
         "vol_1.3": 0
       },
-      "lastEvidenceDate": "2026-11-06",
+      "lastEvidenceDate": "2026-11-07",
       "leader": {
         "name": "stop_0.3_tp_0.6",
-        "consecutiveResearchSessions": 2,
+        "consecutiveResearchSessions": 3,
         "requiredResearchSessions": 7,
         "dates": [
           "2026-11-05",
-          "2026-11-06"
+          "2026-11-06",
+          "2026-11-07"
         ]
       },
       "autoPromotionCandidate": null,
       "autoPromotionReady": false,
-      "autoPromotionReason": "1위 유지 2/7 연구세션",
+      "autoPromotionReason": "1위 유지 3/7 연구세션",
       "recentChanges": [
         {
           "date": "2026-10-03",
@@ -964,17 +980,17 @@
         "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
       },
       "overnight": {
-        "date": "2026-11-08",
+        "date": "2026-11-09",
         "leader": null,
         "leaderStreak": 0,
         "reviewReady": false,
         "activeMain": "baseline",
         "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
       },
-      "updatedAt": "2026-11-08T01:48:43.573746+09:00",
+      "updatedAt": "2026-11-09T01:37:06.169645+09:00",
       "paperOnly": true,
       "autoChange": false
     }
   },
-  "updatedAt": "2026-11-08T01:48:43.050550+09:00"
+  "updatedAt": "2026-11-09T01:37:05.863983+09:00"
 }
