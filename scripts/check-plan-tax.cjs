@@ -6,7 +6,7 @@
  */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..');
-const SRC={mod:fs.readFileSync(path.join(root,'plan-tax-check.js'),'utf8'),plan:fs.readFileSync(path.join(root,'plan.html'),'utf8')};
+const SRC={mod:fs.readFileSync(path.join(root,'plan-tax-check.js'),'utf8'),plan:fs.readFileSync(path.join(root,'plan.html'),'utf8'),eng:fs.readFileSync(path.join(root,'plan-session-engine.js'),'utf8')};
 const load=js=>{const m={exports:{}};vm.runInNewContext(js,{module:m});return m.exports;};
 const fnOf=(src,marker)=>{const s=src.indexOf(marker);assert(s>=0,'없음: '+marker);let i=src.indexOf('{',s),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(s,i+1);}throw Error(marker);};
 const lineOf=(src,start)=>{const s=src.indexOf(start);assert(s>=0,'없음: '+start);return src.slice(s,src.indexOf('\n',s));};
@@ -39,7 +39,7 @@ function check(S){
   const L3={base:{date:'2025-03-03',tecl:5,tqqq:3,sgov:2,cash:1000,avgTecl:40,avgTqqq:30,avgSgov:100},events:[
     tr('2025-04-01','TECL','buy',4,45,0),{type:'cash',date:'2025-04-02',kind:'div',amount:5},tr('2025-05-01','TQQQ','sell',2,35,0),
     {type:'reconcile',date:'2025-06-02',snapshot:{tecl:9,tqqq:1,sgov:2,cash:900,avgTecl:42,avgTqqq:30,avgSgov:100}},tr('2025-07-01','SGOV','sell',1,101,0),tr('2025-08-01','TECL','sell',3,50,0)]};
-  const ctx=vm.createContext({});vm.runInContext(fnOf(S.plan,'function alphaEventList(')+fnOf(S.plan,'function alphaLedgerCalc('),ctx);
+  const ctx=vm.createContext({});vm.runInContext(S.eng,ctx);vm.runInContext(fnOf(S.plan,'function alphaEventList(')+fnOf(S.plan,'function alphaLedgerCalc('),ctx);   // 장부 계산은 엔진 ledgerCalc 한 곳(2026-11-09)
   const A=ctx.alphaLedgerCalc(L3),B3=T.build(L3,T.fxFn([{date:'2025-01-02',close:1300}]));
   t('A6 수량 = 화면 장부(TECL·TQQQ·SGOV)',B3.pos.TECL.qty===A.tecl&&B3.pos.TQQQ.qty===A.tqqq&&B3.pos.SGOV.qty===A.sgov&&B3.notes.includes('reconcile'),JSON.stringify([B3.pos.TECL.qty,A.tecl,B3.pos.TQQQ.qty,A.tqqq,B3.pos.SGOV.qty,A.sgov]));
   // A7 공제 채우기: 두 방식 다 남은 공제 × 0.9 이하 · 한 주 더 팔면 넘는다

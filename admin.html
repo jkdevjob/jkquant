@@ -201,7 +201,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
         <a href="/"><span class="mi">🏠</span>운영</a>
-                <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
+                <a href="/portfolio"><span class="mi">💰</span>포트폴리오</a>
 <a href="/backtest"><span class="mi">📊</span>백테</a>
         <a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a>
         <a href="/claude"><span class="mi">🤖</span>연구(클로드)</a>
@@ -706,7 +706,7 @@ async function applyDefaultsExistingSessions(){
 }
 
 // ── 3. 메뉴 관리 ─────────────────────────────────────────────────────
-const MENU_ICONS={'/':'🏠','/plan':'🧭','/backtest':'📊','/scalping':'⚡','/claude':'🤖','/paper':'🧪','/ipo':'🎯','/realestate':'🏢','/job':'💼','/admin':'👤'};
+const MENU_ICONS={'/':'🏠','/portfolio':'💰','/plan':'🧭','/backtest':'📊','/scalping':'⚡','/claude':'🤖','/paper':'🧪','/ipo':'🎯','/realestate':'🏢','/job':'💼','/admin':'👤'};
 const MENU_HARD_ADMIN=new Set(['/scalping','/claude','/admin']);
 let menuDraft=[];
 let menuSaveTimer=0,menuSaveSeq=0;
@@ -738,14 +738,14 @@ function queueMenuSave(){
 }
 function menuBase(){
   const src=(window.JKAccess&&JKAccess.MENU_ITEMS)||[
-    {path:'/',label:'운영',mode:'public',order:10},{path:'/plan',label:'자산플랜',mode:'public',order:20},
+    {path:'/',label:'운영',mode:'public',order:10},{path:'/portfolio',label:'포트폴리오',mode:'public',order:20},
     {path:'/backtest',label:'백테',mode:'public',order:30},{path:'/scalping',label:'연구(지피티)',mode:'admin',order:40},
     {path:'/claude',label:'연구(클로드)',mode:'admin',order:50},{path:'/paper',label:'모의',mode:'public',order:60},
     {path:'/tenbagger',label:'텐배거',mode:'public',order:65},
     {path:'/ipo',label:'공모주',mode:'public',order:70},{path:'/realestate',label:'부동산',mode:'public',order:75},{path:'/job',label:'JOB',mode:'public',order:80},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
-  return src.filter(x=>x.path!=='/tenbagger').map(x=>({path:x.path,label:x.label,mode:x.mode,order:x.order}));
+  return src.filter(x=>x.path!=='/tenbagger').filter(x=>!x.navHidden).map(x=>({path:x.path,label:x.label,mode:x.mode,order:x.order}));   // 메뉴에 안 보이는 주소(텐배거 · 듀얼 가드 /plan — 운영 탭 안)는 목록에서 뺀다
 }
 function renderMenus(el){
   el.innerHTML='<div class="card"><h3><span class="dot"></span>공용 메뉴 관리</h3>'

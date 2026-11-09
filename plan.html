@@ -4,8 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
-<title>JK 투자 — 자산플랜</title>
-<script src="/plan-session-engine.js?v=5"></script>
+<title>JK 투자 — 듀얼 가드</title>
+<script>
+/* 운영 › 듀얼 가드 탭 안(/plan?embed=1 · 2026-11-09 사용자: "자산플랜의 듀얼가드를 운영메뉴로") — 머리말·메뉴는 바깥 운영 화면 것을 쓰니
+   여기선 숨기고, 링크는 바깥 창에서 연다. 계산·장부·저장은 그대로 이 페이지가 한다(화면 한 벌). 창 안이 아니면(주소로 바로 열면) 평소 화면. */
+(function(){ try{ if(!/[?&]embed=1(&|$)/.test(location.search)||window.parent===window) return; }catch(e){ return; }
+  document.documentElement.classList.add('embed');
+  var b=document.createElement('base'); b.target='_top'; document.head.appendChild(b); })();
+</script>
+<script src="/plan-session-engine.js?v=6"></script>
 <script src="/plan-session-settings.js?v=2"></script>
 <script src="/plan-tax-check.js?v=1"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
@@ -22,6 +29,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 button,input,select{font:inherit}
 button{cursor:pointer}
 .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 70px}
+/* 운영 › 듀얼 가드 탭 안(html.embed) — 머리말·메뉴 숨김 · 위 여백 줄임 */
+html.embed .jk-site-header,html.embed .wrap>.top{display:none!important}
+html.embed .wrap{padding-top:10px}
 .top{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:18px}
 .brand .logo{font-size:11px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;font-weight:800}
 .brand h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:3px}
@@ -328,14 +338,14 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v2.1.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼 가드 <span class="ver">v2.2.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
         <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴">三</button>
         <div class="jkmenu-pop" id="jkmenuPop" hidden>
-          <a href="/"><span class="mi">🏠</span>운영</a>
-          <a href="/plan" class="cur"><span class="mi">🧭</span>자산플랜</a>
+          <a href="/" class="cur"><span class="mi">🏠</span>운영</a>
+          <a href="/portfolio"><span class="mi">💰</span>포트폴리오</a>
           <a href="/backtest"><span class="mi">📊</span>백테</a>
           <a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a>
           <a href="/claude"><span class="mi">🤖</span>연구(클로드)</a>
@@ -357,11 +367,11 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
   </nav>
 
   <!-- 🤖 클로드 탭 전용 — 화면은 #pane-claude · 매매 규칙은 plan-session-engine.js(STRATEGY '듀얼 가드') · 연구는 research/daily 브랜치 research/im_plan/ -->
-  <div class="ai-pane" id="pane-claude" role="tabpanel" aria-label="클로드 5년 자산플랜">
+  <div class="ai-pane" id="pane-claude" role="tabpanel" aria-label="클로드 5년 플랜 · 듀얼 가드">
   <div class="hero">
     <section class="card">
       <div class="stage-head">
-        <div><div class="sub" id="stageSource">🤖 클로드 · 5년 자산플랜</div><div class="stage-title dg-title"><span id="stageTitle">듀얼 가드</span><span class="dg-ver" id="dgVer">v1.0</span></div><div class="sub" id="stageDesc">TECL 역분산 70% + TQQQ 추세 Guard 30% + SGOV</div></div>
+        <div><div class="sub" id="stageSource">🤖 클로드 · 5년 플랜</div><div class="stage-title dg-title"><span id="stageTitle">듀얼 가드</span><span class="dg-ver" id="dgVer">v1.0</span></div><div class="sub" id="stageDesc">TECL 역분산 70% + TQQQ 추세 Guard 30% + SGOV</div></div>
         <div class="badge" id="stageBadge">최공격</div>
       </div>
       <div class="dg-strip" id="dgStrip" aria-live="polite">
@@ -2362,6 +2372,20 @@ function renderDualGuardStrip(o){
    +chip('① TECL · 전체 자산',pp(o.teclNow)+' → '+pp(o.teclTarget),o.teclHit?'TECL 몫 기준 '+(o.gap*100).toFixed(1)+'%p 차이 · 이번에 조정':'TECL 몫 기준 '+(o.gap*100).toFixed(1)+'%p 차이 · '+(o.band*100).toFixed(0)+'%p 넘으면 조정')
    +chip('② TQQQ Guard',o.guard+(o.guardFlip?' 전환':''),'SMA'+o.ma+' 대비 '+(o.dist>=0?'+':'')+o.dist.toFixed(2)+'%',o.guard==='ON'?'on':'off')
    +chip('다음 Guard 경계',o.guard==='ON'?'OFF '+usd2(o.lower)+' 미만':'ON '+usd2(o.upper)+' 초과','확정 종가 기준 · SMA'+o.ma+'가 매일 움직여 경계도 바뀜');
+  if(typeof planEmbedPost==='function')planEmbedPost(o);   // 운영 › 듀얼 가드 탭 안이면 바깥(포트폴리오 '오늘' 칸)에 같은 값을 알린다
+}
+/* 운영 › 듀얼 가드 탭 안(html.embed)이면 바깥 운영 화면에 오늘 판단을 알린다 — 포트폴리오 '오늘' 칸이 이 값을 그대로 쓴다(판정을 두 군데서 세지 않는다).
+   '현재 투자중'·실전 세션이면 장부도 보낸다(바깥 화면이 처음 읽은 사본이 그 뒤 체결 기록으로 낡지 않게 · 바깥은 읽기만 한다).
+   모의 세션은 paper 표시만 — 모의 장부를 실투자 합계에 넣지 않는다. 받는 쪽은 같은 출처·같은 계정만 받는다(index.html). */
+function planEmbedPost(o){
+  if(!o||!document.documentElement.classList.contains('embed')||window.parent===window)return;
+  try{
+    const u=auth&&auth.currentUser;if(!u)return;
+    const x=activeAssetSession(),paper=!!(x&&x.paper);
+    const msg={type:'jk-dg',v:1,uid:u.uid,key:x?String(x.id):'cur',paper,strip:{...o}};
+    if(!paper){msg.ledger=cloneObj(alphaLedger);msg.startCapital=num('startCapital',0);msg.startDate=String(($('startDate')||{}).value||'');}
+    window.parent.postMessage(msg,location.origin);
+  }catch(e){}
 }
 function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV)renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);}
 function ledgerReady(){return sleeveLedger.startQLD>0||sleeveLedger.startSGOV>0||sleeveLedger.startCash!==0||(sleeveLedger.trades||[]).length>0;}
@@ -2593,10 +2617,7 @@ function localSave(){
   return true;
 }
 
-function alphaEventList(ledger=alphaLedger){
-  return (Array.isArray(ledger&&ledger.events)?ledger.events:[]).map((e,i)=>({...e,_i:i}))
-    .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||a._i-b._i);
-}
+function alphaEventList(ledger=alphaLedger){return JKPlanSessionEngine.ledgerEvents(ledger);}   // 장부 계산은 엔진 한 곳(plan-session-engine.js) — 포트폴리오(index.html)가 같은 함수로 센다
 /* 입금 맞춤 — 모의 엔진(plan-session-engine.js replay)은 입금이 들어온 날 전체를 목표 비중으로 맞춘다(force).
    운영 화면도 같은 규칙: 마지막 체결 뒤에 들어온 입금(dep)이 있으면 그 돈은 아직 안 맞춘 돈 → 다음 주문표에서 전체 맞춤.
    예전엔 이 규칙이 운영 화면에 없어, 입금이 TECL 밴드·Guard 신호를 안 건드리면 다음 신호까지 현금으로 남았다(2026-11-08 · 모의와 갈림).
@@ -2610,44 +2631,7 @@ function alphaDepositPending(ledger=alphaLedger){
   }
   return dep;
 }
-function alphaLedgerCalc(ledger=alphaLedger){
-  const b=ledger&&ledger.base?ledger.base:{};
-  const S={
-    tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),
-    avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null,
-    cash:Number.isFinite(+b.cash)?+b.cash:0,minCash:Number.isFinite(+b.cash)?+b.cash:0,invalid:false,error:"",divIn:0,netFlow:0,tradePnl:{}
-  };
-  for(const e of alphaEventList(ledger)){
-    /* 현금 기록 — 배당(분배금)·입금·출금. 매매가 아니다: 수량·평단은 그대로, 현금만 바뀐다.
-       netFlow(입금−출금)는 밖에서 넣고 뺀 돈이라 성장이 아니다 — 목표 진행률의 시작점에 더한다. */
-    if(e.type==='cash'){
-      const amt=Math.max(0,+e.amount||0),k=e.kind==='wd'?'wd':e.kind==='dep'?'dep':'div';
-      if(!(amt>0))continue;
-      if(k==='wd'){S.cash-=amt;S.netFlow-=amt;}else{S.cash+=amt;if(k==='dep')S.netFlow+=amt;else S.divIn+=amt;}
-      S.minCash=Math.min(S.minCash,S.cash);continue;
-    }
-    if(e.type==='reconcile'&&e.snapshot){
-      S.tecl=Math.max(0,Math.floor(+e.snapshot.tecl||0));S.tqqq=Math.max(0,Math.floor(+e.snapshot.tqqq||0));S.sgov=Math.max(0,Math.floor(+e.snapshot.sgov||0));S.cash=Number.isFinite(+e.snapshot.cash)?+e.snapshot.cash:S.cash;
-      S.avgTecl=Number.isFinite(+e.snapshot.avgTecl)&&+e.snapshot.avgTecl>0?+e.snapshot.avgTecl:null;S.avgTqqq=Number.isFinite(+e.snapshot.avgTqqq)&&+e.snapshot.avgTqqq>0?+e.snapshot.avgTqqq:null;S.avgSgov=Number.isFinite(+e.snapshot.avgSgov)&&+e.snapshot.avgSgov>0?+e.snapshot.avgSgov:null;continue;
-    }
-    if(e.type!=='trade')continue;
-    const sym=String(e.symbol||'').toUpperCase(),q=Math.max(0,Math.floor(+e.qty||0)),p=Math.max(0,+e.price||0),fee=Math.max(0,+e.fee||0),k=sym==='TECL'?'tecl':sym==='TQQQ'?'tqqq':sym==='SGOV'?'sgov':null,ak=sym==='TECL'?'avgTecl':sym==='TQQQ'?'avgTqqq':sym==='SGOV'?'avgSgov':null;
-    if(!k||!ak||!q||!(p>0))continue;
-    if(e.side==='buy'){
-      const oldQ=S[k],oldAvg=S[ak];
-      S[ak]=oldQ===0?p:(Number.isFinite(oldAvg)?(oldQ*oldAvg+q*p)/(oldQ+q):null);
-      S[k]+=q;S.cash-=q*p+fee;S.minCash=Math.min(S.minCash,S.cash);
-    }else if(e.side==='sell'){
-      /* 표시용 파생값: 평단이 사라지는 전량매도도 매도 직전 평단으로 계산한다.
-         무매 거래이력과 같이 수수료 제외 손익이며 원본 체결·계좌 계산은 변경하지 않는다. */
-      S.tradePnl[e._i]={profit:q<=S[k]&&Number.isFinite(S[ak])?(p-S[ak])*q:null,
-        reason:q>S[k]?'이력 오류':!Number.isFinite(S[ak])?'평단 미등록':''};
-      if(q>S[k]){S.invalid=true;S.error=String(e.date||'')+' '+sym+' 매도 '+q+'주 > 당시 보유 '+S[k]+'주';}
-      S[k]=Math.max(0,S[k]-q);if(S[k]===0)S[ak]=null;S.cash+=q*p-fee;S.minCash=Math.min(S.minCash,S.cash);
-    }
-  }
-  return S;
-}
+function alphaLedgerCalc(ledger=alphaLedger){return JKPlanSessionEngine.ledgerCalc(ledger);}
 function alphaSyncInputs(){
   const S=alphaLedgerCalc();
   if($('aTeclQty'))$('aTeclQty').value=S.tecl;
@@ -2917,7 +2901,7 @@ function render(){
     $("stageTitle").textContent=P.name;if($("dgVer"))$("dgVer").textContent="v"+P.version;
     $("stageBadge").textContent=HD.risk;
     $("stageDesc").textContent=P.summary+" · 시작금 "+usd(cap);
-    $("stageSource").textContent="🤖 클로드 · 5년 자산플랜";
+    $("stageSource").textContent="🤖 클로드 · 5년 플랜";
   }else{
     $("stageTitle").textContent=st.title;$("stageBadge").textContent=st.badge;$("stageDesc").textContent=st.desc;
     $("stageSource").textContent=$("stageMode").value==="auto"?"현재 자동판정 단계":"현재 수동 고정 단계";

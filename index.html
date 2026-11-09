@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 운영</title>
-<script src="/plan-session-engine.js?v=5"></script>
+<script src="/plan-session-engine.js?v=6"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.1.0" defer></script>
@@ -65,6 +65,16 @@ span.badge{display:inline-block;padding:2px 8px;margin:0;border:0;border-radius:
 .tab[data-t="dca"].on{background:linear-gradient(135deg,#1d7f8c,#0e4d56)}
 .tab[data-t="asap"].on{background:linear-gradient(135deg,#c99a2e,#8a6410)}
 .tab[data-t="ivs"].on{background:linear-gradient(135deg,#b4407f,#7a2453)}
+.tab[data-t="dg"].on{background:linear-gradient(135deg,#7c3aed,#4c1d95)}
+/* ASAP 탭은 숨긴다(2026-11-09 사용자: '운영메뉴 탭이 너무 꽉차면 제일 성과없는 asap 탭을 숨기고'). 기록·코드는 그대로 —
+   모의 목록·포트폴리오에서 그 세션을 누르면 열리고, 열려 있는 동안만 탭이 보인다. */
+.tab[data-t="asap"]:not(.on){display:none}
+/* 운영 › 듀얼 가드 — 플랜 화면(/plan?embed=1)을 그대로 넣는다(화면·장부·저장 한 벌). 창 높이는 화면에 맞추고 안에서 스크롤한다 —
+   창 안의 확인 상자(세션 설정 등)가 늘 보이게. 세션바·상태줄·기록 버튼은 이 전략 것이 아니라 숨긴다. */
+section#dg{padding:0}
+#dgFrame{display:block;width:100%;border:0;background:var(--bg);min-height:360px}
+.dg-wait{padding:28px 6px;color:var(--faint);font-size:13px;text-align:center}
+body.dgview #sessbar,body.dgview #statusline,body.dgview #fab,body.dgview:not(.portfoliopage) .wrap>footer{display:none!important}
 /* 폰 폭에서도 여섯 탭이 한 줄에 들어가게. 예전엔 380 이하만 줄여서 390·412 폰에서 탭 줄이 화면보다 7~30px 넓었고,
    그 넘침 때문에 브라우저가 페이지 전체를 축소해 보여 줬다. 글꼴 차이로 그래도 넘치면 페이지 대신 탭 줄만 옆으로 밀린다(위 overflow-x) */
 @media(max-width:430px){.tabs{gap:5px}.tab{font-size:12px;padding:11px 2px}}
@@ -253,6 +263,42 @@ body.paperpage #paperModal{position:static;inset:auto;display:block!important;ba
 body.paperpage #paperModal .box{max-width:none!important;max-height:none!important;overflow:visible;border-color:var(--line);padding:16px 14px}
 body.paperpage #paperModal .mx,body.paperpage #paperModal .mbtns{display:none}
 @media(max-width:460px){body.paperpage #paperModal{padding:0 10px 55px}body.paperpage #paperModal .box{padding:12px 8px!important;border-radius:12px}}
+/* ── 💰 포트폴리오(/portfolio) — 운영 본문 대신 #pfPage 만 보인다(머리말·바닥글은 그대로) ── */
+#pfPage{display:none}
+body.portfoliopage>div.wrap>*:not(#pfPage):not(footer){display:none!important}
+body.portfoliopage #pfPage{display:block;padding:12px 0 70px}
+body.portfoliopage #fab{display:none!important}
+.pf-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.pf-head h2{font-size:18px;font-weight:800;margin:0}
+.pf-head .sub{font-size:12px;color:var(--faint);margin-top:3px;line-height:1.5}
+.pf-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+.pf-kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 11px;min-width:0}
+.pf-kpi .k{font-size:11px;color:var(--faint);font-weight:700}
+.pf-kpi .v{font-size:16px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums;word-break:break-all}
+.pf-kpi .s{font-size:11px;color:var(--dim);margin-top:2px}
+.pf-bar{display:flex;height:12px;border-radius:7px;overflow:hidden;background:var(--panel2);margin:2px 0 6px}
+.pf-bar span{display:block;height:100%}
+.pf-legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--dim);margin-bottom:12px}
+.pf-legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.pf-today{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.pf-today h3{font-size:13.5px;font-weight:800;margin:0 0 6px}
+.pf-today .row{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line);font-size:12.5px;line-height:1.5}
+.pf-today .row:first-of-type{border-top:0}
+.pf-today .nm{flex:0 0 auto;font-weight:800;min-width:72px}
+.pf-today .go{color:var(--gold);font-weight:800}
+.pf-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.pf-card{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:11px 12px;min-width:0}
+.pf-card .t{display:flex;justify-content:space-between;gap:8px;font-weight:800;font-size:13.5px}
+.pf-card .t .w{color:var(--dim);font-weight:700;font-size:12px;white-space:nowrap}
+.pf-card .nm2{font-size:11.5px;color:var(--faint);margin-top:1px}
+.pf-card .g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:8px 0 6px}
+.pf-card .g .k{font-size:10.5px;color:var(--faint);font-weight:700}
+.pf-card .g .v{font-size:12.5px;font-weight:800;font-variant-numeric:tabular-nums;word-break:break-all}
+.pf-card .st{font-size:11.5px;color:var(--dim);line-height:1.6;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}
+.pf-card .open{margin-top:8px;width:100%;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-weight:700;font-size:12.5px;cursor:pointer}
+.pf-pos{color:var(--buy)}.pf-neg{color:var(--sell)}
+.pf-note{font-size:11.5px;color:var(--faint);line-height:1.6;margin-top:10px}
+@media(max-width:460px){.pf-kpis{grid-template-columns:1fr 1fr}.pf-kpis .pf-kpi:first-child{grid-column:1/-1}.pf-cards{grid-template-columns:1fr}}
 .modal .mbtns button{flex:1;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:13px;cursor:pointer}
 .modal .save{background:var(--vio2);color:#fff}.modal .close{background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
 .seclabel{font-size:11px;color:var(--faint);font-weight:700;letter-spacing:.05em;margin:16px 0 8px;text-transform:uppercase}
@@ -593,14 +639,14 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.118.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.119.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
         <a href="/" class="cur"><span class="mi">🏠</span>운영</a>
-                <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
+                <a href="/portfolio" id="jkPortfolio"><span class="mi">💰</span>포트폴리오</a>
 <a href="/backtest"><span class="mi">📊</span>백테</a>
         <a href="/scalping"><span class="mi">⚡</span>연구(지피티)</a>
         <a href="/claude"><span class="mi">🤖</span>연구(클로드)</a>
@@ -633,9 +679,16 @@ if(/^\/paper\/?$/.test(location.pathname)){
   (function(){ var h=document.querySelector('#jkmenuPop a[href="/"]'), p=document.getElementById('jkPaper');
     if(h) h.classList.remove('cur'); if(p) p.classList.add('cur'); })();
 }
+/* 💰 포트폴리오(/portfolio) — 실제로 투자 중인 것 한눈에. 모의(/paper)와 같은 방식: 같은 앱이 전략 화면을 숨기고 그린다(엔진 한 벌). */
+if(/^\/portfolio\/?$/.test(location.pathname)){
+  document.body.classList.add('portfoliopage'); document.title='JK 투자 — 포트폴리오';
+  (function(){ var h=document.querySelector('#jkmenuPop a[href="/"]'), p=document.getElementById('jkPortfolio');
+    if(h) h.classList.remove('cur'); if(p) p.classList.add('cur'); })();
+}
 </script>
 <div class="wrap">
   <div class="tabs">
+    <button class="tab" data-t="dg">듀얼 가드</button>
     <button class="tab on" data-t="inf">무한매수법</button>
     <button class="tab" data-t="vr">밸류리밸런싱</button>
     <button class="tab" data-t="ma">로테이션</button>
@@ -646,6 +699,10 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <div class="sessbar" id="sessbar"></div>
   <div class="statusline" id="statusline"></div>
   <div id="paperPage"></div><!-- /paper 에서 모의 성과 상자(#paperModal)가 여기로 온다 -->
+  <div id="pfPage"></div><!-- /portfolio — 실투자 합산(pfRender) -->
+
+  <!-- 듀얼 가드 — 플랜 화면을 그대로 넣는다(openDualGuard) -->
+  <section id="dg"><div class="dg-wait" id="dgWait">듀얼 가드 화면을 여는 중…</div></section>
 
   <!-- 무한매수법 -->
   <section id="inf" class="on">
@@ -1701,7 +1758,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.118.1</b> · 2026-11-08</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.119.0</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -7393,7 +7450,7 @@ function _paperAsap(sess, from){
 /* 모의 성과 — 전 전략의 모의 세션을 한 줄씩. "결과만 확인"용.
    compute*()가 활성 탭만 읽으므로 여기서는 기록에서 직접 투입·평가를 뽑는다. */
 const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','섀넌(역분산)'],
-                  ['ma','200일선 로테'],['dca','매수적립'],['asap','ASAP'],['plan','자산플랜']];
+                  ['ma','200일선 로테'],['dca','매수적립'],['asap','ASAP'],['plan','듀얼 가드']];   // 'plan' = 듀얼 가드(옛 이름 자산플랜 · 2026-11-09)
 const PLAN_PAPER_QUOTES={},PLAN_PAPER_CACHE={};
 async function loadPlanPaperData(force){
   if(force)Object.keys(PLAN_PAPER_QUOTES).forEach(k=>delete PLAN_PAPER_QUOTES[k]);
@@ -8083,12 +8140,13 @@ async function paperBreathe(){
 /* 모의성과는 세션을 순차 재생해야 하지만 시세 네트워크까지 순차로 기다릴 이유는 없다.
    필요한 종목을 먼저 병렬로 받아 _memoQuote 캐시에 채우면 10개 세션이어도 네트워크 대기는
    '종목 수의 합'이 아니라 '가장 늦은 한 종목' 수준으로 줄어든다. */
-async function paperPrefetchQuotes(){
-  const px=new Set(), dv=new Set();
+async function paperPrefetchQuotes(opt){
+  const px=new Set(), dv=new Set(), live=!!(opt&&opt.live);   // live: 포트폴리오 — 실전 세션(기록 있는 것)만
   for(const [tab] of PAPER_TABS){
     const box=S&&S[tab], ss=(box&&box.sessions)||[];
     for(const sess of ss){
-      if(!sess||!sess.paper)continue;
+      if(!sess||(live?(sess.paper||!(sess.hist||[]).length):!sess.paper))continue;
+      if(live&&tab==='plan')continue;   // 듀얼 가드 실전 장부는 포트폴리오가 따로(pfPlanRows · 엔진 ledgerCalc)
       if(tab==='plan'){ if(!planPaperRetired(sess)) ['TECL','TQQQ','SGOV'].forEach(x=>px.add(x)); continue; }
       const st=sess.settings||{}, sym=String(st.ticker||'').toUpperCase();
       if(sym)px.add(sym);
@@ -8105,12 +8163,15 @@ async function paperPrefetchQuotes(){
 }
 /* 세션마다 시세를 맞춘 뒤 그 자리에서 성과까지 계산해 돌려준다.
    나중에 한꺼번에 계산하면 캐시에 마지막 세션 시세만 남아 앞 세션이 전부 '시세 대기'가 된다. */
-async function paperFillAll(){
+/* opt.live (포트폴리오 · 2026-11-09): 모의 대신 실전(운영) 세션 — 기록이 있는 것만. 모의 체결(paperAuto·SimForward)은 만들지 않고
+   지금 기록 그대로 같은 계산(paperStat)으로 평가만 한다. 시세 칸 되돌리기·저장 막기는 모의와 똑같이 탄다. */
+async function paperFillAll(opt){
   if(_paperFilling) return null;
+  const live=!!(opt&&opt.live), pick=x=>!!x&&(live?(!x.paper&&(x.hist||[]).length>0):!!x.paper);
   _paperFilling=true;
   _paperSliceAt=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
   const prevTab=S.activeTab; const rows=[];
-  const _total=PAPER_TABS.reduce((a,[t])=>a+((S[t]&&S[t].sessions)||[]).filter(x=>x&&x.paper).length,0); let _done=0;
+  const _total=PAPER_TABS.reduce((a,[t])=>a+(live&&t==='plan'?0:((S[t]&&S[t].sessions)||[]).filter(pick).length),0); let _done=0;
   const _tick=()=>{ _done++; if(typeof paperLoadingProgress==='function') paperLoadingProgress(_done,_total); };
   /* 시세도 원래대로 돌려놔야 한다. lastQuote 는 전략마다 한 칸뿐인데 아래에서
      세션마다 갈아끼우므로, 다 돌고 나면 마지막 세션 종목이 남는다.
@@ -8125,10 +8186,11 @@ async function paperFillAll(){
      그러면 운영 화면이 다시 그릴 때마다 '종목이 다르다'며 전체 이력을 또 받았다. */
   const prevCache={inf:infQuoteCache, ma:maQuoteData, ivs:ivsQuoteData, ivs1:ivsQuote1, dca:dcaQuoteData, asap:asapQuoteData};
   try{
-    await paperPrefetchQuotes();                // 종목별 네트워크는 병렬, 전략 재생만 순차 (실패해도 아래 finally 로 정리된다)
+    await paperPrefetchQuotes(opt);             // 종목별 네트워크는 병렬, 전략 재생만 순차 (실패해도 아래 finally 로 정리된다)
     for(const [tab,label] of PAPER_TABS){
+      if(live&&tab==='plan') continue;          // 듀얼 가드 실전 장부는 포트폴리오가 따로 센다(pfPlanRows)
       const box=S[tab]; if(!box||!box.sessions) continue;
-      const targets=box.sessions.filter(x=>x.paper);
+      const targets=box.sessions.filter(pick);
       if(!targets.length) continue;
       const prevAct=box.active;
       for(const sess of targets){
@@ -8149,12 +8211,16 @@ async function paperFillAll(){
           if(PAPER_LOADERS[tab]) await PAPER_LOADERS[tab](have!==want);   // 종목이 다르면 강제 갱신
           if(divCashOn(sess.settings)) await warmDiv(want);   // 분배금 현금수령 세션은 분배 이력도 미리
           if(divCashOn(sess.settings) && tab==='ivs' && (sess.settings.park||'bill')==='x1') await warmDiv(ivsX1Of(want));   // 짝 종목 것도
-          paperAuto();
-          if(tab==='vr') vrSimForward();
-          if(tab==='inf') infSimForward((sess.hist||[]).length?null:paperStart(sess));
+          if(!live){                          // 실전 세션엔 모의 체결을 만들지 않는다
+            paperAuto();
+            if(tab==='vr') vrSimForward();
+            if(tab==='inf') infSimForward((sess.hist||[]).length?null:paperStart(sess));
+          }
           const r=paperStat(tab,sess);
           // 적립 탭은 세션마다 방식이 다르다 — 표에서 적립/거치가 구분돼야 비교가 된다
-          if(r){ r.label=(tab==='dca' && (sess.settings||{}).mode==='lump') ? '거치(일시금)' : label; rows.push(r); }
+          if(r){ r.label=(tab==='dca' && (sess.settings||{}).mode==='lump') ? '거치(일시금)' : label;
+            if(live){ if(!(r.price>0)) r.pending=true; try{ r.status=stratStatusHtml(tab,sess); }catch(e){ r.status=''; } }   // 운영 상태줄과 같은 요약·신호
+            rows.push(r); }
         }catch(e){ console.error('paperFill',tab,e); }
         _tick();
       }
@@ -8940,6 +9006,244 @@ function paperPageAuto(){
 document.addEventListener('DOMContentLoaded', ()=>{ if(isPaperPage()) paperPageMode(true); });
 window.addEventListener('popstate', ()=>{ const on=/^\/paper\/?$/.test(location.pathname);
   if(on!==isPaperPage()){ paperPageMode(on); if(on) paperPageAuto(); } });
+/* ── 운영 › 듀얼 가드 탭 (2026-11-09 사용자: "자산플랜의 듀얼가드를 운영메뉴로 옮기고 무매보다 왼쪽으로") ──
+   플랜 화면(/plan)을 그 탭 안에 그대로 넣는다(/plan?embed=1) — 화면·장부·저장은 plan.html 한 벌이다(같은 걸 두 군데서 만들지 않는다).
+   S.activeTab 에는 넣지 않는다 — 여러 곳이 S[S.activeTab] 을 바로 읽는다(세션바·상태줄·기록 시트·모의 재생). 듀얼 가드를 보고
+   있는지는 S.opView='dg' 로 따로 적는다(다른 기기에서 열어도 이어진다). 다른 전략 탭을 누르면 지운다(closeDualGuardView). */
+var dgFrameEl=null;
+function isDgView(){ return document.body.classList.contains('dgview'); }
+function dgEnsureFrame(extra){
+  const sec=$('dg'); if(!sec) return null;
+  if(!dgFrameEl){
+    dgFrameEl=document.createElement('iframe'); dgFrameEl.id='dgFrame'; dgFrameEl.title='듀얼 가드';
+    sec.appendChild(dgFrameEl);
+  }
+  if(extra || !dgFrameEl.getAttribute('src')) dgFrameEl.setAttribute('src','/plan?embed=1'+(extra?'&'+extra:''));
+  const w=$('dgWait'); if(w) w.remove();
+  return dgFrameEl;
+}
+/* 창 높이 = 화면 높이 − 창 윗변(문서 기준). 운영 화면 자체는 스크롤하지 않고 창 안에서만 스크롤한다. */
+function dgSize(){
+  if(!dgFrameEl||!isDgView()) return;
+  const top=dgFrameEl.getBoundingClientRect().top+(window.scrollY||0);
+  dgFrameEl.style.height=Math.max(360,Math.round((window.innerHeight||700)-top))+'px';
+}
+function openDualGuard(extra){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.dataset.t==='dg'));
+  document.querySelectorAll('section').forEach(x=>x.classList.toggle('on',x.id==='dg'));
+  document.body.classList.add('dgview'); hideFab();
+  dgEnsureFrame(extra);
+  if(S.opView!=='dg'){ S.opView='dg'; save(); }
+  cancelHold(); window.scrollTo({top:0,behavior:'auto'});
+  requestAnimationFrame(dgSize);
+}
+function closeDualGuardView(){
+  document.body.classList.remove('dgview');
+  if(S.opView) delete S.opView;      // 바로 뒤 전략 탭 처리(S.activeTab=…; save())가 함께 저장한다
+}
+window.addEventListener('resize',()=>{ try{ dgSize(); }catch(e){} });
+
+/* ── 💰 포트폴리오 (/portfolio) — 실제로 투자 중인 것 한눈에 ──
+   2026-11-09 사용자: "자산플랜은 포트폴리오로 변경하고 운영에서 내가 실투자 하고 있는 것들에 대해 자세히 볼수 있게 · 두전략 합친 결과와 투자상황 등등 한눈에".
+   모의(/paper)와 같은 방식 — 같은 앱이 전략 화면을 숨기고 그린다. 숫자는 여기서 새로 세지 않는다:
+     · 운영 실전 세션 = 모의 목록과 같은 paperStat(그 탭의 compute 를 그대로 부른다 · paperFillAll({live:true}))
+     · 듀얼 가드 = 엔진 ledgerCalc(플랜 화면 계좌 칸과 같은 함수) · 오늘 판단은 플랜 화면이 센 글자를 받는다(postMessage)
+   모의 세션·기록 없는 세션(만들기만 한 빈 세션)·폐지된 플랜 세션은 넣지 않는다. */
+var planLiveDoc=null;                          // pullRemote 가 읽은 fiveYearPlanV2 사본(읽기 전용)
+var PF={rows:null, busy:false, err:'', at:0, dg:{}, over:{}, dgSeen:null};
+const PF_COLOR={plan:'#8b5cf6',inf:'#34d399',vr:'#818cf8',ma:'#f59e0b',ivs:'#f472b6',dca:'#22d3ee',asap:'#facc15'};
+function isPfPage(){ return document.body.classList.contains('portfoliopage'); }
+function pfNum(v){ const n=+String(v==null?'':v).replace(/[^0-9.\-]/g,''); return Number.isFinite(n)?n:0; }
+function pfEsc(x){ return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function pfPct(v){ return v==null||!Number.isFinite(+v)?'—':((+v>=0?'+':'')+(+v).toFixed(1)+'%'); }
+function pfMoney(v){ return (window.JKMoney&&window.JKMoney.usdHtml)?window.JKMoney.usdHtml(+v||0):('$'+(+v||0).toFixed(2)); }
+function pfRowMoney(r,v){ return r.cur==='krw'?(Math.round(+v||0).toLocaleString('ko-KR')+'원'):pfMoney(v); }
+/* 계좌 밖으로 나간 돈 — 운영 줄(paperStat)은 out={saved,withdrawn}(단리 인출·출금·현금 분배금 · total 에 들어 있다), 듀얼 가드 줄은 0(출금은 투입에서 뺀다) */
+function pfOutAmt(r){ return typeof r.out==='number'?r.out:((r.out&&((+r.out.saved||0)+(+r.out.withdrawn||0)))||0); }
+function pfLedgerUsed(l){ const b=(l&&l.base)||{}; return (Array.isArray(l&&l.events)&&l.events.length>0)||(+b.tecl||0)>0||(+b.tqqq||0)>0||(+b.sgov||0)>0; }
+/* 듀얼 가드 실전 장부 — '현재 투자중'(fiveYearPlanV2.alphaLedger) + 실전 세션(S.plan · 모의·폐지 제외). 체결·보유가 하나도 없으면 시작 전이라 뺀다.
+   PF.over: 듀얼 가드 창이 저장 뒤 보내 준 최신 장부(이 화면이 처음 읽은 사본이 그 뒤 체결 기록으로 낡지 않게 · 이 화면은 장부를 쓰지 않는다). */
+function pfPlanLedgers(){
+  const out=[], five=planLiveDoc, o=PF.over.cur, curL=(o&&o.ledger)||(five&&five.alphaLedger);
+  if(curL&&pfLedgerUsed(curL)) out.push({key:'cur', id:'', name:'현재 투자중', ledger:curL,
+    start:pfNum(o&&o.startCapital!=null?o.startCapital:(five&&five.startCapital)),
+    from:String((o&&o.startDate)||(five&&five.startDate)||(curL.base&&curL.base.date)||'')});
+  for(const x of ((S.plan&&S.plan.sessions)||[])){
+    if(!x||x.paper||planPaperRetired(x)) continue;
+    const ov=PF.over[x.id], L=(ov&&ov.ledger)||x.ledger; if(!L||!pfLedgerUsed(L)) continue;
+    const st=x.settings||{};
+    out.push({key:String(x.id), id:String(x.id), name:x.name||'듀얼 가드 세션', ledger:L,
+      start:pfNum(ov&&ov.startCapital!=null?ov.startCapital:st.startCapital), from:String(st.startDate||(L.base&&L.base.date)||'')});
+  }
+  return out;
+}
+/* 듀얼 가드 한 줄 — 수량·현금은 엔진 ledgerCalc, 시세는 모의 목록 플랜 줄과 같은 TECL·TQQQ·SGOV(지금가 · 없으면 마지막 종가).
+   투입 = 시작금 + 입금 − 출금 — 플랜 화면 목표 진행률의 시작점과 같은 정의(입출금은 번 돈이 아니다). */
+function pfPlanRow(L, Q, E){
+  const c=E.ledgerCalc(L.ledger);
+  const px=sym=>{ const q=Q&&Q[sym]; return q&&+q.price>0?+q.price:(q&&q.last&&+q.last.close>0?+q.last.close:0); };
+  const p={TECL:px('TECL'),TQQQ:px('TQQQ'),SGOV:px('SGOV')};
+  const pending=(c.tecl>0&&!p.TECL)||(c.tqqq>0&&!p.TQQQ)||(c.sgov>0&&!p.SGOV);
+  const total=c.cash+c.tecl*p.TECL+c.tqqq*p.TQQQ+c.sgov*p.SGOV, inflow=Math.max(0,(+L.start||0)+(+c.netFlow||0));
+  const to=['TECL','TQQQ','SGOV'].map(k=>Q&&Q[k]&&Q[k].last&&Q[k].last.date).filter(Boolean).sort()[0]||'';
+  return {tab:'plan', key:L.key, id:L.id||'', label:'듀얼 가드', name:L.name, sym:'TECL/TQQQ/SGOV', cur:curOf({ticker:'TECL'}), from:L.from, to,
+    inflow, total, out:0, pending, invalid:!!c.invalid, error:c.error||'', ret:inflow>0?(total/inflow-1)*100:null,
+    hold:{TECL:c.tecl,TQQQ:c.tqqq,SGOV:c.sgov,cash:c.cash}, px:p};
+}
+async function pfPlanRows(){
+  const E=window.JKPlanSessionEngine, list=pfPlanLedgers(); if(!list.length) return [];
+  if(!E||!E.ledgerCalc) return list.map(L=>({tab:'plan',key:L.key,id:L.id||'',label:'듀얼 가드',name:L.name,cur:curOf({ticker:'TECL'}),pending:true,inflow:0,total:0,out:0,
+    error:'플랜 엔진(plan-session-engine.js)을 불러오지 못했습니다 — 새로고침하세요.'}));
+  const Q=await loadPlanPaperData(false);
+  return list.map(L=>pfPlanRow(L,Q,E));
+}
+/* 합계 — 순수 함수(scripts/check-portfolio.cjs 가 직접 부른다). 원화 종목 세션은 지금 환율로 달러로 바꿔 더한다(표시용 · 장부에 넣지 않는다).
+   now = 지금 계좌에 있는 돈 · out = 계좌 밖으로 나간 돈 · total = now+out · inflow = 투입 · 수익률 = total ÷ inflow − 1(토탈리턴).
+   시세가 아직 없는 줄·환율이 없는 원화 줄은 0 으로 더하지 않고 합계에서 빼며 그 수를 센다(missing). 비중은 지금 계좌(now) 기준. */
+function pfSummary(rows, fx){
+  let now=0,out=0,total=0,inflow=0,missing=0; const parts=[];
+  for(const r of rows||[]){
+    if(!r||r.pending||!Number.isFinite(+r.total)){ missing++; continue; }
+    let k=1; if(r.cur==='krw'){ if(!(+fx>0)){ missing++; continue; } k=1/(+fx); }
+    const o=pfOutAmt(r)*k, t=(+r.total||0)*k, i=(+r.inflow||0)*k;
+    now+=t-o; out+=o; total+=t; inflow+=i; parts.push({r, now:t-o, out:o, total:t, inflow:i});
+  }
+  parts.forEach(p=>p.w=now>0?p.now/now:0);
+  return {now, out, total, inflow, pnl:total-inflow, ret:inflow>0?(total/inflow-1)*100:null, parts, missing};
+}
+/* 듀얼 가드 오늘 판단 — 플랜 화면(renderDualGuardStrip)이 센 값 그대로(판정을 여기서 다시 세지 않는다) */
+function pfDgText(r){
+  const m=PF.dg[r.key], o=m&&m.strip;
+  if(!o){
+    const v=PF.dgSeen;   // 듀얼 가드 탭이 지금 다른 장부(모의 세션 등)를 보고 있으면 '계산 중'에 멈춰 보이지 않게 이유를 적는다
+    return '<span class="badge set">'+(!dgFrameEl?'듀얼 가드 탭을 열면 오늘 판단이 여기 보입니다'
+      :(v&&v.key!==r.key)?('듀얼 가드 탭이 '+(v.paper?'모의 세션':'다른 장부')+' 보는 중 — 그 탭에서 「'+pfEsc(r.name||'')+'」 선택 시 표시')
+      :'듀얼 가드 화면에서 오늘 판단을 계산하는 중…')+'</span>';
+  }
+  const act=o.orders?pfEsc(o.orderText||''):(o.need?'조건은 충족 · 정수 주수·현금 때문에 실제 주문 0건':'주문 없음');
+  return '<span class="badge '+(o.orders?'warn':'ok')+'">'+(o.orders?'주문 '+(+o.orders)+'건':'유지')+'</span> '
+    +pfEsc(o.date||'')+' 신호 · '+act+' · TQQQ Guard '+pfEsc(o.guard||'')+(o.guardFlip?' 전환':'');
+}
+function pfCard(r,Z){
+  const p=Z.parts.find(x=>x.r===r), w=p?(p.w*100).toFixed(1)+'%':'—', outAmt=pfOutAmt(r), now=(+r.total||0)-outAmt;
+  const extra=[];
+  if(r.from) extra.push(pfEsc(r.from)+' 시작');
+  if(r.tab==='plan'){ if(r.hold) extra.push('TECL '+r.hold.TECL+' · TQQQ '+r.hold.TQQQ+' · SGOV '+r.hold.SGOV+'주 · 현금 $'+(+r.hold.cash||0).toFixed(2)); }
+  else{
+    if(Number.isFinite(r.atr)) extra.push('세후 TR '+pfPct(r.atr));
+    if(r.mdd&&Number.isFinite(+r.mdd.pct)) extra.push('MDD −'+(+r.mdd.pct).toFixed(1)+'%');
+    if(outAmt>0) extra.push('나간 돈 '+pfRowMoney(r,outAmt));
+  }
+  if(r.error) extra.push('<span class="pf-neg">⚠ '+(r.invalid?'장부 오류: ':'')+pfEsc(r.error)+'</span>');
+  const st=r.tab==='plan'?pfDgText(r):(r.status||'');
+  return '<div class="pf-card" style="border-left-color:'+(PF_COLOR[r.tab]||'var(--line)')+'">'
+    +'<div class="t"><span>'+pfEsc(r.label)+(r.sym&&r.tab!=='plan'?' · '+pfEsc(r.sym):'')+'</span><span class="w">비중 '+w+'</span></div>'
+    +'<div class="nm2">'+pfEsc(r.name||'')+'</div>'
+    +'<div class="g"><div><div class="k">평가 (지금)</div><div class="v">'+(r.pending?'시세 대기':pfRowMoney(r,now))+'</div></div>'
+    +'<div><div class="k">투입</div><div class="v">'+pfRowMoney(r,r.inflow||0)+'</div></div>'
+    +'<div><div class="k">수익률</div><div class="v '+((+r.ret||0)>=0?'pf-pos':'pf-neg')+'">'+(r.pending?'—':pfPct(r.ret))+'</div></div></div>'
+    +(extra.length?'<div class="st">'+extra.join(' · ')+'</div>':'')
+    +(st?'<div class="st" style="margin-top:4px">'+st+'</div>':'')
+    +'<button class="open" data-pftab="'+pfEsc(r.tab)+'" data-pfid="'+pfEsc(r.tab==='plan'?r.key:r.id)+'">운영에서 열기 →</button></div>';
+}
+function pfRender(){
+  const box=$('pfPage'); if(!box) return;
+  const rows=PF.rows, fx=(typeof liveFX!=='undefined'&&liveFX)?liveFX:paperFxFallback();
+  let h='<div class="pf-head"><div><h2>💰 포트폴리오</h2><div class="sub">실제로 투자 중인 것만 — 운영 실전 세션 + 듀얼 가드 장부'
+       +(PF.at?' · '+new Date(PF.at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' 계산':'')+'. 모의 세션은 🧪 모의에서 봅니다.</div></div>'
+       +'<button class="fetchbtn" id="pfRefreshBtn"'+(PF.busy?' disabled':'')+'>'+(PF.busy?'계산 중…':'🔄 다시 계산')+'</button></div>';
+  if(!rows){
+    box.innerHTML=h+'<div class="pf-today"><p class="lead" style="margin:0">'+(PF.err?('⚠ 합산하지 못했습니다 — '+pfEsc(PF.err))
+      :(PF.busy?'실전 세션 시세를 받아 합산하는 중… (세션마다 그 전략 화면과 같은 계산)':'Firebase DB 원장을 불러온 뒤 합산합니다…'))+'</p></div>';
+    return;
+  }
+  if(!rows.length){
+    box.innerHTML=h+'<div class="pf-today"><p class="lead" style="margin:0">아직 체결 기록이 있는 실전 세션이 없습니다. 운영 탭의 실전 세션(모의 아님)에 체결을 기록하면 여기에 합쳐집니다.</p></div>';
+    return;
+  }
+  const Z=pfSummary(rows,fx);
+  h+='<div class="pf-kpis">'
+    +'<div class="pf-kpi"><div class="k">총자산 (지금 계좌)</div><div class="v">'+pfMoney(Z.now)+'</div><div class="s">'+(Z.out>0?'계좌 밖으로 나간 돈 '+pfMoney(Z.out)+' 별도':'실전 '+Z.parts.length+'개 합계')+'</div></div>'
+    +'<div class="pf-kpi"><div class="k">투입 원금</div><div class="v">'+pfMoney(Z.inflow)+'</div><div class="s">입금·출금 반영</div></div>'
+    +'<div class="pf-kpi"><div class="k">손익 · 수익률</div><div class="v '+(Z.pnl>=0?'pf-pos':'pf-neg')+'">'+pfPct(Z.ret)+'</div><div class="s">'+pfMoney(Z.pnl)+'</div></div>'
+    +'</div>';
+  h+='<div class="pf-bar">'+Z.parts.map(p=>'<span style="width:'+(p.w*100).toFixed(2)+'%;background:'+(PF_COLOR[p.r.tab]||'#888')+'"></span>').join('')+'</div>'
+    +'<div class="pf-legend">'+Z.parts.map(p=>'<span><i style="background:'+(PF_COLOR[p.r.tab]||'#888')+'"></i>'+pfEsc(p.r.label)+(p.r.tab!=='plan'&&p.r.sym?' '+pfEsc(p.r.sym):'')+' '+(p.w*100).toFixed(1)+'%</span>').join('')+'</div>';
+  h+='<div class="pf-today"><h3>📋 오늘</h3>'+rows.map(r=>'<div class="row"><div class="nm" style="color:'+(PF_COLOR[r.tab]||'inherit')+'">'+pfEsc(r.label)+'</div><div>'
+    +(r.tab==='plan'?pfDgText(r):(r.status||'—'))+'</div></div>').join('')+'</div>';
+  h+='<div class="pf-cards">'+rows.map(r=>pfCard(r,Z)).join('')+'</div>';
+  h+='<div class="pf-note">평가는 지금 시세(장중이면 장중가) 기준 · 원화 종목 세션은 지금 환율로 달러 환산해 더합니다(표시용). 세션별 숫자는 그 전략 화면·모의 목록과 같은 계산입니다 — 무매·VR·섀넌 등은 그 탭의 계산, 듀얼 가드는 플랜 화면 계좌 칸과 같은 장부 계산.'
+    +(Z.missing?' · 시세·환율 대기 '+Z.missing+'개는 합계에서 뺐습니다.':'')+'</div>';
+  box.innerHTML=h;
+  try{ if(window.JKMoney) window.JKMoney.paint(); }catch(e){}
+}
+function pfOpen(tab,id){
+  if(tab==='plan'){ if(id&&id!=='cur'){ gotoSess('plan',id); return; } leaveOverlayPages(); openDualGuard(); return; }
+  gotoSess(tab,id);
+  const chip=document.querySelector('#'+tab+' .chip[data-b="'+tab+'-now"]'); if(chip) chip.click();   // 포트폴리오에선 '현재'(오늘 주문표)로
+}
+async function pfRefresh(force){
+  if(PF.busy) return; PF.busy=true; PF.err=''; pfRender();
+  try{
+    while(typeof _paperFilling!=='undefined'&&_paperFilling) await new Promise(r=>setTimeout(r,300));   // 모의 목록 계산이 돌고 있으면 끝난 뒤에(시세 칸을 같이 쓴다)
+    if(force){ try{ await loadPlanPaperData(true); }catch(e){} }
+    const ops=(await paperFillAll({live:true}))||[];
+    const plans=await pfPlanRows();
+    PF.rows=[...plans,...ops]; PF.at=Date.now();
+    try{ refreshAll(); }catch(e){}               // 모의 목록 채우기와 같이 — 시세 칸을 되돌린 뒤 운영 화면을 한 번 다시 그린다
+  }catch(e){ console.error('portfolio',e); PF.err=String(e&&e.message||e); }
+  finally{ PF.busy=false; }
+  pfRender();
+  if(!dgFrameEl && pfPlanLedgers().length) dgEnsureFrame();   // 듀얼 가드 오늘 판단은 플랜 화면이 센다 — 그 창을 뒤에서 미리 연다(탭을 누르면 바로 보인다)
+}
+async function pfRecalcPlan(){
+  if(!PF.rows||PF.busy){ pfRender(); return; }
+  try{ const plans=await pfPlanRows(); PF.rows=[...plans,...PF.rows.filter(r=>r.tab!=='plan')]; }catch(e){ console.warn('portfolio plan',e); }
+  pfRender();
+}
+function pfPageMode(on){
+  document.body.classList.toggle('portfoliopage',!!on);
+  const home=document.querySelector('#jkmenuPop a[href="/"]'), pp=$('jkPortfolio');
+  if(home) home.classList.toggle('cur',!on); if(pp) pp.classList.toggle('cur',!!on);
+  document.title=on?'JK 투자 — 포트폴리오':APP_TITLE;
+  if(window.JKUnifiedUI) window.JKUnifiedUI.normalizeHeader();
+  if(on){ hideFab(); pfRender(); }
+  else if(!isDgView()&&S.activeTab!=='ma'&&S.activeTab!=='asap') showFab();
+}
+/* 페이지로 열었으면 원장을 다 읽은 뒤(클라우드 읽기 뒤) 한 번 채운다 — 모의 페이지(paperPageAuto)와 같은 규칙 */
+function pfPageAuto(){
+  if(!isPfPage()||window._pfAutoOpened) return;
+  if(typeof stateCloudHydrated!=='undefined'&&!stateCloudHydrated){ pfRender(); return; }
+  window._pfAutoOpened=true;
+  pfRefresh(false);
+}
+/* 포트폴리오·모의 페이지에서 운영 화면으로 나간다(뒤로 가기로 돌아온다) */
+function leaveOverlayPages(){
+  if(isPfPage()){ history.pushState(null,'','/'); pfPageMode(false); }
+  closePaper();
+}
+document.addEventListener('DOMContentLoaded',()=>{ if(isPfPage()) pfPageMode(true); });
+window.addEventListener('popstate',()=>{ const on=/^\/portfolio\/?$/.test(location.pathname);
+  if(on!==isPfPage()){ pfPageMode(on); if(on) pfPageAuto(); } });
+document.addEventListener('click',e=>{
+  const b=e.target&&e.target.closest&&e.target.closest('#pfPage button');
+  if(!b) return;
+  if(b.id==='pfRefreshBtn'){ pfRefresh(true); return; }
+  if(b.dataset&&b.dataset.pftab) pfOpen(b.dataset.pftab,b.dataset.pfid||'');
+});
+/* 듀얼 가드 창(플랜 화면)이 오늘 판단을 셀 때마다 알려 준다 — 포트폴리오 '오늘' 칸이 그 글자를 그대로 쓴다.
+   '현재 투자중'·실전 세션이면 장부도 같이 온다(PF.over) — 처음 읽은 사본이 그 뒤 체결 기록으로 낡지 않게. 이 화면은 그 장부를 저장하지 않는다.
+   같은 출처 · 우리가 만든 창 · 같은 로그인 계정에서 온 것만 받는다. */
+window.addEventListener('message',e=>{
+  if(e.origin!==location.origin||!dgFrameEl||e.source!==dgFrameEl.contentWindow) return;
+  const d=e.data; if(!d||d.type!=='jk-dg'||!curUid||d.uid!==curUid) return;
+  const key=String(d.key||''); if(!key) return;
+  PF.dgSeen={key, paper:!!d.paper};                 // 듀얼 가드 탭이 지금 보고 있는 장부 — '오늘' 칸 안내용
+  if(d.paper){ if(isPfPage()) pfRender(); return; } // 모의 세션 값은 받지 않는다(실투자 합계에 안 섞는다)
+  PF.dg[key]={strip:d.strip||null, at:Date.now()};
+  if(d.ledger&&typeof d.ledger==='object') PF.over[key]={ledger:d.ledger, startCapital:d.startCapital, startDate:d.startDate};
+  if(isPfPage()) pfRecalcPlan();
+});
 /* 모의 성과 → 그 세션의 거래이력.
    순서가 중요하다: 탭 → 세션 → 서브탭.
    switchSess가 서브탭을 '현재'로 되돌리므로 거래이력 열기는 반드시 그 뒤여야 한다.
@@ -8947,12 +9251,13 @@ window.addEventListener('popstate', ()=>{ const on=/^\/paper\/?$/.test(location.
 function gotoSess(tab, id){
   if(tab==='plan'){
     const box=S.plan,x=box&&box.sessions&&box.sessions.find(s=>s.id===id);if(!x)return;
-    location.href='/plan?session='+encodeURIComponent(id)+'&horizon='+encodeURIComponent(x.horizon||5);return;
+    /* 듀얼 가드는 운영 탭이 됐다(2026-11-09) — 그 탭 안의 플랜 화면을 그 세션으로 연다(플랜 화면의 ?session= 딥링크 그대로) */
+    leaveOverlayPages(); openDualGuard('session='+encodeURIComponent(id)+'&horizon='+encodeURIComponent(x.horizon||5));return;
   }
   const box=S[tab]; if(!box||!box.sessions) return;
   if(!box.sessions.some(x=>x.id===id)) return;
-  closePaper();
-  if(S.activeTab!==tab){
+  leaveOverlayPages();
+  if(S.activeTab!==tab || isDgView()){
     const tb=document.querySelector(`.tab[data-t="${tab}"]`);
     if(tb) tb.click(); else { S.activeTab=tab; save(); }
   }
@@ -10316,11 +10621,10 @@ async function createSess(){
 }
 
 /* ── 상태줄 ── */
-function renderStatusline(){
-  // 모의 성과 백그라운드 재생 중에는 운영 상태줄을 임시 세션으로 바꾸지 않는다.
-  if(_paperFilling)return;
-  const s=sess(), strat=S.activeTab;
-  let html='';   // 세션명(키움 USD)은 세션바와 중복이라 제거 — 전략 요약만 표시
+/* 전략 요약 + 신호 배지 — 운영 상태줄과 포트폴리오(실전 세션 카드)가 같이 쓴다(같은 글자를 두 군데서 만들지 않는다).
+   compute*() 가 활성 탭·세션을 읽으므로, 부르는 쪽이 S.activeTab·box.active 를 그 세션으로 맞춰 둔 상태여야 한다. */
+function stratStatusHtml(strat,s){
+  let html='';
   if(strat==='inf'){
     const st=s.settings,c=computeInf();
     html+=`<span>${tickerLabel(st.ticker)} · ${st.div}분할 · ${st.autoTp===true?('익절 자동 · '+autoTpLabel(autoTpModeOf(st))):'익절'+st.target+'%'} · ${wn(st.principal)}</span>`;
@@ -10352,6 +10656,13 @@ function renderStatusline(){
     const mode=st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
     html+=`<span>${tickerLabel(st.ticker)} · ${mode} · ±${st.band}% · ${st.formula==='skill'?'실력(실험적)':'기본'}공식</span>`;
   }
+  return html;
+}
+function renderStatusline(){
+  // 모의 성과 백그라운드 재생 중에는 운영 상태줄을 임시 세션으로 바꾸지 않는다.
+  if(_paperFilling)return;
+  const s=sess(), strat=S.activeTab;
+  let html=stratStatusHtml(strat,s);   // 세션명(키움 USD)은 세션바와 중복이라 제거 — 전략 요약만 표시
   // 설정은 '지금 보고 있는 전략·세션'의 설정이라 상단 헤더보다 상태줄이 맞다
   html+=`<button class="setpill" onclick="openSettings()" title="설정">⚙️ 설정</button>`;
   $('statusline').innerHTML=html;
@@ -10693,6 +11004,8 @@ function holdScroll(y){
 function setupTabs(){
   document.querySelectorAll('.tab').forEach(t=>{
     t.onclick=()=>{
+      if(t.dataset.t==='dg'){ openDualGuard(); return; }   // 듀얼 가드는 전략 탭(S.activeTab)이 아니다 — 화면만 바꾼다(openDualGuard)
+      closeDualGuardView();
       document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
       document.querySelectorAll('section').forEach(x=>x.classList.remove('on'));
       t.classList.add('on');$(t.dataset.t).classList.add('on');
@@ -11054,6 +11367,9 @@ async function pullRemote(){
     try{ const stored=snap.paperStorageData?snap.paperStorageData():d; dbReadKB=Math.round(fsDocBytes('users/'+curUid, fsDocParts(stored))/1024); dbReadTop=dbPartsText(fsDocParts(stored),4); }catch(e){}
     if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object')cacheStrategyDefaults(d.strategyDefaultOverrides);
     KR_NAME_MEMO=(d&&d.tickerNameMemo&&typeof d.tickerNameMemo==='object')?JSON.parse(JSON.stringify(d.tickerNameMemo)):{};
+    /* 듀얼 가드 '현재 투자중' 장부(fiveYearPlanV2) — 포트폴리오 합산용 읽기 전용 사본. 이 화면은 이 칸을 쓰지 않는다(쓰는 곳은 플랜 화면 하나). */
+    planLiveDoc=(d&&d.fiveYearPlanV2&&typeof d.fiveYearPlanV2==='object')?JSON.parse(JSON.stringify(d.fiveYearPlanV2))
+               :((d&&d.fiveYearPlan&&typeof d.fiveYearPlan==='object')?JSON.parse(JSON.stringify(d.fiveYearPlan)):null);
     const hasV2=d&&validState(d.stateV2),legacy=d&&validState(d.state)?d.state:null;
     const remote=hasV2?d.stateV2:legacy;
     const remoteUpdated=hasV2?(+d.stateV2Updated||0):(+d.updated||0);
@@ -11160,6 +11476,7 @@ async function retryDbLoad(){
     applyAdminMode();
     setSync('ok');
     paperPageAuto();
+    pfPageAuto();
   }catch(e){
     console.error('db retry',e);
     authWarn('로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다 — '+(e&&e.message||e));
@@ -11248,9 +11565,12 @@ function startApp(){
   appStarted=true;
   applyAdminMode();
   setupTabs();setupSegs();setupSessbar();
+  /* ASAP 탭은 숨겼다(2026-11-09 사용자) — 지난번에 ASAP 을 보고 있었어도 첫 화면은 무한매수법. ASAP 세션은 모의 목록·포트폴리오에서 열린다. */
+  if(S.activeTab==='asap')S.activeTab='inf';
   if(S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
   refreshAll();
   if(S.activeTab==='ma'||S.activeTab==='asap')hideFab(); else showFab();
+  if(S.opView==='dg') openDualGuard();   // 지난번에 듀얼 가드를 보고 있었으면 그 화면으로(다른 기기도 같다 — 원장에 적힌다)
   /* 주문 권한은 서버가 정한다. 답이 오면 주문 패널을 다시 그린다 —
      기다렸다 시작하면 서버가 늦을 때 앱이 통째로 늦어진다. */
   try{ kisSyncOwner().then(ok=>{ if(ok) try{ renderOrder(); }catch(e){} }); }catch(e){}
@@ -11324,6 +11644,7 @@ function initAuth(){
       applyAdminMode();          // 계정으로 권한이 정해지므로 로그인 뒤에 다시 본다
       setSync('ok');
       paperPageAuto();           // /paper 로 열었으면 이제(클라우드 기록을 맞춘 뒤) 모의 성과를 채운다
+      pfPageAuto();              // /portfolio 로 열었으면 실투자 합산도 같은 때에
       /* 접속 기록은 앱을 여는 것보다 중요하지 않다. 실패해도 거래 원장/모의성과는 그대로 쓴다. */
       void withTimeout(touchProfile(user), 8000, '프로필 기록').catch(e=>console.warn('profile',e));
     }catch(e){
