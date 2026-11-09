@@ -98,6 +98,14 @@ input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var
 .menu-move{display:flex;gap:5px}.menu-move button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--dim);cursor:pointer;font-weight:900}
 .menu-move button:disabled{opacity:.3;cursor:default}
 @media(max-width:620px){.cfggrid{grid-template-columns:1fr}.menu-row{grid-template-columns:1fr 1fr}.menu-move{justify-content:flex-end}}
+/* 하위 탭(2026-11-09) — 메뉴 줄 아래 접히는 칸 · 같은 공개범위 셋 · 위/아래 */
+.sub-list{grid-column:1/-1;margin-top:2px;border-top:1px dashed var(--line);padding-top:6px}
+.sub-list summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--dim);padding:4px 2px}
+.sub-row{display:grid;grid-template-columns:minmax(130px,1fr) 130px auto;gap:8px;align-items:center;padding:6px 4px;border-top:1px solid var(--line)}
+.sub-list summary+.sub-row{border-top:0}
+.sub-name{font-size:12.5px;font-weight:700}.sub-name small{display:block;color:var(--faint);font-size:10px;font-weight:600;margin-top:1px}
+.sub-row select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:6px 8px;font-family:inherit;font-size:12.5px}
+@media(max-width:620px){.sub-row{grid-template-columns:minmax(0,1fr) 104px auto;gap:6px}.sub-row select{padding:6px 5px}.sub-row .menu-move button{width:30px;height:30px}}   /* 휴대폰: 탭 하나 = 한 줄 */
 
 .htable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .htable{width:100%;border-collapse:collapse;font-size:11px;min-width:520px}
@@ -194,7 +202,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.31</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.13.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -710,12 +718,22 @@ const MENU_ICONS={'/':'🏠','/portfolio':'💰','/plan':'🧭','/backtest':'�
 const MENU_HARD_ADMIN=new Set(['/scalping','/claude','/admin']);
 let menuDraft=[];
 let menuSaveTimer=0,menuSaveSeq=0;
+/* 하위 탭 초안 — {경로: [{key,label,mode,order}]} · 목록과 기본값은 jk-access.js SUB_TABS 한 곳(페이지 적용과 같은 표) */
+let subDraft={}, subOpen=new Set();
+const SUB_MODE_LABEL={public:'전체 공개',admin:'관리자만',hidden:'전체 숨김'};
+function subDraftFrom(cfg){
+  const out={}; if(!window.JKAccess||!JKAccess.SUB_TABS||!JKAccess.subTabState) return out;
+  Object.keys(JKAccess.SUB_TABS).forEach(p=>{ out[p]=JKAccess.subTabState(cfg,p,true).map((x,i)=>({key:x.key,label:x.label,mode:x.mode,order:(i+1)*10})); });
+  return out;
+}
 
 function menuDraftConfig(){
   menuDraft.sort((a,b)=>a.order-b.order);
   menuDraft.forEach((x,i)=>x.order=(i+1)*10);
   const items={};menuDraft.forEach(x=>items[x.path]={mode:x.mode,order:x.order});
-  return {items,updatedAt:Date.now(),updatedBy:normEmail(me&&me.email)};
+  const subs={};
+  Object.keys(subDraft).forEach(p=>{ subDraft[p].sort((a,b)=>a.order-b.order).forEach((x,i)=>{ x.order=(i+1)*10; (subs[p]=subs[p]||{})[x.key]={mode:x.mode,order:x.order}; }); });
+  return {items,subs,updatedAt:Date.now(),updatedBy:normEmail(me&&me.email)};
 }
 function previewMenuDraft(){
   const pos={};menuDraft.forEach((x,i)=>pos[x.path]=i);
@@ -749,14 +767,15 @@ function menuBase(){
 }
 function renderMenus(el){
   el.innerHTML='<div class="card"><h3><span class="dot"></span>공용 메뉴 관리</h3>'
-    +'<p class="lead">각 메뉴를 <b>전체 공개 / 관리자만 / 전체 숨김</b>으로 정하고 순서를 바꿉니다. 저장하면 모든 승인 사용자 화면에 같은 정책이 적용됩니다.</p>'
+    +'<p class="lead">각 메뉴를 <b>전체 공개 / 관리자만 / 전체 숨김</b>으로 정하고 순서를 바꿉니다. 메뉴 아래 <b>하위 탭</b>을 펼치면 그 화면의 탭도 같은 방식으로 숨기거나 순서를 바꿉니다. 저장하면 모든 승인 사용자 화면에 같은 정책이 적용됩니다.</p>'
     +'<div id="menuBody"><p class="lead">불러오는 중…</p></div>'
     +'<div class="row" style="margin-top:13px"><button class="prim" onclick="saveMenus()">💾 메뉴 설정 저장</button>'
     +'<button class="ghostbtn" onclick="resetMenus()">기본 순서로 되돌리기</button></div>'
     +'<div id="menuStatus" class="cfgstatus"></div>'
     +'<p class="note"><b>전체 숨김</b>: 메뉴에서 누구에게도 보이지 않습니다. 관리자는 주소를 직접 입력하면 열 수 있지만 일반 사용자는 직접 URL도 차단됩니다.<br>'
     +'<b>관리자만</b>: 관리자 메뉴에는 보이고 일반 사용자에게는 숨겨지며 직접 URL도 차단됩니다.<br>'
-    +'연구(지피티)·연구(클로드)·관리자는 기존 소유자 보안이 있으므로 공개로 낮추지 않고 <b>관리자만/전체 숨김</b>만 선택합니다.</p></div>';
+    +'연구(지피티)·연구(클로드)·관리자는 기존 소유자 보안이 있으므로 공개로 낮추지 않고 <b>관리자만/전체 숨김</b>만 선택합니다.<br>'
+    +'<b>하위 탭</b>: 화면에서만 가립니다(데이터 권한은 그대로). 지금 열려 있는 탭은 다른 탭으로 옮길 때까지 보입니다. 관리자 화면의 탭은 스스로 잠그지 않게 목록에 없습니다.</p></div>';
   loadMenus();
 }
 function menuModeOptions(r){
@@ -773,8 +792,30 @@ function paintMenus(){
       +'<small>'+esc(r.path)+(MENU_HARD_ADMIN.has(r.path)?' · 기존 소유자 제한 유지':'')+'</small></div>'
       +'<select onchange="menuModeChange(\''+r.path+'\',this.value)">'+menuModeOptions(r)+'</select>'
       +'<div class="menu-move"><button '+(idx===0?'disabled ':'')+'onclick="moveMenu(\''+r.path+'\',-1)" title="위로">↑</button>'
-      +'<button '+(idx===menuDraft.length-1?'disabled ':'')+'onclick="moveMenu(\''+r.path+'\',1)" title="아래로">↓</button></div></div>'
+      +'<button '+(idx===menuDraft.length-1?'disabled ':'')+'onclick="moveMenu(\''+r.path+'\',1)" title="아래로">↓</button></div>'
+      +subBlockHtml(r.path)+'</div>'
   ).join('')+'</div>';
+}
+function subBlockHtml(path){
+  const L=(subDraft[path]||[]).sort((a,b)=>a.order-b.order); if(!L.length) return '';
+  const hid=L.filter(x=>x.mode==='hidden').length, adm=L.filter(x=>x.mode==='admin').length;
+  return '<details class="sub-list" data-path="'+esc(path)+'"'+(subOpen.has(path)?' open':'')+' ontoggle="subToggle(this)"><summary>하위 탭 '+L.length+'개'
+    +(hid?' · 숨김 '+hid:'')+(adm?' · 관리자만 '+adm:'')+'</summary>'
+    +L.map((x,i)=>'<div class="sub-row"><div class="sub-name">'+esc(x.label)+'<small>'+esc(x.key)+'</small></div>'
+      +'<select onchange="subModeChange(\''+path+'\',\''+x.key+'\',this.value)">'+['public','admin','hidden'].map(m=>'<option value="'+m+'"'+(x.mode===m?' selected':'')+'>'+SUB_MODE_LABEL[m]+'</option>').join('')+'</select>'
+      +'<div class="menu-move"><button '+(i===0?'disabled ':'')+'onclick="moveSub(\''+path+'\',\''+x.key+'\',-1)" title="위로">↑</button>'
+      +'<button '+(i===L.length-1?'disabled ':'')+'onclick="moveSub(\''+path+'\',\''+x.key+'\',1)" title="아래로">↓</button></div></div>').join('')
+    +'</details>';
+}
+function subToggle(d){ const p=d.getAttribute('data-path'); if(d.open) subOpen.add(p); else subOpen.delete(p); }
+function subModeChange(path,key,mode){
+  const x=(subDraft[path]||[]).find(z=>z.key===key); if(!x||!['public','admin','hidden'].includes(mode)) return;
+  x.mode=mode; paintMenus(); queueMenuSave();
+}
+function moveSub(path,key,dir){
+  const L=(subDraft[path]||[]).sort((a,b)=>a.order-b.order), i=L.findIndex(z=>z.key===key), j=i+dir;
+  if(i<0||j<0||j>=L.length) return;
+  [L[i],L[j]]=[L[j],L[i]]; L.forEach((z,k)=>z.order=(k+1)*10); paintMenus(); queueMenuSave();
 }
 async function loadMenus(){
   const st=$('menuStatus');if(st){st.className='cfgstatus';st.textContent='';}
@@ -790,7 +831,9 @@ async function loadMenus(){
     let mode=v.mode||x.mode;if(hard&&mode==='public')mode='admin';
     return {...x,mode,order:Number.isFinite(+v.order)?+v.order:x.order};
   }).sort((a,b)=>a.order-b.order);
-  menuDraft.forEach((x,i)=>x.order=(i+1)*10);paintMenus();
+  menuDraft.forEach((x,i)=>x.order=(i+1)*10);
+  subDraft=subDraftFrom(cfg);   // 하위 탭 — 저장된 정책(없으면 기본값 · ASAP 숨김)
+  paintMenus();
 }
 function menuModeChange(path,mode){
   const r=menuDraft.find(x=>x.path===path);if(!r)return;
@@ -806,7 +849,9 @@ function moveMenu(path,dir){
   queueMenuSave();
 }
 function resetMenus(){
-  menuDraft=menuBase().map(x=>({...x}));paintMenus();
+  menuDraft=menuBase().map(x=>({...x}));
+  subDraft=subDraftFrom(window.JKAccess?JKAccess.menuDefaults():{});   // 하위 탭도 기본(페이지 순서 · ASAP 숨김)
+  paintMenus();
   queueMenuSave();
 }
 async function saveMenus(auto=false,queuedSeq=0){

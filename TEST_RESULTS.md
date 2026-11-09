@@ -1,5 +1,17 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 메뉴 관리 — 메뉴마다 하위 탭 숨김·순서 · v3.125.0 (관리자 v0.13.0)
+
+- `check-subtabs.cjs` **ALL PASS · 변이 13/13 빨간불**.
+  - S1 정리: 저장값 그대로 · 잘못된 공개범위는 기본 · 모르는 키·페이지 버림 · 저장된 페이지의 새 탭은 1000+ · ASAP 기본 숨김.
+  - S2 상태: 일반 사용자 = inf·ma·ivs·dca · 관리자 = + 관리자만(dg) · 숨김(vr)·ASAP 은 둘 다 안 보임.
+  - S3 적용(가짜 문서에서 applyMenuConfig 그대로): 숨김 클래스 · CSS order 1~7 · /paper·/portfolio 도 운영 정책 · 목록에 없는 탭·페이지는 그대로 · 준비 표시.
+  - S4 목록 = 페이지 7곳의 실제 탭 단추(키·이름·순서).
+  - S5 관리자 함수(menuDraftConfig · moveSub · subModeChange · resetMenus · subBlockHtml) 값.
+- check-ui-common · test_tenbagger_ui · test_tenbagger_claude · check-portfolio 63/63 · check-plan-claude-tab 23/23 통과(jk-access.js 를 쓰는 시험).
+- 관리자 화면 하위 탭 칸 휴대폰(360·390px) 캡처 — 가로 넘침 없음 · 탭 하나 한 줄.
+- 실제 Firestore 저장·다른 기기 반영은 배포 뒤 사용자 확인.
+
 ## 2026-11-09 · 포트폴리오 세션별 · 종목별 보유 · v3.124.0
 
 - `check-portfolio.cjs` **ALL PASS · 변이 63/63 빨간불**(새 P1~P9 · 변이 10종).
