@@ -9,6 +9,7 @@
   - Q5 운영 그릇 — USD 2주 × 종가 · SMH 1주 × 짝 종가 · 현금 55 = k 60 − 나간 돈 5 · 끝 값 지금 시세.
   - Q6 듀얼가드 — TECL 5 × 100 · SGOV 3 × 100 · 현금 1,200 · 끝 값 보유 × 지금가.
 - 그림 캡처(390px · 세션 4 · 종목 11): 세션별 · 종목별 둘 다 가로 넘침 없음.
+- 배포 확인(PR #632 squash ae8def6 · GitHub check · regression 통과): curl 운영 index v3.126.0(#appVerTop·#appVer) · pfChartSeries · data-pfmode · pfChartToggle · PF_TK_COLORS · 종목별 처음 꺼 둠 · 그릇 hv·cash 각 1.
 - 실제 계좌 숫자로 본 그림은 배포 뒤 사용자 확인.
 
 ## 2026-11-09 · 메뉴 관리 — 메뉴마다 하위 탭 숨김·순서 · v3.125.0 (관리자 v0.13.0)
