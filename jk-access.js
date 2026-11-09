@@ -15,7 +15,7 @@
      scalping/claude/admin은 별도 소유자 보안이 있으므로 기본값도 admin이다. */
   var MENU_ITEMS=[
     {path:'/',label:'운영',mode:'public',order:10},
-    {path:'/plan',label:'자산플랜',mode:'public',order:20},
+    {path:'/portfolio',label:'포트폴리오',mode:'public',order:20},
     {path:'/backtest',label:'백테',mode:'public',order:30},
     {path:'/scalping',label:'연구(지피티)',mode:'admin',order:40},
     {path:'/claude',label:'연구(클로드)',mode:'admin',order:50},
@@ -27,7 +27,10 @@
     {path:'/swim',label:'수영대회',mode:'public',order:81,after:'/job'},
     {path:'/workout',label:'운동 타이머',mode:'public',order:82,after:'/job'},
     {path:'/settings',label:'설정',mode:'public',order:85},
-    {path:'/admin',label:'관리자',mode:'admin',order:90}
+    {path:'/admin',label:'관리자',mode:'admin',order:90},
+    /* 듀얼가드(옛 자산플랜 · 2026-11-09)는 운영 탭 안으로 들어갔다 — 메뉴에는 안 보이고, 주소로 바로 여는 권한(관리자가 정한 공개/관리자)은 그대로 둔다.
+       목록 맨 끝에 둔다: 텐배거 숨김 시험의 변이가 파일의 첫 ',navHidden:true'(텐배거)를 지운다. */
+    {path:'/plan',label:'듀얼가드',mode:'public',order:21,navHidden:true}
   ];
   var menuCache=null, menuSeq=0;
   /* 메뉴 순서·표시는 DB 설정(settings/siteMenu)을 읽어야 안다. 그 전엔 페이지 HTML 의 기본 순서라,

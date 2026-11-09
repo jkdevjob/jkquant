@@ -21,7 +21,7 @@ function update(session,input,options){
   if(!paper&&hasLedgerActivity(x.ledger)&&!restoring&&(cap!==+st.startCapital||start!==st.startDate)){
     throw Error('거래 또는 보유내역이 있는 운영 세션의 시작자산·시작일은 거래이력의 시작잔고 수정에서 변경하세요.');
   }
-  x.name=String(input.name||'').trim()||x.name||x.horizon+'년 세션';
+  x.name=String(input.name||'').trim()||x.name||'듀얼가드 세션';
   x.paper=paper;x.simStart=paper?start:'';
   x.settings={...st,startCapital:restoring?+liveBase.startCapital:cap,monthlyAdd:monthly,targetCapital:target,startDate:restoring?liveBase.startDate:start};
   x.settings.alphaRules='base';   // 규칙은 기본 하나(2026-11-08 새 규칙·공격형 폐지) — 무엇을 넘겨도 base 로 저장한다
@@ -32,6 +32,7 @@ function update(session,input,options){
     x.ledger={base:{date:start,tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
   }
   if(restoring)delete x.liveSettings;
+  if(!paper&&typeof input.portfolio==='boolean')x.portfolio=input.portfolio;   // '💰 포트폴리오에 넣기' — 운영(실계좌) 세션만 고른다 · 모의로 바꿀 땐 예전 값을 그대로 둔다
   x.updatedAt=Date.now();
   return x;
 }

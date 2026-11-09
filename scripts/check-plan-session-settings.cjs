@@ -37,13 +37,14 @@ function fn(marker){
 async function fixture(cancel,creating=false){
   let resolveFx,saves=0,loads=0;
   const fx=new Promise(r=>resolveFx=r),box={sessions:[JSON.parse(original)],activeByHorizon:{10:'keep'}};
-  const values={assetSessionKind:'paper',assetSessionName:'edited',assetSessionCapital:'20000',assetSessionMonthly:'250',assetSessionTarget:'90000',assetSessionStart:'2025-01-02'};
+  const values={assetSessionName:'edited',assetSessionCapital:'20000',assetSessionMonthly:'250',assetSessionTarget:'90000',assetSessionStart:'2025-01-02'};
   const els=Object.fromEntries(Object.entries(values).map(([k,value])=>[k,{value}]));
+  els.assetSessionPaper={checked:true};   // 세션 창의 '모의투자로 만들기' 체크(2026-11-09 운영 탭과 같은 모양)
   els.assetSessionModal={hidden:false};els.assetSessionCreate={disabled:false};
   const c=vm.createContext({console,window:{JKPlanSessionSettings:E},$:id=>els[id],ensureLiveBoxes(){},assetPlanBox:()=>box,
     confirm:()=>true,alert:m=>{throw Error(m);},assetFxAt:()=>fx,todayISO:()=>opt.today,assetSessionSettingsFromView:()=>live.settings,
     saveOperatingState:async()=>saves++,renderAssetSessions(){},loadActiveAssetSessionView:async()=>loads++,planSid:()=> 'new'});
-  vm.runInContext("let assetSessionSaving=false,assetModalRevision=1,assetModalHorizon=10,activeHorizon=10,assetEditingId='keep',assetViewRevision=0;const assetPaperCache={keep:'old'};"+fn('function closeAssetSessionModal()')+fn('async function createAssetSession()'),c);
+  vm.runInContext("let assetSessionSaving=false,assetModalRevision=1,assetModalHorizon=10,activeHorizon=10,assetEditingId='keep',assetViewRevision=0;const assetPaperCache={keep:'old'};"+fn('function assetModalPaper()')+fn('function closeAssetSessionModal()')+fn('async function createAssetSession()'),c);
   if(creating)vm.runInContext('assetEditingId=null',c);
   const pending=c.createAssetSession();await c.createAssetSession();
   if(cancel==='close')c.closeAssetSessionModal();
