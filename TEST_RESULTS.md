@@ -10,6 +10,7 @@
   - S5 관리자 함수(menuDraftConfig · moveSub · subModeChange · resetMenus · subBlockHtml) 값.
 - check-ui-common · test_tenbagger_ui · test_tenbagger_claude · check-portfolio 63/63 · check-plan-claude-tab 23/23 통과(jk-access.js 를 쓰는 시험).
 - 관리자 화면 하위 탭 칸 휴대폰(360·390px) 캡처 — 가로 넘침 없음 · 탭 하나 한 줄.
+- `check-before-push`: 1~54 단계 PASS · 55 회귀 1건 FAIL — '메뉴 정책 값 시험'이 jk-access.js 함수를 떼어 돌리는데 menuDefaults·normalizeMenuConfig 가 이제 SUB_TABS·SUB_MODES·subDefaults 를 써서 ReferenceError → 시험이 그 셋도 함께 가져가게 고친 뒤 회귀 **2819 PASS / 0 FAIL** · 56 모의 재생 · 57 MA150 PASS.
 - 실제 Firestore 저장·다른 기기 반영은 배포 뒤 사용자 확인.
 
 ## 2026-11-09 · 포트폴리오 세션별 · 종목별 보유 · v3.124.0

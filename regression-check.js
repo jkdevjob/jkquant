@@ -1331,10 +1331,12 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   {
     const vm=require('vm'), box={location:{origin:'https://jkquant.pages.dev',pathname:'/job'},URL};
     const menuDecl=(acc.match(/var MENU_ITEMS=\[[\s\S]*?\n  \];/)||[''])[0];
+    /* 하위 탭(2026-11-09) — menuDefaults·normalizeMenuConfig 가 SUB_TABS·SUB_MODES·subDefaults 를 쓴다 */
+    const subDecl=((acc.match(/var SUB_TABS=\{[\s\S]*?\n  \};/)||[''])[0])+'\n'+((acc.match(/var SUB_MODES=\[[^\n]*\];/)||[''])[0]);
     const adminDecl=(acc.match(/var ADMIN_EMAILS=\[[^\n]+\];/)||[''])[0];
     const fn=n=>optFn(acc,'function '+n+'(');
     try{
-      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
+      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+subDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('subDefaults')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
         +'\nthis.out={d:menuDefaults(),n:normalizeMenuConfig({items:{"/job":{mode:"hidden",order:5},"/plan":{mode:"admin",order:6}}}),a:menuAccess({email:"user@example.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job"),b:menuAccess({email:"jk82investing@gmail.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job")};',box);
       ok('메뉴 정책 값 시험 — 기본/숨김/관리자 우회',
          box.out.d.items['/plan'].mode==='public' && box.out.d.items['/scalping'].mode==='admin'
