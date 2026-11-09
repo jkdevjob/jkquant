@@ -1,5 +1,31 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 섀넌 기록 시트 · v3.127.2
+
+- `check-ivs-sheet.cjs` **ALL PASS · 변이 6/6 빨간불**(실제 함수를 가짜 화면에서).
+  - V2 매수 13 × 53.83 → buy · lev · USD · 699.79 · 수수료 699.79×0.25% · 11-10 입금보다 앞에 정렬 · save→refresh→push→close. 1배수 짝 매도 → x1 · SMH. 국채면 x1 골라도 lev. 입금 1,000(쉼표)·출금 200·배당 3.5 → 날짜순.
+  - V3 단가 없음·수량 0·금액 없음·날짜 없음 → 알림 4 · 기록 0 · 저장 없음.
+- check-portfolio 80/80(F3 FAB 줄 순서 그대로) 통과.
+- 실제 토스 USD 매수 입력은 배포 뒤 사용자 확인.
+
+## 2026-11-09 · 로그인 게이트 — 팝업 한 번에 하나 · 오류 글자 한 벌 · 앱 내장 브라우저 안내 · v3.127.1 (듀얼가드 v2.5.5)
+
+- `check-login-gate.cjs` **ALL PASS · 변이 8/8 빨간불**(실제 jk-access 를 가짜 문서·가짜 Firebase 로).
+  - G1 떠 있는 동안 두 번 눌러도 signInWithPopup 1회 · 단추 disabled · 끝나면 풀림 · 취소 '' · 닫음·차단(기본/카카오톡 UA)·네트워크·도메인·모름·코드 없음 글자 · 실패 뒤 재시도 가능 · select_account 유지.
+  - G2 판별 8 UA(Safari·CriOS·네이버·카카오톡·이름 없는 iOS 내장·안드로이드 Chrome·안드로이드 wv·인스타) · 홈 화면 앱은 아님.
+  - G3 카카오톡 UA 로그인 화면에 ⚠ 「다른 브라우저로 열기」 · Safari 는 없음.
+- check-login-quote-paper(L3 jk-access 판별 + index 위임) · check-ui-common · check-subtabs 14/14 · check-plan-claude-tab 23/23 · tests/swim 17 통과.
+- 실제 기기에서 그 사용자가 다시 로그인하는 것은 배포 뒤 확인 — 앱 안 브라우저였다면 안내대로 기본 브라우저로 열어야 한다(구글이 WebView 로그인을 막는다).
+
+## 2026-11-09 · 모의 목록 = 운영 탭·세션 순서 · 운영 첫 화면 = 첫 탭 · v3.127.0
+
+- `check-portfolio.cjs` **ALL PASS · 변이 80/80 빨간불**(새 F5~F8 · 변이 7종).
+  - F5 정책 전 dg,inf,vr,ma,ivs,dca,asap · 정책(order 1~7 · ma·asap 숨김) 뒤 inf,dg,vr,ivs,dca · all 은 숨긴 탭 포함 · 화면 없으면 기본 상수.
+  - F6 일곱 줄 → 정책 순서 i1,i2,zz(모르는 세션 맨 뒤),p1,p2,m1(숨긴 로테이션도 제자리),v1 · 기본 순서면 듀얼가드 줄부터.
+  - F7 듀얼가드 숨김 → 무매 단추 클릭 1 · 기본 → 듀얼가드 화면 1 · 사용자가 고른 뒤 0 · 모의 페이지 0 · 이미 그 탭이면 다시 안 누름.
+- `check-subtabs.cjs` ALL PASS · 변이 14/14(알림 제거 빨간불). check-paper-apply-navigation · check-login-quote-paper · check-ui-common · check-plan-claude-tab 23/23 통과.
+- 실제 기기(폰·PC)에서 운영을 열 때 첫 탭으로 가는지는 배포 뒤 사용자 확인.
+
 ## 2026-11-09 · 포트폴리오 평가액 추이 — 세션별 · 종목별 보기 · 선 골라 보기 · v3.126.0
 
 - `check-portfolio.cjs` **ALL PASS · 변이 73/73 빨간불**(새 Q1~Q6 · 변이 10종).

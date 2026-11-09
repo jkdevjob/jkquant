@@ -1,5 +1,36 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-09 · 섀넌 기록 시트 — 탭마다 제 양식 · 저장은 주문대로 체결 기록과 같은 길 · v3.127.2
+
+- 사용자(11/09, 화면): "섀넌 매수 입력이 안돼".
+- 원인: 기록 시트(openSheet)가 무매/VR 둘만 알아 섀넌 탭에서 VR 양식(Pool)을 열었고, '기록하기'가 `sheetSaveVr`(computeVr · cyc) 로 가서 섀넌 세션에 기록이 안 됐다. 시작 때 FAB 숨김 규칙(로테·ASAP 만)이 탭 클릭 규칙(섀넌 숨김)과 달라 지난 탭이 섀넌이면 단추가 남았다.
+- 고침: `sheetIvsHTML`·`sheetSelIvs`·`sheetSelIvsLeg`·`sheetSaveIvs` — 매수·매도는 `_ivsPush`(주문대로 체결 기록과 같은 계산) · 입금(add)·출금(wd)·배당(div)은 amt 기록 · 날짜순 정렬 · 저장→갱신→클라우드→닫기. `openSheet` 는 탭마다 제 양식(무매·VR·섀넌 아니면 알림). FAB 은 무매·VR·섀넌(탭 클릭·시작 같게). 닫을 때 유형·종목 초기화.
+- 시험: 새 check-ivs-sheet(V1 양식 · V2 저장 다섯 경우 · V3 검증 · V4 배선) · 변이 6종 → 6/6 · 회귀에 연결.
+- 버전: index v3.127.1 → v3.127.2.
+
+## 2026-11-09 · 로그인 게이트 — 팝업 한 번에 하나 · 오류 글자 한 벌 · 앱 내장 브라우저 안내 · v3.127.1 (듀얼가드 v2.5.5)
+
+- 사용자(11/09, 새 사용자 화면): "Firebase: Error (auth/cancelled-popup-request)." — 다른 사람이 로그인하려다 이 글자를 봤다.
+- 원인: 게이트(jk-access guard)의 로그인이 팝업이 떠 있는 동안 또 눌리는 걸 막지 않았고(폰에선 팝업이 새 탭으로 열려 돌아와 다시 누르기 쉽다), Firebase 가 앞 요청을 취소하며 낸 코드를 `e.message` 그대로 보였다. 운영 페이지에만 있던 앱 내장 브라우저 안내가 게이트엔 없었다.
+- jk-access.js: `INAPP_UA`·`inAppName`(운영에서 옮김) · `loginErrorText` · guard 로그인 한 번에 하나(`loginBusy` · 단추 잠금 · "구글 로그인 창을 열었습니다" 안내 · 끝나면 풀림) · 로그인 화면에 앱 안 ⚠ 안내(`.jwarn`) · 내보냄.
+- index.html: `inAppName` 은 JKAccess 위임(표 삭제) · googleLogin 한 번에 하나(`_googleLoginBusy` · gbtn 잠금) · 오류 글자는 `JKAccess.loginErrorText`.
+- plan.html: planLoginImpl 한 번에 하나 · 같은 글자 · 머리 로그인 단추도 planLoginImpl 로(따로 signInWithPopup 안 함).
+- 시험: 새 check-login-gate(G1 한 번에 하나·오류 글자 여덟 경우 · G2 판별 · G3 안내 · G4 배선) · 변이 8종 → 8/8 · 회귀에 연결. check-login-quote-paper L3 은 jk-access 에서 판별을 읽고 index 위임을 확인.
+- 버전: index v3.127.0 → v3.127.1 · 듀얼가드 v2.5.4 → v2.5.5.
+
+## 2026-11-09 · 모의 목록 = 운영 탭·세션 순서 · 운영 첫 화면 = 첫 탭 · v3.127.0
+
+- 사용자(11/09): "모의투자에서 보이는 순서를 운영탭 세션 순서대로 표출해" · "운영메뉴 들어가면 왜 섀넌이 선택되지 항상? 마지막 보던거나 무조건 첫 탭으로 가"
+- 섀넌이 늘 선택되던 원인: 운영 첫 화면이 원장에 저장된 지난 탭(S.activeTab · S.opView)을 복원하는데, 이 값은 기기 공용이라 다른 기기(PC)가 섀넌을 열어 둔 채 저장하거나 모의·포트폴리오에서 섀넌 세션을 눌러 들어가면 'ivs'가 올라가 다음에 열 때 섀넌으로 갔다. 모의 재계산 중 저장은 이미 막혀 있었다(pushRemoteNow `_paperFilling`).
+- index.html:
+  - `OP_TABS`(기본 탭 순서 · HTML 과 같음) · `opTabOrder()`(화면 단추의 CSS order·숨김 기준 · all 이면 숨긴 탭도) · `opOpenFirst()`(보이는 첫 탭 — 듀얼가드면 그 화면 · 이미 그 탭이면 다시 안 누름 · 모의·포트폴리오 페이지·사용자가 고른 뒤엔 안 함).
+  - startApp: 운영 화면이면 `opOpenFirst()` · 지난 듀얼가드 화면 복원(`S.opView`) 제거 · 모의·포트폴리오 페이지는 예전처럼 전략 문맥만 지난 탭.
+  - 탭 단추는 사용자 클릭(isTrusted)만 `_userTabbed` 로 기억 · gotoSess 도 기억 · `jk-subtabs` 알림을 받으면(정책이 늦게 올 때) 아직 안 골랐으면 첫 탭을 다시 고름.
+  - `paperOrderRows()` — 모의 목록을 그릴 때 운영 탭 순서(숨긴 탭 포함 · plan→dg) → 세션바(box.sessions) 순서로 정렬.
+- jk-access.js: applySubTabs 가 적용 뒤 `jk-subtabs` 이벤트를 보낸다(없는 환경은 건너뜀).
+- 시험: check-portfolio F1(OP_TABS = HTML 순서) · F3(새 첫 화면 배선) · F5(탭 순서 · 정책 · 숨김 · all · 화면 없음) · F6(모의 목록 순서 · 듀얼가드 줄 · 모르는 세션 맨 뒤) · F7(첫 탭 열기 다섯 경우) · F8(배선) · 변이 7종 → 80/80. check-subtabs S3 알림 · 변이 14/14. check-paper-apply-navigation 하네스에 새 함수.
+- 버전: index v3.126.0 → v3.127.0.
+
 ## 2026-11-09 · 포트폴리오 평가액 추이 — 세션별 · 종목별 보기 · 선 골라 보기 · v3.126.0
 
 - 사용자(11/09): "평가액 추이 그래프를 세션별 종목별로 선택해서 볼수 있게 해"

@@ -368,7 +368,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.5.4</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.5.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -3219,7 +3219,7 @@ async function cloudLoad(user){
 }
 function userBadge(user){
   const b=$("userbadge");
-  if(!user){b.innerHTML='<button class="lo" id="loginBtn">로그인</button>';$("loginBtn").addEventListener("click",()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(()=>{}));return;}
+  if(!user){b.innerHTML='<button class="lo" id="loginBtn">로그인</button>';$("loginBtn").addEventListener("click",()=>window.planLoginImpl());return;}
   const photo=user.photoURL?'<img src="'+user.photoURL.replace(/"/g,"&quot;")+'" alt="">':"";
   b.innerHTML=photo+'<span>'+(user.displayName||user.email||"사용자")+'</span><button class="lo" id="logoutBtn">로그아웃</button>';
   $("logoutBtn").addEventListener("click",()=>signOut(auth));
@@ -3323,10 +3323,14 @@ function planGate(on){
   if(on){h.classList.add('authed');h.classList.remove('had-user');h.classList.remove('embed-dberr');return;}
   h.classList.remove('authed');h.classList.remove('had-user');
 }
+let _planLoginBusy=false;   // 한 번에 하나 — 앞 팝업이 취소돼 'auth/cancelled-popup-request' 가 나지 않게(운영·게이트와 같은 규칙 · 2026-11-09)
 window.planLoginImpl=()=>{
+  if(_planLoginBusy) return;
   const er=$("gerr"); if(er) er.textContent='';
+  _planLoginBusy=true;
   signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>{ if(!er) return;
-    er.textContent=(e&&e.code==='auth/popup-blocked')?'팝업이 막혔습니다 — 브라우저에서 팝업을 허용한 뒤 다시 눌러 주세요.':((e&&e.message)||'로그인 실패'); });
+    er.textContent=(window.JKAccess&&JKAccess.loginErrorText)?JKAccess.loginErrorText(e):((e&&e.message)||'로그인 실패'); })   // 글자는 jk-access 한 벌(게이트·운영과 같음)
+    .finally(()=>{ _planLoginBusy=false; });
 };
 const planFb={auth,db,doc,getDoc,setDoc};
 /* DB 정본을 먼저 읽은 뒤에만 본문을 연다. 12초가 넘어도 실패로 돌리지 않고 계속 기다린다 — 예전엔 12초에
