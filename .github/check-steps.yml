@@ -212,7 +212,7 @@
 
 - name: 텐배거 GPT 과거 연구 값·미래봉·갭 체결·자료 일치 검사
   run: |
-    pip install --quiet lxml
+    pip install --quiet numpy pandas lxml
     python scripts/test_tenbagger.py
     python scripts/mutation_test_tenbagger.py
     node scripts/test_tenbagger_ui.cjs

@@ -127,6 +127,16 @@ try{
   const plines=fs.existsSync(plog)?fs.readFileSync(plog,'utf8').trim().split('\n'):[];
   ok('C5 병렬 pip: 겹치는 줄은 한 번(2줄) · 단계보다 먼저 · 단계 안에서는 다시 안 돈다',
      r.status===0&&plines.length===2&&plines.includes('install --quiet numpy pandas')&&plines.includes('install --quiet lxml')&&r.out.indexOf('[의존성] pip install')<r.out.indexOf('Q1-out')&&['Q1-out','Q2-out','Q3-out'].every(x=>r.out.includes(x)),JSON.stringify(plines)+' '+r.out.slice(0,300));
+  // 조각 모드: 조각 밖 단계의 pip 줄까지 전체 합집합을 먼저 한 번(조각마다 같은 환경 — GitHub 첫 실행에서 텐배거 GPT 가 numpy 없이 떨어졌다) · offline 이면 설치 없음
+  fs.rmSync(plog,{force:true});
+  const shY2=Y({name:'T1',minutes:3,run:'pip install --quiet aaa\necho T1-out'},{name:'T2',run:'pip install --quiet bbb\necho T2-out'},{name:'T3',run:'pip install --quiet aaa\necho T3-out'});
+  r=run(['--shard=1/2'],{PATH:bin+path.delimiter+process.env.PATH},shY2,'shardpip');
+  const plines2=fs.existsSync(plog)?fs.readFileSync(plog,'utf8').trim().split('\n').sort():[];
+  ok('C5 조각 pip: 조각 1/2(T1 만)인데 전체 합집합(aaa·bbb) 2줄을 먼저 · T1 만 돌고 · 단계 안 pip 는 뺌',
+     r.status===0&&JSON.stringify(plines2)===JSON.stringify(['install --quiet aaa','install --quiet bbb'])&&r.out.includes('T1-out')&&!r.out.includes('T2-out')&&r.out.indexOf('[의존성] pip install')<r.out.indexOf('T1-out'),JSON.stringify(plines2)+' '+r.out.slice(0,300));
+  fs.rmSync(plog,{force:true});
+  r=run(['--shard=1/2','--offline'],{PATH:bin+path.delimiter+process.env.PATH},shY2,'shardpip');
+  ok('C5 조각 pip offline: 설치 없음(기록 없음) · 생략 안내',r.status===0&&!fs.existsSync(plog)&&r.out.includes('의존성 설치 생략 (offline): T1')&&r.out.includes('T1-out'),r.out.slice(0,300));
   /* ── C6 회귀 연결 ── */
   const reg=fs.readFileSync(path.join(ROOT,'regression-check.js'),'utf8');
   ok('C6 회귀: CI 단계 목록을 check-steps.yml 에서 읽고(check.yml 아님) 이 시험을 돌린다',

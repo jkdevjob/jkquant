@@ -709,7 +709,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1828,7 +1828,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.2</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.3</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -7978,7 +7978,10 @@ function paperMdd(tab, sess, R, hist){
        들고 있는 동안 주가는 계속 움직인다. 목록의 '최종'도 지금 주가로 잰 값이라
        여기서 거래일에 멈추면 그 사이 낙폭을 통째로 놓친다. */
     const D=days.filter(d=>d&&d.date>=from&&d.close>0);
-    if(D.length<3) return null;
+    /* 낙폭은 날이 셋은 있어야 재지만, 포트폴리오 그릇(_pfSeriesSink)에는 날이 하나뿐인 새 세션 값도 넣는다 —
+       그래야 합친 평가액·세션별·종목별 선에 그 세션이 처음부터 들어간다(2026-11-09 섀넌 선 빠짐: 기록 사흘 미만이라 통째로 빠졌다). */
+    const sink=(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink)?_pfSeriesSink:null;
+    if(D.length<3 && !sink) return null;
     // 짝 종목(섀넌 1배수)도 제 종가로 움직인다 — 없으면 마지막 값으로 둔다
     let P1=null;
     if(R.qty1>0 && typeof ivsQuote1!=='undefined' && ivsQuote1 && ivsQuote1.days){
@@ -8008,18 +8011,18 @@ function paperMdd(tab, sess, R, hist){
             _pfSeriesSink.push({date:row.date, tot, inflow:cur.inflow, out:o, realized:+cur.realized||0, hv, cash:(+cur.k||0)-o}); }
       }
     } finally { sess.hist=real; }
-    if(n<3) return null;
     /* 마지막은 목록의 TR 과 같은 값(지금 시세 · paperRaw)으로 — 확정 종가와 현재가가 다르면 둘이 어긋난다 */
-    if(R && R.price>0 && R.inflow>0)
+    if(n>=3 && R && R.price>0 && R.inflow>0)
       AT.step(D[D.length-1].date, R.total, R.inflow, {realized:R.realized, turnover:R.turnover, held:R.qty*R.price+(R.qty1||0)*(R.price1||0), cost:R.cost});
-    if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){   // 끝 값도 목록·카드와 같은 지금 시세(같은 날이면 바꿔 넣는다)
+    if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){   // 끝 값도 목록·카드와 같은 지금 시세(같은 날이면 바꿔 넣는다) — 날이 셋이 안 되는 새 세션도
       /* 날짜는 마지막 종가 날과 마지막 기록 날 중 늦은 쪽 — 종가가 아직 없는 날의 체결(오늘 · 12/31 매도)이 그 전 종가 날로 잡혀 해를 잘못 타지 않게 */
-      const endD=D[D.length-1].date, lastH=h.reduce((m,x)=>String(x.date)>m?String(x.date):m,'');
+      const endD=D.length?D[D.length-1].date:'', lastH=h.reduce((m,x)=>String(x.date)>m?String(x.date):m,'');
       const o=(R.out&&((+R.out.saved||0)+(+R.out.withdrawn||0)))||0, hv={};
       if(R.sym&&R.qty) hv[R.sym]=R.qty*R.price; if(R.sym1&&R.qty1) hv[R.sym1]=(hv[R.sym1]||0)+R.qty1*(R.price1||0);
       const end={date:lastH>endD?lastH:endD, tot:R.total, inflow:R.inflow, out:o, realized:+R.realized||0, hv, cash:(+R.k||0)-o}, k=_pfSeriesSink.length;
       if(k&&_pfSeriesSink[k-1].date===end.date) _pfSeriesSink[k-1]=end; else _pfSeriesSink.push(end);
     }
+    if(n<3) return null;   // 낙폭 · 세후 TR 은 날이 셋은 있어야 잰다(그릇에는 위에서 넣었다)
     return {pct:mdd*100, nDay:n, endTot, afterTax:AT.done()};
   }catch(e){ console.error('paperMdd',tab,e); return null; }
 }
@@ -9524,7 +9527,7 @@ function pfChartSeries(C, mode){
   return out;
 }
 function pfChartHtml(C){
-  const P=(C&&C.points)||[]; if(P.length<2) return '<div class="pf-note">합친 추이는 날마다 기록이 이틀 이상 쌓이면 그려집니다.</div>';
+  const P=(C&&C.points)||[]; if(P.length<2) return '<div class="pf-note">평가액 추이는 날마다 기록이 이틀 이상 쌓이면 그려집니다.</div>';
   const mode=PF.chartMode==='tk'?'tk':'sess', off=(PF.chartOff&&PF.chartOff[mode])||new Set();
   const ALL=pfChartSeries(C,mode), V=ALL.filter(s=>!off.has(s.key)), TOT=V.find(s=>s.key==='total'), INF=V.find(s=>s.key==='inflow'), SL=V.filter(s=>!s.base);
   const seg='<div class="pf-seg" role="group" aria-label="선 나눠 보기"><button type="button" data-pfmode="sess" aria-pressed="'+(mode==='sess')+'">세션별</button>'
@@ -9549,7 +9552,7 @@ function pfChartHtml(C){
   const lines=SL.map(s=>'<path d="'+path(s)+'" class="pf-sess" stroke="'+s.color+'"'+(s.dash?' stroke-dasharray="'+s.dash+'"':'')+'/>').join('');
   const sdots=SL.map(s=>{ const v=s.vals[n]; return v==null?'':'<circle cx="'+f(xe)+'" cy="'+f(y(v))+'" r="3" fill="'+s.color+'" class="pf-sdot"/>'; }).join('');
   PF.chartGeo={P, L, R, W, n:P.length, S:SL, T:!!TOT, I:!!INF, mode};
-  return seg+'<div class="pf-chart" id="pfChart"><svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" tabindex="0" aria-label="합친 평가액 추이 '+P[0].date+' ~ '+e.date
+  return seg+'<div class="pf-chart" id="pfChart"><svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" tabindex="0" aria-label="평가액 추이 '+P[0].date+' ~ '+e.date
     +(SL.length?' · '+(mode==='tk'?'종목':'세션')+' '+SL.length+'개 선':'')+' · 왼쪽·오른쪽 화살표로 날짜 이동">'
     +band+grid
     +'<text x="'+L+'" y="'+(H-6)+'" class="pf-ax">'+P[0].date+'</text><text x="'+(W-R)+'" y="'+(H-6)+'" class="pf-ax" text-anchor="end">'+e.date+'</text>'
@@ -9702,7 +9705,7 @@ function pfRender(){
   h+='<div class="pf-bar">'+order.map(g=>'<span style="width:'+(grp.get(g)*100).toFixed(2)+'%;background:'+g.color+'"></span>').join('')+'</div>'
     +'<div class="pf-legend">'+order.map(g=>'<span><i style="background:'+g.color+'"></i>'+g.label+' '+(grp.get(g)*100).toFixed(1)+'%</span>').join('')+'</div>';
   PF.C=C;
-  h+='<div class="pf-sec"><h3>📈 합친 평가액 추이</h3><div id="pfChartWrap">'+pfChartHtml(C)+'</div>'
+  h+='<div class="pf-sec"><h3>📈 평가액 추이</h3><div id="pfChartWrap">'+pfChartHtml(C)+'</div>'
     +(C.points.length>1?'<div class="pf-note">MDD 는 입금·새 세션을 뺀 시간가중 수익률로 잽니다(시간가중 누적 '+pfPct(C.twr)+') — 돈이 새로 들어온 날을 수익·손실로 세지 않습니다.</div>':'')
     +pfMonthTable(C)+'</div>';
   h+=pfSessHtml(Z)+pfTickerHtml(pfByTicker(rows,fx));   // 세션별 · 종목별 보유(2026-11-09)

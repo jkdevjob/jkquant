@@ -4,7 +4,7 @@
 //   node scripts/check-before-push.cjs                 전체 · 병렬(코어 수만큼 · 최대 8) · 무거운 단계부터
 //   node scripts/check-before-push.cjs --serial        전체 · 목록 순서대로 하나씩(옛 방식)
 //   node scripts/check-before-push.cjs --parallel=3    일꾼 수 지정
-//   node scripts/check-before-push.cjs --shard=2/4     GitHub 조각 2/4 와 같은 부분집합(하나씩)
+//   node scripts/check-before-push.cjs --shard=2/4     GitHub 조각 2/4 와 같은 부분집합(하나씩 · pip 은 전체 목록 합집합을 먼저)
 //   node scripts/check-before-push.cjs --only=회귀     이름이 정규식에 맞는 단계만
 //   node scripts/check-before-push.cjs --list          단계 · 예상 분 · 조각 배정(--parts=N · 기본 4)만 보여 준다
 //   --offline     npx(외부 빌드) 건너뜀 · pip install 생략 — 개발 중에만. 생략한 것은 GitHub 검증으로 확인한다.
@@ -110,8 +110,11 @@ async function main(){
     plan.push({step:s,command});
   }
   const t0=Date.now(),total=plan.length;let passed=0,stopped=false;const failed=[];
-  if(workers>1){
-    const pips=[...new Set(plan.flatMap(x=>pipLines(x.command).map(l=>l.trim())))];
+  if(workers>1||shard){
+    /* 조각은 전체 목록의 pip 줄 합집합을 먼저 깐다 — 옛 한 작업에서는 앞 단계가 깔아 준 패키지를 뒤 단계가 그냥 썼는데(텐배거 GPT ← numpy),
+       조각으로 나누면 그 단계가 다른 조각에 떨어질 수 있다. 조각마다 같은 환경이어야 어느 조각에 가든 결과가 같다. 병렬은 돌릴 단계 것만. */
+    const scope=shard?steps:plan.map(x=>x.step);
+    const pips=offline?[]:[...new Set(scope.flatMap(s=>pipLines(s.command).map(l=>l.trim())))];
     for(const line of pips){
       console.log('\n[의존성] '+line);
       const r=await spawnStep(line,false);
