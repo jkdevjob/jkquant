@@ -29,7 +29,7 @@ const addM=(d,m)=>{ const y=+d.slice(0,4), mo=+d.slice(5,7)-1+m; return `${y+Mat
 const f=(x,d=1)=>(x>=0&&d>=0?'':'')+x.toFixed(d);
 const KEYS=['base',...Object.keys(V)], HALF='2016-04-01';
 console.log('자료 끝',LAST,'· 후보',JSON.stringify(VARS));
-const SETS=(process.env.SETS||'1만,10만,2만,1억').split(','), CFG={'1만':[10000,0,'1만$ 거치'],'10만':[100000,0,'10만$ 거치'],'2만':[20000,0,'2만$ 거치(지금 플랜)'],'1억':[69244,69.24,'1억원+월 10만원']};
+const SETS=(process.env.SETS||'1만,10만,2만,1억').split(','), CFG={'2.5만':[25000,210,'2.5만$ + 월 210$(실제 구성 · 11-09 배분)'],'1만':[10000,0,'1만$ 거치'],'10만':[100000,0,'10만$ 거치'],'2만':[20000,0,'2만$ 거치(지금 플랜)'],'1억':[69244,69.24,'1억원+월 10만원']};
 for(const key of SETS){ const [P,M,lab]=CFG[key]; console.log(`\n■ ${lab}`);
   const full=Object.fromEntries(KEYS.map(k=>[k,run(k,'2011-04-01',LAST,P,M)]));
   console.log('  전 구간 2011-04~ 세후 연/MDD · 주문/년 TECL·TQQQ: '+KEYS.map(k=>`${k} ${f(full[k].ann)}/${f(full[k].mdd)} · ${f(full[k].nT,0)}·${f(full[k].nQ,1)}`).join(' | '));
