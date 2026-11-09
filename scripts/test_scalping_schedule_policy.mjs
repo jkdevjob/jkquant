@@ -81,4 +81,10 @@ const forbidden=[
 ];
 for(const [name,txt,needle] of forbidden)ok(!txt.includes(needle),name+' has no scheduled user Telegram endpoint');
 
+// 2026-11-09 워크플로 정리(사용자 "필요없는건 지우자"): 할 일이 끝난 1년 백필(manifest complete · 남은 날 0),
+// 한 번 쓰고 끝난 진단 셋, 예약 알림과 겹치는 수동 실행 하나를 지웠다. 옛 브랜치를 합치다 되살아나지 않게 막는다
+// (다시 쓸 일이 생기면 git 기록에서 꺼내고 이 목록도 같이 고친다).
+const removedWorkflows=['opening-year-backfill','diagnose-daytrading-push','job-alert-multisource-test','job-alert-now','telegram-new-room-test'];
+for(const name of removedWorkflows)ok(!fs.existsSync('.github/workflows/'+name+'.yml'),name+'.yml stays removed (2026-11-09 cleanup)');
+
 console.log('✓ scalping schedule policy: Worker realtime/close alerts, GitHub research only');
