@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-10T05:01:49.366767+09:00",
+  "generatedAt": "2026-11-10T06:28:21.442819+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -23,7 +23,7 @@
     "primarySlipTicks": 1.5
   },
   "from": "2018-01-02",
-  "to": "2026-11-05",
+  "to": "2026-11-06",
   "sources": [
     {
       "url": "https://raw.githubusercontent.com/FinanceData/marcap/master/data/marcap-2018.parquet",
@@ -75,15 +75,9 @@
     },
     {
       "url": "https://raw.githubusercontent.com/FinanceData/marcap/master/data/marcap-2026.parquet",
-      "rows": 592855,
-      "lastDate": "2026-11-05",
-      "status": "final"
-    },
-    {
-      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-11-06.csv",
-      "rows": 2876,
+      "rows": 595731,
       "lastDate": "2026-11-06",
-      "status": "provisional"
+      "status": "final"
     },
     {
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-11-09.csv",
@@ -191,94 +185,94 @@
   "outOfSample": {
     "strategy": {
       "0.0t": {
-        "trades": 38,
-        "days": 16,
-        "winRate": 31.57894736842105,
-        "avgPnl": -0.06715697183838502,
-        "avgWin": 8.627610886022186,
+        "trades": 41,
+        "days": 17,
+        "winRate": 36.58536585365854,
+        "avgPnl": 0.4358918397154992,
+        "avgWin": 8.263657399364023,
         "avgLoss": -4.080126752389417,
-        "dayAvgPnl": 1.685461629468454,
-        "tStatDays": 0.6256679584527237,
-        "avgGross": 0.16284302816161503
+        "dayAvgPnl": 1.986778207307449,
+        "tStatDays": 0.7796432069393076,
+        "avgGross": 0.6658918397154994
       },
       "1.5t": {
-        "trades": 38,
-        "days": 16,
-        "winRate": 28.947368421052634,
-        "avgPnl": -0.418343640575919,
-        "avgWin": 9.069109163078117,
+        "trades": 41,
+        "days": 17,
+        "winRate": 34.146341463414636,
+        "avgPnl": 0.07370430455017903,
+        "avgWin": 8.477081115878681,
         "avgLoss": -4.283602190212748,
-        "dayAvgPnl": 1.2985882984357662,
-        "tStatDays": 0.48202427241224144,
-        "avgGross": 0.16284302816161503
+        "dayAvgPnl": 1.5931602579090007,
+        "tStatDays": 0.6253356030044759,
+        "avgGross": 0.6658918397154994
       },
       "3.0t": {
-        "trades": 38,
-        "days": 16,
-        "winRate": 28.947368421052634,
-        "avgPnl": -0.769530309313453,
-        "avgWin": 8.788772922555715,
+        "trades": 41,
+        "days": 17,
+        "winRate": 34.146341463414636,
+        "avgPnl": -0.28848323061514125,
+        "avgWin": 8.149345817628808,
         "avgLoss": -4.663653848223114,
-        "dayAvgPnl": 0.9117149674030781,
-        "tStatDays": 0.33834052516409535,
-        "avgGross": 0.16284302816161503
+        "dayAvgPnl": 1.1995423085105525,
+        "tStatDays": 0.47086838875371023,
+        "avgGross": 0.6658918397154994
       }
     },
     "control": {
       "0.0t": {
-        "trades": 72,
-        "days": 24,
-        "winRate": 41.66666666666667,
-        "avgPnl": -1.237057896442887,
-        "avgWin": 4.120547499612803,
+        "trades": 75,
+        "days": 25,
+        "winRate": 44.0,
+        "avgPnl": -0.8688925551029651,
+        "avgWin": 4.470231875743926,
         "avgLoss": -5.063918893625522,
-        "dayAvgPnl": -1.237057896442887,
-        "tStatDays": -1.2805567984212198,
-        "avgGross": -1.007057896442887
+        "dayAvgPnl": -0.868892555102965,
+        "tStatDays": -0.8714650822262145,
+        "avgGross": -0.6388925551029649
       },
       "1.5t": {
-        "trades": 72,
-        "days": 24,
-        "winRate": 33.33333333333333,
-        "avgPnl": -1.634869456672941,
-        "avgWin": 4.641576024389543,
+        "trades": 75,
+        "days": 25,
+        "winRate": 36.0,
+        "avgPnl": -1.2644932821961739,
+        "avgWin": 4.973015900040287,
         "avgLoss": -4.773092197204183,
-        "dayAvgPnl": -1.6348694566729411,
-        "tStatDays": -1.7031293706943025,
-        "avgGross": -1.007057896442887
+        "dayAvgPnl": -1.264493282196174,
+        "tStatDays": -1.2741427365986364,
+        "avgGross": -0.6388925551029649
       },
       "3.0t": {
-        "trades": 72,
-        "days": 24,
-        "winRate": 33.33333333333333,
-        "avgPnl": -2.032681016902995,
-        "avgWin": 4.200922393971399,
+        "trades": 75,
+        "days": 25,
+        "winRate": 36.0,
+        "avgPnl": -1.6600940092893828,
+        "avgWin": 4.543263702800944,
         "avgLoss": -5.149482722340192,
-        "dayAvgPnl": -2.032681016902995,
-        "tStatDays": -2.13067257836659,
-        "avgGross": -1.007057896442887
+        "dayAvgPnl": -1.6600940092893828,
+        "tStatDays": -1.6802572990656293,
+        "avgGross": -0.6388925551029649
       }
     },
     "skillPctPoints": {
-      "0.0t": 2.922519525911341,
-      "1.5t": 2.9334577551087073,
-      "3.0t": 2.944395984306073
+      "0.0t": 2.855670762410414,
+      "1.5t": 2.857653540105175,
+      "3.0t": 2.8596363177999353
     },
     "skillPairedDays": {
       "0.0t": {
-        "days": 16,
-        "mean": 3.571386278672096,
-        "tStat": 1.4728535676660168
+        "days": 17,
+        "mean": 3.29311460437822,
+        "tStat": 1.4351300200689117
       },
       "1.5t": {
-        "days": 16,
-        "mean": 3.574541077239286,
-        "tStat": 1.4745056159498753
+        "days": 17,
+        "mean": 3.2867314082390053,
+        "tStat": 1.431949930715878
       },
       "3.0t": {
-        "days": 16,
-        "mean": 3.577695875806475,
-        "tStat": 1.475692873484784
+        "days": 17,
+        "mean": 3.28034821209979,
+        "tStat": 1.4283039130873794
       }
     }
   },
@@ -372,279 +366,18 @@
       "avgGross": 1.2146986658630872
     },
     "2026": {
-      "trades": 166,
-      "days": 80,
-      "winRate": 45.18072289156627,
-      "avgPnl": 0.0033175940571910797,
-      "avgWin": 5.094730896648594,
+      "trades": 169,
+      "days": 81,
+      "winRate": 46.15384615384615,
+      "avgPnl": 0.11520506178660343,
+      "avgWin": 5.141330154834446,
       "avgLoss": -4.192902160825833,
-      "dayAvgPnl": 0.03683493003597359,
-      "tStatDays": 0.049583453632138764,
-      "avgGross": 0.5827198568566676
+      "dayAvgPnl": 0.11423587669578569,
+      "tStatDays": 0.15484773545590483,
+      "avgGross": 0.6973078496828458
     }
   },
   "latestSignals": [
-    {
-      "signalId": "965911839230089c",
-      "date": "2026-10-26",
-      "signalTime": "09:00",
-      "tz": "Asia/Seoul",
-      "market": "KOSDAQ",
-      "code": "376900",
-      "name": "로킷헬스케어",
-      "strategy": "opening",
-      "variant": "baseline",
-      "strategyVersion": "opening_gapdown_v1",
-      "signalSchemaVersion": 1,
-      "action": "signal",
-      "rejectedBy": null,
-      "signalPrice": 16290.0,
-      "entryPrice": 16290.0,
-      "prevClose": 16910.0,
-      "gapPct": -3.666469544648132,
-      "chgPct": -3.666469544648132,
-      "volume": null,
-      "cumVolume": null,
-      "volRatio": null,
-      "amount": null,
-      "cumAmount": null,
-      "amountRatio": null,
-      "indicators": {
-        "rsi14Prev": 28.259304584146676,
-        "prevAmountKrw": 7665325730.0,
-        "prevVolume": 468457.0
-      },
-      "params": {
-        "rsiMax": 30.0,
-        "gapMax": -2.0,
-        "gapFloor": -29.0,
-        "minPrevClose": 1000,
-        "minPrevAmount": 2000000000.0,
-        "minHistory": 60,
-        "haltLookback": 20,
-        "noLimitLookback": 10,
-        "picks": 3,
-        "entry": "open_auction",
-        "exit": "close_auction",
-        "fixedCostPct": 0.23,
-        "slipTicksPerSide": [
-          0.0,
-          1.5,
-          3.0
-        ],
-        "primarySlipTicks": 1.5
-      },
-      "decisionReason": "rsi14_prev<30+gap<=-2%+liquidity",
-      "source": "research-daily-bars",
-      "feed": "FinanceData marcap / fdr_krx_data_cache (KRX daily)",
-      "fwd5mPct": null,
-      "fwd10mPct": null,
-      "fwd20mPct": null,
-      "fwd30mPct": null,
-      "mfePct": 4.665438919582576,
-      "maePct": -2.025782688766109,
-      "mfeTime": null,
-      "maeTime": null,
-      "hitPlus1": true,
-      "hitPlus2": true,
-      "hitMinus1": true,
-      "hitMinus2": true,
-      "hitPlus1Time": null,
-      "hitPlus2Time": null,
-      "hitMinus1Time": null,
-      "hitMinus2Time": null,
-      "exitModel": "close_auction",
-      "exitTime": "15:30",
-      "exitPrice": 16160.0,
-      "reason": "close",
-      "grossPnl": -0.7980356046654369,
-      "frictionPct": 0.4141620626151013,
-      "friction": {
-        "0.0t": 0.23,
-        "1.5t": 0.4141620626151013,
-        "3.0t": 0.5983241252302026
-      },
-      "pnl": -1.2121976672805381,
-      "pnlByTicks": {
-        "0.0t": -1.0280356046654369,
-        "1.5t": -1.2121976672805381,
-        "3.0t": -1.3963597298956394
-      }
-    },
-    {
-      "signalId": "fe3c3c2d086bc670",
-      "date": "2026-10-29",
-      "signalTime": "09:00",
-      "tz": "Asia/Seoul",
-      "market": "KOSPI",
-      "code": "001430",
-      "name": "세아베스틸지주",
-      "strategy": "opening",
-      "variant": "baseline",
-      "strategyVersion": "opening_gapdown_v1",
-      "signalSchemaVersion": 1,
-      "action": "signal",
-      "rejectedBy": null,
-      "signalPrice": 30550.0,
-      "entryPrice": 30550.0,
-      "prevClose": 31200.0,
-      "gapPct": -2.083333333333337,
-      "chgPct": -2.083333333333337,
-      "volume": null,
-      "cumVolume": null,
-      "volRatio": null,
-      "amount": null,
-      "cumAmount": null,
-      "amountRatio": null,
-      "indicators": {
-        "rsi14Prev": 27.883246800389017,
-        "prevAmountKrw": 6361051050.0,
-        "prevVolume": 203470.0
-      },
-      "params": {
-        "rsiMax": 30.0,
-        "gapMax": -2.0,
-        "gapFloor": -29.0,
-        "minPrevClose": 1000,
-        "minPrevAmount": 2000000000.0,
-        "minHistory": 60,
-        "haltLookback": 20,
-        "noLimitLookback": 10,
-        "picks": 3,
-        "entry": "open_auction",
-        "exit": "close_auction",
-        "fixedCostPct": 0.23,
-        "slipTicksPerSide": [
-          0.0,
-          1.5,
-          3.0
-        ],
-        "primarySlipTicks": 1.5
-      },
-      "decisionReason": "rsi14_prev<30+gap<=-2%+liquidity",
-      "source": "research-daily-bars",
-      "feed": "FinanceData marcap / fdr_krx_data_cache (KRX daily)",
-      "fwd5mPct": null,
-      "fwd10mPct": null,
-      "fwd20mPct": null,
-      "fwd30mPct": null,
-      "mfePct": 0.654664484451728,
-      "maePct": -2.782324058919805,
-      "mfeTime": null,
-      "maeTime": null,
-      "hitPlus1": false,
-      "hitPlus2": false,
-      "hitMinus1": true,
-      "hitMinus2": true,
-      "hitPlus1Time": null,
-      "hitPlus2Time": null,
-      "hitMinus1Time": null,
-      "hitMinus2Time": null,
-      "exitModel": "close_auction",
-      "exitTime": "15:30",
-      "exitPrice": 30250.0,
-      "reason": "close",
-      "grossPnl": -0.9819967266775809,
-      "frictionPct": 0.7209983633387889,
-      "friction": {
-        "0.0t": 0.23,
-        "1.5t": 0.7209983633387889,
-        "3.0t": 1.2119967266775777
-      },
-      "pnl": -1.7029950900163697,
-      "pnlByTicks": {
-        "0.0t": -1.2119967266775808,
-        "1.5t": -1.7029950900163697,
-        "3.0t": -2.1939934533551586
-      }
-    },
-    {
-      "signalId": "47cb2994c9aaddbd",
-      "date": "2026-10-29",
-      "signalTime": "09:00",
-      "tz": "Asia/Seoul",
-      "market": "KOSPI",
-      "code": "064350",
-      "name": "현대로템",
-      "strategy": "opening",
-      "variant": "baseline",
-      "strategyVersion": "opening_gapdown_v1",
-      "signalSchemaVersion": 1,
-      "action": "signal",
-      "rejectedBy": null,
-      "signalPrice": 81100.0,
-      "entryPrice": 81100.0,
-      "prevClose": 82800.0,
-      "gapPct": -2.0531400966183555,
-      "chgPct": -2.0531400966183555,
-      "volume": null,
-      "cumVolume": null,
-      "volRatio": null,
-      "amount": null,
-      "cumAmount": null,
-      "amountRatio": null,
-      "indicators": {
-        "rsi14Prev": 29.655206892709145,
-        "prevAmountKrw": 30162180350.0,
-        "prevVolume": 366069.0
-      },
-      "params": {
-        "rsiMax": 30.0,
-        "gapMax": -2.0,
-        "gapFloor": -29.0,
-        "minPrevClose": 1000,
-        "minPrevAmount": 2000000000.0,
-        "minHistory": 60,
-        "haltLookback": 20,
-        "noLimitLookback": 10,
-        "picks": 3,
-        "entry": "open_auction",
-        "exit": "close_auction",
-        "fixedCostPct": 0.23,
-        "slipTicksPerSide": [
-          0.0,
-          1.5,
-          3.0
-        ],
-        "primarySlipTicks": 1.5
-      },
-      "decisionReason": "rsi14_prev<30+gap<=-2%+liquidity",
-      "source": "research-daily-bars",
-      "feed": "FinanceData marcap / fdr_krx_data_cache (KRX daily)",
-      "fwd5mPct": null,
-      "fwd10mPct": null,
-      "fwd20mPct": null,
-      "fwd30mPct": null,
-      "mfePct": 0.36991368680641123,
-      "maePct": -5.055487053020958,
-      "mfeTime": null,
-      "maeTime": null,
-      "hitPlus1": false,
-      "hitPlus2": false,
-      "hitMinus1": true,
-      "hitMinus2": true,
-      "hitPlus1Time": null,
-      "hitPlus2Time": null,
-      "hitMinus1Time": null,
-      "hitMinus2Time": null,
-      "exitModel": "close_auction",
-      "exitTime": "15:30",
-      "exitPrice": 79000.0,
-      "reason": "close",
-      "grossPnl": -2.5893958076448786,
-      "frictionPct": 0.5999136868064119,
-      "friction": {
-        "0.0t": 0.23,
-        "1.5t": 0.5999136868064119,
-        "3.0t": 0.9698273736128237
-      },
-      "pnl": -3.1893094944512903,
-      "pnlByTicks": {
-        "0.0t": -2.8193958076448786,
-        "1.5t": -3.1893094944512903,
-        "3.0t": -3.5592231812577024
-      }
-    },
     {
       "signalId": "638d5c4fc3a2f3d6",
       "date": "2026-10-30",
@@ -1688,6 +1421,267 @@
         "1.5t": -13.262886723507922,
         "3.0t": -13.628294762484778
       }
+    },
+    {
+      "signalId": "102b949a16438871",
+      "date": "2026-11-06",
+      "signalTime": "09:00",
+      "tz": "Asia/Seoul",
+      "market": "KOSDAQ GLOBAL",
+      "code": "095610",
+      "name": "테스",
+      "strategy": "opening",
+      "variant": "baseline",
+      "strategyVersion": "opening_gapdown_v1",
+      "signalSchemaVersion": 1,
+      "action": "signal",
+      "rejectedBy": null,
+      "signalPrice": 74800.0,
+      "entryPrice": 74800.0,
+      "prevClose": 88000.0,
+      "gapPct": -15.000000000000002,
+      "chgPct": -15.000000000000002,
+      "volume": null,
+      "cumVolume": null,
+      "volRatio": null,
+      "amount": null,
+      "cumAmount": null,
+      "amountRatio": null,
+      "indicators": {
+        "rsi14Prev": 29.3829864278529,
+        "prevAmountKrw": 35097349950.0,
+        "prevVolume": 388753.0
+      },
+      "params": {
+        "rsiMax": 30.0,
+        "gapMax": -2.0,
+        "gapFloor": -29.0,
+        "minPrevClose": 1000,
+        "minPrevAmount": 2000000000.0,
+        "minHistory": 60,
+        "haltLookback": 20,
+        "noLimitLookback": 10,
+        "picks": 3,
+        "entry": "open_auction",
+        "exit": "close_auction",
+        "fixedCostPct": 0.23,
+        "slipTicksPerSide": [
+          0.0,
+          1.5,
+          3.0
+        ],
+        "primarySlipTicks": 1.5
+      },
+      "decisionReason": "rsi14_prev<30+gap<=-2%+liquidity",
+      "source": "research-daily-bars",
+      "feed": "FinanceData marcap / fdr_krx_data_cache (KRX daily)",
+      "fwd5mPct": null,
+      "fwd10mPct": null,
+      "fwd20mPct": null,
+      "fwd30mPct": null,
+      "mfePct": 10.962566844919785,
+      "maePct": 0.0,
+      "mfeTime": null,
+      "maeTime": null,
+      "hitPlus1": true,
+      "hitPlus2": true,
+      "hitMinus1": false,
+      "hitMinus2": false,
+      "hitPlus1Time": null,
+      "hitPlus2Time": null,
+      "hitMinus1Time": null,
+      "hitMinus2Time": null,
+      "exitModel": "close_auction",
+      "exitTime": "15:30",
+      "exitPrice": 77800.0,
+      "reason": "close",
+      "grossPnl": 4.010695187165769,
+      "frictionPct": 0.6310695187165776,
+      "friction": {
+        "0.0t": 0.23,
+        "1.5t": 0.6310695187165776,
+        "3.0t": 1.0321390374331552
+      },
+      "pnl": 3.379625668449192,
+      "pnlByTicks": {
+        "0.0t": 3.7806951871657692,
+        "1.5t": 3.379625668449192,
+        "3.0t": 2.978556149732614
+      }
+    },
+    {
+      "signalId": "9f4bcff1a3e28786",
+      "date": "2026-11-06",
+      "signalTime": "09:00",
+      "tz": "Asia/Seoul",
+      "market": "KOSPI",
+      "code": "009150",
+      "name": "삼성전기",
+      "strategy": "opening",
+      "variant": "baseline",
+      "strategyVersion": "opening_gapdown_v1",
+      "signalSchemaVersion": 1,
+      "action": "signal",
+      "rejectedBy": null,
+      "signalPrice": 803000.0,
+      "entryPrice": 803000.0,
+      "prevClose": 944000.0,
+      "gapPct": -14.9364406779661,
+      "chgPct": -14.9364406779661,
+      "volume": null,
+      "cumVolume": null,
+      "volRatio": null,
+      "amount": null,
+      "cumAmount": null,
+      "amountRatio": null,
+      "indicators": {
+        "rsi14Prev": 29.56592794822393,
+        "prevAmountKrw": 1373766762500.0,
+        "prevVolume": 1401373.0
+      },
+      "params": {
+        "rsiMax": 30.0,
+        "gapMax": -2.0,
+        "gapFloor": -29.0,
+        "minPrevClose": 1000,
+        "minPrevAmount": 2000000000.0,
+        "minHistory": 60,
+        "haltLookback": 20,
+        "noLimitLookback": 10,
+        "picks": 3,
+        "entry": "open_auction",
+        "exit": "close_auction",
+        "fixedCostPct": 0.23,
+        "slipTicksPerSide": [
+          0.0,
+          1.5,
+          3.0
+        ],
+        "primarySlipTicks": 1.5
+      },
+      "decisionReason": "rsi14_prev<30+gap<=-2%+liquidity",
+      "source": "research-daily-bars",
+      "feed": "FinanceData marcap / fdr_krx_data_cache (KRX daily)",
+      "fwd5mPct": null,
+      "fwd10mPct": null,
+      "fwd20mPct": null,
+      "fwd30mPct": null,
+      "mfePct": 10.95890410958904,
+      "maePct": -0.8717310087173136,
+      "mfeTime": null,
+      "maeTime": null,
+      "hitPlus1": true,
+      "hitPlus2": true,
+      "hitMinus1": false,
+      "hitMinus2": false,
+      "hitPlus1Time": null,
+      "hitPlus2Time": null,
+      "hitMinus1Time": null,
+      "hitMinus2Time": null,
+      "exitModel": "close_auction",
+      "exitTime": "15:30",
+      "exitPrice": 870000.0,
+      "reason": "close",
+      "grossPnl": 8.3437110834371,
+      "frictionPct": 0.6035990037359901,
+      "friction": {
+        "0.0t": 0.23,
+        "1.5t": 0.6035990037359901,
+        "3.0t": 0.97719800747198
+      },
+      "pnl": 7.74011207970111,
+      "pnlByTicks": {
+        "0.0t": 8.1137110834371,
+        "1.5t": 7.74011207970111,
+        "3.0t": 7.36651307596512
+      }
+    },
+    {
+      "signalId": "0a35db30430d4d7b",
+      "date": "2026-11-06",
+      "signalTime": "09:00",
+      "tz": "Asia/Seoul",
+      "market": "KOSDAQ",
+      "code": "327260",
+      "name": "RF머트리얼즈",
+      "strategy": "opening",
+      "variant": "baseline",
+      "strategyVersion": "opening_gapdown_v1",
+      "signalSchemaVersion": 1,
+      "action": "signal",
+      "rejectedBy": null,
+      "signalPrice": 20550.0,
+      "entryPrice": 20550.0,
+      "prevClose": 24050.0,
+      "gapPct": -14.553014553014554,
+      "chgPct": -14.553014553014554,
+      "volume": null,
+      "cumVolume": null,
+      "volRatio": null,
+      "amount": null,
+      "cumAmount": null,
+      "amountRatio": null,
+      "indicators": {
+        "rsi14Prev": 25.866128059575374,
+        "prevAmountKrw": 26722907575.0,
+        "prevVolume": 1066508.0
+      },
+      "params": {
+        "rsiMax": 30.0,
+        "gapMax": -2.0,
+        "gapFloor": -29.0,
+        "minPrevClose": 1000,
+        "minPrevAmount": 2000000000.0,
+        "minHistory": 60,
+        "haltLookback": 20,
+        "noLimitLookback": 10,
+        "picks": 3,
+        "entry": "open_auction",
+        "exit": "close_auction",
+        "fixedCostPct": 0.23,
+        "slipTicksPerSide": [
+          0.0,
+          1.5,
+          3.0
+        ],
+        "primarySlipTicks": 1.5
+      },
+      "decisionReason": "rsi14_prev<30+gap<=-2%+liquidity",
+      "source": "research-daily-bars",
+      "feed": "FinanceData marcap / fdr_krx_data_cache (KRX daily)",
+      "fwd5mPct": null,
+      "fwd10mPct": null,
+      "fwd20mPct": null,
+      "fwd30mPct": null,
+      "mfePct": 11.19221411192215,
+      "maePct": 0.0,
+      "mfeTime": null,
+      "maeTime": null,
+      "hitPlus1": true,
+      "hitPlus2": true,
+      "hitMinus1": false,
+      "hitMinus2": false,
+      "hitPlus1Time": null,
+      "hitPlus2Time": null,
+      "hitMinus1Time": null,
+      "hitMinus2Time": null,
+      "exitModel": "close_auction",
+      "exitTime": "15:30",
+      "exitPrice": 22350.0,
+      "reason": "close",
+      "grossPnl": 8.75912408759123,
+      "frictionPct": 0.95992700729927,
+      "friction": {
+        "0.0t": 0.23,
+        "1.5t": 0.95992700729927,
+        "3.0t": 1.6898540145985401
+      },
+      "pnl": 7.79919708029196,
+      "pnlByTicks": {
+        "0.0t": 8.52912408759123,
+        "1.5t": 7.79919708029196,
+        "3.0t": 7.0692700729926905
+      }
     }
   ],
   "breadthFilter": {
@@ -1791,94 +1785,94 @@
         "outOfSample": {
           "strategy": {
             "0.0t": {
-              "trades": 30,
-              "days": 10,
-              "winRate": 30.0,
-              "avgPnl": -1.2892204239220322,
-              "avgWin": 5.675414699254689,
+              "trades": 33,
+              "days": 11,
+              "winRate": 36.36363636363637,
+              "avgPnl": -0.5531237078626322,
+              "avgWin": 5.958521887623857,
               "avgLoss": -4.274064048140627,
-              "dayAvgPnl": -1.2892204239220322,
-              "tStatDays": -0.8051592827610607,
-              "avgGross": -1.059220423922032
+              "dayAvgPnl": -0.5531237078626323,
+              "tStatDays": -0.3404547511529554,
+              "avgGross": -0.3231237078626321
             },
             "1.5t": {
-              "trades": 30,
-              "days": 10,
-              "winRate": 26.666666666666668,
-              "avgPnl": -1.606289615730351,
-              "avgWin": 6.066963783700796,
+              "trades": 33,
+              "days": 11,
+              "winRate": 33.33333333333333,
+              "avgPnl": -0.8869622316202506,
+              "avgWin": 6.132240463458967,
               "avgLoss": -4.396563579159859,
-              "dayAvgPnl": -1.606289615730351,
-              "tStatDays": -0.9942369443246073,
-              "avgGross": -1.059220423922032
+              "dayAvgPnl": -0.8869622316202506,
+              "tStatDays": -0.5445462467472483,
+              "avgGross": -0.3231237078626321
             },
             "3.0t": {
-              "trades": 30,
-              "days": 10,
-              "winRate": 26.666666666666668,
-              "avgPnl": -1.92335880753867,
-              "avgWin": 5.835014929822635,
+              "trades": 33,
+              "days": 11,
+              "winRate": 33.33333333333333,
+              "avgPnl": -1.220800755377869,
+              "avgWin": 5.826768976115591,
               "avgLoss": -4.744585621124599,
-              "dayAvgPnl": -1.9233588075386703,
-              "tStatDays": -1.1796812532880532,
-              "avgGross": -1.059220423922032
+              "dayAvgPnl": -1.220800755377869,
+              "tStatDays": -0.7473283286719707,
+              "avgGross": -0.3231237078626321
             }
           },
           "control": {
             "0.0t": {
-              "trades": 30,
-              "days": 10,
-              "winRate": 36.666666666666664,
-              "avgPnl": -0.9256596372581721,
-              "avgWin": 5.523300639840226,
+              "trades": 33,
+              "days": 11,
+              "winRate": 42.42424242424242,
+              "avgPnl": -0.11722915777514166,
+              "avgWin": 6.046966710671998,
               "avgLoss": -4.659268218736193,
-              "dayAvgPnl": -0.925659637258172,
-              "tStatDays": -0.5452153032551684,
-              "avgGross": -0.6956596372581719
+              "dayAvgPnl": -0.11722915777514155,
+              "tStatDays": -0.06754784097567967,
+              "avgGross": 0.11277084222485856
             },
             "1.5t": {
-              "trades": 30,
-              "days": 10,
-              "winRate": 33.33333333333333,
-              "avgPnl": -1.3251858949365156,
-              "avgWin": 5.605546721022713,
+              "trades": 33,
+              "days": 11,
+              "winRate": 39.39393939393939,
+              "avgPnl": -0.5115749131017199,
+              "avgWin": 6.071467071228142,
               "avgLoss": -4.79055220291613,
-              "dayAvgPnl": -1.3251858949365154,
-              "tStatDays": -0.7824073172657421,
-              "avgGross": -0.6956596372581719
+              "dayAvgPnl": -0.5115749131017198,
+              "tStatDays": -0.29491119445151986,
+              "avgGross": 0.11277084222485856
             },
             "3.0t": {
-              "trades": 30,
-              "days": 10,
-              "winRate": 33.33333333333333,
-              "avgPnl": -1.724712152614859,
-              "avgWin": 5.175355819982182,
+              "trades": 33,
+              "days": 11,
+              "winRate": 39.39393939393939,
+              "avgPnl": -0.9059206684282981,
+              "avgWin": 5.661503132317981,
               "avgLoss": -5.174746138913379,
-              "dayAvgPnl": -1.724712152614859,
-              "tStatDays": -1.02049811051644,
-              "avgGross": -0.6956596372581719
+              "dayAvgPnl": -0.905920668428298,
+              "tStatDays": -0.5223879887548033,
+              "avgGross": 0.11277084222485856
             }
           },
           "skillPctPoints": {
-            "0.0t": -0.36356078666386016,
-            "1.5t": -0.2811037207938356,
-            "3.0t": -0.19864665492381128
+            "0.0t": -0.4358945500874908,
+            "1.5t": -0.3753873185185308,
+            "3.0t": -0.31488008694957104
           },
           "skillPairedDays": {
             "0.0t": {
-              "days": 10,
-              "mean": -0.36356078666386005,
-              "tStat": -0.31660225655351076
+              "days": 11,
+              "mean": -0.4358945500874907,
+              "tStat": -0.4186421630940129
             },
             "1.5t": {
-              "days": 10,
-              "mean": -0.2811037207938356,
-              "tStat": -0.24480622170661842
+              "days": 11,
+              "mean": -0.3753873185185308,
+              "tStat": -0.35993870663683825
             },
             "3.0t": {
-              "days": 10,
-              "mean": -0.19864665492381112,
-              "tStat": -0.17279574216411692
+              "days": 11,
+              "mean": -0.31488008694957104,
+              "tStat": -0.30093711102686815
             }
           }
         },
@@ -1972,15 +1966,15 @@
             "avgGross": 2.7460269688638217
           },
           "2026": {
-            "trades": 108,
-            "days": 36,
-            "winRate": 46.2962962962963,
-            "avgPnl": 0.38351152155934937,
-            "avgWin": 5.378081800945296,
+            "trades": 111,
+            "days": 37,
+            "winRate": 47.74774774774775,
+            "avgPnl": 0.5435871996112793,
+            "avgWin": 5.430623110862397,
             "avgLoss": -3.9221525123940526,
-            "dayAvgPnl": 0.38351152155934953,
-            "tStatDays": 0.44543799676514234,
-            "avgGross": 0.9515438983135448
+            "dayAvgPnl": 0.5435871996112793,
+            "tStatDays": 0.6376043657280206,
+            "avgGross": 1.1160384808653778
           }
         }
       },
@@ -2082,94 +2076,94 @@
         "outOfSample": {
           "strategy": {
             "0.0t": {
-              "trades": 21,
-              "days": 7,
-              "winRate": 38.095238095238095,
-              "avgPnl": 0.15015917033938792,
-              "avgWin": 6.298912637578956,
+              "trades": 24,
+              "days": 8,
+              "winRate": 45.83333333333333,
+              "avgPnl": 0.9823697056383852,
+              "avgWin": 6.437711950802341,
               "avgLoss": -3.633689117192654,
-              "dayAvgPnl": 0.15015917033938786,
-              "tStatDays": 0.0800536709573871,
-              "avgGross": 0.38015917033938806
+              "dayAvgPnl": 0.9823697056383851,
+              "tStatDays": 0.5382261857805849,
+              "avgGross": 1.2123697056383853
             },
             "1.5t": {
-              "trades": 21,
-              "days": 7,
-              "winRate": 38.095238095238095,
-              "avgPnl": -0.13051293468344363,
-              "avgWin": 6.066963783700796,
+              "trades": 24,
+              "days": 8,
+              "winRate": 45.83333333333333,
+              "avgPnl": 0.674090133337081,
+              "avgWin": 6.132240463458967,
               "avgLoss": -3.944344761381437,
-              "dayAvgPnl": -0.1305129346834436,
-              "tStatDays": -0.06901301812091223,
-              "avgGross": 0.38015917033938806
+              "dayAvgPnl": 0.6740901333370811,
+              "tStatDays": 0.369416878006794,
+              "avgGross": 1.2123697056383853
             },
             "3.0t": {
-              "trades": 21,
-              "days": 7,
-              "winRate": 38.095238095238095,
-              "avgPnl": -0.4111850397062753,
-              "avgWin": 5.835014929822635,
+              "trades": 24,
+              "days": 8,
+              "winRate": 45.83333333333333,
+              "avgPnl": 0.36581056103577675,
+              "avgWin": 5.826768976115591,
               "avgLoss": -4.25500040557022,
-              "dayAvgPnl": -0.4111850397062754,
-              "tStatDays": -0.21564286159774068,
-              "avgGross": 0.38015917033938806
+              "dayAvgPnl": 0.3658105610357767,
+              "tStatDays": 0.20044489171524102,
+              "avgGross": 1.2123697056383853
             }
           },
           "control": {
             "0.0t": {
-              "trades": 21,
-              "days": 7,
-              "winRate": 47.61904761904761,
-              "avgPnl": 0.8591908228150322,
-              "avgWin": 6.035737622063243,
+              "trades": 24,
+              "days": 8,
+              "winRate": 54.166666666666664,
+              "avgPnl": 1.7476764245950485,
+              "avgWin": 6.481431010138301,
               "avgLoss": -3.846760812865159,
-              "dayAvgPnl": 0.8591908228150323,
-              "tStatDays": 0.4622004448434044,
-              "avgGross": 1.0891908228150324
+              "dayAvgPnl": 1.7476764245950487,
+              "tStatDays": 0.9504592010223947,
+              "avgGross": 1.9776764245950489
             },
             "1.5t": {
-              "trades": 21,
-              "days": 7,
-              "winRate": 47.61904761904761,
-              "avgPnl": 0.4853036061699542,
-              "avgWin": 5.605546721022713,
+              "trades": 24,
+              "days": 8,
+              "winRate": 54.166666666666664,
+              "avgPnl": 1.3777075185544894,
+              "avgWin": 6.071467071228142,
               "avgLoss": -4.169462861878008,
-              "dayAvgPnl": 0.4853036061699542,
-              "tStatDays": 0.2644258472696521,
-              "avgGross": 1.0891908228150324
+              "dayAvgPnl": 1.3777075185544896,
+              "tStatDays": 0.7558126289526934,
+              "avgGross": 1.9776764245950489
             },
             "3.0t": {
-              "trades": 21,
-              "days": 7,
-              "winRate": 47.61904761904761,
-              "avgPnl": 0.11141638952487597,
-              "avgWin": 5.175355819982182,
+              "trades": 24,
+              "days": 8,
+              "winRate": 54.166666666666664,
+              "avgPnl": 1.0077386125139303,
+              "avgWin": 5.661503132317981,
               "avgLoss": -4.492164910890858,
-              "dayAvgPnl": 0.11141638952487597,
-              "tStatDays": 0.06148891413692918,
-              "avgGross": 1.0891908228150324
+              "dayAvgPnl": 1.0077386125139305,
+              "tStatDays": 0.5576360371426186,
+              "avgGross": 1.9776764245950489
             }
           },
           "skillPctPoints": {
-            "0.0t": -0.7090316524756445,
-            "1.5t": -0.6158165408533978,
-            "3.0t": -0.5226014292311514
+            "0.0t": -0.7653067189566636,
+            "1.5t": -0.7036173852174085,
+            "3.0t": -0.6419280514781538
           },
           "skillPairedDays": {
             "0.0t": {
-              "days": 7,
-              "mean": -0.7090316524756444,
-              "tStat": -0.42762299273889354
+              "days": 8,
+              "mean": -0.7653067189566634,
+              "tStat": -0.5325581805851352
             },
             "1.5t": {
-              "days": 7,
-              "mean": -0.6158165408533979,
-              "tStat": -0.37157871605945153
+              "days": 8,
+              "mean": -0.7036173852174085,
+              "tStat": -0.48932150519071427
             },
             "3.0t": {
-              "days": 7,
-              "mean": -0.5226014292311513,
-              "tStat": -0.315191579383486
+              "days": 8,
+              "mean": -0.6419280514781537,
+              "tStat": -0.44551803461261896
             }
           }
         },
@@ -2263,15 +2257,15 @@
             "avgGross": 2.515657310239256
           },
           "2026": {
-            "trades": 84,
-            "days": 28,
-            "winRate": 53.57142857142857,
-            "avgPnl": 1.007110108262739,
-            "avgWin": 5.28270478370102,
+            "trades": 87,
+            "days": 29,
+            "winRate": 55.172413793103445,
+            "avgPnl": 1.1898411945116358,
+            "avgWin": 5.346680210312254,
             "avgLoss": -3.9262683633968165,
-            "dayAvgPnl": 1.007110108262739,
-            "tStatDays": 1.0005736445020543,
-            "avgGross": 1.5677248008104887
+            "dayAvgPnl": 1.189841194511636,
+            "tStatDays": 1.2039934959506886,
+            "avgGross": 1.7563495819112087
           }
         }
       }
@@ -2280,14 +2274,14 @@
   "live": {
     "trades": 62,
     "days": 23,
-    "actualGapQualifiesRate": 46.774193548387096,
+    "actualGapQualifiesRate": 51.61290322580645,
     "openVsExpectedPct": {
-      "n": 53,
-      "mean": 4.40000017163017
+      "n": 56,
+      "mean": 4.771582230754958
     },
     "openVsExpected0856Pct": {
-      "n": 28,
-      "mean": 3.242186973562092
+      "n": 31,
+      "mean": 4.29691823328899
     },
     "buySlipPct": {
       "n": 25,
@@ -2302,8 +2296,8 @@
       "mean": -0.5990051725139331
     },
     "modelNet0tPct": {
-      "n": 53,
-      "mean": -1.008516152040189
+      "n": 56,
+      "mean": -0.6462743571094153
     },
     "note": "buySlip = 매수체결가/시가-1, sellSlip = 1-매도체결가/매도 기준가(10:00 매도 날은 10:00 기록 가격 · 그 전은 종가) (양수 = 비용). 판정은 realizedNet 누적으로 한다."
   },
@@ -3060,13 +3054,13 @@
       "source": "kis-vts-live",
       "expectedPrice": 65600,
       "expectedGapPct": -23.004694835680752,
-      "actualOpen": null,
-      "actualClose": null,
-      "actualGapPct": null,
-      "actualGapQualifies": false,
-      "openVsExpectedPct": null,
+      "actualOpen": 73200.0,
+      "actualClose": 78100.0,
+      "actualGapPct": -14.084507042253524,
+      "actualGapQualifies": true,
+      "openVsExpectedPct": 11.585365853658548,
       "expectedGapPct0856": -28.4037558685446,
-      "openVsExpected0856Pct": null,
+      "openVsExpected0856Pct": 19.999999999999996,
       "buyOrderOk": false,
       "buyOrderMsg": null,
       "sellOrderOk": false,
@@ -3076,12 +3070,12 @@
       "sellQty": null,
       "sellFill": null,
       "exitRef": "close",
-      "exitRefPrice": null,
+      "exitRefPrice": 78100.0,
       "buySlipPct": null,
       "sellSlipPct": null,
       "realizedGrossPct": null,
       "realizedNetPct": null,
-      "modelNet0tPct": null
+      "modelNet0tPct": 6.463989071038242
     },
     {
       "date": "2026-11-06",
@@ -3091,13 +3085,13 @@
       "source": "kis-vts-live",
       "expectedPrice": 7010,
       "expectedGapPct": -22.111111111111114,
-      "actualOpen": null,
-      "actualClose": null,
-      "actualGapPct": null,
-      "actualGapQualifies": false,
-      "openVsExpectedPct": null,
+      "actualOpen": 8010.0,
+      "actualClose": 8210.0,
+      "actualGapPct": -10.999999999999998,
+      "actualGapQualifies": true,
+      "openVsExpectedPct": 14.265335235378029,
       "expectedGapPct0856": -22.111111111111114,
-      "openVsExpected0856Pct": null,
+      "openVsExpected0856Pct": 14.265335235378029,
       "buyOrderOk": false,
       "buyOrderMsg": null,
       "sellOrderOk": false,
@@ -3107,12 +3101,12 @@
       "sellQty": null,
       "sellFill": null,
       "exitRef": "close",
-      "exitRefPrice": null,
+      "exitRefPrice": 8210.0,
       "buySlipPct": null,
       "sellSlipPct": null,
       "realizedGrossPct": null,
       "realizedNetPct": null,
-      "modelNet0tPct": null
+      "modelNet0tPct": 2.2668789013732895
     },
     {
       "date": "2026-11-06",
@@ -3122,13 +3116,13 @@
       "source": "kis-vts-live",
       "expectedPrice": 19000,
       "expectedGapPct": -20.997920997920993,
-      "actualOpen": null,
-      "actualClose": null,
-      "actualGapPct": null,
-      "actualGapQualifies": false,
-      "openVsExpectedPct": null,
+      "actualOpen": 20550.0,
+      "actualClose": 22350.0,
+      "actualGapPct": -14.553014553014554,
+      "actualGapQualifies": true,
+      "openVsExpectedPct": 8.157894736842097,
       "expectedGapPct0856": -20.997920997920993,
-      "openVsExpected0856Pct": null,
+      "openVsExpected0856Pct": 8.157894736842097,
       "buyOrderOk": false,
       "buyOrderMsg": null,
       "sellOrderOk": false,
@@ -3138,12 +3132,12 @@
       "sellQty": null,
       "sellFill": null,
       "exitRef": "close",
-      "exitRefPrice": null,
+      "exitRefPrice": 22350.0,
       "buySlipPct": null,
       "sellSlipPct": null,
       "realizedGrossPct": null,
       "realizedNetPct": null,
-      "modelNet0tPct": null
+      "modelNet0tPct": 8.52912408759123
     },
     {
       "date": "2026-11-09",
@@ -3244,5 +3238,5 @@
     "basedOnStatus": "provisional_snapshot",
     "size": 96
   },
-  "finalDataThrough": "2026-11-05"
+  "finalDataThrough": "2026-11-06"
 }
