@@ -2626,17 +2626,11 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
     ok('자동 키는 값이 있을 때만 통한다',
        /if \(env\.AUTOTRADE_KEY && ak && ak === env\.AUTOTRADE_KEY\)/.test(vo));
   }
+  // 2026-11-09 사용자 결정("무매 자동 주문(모의) 이것도 지워"): 서버 자동주문을 깨우던 예약 워크플로(autotrade.yml)를 지웠다.
+  // GitHub 예약이 몇 시간씩 늦어 주문 창(마감 전 1시간)을 놓쳤다 — 미국 10/30~11/06 실행 12번이 모두 창 뒤에 도착.
+  // 서버 함수(functions/api/autotrade.js)는 남지만 부르는 곳이 없다 — 한투 주문은 앱의 '주문 보내기' 버튼으로만 나간다.
   const wf=__d+'/.github/workflows/autotrade.yml';
-  ok('시간을 재는 워크플로가 있다', fs.existsSync(wf));
-  if(fs.existsSync(wf)){
-    const y=fs.readFileSync(wf,'utf8');
-    // 몇 시에 몇 번 도는지는 [130] 이 주문 창과 맞대 본다
-    ok('평일에만 돈다', /cron: "[^"]+ \* \* 1-5"/.test(y) && [...y.matchAll(/cron: "([^"]+)"/g)].every(m=>/ \* \* 1-5$/.test(m[1])));
-    ok('손으로도 돌릴 수 있다', /workflow_dispatch/.test(y));
-    ok('손으로 돌릴 땐 드라이런이 기본', /default: true/.test(y));
-    ok('주문구분을 손으로 골라 시험할 수 있다', /ord_dvsn:/.test(y) && /ordDvsn=\$DVSN/.test(y));
-    ok('평소 주문구분은 지정가다', /inputs\.ord_dvsn \|\| '00'/.test(y));
-  }
+  ok('서버 자동주문 예약 워크플로는 지웠다(2026-11-09) — 한투 주문은 앱 버튼으로만', !fs.existsSync(wf));
 }
 
 /* ════ 43. 미국 주문구분 — LOC 가 몇 번인지 알아보되, 평소 주문은 건드리지 않는다 ════
@@ -10131,32 +10125,13 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
    ① 크론을 30분마다 건다 — 서버 orderWindow 를 그대로 써서 지연 1분 단위로 창에 드는지 잰다.
    ② 그러면 같은 날 창 안 실행이 여러 번 온다 — 첫 주문 직전에 오늘을 조건부 쓰기로 차지한다.
       실코드(onRequest)를 가짜 Firestore · 시세 · 한투로 돌려 겹침 · 재실행 · 쓰기 실패를 본다.
-   ③ 저장소가 공개라 실행 기록도 공개다 — uid · 가격 · 수량을 찍지 않는다. */
-console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주문 직전 선점 · 공개 로그');
+   ③ 저장소가 공개라 실행 기록도 공개다 — uid · 가격 · 수량을 찍지 않는다.
+   2026-11-09: 사용자 결정으로 예약 워크플로(autotrade.yml)를 지웠다 — 크론 검사(①)와 워크플로 로그 검사(③)는 대상이 없어 뺐다.
+   서버 함수 검사(②)는 함수가 남아 있어 그대로 둔다. ④ 는 '서버 자동주문은 껐다'는 앱 안내를 본다. */
+console.log('\n[130] 무매 자동주문 서버 함수 — 주문 직전 선점 · 앱 안내(예약 워크플로는 2026-11-09 삭제)');
 {
   const {spawnSync}=require('child_process');
-  const imP=__d+'/functions/api/_im.js', atP=__d+'/functions/api/autotrade.js', wfP=__d+'/.github/workflows/autotrade.yml';
-  const im=fs.readFileSync(imP,'utf8'), y=fs.readFileSync(wfP,'utf8');
-  const OW=new Function(im.replace(/export /g,'')+'\nreturn orderWindow;')();
-  // 크론 줄 → 하루 중 예정 시각(UTC 분). 분·시 칸은 숫자 · 쉼표 목록 · a-b 범위 · * 만 쓴다
-  const expand=(f,max)=>f==='*'?Array.from({length:max},(_,i)=>i):f.split(',').flatMap(p=>{ const m=p.match(/^(\d+)-(\d+)$/);
-    if(m){ const a=[]; for(let i=+m[1];i<=+m[2];i++) a.push(i); return a; } return [+p]; });
-  const slots=(crons)=>crons.flatMap(c=>{ const [mi,h]=c.trim().split(/\s+/); return expand(h,24).flatMap(hh=>expand(mi,60).map(mm=>hh*60+mm)); }).sort((a,b)=>a-b);
-  // 지연 d분 — 예정 시각 + d 중 하나라도 서버 주문 창 안이면 그 지연은 덮인다. 처음 못 덮는 d(분)를 돌려준다
-  const firstGap=(sl,day,maxD)=>{ const b=Date.parse(day+'T00:00:00Z');
-    for(let d=0; d<=maxD; d++) if(!sl.some(s=>OW('usd', new Date(b+(s+d)*60e3)).ok)) return d; return null; };
-  const cr=[...y.matchAll(/cron: "([^"]+)"/g)].map(m=>m[1]), sl=slots(cr);
-  ok('① 크론 — 평일 · 하루 11번 · 15:40~20:40 UTC 30분 간격', cr.length>0 && cr.every(c=>/ \* \* 1-5$/.test(c)) && sl.length===11
-     && sl[0]===15*60+40 && sl[sl.length-1]===20*60+40 && sl.every((s,i)=>i===0||s-sl[i-1]===30), cr.join(' | ')+' → '+sl.length+'번');
-  const gS=firstGap(sl,'2026-09-24',600), gW=firstGap(sl,'2026-12-03',600);
-  ok('① 서머타임 — 지연 0분 ~ 4시간 20분 전부 하루 한 번 이상 주문 창(15:00~16:00 ET) 안 (처음 놓치는 지연 261분 · 실측 최대 188분)', gS===261, '처음 놓치는 지연 '+gS+'분');
-  ok('① 겨울 — 지연 0분 ~ 5시간 20분 전부 주문 창 안 (처음 놓치는 지연 321분)', gW===321, '처음 놓치는 지연 '+gW+'분');
-  { // 재는 방법이 옛 크론을 실제로 잡는지 — 옛 두 줄(19:40·20:40 UTC)은 21분만 늦어도 창을 놓쳤다
-    const old=slots(['40 19 * * 1-5','40 20 * * 1-5']), b=Date.parse('2026-09-24T00:00:00Z');
-    ok('① (재는 방법 확인) 옛 크론은 21분 늦으면 놓친다 — 실측 지연 130 · 158 · 188분은 전부 창 밖',
-       firstGap(old,'2026-09-24',600)===21 && [130,158,188].every(d=>!old.some(s=>OW('usd', new Date(b+(s+d)*60e3)).ok))); }
-  ok('① 한 번에 하나만 돈다 — concurrency 그룹 · 도는 중인 실행은 끊지 않는다 · 10분 제한',
-     /\nconcurrency:\n  group: autotrade-order\n  cancel-in-progress: false\n/.test(y) && /\n    timeout-minutes: 10\n/.test(y));
+  const imP=__d+'/functions/api/_im.js', atP=__d+'/functions/api/autotrade.js';
 
   /* ② 서버 — 실코드 onRequest 를 가짜 Firestore(조건부 쓰기까지) · 시세 · 한투 로 돌린다.
      비동기라 자식 프로세스에서 돌리고 결과만 받는다. */
@@ -10277,27 +10252,10 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
      S7.orders===0 && S7.claim==='실행 기록을 쓰지 못했습니다 (500)' && S7.marked===false && S8.orders===0 && S8.claim==='실행 기록을 읽지 못했습니다 (500)', J([S7,S8]));
   ok('② 모의 자동이력 분할 전후 실제 서버 주문 계산이 같다 · 조각을 읽은 뒤 계산 · 드라이런 주문 0건',S9.same===true&&S9.parts>0&&S9.orders===0,J(S9));
 
-  /* ③ 공개 로그 — 워크플로의 요약 스크립트를 그대로 떼어 표본 응답에 돌린다 */
-  { const m=y.match(/node - resp\.json <<'NODE'[^\n]*\n([\s\S]*?)\n[ \t]*NODE\n/);
-    const script=m?m[1].replace(/^ {10}/gm,''):'';
-    const sample={at:'2026-09-24T19:30:00.000Z',dry:false,uid:'UID-SECRET-123',marked:true,claim:'오늘 주문 차지',sessions:[
-      {name:'실계좌 SOXL',id:'s1',paper:false,skip:'한투 연결 꺼짐'},
-      {name:'20/10',id:'s2',paper:true,ticker:'SOXL',close:146.33,orders:[{side:'buy',kind:'별지점 매수',price:156.37,qty:10},{side:'sell',kind:'지정가매도',price:160.01,qty:40},{side:'buy',kind:'평단 매수',price:145.47,qty:13}],
-        results:[{kind:'별지점 매수',ok:true,msg:'주문 접수',orderNo:'0001234567'},{kind:'지정가매도',ok:false,msg:'모의투자 잔고내역이 없습니다.'},{kind:'평단 매수',ok:true,msg:'주문 접수',orderNo:'0001234568'}]},
-      {name:'20/10',id:'s3',paper:true,ticker:'TQQQ',close:78.58,orders:[{side:'buy',price:84.89,qty:19}],skip:'주문 시간이 아닙니다 — 지금 18:43, 주문 창은 15:00~16:00 (거래소 시각)'}]};
-    const tmp=path.join(require('os').tmpdir(),'__at_resp_'+process.pid+'.json'); fs.writeFileSync(tmp,JSON.stringify(sample));
-    const r=spawnSync(process.execPath,['-',tmp],{input:script,encoding:'utf8'}); const o=r.stdout||'';
-    try{ fs.unlinkSync(tmp); }catch(e){}
-    ok('③ 공개 로그 — 세션마다 결과만 (보냄 3 · 접수 2 · 사유 · 주문표 건수)', !!script && r.status===0
-       && /  20\/10 SOXL \(모의\): 보냄 3 · 접수 2 · 주문 접수 \/ 모의투자 잔고내역이 없습니다\. \[주문표 3건\]/.test(o)
-       && /  실계좌 SOXL \(실계좌\): 한투 연결 꺼짐/.test(o) && /  20\/10 TQQQ \(모의\): 주문 시간이 아닙니다/.test(o) && /오늘 주문 차지 · 주문 냄 예/.test(o),
-       (o||'').slice(0,400)+(r.stderr||'').slice(0,200));
-    ok('③ 공개 로그 — uid · 가격 · 수량 · 주문번호를 찍지 않는다', !!o && !/UID-SECRET-123|156\.37|160\.01|145\.47|84\.89|146\.33|78\.58|000123456|qty/.test(o), o.slice(0,300));
-    ok('③ 응답 원문을 그대로 찍는 줄이 없다', !/^\s*cat resp\.json\s*$/m.test(y)); }
-
-  /* ④ 앱 안내 — 15:40 고정이 아니다 */
+  /* ④ 앱 안내 — 서버 자동주문은 껐다(2026-11-09) · 주문 창에 들어간다고 하지 않는다 */
   { const t=new Function(extractFn(idx,'function kisAutoLimitsNote()')+'\nreturn kisAutoLimitsNote;')()();
-    ok('④ 앱 안내 — 서버 자동주문은 마감 전 1시간(15:00~16:00 ET) 안에 들어간다', /서버 자동주문은 마감 전 1시간\(15:00~16:00 ET\) 안에 들어갑니다/.test(t) && !/15:40/.test(t)); }
+    ok('④ 앱 안내 — 서버 자동주문은 껐고(2026-11-09) 주문은 버튼으로만 나간다고 알린다 · 주문 창에 들어간다고 하지 않는다',
+       /서버 자동주문은 껐습니다/.test(t) && /이 버튼을 눌러야 나갑니다/.test(t) && !/마감 전 1시간\(15:00~16:00 ET\) 안에 들어갑니다/.test(t) && !/15:40/.test(t)); }
 }
 
 /* ════ 131. 한투 계좌 확인 — 읽기 전용 (주문가능금액 · 보유 · 앱 장부 대조) ════
