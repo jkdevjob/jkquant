@@ -8343,9 +8343,8 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /137개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
-  ok('자산플랜 담당 탭 — 🤖 클로드 · ⚡ 지피티 (기간 탭 5·10·15·20년은 2026-11-08 폐지) + B안 화면 제거',
-     /<nav class="plan-tabs" id="aiTabs"/.test(pl)
-     && /data-ai="claude"/.test(pl) && /data-ai="gpt"/.test(pl)
+  ok('듀얼 가드 화면 하나 — 클로드/지피티 탭 없음(2026-11-09 사용자 지시) · 기간 탭 5·10·15·20년 없음(2026-11-08) · B안 화면 제거',
+     !/id="aiTabs"/.test(pl) && !/data-ai=/.test(pl) && !/id="pane-gpt"/.test(pl) && !/plan-gpt\.js/.test(pl)
      && !/data-horizon=/.test(pl) && !/id="horizonTabs"/.test(pl)
      && !/data-ptab="classic"[^>]*>/.test(pl)
      && /data-ppanel="classic" hidden aria-hidden="true" style="display:none"/.test(pl));
@@ -10634,10 +10633,10 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   const pePath=__d+'/plan-session-engine.js', pe=fs.existsSync(pePath)?fs.readFileSync(pePath,'utf8'):'';
 
-  ok('A 자산플랜 🤖 클로드 탭 안에 공통 세션바와 +세션 모달 (기간 탭 폐지)',
+  ok('A 듀얼 가드 화면에 공통 세션바와 +세션 모달 (기간 탭 · 클로드/지피티 탭 없음)',
      /id="assetSessionCard"/.test(pl) && /id="assetSessionChips"/.test(pl)
      && /id="assetSessionAdd"/.test(pl) && /id="assetSessionModal"/.test(pl)
-     && pl.indexOf('id="pane-claude"')>=0 && pl.indexOf('id="pane-claude"')<pl.indexOf('id="assetSessionCard"') && !/data-horizon=/.test(pl));
+     && pl.indexOf('id="dgStrip"')>=0 && pl.indexOf('id="dgStrip"')<pl.indexOf('id="assetSessionCard"') && !/data-horizon=/.test(pl) && !/id="pane-gpt"/.test(pl));
 
   ok('B 세션은 5년만 · 폐지된 기간·규칙 세션은 숨기고(planRetired) 현재 투자중 플랜은 Firebase 원장과 분리',
      /filter\(x=>x&&\+x\.horizon===\+h&&!planRetired\(x\)\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
@@ -12744,10 +12743,10 @@ console.log('\n[37-조회] 모의 성과 첫 진입 — 오늘 결과 없으면 
 Promise.all(PENDING).then(()=>{
   const rec=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-inf-record-quantity.cjs'),IDX],{encoding:'utf8'});
   /* 2026-11-08 — 5년 규칙 벌(새 규칙·공격형) 시험 2개(check-plan-rules-exp · check-plan-rules-session)는 규칙 폐지와 함께 빠졌다.
-     폐지 자체(규칙 하나 · 10·15·20년 거절 · 폐지 세션 숨김 · 기본 결과 = 개편 전 엔진)와 클로드/지피티 탭은 check-plan-claude-tab 이 본다. */
+     폐지 자체(규칙 하나 · 10·15·20년 거절 · 폐지 세션 숨김 · 기본 결과 = 개편 전 엔진)와 클로드/지피티 탭이 없는지는 check-plan-claude-tab 이 본다. */
   const pct=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-claude-tab.cjs')],{encoding:'utf8'});
-  ok('자산플랜 v2 🤖 클로드/⚡ 지피티 탭 · 5년 듀얼 가드 하나: 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·탭 전환·폐지 세션 숨김·모의 목록·지피티 저장 창구·변이 18종',
-     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 18/18 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
+  ok('5년 듀얼 가드 하나(클로드/지피티 탭 없음 · 2026-11-09): 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·폐지 세션 숨김·모의 목록·변이 14종',
+     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 14/14 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
   /* 2026-11-08 — 입금 맞춤: 모의 엔진은 입금일 전체 맞춤(force)인데 운영 화면은 신호 없으면 현금으로 두던 갈림을 고침(plan 2.0.1) */
   const pdp=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-deposit.cjs')],{encoding:'utf8'});
   ok('자산플랜 입금 맞춤: 마지막 체결 뒤 입금 → 전체 맞춤 · 운영 주문표 = 모의 엔진 입금일 체결(21일 전부) · 변이 6종',

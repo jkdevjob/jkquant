@@ -6,6 +6,18 @@
 - 지피티 아침 보고: `research/gpt-morning` 브랜치 마지막 제출은 11/08(`gpt-morning-report.yml` 실행 42420601868). 11/09 · 11/04 · 11/03 은 제출이 없다. 푸시 서버는 저장된 보고가 없으면 08:00 에 '연구 준비 미완료' 보고를 만들어 보내게 되어 있다(코드 확인) — 실제로 그날 보냈는지는 소유자 인증이 없어 미확인.
 - 11/09 ① 장부(`data/opening-gapdown-live/2026-11-09.json`)는 밤 작업이 데이터 브랜치로 옮기기 전이라 아직 없다 — 그림자 칸 · 10:00 매도 첫 기록 확인은 11/10 아침.
 
+## 2026-11-09 · 듀얼 가드 클로드/지피티 탭 삭제 · 플랜 v2.3.0
+
+- `scripts/check-plan-claude-tab.cjs` **ALL PASS · 변이 14/14 빨간불**.
+  - C2: 탭 줄·`.ai-tab`·`data-ai`·두 칸·`planGptRoot`·`plan-gpt.js`·`PLANGPT_ACCOUNT`·`planAiTab`·`#gpt` 처리가 하나도 없다. `plan-gpt*.js|css` 파일 0개. 화면 순서 = 한눈에 띠 → 세션 → 주문표 → 초기화.
+  - 새 변이: '클로드/지피티 탭 되살림'(탭 줄 · 칸 다시 넣기) → C2 빨간불 · '지피티 저장 창구 되살림' → C2 빨간불.
+- `check-sticky-layout` ALL PASS(11 경로 × 4 폭 · /plan 은 붙박이 탭 줄이 없어져 뺐다). 플랜 관련 시험(evidence · deposit · history-pnl · tax · session-* · signal-fill · warmup · portfolio 23/23 · no-browser-storage · unified-layout · mobile-pages · ui-common) 모두 통과.
+- 전체 회귀 **2829 PASS / 0 FAIL**.
+- 로컬 브라우저 스모크(가짜 로그인·DB · 저장해 둔 실제 일봉)
+  - /plan 바로 열기 · 운영 › 듀얼 가드 탭 안 창(`/plan?embed=1`) × 폰 390 · PC 1280: v2.3.0 · 탭·지피티 칸·plan-gpt.js 없음 · 화면 순서 띠 → 세션 → 주문표 → 초기화 · 한눈에 띠 칩 4개 · 창 알림(11-06 · 주문 3건) 정상 · 가로 넘침 0 · 페이지 오류 0.
+  - 예전 링크 `/plan#gpt` → 듀얼 가드 화면 그대로 열림(지피티 칸 없음).
+- 미확인: 사용자 기기(iPhone Safari)에서 탭 없는 화면.
+
 ## 2026-11-09 · 포트폴리오 v2 — 합친 추이·MDD · 올해 양도세 · 목표 비중 · v3.120.0
 
 - `scripts/check-portfolio.cjs` **ALL PASS · 변이 23/23 빨간불**(새 변이 7개가 의도한 항목에서 걸림).
