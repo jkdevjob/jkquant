@@ -12703,16 +12703,16 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-08 — 5년 규칙 벌(새 규칙·공격형) 시험 2개(check-plan-rules-exp · check-plan-rules-session)는 규칙 폐지와 함께 빠졌다.
      폐지 자체(규칙 하나 · 10·15·20년 거절 · 폐지 세션 숨김 · 기본 결과 = 개편 전 엔진)와 클로드/지피티 탭이 없는지는 check-plan-claude-tab 이 본다. */
   const pct=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-claude-tab.cjs')],{encoding:'utf8'});
-  ok('듀얼가드 하나(클로드/지피티 탭 없음 · 2026-11-09): 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·폐지 세션 숨김·모의 목록·이름(띄어쓰기·"5년"·"플랜" 없음)·모의 캐시 판·변이 22종',
-     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 22/22 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
+  ok('듀얼가드 하나(클로드/지피티 탭 없음 · 2026-11-09): 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·폐지 세션 숨김·모의 목록·이름(띄어쓰기·"5년"·"플랜" 없음)·모의 캐시 판·영어 "5 YEAR" 없음·변이 23종',
+     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 23/23 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
   /* 2026-11-08 — 입금 맞춤: 모의 엔진은 입금일 전체 맞춤(force)인데 운영 화면은 신호 없으면 현금으로 두던 갈림을 고침(plan 2.0.1) */
   const pdp=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-deposit.cjs')],{encoding:'utf8'});
   ok('자산플랜 입금 맞춤: 마지막 체결 뒤 입금 → 전체 맞춤 · 운영 주문표 = 모의 엔진 입금일 체결(21일 전부) · 변이 6종',
      pdp.status===0&&(pdp.stdout||'').includes('ALL PASS plan deposit · 변이 6/6 red'),(pdp.stdout||'').slice(-600)+(pdp.stderr||''));
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
-  ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 48종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 48/48 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+  ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 53/53 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   /* 2026-11-09 — 운영 › 듀얼가드 탭을 다른 운영 탭처럼(세션 줄 맨 위 · 보고 있는 칩/두 번 누르면 세션 설정 · 끌어서 순서 · ⚙️ 설정 따로 · 창 안 다시 로그인 없음) */
   const pdg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-dg-tab.cjs')],{encoding:'utf8'});
   ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 변이 24종',

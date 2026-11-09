@@ -227,6 +227,15 @@ await t('P2 첫 화면: 오늘 결과가 없으면 목록을 비우고 "조회 �
   const rows=sum(); assert.equal(rows[0].pending,true); assert.equal(rows[1].pending,undefined);
   assert(/r\.pending\s*\n?\s*\? `<td colspan="8" style="color:var\(--faint\)">계산 중/.test(op),'아직 계산 전 줄은 실패로 안 보인다');
 });
+await t('P2 지난 목록 캐시 판 ≥7 — ASAP 모의 줄이 든 지난 결과(판 6)는 재계산 실패 대체 화면에도 안 쓴다 · 값 및 변이 1종',async()=>{
+  // 2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?" — ASAP 모의를 목록에서 뺀 판(v3.123.3)은 지난 목록 캐시 판도 올린다
+  const verify=src=>{ const V=+((src.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1]);
+    const L=new Function('S','PAPER_VIEW_CACHE_VER',fnOf(src,'function paperViewCacheLast()')+'\nreturn paperViewCacheLast;');
+    assert.equal(L({paperViewCache:{ver:6,sig:'v6',rows:[{tab:'asap',price:1},{tab:'inf',price:1}]}},V)(),null,'판 6 지난 목록(ASAP 줄)은 안 씀');
+    assert.equal(L({paperViewCache:{ver:V,sig:'now',rows:[{tab:'inf',price:1}]}},V)().sig,'now','지금 판 지난 목록은 씀'); };
+  verify(html);
+  assert.throws(()=>verify(html.replace(/const PAPER_VIEW_CACHE_VER=\d+;/,'const PAPER_VIEW_CACHE_VER=6;')),assert.AssertionError,'변이(판 6)가 값 단언에 걸려야 함');
+});
 await t('P2 VR 모의 평가는 그 세션 종목 시세만 쓴다 — 없으면 평단 대체(가짜 0% 손익) 대신 0(시세 대기)',async()=>{
   const pr=fn('function paperRaw(tab, sess)');
   const run=(Q)=>new Function('computeVr','quoteOf','vrLastPrice','sessDivCash','console',pr+'\nreturn paperRaw;')(

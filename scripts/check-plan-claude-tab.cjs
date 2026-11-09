@@ -107,7 +107,7 @@ async function check(S){
   /* 이름(2026-11-09 사용자: "듀얼 가드를 전부 듀얼가드로 바꾸고 5년이라는 말은 전부 지워") — 띄어 쓴 이름 없음 · 플랜 화면 글자(주석 뺀)에 '5년' 없음 ·
      원장 칸 이름 · 새 세션 기본 이름. 엔진 공용 주석(여러 파일이 같은 글자)은 화면에 안 보여 그대로 둔다. */
   { const code=x=>x.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:'"])\/\/[^\n]*/g,'$1').replace(/<!--[\s\S]*?-->/g,'');
-    const left=(code(P).match(/[^\n]{0,30}5년[^\n]{0,30}/g)||[]);
+    const left=(code(P).match(/[^\n]{0,30}(5년|5[ -]?YEAR)[^\n]{0,30}/gi)||[]);   // 영어 표기('5 YEAR' · '5-YEAR')도 — 2026-11-09 사용자 화면 '5 YEAR · DUAL GUARD'
     const leftPlan=((code(P)+'\n'+code(X)).match(/[^\n]{0,30}플랜[^\n]{0,30}/g)||[]);   // '플랜' → '듀얼가드'(2026-11-09 사용자: "이제 플랜이 아니야 듀얼이라고 해" · "어 전부 바꾸고")
     t('E1 이름: "듀얼가드"(띄어쓰기 없음 — 엔진·듀얼가드 화면·운영) · 듀얼가드 화면 글자에 "5년" 없음 · 화면 글자(주석 뺀 듀얼가드·운영)에 "플랜" 없음 · 원장 칸 이름 · 새 세션 기본 이름 · 엔진 폐지 안내',
       !/듀얼 가드/.test(S.eng+P+X)&&E.STRATEGY.name==='듀얼가드'&&!left.length&&!leftPlan.length&&/fiveYearPlanV2:'듀얼가드', fiveYearPlan:'듀얼가드\(옛\)'/.test(X)
@@ -118,7 +118,7 @@ async function check(S){
   { const fill=fnOf(X,'async function paperFillAll(opt)'),pre=fnOf(X,'async function paperPrefetchQuotes(opt)'),i=fill.indexOf("if(tab==='plan'){"),j=fill.indexOf('if(planPaperRetired(sess)){ _tick(); continue; }'),k=fill.indexOf('replayPlanPaper(sess)');
     t('D3 모의 목록 채우기 — 폐지 세션은 재생 전에 건너뜀 · 미리 받기도 남은 세션만',i>=0&&j>i&&k>j&&/if\(tab==='plan'\)\{ if\(!planPaperRetired\(sess\)\) \['TECL','TQQQ','SGOV'\]/.test(pre),[i,j,k].join()); }
   { const v=+((X.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1]),pv=(P.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1],iv=(X.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1];
-    t('D4 지난 순위 캐시 판 ≥6 (폐지 세션 줄 · 옛 이름 글자 다시 셈) · 두 화면 엔진 판 같음(≥5)',v>=6&&pv===iv&&+pv>=5,JSON.stringify({v,pv,iv})); }
+    t('D4 지난 순위 캐시 판 ≥7 (폐지 세션 줄 · 옛 이름 글자 · ASAP 모의 줄 다시 셈) · 두 화면 엔진 판 같음(≥5)',v>=7&&pv===iv&&+pv>=5,JSON.stringify({v,pv,iv})); }
 
   return bad;
 }
@@ -147,8 +147,9 @@ async function check(S){
     ['엔진: 이름 띄어쓰기 되살림','eng',s=>s.replace("name:'듀얼가드',owner:'claude'","name:'듀얼 가드',owner:'claude'")],
     ['설정: 새 세션 기본 이름 "5년 세션"(옛 코드)','set',s=>s.replace("||'듀얼가드 세션';","||x.horizon+'년 세션';")],
     ['듀얼가드 화면: "플랜" 글자 되살림','plan',s=>s.replace('<label>듀얼가드 시작일</label>','<label>플랜 시작일</label>')],
+    ['듀얼가드 화면: 머리글 "5 YEAR" 되살림(옛 코드)','plan',s=>s.replace("setTxt('alphaHorizonEyebrow','DUAL GUARD · v'+P.version);","setTxt('alphaHorizonEyebrow','5 YEAR · DUAL GUARD · v'+P.version);")],
     ['운영: "플랜" 글자 되살림','idx',s=>s.replace("'듀얼가드 세금 점검과 같은 계산(결제일 환율 · 선입선출)'","'플랜 세금 점검과 같은 계산(결제일 환율 · 선입선출)'")],
-    ['모의 목록 캐시 판: 옛 판(옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=6;','const PAPER_VIEW_CACHE_VER=5;')],
+    ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=7;','const PAPER_VIEW_CACHE_VER=6;')],
     ['엔진: 폐지 안내 "폐지된 플랜"(옛 글자)','eng',s=>s.replace("error:'폐지된 세션 — '+gone","error:'폐지된 플랜 — '+gone")],
   ];
   let red=0;
