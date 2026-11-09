@@ -53,13 +53,16 @@ async function check(S){
   // ── B. 설정 창은 앞 전환이 끝난 뒤
   { const c=planCtx(S);const el=()=>({value:'',checked:false,disabled:false,textContent:'',dataset:{},hidden:true});const E={};
     for(const id of ['assetSessionName','assetSessionPaper','assetSessionCapital','assetSessionMonthly','assetSessionTarget','assetSessionStart','assetSessionModalTitle','assetSessionCreate','assetSessionModalStrategy','assetSessionModal'])E[id]=el();
-    Object.assign(c,{$:id=>E[id],openAssetSessionModal(){},syncAssetSessionModal(){},planStrategyLabel:()=>'듀얼 가드 v1.0',planPortfolio:true,assetEditingId:null,assetPfPick:true});
-    vm.runInContext(['function setAssetModalMode(m)','function assetPfInit(on)','async function editAssetSession(mode)'].map(m=>fnOf(S.plan,m)).join('\n'),c);
+    Object.assign(c,{$:id=>E[id],openAssetSessionModal(){},syncAssetSessionModal(){},planStrategyLabel:()=>'듀얼 가드 v1.0',planPortfolio:true,assetEditingId:null,assetPfPick:true,planCurName:'토스 듀얼'});
+    vm.runInContext(['function planCurLabel()','function setAssetModalMode(m)','function assetPfInit(on)','async function editAssetSession(mode)'].map(m=>fnOf(S.plan,m)).join('\n'),c);
     const p=c.selectAssetSession('B');const e=c.editAssetSession('session');await Promise.all([p,e]);
     t('B1 세션을 바꾸자마자 설정을 열어도 B 장부는 B 그대로(앞 세션 A 장부를 옮겨 적지 않음) · 창은 B 를 연다',JSON.stringify(c.box.sessions[2].ledger.events)==='["b"]'&&c.assetEditingId==='B'&&E.assetSessionModal.dataset.mode==='session',
       JSON.stringify([c.box.sessions[2].ledger,c.assetEditingId]));
     await c.editAssetSession('settings');
-    t('B2 ⚙️ 설정은 settings 갈래 · 제목 "설정 · B 운영"',E.assetSessionModal.dataset.mode==='settings'&&/^설정 · B 운영/.test(E.assetSessionModalTitle.textContent),E.assetSessionModalTitle.textContent); }
+    t('B2 ⚙️ 설정은 settings 갈래 · 제목 "설정 · B 운영"',E.assetSessionModal.dataset.mode==='settings'&&/^설정 · B 운영/.test(E.assetSessionModalTitle.textContent),E.assetSessionModalTitle.textContent);
+    await c.selectAssetSession('');await c.editAssetSession('session');
+    t('H1 현재 투자중(본 장부)도 이름 칸이 열려 있고 지금 이름(토스 듀얼)이 들어 있다 · 모의투자로 바꾸기만 잠김',E.assetSessionName.disabled===false&&E.assetSessionName.value==='토스 듀얼'&&E.assetSessionPaper.disabled===true&&c.assetEditingId==='current',
+      JSON.stringify([E.assetSessionName.disabled,E.assetSessionName.value,E.assetSessionPaper.disabled,c.assetEditingId])); }
 
   // ── C. 끌어서 순서
   { const c=planCtx(S);const L=c.box.sessions;
@@ -82,15 +85,43 @@ async function check(S){
   // ── D. 세션 줄
   { const V={assetSessionChips:{innerHTML:''},assetSessionState:{className:'',textContent:'',title:''}};
     const box={sessions:[{id:'A',name:'A 운영',horizon:5,paper:false},{id:'P',name:'모의<1>',horizon:5,paper:true,simStart:'2025-01-02'},{id:'H',name:'10년',horizon:10}],activeByHorizon:{5:'P'}};
-    const c={window:{JKPlanSessionEngine:{STRATEGY:{name:'듀얼 가드',version:'1.0'},retiredReason:x=>+x.horizon!==5?'x':''}},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5,dgDragEl:null};
-    vm.createContext(c);vm.runInContext(['function planStrategy()','function planStrategyLabel()','function planRetired(x)','function assetSessionList(h=activeHorizon)','function activeAssetSession()','function renderAssetSessions()'].map(m=>fnOf(S.plan,m)).join('\n'),c);
+    const c={window:{JKPlanSessionEngine:{STRATEGY:{name:'듀얼 가드',version:'1.0'},retiredReason:x=>+x.horizon!==5?'x':''}},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5,dgDragEl:null,planCurName:''};
+    vm.createContext(c);vm.runInContext(['function planCurLabel()','function planStrategy()','function planStrategyLabel()','function planRetired(x)','function assetSessionList(h=activeHorizon)','function activeAssetSession()','function renderAssetSessions()'].map(m=>fnOf(S.plan,m)).join('\n'),c);
     c.renderAssetSessions();const h=V.assetSessionChips.innerHTML,ids=[...h.matchAll(/data-asess="([^"]*)"/g)].map(m=>m[1]);
     t('D1 칩 차례: 현재 투자중(맨 앞) → 세션들 → + 세션(맨 끝) · 폐지 세션 없음',ids.join()===',A,P'&&/data-asess-add="1"[^>]*>\+ 세션<\/div>$/.test(h)&&!/10년/.test(h),ids.join());
     t('D2 ✕ 는 보고 있는 세션에만(P) · 모의 배지 · 이름은 글자로(<1> 이스케이프)',(h.match(/data-asess-del=/g)||[]).length===1&&/data-asess-del="P"/.test(h)&&/paperbadge">모의/.test(h)&&/모의&lt;1>/.test(h)&&/class="dg-sesschip on" data-asess="P"/.test(h),h.slice(0,300));
+    const first0=(h.match(/^<div[^>]*data-asess=""[^>]*>([^<]*)<\/div>/)||['',''])[1];c.planCurName='토스 <듀얼>';c.renderAssetSessions();
+    const first1=(V.assetSessionChips.innerHTML.match(/^<div[^>]*data-asess=""[^>]*>([^<]*)<\/div>/)||['',''])[1];
+    t('H2 세션 줄 첫 칩 = 본 장부 이름(바꾸기 전 "현재 투자중" · 바꾼 뒤 그 이름 · 글자로 이스케이프)',first0==='현재 투자중'&&first1==='토스 &lt;듀얼>',JSON.stringify([first0,first1]));
     t('D3 상태줄 글자 — 운영 탭처럼 세션 이름 없이 전략 요약 · 모의 시작일 · 숨긴 세션 수',V.assetSessionState.textContent==='듀얼 가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 1개'&&V.assetSessionState.className==='asset-session-state paper',V.assetSessionState.textContent);
     dgActivate:{ const L=[];const cc={activeAssetSession:()=>({id:'P'}),editAssetSession:m=>L.push('edit:'+m),selectAssetSession:id=>L.push('sel:'+id),$:()=>({hidden:true})};
       vm.createContext(cc);vm.runInContext(fnOf(S.plan,'function dgChipActivate(id)'),cc);cc.dgChipActivate('P');cc.dgChipActivate('A');cc.dgChipActivate('');
       t('D4 보고 있는 칩(P)을 누르면 세션 설정 · 다른 칩은 전환',L.join()==='edit:session,sel:A,sel:',L.join()); } }
+
+  // ── H. 본 장부(현재 투자중) 이름 — 저장(원장 sessionName) · 읽기 · 포트폴리오
+  { const M=(()=>{const c={};vm.createContext(c);vm.runInContext(rd('plan-session-settings.js'),c);return c.JKPlanSessionSettings;})();
+    const P={};const el=(id,o={})=>P[id]=Object.assign({value:'',checked:false,disabled:false,textContent:'',hidden:false},o);
+    el('assetSessionPaper',{checked:false});el('assetSessionName',{value:'  토스 듀얼 가드  '});el('assetSessionCapital',{value:'20000'});el('assetSessionMonthly',{value:'0'});el('assetSessionTarget',{value:'150000'});
+    el('assetSessionStart',{value:'2026-01-02'});el('assetSessionPf',{checked:true});el('assetSessionModal',{hidden:false});el('assetSessionCreate');
+    const seen=[];const c={$:id=>P[id],window:{JKPlanSessionSettings:M},ensureLiveBoxes(){},assetModalRevision:1,assetModalHorizon:5,activeHorizon:5,assetEditingId:'current',assetSessionSaving:false,assetViewRevision:0,assetPaperCache:{},
+      planPortfolio:true,planCurName:'',assetPlanBox:()=>({sessions:[],activeByHorizon:{}}),cloneObj:v=>JSON.parse(JSON.stringify(v)),alphaLedger:{base:{date:'2026-01-02',cash:20000},events:[]},
+      assetSessionSettingsFromView:()=>({startCapital:20000,monthlyAdd:0,targetCapital:150000,startDate:'2026-01-02'}),confirm:()=>true,assetFxAt:async()=>1400,todayISO:()=>'2026-11-09',
+      applyAssetSettings(){},alphaSyncInputs(){},localSave(){},saveOperatingState:async()=>true,closeAssetSessionModal(){},renderAssetSessions(){},loadActiveAssetSessionView:async()=>{},planSid:()=>'n',alert:m=>seen.push('alert:'+m)};
+    c.cloudSave=async()=>{seen.push(c.planCurName);return true;};
+    vm.createContext(c);vm.runInContext(['function planCurLabel()','function assetModalPaper()','async function createAssetSession()'].map(m=>fnOf(S.plan,m)).join('\n'),c);
+    await c.createAssetSession();P.assetSessionName.value='현재 투자중';await c.createAssetSession();
+    t('H3 현재 투자중 이름을 바꿔 저장하면 원장 저장 전에 이름이 들어감(앞뒤 빈칸 정리) · "현재 투자중"으로 되돌리면 빈칸(기본)',seen.join('|')==='토스 듀얼 가드|',seen.join('|'));
+    const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:true,planCurName:'토스 듀얼'};
+    vm.createContext(r);vm.runInContext(fnOf(S.plan,'function readForm()'),r);const o=r.readForm();
+    const a={$:()=>null,todayISO:()=>'2026-11-09',plusYears:s=>s,planSid:()=>'x',bindSleeveLedger(){},alphaSyncInputs(){},alphaFee:()=>0,ALPHA_FEE_RATE:0.001,planLinks:null,sleeveSessions:null,alphaLedger:null,planPortfolio:true,planCurName:''};
+    vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function apply(o)'),a);
+    a.apply({sessionName:' 토스 듀얼 '});const n1=a.planCurName;a.apply({});const n2=a.planCurName;
+    t('H4 이름은 원장(fiveYearPlanV2.sessionName)에 적고 읽는다 — 없으면 빈칸(기본 "현재 투자중")',o.sessionName==='토스 듀얼'&&n1==='토스 듀얼'&&n2==='',JSON.stringify([o.sessionName,n1,n2]));
+    const pc={planLiveDoc:{sessionName:'토스 듀얼',startCapital:1,alphaLedger:{base:{cash:1},events:[{id:'e'}]}},PF:{over:{}},S:{plan:{sessions:[{id:'s1',name:'옛 이름',horizon:5,paper:false,settings:{},ledger:{base:{cash:1},events:[{id:'f'}]}}]}},planPaperRetired:()=>false};
+    vm.createContext(pc);vm.runInContext(['function pfNum(v)','function pfWanted(x)','function pfPlanWanted(stored, ov)','function pfLedgerUsed(l)','function pfPlanLedgers(withOff)'].map(m=>fnOf(S.idx,m)).join('\n'),pc);
+    const n3=pc.pfPlanLedgers().map(x=>x.name).join('|');pc.PF.over={cur:{ledger:pc.planLiveDoc.alphaLedger,name:'창 이름'},s1:{ledger:pc.S.plan.sessions[0].ledger,name:'새 이름'}};
+    const n4=pc.pfPlanLedgers().map(x=>x.name).join('|');pc.planLiveDoc.sessionName='';pc.PF.over={};const n5=pc.pfPlanLedgers()[0].name;
+    t('H5 포트폴리오 카드 이름 — 원장 이름 · 창이 방금 보낸 이름이 우선 · 없으면 "현재 투자중"',n3==='토스 듀얼|옛 이름'&&n4==='창 이름|새 이름'&&n5==='현재 투자중',JSON.stringify([n3,n4,n5])); }
 
   // ── E. 설정 창 두 갈래 · 시작일 칸
   { const mk=(mode,paper)=>{const E={assetSessionModal:{dataset:{mode}},assetSessionPaper:{checked:paper},assetSessionCapital:{disabled:false,value:''},assetSessionStart:{disabled:false,value:'',min:''},
@@ -182,6 +213,11 @@ const MUT=[
   ['운영: 미리 열기 안 부름','idx',s=>s.replace("      dgPreload();               // 듀얼 가드 창을 뒤에서 미리 연다","      // dgPreload 없음")],
   ['다른 탭: 보고 있는 칩을 눌러도 설정 안 열림(옛 코드)','idx',s=>s.replace("if(chip){ const id=chip.getAttribute('data-sid'); if(String(tabBox().active)===String(id)) editSess(id); else switchSess(id); }","if(chip){switchSess(chip.getAttribute('data-sid'));}")],
   ['상태줄 배지 없음','plan',s=>s.replace("  if(sb)sb.innerHTML=o?(","  if(false)sb.innerHTML=o?(")],
+  ['현재 투자중: 이름 칸 잠금(옛 코드)','plan',s=>s.replace("$('assetSessionName').disabled=false;$('assetSessionPaper').disabled=!x;","$('assetSessionName').disabled=!x;$('assetSessionPaper').disabled=!x;")],
+  ['현재 투자중: 바꾼 이름을 원장 저장 전에 안 넣음','plan',s=>s.replace("      planCurName=String(x.name||'').trim()==='현재 투자중'?'':String(x.name||'').trim();","")],
+  ['현재 투자중: 원장에 이름 안 적음','plan',s=>s.replace("  o.sessionName=String(planCurName||'').trim();","")],
+  ['세션 줄: 첫 칩 이름 고정','plan',s=>s.replace("title=\"두 번 누르면 세션 설정\">'+q(planCurLabel())+'</div>';","title=\"두 번 누르면 세션 설정\">현재 투자중</div>';")],
+  ['포트폴리오: 현재 투자중 이름 무시','idx',s=>s.replace("name:String((o&&o.name)||(five&&five.sessionName)||'').trim()||'현재 투자중'","name:'현재 투자중'")],
   ['운영 세션 창: 막 연 창도 바깥 누름에 바로 닫힘(옛 코드)','idx',s=>s.replace("if(e.target===m && Date.now()-(m._openedAt||0)>450) m.classList.remove('on');","if(e.target===m) m.classList.remove('on');")],
   ['듀얼 가드 세션 창: 막 연 창도 바깥 누름에 바로 닫힘','plan',s=>s.replace("if(e.target===$(\"assetSessionModal\")&&Date.now()-assetModalOpenedAt>450)closeAssetSessionModal();","if(e.target===$(\"assetSessionModal\"))closeAssetSessionModal();")],
 ];

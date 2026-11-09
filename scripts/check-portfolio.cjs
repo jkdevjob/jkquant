@@ -214,7 +214,7 @@ function check2(S,t,E,bad){
   { const sent=[];const mkc=(embed,sess,pp=true)=>{const w={};w.parent={postMessage:(m,o)=>sent.push({m,o})};
       const c={document:{documentElement:{classList:{contains:x=>x==='embed'&&embed}}},window:w,location:{origin:'https://jk.example'},auth:{currentUser:{uid:'u1'}},planPortfolio:pp,
         activeAssetSession:()=>sess,alphaLedger:{base:{cash:1},events:[{id:'q'}]},cloneObj:v=>JSON.parse(JSON.stringify(v)),num:(id,f)=>id==='startCapital'?20000:f,$:id=>id==='startDate'?{value:'2026-01-02'}:null};
-      vm.createContext(c);vm.runInContext(fnOf(S.plan,'function planEmbedPost(o)'),c);return c;};
+      c.planCurName='';vm.createContext(c);vm.runInContext(fnOf(S.plan,'function planCurLabel()')+fnOf(S.plan,'function planEmbedPost(o)'),c);return c;};
     const o={date:'2026-11-06',orders:2,orderText:'TQQQ 매도 38주',need:true,guard:'OFF',guardFlip:true};
     mkc(true,null).planEmbedPost(o);mkc(true,{id:'p1',paper:true}).planEmbedPost(o);mkc(true,{id:'s9',paper:false}).planEmbedPost(o);mkc(false,null).planEmbedPost(o);mkc(true,null).planEmbedPost(null);
     const [m1,m2,m3]=sent.map(x=>x.m);
@@ -383,7 +383,7 @@ function check5(S,t,E,bad){
     applyAssetSettings(){},alphaSyncInputs(){},localSave(){},closeAssetSessionModal(){},renderAssetSessions(){},loadActiveAssetSessionView:async()=>{},planSid:()=>'new1',alert:m=>log.push('alert:'+m)};
   c.cloudSave=async()=>{log.push('cloud:'+c.planPortfolio);return true;};
   c.saveOperatingState=async()=>{log.push('state:'+JSON.stringify(box.sessions.map(x=>x.portfolio===undefined?'-':x.portfolio)));return true;};
-  vm.createContext(c);vm.runInContext(fnOf(S.plan,'function assetModalPaper()')+fnOf(S.plan,'async function createAssetSession()'),c);
+  c.planCurName='';vm.createContext(c);vm.runInContext(fnOf(S.plan,'function planCurLabel()')+fnOf(S.plan,'function assetModalPaper()')+fnOf(S.plan,'async function createAssetSession()'),c);
   return (async()=>{
     await c.createAssetSession();
     c.assetEditingId='s1';P.assetSessionName.value='세션';P.assetSessionCapital.value='5000';P.assetSessionTarget.value='9000';P.assetSessionPf.checked=false;await c.createAssetSession();
@@ -391,7 +391,7 @@ function check5(S,t,E,bad){
     t('O9 듀얼 가드 설정창 저장 — 현재 투자중 끔 → 원장 저장 때 planPortfolio=false · 세션 끔 → 그 세션 portfolio:false · 모의 새 세션은 값 없음',
       log.join(' | ')==='cloud:false | state:[false] | state:[false,"-"]',log.join(' | '));
     // O10 원장에 적고 읽기 — readForm 이 portfolio 를 적고, apply 가 읽는다(없으면 넣음)
-    const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:false};
+    const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:false,planCurName:''};
     vm.createContext(r);vm.runInContext(fnOf(S.plan,'function readForm()'),r);const o=r.readForm();
     const a={$:()=>null,todayISO:()=>'2026-11-09',plusYears:s=>s,planSid:()=>'x',bindSleeveLedger(){},alphaSyncInputs(){},alphaFee:()=>0,ALPHA_FEE_RATE:0.001,planLinks:null,sleeveSessions:null,alphaLedger:null,planPortfolio:true};
     vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function apply(o)'),a);
@@ -445,13 +445,13 @@ const MUT=[
   ['세션 설정(새로): 고른 값을 저장 안 함','idx',s=>s.replace("const pf=$('sess_pf'); if(!s.paper&&pf) s.portfolio=!!pf.checked;","const pf=$('sess_pf');")],
   ['세션 설정: 모의에서도 넣기를 고를 수 있음','idx',s=>s.replace("if(paper){ if(!c.disabled) _sessPfPick=c.checked; c.checked=false; c.disabled=true; }","if(paper){ }")],
   ['뺀 세션 안내: 빈 세션도 적음','idx',s=>s.replace("if(x&&!x.paper&&!pfWanted(x)&&(x.hist||[]).length) out.push","if(x&&!x.paper&&!pfWanted(x)) out.push")],
-  ['받는 쪽: 창이 보낸 선택을 버림','idx',s=>s.replace("    portfolio:typeof d.portfolio==='boolean'?d.portfolio:undefined};","};")],
+  ['받는 쪽: 창이 보낸 선택을 버림','idx',s=>s.replace("    portfolio:typeof d.portfolio==='boolean'?d.portfolio:undefined, name:","    name:")],
   ['플랜 설정 모듈: 선택 저장 안 함','set',s=>s.replace("  if(!paper&&typeof input.portfolio==='boolean')x.portfolio=input.portfolio;","")],
   ['플랜 설정 모듈: 모의로 바꿀 때도 덮어씀','set',s=>s.replace("  if(!paper&&typeof input.portfolio==='boolean')x.portfolio=input.portfolio;","  if(typeof input.portfolio==='boolean')x.portfolio=input.portfolio;")],
   ['플랜 현재 투자중: 선택을 원장 저장 전에 안 넣음','plan',s=>s.replace("      planPortfolio=x.portfolio!==false;\n","")],
   ['플랜 원장: portfolio 를 안 적음','plan',s=>s.replace("  o.portfolio=planPortfolio!==false;","")],
   ['플랜 원장: portfolio 를 안 읽음','plan',s=>s.replace("  planPortfolio=all.portfolio!==false;\n","")],
-  ['플랜 창: 선택을 안 보냄','plan',s=>s.replace("      msg.portfolio=x?x.portfolio!==false:planPortfolio!==false;}","}")],
+  ['플랜 창: 선택을 안 보냄','plan',s=>s.replace("      msg.portfolio=x?x.portfolio!==false:planPortfolio!==false;msg.name=","      msg.name=")],
   ['플랜 설정창: 모의 세션도 넣기 고를 수 있음','plan',s=>s.replace("if(paper){if(!c.disabled)assetPfPick=c.checked;c.checked=false;c.disabled=true;}","if(paper){}")],
 ];
 (async()=>{

@@ -683,7 +683,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.122.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.122.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1802,7 +1802,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.122.1</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.122.2</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -9140,7 +9140,7 @@ function pfLedgerUsed(l){ const b=(l&&l.base)||{}; return (Array.isArray(l&&l.ev
 function pfPlanLedgers(withOff){   // withOff: 포트폴리오에서 뺀 장부도(off:true) — 뺀 세션 목록용
   const out=[], five=planLiveDoc, o=PF.over.cur, curL=(o&&o.ledger)||(five&&five.alphaLedger);
   if(curL&&pfLedgerUsed(curL)){ const on=pfPlanWanted(five,o);
-    if(on||withOff) out.push({key:'cur', id:'', name:'현재 투자중', ledger:curL, off:!on,
+    if(on||withOff) out.push({key:'cur', id:'', name:String((o&&o.name)||(five&&five.sessionName)||'').trim()||'현재 투자중', ledger:curL, off:!on,
       start:pfNum(o&&o.startCapital!=null?o.startCapital:(five&&five.startCapital)),
       from:String((o&&o.startDate)||(five&&five.startDate)||(curL.base&&curL.base.date)||'')}); }
   for(const x of ((S.plan&&S.plan.sessions)||[])){
@@ -9148,7 +9148,7 @@ function pfPlanLedgers(withOff){   // withOff: 포트폴리오에서 뺀 장부�
     const ov=PF.over[x.id], L=(ov&&ov.ledger)||x.ledger; if(!L||!pfLedgerUsed(L)) continue;
     const on=pfPlanWanted(x,ov); if(!on&&!withOff) continue;
     const st=x.settings||{};
-    out.push({key:String(x.id), id:String(x.id), name:x.name||'듀얼 가드 세션', ledger:L, off:!on,
+    out.push({key:String(x.id), id:String(x.id), name:(ov&&ov.name)||x.name||'듀얼 가드 세션', ledger:L, off:!on,
       start:pfNum(ov&&ov.startCapital!=null?ov.startCapital:st.startCapital), from:String(st.startDate||(L.base&&L.base.date)||'')});
   }
   return out;
@@ -9544,7 +9544,7 @@ window.addEventListener('message',e=>{
   if(d.paper){ if(isPfPage()) pfRender(); return; } // 모의 세션 값은 받지 않는다(실투자 합계에 안 섞는다)
   PF.dg[key]={strip:d.strip||null, at:Date.now()};
   if(d.ledger&&typeof d.ledger==='object') PF.over[key]={ledger:d.ledger, startCapital:d.startCapital, startDate:d.startDate,
-    portfolio:typeof d.portfolio==='boolean'?d.portfolio:undefined};   // 세션 설정의 '💰 포트폴리오에 넣기' — 방금 바꾼 값이 바로 반영되게
+    portfolio:typeof d.portfolio==='boolean'?d.portfolio:undefined, name:typeof d.name==='string'?d.name.slice(0,80):undefined};   // 세션 설정의 '💰 포트폴리오에 넣기' — 방금 바꾼 값이 바로 반영되게
   if(isPfPage()) pfRecalcPlan();
 });
 /* 모의 성과 → 그 세션의 거래이력.
