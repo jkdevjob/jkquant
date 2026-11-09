@@ -314,7 +314,16 @@ function check3(S,t,E,bad){
     const A=run(true),B=run(false),k=A.sink||[];
     t('I1 날마다 값: 총자산 = 주식×종가 + 나머지(k) · 투입 · 나간 돈 · 누적 실현손익(그날까지 기록)',k.length===6&&k[0].tot===2*10+50&&k[2].tot===2*30+50&&k[2].realized===10&&k[2].out===2&&k[1].inflow===100,JSON.stringify(k));
     t('I2 끝 값은 지금 시세(목록·카드와 같은 값) · 날짜는 종가 끝(01-05)보다 늦은 마지막 기록 날(01-09)',k[5]&&k[5].date==='2026-01-09'&&k[5].tot===999&&k[5].realized===42&&k[5].out===7,JSON.stringify(k[5]));
-    t('I3 그릇이 없으면(모의 목록) 예전 그대로 — 결과 같음',JSON.stringify(A.r)===JSON.stringify(B.r)&&B.sink===null); }
+    t('I3 그릇이 없으면(모의 목록) 예전 그대로 — 결과 같음',JSON.stringify(A.r)===JSON.stringify(B.r)&&B.sink===null);
+    // I4 새 세션(기록이 사흘 미만 · 2026-11-09 섀넌 선 빠짐) — 낙폭은 안 재도(null) 그릇에는 날마다 값 + 끝 값이 들어간다 · 종가 뒤에 시작한 세션은 끝 값 하나
+    const run2=(hist2,withSink)=>new Function('PAPER_DAYS','PAPER_CACHESYM','paperRaw','ivsQuote1','console','paperAfterTaxAcc','PAPER_NOFEE_TABS',
+      (withSink?'var _pfSeriesSink=[];':'')+md+'\nreturn {r:paperMdd("ivs",{settings:{ticker:"USD"},hist:'+JSON.stringify(hist2)+'},{qty1:0,price:77,inflow:100,total:999,realized:1,sym:"USD",qty:2,k:50,out:{saved:0,withdrawn:0}},'+JSON.stringify(hist2)+'),sink:'+(withSink?'_pfSeriesSink':'null')+'};')(
+      {ivs:()=>days},{ivs:()=>'USD'},raw,undefined,{error(){}},()=>({step(){},done(){return null;}}),new Set());
+    const N2=run2([{date:'2026-01-04'},{date:'2026-01-09'}],true), N2b=run2([{date:'2026-01-04'},{date:'2026-01-09'}],false), N0=run2([{date:'2026-01-07'}],true);
+    t('I4 새 세션: 종가 이틀(01-04·01-05)뿐이면 MDD null · 그릇엔 이틀 값 + 끝 값(01-09 · 지금 시세 999) · 그릇 없으면 null 그대로',
+      N2.r===null&&N2.sink.length===3&&N2.sink[0].date==='2026-01-04'&&N2.sink[0].tot===2*40+50&&N2.sink[1].tot===2*50+50&&N2.sink[2].date==='2026-01-09'&&N2.sink[2].tot===999&&N2.sink[2].hv.USD===154
+      &&N2b.r===null&&N2b.sink===null,JSON.stringify([N2.r,N2.sink]));
+    t('I4b 종가 뒤에 시작한 세션(01-07) — 날이 없어도 끝 값 하나(날짜 = 기록 날)',N0.r===null&&N0.sink.length===1&&N0.sink[0].date==='2026-01-07'&&N0.sink[0].tot===999,JSON.stringify(N0.sink)); }
   // ── M. 합친 추이 · MDD — 시간가중(새 세션이 들어온 날 섞임으로 가짜 낙폭을 만들지 않는다)
   { const d=i=>'2026-02-0'+i;
     const A={tab:'plan',cur:'usd',series:[1,2,3,4,5].map((i)=>({date:d(i),tot:[100,110,121,108.9,120][i-1],inflow:100,out:0}))};
@@ -665,6 +674,8 @@ const MUT=[
   ['합친 추이: hv 없는 옛 점을 버림','idx',s=>s.replace("      else tk['?']=(tk['?']||0)+(t1-o1); }\n","      }\n")],
   ['그릇: 종목별 값 안 넣음','idx',s=>s.replace("_pfSeriesSink.push({date:row.date, tot, inflow:cur.inflow, out:o, realized:+cur.realized||0, hv, cash:(+cur.k||0)-o});","_pfSeriesSink.push({date:row.date, tot, inflow:cur.inflow, out:o, realized:+cur.realized||0, hv:{}, cash:(+cur.k||0)-o});")],
   ['그릇: 현금에 나간 돈 포함','idx',s=>s.replace("hv, cash:(+cur.k||0)-o}); }","hv, cash:(+cur.k||0)}); }")],
+  ['새 세션: 날이 셋 미만이면 그릇에도 안 넣음(섀넌 선 빠짐 재현)','idx',s=>s.replace("if(D.length<3 && !sink) return null;","if(D.length<3) return null;")],
+  ['새 세션: 끝 값을 셋 미만이면 안 넣음','idx',s=>s.replace("if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){   // 끝 값도 목록·카드와 같은 지금 시세(같은 날이면 바꿔 넣는다) — 날이 셋이 안 되는 새 세션도","if(n>=3&&typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){")],
   ['듀얼가드 날마다: 종목별 빠짐','idx',s=>s.replace("    const hv={}; if(st.tecl) hv.TECL=st.tecl*last.TECL;","    const hv={}; if(false) hv.TECL=st.tecl*last.TECL;")],
   ['종목별 선: 다 판 뒤 끊김(null)','idx',s=>s.replace("if(v!=null){ on=true; return v; } return on?0:null; });","if(v!=null){ on=true; return v; } return null; });")],
   ['그림: 끈 선도 세로 축에 넣음','idx',s=>s.replace("let lo=Infinity, hi=-Infinity; for(const s of V) for(const v of s.vals)","let lo=Infinity, hi=-Infinity; for(const s of ALL) for(const v of s.vals)")],

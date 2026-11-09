@@ -987,6 +987,20 @@ class ArenaTest(unittest.TestCase):
         firsts = [x["version"] for x in state["log"] if x["kind"] == "new"]
         self.assertEqual(len(firsts), len(set(firsts)))
 
+    def test_candidates_failing_gate_are_rejected_not_added(self):
+        # 새 후보가 모두 기준 미달이면 하나도 투입하지 않고 탈락 사유(손실 기준 미달)를 센다 — 거절 조건을 지우면(why="") 미달 후보가 그대로 들어간다(2026-11-09 변이 보강)
+        state = self.fixed(budget=8)
+        seeds = {r["version"] for r in state["tabs"]["opening"]["pool"]}
+        self.formula = lambda p: (p["minQ"] * 0.01 + p["topK"] * 0.001, lab.gen_version("opening", lab._canon("opening", p)) in seeds)
+        outs, st = self.run_days(["2026-10-05"], state=state)
+        z = outs[0]
+        self.assertEqual(z["gen"]["evaluated"], 8)
+        self.assertEqual(z["added"], [])
+        self.assertEqual(z["poolSize"], len(seeds))
+        rej = [x for x in st["log"] if x["kind"] == "reject"]
+        self.assertTrue(rej and "기준 통과 0" in rej[-1]["reason"] and "손실 기준 미달 8" in rej[-1]["reason"], rej)
+        self.assertEqual(len(st["tabs"]["opening"]["tried"]), 8)
+
     def test_seven_days_top_promotes_next_day(self):
         days = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-11"]
         outs, _ = self.run_days(days, key="k", state=self.fixed())
@@ -1621,6 +1635,35 @@ class NewRuleComponentsTest(unittest.TestCase):
         self.assertEqual(lab.coin_breakout(H, dict(p, hiN=3))[2]["levelNext"], 105)  # 다음 날 기준선도 같은 식(마지막 3일 고가 105·100·100)
         self.assertEqual(lab.coin_breakout(H, dict(p, hiN=1))[2]["levelNext"], 100.5)
 
+
+
+class MutationCoverageTest(unittest.TestCase):
+    """2026-11-09: 변이 검사 하네스를 고치자(사본 폴더에 휴장 달력이 없어 원본도 빨간불 → 파이썬 변이 145개가 전부 '잡힘'으로 보였다)
+    살아남은 변이 3개를 잡는 시험 — ① 신호 행 topK 자르기 · ④ SOXL RSI 조건 끔(rsiMax 100) · 경쟁 기준 미달 후보 거절(ArenaTest)."""
+
+    def test_d1_days_keeps_only_topk_deepest_gaps(self):
+        sig = [dict(date="2026-10-05", code=c, gapPct=g, pnl="0") for c, g in (("a", "-3.0"), ("b", "-6.0"), ("c", "-4.5"), ("d", "-5.0"), ("e", "-2.0"))]
+        dec = [dict(date="2026-10-05", rsiPassed="9")]
+        old = lab.read_csv
+        lab.read_csv = lambda path: dec if path.name == "decisions.csv" else sig
+        try:
+            out, q = lab.d1_days(dict(minQ=7, topK=2, gapMax=None))
+            self.assertEqual([r["code"] for r in out["2026-10-05"]], ["b", "d"])          # 갭 깊은 순 두 개만
+            out3, _ = lab.d1_days(dict(minQ=7, topK=3, gapMax=-4.0))
+            self.assertEqual([r["code"] for r in out3["2026-10-05"]], ["b", "d", "c"])    # gapMax 거른 뒤 topK
+            self.assertEqual(lab.d1_days(dict(minQ=10, topK=2, gapMax=None))[0], {})      # minQ 미달 날은 비움
+            self.assertEqual(q, ["2026-10-05"])
+        finally:
+            lab.read_csv = old
+
+    def test_soxl_signal_rsi_off_at_100(self):
+        p = dict(rsiMax=100.0, ibsMax=1.0, downDays=0)
+        self.assertTrue(lab.soxl_signal(p, 100.0, 1.0, 0))                                  # RSI(2)=100(이틀 연속 상승)이어도 조건이 꺼져 있으면 통과
+        self.assertTrue(lab.soxl_signal(p, 3.0, 1.0, 0))
+        self.assertFalse(lab.soxl_signal(dict(p, rsiMax=20.0), 20.0, 1.0, 0))                 # 켜진 RSI 는 미만만
+        self.assertTrue(lab.soxl_signal(dict(p, rsiMax=20.0), 19.9, 1.0, 0))
+        self.assertFalse(lab.soxl_signal(dict(p, ibsMax=0.2), 3.0, 0.3, 0))                   # 다른 켜진 조건은 그대로 막는다
+        self.assertFalse(lab.soxl_signal(dict(p, downDays=3), 3.0, 1.0, 2))
 
 if __name__ == "__main__":
     unittest.main()

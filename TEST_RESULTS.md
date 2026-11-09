@@ -1,5 +1,23 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 포트폴리오 그래프에 새 세션(섀넌) 선 · 제목 '평가액 추이' · v3.127.3
+
+- `check-portfolio.cjs` **ALL PASS · 변이 82/82 빨간불**(새 I4 · I4b · 변이 2종).
+  - I4 섀넌 세션 기록 01-04·01-09 · 종가 01-01~05 → 걸음 날 01-04·01-05 둘뿐 → MDD null(그릇 없을 때와 같음) · 그릇엔 [01-04 2×40+50, 01-05 2×50+50, 01-09 끝 값 999 · hv.USD 154] 셋. I4b 종가 뒤(01-07) 시작 → 끝 값 하나(날짜 01-07). I1~I3 · Q5 그대로.
+  - 변이: `D.length<3` 로 통째로 빠짐(옛 코드 · 섀넌 선 빠짐 재현) · 끝 값을 사흘 미만이면 안 넣음 → 둘 다 빨간불.
+- 실제 포트폴리오 화면의 섀넌 선·종목별 USD 는 배포 뒤 사용자 확인.
+
+## 2026-11-09 · 검사 시간 단축 — 단계 목록 한 곳 · 로컬 병렬 · GitHub 조각 4개 · 갭하락 변이 하네스
+
+- `check-ci-steps.cjs` **ALL PASS 30건**(실제 파서·배정 함수를 그대로 · 실행기는 가짜 목록으로 자식 프로세스).
+  - C1 목록 58단계 · 이름 겹침 없음 · 회귀·wrangler·텐배거 변이·이 시험 포함 · minutes 힌트(갭하락 4 · 부동산 2 · 회귀 1.5 · 텐배거 1 · 나머지 0.5) · workflows 폴더에 없음. C2 check.yml 조각 1..4 = `--shard=k/4` · run 줄 둘뿐 · shard/check · needs · always() · Draft 제외 2곳 · Node 22 · Python 3.12 · 겹침 취소 · 트리거 그대로. C3 조각 1~8 합 = 전부 · 빈 조각 없음 · LPT 상한 · 늘 같은 배정 · 가장 무거운 단계는 단계 수 가장 적은 조각 · [3,1,1,1]→조각 [1,2,2,2]. C4 파서 오류 6종 · | 블록(속 빈 줄) · pip 줄 · k/n. C5 실행기: 하나씩 순서 · `::group::` · `--only` · 빨간불 종료코드 3 · `::error` · 병렬 4(1.5초×4 가 4.5초 안) · 빨간불에 끊기(표시 파일 없음 · 1.5초 안) · `--keep-going` · `--list` · `--shard` 1/2·2/2 · 조각 안 목록 순서 · `--offline`(npx 건너뜀 · pip 생략) · 병렬 pip 한 번(가짜 pip 기록 2줄 · 단계보다 먼저). C6 회귀 연결.
+  - 변이 10/10 빨간불: M1 마지막 단계 배정 빠뜨림 · M2 가장 찬 조각에 넣음 · M3 종료코드 무시 · M4 병렬이 사실은 하나씩 · M5 빨간불에 안 끊음 · M6 pip 를 단계에서 안 뺌 · M7 check.yml 조각 3개 vs /4 · M8 조각 안 무거운 순 · M9 회귀가 옛 check.yml 읽음 · M10 offline 에 npx 돌림.
+- 옛 check.yml 파서(57단계)와 새 목록 파서의 이름·명령이 JSON 으로 같음(이사 뒤 확인).
+- 갭하락 변이 하네스(`scripts/mutation_test_opening_gapdown.py`): 고치기 전 — 변이 없는 원본 사본이 사본 폴더에서 `FAILED (failures=2)`(test_daily_board_same_kst_dates · test_holiday_vs_open_day — `_krx_calendar.js` 가 없어 2026-10-05 가 개장일로 읽힘) → 파이썬 변이 145개 전부 '잡힘'(무효). 고친 뒤 — 대조군 py·js 초록 · 살아남은 변이 3개 드러남(history rows not scored picks · arena admits gate fail · soxl rsi off not off) → 시험 3개 보강(MutationCoverageTest 2 · ArenaTest 1 · test_opening_gapdown.py 94 OK) → **399/399 잡힘 · 대조군 2 · 1분 41초**(12 일꾼 · 하나씩 17분 02초). 하네스 변이 2종 빨간불: no-op 변이 추가 → `FAIL survived` 종료 1 · 달력 사본 빼면 → `FAIL control … 하네스 무효` 종료 1.
+- 전체 검사(`node scripts/check-before-push.cjs` · 병렬 4 · 외부 빌드 포함): 2차(갭하락 하나씩) **58/58 PASS · 17분 30초** · 최종(갭하락 풀) **58/58 PASS · 2분 25초**(가장 오래: 갭하락 2분 21초 · 부동산 1분 54초 · 회귀 1분 13초). 단계 시간 합(하나씩 추정): 고치기 전 22분 14초 → 7분 45초.
+- GitHub run 2482(a6ee31f): 조각 1 2분 40초 · 조각 3 1분 29초 · 조각 4 1분 29초 초록 · 조각 2 빨간불(텐배거 GPT ← numpy 없음 · 1분 52초에 멈춤) · check 빨간불(합치기 동작 확인). 고친 뒤(조각 pip 합집합 · 명시) 다시 돌린 결과는 아래 v3.127.3 PR 로 확인.
+- `check-ci-steps.cjs` **32건**(C5 조각 pip: 조각 1/2 인데 합집합 2줄 먼저 · 단계 안 pip 뺌 · offline 설치 없음) · 변이 M11(합집합을 조각 단계만으로) 빨간불.
+
 ## 2026-11-09 · 섀넌 기록 시트 · v3.127.2
 
 - `check-ivs-sheet.cjs` **ALL PASS · 변이 6/6 빨간불**(실제 함수를 가짜 화면에서).
@@ -7,6 +25,7 @@
   - V3 단가 없음·수량 0·금액 없음·날짜 없음 → 알림 4 · 기록 0 · 저장 없음.
 - check-portfolio 80/80(F3 FAB 줄 순서 그대로) 통과.
 - 실제 토스 USD 매수 입력은 배포 뒤 사용자 확인.
+- 배포 확인(PR #634 squash c298bae · PR check 성공(fd54682) · regression 성공(295107e) · main 검증 run 2481 성공): curl 운영 index v3.127.2(#appVerTop·#appVer) · /plan v2.5.5 · jk-access.js loginErrorText·SUB_TABS·'jk-subtabs' · index sheetIvsHTML·opOpenFirst·paperOrderRows 각 1.
 
 ## 2026-11-09 · 로그인 게이트 — 팝업 한 번에 하나 · 오류 글자 한 벌 · 앱 내장 브라우저 안내 · v3.127.1 (듀얼가드 v2.5.5)
 
@@ -16,6 +35,7 @@
   - G3 카카오톡 UA 로그인 화면에 ⚠ 「다른 브라우저로 열기」 · Safari 는 없음.
 - check-login-quote-paper(L3 jk-access 판별 + index 위임) · check-ui-common · check-subtabs 14/14 · check-plan-claude-tab 23/23 · tests/swim 17 통과.
 - 실제 기기에서 그 사용자가 다시 로그인하는 것은 배포 뒤 확인 — 앱 안 브라우저였다면 안내대로 기본 브라우저로 열어야 한다(구글이 WebView 로그인을 막는다).
+- 배포 확인(PR #634 squash c298bae · PR check 성공(fd54682) · regression 성공(295107e) · main 검증 run 2481 성공): curl 운영 index v3.127.2(#appVerTop·#appVer) · /plan v2.5.5 · jk-access.js loginErrorText·SUB_TABS·'jk-subtabs' · index sheetIvsHTML·opOpenFirst·paperOrderRows 각 1.
 
 ## 2026-11-09 · 모의 목록 = 운영 탭·세션 순서 · 운영 첫 화면 = 첫 탭 · v3.127.0
 
@@ -25,6 +45,7 @@
   - F7 듀얼가드 숨김 → 무매 단추 클릭 1 · 기본 → 듀얼가드 화면 1 · 사용자가 고른 뒤 0 · 모의 페이지 0 · 이미 그 탭이면 다시 안 누름.
 - `check-subtabs.cjs` ALL PASS · 변이 14/14(알림 제거 빨간불). check-paper-apply-navigation · check-login-quote-paper · check-ui-common · check-plan-claude-tab 23/23 통과.
 - 실제 기기(폰·PC)에서 운영을 열 때 첫 탭으로 가는지는 배포 뒤 사용자 확인.
+- 배포 확인(PR #634 squash c298bae · PR check 성공(fd54682) · regression 성공(295107e) · main 검증 run 2481 성공): curl 운영 index v3.127.2(#appVerTop·#appVer) · /plan v2.5.5 · jk-access.js loginErrorText·SUB_TABS·'jk-subtabs' · index sheetIvsHTML·opOpenFirst·paperOrderRows 각 1.
 
 ## 2026-11-09 · 포트폴리오 평가액 추이 — 세션별 · 종목별 보기 · 선 골라 보기 · v3.126.0
 
