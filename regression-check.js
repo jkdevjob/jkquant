@@ -1475,7 +1475,7 @@ console.log('[24-1] 모의 설정 지문 — 무매 주문 설정 변경 시 성
    그 세션이 왜 그 숫자가 나왔는지다. */
 console.log('[25] 모의 성과 → 분석 이동');
 {
-  ok('성과 줄이 어느 세션인지 안다', /return \{tab, id:sess\.id, name:sess\.name/.test(idx));
+  ok('성과 줄이 어느 세션인지 안다', /const row=\{tab, id:sess\.id, name:sess\.name/.test(idx) && /\n  return row;\n\}\nfunction paperSummary\(\)/.test(idx));   // 2026-11-09 포트폴리오 보유(hold)를 붙이려고 row 로 받은 뒤 돌려준다
   /* 줄 전체를 누르게 했더니 숫자를 보려고 짚기만 해도 화면이 넘어갔다 —
      이제 '전략 이름'만 누른다. 줄에는 onclick 이 남아 있으면 안 된다. */
   ok('전략 이름을 누르면 이동',
@@ -4082,7 +4082,7 @@ console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
      마지막 거래일에서 끊으면 그 사이 낙폭을 통째로 놓친다. */
   ok('시세가 있는 끝까지 본다', /const D=days\.filter\(d=>d&&d\.date>=from&&d\.close>0\);/.test(md));
   ok('paperRaw 가 k 와 주식 수를 돌려준다',
-     /k: total - qty\*price - qty1\*price1/.test(idx) && /return \{inflow, total, price, sym, qty, qty1, price1, out:_out,/.test(idx));
+     /k: total - qty\*price - qty1\*price1/.test(idx) && /return \{inflow, total, price, sym, qty, qty1, price1, sym1, out:_out,/.test(idx));   // sym1 = 섀넌 1배수 짝 종목(포트폴리오 종목별 · 2026-11-09)
   // 열 자리 — TR(토탈리턴 · 옛 '최종')과 현재 사이 (10-21 순서 TR · MDD · MAR · 평가)
   { const op=(()=>{ try{ return extractFn(idx,'async function openPaper()'); }catch(e){ return ''; } })();
     const iF=op.indexOf('>TR</th>'), iM=op.indexOf('>MDD</th>'), iN=op.indexOf('>현재</th>');
@@ -12712,7 +12712,7 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 53/53 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 63/63 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   /* 2026-11-09 — 운영 › 듀얼가드 탭을 다른 운영 탭처럼(세션 줄 맨 위 · 보고 있는 칩/두 번 누르면 세션 설정 · 끌어서 순서 · ⚙️ 설정 따로 · 창 안 다시 로그인 없음) */
   const pdg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-dg-tab.cjs')],{encoding:'utf8'});
   ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 변이 24종',
