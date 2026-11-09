@@ -12,7 +12,7 @@ const grab=(start,end)=>{ const a=src.indexOf(start),b=src.indexOf(end); if(a<0|
 eval(grab('const hold=sym=>','(async()=>{'));
 const irx={}; require('./data/IRX.json').series.forEach(x=>irx[x.date]=x.close);
 eval(grab('  // ── 지표 ──','  // 블록 부트스트랩'));
-const END='2026-10-19', FEE=0.0025, PERDAY=10;
+const END=process.env.END||'2026-10-19', FEE=0.0025, PERDAY=10;   // 11-09: END · LS(일시금 고르기) · DSUB(적립 고르기) 환경변수 — 안 주면 예전과 같음
 const toMap=(eq,fin)=>{ const m={}; eq.forEach(([d,v])=>{ if(!String(d).endsWith('~')&&d<=END) m[d]=v; }); const ks=Object.keys(m).sort(); if(fin!=null&&ks.length&&ks[ks.length-1]===eq[eq.length-1][0]) m[ks[ks.length-1]]=fin; return m; };
 const HOOK=()=>{ const patch=(name,from,to)=>{ let s=window[name].toString(); if(!s.includes(from)) throw new Error('hook '+name+': '+from); s=s.split(from).join(to); (0,eval)(name+'='+s); };
   patch('runIVS','if(i%10===0)snap.push([d,eq]);','window.__EQ.push([d,eq]);if(i%10===0)snap.push([d,eq]);');
@@ -26,11 +26,14 @@ const LEGS={ IM:{app:'IM',tkr:'SOXL'}, IVS_Uc:{app:'IVS',tkr:'USD',ivs:[.55,40,.
   H_G:{px:()=>({px:['GOLDX'],rule:hold('GOLDX')})} };
 const LUMPS={ L0:[['IM',1/3],['P5',2/3]], L7:[['IM',1/3],['P5N',2/3]], L1:[['P5N',1]], L2:[['P5N',5/6],['IVS_Uc',1/6]], L3:[['P5N',2/3],['IVS_Uc',1/3]],
   L4:[['P5X',5/6],['IVS_Uc',1/6]], L5:[['IM',1/6],['P5X',5/6]], L6:[['P5N',5/6],['H_G',1/6]], L8:[['P5N',2/3],['IVS_Uc',1/6],['H_G',1/6]],
-  L9:[['P5',5/6],['IVS_Uc',1/6]], L10:[['P5',1]], L11:[['P5',2/3],['IVS_Uc',1/3]], L12:[['P5X',1]] };
+  L9:[['P5',5/6],['IVS_Uc',1/6]], L10:[['P5',1]], L11:[['P5',2/3],['IVS_Uc',1/3]], L12:[['P5X',1]],
+  L13:[['P5',3/4],['IVS_Uc',1/4]], L14:[['P5',1/2],['IVS_Uc',1/2]] };   // 11-09 포트폴리오 후보 ① 비중
+if(process.env.LS){ const keep=process.env.LS.split(','); for(const k of Object.keys(LUMPS)) if(!keep.includes(k)) delete LUMPS[k]; }
 const LNAME={L0:'지금: 무매 1만 + 플랜(기본) 2만',L7:'무매 1/3 + 플랜(새 규칙) 2/3',L1:'플랜(새 규칙) 100%',L2:'플랜(새) 5/6 + 섀넌 USD 1/6',L3:'플랜(새) 2/3 + 섀넌 USD 1/3',
-  L4:'플랜(공격형) 5/6 + 섀넌 USD 1/6',L5:'무매 1/6 + 플랜(공격형) 5/6',L6:'플랜(새) 5/6 + 금 1/6',L8:'플랜(새) 2/3 + 섀넌 USD 1/6 + 금 1/6',L9:'플랜(기본) 5/6 + 섀넌 USD 1/6',L10:'플랜(기본) 100%',L11:'플랜(기본) 2/3 + 섀넌 USD 1/3',L12:'플랜(공격형) 100%'};
+  L4:'플랜(공격형) 5/6 + 섀넌 USD 1/6',L5:'무매 1/6 + 플랜(공격형) 5/6',L6:'플랜(새) 5/6 + 금 1/6',L8:'플랜(새) 2/3 + 섀넌 USD 1/6 + 금 1/6',L9:'플랜(기본) 5/6 + 섀넌 USD 1/6',L10:'플랜(기본) 100%',L11:'플랜(기본) 2/3 + 섀넌 USD 1/3',L12:'플랜(공격형) 100%',L13:'플랜(기본) 3/4 + 섀넌 USD 1/4',L14:'플랜(기본) 1/2 + 섀넌 USD 1/2'};
 const DCAS={ BASKET:{USD:2,ROM:2,QLD:2,GOLD:1,TSLA:1}, LEV3:{USD:1,ROM:1,QLD:1}, USD:{USD:1}, ROM:{ROM:1}, QLD:{QLD:1}, TQQQ:{TQQQ:1}, QQQ:{QQQ:1}, SPY:{SPY:1}, GOLD:{GOLD:1}, TSLA:{TSLA:1},
   QLD_G2:{QLD:8,GOLD:2}, QLD_G3:{QLD:7,GOLD:3}, USD_G3:{USD:7,GOLD:3}, QQQ_G3:{QQQ:7,GOLD:3}, SPY_G3:{SPY:7,GOLD:3}, LEV_G2:{USD:8/3,ROM:8/3,QLD:8/3,GOLD:2}, CASH:{CASH:1}, PLAN:'plan', PROP:'prop' };
+if(process.env.DSUB){ const keep=process.env.DSUB.split(','); for(const k of Object.keys(DCAS)) if(!keep.includes(k)) delete DCAS[k]; }
 const DNAME={BASKET:'지금 바구니',LEV3:'USD·ROM·QLD 같은 비율',USD:'USD',ROM:'ROM',QLD:'QLD',TQQQ:'TQQQ',QQQ:'QQQ',SPY:'SPY',GOLD:'금(GLDM)',TSLA:'TSLA',QLD_G2:'QLD 8 + 금 2',QLD_G3:'QLD 7 + 금 3',USD_G3:'USD 7 + 금 3',
   QQQ_G3:'QQQ 7 + 금 3',SPY_G3:'SPY 7 + 금 3',LEV_G2:'USD·ROM·QLD 8 + 금 2',CASH:'적립 안 함(단기국채에 쌓음)',PLAN:'플랜에 매달 넣기',PROP:'일시금 전략에 비례로 넣기'};
 const SETS={real:{from:'2011-03-01',E:'TECL',T:'TQQQ',sym:{USD:'USD',ROM:'ROM',QLD:'QLD',TQQQ:'TQQQ',QQQ:'QQQ',SPY:'SPY',GOLD:'GOLDX',TSLA:'TSLA'},
@@ -66,7 +69,7 @@ function evalPath(ds,V,F,crs){ const n=ds.length, nav=new Float64Array(n); nav[0
         const curves={}, depCurves={};
         for(const [nm,legs] of Object.entries(LUMPS)){ let m=null; for(const [k,w] of legs){ const x=await get(k,w); m=m?mixNone(m,x):x; } curves[nm]=m;
           const pl=legs.find(([k])=>LEGS[k].plan); if(pl){ let md=null, fl=null; for(const [k,w] of legs){ const x=(k===pl[0])?await get(k,w,true):{m:await get(k,w)}; if(k===pl[0]) fl=x.flows; md=md?mixNone(md,x.m):x.m; } depCurves[nm]={m:md,flows:fl}; } }
-        const ds=Object.keys(curves.L0).filter(d=>Object.values(curves).every(m=>m[d]!=null)&&Object.values(depCurves).every(x=>x.m[d]!=null)).sort(); const n=ds.length;
+        const ds=Object.keys(curves[Object.keys(curves)[0]]).filter(d=>Object.values(curves).every(m=>m[d]!=null)&&Object.values(depCurves).every(x=>x.m[d]!=null)).sort(); const n=ds.length;
         const U={}; for(const t of new Set(dcaKeys.flatMap(k=>typeof DC[k]==='string'?[]:Object.keys(DC[k])))) U[t]=unitDca(ds,t==='CASH'?'CASH':C.sym[t]);
         const Fd=new Float64Array(n); for(let t=1;t<n;t++) Fd[t]=PERDAY;
         for(const nm of Object.keys(LUMPS)){ const L=Float64Array.from(ds.map(d=>curves[nm][d])); R.win[nm]=R.win[nm]||{};
