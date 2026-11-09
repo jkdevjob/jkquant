@@ -213,7 +213,7 @@ const sheetCase=()=>{
       okSave===true && C.lastPushedJSON===JSON.stringify(stored) && JSON.stringify(C.stateDbBase)===JSON.stringify(stored)
       && JSON.stringify(C.S)===before && stored._updated>=t0 && JSON.stringify({...stored,_updated:5})===before && docs.get('users/u1').stateV2Rev===1); }
   /* 저장 뒤 합치기 — 값이 undefined 인 칸(2026-11-09 사용자 화면 "클라우드 저장에 실패했습니다 — "undefined" is not valid JSON").
-     모의 목록 계산(paperFillAll)이 듀얼 가드 묶음(S.plan)에 없는 active 칸을 undefined 로 되돌려 만들고, 다른 창이 먼저 저장한
+     모의 목록 계산(paperFillAll)이 듀얼가드 묶음(S.plan)에 없는 active 칸을 undefined 로 되돌려 만들고, 다른 창이 먼저 저장한
      원장과 합칠 때 JSON.parse(undefined) 로 터졌다 — DB 저장은 됐지만 실패로 보이고 이 창은 다른 창 변경을 못 받았다. */
   const r3={ts:3,date:'2026-09-03',kind:'1회매수',price:9,qty:1};
   const undefSave=async src=>{
@@ -242,11 +242,11 @@ const sheetCase=()=>{
     &&!Object.prototype.hasOwnProperty.call(R.S.plan,'active')&&!('active' in R.stored.stateV2.plan);   // undefined 칸을 다시 만들지 않는다
   { const R=await undefSave(idx);
     ok('저장 뒤 합치기: undefined 칸(S.plan.active · 세션 memo)이 있어도 성공 — 오류 없음 · DB = 다른 창 기록 + 이 창 기록 · 이 창도 합친 장부 · active 칸 안 만듦',undefOk(R)); }
-  /* 모의 목록 계산(paperFillAll) 뒤 S.plan 에 active 칸이 생기지 않는다 — 듀얼 가드 모의 세션만 있는 경우를 그대로 돌린다 */
+  /* 모의 목록 계산(paperFillAll) 뒤 S.plan 에 active 칸이 생기지 않는다 — 듀얼가드 모의 세션만 있는 경우를 그대로 돌린다 */
   const fillPlan=async src=>{
     const C=vm.createContext({console:{error(){},warn(){},log(){}},JSON,Date,Math,Map,Set,Object,Array,String,Promise,performance:{now:()=>0},
       S:{activeTab:'inf',inf:{active:'i1',sessions:[{id:'i1',hist:[]}]},plan:{sessions:[{id:'p1',paper:true,hist:[]}],activeByHorizon:{}}},
-      PAPER_TABS:[['inf','무한매수법'],['plan','듀얼 가드']],_paperFilling:false,_paperSliceAt:0,_fillQuoteCache:null,lastQuote:{},
+      PAPER_TABS:[['inf','무한매수법'],['plan','듀얼가드']],_paperFilling:false,_paperSliceAt:0,_fillQuoteCache:null,lastQuote:{},
       infQuoteCache:null,maQuoteData:null,ivsQuoteData:null,ivsQuote1:null,dcaQuoteData:null,asapQuoteData:null,infChartData:null,vrChartData:null,
       pfWanted:x=>!!x&&!x.paper,paperLoadingProgress(){},paperPrefetchQuotes:async()=>{},paperBreathe:async()=>{},planPaperRetired:()=>false,
       loadPlanPaperData:async()=>{},replayPlanPaper(){},paperStatPlan:()=>({tab:'plan'})});
@@ -255,7 +255,7 @@ const sheetCase=()=>{
     return {rows,plan:C.S.plan,inf:C.S.inf};
   };
   { const R=await fillPlan(idx);
-    ok('모의 목록 계산 뒤 S.plan 에 active 칸이 생기지 않음(듀얼 가드 묶음엔 원래 없다) · 다른 탭 active 는 그대로',
+    ok('모의 목록 계산 뒤 S.plan 에 active 칸이 생기지 않음(듀얼가드 묶음엔 원래 없다) · 다른 탭 active 는 그대로',
       R.rows.length===1&&!Object.prototype.hasOwnProperty.call(R.plan,'active')&&R.inf.active==='i1'); }
   /* 변이 — 옛 코드로 되돌리면 빨간불 */
   { const MUT=[

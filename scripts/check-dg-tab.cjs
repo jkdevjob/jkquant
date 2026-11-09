@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-/* 운영 › 듀얼 가드 탭을 다른 운영 탭처럼 (index v3.122.0 · plan v2.5.0 · 2026-11-09)
+/* 운영 › 듀얼가드 탭을 다른 운영 탭처럼 (index v3.122.0 · plan v2.5.0 · 2026-11-09)
  * 사용자: "듀얼가드를 운영에 다른 탭과 같이 변경해 설정을 따로 빼고 세션을 위로 올리고 세션 누르면 이름과 모의투자등등 선택할수 있고
  *          세션 드래그 가능하게 / 다른 탭이랑 최대한 비슷하게 / 듀얼가드 접근시 또 로그인 하지 말고"
  * 실제 페이지 함수를 뽑아 그대로 돌린다(재구현 없음). 값 시험 + 변이(틀린 코드로 바꾸면 빨간불).
@@ -10,7 +10,7 @@
  *   D 세션 줄 — 현재 투자중 맨 앞 · ✕ 는 보고 있는 세션에만 · + 세션 맨 끝 · 보고 있는 칩을 누르면 세션 설정
  *   E 설정 창 두 갈래 — 세션(이름 · 모의투자 · 포트폴리오) / ⚙️ 설정(금액 · 시작일) · 시작일 칸은 갈래·종류에 맞게
  *   F 창 안에서 다시 로그인하지 않는다 — 로그인 상자 대신 운영 화면 로그인을 이어받음 · DB 다시 연결 상자는 그대로
- *   G 운영 화면 — 듀얼 가드 창 미리 열기(모의 페이지 빼고) · 다른 탭도 보고 있는 칩을 누르면 세션 설정 · 상태줄 배지
+ *   G 운영 화면 — 듀얼가드 창 미리 열기(모의 페이지 빼고) · 다른 탭도 보고 있는 칩을 누르면 세션 설정 · 상태줄 배지
  */
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
 const root=path.join(__dirname,'..'),rd=f=>fs.readFileSync(path.join(root,f),'utf8');
@@ -53,7 +53,7 @@ async function check(S){
   // ── B. 설정 창은 앞 전환이 끝난 뒤
   { const c=planCtx(S);const el=()=>({value:'',checked:false,disabled:false,textContent:'',dataset:{},hidden:true});const E={};
     for(const id of ['assetSessionName','assetSessionPaper','assetSessionCapital','assetSessionMonthly','assetSessionTarget','assetSessionStart','assetSessionModalTitle','assetSessionCreate','assetSessionModalStrategy','assetSessionModal'])E[id]=el();
-    Object.assign(c,{$:id=>E[id],openAssetSessionModal(){},syncAssetSessionModal(){},planStrategyLabel:()=>'듀얼 가드 v1.0',planPortfolio:true,assetEditingId:null,assetPfPick:true,planCurName:'토스 듀얼'});
+    Object.assign(c,{$:id=>E[id],openAssetSessionModal(){},syncAssetSessionModal(){},planStrategyLabel:()=>'듀얼가드 v1.0',planPortfolio:true,assetEditingId:null,assetPfPick:true,planCurName:'토스 듀얼'});
     vm.runInContext(['function planCurLabel()','function setAssetModalMode(m)','function assetPfInit(on)','async function editAssetSession(mode)'].map(m=>fnOf(S.plan,m)).join('\n'),c);
     const p=c.selectAssetSession('B');const e=c.editAssetSession('session');await Promise.all([p,e]);
     t('B1 세션을 바꾸자마자 설정을 열어도 B 장부는 B 그대로(앞 세션 A 장부를 옮겨 적지 않음) · 창은 B 를 연다',JSON.stringify(c.box.sessions[2].ledger.events)==='["b"]'&&c.assetEditingId==='B'&&E.assetSessionModal.dataset.mode==='session',
@@ -85,7 +85,7 @@ async function check(S){
   // ── D. 세션 줄
   { const V={assetSessionChips:{innerHTML:''},assetSessionState:{className:'',textContent:'',title:''}};
     const box={sessions:[{id:'A',name:'A 운영',horizon:5,paper:false},{id:'P',name:'모의<1>',horizon:5,paper:true,simStart:'2025-01-02'},{id:'H',name:'10년',horizon:10}],activeByHorizon:{5:'P'}};
-    const c={window:{JKPlanSessionEngine:{STRATEGY:{name:'듀얼 가드',version:'1.0'},retiredReason:x=>+x.horizon!==5?'x':''}},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5,dgDragEl:null,planCurName:''};
+    const c={window:{JKPlanSessionEngine:{STRATEGY:{name:'듀얼가드',version:'1.0'},retiredReason:x=>+x.horizon!==5?'x':''}},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5,dgDragEl:null,planCurName:''};
     vm.createContext(c);vm.runInContext(['function planCurLabel()','function planStrategy()','function planStrategyLabel()','function planRetired(x)','function assetSessionList(h=activeHorizon)','function activeAssetSession()','function renderAssetSessions()'].map(m=>fnOf(S.plan,m)).join('\n'),c);
     c.renderAssetSessions();const h=V.assetSessionChips.innerHTML,ids=[...h.matchAll(/data-asess="([^"]*)"/g)].map(m=>m[1]);
     t('D1 칩 차례: 현재 투자중(맨 앞) → 세션들 → + 세션(맨 끝) · 폐지 세션 없음',ids.join()===',A,P'&&/data-asess-add="1"[^>]*>\+ 세션<\/div>$/.test(h)&&!/10년/.test(h),ids.join());
@@ -93,7 +93,7 @@ async function check(S){
     const first0=(h.match(/^<div[^>]*data-asess=""[^>]*>([^<]*)<\/div>/)||['',''])[1];c.planCurName='토스 <듀얼>';c.renderAssetSessions();
     const first1=(V.assetSessionChips.innerHTML.match(/^<div[^>]*data-asess=""[^>]*>([^<]*)<\/div>/)||['',''])[1];
     t('H2 세션 줄 첫 칩 = 본 장부 이름(바꾸기 전 "현재 투자중" · 바꾼 뒤 그 이름 · 글자로 이스케이프)',first0==='현재 투자중'&&first1==='토스 &lt;듀얼>',JSON.stringify([first0,first1]));
-    t('D3 상태줄 글자 — 운영 탭처럼 세션 이름 없이 전략 요약 · 모의 시작일 · 숨긴 세션 수',V.assetSessionState.textContent==='듀얼 가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 1개'&&V.assetSessionState.className==='asset-session-state paper',V.assetSessionState.textContent);
+    t('D3 상태줄 글자 — 운영 탭처럼 세션 이름 없이 전략 요약 · 모의 시작일 · 숨긴 세션 수',V.assetSessionState.textContent==='듀얼가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 1개'&&V.assetSessionState.className==='asset-session-state paper',V.assetSessionState.textContent);
     dgActivate:{ const L=[];const cc={activeAssetSession:()=>({id:'P'}),editAssetSession:m=>L.push('edit:'+m),selectAssetSession:id=>L.push('sel:'+id),$:()=>({hidden:true})};
       vm.createContext(cc);vm.runInContext(fnOf(S.plan,'function dgChipActivate(id)'),cc);cc.dgChipActivate('P');cc.dgChipActivate('A');cc.dgChipActivate('');
       t('D4 보고 있는 칩(P)을 누르면 세션 설정 · 다른 칩은 전환',L.join()==='edit:session,sel:A,sel:',L.join()); } }
@@ -101,7 +101,7 @@ async function check(S){
   // ── H. 본 장부(현재 투자중) 이름 — 저장(원장 sessionName) · 읽기 · 포트폴리오
   { const M=(()=>{const c={};vm.createContext(c);vm.runInContext(rd('plan-session-settings.js'),c);return c.JKPlanSessionSettings;})();
     const P={};const el=(id,o={})=>P[id]=Object.assign({value:'',checked:false,disabled:false,textContent:'',hidden:false},o);
-    el('assetSessionPaper',{checked:false});el('assetSessionName',{value:'  토스 듀얼 가드  '});el('assetSessionCapital',{value:'20000'});el('assetSessionMonthly',{value:'0'});el('assetSessionTarget',{value:'150000'});
+    el('assetSessionPaper',{checked:false});el('assetSessionName',{value:'  토스 듀얼가드  '});el('assetSessionCapital',{value:'20000'});el('assetSessionMonthly',{value:'0'});el('assetSessionTarget',{value:'150000'});
     el('assetSessionStart',{value:'2026-01-02'});el('assetSessionPf',{checked:true});el('assetSessionModal',{hidden:false});el('assetSessionCreate');
     const seen=[];const c={$:id=>P[id],window:{JKPlanSessionSettings:M},ensureLiveBoxes(){},assetModalRevision:1,assetModalHorizon:5,activeHorizon:5,assetEditingId:'current',assetSessionSaving:false,assetViewRevision:0,assetPaperCache:{},
       planPortfolio:true,planCurName:'',assetPlanBox:()=>({sessions:[],activeByHorizon:{}}),cloneObj:v=>JSON.parse(JSON.stringify(v)),alphaLedger:{base:{date:'2026-01-02',cash:20000},events:[]},
@@ -110,7 +110,7 @@ async function check(S){
     c.cloudSave=async()=>{seen.push(c.planCurName);return true;};
     vm.createContext(c);vm.runInContext(['function planCurLabel()','function assetModalPaper()','async function createAssetSession()'].map(m=>fnOf(S.plan,m)).join('\n'),c);
     await c.createAssetSession();P.assetSessionName.value='현재 투자중';await c.createAssetSession();
-    t('H3 현재 투자중 이름을 바꿔 저장하면 원장 저장 전에 이름이 들어감(앞뒤 빈칸 정리) · "현재 투자중"으로 되돌리면 빈칸(기본)',seen.join('|')==='토스 듀얼 가드|',seen.join('|'));
+    t('H3 현재 투자중 이름을 바꿔 저장하면 원장 저장 전에 이름이 들어감(앞뒤 빈칸 정리) · "현재 투자중"으로 되돌리면 빈칸(기본)',seen.join('|')==='토스 듀얼가드|',seen.join('|'));
     const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:true,planCurName:'토스 듀얼'};
     vm.createContext(r);vm.runInContext(fnOf(S.plan,'function readForm()'),r);const o=r.readForm();
     const a={$:()=>null,todayISO:()=>'2026-11-09',plusYears:s=>s,planSid:()=>'x',bindSleeveLedger(){},alphaSyncInputs(){},alphaFee:()=>0,ALPHA_FEE_RATE:0.001,planLinks:null,sleeveSessions:null,alphaLedger:null,planPortfolio:true,planCurName:''};
@@ -163,7 +163,7 @@ async function check(S){
     tm=null;const b=mk(true,'u1',null);b.dgPreload();const paperNo=!tm;
     tm=null;const d=mk(false,null,null);d.dgPreload();const noUser=!tm;
     tm=null;const e=mk(false,'u1',{});e.dgPreload();const hasFrame=!tm;
-    t('G1 로그인 뒤 듀얼 가드 창을 뒤에서 한 번만 미리 연다 · 모의 성과 페이지 · 로그인 전 · 이미 열린 창이면 안 연다',scheduled&&runs.join()==='open'&&paperNo&&noUser&&hasFrame,JSON.stringify({scheduled,runs,paperNo,noUser,hasFrame}));
+    t('G1 로그인 뒤 듀얼가드 창을 뒤에서 한 번만 미리 연다 · 모의 성과 페이지 · 로그인 전 · 이미 열린 창이면 안 연다',scheduled&&runs.join()==='open'&&paperNo&&noUser&&hasFrame,JSON.stringify({scheduled,runs,paperNo,noUser,hasFrame}));
     t('G2 미리 열기 자리 — DB 원장을 읽은 뒤(앱 시작 · DB 다시 연결 두 곳)',(S.idx.match(/pfPageAuto\(\);[^\n]*\n\s*dgPreload\(\);/g)||[]).length===2); }
   { let click=null;const L=[];const bar={addEventListener:(k,f)=>{if(k==='click')click=f;}};
     const c={$:id=>id==='sessbar'?bar:null,window:{addEventListener(){}},_dragEndAt:0,Date,tabBox:()=>({active:'s2'}),deleteSess:id=>L.push('del:'+id),openSess:()=>L.push('add'),switchSess:id=>L.push('sw:'+id),editSess:id=>L.push('edit:'+id),
@@ -171,14 +171,14 @@ async function check(S){
     vm.createContext(c);vm.runInContext(fnOf(S.idx,'function setupSessbar()'),c);c.setupSessbar();
     const ev=sel=>({target:{closest:q=>q==='[data-sid]'&&sel?{getAttribute:()=>sel}:null},stopPropagation(){}});
     click(ev('s2'));click(ev('s1'));
-    t('G3 다른 운영 탭도 — 보고 있는 칩(s2)을 누르면 세션 설정 · 다른 칩(s1)은 전환(듀얼 가드 세션 줄과 같은 동작)',L.join()==='edit:s2,sw:s1',L.join()); }
-  { // 두 번 누름의 둘째 누름이 막 열린 창 바깥에 떨어져도 안 닫힘 — 운영 세션 창 · 듀얼 가드 세션 창
+    t('G3 다른 운영 탭도 — 보고 있는 칩(s2)을 누르면 세션 설정 · 다른 칩(s1)은 전환(듀얼가드 세션 줄과 같은 동작)',L.join()==='edit:s2,sw:s1',L.join()); }
+  { // 두 번 누름의 둘째 누름이 막 열린 창 바깥에 떨어져도 안 닫힘 — 운영 세션 창 · 듀얼가드 세션 창
     let h=null;const m={classList:{set:new Set(['on']),remove(x){this.set.delete(x);}},addEventListener:(k,f)=>{h=f;}};let now=1000;
     const c={$:id=>id==='sessModal'?m:null,Date:{now:()=>now}};vm.createContext(c);
     vm.runInContext((S.idx.match(/\['setModal','sessModal','paperModal'\]\.forEach\([^\n]*/)||[''])[0],c);
     m._openedAt=1000;now=1200;if(h)h({target:m});const kept=m.classList.set.has('on');now=1600;if(h)h({target:m});const closed=!m.classList.set.has('on');
     const P=S.plan;
-    t('G7 막 연 세션 창은 0.2초 뒤 바깥 누름(두 번 누름의 둘째)에 안 닫히고 0.6초 뒤엔 닫힘 · 듀얼 가드 창도 같은 규칙 · 열 때 시각을 적음',!!h&&kept&&closed
+    t('G7 막 연 세션 창은 0.2초 뒤 바깥 누름(두 번 누름의 둘째)에 안 닫히고 0.6초 뒤엔 닫힘 · 듀얼가드 창도 같은 규칙 · 열 때 시각을 적음',!!h&&kept&&closed
       &&/\$\('sessModal'\)\._openedAt=Date\.now\(\);/.test(fnOf(S.idx,'function editSess(id)'))&&/if\(e\.target===\$\("assetSessionModal"\)&&Date\.now\(\)-assetModalOpenedAt>450\)closeAssetSessionModal\(\);/.test(P)
       &&/assetModalOpenedAt=Date\.now\(\);/.test(fnOf(P,'function openAssetSessionModal()')),JSON.stringify({kept,closed})); }
   { const V={dgStrip:{innerHTML:''},assetStatusBadges:{innerHTML:''}};
@@ -210,7 +210,7 @@ const MUT=[
   ['창 안: 운영 로그인 안 이어받음','plan',s=>s.replace("    await updateCurrentUser(auth,pu);","    return false;")],
   ['창 안: 로그인 상자 CSS 되살림','plan',s=>s.replace("html.embed:not(.embed-dberr) #authgate .gbox{display:none}","")],
   ['운영: 모의 페이지에서도 미리 열기','idx',s=>s.replace("if(dgFrameEl||_dgPreloadTimer||!curUid||isPaperPage()) return;","if(dgFrameEl||_dgPreloadTimer||!curUid) return;")],
-  ['운영: 미리 열기 안 부름','idx',s=>s.replace("      dgPreload();               // 듀얼 가드 창을 뒤에서 미리 연다","      // dgPreload 없음")],
+  ['운영: 미리 열기 안 부름','idx',s=>s.replace("      dgPreload();               // 듀얼가드 창을 뒤에서 미리 연다","      // dgPreload 없음")],
   ['다른 탭: 보고 있는 칩을 눌러도 설정 안 열림(옛 코드)','idx',s=>s.replace("if(chip){ const id=chip.getAttribute('data-sid'); if(String(tabBox().active)===String(id)) editSess(id); else switchSess(id); }","if(chip){switchSess(chip.getAttribute('data-sid'));}")],
   ['상태줄 배지 없음','plan',s=>s.replace("  if(sb)sb.innerHTML=o?(","  if(false)sb.innerHTML=o?(")],
   ['현재 투자중: 이름 칸 잠금(옛 코드)','plan',s=>s.replace("$('assetSessionName').disabled=false;$('assetSessionPaper').disabled=!x;","$('assetSessionName').disabled=!x;$('assetSessionPaper').disabled=!x;")],
@@ -219,12 +219,12 @@ const MUT=[
   ['세션 줄: 첫 칩 이름 고정','plan',s=>s.replace("title=\"두 번 누르면 세션 설정\">'+q(planCurLabel())+'</div>';","title=\"두 번 누르면 세션 설정\">현재 투자중</div>';")],
   ['포트폴리오: 현재 투자중 이름 무시','idx',s=>s.replace("name:String((o&&o.name)||(five&&five.sessionName)||'').trim()||'현재 투자중'","name:'현재 투자중'")],
   ['운영 세션 창: 막 연 창도 바깥 누름에 바로 닫힘(옛 코드)','idx',s=>s.replace("if(e.target===m && Date.now()-(m._openedAt||0)>450) m.classList.remove('on');","if(e.target===m) m.classList.remove('on');")],
-  ['듀얼 가드 세션 창: 막 연 창도 바깥 누름에 바로 닫힘','plan',s=>s.replace("if(e.target===$(\"assetSessionModal\")&&Date.now()-assetModalOpenedAt>450)closeAssetSessionModal();","if(e.target===$(\"assetSessionModal\"))closeAssetSessionModal();")],
+  ['듀얼가드 세션 창: 막 연 창도 바깥 누름에 바로 닫힘','plan',s=>s.replace("if(e.target===$(\"assetSessionModal\")&&Date.now()-assetModalOpenedAt>450)closeAssetSessionModal();","if(e.target===$(\"assetSessionModal\"))closeAssetSessionModal();")],
 ];
 (async()=>{
   const bad=await check(SRC);
   if(bad.length){console.error('FAIL\n  '+bad.join('\n  '));process.exit(1);}
-  console.log('PASS 듀얼 가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 설정은 전환 뒤 · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 다른 탭 칩 · 배지');
+  console.log('PASS 듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 설정은 전환 뒤 · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 다른 탭 칩 · 배지');
   let red=0;
   for(const [name,key,mut] of MUT){
     const m=mut(SRC[key]);assert.notEqual(m,SRC[key],'변이 대상 없음: '+name);

@@ -8,6 +8,21 @@
 - 보고 schema 검증 PASS, `tests/gpt-morning-report.test.mjs` **19 PASS / 0 FAIL**. 준비 workflow `42578532171` 성공; 서버 응답 ok:true·duplicate:true·queued:null·dueAt:null. 기발송 준비 미완료 영수증 push1/1·Telegram sent이며 지연 연구 전송·기기 수신을 확인한 것이 아님.
 - 전체 check-before-push: **진행 중**. 최초 Windows 실행은 누락 pyarrow/기본한글인코딩 및 격리 자식 Python의 bs4 경로 문제로 중단했다. 저장소 검사/무관한 기능을 바꾸지 않고 작업 폴더의 독립 환경으로 보완 중. 최종 전체 PASS 전 Ready/병합하지 않는다.
 
+## 2026-11-09 · 포트폴리오 세션별 선 · 이름 '듀얼가드' · '5년' 삭제 · v3.123.0 (플랜 v2.5.2)
+
+- `check-portfolio.cjs` **ALL PASS · 변이 48/48 빨간불**.
+  - L5 세션별 값: 날마다 세션 합 = 합친 평가액(나간 돈 뺌) · 시작 전 null · 이월 · 원화 환율 · 줄 순서.
+  - L6 그림: 세션마다 선 · 무리 색 · 같은 무리 둘째·그 밖 점선 · 범례 이름 이스케이프 · 축 안 · 세션 하나면 안 그림.
+  - L7 끝 값 13px 이상 · 순서 · 칸 안.
+  - L8 값 상자 세션 줄(textContent).
+  - 새 변이 7종: 나간 돈 안 뺌 · 하나여도 그림 · 한 색 · 같은 모양 · 겹침 안 막음 · 값 상자 세션 없음 · 합친 선 예전 파랑.
+- `check-plan-claude-tab.cjs` **ALL PASS · 변이 18/18 빨간불**.
+  - E1: 띄어 쓴 이름 없음 · 플랜 화면 글자(주석 뺀)에 '5년' 없음 · 원장 칸 이름 · 새 세션 기본 이름.
+  - D1: 모의 목록 '듀얼가드 v1.0'.
+- 색 검증(dataviz validate_palette · 바탕 #171c2e): 무리 색 세 개 모든 짝 PASS(색약 ΔE 13.0↑ · 일반 19.7↑ · 대비 3:1↑). 금색↔초록 색약 ΔE 6.9 WARN → 투입 점선으로 가름. 예전 파랑↔보라 ΔE 1.9 FAIL → 합친 선 흰색.
+- 눈 확인: 앱 함수(pfCombine · pfChartHtml · pfChartBind)를 그대로 떼어 세션 셋(듀얼가드 · 무매 · 섀넌)으로 그림 → 폰 390 · PC 1280 오류 0 · 가로 넘침 0 · 끝 값 안 겹침 · 값 상자 이름 간격 고침.
+- 미확인: 실제 계정 데이터로 본 포트폴리오 화면.
+
 ## 2026-11-09 · 클라우드 저장 실패 "undefined" is not valid JSON · v3.122.2
 
 - 재현: `check-history-preservation.cjs` 가 실제 저장 함수(`_commitStateRemote`)를 가짜 Firestore 로 돌린다.
@@ -16,6 +31,8 @@
   - 고친 코드: 오류 없음 · DB [1,2,3] · 이 창 장부 [1,2,3] · `S.plan` 에 active 칸 없음.
 - 모의 목록 계산(`paperFillAll` 실제 함수 · 듀얼 가드 모의 세션) 뒤 `S.plan` 에 active 칸이 생기지 않음 · 무매 active 그대로.
 - 변이 3종 빨간불: 합치기 옛 코드 · 저장 뒤 active 덮기 옛 코드 · 모의 목록 옛 되돌리기.
+- `check-before-push` 57단계 전부 PASS(전체 회귀 2830 PASS / 0 FAIL 포함 · `--offline` 아님).
+- 병합 뒤(58ff413) 운영 확인: curl 운영 v3.122.2(두 곳) · 고친 합치기·되돌리기 코드 있음 · index 해시가 로컬과 같다.
 - 미확인: 사용자 화면에서 새로고침 뒤 오류가 다시 안 뜨는지.
 
 ## 2026-11-09 · 듀얼 가드 '현재 투자중' 이름 바꾸기 · v3.122.1 (플랜 v2.5.1)
@@ -33,7 +50,7 @@
 - check-portfolio 41/41 · check-plan-claude-tab 14/14 통과.
 - 전체 회귀 2830 PASS / 0 FAIL. `check-before-push` 57단계 전부 PASS — 전체 검증(외부 빌드·Worker dry-run 포함 · `--offline` 아님).
 - 미확인: 실제 계정에서 이름 바꾼 뒤 다른 기기로 열기 · iPhone Safari.
-- 병합 뒤(6c69981) 운영 확인: curl 운영 v3.122.1(두 곳) · /plan v2.5.1 · '현재 투자중' 이름 코드 있음 · index·plan 해시가 로컬과 같다. GitHub regression 통과(06:02~06:04 UTC).
+- 병합 뒤(6c69981) 운영 확인: curl 운영 v3.122.1(두 곳) · /plan v2.5.1 · '현재 투자중' 이름 코드 있음 · index·plan 해시가 로컬과 같다. GitHub 검사 3개 통과(regression 06:02~06:04 · check 06:02~06:26 UTC) · main 푸시 검증 통과(06:03~06:26).
 
 ## 2026-11-09 · 운영 › 듀얼 가드 탭을 다른 운영 탭처럼 · v3.122.0 (플랜 v2.5.0)
 
