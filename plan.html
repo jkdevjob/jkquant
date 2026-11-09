@@ -13,7 +13,7 @@
   var b=document.createElement('base'); b.target='_top'; document.head.appendChild(b); })();
 </script>
 <script src="/plan-session-engine.js?v=6"></script>
-<script src="/plan-session-settings.js?v=2"></script>
+<script src="/plan-session-settings.js?v=3"></script>
 <script src="/plan-tax-check.js?v=1"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
@@ -238,6 +238,8 @@ th:first-child,td:first-child{text-align:left}
 .asset-session-modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.68);display:flex;align-items:center;justify-content:center;padding:16px}
 .asset-session-modal[hidden]{display:none}.asset-session-modal .box{width:min(500px,100%);background:var(--surf);border:1px solid var(--border2);border-radius:13px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 .asset-session-modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.asset-session-pf{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--dim);cursor:pointer;line-height:1.5}
+.asset-session-pf input{width:16px;height:16px;flex:0 0 auto;margin:0}.asset-session-pf input:disabled+span{opacity:.65}
 .asset-session-paper{margin-top:8px;padding:9px 10px;border:1px solid rgba(245,196,81,.25);border-radius:9px;background:rgba(245,196,81,.05)}
 .asset-session-paper-result{margin:10px 0 0;padding:10px;border:1px solid var(--border2);border-radius:9px;background:rgba(139,140,240,.05)}
 .asset-session-paper-result .kpis{margin-top:7px}
@@ -336,7 +338,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼 가드 <span class="ver">v2.3.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼 가드 <span class="ver">v2.4.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -862,6 +864,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="field"><label>세션 종류</label><select id="assetSessionKind"><option value="live">운영 세션</option><option value="paper">모의투자 세션</option></select></div>
       <div class="field" id="assetSessionStartWrap"><label id="assetSessionStartLabel">시작일</label><input id="assetSessionStart" type="date"></div>
     </div>
+    <label class="asset-session-pf" id="assetSessionPfRow"><input type="checkbox" id="assetSessionPf" checked> <span><b style="color:var(--accent)">💰 포트폴리오</b>에 넣기 <span class="sub" id="assetSessionPfHint">— 운영 › 포트폴리오 합계·추이·양도세에 더합니다</span></span></label>
     <div class="asset-session-paper" id="assetSessionPaperNote">운영 세션은 실제 체결을 직접 기록합니다. 모의투자 세션은 과거 시세로 자동 재생하며 실제 거래이력을 변경하지 않습니다.</div>
     <div class="btnrow"><button class="btn primary" id="assetSessionCreate">세션 만들기</button><button class="btn" id="assetSessionCancel">취소</button></div>
   </div>
@@ -999,6 +1002,17 @@ function ensureLiveBoxes(){
 const assetPaperCache={};
 let assetViewRevision=0;
 let assetEditingId=null,assetModalHorizon=5,assetModalRevision=0,assetSessionSaving=false;
+/* 💰 포트폴리오에 넣기(2026-11-09 사용자: "운영 세션 설정에서 모의투자처럼 포트폴리오에 추가 할지 선택 하게 해").
+   '현재 투자중'은 fiveYearPlanV2.portfolio, 추가 세션은 세션의 portfolio. 고른 적 없으면 넣음(예전 포트폴리오 그대로) · 모의 세션은 넣지 않는다(실제 돈만).
+   포트폴리오(index.html pfPlanWanted)는 저장된 값과 이 창이 보낸 값(planEmbedPost)을 읽는다. */
+let planPortfolio=true,assetPfPick=true;
+function assetPfInit(on){assetPfPick=!!on;const c=$('assetSessionPf');if(c){c.disabled=false;c.checked=!!on;}}
+function assetPfUI(paper){
+  const c=$('assetSessionPf'),h=$('assetSessionPfHint');if(!c)return;
+  if(paper){if(!c.disabled)assetPfPick=c.checked;c.checked=false;c.disabled=true;}
+  else if(c.disabled){c.disabled=false;c.checked=assetPfPick;}
+  if(h)h.textContent=paper?'— 모의 세션은 넣지 않습니다(실제 돈만)':'— 운영 › 포트폴리오 합계·추이·양도세에 더합니다';
+}
 function setAssetDetail(name){
   const selected=['current','analysis','history','explain'].includes(name)?name:'current';
   document.querySelectorAll('[data-asset-detail]').forEach(b=>{
@@ -1218,6 +1232,7 @@ function openAssetSessionModal(){
   $('assetSessionMonthly').value=Math.max(0,num('monthlyAdd',0));
   $('assetSessionTarget').value=Math.max(1,num('targetCapital',150000));
   $('assetSessionKind').value='live';
+  assetPfInit(true);   // 새 운영 세션은 포트폴리오에 넣는 게 기본
   const min=new Date();min.setFullYear(min.getFullYear()-3);
   $('assetSessionStart').min=min.toISOString().slice(0,10);$('assetSessionStart').max=todayISO();$('assetSessionStart').value=todayISO();
   $('assetSessionName').disabled=false;$('assetSessionKind').disabled=false;
@@ -1234,6 +1249,7 @@ function editAssetSession(){
   $('assetSessionName').value=x?x.name:'현재 투자중';
   $('assetSessionName').disabled=!x;$('assetSessionKind').disabled=!x;
   $('assetSessionKind').value=x&&x.paper?'paper':'live';
+  assetPfInit(x?x.portfolio!==false:planPortfolio!==false);
   $('assetSessionCapital').value=st.startCapital;$('assetSessionMonthly').value=st.monthlyAdd;
   $('assetSessionTarget').value=st.targetCapital;$('assetSessionStart').value=x&&x.paper?x.simStart:st.startDate;
   $('assetSessionModalTitle').textContent='자산플랜 세션 설정';$('assetSessionCreate').textContent='변경 저장';
@@ -1241,6 +1257,7 @@ function editAssetSession(){
 }
 function syncAssetSessionModal(){
   const paper=$('assetSessionKind').value==='paper';
+  assetPfUI(paper);
   const x=assetEditingId==='current'?{ledger:alphaLedger}:assetPlanBox().sessions.find(s=>s.id===assetEditingId);
   const locked=!paper&&x&&window.JKPlanSessionSettings.hasLedgerActivity(x.ledger);
   if(!paper&&x&&x.liveSettings){$('assetSessionCapital').value=x.liveSettings.startCapital;$('assetSessionStart').value=x.liveSettings.startDate;}
@@ -1260,8 +1277,9 @@ async function createAssetSession(){
   if(assetSessionSaving)return;
   ensureLiveBoxes();
   const revision=assetModalRevision,horizon=assetModalHorizon,id=assetEditingId;
-  const input={paper:$('assetSessionKind').value==='paper',name:$('assetSessionName').value,capital:$('assetSessionCapital').value,monthly:$('assetSessionMonthly').value,target:$('assetSessionTarget').value,start:$('assetSessionStart').value};
-  const box=assetPlanBox(),original=id==='current'?{id,horizon,paper:false,settings:assetSessionSettingsFromView(),ledger:cloneObj(alphaLedger)}:box.sessions.find(x=>x.id===id);
+  const input={paper:$('assetSessionKind').value==='paper',name:$('assetSessionName').value,capital:$('assetSessionCapital').value,monthly:$('assetSessionMonthly').value,target:$('assetSessionTarget').value,start:$('assetSessionStart').value,
+    portfolio:!!($('assetSessionPf')&&$('assetSessionPf').checked)};
+  const box=assetPlanBox(),original=id==='current'?{id,horizon,paper:false,portfolio:planPortfolio!==false,settings:assetSessionSettingsFromView(),ledger:cloneObj(alphaLedger)}:box.sessions.find(x=>x.id===id);
   if(id&&!original)return;
   if(original&&original.paper!==input.paper&&!confirm('세션 종류를 변경할까요? 실제 거래이력은 보존하고, 모의 거래는 운영 거래이력에 복사하지 않습니다.'))return;
   assetSessionSaving=true;$('assetSessionCreate').disabled=true;
@@ -1274,6 +1292,7 @@ async function createAssetSession(){
     const x=window.JKPlanSessionSettings.update(seed,input,{today:todayISO(),minStart:min.toISOString().slice(0,10),fx});
     ++assetViewRevision;
     if(id==='current'){
+      planPortfolio=x.portfolio!==false;
       applyAssetSettings(x);alphaLedger=x.ledger;alphaSyncInputs();localSave();await cloudSave();
     }else{
       if(original)box.sessions[box.sessions.indexOf(original)]=x;else box.sessions.push(x);
@@ -2359,7 +2378,8 @@ function planEmbedPost(o){
     const u=auth&&auth.currentUser;if(!u)return;
     const x=activeAssetSession(),paper=!!(x&&x.paper);
     const msg={type:'jk-dg',v:1,uid:u.uid,key:x?String(x.id):'cur',paper,strip:{...o}};
-    if(!paper){msg.ledger=cloneObj(alphaLedger);msg.startCapital=num('startCapital',0);msg.startDate=String(($('startDate')||{}).value||'');}
+    if(!paper){msg.ledger=cloneObj(alphaLedger);msg.startCapital=num('startCapital',0);msg.startDate=String(($('startDate')||{}).value||'');
+      msg.portfolio=x?x.portfolio!==false:planPortfolio!==false;}   // 세션 설정의 '💰 포트폴리오에 넣기' — 포트폴리오가 바로 따른다
     window.parent.postMessage(msg,location.origin);
   }catch(e){}
 }
@@ -2561,10 +2581,12 @@ function readForm(){
   o.sleeveSessions=JSON.parse(JSON.stringify(sleeveSessions));
   o.sleeveLedger=JSON.parse(JSON.stringify(sleeveLedger));
   o.alphaLedger=JSON.parse(JSON.stringify(alphaLedger));
+  o.portfolio=planPortfolio!==false;   // '현재 투자중'을 포트폴리오에 넣을지(세션 설정)
   return o;
 }
 function apply(o){
   const all={...defaults(),...o};
+  planPortfolio=all.portfolio!==false;
   planLinks={inf:String(all.planLinks?.inf||''),vr:String(all.planLinks?.vr||''),sleeve:String(all.planLinks?.sleeve||'')};
   sleeveSessions=Array.isArray(all.sleeveSessions)?all.sleeveSessions:[];
   // v1.4.x 장부를 최초 1회 세션 구조로 마이그레이션
