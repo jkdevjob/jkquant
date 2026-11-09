@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 async function getEditor(){
   const b=await chromium.connectOverCDP('http://127.0.0.1:9222');
   const ctx=b.contexts()[0];
-  let p=ctx.pages().find(x=>x.url().includes('Redirect=Write'));
+  let p=ctx.pages().find(x=>x.url().includes('Redirect=Write'))||ctx.pages().find(x=>x.url().includes('Redirect=Update')); // 수정 화면도 찾는다(retitle_post.js)
   if(!p) throw new Error('editor page not found');
   const f=p.frame({name:'mainFrame'});
   return {b,ctx,p,f};
