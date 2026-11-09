@@ -150,18 +150,19 @@ function check(S){
     t('D6 고른 적 없거나(undefined) 켠 장부는 넣는다 — 예전 포트폴리오 그대로',c.pfPlanLedgers().map(x=>x.key).join()==='cur,live1'); }
 
   // ── E. 실전 세션 채우기
-  { const mk=()=>{const log={auto:0,vr:0,inf:0,loaders:[]};
+  { const mk=(asap)=>{const log={auto:0,vr:0,inf:0,loaders:[]};
       const S0={activeTab:'inf',inf:{active:'i1',sessions:[{id:'i1',paper:false,settings:{ticker:'SOXL'},hist:[{d:1}]},{id:'ip',paper:true,settings:{ticker:'SOXL'},hist:[{d:1}]},{id:'i0',paper:false,settings:{ticker:'SOXL'},hist:[]},
           {id:'i2',paper:false,portfolio:false,settings:{ticker:'TECL'},hist:[{d:1}]}]},
         dca:{active:'d1',sessions:[{id:'d1',paper:false,settings:{ticker:'TQQQ',mode:'dca'},hist:[{d:1}]}]},
         plan:{sessions:[{id:'pl',paper:false,horizon:5,settings:{},ledger:{base:{},events:[{id:1}]}},{id:'pp',paper:true,horizon:5,simStart:'2026-01-02',settings:{}}]}};
+      if(asap) S0.asap={active:'a1',sessions:[{id:'a1',paper:false,settings:{ticker:'QLD'},hist:[{d:1}]},{id:'ap',paper:true,settings:{ticker:'UPRO'},hist:[{d:1}]}]};
       const ctx={S:S0,_paperFilling:false,_fillQuoteCache:null,infChartData:[],vrChartData:[],lastQuote:{inf:{symbol:'SOXL'},dca:null,plan:null},
         infQuoteCache:null,maQuoteData:null,ivsQuoteData:null,ivsQuote1:null,dcaQuoteData:null,asapQuoteData:null,
-        PAPER_TABS:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼가드']],
-        PAPER_CACHESYM:{inf:()=>'SOXL',dca:()=>'TQQQ'},PAPER_LOADERS:{inf:async f=>log.loaders.push('inf'),dca:async f=>log.loaders.push('dca')},
+        PAPER_TABS:asap?[['inf','무한매수법'],['dca','매수적립'],['asap','ASAP'],['plan','듀얼가드']]:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼가드']],
+        PAPER_CACHESYM:{inf:()=>'SOXL',dca:()=>'TQQQ',asap:()=>'QLD'},PAPER_LOADERS:{inf:async f=>log.loaders.push('inf'),dca:async f=>log.loaders.push('dca'),asap:async f=>log.loaders.push('asap')},
         fetchDaily:async s=>{(log.fd=log.fd||[]).push(s);return {};},fetchDailyDiv:async()=>({}),
         divCashOn:()=>false,warmDiv:async()=>{},ivsX1Of:x=>x,paperAuto:()=>{log.auto++;},vrSimForward:()=>{log.vr++;},infSimForward:()=>{log.inf++;},paperStart:()=>'2025-01-02',
-        paperStat:(tab,x)=>({tab,id:x.id,price:tab==='dca'?0:10}),stratStatusHtml:(tab,x)=>'ST:'+tab+':'+x.id,
+        paperStat:(tab,x)=>{ (log.stat=log.stat||[]).push(tab+':'+x.id); return {tab,id:x.id,price:tab==='dca'?0:10}; },stratStatusHtml:(tab,x)=>'ST:'+tab+':'+x.id,
         planPaperRetired:()=>false,loadPlanPaperData:async()=>({}),replayPlanPaper:()=>({}),paperStatPlan:x=>({tab:'plan',id:x.id}),
         console:{error(){},warn(){}},Map,Promise,Set};
       vm.createContext(ctx);vm.runInContext(fnOf(S.idx,'function pfWanted(x)')+fnOf(S.idx,'async function paperBreathe()')+fnOf(S.idx,'async function paperPrefetchQuotes(opt)')+fnOf(S.idx,'async function paperFillAll(opt)'),ctx);
@@ -176,6 +177,17 @@ function check(S){
       t('E5 끝나면 탭·세션·재생 표시가 그대로',A.ctx.S.activeTab==='inf'&&A.ctx.S.inf.active==='i1'&&A.ctx._paperFilling===false&&A.ctx._fillQuoteCache===null);
       const B=mk(),rows2=await B.ctx.paperFillAll();
       t('E6 모의(기본) — 예전 그대로: 모의 세션(무매 ip · 플랜 pp)만 · 모의 체결을 굴린다 · 상태줄 글자 없음',rows2.map(r=>r.tab+':'+r.id).join()==='inf:ip,plan:pp'&&B.log.auto===1&&B.log.inf===1&&!rows2[0].status,rows2.map(r=>r.tab+':'+r.id).join()+' auto='+B.log.auto);
+      /* ASAP 모의 뺌(2026-11-09 사용자: "운영 asap를 가려서 asap에 딸린 세션을 모의투자 해지 못하네 asap 세션은 전체 모의투자 해지해") */
+      const C8=mk(true),r8=await C8.ctx.paperFillAll({live:true});
+      t('E8 ASAP 실계좌 — 포트폴리오(live)엔 그대로(기록 있는 a1 · 시세 QLD 선취) · 모의 ap 는 아님',r8.map(r=>r.tab+':'+r.id).join()==='inf:i1,dca:d1,asap:a1'&&(C8.log.fd||[]).includes('QLD')&&!(C8.log.fd||[]).includes('UPRO'),JSON.stringify([r8.map(r=>r.tab+':'+r.id),C8.log.fd]));
+      const C9=mk(true),r9=await C9.ctx.paperFillAll();
+      t('E9 ASAP 모의 — 모의 목록 재계산에서 뺀다: 줄 없음 · 재생(로더·paperStat) 안 함 · 시세(UPRO) 안 받음 · 세션·기록 그대로',r9.map(r=>r.tab+':'+r.id).join()==='inf:ip,plan:pp'&&!C9.log.loaders.includes('asap')&&!(C9.log.stat||[]).some(x=>x.startsWith('asap'))&&!(C9.log.fd||[]).includes('UPRO')
+        &&C9.ctx.S.asap.sessions[1].paper===true&&C9.ctx.S.asap.sessions[1].hist.length===1&&C9.ctx.S.asap.active==='a1',JSON.stringify([r9.map(r=>r.tab+':'+r.id),C9.log]));
+      { const S1={inf:{sessions:[{id:'ip',paper:true}]},asap:{sessions:[{id:'ap',paper:true}]}};
+        const sum=new Function('PAPER_TABS','S','paperStat',fnOf(S.idx,'function paperSummary()')+'\nreturn paperSummary;')([['inf','무매'],['asap','ASAP']],S1,(tab,x)=>({tab,id:x.id,price:1}));
+        const ps=new Function('PAPER_TABS','S',fnOf(S.idx,'function paperSessions()')+'\nreturn paperSessions;')([['inf','무매'],['asap','ASAP']],S1);
+        const rows=sum(), all=ps();
+        t('E10 ASAP 모의 — 목록 요약(paperSummary)·전체 적용 대상(paperSessions)에서도 뺀다',rows.map(r=>r.tab).join()==='inf'&&all.map(x=>x[0]).join()==='inf',JSON.stringify([rows,all.map(x=>x[0])])); }
       return check2(S,t,E,bad);
     });
   }
@@ -460,6 +472,11 @@ const MUT=[
   ['날마다 값: 끝 날짜를 종가 끝으로 고정','idx',s=>s.replace("const end={date:lastH>endD?lastH:endD, tot:R.total,","const end={date:endD, tot:R.total,")],
   ['듀얼가드 추이: 입금을 투입에 안 넣음','idx',s=>s.replace("const inflow=Math.max(0,(+L.start||0)+(+st.netFlow||0)); if(!(inflow>0)) continue;","const inflow=Math.max(0,(+L.start||0)); if(!(inflow>0)) continue;")],
   ['합친 추이: 원화 줄을 환율 없이 섞음','idx',s=>s.replace("let k=1; if(r.cur==='krw'){ if(!(+fx>0)) continue; k=1/(+fx); }","let k=1;")],
+  ['ASAP 모의: 재계산에 다시 넣음(옛 코드)','idx',s=>s.replace("      if(!live&&tab==='asap') continue;         // ASAP 모의 뺌(PAPER_TABS 주석)\n","")],
+  ['ASAP 실계좌: 포트폴리오에서도 뺌','idx',s=>s.replace("      if(!live&&tab==='asap') continue;         // ASAP 모의 뺌(PAPER_TABS 주석)","      if(tab==='asap') continue;")],
+  ['ASAP 모의: 시세 선취에 다시 넣음','idx',s=>s.replace("    if(!live&&tab==='asap') continue;   // ASAP 모의 뺌(PAPER_TABS 주석)\n","")],
+  ['ASAP 모의: 목록 요약에 다시 넣음','idx',s=>s.replace("if(!box||!box.sessions||tab==='asap') return;   // ASAP 모의 뺌(PAPER_TABS 주석)\n    box.sessions.forEach(sess=>{","if(!box||!box.sessions) return;\n    box.sessions.forEach(sess=>{")],
+  ['ASAP 모의: 전체 적용에 다시 넣음','idx',s=>s.replace("if(!box||!box.sessions||tab==='asap') return;   // ASAP 모의 뺌(PAPER_TABS 주석)\n    box.sessions.forEach(x=>{","if(!box||!box.sessions) return;\n    box.sessions.forEach(x=>{")],
   ['세션 선: 나간 돈을 안 뺌(합 ≠ 합친 평가액)','idx',s=>s.replace("tot+=t1; inflow+=(+x.last.inflow)*x.k; out+=o1; by.push(t1-o1); }","tot+=t1; inflow+=(+x.last.inflow)*x.k; out+=o1; by.push(t1); }")],
   ['세션 선: 하나여도 그림','idx',s=>s.replace("const ss=(C&&C.sess)||[]; if(ss.length<2) return [];","const ss=(C&&C.sess)||[]; if(!ss.length) return [];")],
   ['세션 선: 무리 색 대신 한 색','idx',s=>s.replace("return {j, color:g.color, dash:","return {j, color:'#9085e9', dash:")],

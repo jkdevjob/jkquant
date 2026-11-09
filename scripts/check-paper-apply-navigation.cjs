@@ -37,7 +37,7 @@ async function application(failLoader=false){
  const fields={p_simstart:{value:'2025-02-03'},paperModal:el('modal')};
  const c=vm.createContext({S,console:{error(){}},setTimeout:()=>0,clearTimeout:()=>{},_paperFilling:false,_paperViewRefreshPromise:null,_fillQuoteCache:null,lastQuote:{},infQuoteCache:null,maQuoteData:null,ivsQuoteData:null,ivsQuote1:null,dcaQuoteData:null,asapQuoteData:null,curUid:'test',window:{fb:{}},saveTimer:null,stateSaveQueue:Promise.resolve(),stateCloudHydrated:true,lastPushedJSON:'',PAPER_TABS:tabs.map(t=>[t,t]),PAPER_CACHESYM:Object.fromEntries(tabs.map(t=>[t,()=>t])),PAPER_LOADERS:{},
   $:id=>fields[id],paperMinDate:()=> '2020-01-01',PAPER_MAX_YEARS:10,PAPER_RAW_WON_MIGRATION:1,
-  paperSessions:()=>tabs.flatMap(t=>S[t].sessions.filter(s=>s.paper).map(s=>[t,s])),paperReadAmt:()=>null,
+  paperReadAmt:()=>null,
   confirm:()=>true,paperRememberForm:()=>{},saveLocal:()=>{},paperEnsureCommonWon:async()=>{},paperRepairLegacyStarts:async()=>0,paperRepairCommonStarts:async()=>0,syncPaperStart:()=>{},loadFX:async()=>{},
   paperViewCacheRead:()=>({rows:[]}),paperViewCacheFresh:()=>true,paperSummary:()=>[],
   divCashOn:()=>false,paperAuto:()=>{S[S.activeTab].sessions.find(s=>s.id===S[S.activeTab].active).hist.push({sim:true,amt:42});void c.pushRemoteNow();},
@@ -46,14 +46,16 @@ async function application(failLoader=false){
  for(const t of tabs)c.PAPER_LOADERS[t]=async()=>{await c.pushRemoteNow();assert.equal(saved.length,0,'temporary replay selection must never reach DB');await Promise.resolve();if(failLoader&&t==='vr')throw Error('quote unavailable');};
  // paperFillAll 이 먼저 종목 시세를 병렬로 받아 둔다(perf(paper)) — 네트워크는 가짜로 둔다
  c.fetchDaily=async()=>null; c.fetchDailyDiv=async()=>null; c.ivsX1Of=()=>'';
- vm.runInContext(fn('async function pushRemoteNow()')+fn('async function paperPrefetchQuotes(opt)')+fn('async function paperBreathe()')+fn('async function paperFillAll(opt)')+fn('async function openPaper()')+fn('async function applyAllSimStart()'),c);
+ vm.runInContext(fn('async function pushRemoteNow()')+fn('async function paperPrefetchQuotes(opt)')+fn('async function paperBreathe()')+fn('async function paperFillAll(opt)')+fn('async function openPaper()')+fn('async function applyAllSimStart()')+fn('function paperSessions()'),c);   // 전체 적용 대상 = 앱 함수 그대로(ASAP 모의 뺌 포함)
  c.refreshPaperView=async(force)=>{assert.equal(force,true);const rows=await c.paperFillAll();await c.pushRemoteNow();return rows;};
  await c.openPaper();assert.equal(saved.length,0,'normal paper open must not replay or write DB');
  assert.equal(S.activeTab,'ma');for(const t of tabs)assert.equal(S[t].active,t+'-live');
  saved.length=0;for(const t of tabs)S[t].sessions[1].hist=[{sim:true,amt:3}];
  await c.applyAllSimStart();assert.equal(S.activeTab,'ma');assert(saved.length>0);
  for(const snapshot of saved){assert.equal(snapshot.activeTab,'ma');for(const t of tabs)assert.equal(snapshot[t].active,t+'-live');}
- for(const t of tabs){assert.deepEqual(S[t].sessions[0],old[t]);const s=S[t].sessions[1];assert.equal(s.simStart,'2025-02-03');assert.deepEqual(clone(s.hist),failLoader&&t==='vr'?[]:[{sim:true,amt:42}]);}
+ for(const t of tabs){assert.deepEqual(S[t].sessions[0],old[t]);const s=S[t].sessions[1];
+  if(t==='asap'){ assert.equal(s.simStart,'2025-01-01','ASAP 모의는 전체 적용에서 뺀다(운영에서 숨김 · 2026-11-09)'); assert.deepEqual(clone(s.hist),[{sim:true,amt:3}],'ASAP 모의 기록은 그대로'); continue; }
+  assert.equal(s.simStart,'2025-02-03');assert.deepEqual(clone(s.hist),failLoader&&t==='vr'?[]:[{sim:true,amt:42}]);}
  assert.equal(c._paperFilling,false);
  console.log('PASS normal paper open is read-only/fast; full apply keeps operating strategy/session and saves completed replay after restoration'+(failLoader?' (loader failure included)':''));
 }

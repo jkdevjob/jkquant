@@ -1,5 +1,15 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · ASAP 세션을 모의투자에서 뺌 · v3.123.3
+
+- `check-portfolio.cjs` **ALL PASS · 변이 53/53 빨간불**.
+  - E8: 실계좌 ASAP(기록 있음)은 포트폴리오(live)에 그대로 · 시세 선취.
+  - E9: 모의 ASAP 은 모의 재계산에서 빠짐 — 줄 없음 · 로더·paperStat 안 부름 · 시세 안 받음 · 세션·기록·보던 칸 그대로.
+  - E10: 목록 요약(paperSummary) · 전체 적용 대상(paperSessions)에서도 빠짐.
+  - 새 변이 5종(재계산 · 포트폴리오에서도 뺌 · 시세 선취 · 목록 요약 · 전체 적용) 모두 빨간불.
+- `check-paper-apply-navigation.cjs` 통과 — 앱 paperSessions 그대로 · 전체 적용 뒤 ASAP 모의 세션의 시작일·기록이 그대로.
+- check-history-preservation · check-login-quote-paper · check-plan-claude-tab 통과.
+
 ## 2026-11-09 · 화면 글자 '플랜' → '듀얼가드' · v3.123.2 (듀얼가드 v2.5.3)
 
 - `check-plan-claude-tab.cjs` **ALL PASS · 변이 22/22 빨간불**.
@@ -9,6 +19,7 @@
 - 알림 시험(settings-notifications · research-notify · gpt-common-notifications) 24 통과 — 새 이름 '무매·듀얼가드·클로드 텐배거' · '🔬 무매·듀얼가드 연구'.
 - check-plan-signal-fill · check-portfolio 48/48 · check-dg-tab 24/24 · check-history-preservation 통과.
 - 파일 훑기: index · plan · 엔진 · 설정 · 세금 · 메뉴 · 알림 설정 · Worker · backtest · admin · settings 의 화면 글자에 '플랜'·띄어 쓴 이름 0.
+- check-before-push 57단계 PASS(main #623 합친 뒤 · 회귀 2817/0). 병합 뒤(d5e1c87) 운영 확인: curl v3.123.2(두 곳) · /plan v2.5.3 · 캐시 판 6 · 엔진 '폐지된 세션' · 알림 설정 이름 · 해시 일치 · Worker 배포 워크플로 성공(08:09 UTC).
 
 ## 2026-11-09 · 무매 서버 자동주문(모의) 예약 삭제 · v3.123.1
 
