@@ -709,7 +709,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1828,7 +1828,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.0</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.1</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -12009,8 +12009,11 @@ function importJSON(e){
 }
 
 /* ── 로그인 / 인증 흐름 ── */
+let _googleLoginBusy=false;   // 한 번에 하나 — 팝업이 떠 있는 동안 또 누르면 앞 요청이 취소돼 'auth/cancelled-popup-request'(2026-11-09 새 사용자 화면 · 게이트와 같은 규칙)
 function googleLogin(){
   if(!window.fb){$('gerr').textContent='로그인 모듈 로딩 중… 잠시 후 다시 눌러주세요.';authLastErr='window.fb 미로딩';return;}
+  if(_googleLoginBusy) return;
+  _googleLoginBusy=true; const gb=$('gbtn'); if(gb) gb.disabled=true;
   $('gerr').textContent='';
   // 팝업 방식만 사용 (모바일 storage-partitioned 환경에서 redirect 가 깨지는 문제 회피)
   window.fb.signInWithPopup(window.fb.auth,window.fb.provider).then(()=>{
@@ -12019,18 +12022,10 @@ function googleLogin(){
     setTimeout(()=>{ if(!appStarted) authWarn('구글 인증은 됐는데 앱이 안 열립니다. 아래 진단 정보를 알려주세요.'); },5000);
   }).catch(e=>{
     const code=e&&(e.code||e.message)||'알 수 없는 오류';
-    if(code==='auth/popup-closed-by-user'||code==='auth/cancelled-popup-request'){
-      $('gerr').textContent='로그인 창이 닫혔어요. 다시 눌러주세요.';
-    }else if(code==='auth/popup-blocked'){
-      const nm=(typeof inAppName==='function')&&inAppName();
-      $('gerr').textContent = nm
-        ? (nm+' 안에서는 로그인 팝업이 차단됩니다. 위 안내대로 기본 브라우저로 열어주세요.')
-        : '팝업이 차단됐어요. 브라우저 주소창의 팝업 차단을 허용하거나, Safari/Chrome 기본 브라우저로 열어 다시 시도하세요.';
-    }else{
-      $('gerr').textContent='로그인 실패: '+code;
-    }
+    /* 오류 글자는 jk-access 한 벌(게이트·듀얼가드와 같음) — 취소 코드는 ''(보여 줄 게 없다 · 새 요청이 제 결과를 알린다) */
+    $('gerr').textContent=(window.JKAccess&&JKAccess.loginErrorText)?JKAccess.loginErrorText(e):('로그인 실패: '+code);
     authLastErr=String(code);
-  });
+  }).finally(()=>{ _googleLoginBusy=false; if(gb) gb.disabled=false; });
 }
 async function retryDbLoad(){
   const user=window.fb&&window.fb.auth&&window.fb.auth.currentUser;
@@ -12290,21 +12285,8 @@ function authWarn(msg){
    그 에러 화면은 firebaseapp.com 에서 뜨므로 우리 코드로는 catch 도 못 한다
    → 누르기 전에 안내해서 기본 브라우저로 유도하는 것이 유일한 방어.
    (근본 해결은 authDomain 을 우리 도메인으로 옮기고 /__/auth/* 를 프록시하는 것) */
-const INAPP_UA=[[/NAVER/i,'네이버 앱'],[/KAKAOTALK/i,'카카오톡'],[/Instagram/i,'인스타그램'],
-  [/FBAN|FBAV|FB_IAB/i,'페이스북'],[/\bLine\//i,'라인'],[/DaumApps/i,'다음 앱'],
-  [/\bBand\//i,'밴드'],[/everytimeApp/i,'에브리타임'],[/Snapchat/i,'스냅챗'],[/TwitterAndroid|Twitter for/i,'X(트위터)']];
-function inAppName(ua){
-  ua=(ua==null?(navigator.userAgent||''):String(ua));
-  for(const [re,nm] of INAPP_UA) if(re.test(ua)) return nm;
-  /* 이름을 모르는 앱 내장 브라우저 — 구글은 앱 내장 화면(WebView)에서 로그인을 막는다.
-     iOS 의 진짜 브라우저(사파리·크롬·파이어폭스·엣지·웨일)는 UA 끝에 Safari/ 가 붙는데 내장 화면은 안 붙는다.
-     홈 화면에 추가한 앱(standalone)도 안 붙으므로 그건 뺀다. 안드로이드 내장 화면은 '; wv)' 가 붙는다. */
-  let standalone=false;
-  try{ standalone=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches); }catch(e){}
-  if(/iPhone|iPad|iPod/i.test(ua) && /AppleWebKit/i.test(ua) && !/Safari\//i.test(ua) && !standalone) return '앱 내장 브라우저';
-  if(/Android/i.test(ua) && /; wv\)/i.test(ua)) return '앱 내장 브라우저';
-  return null;
-}
+/* 앱 내장 브라우저 판별은 jk-access.js 한 곳(JKAccess.inAppName) — 운영·듀얼가드·게이트가 같은 표를 쓴다(2026-11-09). 이름은 그대로 두어 부르는 곳(진단·안내 상자·로그인)은 안 바뀐다 */
+function inAppName(ua){ return (window.JKAccess&&JKAccess.inAppName)?JKAccess.inAppName(ua):null; }
 function copyAppUrl(){
   const u=location.origin+location.pathname;
   const done=()=>{ const e=document.getElementById('iw_copied'); if(e){e.textContent='✓ 복사됨 — 브라우저 주소창에 붙여넣으세요';} };

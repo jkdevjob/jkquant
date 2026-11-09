@@ -61,7 +61,11 @@ await t('L2 자산플랜 8초 타이머도 Firebase 가 답했으면 "늦어지�
   assert(/onAuthStateChanged\(auth,async user=>\{\s*\n\s*window\.__planAuthResolved=true;/.test(plan));
 });
 await t('L3 앱 내장 브라우저 감지 — 이름을 아는 앱 + 이름 모르는 iOS/안드로이드 내장 화면 · 진짜 브라우저·홈 화면 앱은 아님',async()=>{
-  const src=(html.match(/const INAPP_UA=\[[\s\S]*?\]\];/)||[''])[0]+'\n'+fn('function inAppName(ua){');
+  // 판별 표·함수는 jk-access.js 한 곳으로 옮겼다(2026-11-09) — index 는 위임한다
+  const acc=fs.readFileSync(path.join(ROOT,'jk-access.js'),'utf8');
+  const src=(acc.match(/var INAPP_UA=\[[\s\S]*?\]\];/)||[''])[0]+'\n'+fnOf(acc,'function inAppName(ua){');
+  assert(/function inAppName\(ua\)\{ return \(window\.JKAccess&&JKAccess\.inAppName\)\?JKAccess\.inAppName\(ua\):null; \}/.test(html),'index 는 jk-access 판별에 위임');
+  assert(!/const INAPP_UA=/.test(html),'index 에 표가 남아 있으면 두 군데');
   const mk=(standalone)=>new Function('navigator','window',src+'\nreturn inAppName;')({userAgent:'',standalone},{matchMedia:()=>({matches:false})});
   const f=mk(false), fs_=mk(true);
   const iOS='Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko)';

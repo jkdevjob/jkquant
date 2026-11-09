@@ -1,5 +1,14 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 로그인 게이트 — 팝업 한 번에 하나 · 오류 글자 한 벌 · 앱 내장 브라우저 안내 · v3.127.1 (듀얼가드 v2.5.5)
+
+- `check-login-gate.cjs` **ALL PASS · 변이 8/8 빨간불**(실제 jk-access 를 가짜 문서·가짜 Firebase 로).
+  - G1 떠 있는 동안 두 번 눌러도 signInWithPopup 1회 · 단추 disabled · 끝나면 풀림 · 취소 '' · 닫음·차단(기본/카카오톡 UA)·네트워크·도메인·모름·코드 없음 글자 · 실패 뒤 재시도 가능 · select_account 유지.
+  - G2 판별 8 UA(Safari·CriOS·네이버·카카오톡·이름 없는 iOS 내장·안드로이드 Chrome·안드로이드 wv·인스타) · 홈 화면 앱은 아님.
+  - G3 카카오톡 UA 로그인 화면에 ⚠ 「다른 브라우저로 열기」 · Safari 는 없음.
+- check-login-quote-paper(L3 jk-access 판별 + index 위임) · check-ui-common · check-subtabs 14/14 · check-plan-claude-tab 23/23 · tests/swim 17 통과.
+- 실제 기기에서 그 사용자가 다시 로그인하는 것은 배포 뒤 확인 — 앱 안 브라우저였다면 안내대로 기본 브라우저로 열어야 한다(구글이 WebView 로그인을 막는다).
+
 ## 2026-11-09 · 모의 목록 = 운영 탭·세션 순서 · 운영 첫 화면 = 첫 탭 · v3.127.0
 
 - `check-portfolio.cjs` **ALL PASS · 변이 80/80 빨간불**(새 F5~F8 · 변이 7종).

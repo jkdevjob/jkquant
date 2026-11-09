@@ -1,5 +1,15 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-09 · 로그인 게이트 — 팝업 한 번에 하나 · 오류 글자 한 벌 · 앱 내장 브라우저 안내 · v3.127.1 (듀얼가드 v2.5.5)
+
+- 사용자(11/09, 새 사용자 화면): "Firebase: Error (auth/cancelled-popup-request)." — 다른 사람이 로그인하려다 이 글자를 봤다.
+- 원인: 게이트(jk-access guard)의 로그인이 팝업이 떠 있는 동안 또 눌리는 걸 막지 않았고(폰에선 팝업이 새 탭으로 열려 돌아와 다시 누르기 쉽다), Firebase 가 앞 요청을 취소하며 낸 코드를 `e.message` 그대로 보였다. 운영 페이지에만 있던 앱 내장 브라우저 안내가 게이트엔 없었다.
+- jk-access.js: `INAPP_UA`·`inAppName`(운영에서 옮김) · `loginErrorText` · guard 로그인 한 번에 하나(`loginBusy` · 단추 잠금 · "구글 로그인 창을 열었습니다" 안내 · 끝나면 풀림) · 로그인 화면에 앱 안 ⚠ 안내(`.jwarn`) · 내보냄.
+- index.html: `inAppName` 은 JKAccess 위임(표 삭제) · googleLogin 한 번에 하나(`_googleLoginBusy` · gbtn 잠금) · 오류 글자는 `JKAccess.loginErrorText`.
+- plan.html: planLoginImpl 한 번에 하나 · 같은 글자 · 머리 로그인 단추도 planLoginImpl 로(따로 signInWithPopup 안 함).
+- 시험: 새 check-login-gate(G1 한 번에 하나·오류 글자 여덟 경우 · G2 판별 · G3 안내 · G4 배선) · 변이 8종 → 8/8 · 회귀에 연결. check-login-quote-paper L3 은 jk-access 에서 판별을 읽고 index 위임을 확인.
+- 버전: index v3.127.0 → v3.127.1 · 듀얼가드 v2.5.4 → v2.5.5.
+
 ## 2026-11-09 · 모의 목록 = 운영 탭·세션 순서 · 운영 첫 화면 = 첫 탭 · v3.127.0
 
 - 사용자(11/09): "모의투자에서 보이는 순서를 운영탭 세션 순서대로 표출해" · "운영메뉴 들어가면 왜 섀넌이 선택되지 항상? 마지막 보던거나 무조건 첫 탭으로 가"
