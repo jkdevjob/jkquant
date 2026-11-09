@@ -11,7 +11,7 @@ const worker="https://alerts.example";
 const names={
   gpt:"연구(지피티) · 전체 탭",
   ipo:"공모주·청약 일정",presale:"대전·세종 신규분양",
-  research:"연구 결과 · 무매·플랜·클로드 텐배거",job:"대전·세종 JOB 신규공고",swim:"전국 수영대회 신규·변경"
+  research:"연구 결과 · 무매·듀얼가드·클로드 텐배거",job:"대전·세종 JOB 신규공고",swim:"전국 수영대회 신규·변경"
 };
 const response=body=>new Response(JSON.stringify(body),{headers:{"content-type":"application/json"}});
 const row=(html,topic)=>html.split('<div class="alert-item">').find(x=>x.includes('data-topic="'+topic+'"'))||"";

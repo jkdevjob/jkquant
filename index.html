@@ -689,7 +689,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.123.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.123.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1808,7 +1808,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.123.1</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.123.2</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -3267,7 +3267,7 @@ function imAutoTpBadge(c){
   return `<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(139,124,246,.12);border:1px solid rgba(139,124,246,.32)">🧪 <b style="color:var(--vio)">익절 변환 자동 · ${label}</b> · ${hold?'이번 사이클':'다음 사이클'} 익절 <b>${c.tp}%</b>`
     +`<span style="color:var(--faint)"> (${detail}${hold&&c.cycStart?' · 사이클 시작 '+c.cycStart:''} · 별%·복귀선도 같이 · 원문 V4.0 아님)</span></div>`;
 }
-function imRowsNote(n){ return `<div class="note">아래로 LOC 매수 추가 — <b>V4.0 정식</b> 주문입니다. 가격은 <b>1회매수금 ÷ (본 주문 수량 + k)</b>, 1주씩. 종가가 내려갈수록 같은 1회매수금으로 더 삽니다 (T 는 본 주문만 셉니다). 줄 수 ${n}줄은 <b>JK 투자 구현값</b>입니다 — 원문 표는 '…' 로 이어질 뿐 개수를 정하지 않습니다. 모의·백테·서버·플랜이 같은 주문을 씁니다.</div>`; }
+function imRowsNote(n){ return `<div class="note">아래로 LOC 매수 추가 — <b>V4.0 정식</b> 주문입니다. 가격은 <b>1회매수금 ÷ (본 주문 수량 + k)</b>, 1주씩. 종가가 내려갈수록 같은 1회매수금으로 더 삽니다 (T 는 본 주문만 셉니다). 줄 수 ${n}줄은 <b>JK 투자 구현값</b>입니다 — 원문 표는 '…' 로 이어질 뿐 개수를 정하지 않습니다. 모의·백테·서버·듀얼가드가 같은 주문을 씁니다.</div>`; }
 /* ── 리버스 별지점 = 직전 5거래일 종가 평균 ──
    여기만은 대체값을 두지 않는다. 예전엔 5일 종가가 없으면 '최근 체결가 5건 평균 →
    전일 종가 1개 → 평단'으로 내려갔는데, 셋 다 별지점이 아니다:
@@ -8372,7 +8372,7 @@ function paperFxFallback(){
    - 평소 모의 페이지를 열 때는 저장된 표를 즉시 보여 주고 전 전략 재생을 다시 하지 않는다.
    - 하루가 바뀌었거나 원장이 바뀌면 백그라운드에서 한 번만 증분 갱신한다.
    - 전체 적용/오늘 갱신은 force=true로 명시적으로 다시 계산한다. */
-const PAPER_VIEW_CACHE_VER=5;   // 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
+const PAPER_VIEW_CACHE_VER=6;   // 6: 줄 설명·이름에 남은 옛 글자(띄어 쓴 이름 · '5년'이 붙은 설명)를 다시 셈 (2026-11-09 사용자: 이름은 '듀얼가드' · '5년' 지움) · 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
 let _paperViewRefreshPromise=null;
 function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
 function paperViewSig(){
@@ -9191,7 +9191,7 @@ function pfPlanRow(L, Q, E){
 async function pfPlanRows(){
   const E=window.JKPlanSessionEngine, list=pfPlanLedgers(); if(!list.length) return [];
   if(!E||!E.ledgerCalc) return list.map(L=>({tab:'plan',key:L.key,id:L.id||'',label:'듀얼가드',name:L.name,cur:curOf({ticker:'TECL'}),pending:true,inflow:0,total:0,out:0,
-    error:'플랜 엔진(plan-session-engine.js)을 불러오지 못했습니다 — 새로고침하세요.'}));
+    error:'듀얼가드 엔진(plan-session-engine.js)을 불러오지 못했습니다 — 새로고침하세요.'}));
   const Q=await loadPlanPaperData(false);
   return list.map(L=>{ const r=pfPlanRow(L,Q,E); try{ r.series=pfPlanSeries(L,Q,E,r); }catch(e){ console.warn('portfolio plan series',e); r.series=null; } return r; });
 }
@@ -9429,7 +9429,7 @@ function pfTaxHtml(X, T){
   const k=v=>(v<0?'−':'')+Math.round(Math.abs(+v||0)).toLocaleString('ko-KR')+'원';
   if(!X.items.length&&!X.skipped&&!X.domestic) return '';
   const rows=X.items.map(it=>'<tr><td><i class="sw" style="background:'+pfGroup(it.r.tab).color+'"></i>'+pfEsc(it.r.label)+(it.r.tab!=='plan'&&it.r.sym?' · '+pfEsc(it.r.sym):'')
-    +'<div class="sub">'+(it.exact?'플랜 세금 점검과 같은 계산(결제일 환율 · 선입선출)':'추정 — 달러 실현손익 × 결제일 환율')+' · 매도 '+it.n+'번</div></td><td class="num">'+k(it.krw)+'</td></tr>').join('');
+    +'<div class="sub">'+(it.exact?'듀얼가드 세금 점검과 같은 계산(결제일 환율 · 선입선출)':'추정 — 달러 실현손익 × 결제일 환율')+' · 매도 '+it.n+'번</div></td><td class="num">'+k(it.krw)+'</td></tr>').join('');
   const notes=[];
   if(X.skipped) notes.push('환율·일별 기록이 없어 '+X.skipped+'개 세션은 빠짐');
   if(X.domestic) notes.push('국내(원화) 종목 세션 '+X.domestic+'개는 해외주식 양도세 대상이 아니라 뺌');
@@ -9511,7 +9511,7 @@ function pfRender(){
     +(r.tab==='plan'?pfDgText(r):(r.status||'—'))+'</div></div>').join('')+'</div>';
   h+=pfTaxHtml(X,T);
   h+='<div class="pf-cards">'+rows.map(r=>pfCard(r,Z)).join('')+'</div>';
-  h+='<div class="pf-note">평가는 지금 시세(장중이면 장중가) 기준 · 원화 종목 세션은 지금 환율로 달러 환산해 더합니다(표시용). 세션별 숫자는 그 전략 화면·모의 목록과 같은 계산입니다 — 무매·VR·섀넌 등은 그 탭의 계산, 듀얼가드는 플랜 화면 계좌 칸과 같은 장부 계산.'
+  h+='<div class="pf-note">평가는 지금 시세(장중이면 장중가) 기준 · 원화 종목 세션은 지금 환율로 달러 환산해 더합니다(표시용). 세션별 숫자는 그 전략 화면·모의 목록과 같은 계산입니다 — 무매·VR·섀넌 등은 그 탭의 계산, 듀얼가드는 듀얼가드 화면 계좌 칸과 같은 장부 계산.'
     +(Z.missing?' · 시세·환율 대기 '+Z.missing+'개는 합계에서 뺐습니다.':'')+'</div>'+pfOffHtml();
   box.innerHTML=h;
   try{ pfChartBind(); }catch(e){ console.warn('portfolio chart',e); }

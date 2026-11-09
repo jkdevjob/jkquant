@@ -10,6 +10,16 @@
 - 실제 원천을 별도 임시 폴더에 쓴 결과: UTC11/7 정본 바이트 불변, 부분 UTC 원본으로 **KST11/8 288봉·기준 손익−0.1737876974%·그림자 날짜 복원 PASS**. 운영 장부는 변경하지 않았다. 수정 뒤 G1 395일×2 대조/3변이 재실행 PASS, 기존 BTC 경계와 daily1 shadow 시험 PASS.
 - 전체 검사: Windows check-before-push는 14/57의 리눅스 전용 Git 경로/충돌 재현 환경에서 중단(로컬 전체 PASS 아님). 동일한 정본 `check.yml`을 Linux에서 실행한 [42581591143](https://github.com/jkdevjob/jkquant/actions/runs/42581591143)은 **57단계 전부 PASS**, 엔진 회귀 **2,830 PASS / 0 FAIL**(검증 head `fd4014d2`). 공용 검사에 포함된 GPT·Claude 양쪽 기존 시험과 새 BTC 값3/변이3도 성공했다. 이후 합친 최신 main을 포함한 PR 최종 CI는 별도 확인한다.
 
+## 2026-11-09 · 화면 글자 '플랜' → '듀얼가드' · v3.123.2 (듀얼가드 v2.5.3)
+
+- `check-plan-claude-tab.cjs` **ALL PASS · 변이 22/22 빨간불**.
+  - E1: 듀얼가드·운영 화면 글자(주석 뺀)에 '플랜' 0 · '5년' 0 · 띄어 쓴 이름 0 · 엔진 '폐지된 세션'.
+  - D4: 모의 목록 캐시 판 ≥6.
+  - 새 변이: 듀얼가드 화면 '플랜' 되살림 · 운영 '플랜' 되살림 · 캐시 판 5 · 엔진 '폐지된 플랜'.
+- 알림 시험(settings-notifications · research-notify · gpt-common-notifications) 24 통과 — 새 이름 '무매·듀얼가드·클로드 텐배거' · '🔬 무매·듀얼가드 연구'.
+- check-plan-signal-fill · check-portfolio 48/48 · check-dg-tab 24/24 · check-history-preservation 통과.
+- 파일 훑기: index · plan · 엔진 · 설정 · 세금 · 메뉴 · 알림 설정 · Worker · backtest · admin · settings 의 화면 글자에 '플랜'·띄어 쓴 이름 0.
+
 ## 2026-11-09 · 무매 서버 자동주문(모의) 예약 삭제 · v3.123.1
 
 - 전체 회귀 **2817 PASS / 0 FAIL** (예약 크론 검사 · 워크플로 로그 검사를 대상이 없어 뺀 수).
@@ -32,6 +42,7 @@
 - 색 검증(dataviz validate_palette · 바탕 #171c2e): 무리 색 세 개 모든 짝 PASS(색약 ΔE 13.0↑ · 일반 19.7↑ · 대비 3:1↑). 금색↔초록 색약 ΔE 6.9 WARN → 투입 점선으로 가름. 예전 파랑↔보라 ΔE 1.9 FAIL → 합친 선 흰색.
 - 눈 확인: 앱 함수(pfCombine · pfChartHtml · pfChartBind)를 그대로 떼어 세션 셋(듀얼가드 · 무매 · 섀넌)으로 그림 → 폰 390 · PC 1280 오류 0 · 가로 넘침 0 · 끝 값 안 겹침 · 값 상자 이름 간격 고침.
 - 미확인: 실제 계정 데이터로 본 포트폴리오 화면.
+- 병합 뒤(01b5ec3) 운영 확인: curl 운영 v3.123.0(두 곳) · /plan v2.5.2 · 엔진 이름 '듀얼가드' · 띄어 쓴 이름 0 · index·plan 해시가 로컬과 같다. GitHub 검사 3개 통과(regression 07:10~07:12 · check 07:10~07:32 UTC) · main 푸시 검증 통과(07:10~07:31).
 
 ## 2026-11-09 · 클라우드 저장 실패 "undefined" is not valid JSON · v3.122.2
 
@@ -42,7 +53,7 @@
 - 모의 목록 계산(`paperFillAll` 실제 함수 · 듀얼 가드 모의 세션) 뒤 `S.plan` 에 active 칸이 생기지 않음 · 무매 active 그대로.
 - 변이 3종 빨간불: 합치기 옛 코드 · 저장 뒤 active 덮기 옛 코드 · 모의 목록 옛 되돌리기.
 - `check-before-push` 57단계 전부 PASS(전체 회귀 2830 PASS / 0 FAIL 포함 · `--offline` 아님).
-- 병합 뒤(58ff413) 운영 확인: curl 운영 v3.122.2(두 곳) · 고친 합치기·되돌리기 코드 있음 · index 해시가 로컬과 같다.
+- 병합 뒤(58ff413) 운영 확인: curl 운영 v3.122.2(두 곳) · 고친 합치기·되돌리기 코드 있음 · index 해시가 로컬과 같다. GitHub 검사 3개 통과(check 06:45~07:06 UTC).
 - 미확인: 사용자 화면에서 새로고침 뒤 오류가 다시 안 뜨는지.
 
 ## 2026-11-09 · 듀얼 가드 '현재 투자중' 이름 바꾸기 · v3.122.1 (플랜 v2.5.1)

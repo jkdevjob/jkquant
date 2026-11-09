@@ -14,9 +14,9 @@ const TRADE_TOPICS=new Set(RESEARCH_TRADE_TOPICS);
 const GPT_TOPICS=new Set([...TRADE_TOPICS,"tenbagger_gpt"]);
 const LEGACY_GPT_TOPICS=["opening","daytrading","crypto","soxl","tenbagger_gpt"];
 const VALID_TOPICS=new Set(["presale","job","ipo","research","gpt","swim",...GPT_TOPICS]);
-/* 무매·5년 플랜 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
+/* 무매·듀얼가드 매일 연구 결과 — 연구 기록(research/daily 브랜치)을 연다. 요약은 GitHub Actions 가 감시키로 /research-note 에 보낸다 */
 const RESEARCH_APP="https://github.com/jkdevjob/jkquant/blob/research/daily/research/im_plan/RESEARCH_LOG.md";
-const RESEARCH_STUDIES={im_plan:{name:"무매·5년 플랜 연구",url:RESEARCH_APP},
+const RESEARCH_STUDIES={im_plan:{name:"무매·듀얼가드 연구",url:RESEARCH_APP},
   tenbagger:{name:"텐배거 전향 연구",url:BASE_APP+"/scalping?strategy=tenbagger"},
   tenbagger_claude:{name:"[클로드 연구 텐배거]",url:BASE_APP+"/claude?tab=tenbagger",trade:true}};
 /* 매매 연구(trade:true)는 실제 매수·매도 때만 보낸다(사용자 요청 2026-10-13) — 제목은 '[클로드 연구 텐배거] 🟢 매수 10/15' 처럼 머리말로 시작 */
@@ -696,7 +696,7 @@ export class PresaleAlertStore{
       url:IPO_APP,createdAt:new Date().toISOString()
     }:topic==="research"?{
       id:"test-research-"+Date.now(),type:"research",title:"🔬 매일 연구 웹알림 테스트",
-      body:"무매·5년 플랜·클로드 텐배거 연구 알림이 정상 연결되었습니다.",
+      body:"무매·듀얼가드·클로드 텐배거 연구 알림이 정상 연결되었습니다.",
       url:RESEARCH_APP,createdAt:new Date().toISOString()
     }:topic==="swim"?{
       id:"test-swim-"+Date.now(),type:"swim",title:"🏊 수영대회 웹알림 테스트",
