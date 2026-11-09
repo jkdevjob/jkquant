@@ -28,9 +28,9 @@
     {path:'/workout',label:'운동 타이머',mode:'public',order:82,after:'/job'},
     {path:'/settings',label:'설정',mode:'public',order:85},
     {path:'/admin',label:'관리자',mode:'admin',order:90},
-    /* 듀얼 가드(옛 자산플랜 · 2026-11-09)는 운영 탭 안으로 들어갔다 — 메뉴에는 안 보이고, 주소로 바로 여는 권한(관리자가 정한 공개/관리자)은 그대로 둔다.
+    /* 듀얼가드(옛 자산플랜 · 2026-11-09)는 운영 탭 안으로 들어갔다 — 메뉴에는 안 보이고, 주소로 바로 여는 권한(관리자가 정한 공개/관리자)은 그대로 둔다.
        목록 맨 끝에 둔다: 텐배거 숨김 시험의 변이가 파일의 첫 ',navHidden:true'(텐배거)를 지운다. */
-    {path:'/plan',label:'듀얼 가드',mode:'public',order:21,navHidden:true}
+    {path:'/plan',label:'듀얼가드',mode:'public',order:21,navHidden:true}
   ];
   var menuCache=null, menuSeq=0;
   /* 메뉴 순서·표시는 DB 설정(settings/siteMenu)을 읽어야 안다. 그 전엔 페이지 HTML 의 기본 순서라,

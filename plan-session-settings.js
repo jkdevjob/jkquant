@@ -21,7 +21,7 @@ function update(session,input,options){
   if(!paper&&hasLedgerActivity(x.ledger)&&!restoring&&(cap!==+st.startCapital||start!==st.startDate)){
     throw Error('거래 또는 보유내역이 있는 운영 세션의 시작자산·시작일은 거래이력의 시작잔고 수정에서 변경하세요.');
   }
-  x.name=String(input.name||'').trim()||x.name||x.horizon+'년 세션';
+  x.name=String(input.name||'').trim()||x.name||'듀얼가드 세션';
   x.paper=paper;x.simStart=paper?start:'';
   x.settings={...st,startCapital:restoring?+liveBase.startCapital:cap,monthlyAdd:monthly,targetCapital:target,startDate:restoring?liveBase.startDate:start};
   x.settings.alphaRules='base';   // 규칙은 기본 하나(2026-11-08 새 규칙·공격형 폐지) — 무엇을 넘겨도 base 로 저장한다
