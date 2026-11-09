@@ -5,7 +5,8 @@
 - `check-portfolio.cjs` **ALL PASS · 변이 82/82 빨간불**(새 I4 · I4b · 변이 2종).
   - I4 섀넌 세션 기록 01-04·01-09 · 종가 01-01~05 → 걸음 날 01-04·01-05 둘뿐 → MDD null(그릇 없을 때와 같음) · 그릇엔 [01-04 2×40+50, 01-05 2×50+50, 01-09 끝 값 999 · hv.USD 154] 셋. I4b 종가 뒤(01-07) 시작 → 끝 값 하나(날짜 01-07). I1~I3 · Q5 그대로.
   - 변이: `D.length<3` 로 통째로 빠짐(옛 코드 · 섀넌 선 빠짐 재현) · 끝 값을 사흘 미만이면 안 넣음 → 둘 다 빨간불.
-- 실제 포트폴리오 화면의 섀넌 선·종목별 USD 는 배포 뒤 사용자 확인.
+- 배포 확인(PR #636 squash cd427d4 · GitHub 조각 4개 + check 성공 run 2483): curl 운영 index v3.127.3(#appVerTop·#appVer) · '📈 평가액 추이' 1 · '합친 평가액 추이' 0 · `const sink=(typeof _pfSeriesSink` 1 · 접근 이름 '평가액 추이' 1.
+- 실제 포트폴리오 화면의 섀넌 선·종목별 USD 는 사용자 확인(첫날은 점 하나).
 
 ## 2026-11-09 · 검사 시간 단축 — 단계 목록 한 곳 · 로컬 병렬 · GitHub 조각 4개 · 갭하락 변이 하네스
 
@@ -15,7 +16,7 @@
 - 옛 check.yml 파서(57단계)와 새 목록 파서의 이름·명령이 JSON 으로 같음(이사 뒤 확인).
 - 갭하락 변이 하네스(`scripts/mutation_test_opening_gapdown.py`): 고치기 전 — 변이 없는 원본 사본이 사본 폴더에서 `FAILED (failures=2)`(test_daily_board_same_kst_dates · test_holiday_vs_open_day — `_krx_calendar.js` 가 없어 2026-10-05 가 개장일로 읽힘) → 파이썬 변이 145개 전부 '잡힘'(무효). 고친 뒤 — 대조군 py·js 초록 · 살아남은 변이 3개 드러남(history rows not scored picks · arena admits gate fail · soxl rsi off not off) → 시험 3개 보강(MutationCoverageTest 2 · ArenaTest 1 · test_opening_gapdown.py 94 OK) → **399/399 잡힘 · 대조군 2 · 1분 41초**(12 일꾼 · 하나씩 17분 02초). 하네스 변이 2종 빨간불: no-op 변이 추가 → `FAIL survived` 종료 1 · 달력 사본 빼면 → `FAIL control … 하네스 무효` 종료 1.
 - 전체 검사(`node scripts/check-before-push.cjs` · 병렬 4 · 외부 빌드 포함): 2차(갭하락 하나씩) **58/58 PASS · 17분 30초** · 최종(갭하락 풀) **58/58 PASS · 2분 25초**(가장 오래: 갭하락 2분 21초 · 부동산 1분 54초 · 회귀 1분 13초). 단계 시간 합(하나씩 추정): 고치기 전 22분 14초 → 7분 45초.
-- GitHub run 2482(a6ee31f): 조각 1 2분 40초 · 조각 3 1분 29초 · 조각 4 1분 29초 초록 · 조각 2 빨간불(텐배거 GPT ← numpy 없음 · 1분 52초에 멈춤) · check 빨간불(합치기 동작 확인). 고친 뒤(조각 pip 합집합 · 명시) 다시 돌린 결과는 아래 v3.127.3 PR 로 확인.
+- GitHub run 2482(a6ee31f): 조각 1 2분 40초 · 조각 3 1분 29초 · 조각 4 1분 29초 초록 · 조각 2 빨간불(텐배거 GPT ← numpy 없음 · 1분 52초에 멈춤) · check 빨간불(합치기 동작 확인). 고친 뒤(조각 pip 합집합 · 명시) run 2483(da6a834 · workflow_dispatch): 조각 1 2분 39초 · 조각 2 3분 05초 · 조각 3 1분 49초 · 조각 4 1분 46초 · check 성공 · 시작→끝 3분 20초(옛 한 작업 ~22분). PR #636 squash cd427d4.
 - `check-ci-steps.cjs` **32건**(C5 조각 pip: 조각 1/2 인데 합집합 2줄 먼저 · 단계 안 pip 뺌 · offline 설치 없음) · 변이 M11(합집합을 조각 단계만으로) 빨간불.
 
 ## 2026-11-09 · 섀넌 기록 시트 · v3.127.2
