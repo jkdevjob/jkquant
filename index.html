@@ -327,6 +327,18 @@ body.portfoliopage #fab{display:none!important}
 .pf-tip .k{display:inline-block;width:12px;height:2px;margin-right:6px;vertical-align:middle}
 .pf-tip .nm{display:inline-block;max-width:150px;margin-left:4px;overflow:hidden;text-overflow:ellipsis;vertical-align:bottom}
 .pf-legend2{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:11.5px;color:var(--dim);margin:6px 0 2px}
+/* 세션별 · 종목별 막대 표 (2026-11-09) — 줄마다 이름·금액·수익률 / 막대 / 보유. 막대 끝 4px 둥글게 · 여러 전략 칸은 2px 틈 */
+.pf-hb{padding:7px 0;border-top:1px solid var(--line);min-width:0}
+.pf-sec h3+.pf-hb{border-top:0;padding-top:2px}
+.pf-hb .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12.5px;min-width:0}
+.pf-hb .nm{font-weight:800;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf-hb .nm small{font-weight:600;color:var(--faint);margin-left:6px;font-size:11px}
+.pf-hb .v{flex:0 0 auto;white-space:nowrap;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+.pf-hb .v b{margin-left:7px}
+.pf-hb .bar{height:8px;border-radius:4px;background:var(--panel2);margin:5px 0 4px;overflow:hidden}
+.pf-hb .bar>span{display:flex;gap:2px;height:100%;border-radius:4px;overflow:hidden;min-width:2px}
+.pf-hb .bar>span>i{display:block;height:100%;min-width:2px}
+.pf-hb .sub{font-size:11.5px;color:var(--dim);line-height:1.5;overflow-wrap:anywhere}
 .pf-legend2 .k{display:inline-block;width:14px;height:2px;margin-right:5px;vertical-align:middle}
 .pf-legend2 .k.val{background:var(--pf-val);height:3px}.pf-legend2 .k.in{background:repeating-linear-gradient(90deg,var(--pf-in) 0 5px,transparent 5px 8px)}
 .pf-legend2 .ks{display:inline-block;margin-right:5px;vertical-align:middle}
@@ -689,7 +701,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.123.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.124.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1808,7 +1820,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.123.3</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.124.0</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -7979,7 +7991,7 @@ function paperMdd(tab, sess, R, hist){
    부르는 쪽이 S.activeTab·box.active 를 그 세션으로 맞춰 둔 상태여야 한다. */
 function paperRaw(tab, sess){
   const h=sess.hist||[];
-  let inflow=0, total=0, price=0, sym='', _out=null, qty=0, qty1=0, price1=0;
+  let inflow=0, total=0, price=0, sym='', _out=null, qty=0, qty1=0, price1=0, sym1='', cost1=0;   // sym1·cost1 = 섀넌 1배수 짝 종목·그 원가(포트폴리오 종목별)
   let realized=0, turnover=0, cost=0;   // 세후 TR — 누적 실현손익 · 누적 거래액(수수료 없는 장부용) · 지금 보유분의 원가
   try{
     const st=sess.settings||{};
@@ -8012,7 +8024,7 @@ function paperRaw(tab, sess){
       const c=computeIvs(); price=c.price||0;
       qty=c.qty;
       let ev=price*c.qty;
-      if(c.X1 && c.qty1>0){ const s1=ivsX1Of(sym);
+      if(c.X1 && c.qty1>0){ const s1=ivsX1Of(sym); sym1=s1;
         const q1=(ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===s1)?ivsQuote1:null;
         qty1=c.qty1; price1=((q1&&(q1.price>0?q1.price:(q1.last&&q1.last.close)))||c.avg1||0);
         ev += qty1*price1; }
@@ -8020,7 +8032,7 @@ function paperRaw(tab, sess){
       inflow=(c.principal||0)+(c.added||0);                  // 출금을 빼지 않는다 — 분자에 도로 더하므로
       total=ev + (c.cash||0) + (c.withdrawn||0) + _dv.divCash;
       _out={saved:_dv.divCash, withdrawn:c.withdrawn||0, simple:false};
-      realized=c.realized||0; cost=(c.avg||0)*(c.qty||0)+(c.avg1||0)*(c.qty1||0);
+      realized=c.realized||0; cost1=(c.avg1||0)*(c.qty1||0); cost=(c.avg||0)*(c.qty||0)+cost1;
     }else if(tab==='ma'){
       const c=computeMa(); price=c.ready?(c.price||c.lastClose||0):0;
       const L=maLedger(h, price, +st.principal||0);
@@ -8053,7 +8065,7 @@ function paperRaw(tab, sess){
   }catch(e){ console.error('paperRaw',tab,e); }
   /* k = 주가와 무관한 나머지. 총자산이 주가에 선형이라 어느 주가로 빼도 같은 값이다 —
      그래서 MDD를 잴 때 그날 종가만 갈아끼우면 된다. */
-  return {inflow, total, price, sym, qty, qty1, price1, out:_out, realized, turnover, cost,
+  return {inflow, total, price, sym, qty, qty1, price1, sym1, out:_out, realized, turnover, cost, cost1,
           k: total - qty*price - qty1*price1};
 }
 /* 모의 성과 목록의 '세션' 칸에 적을 주요 설정 — 종목 뒤에 붙는다.
@@ -8162,10 +8174,15 @@ function paperStat(tab, sess){
      현재 + 인출 = 최종. 단리 세션은 초과익이 계좌 밖으로 빠지므로 이 셋이 크게 갈린다. */
   const outAmt=(_out&&((_out.saved||0)+(_out.withdrawn||0)))||0;
   const inflowWon=paperInflowWon(tab,sess,base);
-  return {tab, id:sess.id, name:sess.name, opts:paperOpts(tab,st), sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, inflowWon, total,
+  const row={tab, id:sess.id, name:sess.name, opts:paperOpts(tab,st), sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, inflowWon, total,
     ret:(total/base-1)*100, retNow:((total-outAmt)/base-1)*100, retOut:(outAmt/base)*100,
     cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out, mdd,
     atr:(mdd&&mdd.afterTax)?mdd.afterTax.tr:null, atrTax:(mdd&&mdd.afterTax)?mdd.afterTax.tax:null, atrFee:(mdd&&mdd.afterTax)?mdd.afterTax.fee:null};
+  /* 포트폴리오 채우기 동안만(그릇이 있을 때) 보유를 그 계산 그대로 넘긴다 — 수량·원가(paperRaw)·계좌 현금(= 나머지 − 나간 돈).
+     모의 목록 줄(클라우드 캐시에 저장됨)에는 넣지 않는다 — 문서가 커지지 않게. 종목별 합 + 현금 = 지금 계좌(시험 P1). */
+  if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink)
+    row.hold={sym, qty:+R.qty||0, cost:Math.max(0,(+R.cost||0)-(+R.cost1||0)), sym1:R.sym1||'', qty1:+R.qty1||0, price1:+R.price1||0, cost1:+R.cost1||0, cash:(+R.k||0)-outAmt};
+  return row;
 }
 function paperSummary(){
   const out=[];
@@ -9192,7 +9209,7 @@ function pfPlanRow(L, Q, E){
   const to=['TECL','TQQQ','SGOV'].map(k=>Q&&Q[k]&&Q[k].last&&Q[k].last.date).filter(Boolean).sort()[0]||'';
   return {tab:'plan', key:L.key, id:L.id||'', label:'듀얼가드', name:L.name, sym:'TECL/TQQQ/SGOV', cur:curOf({ticker:'TECL'}), from:L.from, to,
     inflow, total, out:0, pending, invalid:!!c.invalid, error:c.error||'', ret:inflow>0?(total/inflow-1)*100:null,
-    hold:{TECL:c.tecl,TQQQ:c.tqqq,SGOV:c.sgov,cash:c.cash}, px:p, ledgerRef:L.ledger};
+    hold:{TECL:c.tecl,TQQQ:c.tqqq,SGOV:c.sgov,cash:c.cash}, avg:{TECL:c.avgTecl,TQQQ:c.avgTqqq,SGOV:c.avgSgov}, px:p, ledgerRef:L.ledger};
 }
 async function pfPlanRows(){
   const E=window.JKPlanSessionEngine, list=pfPlanLedgers(); if(!list.length) return [];
@@ -9316,6 +9333,88 @@ function pfTargetView(Z){
   return {plan, ivs, inf, other, otherBy, two, wPlan:two>0?plan/two:null, wIvs:two>0?ivs/two:null,
     gapPlan:two*PF_TARGET.plan-plan, gapIvs:two*PF_TARGET.ivs-ivs,                       // + 면 목표보다 모자람
     movePlan:inf>0?three*PF_TARGET.plan-plan:null, moveIvs:inf>0?three*PF_TARGET.ivs-ivs:null};
+}
+/* ── 세션별 · 종목별 보유 (2026-11-09 사용자: "포트폴리오에 세션별과 종목별 보유량 수익률 현재금액과 그래프 그려") ──
+   숫자는 여기서 새로 세지 않는다 — 수량·원가는 그 전략 계산 그대로(운영 = paperRaw 를 paperStat 이 넘긴 hold · 듀얼가드 = 엔진 ledgerCalc).
+   종목별 평가 합 + 현금 = 지금 계좌(pfSummary 의 now) — 같은 돈을 다르게 나눠 보일 뿐이다(시험 P1). */
+function pfQty(q){ const v=+q||0; return Number.isInteger(v)?v.toLocaleString('en-US'):v.toLocaleString('en-US',{maximumFractionDigits:4}); }
+/* 줄 하나의 보유 — [{sym, qty, price, cost}] + 현금. cost = 지금 보유분 원가(그 전략 장부의 평단 × 수량 · 모르면 null) */
+function pfPositions(r){
+  if(!r) return null;
+  const cur=r.cur==='krw'?'krw':'usd', list=[];
+  if(r.tab==='plan'){ const h=r.hold, px=r.px||{}, av=r.avg||{}; if(!h) return null;
+    for(const s of ['TECL','TQQQ','SGOV']){ const q=+h[s]||0, a=+av[s]; if(q>0) list.push({sym:s, qty:q, price:+px[s]||0, cost:a>0?q*a:null}); }
+    return {list, cash:+h.cash||0, cashLabel:'현금', cur}; }
+  const H=r.hold; if(!H) return null;
+  if(+H.qty>0&&H.sym) list.push({sym:String(H.sym), qty:+H.qty, price:+r.price||0, cost:+H.cost>0?+H.cost:null});
+  if(+H.qty1>0&&H.sym1) list.push({sym:String(H.sym1), qty:+H.qty1, price:+H.price1||0, cost:+H.cost1>0?+H.cost1:null});
+  return {list, cash:+H.cash||0, cashLabel:r.tab==='asap'?'리저브':'현금', cur};
+}
+/* 종목별 합 — 같은 종목(같은 통화)은 세션을 합친다. 원화 세션은 지금 환율로 달러 환산(길이·비중용 · 금액 글자는 원화 그대로).
+   시세 대기 줄·환율 없는 원화 줄은 pfSummary 처럼 0 으로 더하지 않고 뺀다(missing). 수익률 = 지금 보유분 평단 대비(이미 판 몫 제외). */
+function pfByTicker(rows, fx){
+  const m=new Map(); let cash=0, missing=0;
+  for(const r of rows||[]){
+    if(!r||r.pending||!Number.isFinite(+r.total)) continue;
+    const P=pfPositions(r); if(!P) continue;
+    let k=1; if(P.cur==='krw'){ if(!(+fx>0)){ missing++; continue; } k=1/(+fx); }
+    for(const p of P.list){
+      const key=P.cur+':'+p.sym; let x=m.get(key);
+      if(!x) m.set(key, x={sym:p.sym, cur:P.cur, qty:0, val:0, usd:0, cost:0, costOk:true, by:new Map(), labels:new Set(), n:0});
+      const v=p.qty*p.price, g=pfGroup(r.tab);
+      x.qty+=p.qty; x.val+=v; x.usd+=v*k; x.n++; x.by.set(g,(x.by.get(g)||0)+v*k); x.labels.add(String(r.label||g.label));
+      if(p.cost==null) x.costOk=false; else x.cost+=p.cost;
+    }
+    cash+=P.cash*k;
+  }
+  const list=[...m.values()], total=list.reduce((a,x)=>a+x.usd,0)+cash;
+  for(const x of list){ x.price=x.qty>0?x.val/x.qty:0; x.avg=x.costOk&&x.qty>0?x.cost/x.qty:null;
+    x.pnl=x.costOk?x.val-x.cost:null; x.ret=x.costOk&&x.cost>0?(x.val/x.cost-1)*100:null; x.w=total>0?x.usd/total:0; }
+  list.sort((a,b)=>b.usd-a.usd||(a.sym<b.sym?-1:a.sym>b.sym?1:0));
+  return {list, cash, total, missing, cashW:total>0?cash/total:0};
+}
+function pfHoldText(P, r){
+  if(!P) return '';
+  const money=v=>P.cur==='krw'?(Math.round(+v||0).toLocaleString('ko-KR')+'원'):pfUsd2(v);
+  const bits=P.list.map(p=>pfEsc(p.sym)+' '+pfQty(p.qty)+'주');
+  if(Math.abs(+P.cash||0)>=0.005) bits.push(P.cashLabel+' '+money(P.cash));
+  return bits.join(' · ')||'보유 없음';
+}
+/* 세션별 막대 — 길이 = 지금 계좌 금액(달러 환산 · 가장 큰 세션 = 끝까지) · 색 = 전략 무리(비중 막대와 같은 네 색) */
+function pfSessHtml(Z){
+  const P=((Z&&Z.parts)||[]).slice().sort((a,b)=>b.now-a.now); if(!P.length) return '';
+  const max=Math.max(0,...P.map(p=>p.now));
+  const amt=(r,v)=>r.cur==='krw'?(Math.round(+v||0).toLocaleString('ko-KR')+'원'):pfUsdPlain(v);
+  const rows=P.map(p=>{ const r=p.r, g=pfGroup(r.tab), w=max>0?Math.max(0,p.now)/max*100:0, now=(+r.total||0)-pfOutAmt(r);
+    return '<div class="pf-hb" title="'+pfEsc(pfSessName(r))+'"><div class="top"><span class="nm"><i class="sw" style="background:'+g.color+'"></i>'+pfEsc(r.label)
+      +(r.tab!=='plan'&&r.sym?' · '+pfEsc(r.sym):'')+(r.name?'<small>'+pfEsc(r.name)+'</small>':'')+'</span>'
+      +'<span class="v">'+amt(r,now)+'<b class="'+((+r.ret||0)>=0?'pf-pos':'pf-neg')+'">'+pfPct(r.ret)+'</b></span></div>'
+      +'<div class="bar"><span style="width:'+w.toFixed(2)+'%;background:'+g.color+'"></span></div>'
+      +'<div class="sub">'+pfHoldText(pfPositions(r),r)+' · 비중 '+(p.w*100).toFixed(1)+'%</div></div>'; }).join('');
+  return '<div class="pf-sec"><h3>📊 세션별 — 지금 금액 · 수익률 · 보유</h3>'+rows
+    +'<div class="pf-note">막대 = 지금 계좌 금액(원화 세션은 지금 환율로 달러 환산해 길이를 맞춤) · 수익률 = 투입 대비(실현·나간 돈 포함 · 아래 카드와 같은 값).</div></div>';
+}
+/* 종목별 막대 — 길이 = 평가 금액(달러 환산) · 칸 = 그 종목을 든 전략(같은 종목을 여러 전략이 들면 나눠 칠함 · 2px 틈) · 현금은 맨 아래 회색 */
+const PF_CASH_COLOR='#646e93';
+function pfTickerHtml(B){
+  if(!B||(!B.list.length&&!(Math.abs(B.cash)>=0.5))) return '';
+  const max=Math.max(0,...B.list.map(x=>x.usd),B.cash);
+  const order=[PF_GROUP.plan,PF_GROUP.ivs,PF_GROUP.inf,PF_OTHER];
+  const m=(x,v)=>x.cur==='krw'?(Math.round(+v||0).toLocaleString('ko-KR')+'원'):pfUsd2(v);
+  const big=(x,v)=>x.cur==='krw'?(Math.round(+v||0).toLocaleString('ko-KR')+'원'):pfUsdPlain(v);
+  const rows=B.list.map(x=>{ const segs=order.filter(g=>x.by.get(g)>0), w=max>0?Math.max(0,x.usd)/max*100:0, who=[...x.labels].join(' · ');
+    return '<div class="pf-hb" title="'+pfEsc(x.sym+' · '+who)+'"><div class="top"><span class="nm">'+pfEsc(x.sym)
+      +'<small>'+pfEsc(who)+(x.n>1?' · '+x.n+'세션':'')+'</small></span>'
+      +'<span class="v">'+big(x,x.val)+'<b class="'+((x.ret||0)>=0?'pf-pos':'pf-neg')+'">'+(x.ret==null?'—':pfPct(x.ret))+'</b></span></div>'
+      +'<div class="bar"><span style="width:'+w.toFixed(2)+'%">'+segs.map(g=>'<i style="flex:'+x.by.get(g).toFixed(4)+' 1 0;background:'+g.color+'"></i>').join('')+'</span></div>'
+      +'<div class="sub">'+pfQty(x.qty)+'주 · 평단 '+(x.avg==null?'—':m(x,x.avg))+' · 현재가 '+m(x,x.price)
+      +(x.pnl==null?'':' · 평가손익 '+(x.pnl>=0?'+':'−')+m(x,Math.abs(x.pnl)))+' · 비중 '+(x.w*100).toFixed(1)+'%</div></div>'; });
+  if(Math.abs(B.cash)>=0.5) rows.push('<div class="pf-hb"><div class="top"><span class="nm">현금·예수금<small>계좌에 남은 돈</small></span><span class="v">'+pfUsdPlain(B.cash)+'</span></div>'
+      +'<div class="bar"><span style="width:'+(max>0?Math.max(0,B.cash)/max*100:0).toFixed(2)+'%;background:'+PF_CASH_COLOR+'"></span></div>'
+      +'<div class="sub">비중 '+(B.cashW*100).toFixed(1)+'%</div></div>');
+  return '<div class="pf-sec"><h3>🧾 종목별 — 보유량 · 평가 · 수익률</h3>'+rows.join('')
+    +'<div class="pf-note">같은 종목은 세션을 합칩니다 · 막대 색 = 그 종목을 든 전략 · 수익률·평가손익 = 지금 보유분의 평단 대비(이미 판 몫 제외) · 평단은 그 전략 장부 값'
+    +(B.missing?' · 환율 대기 원화 세션 '+B.missing+'개는 뺐습니다':'')+'.</div></div>';
 }
 /* 달러 표기는 브라우저 통화 서식으로(예: 21,900 달러 → 앞에 기호 · 만 단위 이상은 21.9K) — 기호를 숫자에 직접 이어 붙이지 않는다(운영 화면 규칙 · 회귀 [통화 앞붙임]) */
 function pfUsdPlain(v){ const x=Math.round(Math.abs(+v||0)); return (v<0&&x?'−':'')+x.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}); }
@@ -9463,8 +9562,8 @@ function pfCard(r,Z){
   const p=Z.parts.find(x=>x.r===r), w=p?(p.w*100).toFixed(1)+'%':'—', outAmt=pfOutAmt(r), now=(+r.total||0)-outAmt;
   const extra=[];
   if(r.from) extra.push(pfEsc(r.from)+' 시작');
-  if(r.tab==='plan'){ if(r.hold) extra.push('TECL '+r.hold.TECL+' · TQQQ '+r.hold.TQQQ+' · SGOV '+r.hold.SGOV+'주 · 현금 '+pfUsd2(r.hold.cash)); }
-  else{
+  { const P=pfPositions(r); if(P) extra.push(pfHoldText(P,r)); }   // 보유 — 세션별·종목별 표와 같은 글자
+  if(r.tab!=='plan'){
     if(Number.isFinite(r.atr)) extra.push('세후 TR '+pfPct(r.atr));
     if(r.mdd&&Number.isFinite(+r.mdd.pct)) extra.push('MDD −'+(+r.mdd.pct).toFixed(1)+'%');
     if(outAmt>0) extra.push('나간 돈 '+pfRowMoney(r,outAmt));
@@ -9512,6 +9611,7 @@ function pfRender(){
   h+='<div class="pf-sec"><h3>📈 합친 평가액 추이</h3>'+pfChartHtml(C)
     +(C.points.length>1?'<div class="pf-note">MDD 는 입금·새 세션을 뺀 시간가중 수익률로 잽니다(시간가중 누적 '+pfPct(C.twr)+') — 돈이 새로 들어온 날을 수익·손실로 세지 않습니다.</div>':'')
     +pfMonthTable(C)+'</div>';
+  h+=pfSessHtml(Z)+pfTickerHtml(pfByTicker(rows,fx));   // 세션별 · 종목별 보유(2026-11-09)
   h+=pfTargetHtml(V);
   h+='<div class="pf-today"><h3>📋 오늘</h3>'+rows.map(r=>'<div class="row"><div class="nm"><i class="sw" style="background:'+pfGroup(r.tab).color+'"></i>'+pfEsc(r.label)+'</div><div>'
     +(r.tab==='plan'?pfDgText(r):(r.status||'—'))+'</div></div>').join('')+'</div>';

@@ -444,8 +444,60 @@ function check5(S,t,E,bad){
       s0.join()==='true,false'&&s1.join()==='false,true,true'&&s2.join()==='true,false'&&s3.join()==='false'
       &&/assetPfInit\(x\?x\.portfolio!==false:planPortfolio!==false\)/.test(fnOf(S.plan,'async function editAssetSession(mode)'))&&/assetPfUI\(paper\)/.test(fnOf(S.plan,'function syncAssetSessionModal()'))
       &&/assetPfInit\(true\)/.test(fnOf(S.plan,'function openAssetSessionModal()'))&&/id="assetSessionPf"/.test(S.plan),JSON.stringify([s0,s1,s2,s3]));
-    return bad;
+    return check6(S,t,E,bad);
   })();
+}
+
+/* P 세션별 · 종목별 보유(index v3.124.0 · 2026-11-09 사용자: "포트폴리오에 세션별과 종목별 보유량 수익률 현재금액과 그래프 그려")
+   — 수량·원가는 그 전략 계산 그대로(paperStat 이 넘긴 hold · 듀얼가드 ledgerCalc 평단) · 종목 합 + 현금 = 지금 계좌 · 같은 종목 합침 · 원화 환산 */
+function check6(S,t,E,bad){
+  const helpers=['function pfOutAmt(r)','function pfSummary(rows, fx)','function pfGroup(tab)','function pfQty(q)','function pfPositions(r)','function pfByTicker(rows, fx)',
+    'function pfHoldText(P, r)','function pfSessHtml(Z)','function pfTickerHtml(B)','function pfUsdPlain(v)','function pfUsd2(v)','function pfPct(v)','function pfEsc(x)','function pfSessName(r)'];
+  const c={Math,Object,Number,String,Map,Set};vm.createContext(c);
+  vm.runInContext(helpers.map(m=>fnOf(S.idx,m)).join('\n')
+    +'\n'+((S.idx.match(/const PF_GROUP=\{.*\};/)||[''])[0]).replace('const PF_GROUP','var PF_GROUP')+'\n'+((S.idx.match(/const PF_OTHER=\{[^}]*\};/)||[''])[0]).replace('const PF_OTHER','var PF_OTHER')
+    +'\n'+((S.idx.match(/const PF_CASH_COLOR='[^']*';/)||[''])[0]).replace('const PF_CASH_COLOR','var PF_CASH_COLOR'),c);
+  // 줄: 듀얼가드(pfPlanRow 꼴) · 무매 SOXL · 섀넌 USD + SMH(1배수) · 적립 USD(같은 종목 합침) · 원화 적립 · ASAP 리저브 · 시세 대기(VR)
+  const plan={tab:'plan',label:'듀얼가드',name:'현재 투자중',cur:'usd',total:0,inflow:20000,out:0,ret:null,hold:{TECL:64,TQQQ:38,SGOV:6,cash:1234.5},avg:{TECL:95,TQQQ:80,SGOV:null},px:{TECL:98,TQQQ:62,SGOV:100.5}};
+  plan.total=1234.5+64*98+38*62+6*100.5; plan.ret=(plan.total/plan.inflow-1)*100;
+  const inf={tab:'inf',label:'무한매수법',sym:'SOXL',name:'40분할',cur:'usd',price:50,total:120*50+800+70,inflow:7000,out:{saved:50,withdrawn:20},ret:5,
+    hold:{sym:'SOXL',qty:120,cost:5400,sym1:'',qty1:0,price1:0,cost1:0,cash:800}};
+  const ivs={tab:'ivs',label:'섀넌',sym:'USD',name:'USD 1배수',cur:'usd',price:60,total:30*60+10*250+300,inflow:4000,out:{saved:0,withdrawn:0},ret:15,
+    hold:{sym:'USD',qty:30,cost:1500,sym1:'SMH',qty1:10,price1:250,cost1:2300,cash:300}};
+  const dca={tab:'dca',label:'적립',sym:'USD',name:'매일',cur:'usd',price:60,total:2.5*60,inflow:120,out:{saved:0,withdrawn:0},ret:25,hold:{sym:'USD',qty:2.5,cost:120,sym1:'',qty1:0,price1:0,cost1:0,cash:0}};
+  const krw={tab:'dca',label:'적립',sym:'005930',name:'삼성',cur:'krw',price:70000,total:10*70000,inflow:600000,out:null,ret:16.7,hold:{sym:'005930',qty:10,cost:600000,sym1:'',qty1:0,price1:0,cost1:0,cash:0}};
+  const asap={tab:'asap',label:'ASAP',sym:'UPRO',name:'',cur:'usd',price:80,total:5*80+600,inflow:900,out:null,ret:11,hold:{sym:'UPRO',qty:5,cost:350,sym1:'',qty1:0,price1:0,cost1:0,cash:600}};
+  const pend={tab:'vr',label:'VR',sym:'TQQQ',cur:'usd',price:0,total:999,inflow:1,pending:true,hold:{sym:'TQQQ',qty:3,cost:100,cash:5}};
+  const rows=[plan,inf,ivs,dca,krw,asap,pend], fx=1400;
+  const Z=c.pfSummary(rows,fx), B=c.pfByTicker(rows,fx), sum=B.list.reduce((a,x)=>a+x.usd,0)+B.cash;
+  t('P1 종목별 평가 합 + 현금 = 지금 계좌(pfSummary now) — 같은 돈을 나눠 보일 뿐(나간 돈 · 시세 대기 줄 제외 · 원화 환산)',near(sum,Z.now,1e-6)&&near(B.total,Z.now,1e-6),JSON.stringify({sum,now:Z.now}));
+  const U=B.list.find(x=>x.sym==='USD'), T=B.list.find(x=>x.sym==='TECL'), G=B.list.find(x=>x.sym==='SGOV'), K=B.list.find(x=>x.sym==='005930'), M=B.list.find(x=>x.sym==='SMH');
+  t('P2 같은 종목(USD — 섀넌 30주 + 적립 2.5주)은 합친다 · 평단 = 원가 합 ÷ 수량 · 수익률 = 평가 ÷ 원가 − 1 · 전략 칸 둘(섀넌 · 그 밖)',
+    !!U&&near(U.qty,32.5)&&near(U.val,32.5*60)&&near(U.avg,1620/32.5)&&near(U.ret,(1950/1620-1)*100)&&U.n===2&&U.by.size===2,JSON.stringify(U&&{q:U.qty,v:U.val,a:U.avg,r:U.ret,n:U.n}));
+  t('P3 듀얼가드 평단 = 엔진 장부 평단(TECL 95) · 평단 모르면(SGOV) 수익률·평가손익·평단 없음(0 으로 꾸미지 않음) · 1배수 짝(SMH)은 제 원가',
+    !!T&&near(T.avg,95)&&near(T.ret,(98/95-1)*100)&&!!G&&G.ret===null&&G.pnl===null&&G.avg===null&&!!M&&near(M.cost,2300)&&near(M.ret,(2500/2300-1)*100),JSON.stringify([T&&T.ret,G&&[G.ret,G.pnl],M&&M.ret]));
+  t('P4 원화 종목은 원화 그대로(수량·평가) · 길이·비중만 환율로 달러 환산 · 환율 없으면 빼고 셈(missing)',
+    !!K&&near(K.val,700000)&&near(K.usd,500)&&B.missing===0&&(()=>{const b=c.pfByTicker(rows,0);return b.missing===1&&!b.list.some(x=>x.sym==='005930');})(),JSON.stringify(K&&{v:K.val,u:K.usd}));
+  t('P5 현금 = 계좌에 남은 돈만(무매 나간 돈 70 은 빼고 · ASAP 리저브 600 포함) · 시세 대기 줄(VR) 보유는 안 더함 · 큰 순서',
+    near(B.cash,1234.5+800+300+600)&&!B.list.some(x=>x.sym==='TQQQ'&&x.qty===41)&&B.list.every((x,i)=>!i||B.list[i-1].usd>=x.usd),JSON.stringify({cash:B.cash,order:B.list.map(x=>x.sym)}));
+  const hs=c.pfSessHtml(Z), ht=c.pfTickerHtml(B);
+  t('P6 세션별 막대 — 큰 순서 · 가장 큰 세션 = 100% · 보유 글자(SOXL 120주 · 현금 $800.00 · 1배수 짝 · ASAP 리저브) · 수익률',
+    /세션별/.test(hs)&&/width:100\.00%/.test(hs)&&hs.indexOf('SOXL 120주 · 현금 $800.00')>0&&hs.indexOf('USD 30주 · SMH 10주 · 현금 $300.00')>0&&hs.indexOf('UPRO 5주 · 리저브 $600.00')>0&&/\+5\.0%/.test(hs),hs.slice(0,300));
+  t('P7 종목별 막대 — USD 32.5주 · 평단 · 현재가 · 평가손익 · 두 전략 칸(색) · 원화는 원 · 현금 줄',
+    ht.indexOf('32.5주 · 평단 $49.85 · 현재가 $60.00 · 평가손익 +$330.00')>0&&ht.indexOf('섀넌 · 적립 · 2세션')>0&&(ht.match(/<i style="flex:/g)||[]).length>=B.list.length+1&&ht.indexOf('700,000원')>0&&/현금·예수금/.test(ht)&&ht.indexOf('background:#d55181')>0,ht.slice(0,400));
+  // P8 paperStat — 포트폴리오 채우기 동안(그릇 있음)만 보유를 넘긴다 · 현금 = 나머지(k) − 나간 돈 · 1배수 짝 원가는 따로 · 모의 목록 줄엔 없음
+  { const st=fnOf(S.idx,'function paperStat(tab, sess)');
+    const R={inflow:1000,total:1500,price:60,sym:'USD',qty:10,qty1:2,price1:250,sym1:'SMH',out:{saved:30,withdrawn:20},realized:0,turnover:0,cost:900,cost1:400,k:1500-600-500};
+    const run=sink=>new Function('S','paperRaw','paperMdd','paperStatPlan','paperStart','tradeCount','paperOpts','curOf','paperInflowWon',(sink?'var _pfSeriesSink=[];':'')+st+'\nreturn paperStat;')(
+      {activeTab:'inf',ivs:{active:'z'}},()=>R,()=>null,()=>null,()=>'',()=>0,()=>'',()=>'usd',()=>0)('ivs',{id:'a',name:'n',settings:{},hist:[{date:'2026-01-02'}]});
+    const a=run(true), b=run(false), h=a&&a.hold;
+    t('P8 paperStat 보유 — 그릇 있을 때만 hold · 주 원가 = 900 − 400 · 짝 SMH 2주 원가 400 · 현금 = k 400 − 나간 돈 50 = 350 · 모의 목록 줄엔 없음',
+      !!h&&h.sym==='USD'&&h.qty===10&&near(h.cost,500)&&h.sym1==='SMH'&&h.qty1===2&&near(h.cost1,400)&&near(h.cash,350)&&!!b&&b.hold===undefined,JSON.stringify(h)); }
+  t('P9 배선 — pfRender 가 세션별·종목별을 합친 추이 아래에 · 카드 보유 = pfHoldText · paperRaw 섀넌 sym1·cost1 · pfPlanRow 평단(avg)',
+    /h\+=pfSessHtml\(Z\)\+pfTickerHtml\(pfByTicker\(rows,fx\)\);/.test(fnOf(S.idx,'function pfRender()'))&&/extra\.push\(pfHoldText\(P,r\)\)/.test(fnOf(S.idx,'function pfCard(r,Z)'))
+      &&/sym1=s1;/.test(fnOf(S.idx,'function paperRaw(tab, sess)'))&&/cost1=\(c\.avg1\|\|0\)\*\(c\.qty1\|\|0\); cost=\(c\.avg\|\|0\)\*\(c\.qty\|\|0\)\+cost1;/.test(fnOf(S.idx,'function paperRaw(tab, sess)'))
+      &&/avg:\{TECL:c\.avgTecl,TQQQ:c\.avgTqqq,SGOV:c\.avgSgov\}/.test(fnOf(S.idx,'function pfPlanRow(L, Q, E)')));
+  return bad;
 }
 
 const MUT=[
@@ -503,6 +555,16 @@ const MUT=[
   ['플랜 원장: portfolio 를 안 읽음','plan',s=>s.replace("  planPortfolio=all.portfolio!==false;\n","")],
   ['플랜 창: 선택을 안 보냄','plan',s=>s.replace("      msg.portfolio=x?x.portfolio!==false:planPortfolio!==false;msg.name=","      msg.name=")],
   ['플랜 설정창: 모의 세션도 넣기 고를 수 있음','plan',s=>s.replace("if(paper){if(!c.disabled)assetPfPick=c.checked;c.checked=false;c.disabled=true;}","if(paper){}")],
+  ['종목별: 현금을 안 더함','idx',s=>s.replace("    cash+=P.cash*k;\n  }\n  const list=[...m.values()]","  }\n  const list=[...m.values()]")],
+  ['종목별: 같은 종목을 세션마다 따로 셈','idx',s=>s.replace("const key=P.cur+':'+p.sym;","const key=P.cur+':'+p.sym+':'+(r.id||r.key||r.name);")],
+  ['종목별: 원화를 환율로 안 나눔','idx',s=>s.replace("    let k=1; if(P.cur==='krw'){ if(!(+fx>0)){ missing++; continue; } k=1/(+fx); }\n    for(const p of P.list){","    let k=1;\n    for(const p of P.list){")],
+  ['종목별: 시세 대기 줄도 더함','idx',s=>s.replace("    if(!r||r.pending||!Number.isFinite(+r.total)) continue;\n    const P=pfPositions(r);","    if(!r) continue;\n    const P=pfPositions(r);")],
+  ['종목별: 평단 모르면 원가 0 으로 셈','idx',s=>s.replace("if(p.cost==null) x.costOk=false; else x.cost+=p.cost;","x.cost+=p.cost||0;")],
+  ['paperStat 보유: 현금에 나간 돈 포함','idx',s=>s.replace("cash:(+R.k||0)-outAmt};","cash:(+R.k||0)};")],
+  ['paperStat 보유: 모의 목록 줄에도 넣음','idx',s=>s.replace("  if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink)\n    row.hold=","  if(true)\n    row.hold=")],
+  ['paperStat 보유: 짝 원가를 주 종목에 섞음','idx',s=>s.replace("cost:Math.max(0,(+R.cost||0)-(+R.cost1||0)),","cost:+R.cost||0,")],
+  ['카드: 보유 글자 안 적음','idx',s=>s.replace("  { const P=pfPositions(r); if(P) extra.push(pfHoldText(P,r)); }","")],
+  ['듀얼가드 줄: 평단 빠짐','idx',s=>s.replace(" avg:{TECL:c.avgTecl,TQQQ:c.avgTqqq,SGOV:c.avgSgov},","")],
 ];
 (async()=>{
   const bad=await check(SRC);

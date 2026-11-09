@@ -1,5 +1,15 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 포트폴리오 세션별 · 종목별 보유 · v3.124.0
+
+- `check-portfolio.cjs` **ALL PASS · 변이 63/63 빨간불**(새 P1~P9 · 변이 10종).
+  - P1 종목별 평가 합 + 현금 = pfSummary now(나간 돈 · 시세 대기 · 원화 줄 포함 일곱 줄).
+  - P2 USD 섀넌 30주 + 적립 2.5주 → 32.5주 · 평단 49.85 · 수익률 +20.4%.
+  - P3 듀얼가드 TECL 평단 95(엔진) · SGOV 평단 없음 → 수익률 '—'.
+  - P8 paperStat — 그릇 있을 때만 hold · 주 원가 500 = 900 − 짝 400 · 현금 350 = k 400 − 나간 돈 50.
+- `check-before-push`: 1~54 단계 PASS · 55 회귀에서 2건 FAIL(원문 모양 검사 — paperStat 이 `const row=` 로 받아 돌려주고 paperRaw 반환에 sym1 이 붙어 옛 정규식이 못 찾음) → 정규식을 지금 모양으로 고친 뒤 회귀 **2818 PASS / 0 FAIL** · 56 모의 재생 · 57 MA150 PASS.
+- 실제 계좌 숫자로 그린 화면은 배포 뒤 사용자 확인 — 시험은 가짜 줄로 값만 본다.
+
 ## 2026-11-09 · ASAP 세션을 모의투자에서 뺌 · 영어 '5 YEAR' 머리글 삭제 · v3.123.3 (듀얼가드 v2.5.4)
 
 - `check-portfolio.cjs` **ALL PASS · 변이 53/53 빨간불**.
@@ -12,6 +22,7 @@
 - `check-login-quote-paper.cjs` ALL PASS — 새 'P2 지난 목록 캐시 판 ≥7': 판 6 지난 목록(ASAP 줄)은 실패 대체 화면에도 안 씀 · 지금 판은 씀. 판 6 으로 되돌린 파일에선 이 시험이 FAIL(변이 확인).
 - `check-plan-claude-tab.cjs` ALL PASS · 변이 23/23 — E1 이 영어 '5 YEAR'·'5-YEAR' 도 본다(사용자 화면 '5 YEAR · DUAL GUARD'). D4 캐시 판 ≥7 · 변이 판 7→6 빨간불.
 - `check-before-push` **57/57 PASS**(main #627 합치기 전 트리 · 2410ccc). 검사 중 회귀 시험 설명 글자의 작은따옴표가 문자열을 끊어 regression-check.js 가 문법 오류로 시작도 못 하던 것을 찾아 고침(2410ccc · 이번 판 795eb2d 에서 생김) — 회귀 단계(55/57) ALL PASS.
+- 배포 확인(PR #629 squash 36e0f81 · GitHub check · regression 통과): curl 운영 index v3.123.3(#appVerTop·#appVer) · `PAPER_VIEW_CACHE_VER=7` · ASAP 제외 코드 · /plan v2.5.4 · 머리글 'DUAL GUARD' · '5 YEAR' 0개.
 - 운영 파일 확인(v3.123.2 · 듀얼가드 v2.5.3, 병합 전): 띄어 쓴 '듀얼 가드' 0 · 화면 '5년 플랜' 0(주석만) · '5 YEAR' 2(이번에 지움). 사용자 화면의 나머지 옛 글자는 새로고침 전 예전 판.
 
 ## 2026-11-09 · 지피티 G1 BTC 재현·시간순 검증
