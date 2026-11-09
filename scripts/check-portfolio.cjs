@@ -1,18 +1,18 @@
 #!/usr/bin/env node
 'use strict';
-/* 💰 포트폴리오 · 운영 › 듀얼 가드 탭 · ASAP 숨김 (index v3.119.0 · plan v2.2.0 · 2026-11-09)
+/* 💰 포트폴리오 · 운영 › 듀얼가드 탭 · ASAP 숨김 (index v3.119.0 · plan v2.2.0 · 2026-11-09)
  * 사용자: "자산플랜의 듀얼가드를 운영메뉴로 옮기고 무매보다 왼쪽으로 / 자산플랜은 포트폴리오로 변경하고 운영에서 내가 실투자 하고 있는 것들에 대해
  *          자세히 볼수 있게 / 두전략 합친 결과와 투자상황 등등 한눈에 볼수 있게 / 운영메뉴 탭이 너무 꽉차면 제일 성과없는 asap 탭을 숨기고"
  * 실제 페이지·엔진 함수를 뽑아 그대로 돌린다(재구현 없음). 값 시험 + 변이(틀린 코드로 바꾸면 빨간불).
  *   A 장부 계산을 엔진으로 옮긴 것 — 옮기기 전 plan.html 코드와 결과가 같다(고정 + 무작위 600개) · plan.html 은 엔진을 부른다
  *   B 합계(pfSummary) — 원화 세션 환율 환산 · 시세 대기 줄은 0 으로 안 더함 · 나간 돈 · 비중
- *   C 듀얼 가드 줄(pfPlanRow) — 엔진 장부 × 시세 · 투입 = 시작금 + 입금 − 출금
- *   D 듀얼 가드 장부 목록(pfPlanLedgers) — 현재 투자중 + 실전 세션만(모의·폐지·빈 장부 제외) · 창이 보낸 최신 장부 우선
+ *   C 듀얼가드 줄(pfPlanRow) — 엔진 장부 × 시세 · 투입 = 시작금 + 입금 − 출금
+ *   D 듀얼가드 장부 목록(pfPlanLedgers) — 현재 투자중 + 실전 세션만(모의·폐지·빈 장부 제외) · 창이 보낸 최신 장부 우선
  *   E 실전 세션 채우기(paperFillAll({live:true})) — 모의 제외 · 기록 없는 세션 제외 · 모의 체결 안 만듦 · 상태줄 글자
- *   F 화면 구조 — 듀얼 가드 탭 맨 왼쪽 · S.activeTab 에 안 들어감 · ASAP 숨김 · 메뉴 포트폴리오 · 플랜 화면 창 모드
+ *   F 화면 구조 — 듀얼가드 탭 맨 왼쪽 · S.activeTab 에 안 들어감 · ASAP 숨김 · 메뉴 포트폴리오 · 플랜 화면 창 모드
  *   G 플랜 창 → 바깥 알림(planEmbedPost) — 모의 장부는 안 보냄 · H 바깥이 받는 쪽 — 같은 출처·창·계정 · 모의 거절
  *   O 세션 설정 '💰 포트폴리오에 넣기'(index v3.121.0 · plan v2.4.0 · 2026-11-09 사용자: "운영 세션 설정에서 모의투자처럼 포트폴리오에 추가 할지 선택 하게 해")
- *     — 실계좌만 · 고른 적 없으면 넣음 · 끈 세션은 합계·시세 선취에서 빠짐 · 모의는 잠금 · 듀얼 가드(현재 투자중 · 세션)도 같은 선택 · 창이 보낸 값 우선 · 뺀 세션 안내
+ *     — 실계좌만 · 고른 적 없으면 넣음 · 끈 세션은 합계·시세 선취에서 빠짐 · 모의는 잠금 · 듀얼가드(현재 투자중 · 세션)도 같은 선택 · 창이 보낸 값 우선 · 뺀 세션 안내
  */
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
 const root=path.join(__dirname,'..'),rd=f=>fs.readFileSync(path.join(root,f),'utf8');
@@ -105,12 +105,12 @@ function check(S){
       {tab:'inf',cur:'usd',total:1070,inflow:1000,out:{saved:50,withdrawn:20}},{tab:'ivs',cur:'krw',total:1400000,inflow:1120000,out:null},{tab:'vr',cur:'usd',total:999,inflow:1,pending:true}];
     const Z=c.pfSummary(rows,1400);
     t('B1 합계: 지금 23,899.76(나간 돈 70 별도) · 투입 22,700 · TR +5.594% · 시세 대기 1줄 제외',near(Z.now,23899.76)&&near(Z.out,70)&&near(Z.total,23969.76)&&near(Z.inflow,22700)&&near(Z.ret,(23969.76/22700-1)*100)&&Z.missing===1&&Z.parts.length===4,JSON.stringify({now:Z.now,out:Z.out,inflow:Z.inflow,ret:Z.ret,missing:Z.missing}));
-    t('B2 비중은 지금 계좌 기준 — 듀얼 가드 90.68% · 원화 섀넌 4.18% · 합 100%',near(Z.parts[0].w,21671.76/23899.76)&&near(Z.parts[3].w,1000/23899.76)&&near(Z.parts.reduce((a,p)=>a+p.w,0),1),Z.parts.map(p=>p.w).join());
+    t('B2 비중은 지금 계좌 기준 — 듀얼가드 90.68% · 원화 섀넌 4.18% · 합 100%',near(Z.parts[0].w,21671.76/23899.76)&&near(Z.parts[3].w,1000/23899.76)&&near(Z.parts.reduce((a,p)=>a+p.w,0),1),Z.parts.map(p=>p.w).join());
     const Z0=c.pfSummary(rows,0);
     t('B3 환율이 없으면 원화 줄은 0 으로 더하지 않고 뺀다(2줄 대기)',Z0.missing===2&&near(Z0.inflow,21900),JSON.stringify({m:Z0.missing,i:Z0.inflow}));
     t('B4 빈 목록 — 0 · 수익률 없음',(()=>{const z=c.pfSummary([],1400);return z.now===0&&z.ret===null&&z.parts.length===0;})()); }
 
-  // ── C. 듀얼 가드 줄
+  // ── C. 듀얼가드 줄
   { const c={JKPlanSessionEngine:E,curOf:st=>/^\d{6}$/.test(String((st||{}).ticker||''))?'krw':'usd'};vm.createContext(c);
     vm.runInContext(fnOf(S.idx,'function pfPlanRow(L, Q, E)'),c);
     const L={key:'cur',id:'',name:'현재 투자중',start:20000,from:'2026-01-02',ledger:{base:{date:'2026-01-02',cash:20000},events:[
@@ -124,7 +124,7 @@ function check(S){
     const r2=c.pfPlanRow(L,{TECL:{price:98},TQQQ:{price:62},SGOV:null},E);
     t('C4 보유한 종목 시세가 없으면 시세 대기(합계에서 빠진다)',r2.pending===true,r2.pending); }
 
-  // ── D. 듀얼 가드 장부 목록
+  // ── D. 듀얼가드 장부 목록
   { const c={planLiveDoc:{startCapital:'20,000',startDate:'2026-01-02',alphaLedger:{base:{cash:20000},events:[{id:'x',type:'trade',date:'2026-01-05',symbol:'TECL',side:'buy',qty:1,price:90,fee:0}]}},
       PF:{over:{}},S:{plan:{sessions:[
         {id:'live1',name:'실전 세션',horizon:5,paper:false,settings:{startCapital:5000,startDate:'2026-03-02'},ledger:{base:{cash:5000},events:[{id:'y',type:'cash',kind:'dep',date:'2026-04-01',amount:100}]}},
@@ -137,9 +137,9 @@ function check(S){
     t('D1 현재 투자중 + 실전 세션만 — 모의·10년(폐지)·빈 장부 제외 · 시작금 "20,000" → 20000',a.map(x=>x.key).join()==='cur,live1'&&a[0].start===20000&&a[1].start===5000&&a[1].from==='2026-03-02',JSON.stringify(a.map(x=>[x.key,x.start,x.from])));
     c.PF.over.cur={ledger:{base:{cash:1},events:[{id:'n',type:'trade',date:'2026-11-07',symbol:'SGOV',side:'buy',qty:1,price:100,fee:0}]},startCapital:21000,startDate:'2026-02-02'};
     const b=c.pfPlanLedgers();
-    t('D2 듀얼 가드 창이 보낸 최신 장부·시작금을 쓴다(처음 읽은 사본보다 우선)',b[0].ledger===c.PF.over.cur.ledger&&b[0].start===21000&&b[0].from==='2026-02-02',JSON.stringify(b[0]));
+    t('D2 듀얼가드 창이 보낸 최신 장부·시작금을 쓴다(처음 읽은 사본보다 우선)',b[0].ledger===c.PF.over.cur.ledger&&b[0].start===21000&&b[0].from==='2026-02-02',JSON.stringify(b[0]));
     const doc0=c.planLiveDoc;c.planLiveDoc=null;c.PF.over={};
-    t('D3 듀얼 가드 원장이 없으면 현재 투자중 줄도 없다',c.pfPlanLedgers().map(x=>x.key).join()==='live1');
+    t('D3 듀얼가드 원장이 없으면 현재 투자중 줄도 없다',c.pfPlanLedgers().map(x=>x.key).join()==='live1');
     // 💰 포트폴리오에 넣기 — 현재 투자중(fiveYearPlanV2.portfolio) · 세션(portfolio) · 창이 보낸 값이 저장값보다 우선
     c.planLiveDoc={...doc0,portfolio:false};c.S.plan.sessions[0].portfolio=false;
     const off=c.pfPlanLedgers(),all=c.pfPlanLedgers(true);
@@ -157,7 +157,7 @@ function check(S){
         plan:{sessions:[{id:'pl',paper:false,horizon:5,settings:{},ledger:{base:{},events:[{id:1}]}},{id:'pp',paper:true,horizon:5,simStart:'2026-01-02',settings:{}}]}};
       const ctx={S:S0,_paperFilling:false,_fillQuoteCache:null,infChartData:[],vrChartData:[],lastQuote:{inf:{symbol:'SOXL'},dca:null,plan:null},
         infQuoteCache:null,maQuoteData:null,ivsQuoteData:null,ivsQuote1:null,dcaQuoteData:null,asapQuoteData:null,
-        PAPER_TABS:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼 가드']],
+        PAPER_TABS:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼가드']],
         PAPER_CACHESYM:{inf:()=>'SOXL',dca:()=>'TQQQ'},PAPER_LOADERS:{inf:async f=>log.loaders.push('inf'),dca:async f=>log.loaders.push('dca')},
         fetchDaily:async s=>{(log.fd=log.fd||[]).push(s);return {};},fetchDailyDiv:async()=>({}),
         divCashOn:()=>false,warmDiv:async()=>{},ivsX1Of:x=>x,paperAuto:()=>{log.auto++;},vrSimForward:()=>{log.vr++;},infSimForward:()=>{log.inf++;},paperStart:()=>'2025-01-02',
@@ -183,32 +183,32 @@ function check(S){
 function check2(S,t,E,bad){
   // ── F. 화면 구조
   { const tabs=(S.idx.match(/<div class="tabs">([\s\S]*?)<\/div>/)||['',''])[1],order=[...tabs.matchAll(/data-t="(\w+)"/g)].map(m=>m[1]).join();
-    t('F1 운영 탭 순서 — 듀얼 가드 맨 왼쪽(무매보다 왼쪽) · ASAP 은 맨 끝에 남되 숨김',order==='dg,inf,vr,ma,ivs,dca,asap'&&/\.tab\[data-t="asap"\]:not\(\.on\)\{display:none\}/.test(S.idx),order);
+    t('F1 운영 탭 순서 — 듀얼가드 맨 왼쪽(무매보다 왼쪽) · ASAP 은 맨 끝에 남되 숨김',order==='dg,inf,vr,ma,ivs,dca,asap'&&/\.tab\[data-t="asap"\]:not\(\.on\)\{display:none\}/.test(S.idx),order);
     const st=fnOf(S.idx,'function setupTabs()'),od=fnOf(S.idx,'function openDualGuard(extra)'),sa=fnOf(S.idx,'function startApp()');
-    t('F2 듀얼 가드 탭은 S.activeTab 에 안 들어간다 — 누르면 화면만 바꾸고(opView) 다른 탭이 지운다',
+    t('F2 듀얼가드 탭은 S.activeTab 에 안 들어간다 — 누르면 화면만 바꾸고(opView) 다른 탭이 지운다',
       /if\(t\.dataset\.t==='dg'\)\{ openDualGuard\(\); return; \}/.test(st)&&st.indexOf("openDualGuard(); return;")<st.indexOf('S.activeTab=t.dataset.t')&&/closeDualGuardView\(\);/.test(st)
       &&!/S\.activeTab\s*=/.test(od)&&/S\.opView='dg'/.test(od)&&/\/plan\?embed=1/.test(fnOf(S.idx,'function dgEnsureFrame(extra)')));
-    t('F3 첫 화면 — ASAP 을 보고 있었어도 무한매수법 · 듀얼 가드를 보고 있었으면 듀얼 가드',/if\(S\.activeTab==='asap'\)S\.activeTab='inf';/.test(sa)&&/if\(S\.opView==='dg'\) openDualGuard\(\);/.test(sa)
+    t('F3 첫 화면 — ASAP 을 보고 있었어도 무한매수법 · 듀얼가드를 보고 있었으면 듀얼가드',/if\(S\.activeTab==='asap'\)S\.activeTab='inf';/.test(sa)&&/if\(S\.opView==='dg'\) openDualGuard\(\);/.test(sa)
       &&sa.indexOf("if(S.activeTab==='asap')S.activeTab='inf';")<sa.indexOf('const tb=document.querySelector'));
-    t('F4 모의 목록 듀얼 가드 줄 → 운영 › 듀얼 가드 탭 안에서 그 세션(딥링크) · 다른 전략 줄은 듀얼 가드를 보고 있어도 그 탭으로',
+    t('F4 모의 목록 듀얼가드 줄 → 운영 › 듀얼가드 탭 안에서 그 세션(딥링크) · 다른 전략 줄은 듀얼가드를 보고 있어도 그 탭으로',
       /openDualGuard\('session='\+encodeURIComponent\(id\)/.test(fnOf(S.idx,'function gotoSess(tab, id)'))&&/if\(S\.activeTab!==tab \|\| isDgView\(\)\)\{/.test(fnOf(S.idx,'function gotoSess(tab, id)')));
     const menuBad=PAGES.filter(f=>{const s=rd(f);return !/<a href="\/portfolio"[^>]*><span class="mi">💰<\/span>포트폴리오<\/a>/.test(s)||/>자산플랜<\/a>/.test(s);});
     t('F5 모든 페이지 메뉴: 자산플랜 → 💰 포트폴리오(/portfolio)',menuBad.length===0,menuBad.join());
-    t('F6 메뉴 정책: 포트폴리오 20번 공개 · /plan 은 메뉴에서 숨기고 주소 권한만(듀얼 가드) · 머리말 이름',
-      /\{path:'\/portfolio',label:'포트폴리오',mode:'public',order:20\}/.test(S.acc)&&/\{path:'\/plan',label:'듀얼 가드',mode:'public',order:21,navHidden:true\}/.test(S.acc)
-      &&/'\/portfolio':'포트폴리오','\/plan':'듀얼 가드'/.test(S.ui)&&/\.filter\(x=>!x\.navHidden\)/.test(S.admin)&&/'\/portfolio':'💰'/.test(S.admin));
+    t('F6 메뉴 정책: 포트폴리오 20번 공개 · /plan 은 메뉴에서 숨기고 주소 권한만(듀얼가드) · 머리말 이름',
+      /\{path:'\/portfolio',label:'포트폴리오',mode:'public',order:20\}/.test(S.acc)&&/\{path:'\/plan',label:'듀얼가드',mode:'public',order:21,navHidden:true\}/.test(S.acc)
+      &&/'\/portfolio':'포트폴리오','\/plan':'듀얼가드'/.test(S.ui)&&/\.filter\(x=>!x\.navHidden\)/.test(S.admin)&&/'\/portfolio':'💰'/.test(S.admin));
     t('F7 /portfolio 는 운영 앱이 그린다(모의 /paper 와 같은 방식) · 원장 읽은 뒤 채움',
       /if\(\/\^\\\/portfolio\\\/\?\$\/\.test\(location\.pathname\)\)\{\s*document\.body\.classList\.add\('portfoliopage'\)/.test(S.idx)
       &&(S.idx.match(/pfPageAuto\(\);/g)||[]).length>=2&&/body\.portfoliopage>div\.wrap>\*:not\(#pfPage\):not\(footer\)\{display:none!important\}/.test(S.idx)
-      &&/body\.dgview:not\(\.portfoliopage\) \.wrap>footer/.test(S.idx));   // 듀얼 가드를 보던 채로 포트폴리오를 열어도 바닥글(버전)은 보인다
+      &&/body\.dgview:not\(\.portfoliopage\) \.wrap>footer/.test(S.idx));   // 듀얼가드를 보던 채로 포트폴리오를 열어도 바닥글(버전)은 보인다
     // 플랜 화면 창 모드 — 머리 스크립트를 실제로 돌린다
-    const head=(S.plan.match(/<script>\n\/\* 운영 › 듀얼 가드 탭 안[\s\S]*?<\/script>/)||[''])[0].replace(/^<script>|<\/script>$/g,'');
+    const head=(S.plan.match(/<script>\n\/\* 운영 › 듀얼가드 탭 안[\s\S]*?<\/script>/)||[''])[0].replace(/^<script>|<\/script>$/g,'');
     const run=(search,inFrame)=>{const cls=new Set(),kids=[];const de={classList:{add:x=>cls.add(x)}};const w={};w.parent=inFrame?{}:w;
       const c={location:{search},window:w,document:{documentElement:de,createElement:()=>({}),head:{appendChild:x=>kids.push(x)}}};vm.createContext(c);vm.runInContext(head,c);return {embed:cls.has('embed'),base:kids[0]&&kids[0].target};};
     const a=run('?embed=1',true),b=run('?embed=1',false),d=run('?session=x',true);
     t('F8 플랜 화면 창 모드: 운영 탭 창 안 + ?embed=1 일 때만 머리말 숨김 · 링크는 바깥 창(_top) · 주소로 바로 열면 평소 화면',
       head.length>0&&a.embed&&a.base==='_top'&&!b.embed&&!d.embed&&/html\.embed \.jk-site-header,html\.embed \.wrap>\.top\{display:none!important\}/.test(S.plan),JSON.stringify([a,b,d]));
-    t('F9 플랜 화면 이름 듀얼 가드 · 메뉴는 운영(cur)·포트폴리오',/<title>JK 투자 — 듀얼 가드<\/title>/.test(S.plan)&&/<a href="\/" class="cur"><span class="mi">🏠<\/span>운영<\/a>/.test(S.plan)); }
+    t('F9 플랜 화면 이름 듀얼가드 · 메뉴는 운영(cur)·포트폴리오',/<title>JK 투자 — 듀얼가드<\/title>/.test(S.plan)&&/<a href="\/" class="cur"><span class="mi">🏠<\/span>운영<\/a>/.test(S.plan)); }
 
   // ── G. 플랜 창 → 바깥 알림
   { const sent=[];const mkc=(embed,sess,pp=true)=>{const w={};w.parent={postMessage:(m,o)=>sent.push({m,o})};
@@ -248,13 +248,16 @@ function check2(S,t,E,bad){
       Object.keys(c2.PF.dg).length===0&&Object.keys(c2.PF.over).length===0&&c2.PF.dgSeen&&c2.PF.dgSeen.paper===true&&txt.includes('모의 세션 보는 중')&&txt.includes('「현재 투자중」'),txt); }
   return check3(S,t,E,bad);
 }
-/* ── v2 (2026-11-09 사용자: "합친 평가액 추이와 합친 MDD, 올해 양도세 합산(250만원 공제는 사람당 한 번), 목표 비중(듀얼 가드 5/6 : 섀넌 1/6) 대비 표시") ── */
+/* ── v2 (2026-11-09 사용자: "합친 평가액 추이와 합친 MDD, 올해 양도세 합산(250만원 공제는 사람당 한 번), 목표 비중(듀얼가드 5/6 : 섀넌 1/6) 대비 표시") ── */
 function check3(S,t,E,bad){
   const T=(()=>{const c={};c.window=c;vm.createContext(c);vm.runInContext(S.tax,c);return c.JKPlanTaxCheck;})();
   const helpers=['function pfOutAmt(r)','function pfPlanSeries(L, Q, E, row)','function pfCombine(rows, fx)','function pfOpTaxKrw(series, T, fx, year)','function pfApplyTax(rows, T, fxDays, year, E)',
-    'function pfTaxSummary(rows, T, year)','function pfTargetView(Z)','function pfUsdPlain(v)','function pfCompact(v)','function pfNiceTicks(lo, hi, n)','function pfPct(v)','function pfEsc(x)','function pfChartHtml(C)','function pfMonthTable(C)'];
+    'function pfTaxSummary(rows, T, year)','function pfTargetView(Z)','function pfUsdPlain(v)','function pfCompact(v)','function pfNiceTicks(lo, hi, n)','function pfPct(v)','function pfEsc(x)','function pfChartHtml(C)','function pfMonthTable(C)',
+    'function pfGroup(tab)','function pfSessName(r)','function pfSessLines(C)','function pfSpread(items, top, bottom, gap)','function pfSw(color,dash)'];
   const c={PF:{chartGeo:null},$:()=>({clientWidth:640}),Math,Object,Number,String,Set,Map,console:{warn(){}}};vm.createContext(c);
-  vm.runInContext(helpers.map(m=>fnOf(S.idx,m)).join('\n')+'\n'+((S.idx.match(/const PF_TARGET=\{[^}]*\};/)||[''])[0]).replace('const PF_TARGET','var PF_TARGET'),c);
+  vm.runInContext(helpers.map(m=>fnOf(S.idx,m)).join('\n')+'\n'+((S.idx.match(/const PF_TARGET=\{[^}]*\};/)||[''])[0]).replace('const PF_TARGET','var PF_TARGET')
+    +'\n'+((S.idx.match(/const PF_GROUP=\{.*\};/)||[''])[0]).replace('const PF_GROUP','var PF_GROUP')+'\n'+((S.idx.match(/const PF_OTHER=\{[^}]*\};/)||[''])[0]).replace('const PF_OTHER','var PF_OTHER')
+    +'\n'+((S.idx.match(/const PF_DASH=\[[^\]]*\];/)||[''])[0]).replace('const PF_DASH','var PF_DASH'),c);
   // ── I. 운영 세션 날마다 값 — paperMdd 걸음이 그릇(_pfSeriesSink)에 넣는다 · 끝 값은 지금 시세 · 끝 날짜는 마지막 기록 날까지
   { const md=fnOf(S.idx,'function paperMdd(tab, sess, R, hist)');
     const days=[1,2,3,4,5].map(i=>({date:'2026-01-0'+i,close:10*i}));
@@ -277,7 +280,7 @@ function check3(S,t,E,bad){
     t('M2 줄마다 이월(그날 값 없으면 직전) · 원화 줄은 환율로 나눔 · 시작 전엔 0',C.points.length===5&&near(C.points[3].tot,108.9+1000+100)&&near(C.points[0].inflow,200)&&near(C.points[2].inflow,1200),JSON.stringify(C.points.map(p=>[p.tot,p.inflow])));
     t('M3 환율이 없으면 원화 줄은 빼고 합친다(0 으로 섞지 않음)',c.pfCombine([A,K],0).points.every(p=>p.inflow===100),'');
     t('M4 나간 돈 — 그림 평가액(now)은 지금 계좌 · 낙폭은 나간 돈 포함(tot)',(()=>{const R=c.pfCombine([{tab:'inf',cur:'usd',series:[{date:d(1),tot:100,inflow:100,out:0},{date:d(2),tot:100,inflow:100,out:30}]}],1);return R.points[1].now===70&&R.mdd===0;})()); }
-  // ── N. 듀얼 가드 날마다 값 — 기록이 늘어나는 날마다 엔진 ledgerCalc · 투입 = 시작금 + 입금 − 출금 · 끝 = 지금 값
+  // ── N. 듀얼가드 날마다 값 — 기록이 늘어나는 날마다 엔진 ledgerCalc · 투입 = 시작금 + 입금 − 출금 · 끝 = 지금 값
   { const days=k=>[1,2,3,4,5].map(i=>({date:'2026-03-0'+i,close:k*i}));
     const Q={TECL:{days:days(50)},TQQQ:{days:days(40)},SGOV:{days:[1,2,3,4,5].map(i=>({date:'2026-03-0'+i,close:100}))}};
     const L={start:1000,from:'2026-03-01',ledger:{base:{date:'2026-03-01',cash:1000},events:[
@@ -286,24 +289,24 @@ function check3(S,t,E,bad){
     const s1=c.pfPlanSeries(L,Q,E,{pending:false,total:4321,inflow:1400});
     t('N1 날마다: 03-02 체결 뒤 현금 499.5 + TECL 5×100 · 03-03 5×150 · 03-04 입금 → 투입 1,500',s1.length===6&&near(s1[1].tot,499.5+500)&&near(s1[2].tot,499.5+750)&&s1[3].inflow===1500&&s1[0].inflow===1000&&near(s1[0].tot,1000),JSON.stringify(s1));
     t('N2 끝 = 줄의 지금 값 · 종가 뒤(03-07) 출금 기록 → 그 날짜로 하나 더',s1[5].date==='2026-03-07'&&s1[5].tot===4321&&s1[5].inflow===1400&&s1[4].date==='2026-03-05',JSON.stringify(s1.slice(-2))); }
-  // ── J. 올해 양도세 — 운영 줄 추정(결제일 해 · 결제일 환율) · 듀얼 가드는 플랜 세금 점검과 같은 계산 · 공제는 사람당 한 번
+  // ── J. 올해 양도세 — 운영 줄 추정(결제일 해 · 결제일 환율) · 듀얼가드는 플랜 세금 점검과 같은 계산 · 공제는 사람당 한 번
   { const fx=T.fxFn([{date:'2026-01-02',close:1000},{date:'2026-07-01',close:1100}]);
     const ser=[{date:'2026-06-01',realized:100},{date:'2026-06-02',realized:100},{date:'2026-12-30',realized:150},{date:'2026-12-31',realized:170}];
     const o=c.pfOpTaxKrw(ser,T,fx,'2026');
     t('J1 운영 줄: 06-01 매도 100$×1,000 + 12-30 매도 50$×1,100(결제 12-31) · 12-31 매도는 결제가 다음 해(01-04)라 뺌',near(o.krw,100*1000+50*1100)&&o.n===2,JSON.stringify(o));
     const rows=[{tab:'plan',tax:{exact:true,krw:2000000,n:3}},{tab:'ivs',tax:{est:true,krw:2000000,n:2}},{tab:'dca',tax:{domestic:true}},{tab:'inf',tax:{missing:true}},{tab:'dca',tax:{est:true,krw:0,n:0}}];
     const X=c.pfTaxSummary(rows,T,'2026');
-    t('J2 공제 250만원은 합친 뒤 한 번: 400만 − 250만 = 150만 × 22% = 33만 · 듀얼 가드 밖 200만 · 국내 1 · 빠짐 1 · 매도 없는 줄은 표에서 뺌',X.total===4000000&&X.taxable===1500000&&near(X.tax,330000)&&X.other===2000000&&X.domestic===1&&X.skipped===1&&X.items.length===2&&X.room===-1500000,JSON.stringify(X));
+    t('J2 공제 250만원은 합친 뒤 한 번: 400만 − 250만 = 150만 × 22% = 33만 · 듀얼가드 밖 200만 · 국내 1 · 빠짐 1 · 매도 없는 줄은 표에서 뺌',X.total===4000000&&X.taxable===1500000&&near(X.tax,330000)&&X.other===2000000&&X.domestic===1&&X.skipped===1&&X.items.length===2&&X.room===-1500000,JSON.stringify(X));
     const L={base:{date:'2026-01-02',tecl:10,avgTecl:50,cash:0},events:[{id:'s',type:'trade',date:'2026-05-01',symbol:'TECL',side:'sell',qty:4,price:80,fee:0.32}]};
     const FX=[{date:'2026-01-02',close:1300},{date:'2026-05-04',close:1400}];
     const pr={tab:'plan',cur:'usd',ledgerRef:L,px:{TECL:90}},or={tab:'ivs',cur:'usd',series:[{date:'2026-05-01',realized:20}]},kr={tab:'dca',cur:'krw'};
     c.pfApplyTax([pr,or,kr],T,FX,'2026',E);
     const ref=T.check({ledger:L,prices:{TECL:90},fxSeries:FX,year:'2026',feeFn:E.alphaFee});
-    t('J3 듀얼 가드 = plan-tax-check check(선입선출 원화 · 플랜 화면과 같은 값) · 운영 = 추정 · 국내 = 제외',pr.tax.exact&&near(pr.tax.krw,ref.realized.fifo)&&pr.tax.n===1&&or.tax.est&&near(or.tax.krw,20*1400)&&kr.tax.domestic===true,JSON.stringify([pr.tax,or.tax,ref.realized])); }
+    t('J3 듀얼가드 = plan-tax-check check(선입선출 원화 · 플랜 화면과 같은 값) · 운영 = 추정 · 국내 = 제외',pr.tax.exact&&near(pr.tax.krw,ref.realized.fifo)&&pr.tax.n===1&&or.tax.est&&near(or.tax.krw,20*1400)&&kr.tax.domestic===true,JSON.stringify([pr.tax,or.tax,ref.realized])); }
   // ── K. 목표 비중 5/6 : 1/6 — 두 전략 합 기준 모자람/넘침 · 무매가 끝나 옮길 때의 몫
   { const P=(tab,now,label)=>({r:{tab,label},now});
-    const V=c.pfTargetView({parts:[P('plan',25000,'듀얼 가드'),P('inf',10000,'무한매수법'),P('dca',228,'매수적립')]});
-    t('K1 섀넌 0 · 듀얼 가드 25,000 → 섀넌 4,166.67 모자람 · 무매 10,000 까지 옮기면 섀넌 +5,833.33 · 듀얼 가드 +4,166.67 · 적립은 목표 밖',
+    const V=c.pfTargetView({parts:[P('plan',25000,'듀얼가드'),P('inf',10000,'무한매수법'),P('dca',228,'매수적립')]});
+    t('K1 섀넌 0 · 듀얼가드 25,000 → 섀넌 4,166.67 모자람 · 무매 10,000 까지 옮기면 섀넌 +5,833.33 · 듀얼가드 +4,166.67 · 적립은 목표 밖',
       V.wPlan===1&&near(V.gapIvs,25000/6)&&near(V.gapPlan,-25000/6)&&near(V.moveIvs,35000/6)&&near(V.movePlan,35000*5/6-25000)&&V.otherBy['매수적립']===228,JSON.stringify(V));
     const V2=c.pfTargetView({parts:[P('plan',25000,''),P('ivs',5000,'')]});
     t('K2 목표대로(25,000 : 5,000) → 모자람 0 · 무매 없으면 옮길 몫 없음',near(V2.gapIvs,0)&&near(V2.wIvs,1/6)&&V2.moveIvs===null,JSON.stringify(V2)); }
@@ -311,10 +314,33 @@ function check3(S,t,E,bad){
   { const C=c.pfCombine([{tab:'plan',cur:'usd',series:[{date:'2026-04-01',tot:100,inflow:100},{date:'2026-04-02',tot:120,inflow:100},{date:'2026-04-03',tot:90,inflow:100},{date:'2026-04-06',tot:95,inflow:100}]}],1);
     const html=c.pfChartHtml(C),bind=fnOf(S.idx,'function pfChartBind()');
     t('L1 그림: 평가액·투입 선 · 끝 값 표시 · 범례 · 최대 낙폭 띠(04-02→04-03 · −25%) · 접근 이름',/class="pf-line pf-in"/.test(html)&&/class="pf-line pf-val"/.test(html)&&/class="pf-end">\$95</.test(html)&&/합친 평가액\(지금 계좌\)/.test(html)&&/투입 원금/.test(html)&&/class="pf-band"/.test(html)&&/role="img"/.test(html)&&near(C.mdd,25)&&C.mddPeak==='2026-04-02',html.slice(0,200));
-    t('L2 값 상자는 textContent 로만 · 손가락(pointerdown)·화살표 키로도 · 색은 검증한 쌍(#3987e5 · #c98500)',/textContent/.test(bind)&&!/innerHTML/.test(bind)&&/pointerdown/.test(bind)&&/ArrowLeft/.test(bind)&&/--pf-val:#3987e5;--pf-in:#c98500/.test(S.idx));
-    t('L3 비중 막대는 무리 넷(듀얼 가드·섀넌·무매·그 밖)만 — 모든 짝이 갈리는 색(검증) · 2px 틈',/plan:\{label:'듀얼 가드',color:'#9085e9'\},ivs:\{label:'섀넌',color:'#d55181'\},inf:\{label:'무한매수법',color:'#008300'\}/.test(S.idx)&&/const PF_OTHER=\{label:'그 밖',color:'#c9cdd9'\};/.test(S.idx)&&/\.pf-bar\{display:flex;gap:2px;/.test(S.idx)&&!/PF_COLOR/.test(S.idx));
+    t('L2 값 상자는 textContent 로만 · 손가락(pointerdown)·화살표 키로도 · 색: 합친 선 흰색(#e8ecf7 — 무리 색과 안 겹침) · 투입 금색 점선(무매 초록과 색약 경고 띠라 모양으로도 가름)',/textContent/.test(bind)&&!/innerHTML/.test(bind)&&/pointerdown/.test(bind)&&/ArrowLeft/.test(bind)&&/--pf-val:#e8ecf7;--pf-in:#c98500/.test(S.idx)
+      &&/\.pf-in\{stroke:var\(--pf-in\);stroke-width:1\.5;stroke-dasharray:6 4\}/.test(S.idx));
+    t('L3 비중 막대는 무리 넷(듀얼가드·섀넌·무매·그 밖)만 — 모든 짝이 갈리는 색(검증) · 2px 틈',/plan:\{label:'듀얼가드',color:'#9085e9'\},ivs:\{label:'섀넌',color:'#d55181'\},inf:\{label:'무한매수법',color:'#008300'\}/.test(S.idx)&&/const PF_OTHER=\{label:'그 밖',color:'#c9cdd9'\};/.test(S.idx)&&/\.pf-bar\{display:flex;gap:2px;/.test(S.idx)&&!/PF_COLOR/.test(S.idx));
     t('L4 화면 배선: 합친 MDD 칸 · 추이 · 목표 · 양도세(세금 모듈 불러옴) · 환율 KRW=X',/합친 MDD/.test(fnOf(S.idx,'function pfRender()'))&&/pfChartHtml\(C\)/.test(fnOf(S.idx,'function pfRender()'))&&/pfTargetHtml\(V\)/.test(fnOf(S.idx,'function pfRender()'))&&/pfTaxHtml\(X,T\)/.test(fnOf(S.idx,'function pfRender()'))
       &&/<script src="\/plan-tax-check\.js\?v=1"><\/script>/.test(S.idx)&&/fetchDaily\('KRW=X'\)/.test(fnOf(S.idx,'async function pfRefresh(force)'))); }
+  /* ── 세션별 선(2026-11-09 사용자: "이 그래프에 포트폴리오에 선택한 세션별 라인도 그려") ── */
+  { const d=i=>'2026-05-0'+i;
+    const A={tab:'plan',cur:'usd',label:'듀얼가드',name:'현재 투자중',series:[1,2,3,4,5].map(i=>({date:d(i),tot:[100,110,121,108.9,120][i-1],inflow:100,out:0}))};
+    const B={tab:'inf',cur:'usd',label:'무한매수법',name:'키움 <SOXL>',series:[{date:d(3),tot:1000,inflow:1000,out:0},{date:d(5),tot:1100,inflow:1000,out:40}]};
+    const K={tab:'dca',cur:'krw',label:'적립',name:'국내',series:[{date:d(2),tot:140000,inflow:140000,out:0},{date:d(4),tot:154000,inflow:140000,out:0}]};
+    const C=c.pfCombine([A,B,K],1400), P=C.points;
+    const sumOk=P.every(p=>near(p.by.reduce((a,v)=>a+(v||0),0),p.now,1e-9));
+    t('L5 세션별 값(by): 날마다 세션 합 = 합친 평가액(나간 돈 뺀 지금 계좌) · 시작 전 null · 이월 · 원화는 환율로 · 순서 = 줄 순서',
+      C.sess.length===3&&C.sess[0]===A&&C.sess[1]===B&&C.sess[2]===K&&sumOk&&P[0].by[1]===null&&P[0].by[2]===null&&P[1].by[2]===100&&near(P[3].by[1],1000)
+      &&near(P[4].by[1],1060)&&near(P[3].by[2],110)&&near(P[4].by[0],120),JSON.stringify(P.map(p=>p.by)));
+    const A2={...A,name:'토스 두 번째'}, html=c.pfChartHtml(c.pfCombine([A,B,A2,K],1400)), G=c.PF.chartGeo, one=c.pfChartHtml(c.pfCombine([A],1));
+    const paths=[...html.matchAll(/<path d="([^"]*)" class="pf-sess" stroke="([^"]*)"( stroke-dasharray="([^"]*)")?\/>/g)];
+    const ys=paths.flatMap(m=>[...m[1].matchAll(/[ML][\d.]+ ([\d.]+)/g)].map(q=>+q[1]));   // 그림 높이 230(폭 614) · 위 10 · 아래 24 → 세로 10~206
+    t('L6 그림: 세션마다 선 하나 · 색 = 그 전략 무리 색(비중 막대·카드와 같음) · 같은 무리 둘째는 점선 · 그 밖은 처음부터 점선 · 범례에 이름(이스케이프) · 축 안 · 세션 하나면 안 그림',
+      paths.length===4&&paths[0][2]==='#9085e9'&&!paths[0][3]&&paths[1][2]==='#008300'&&!paths[1][3]&&paths[2][2]==='#9085e9'&&paths[2][4]==='5 3'&&paths[3][2]==='#c9cdd9'&&paths[3][4]==='5 3'
+      &&html.includes('무한매수법 · 키움 &lt;SOXL&gt;')&&!html.includes('<SOXL>')&&html.includes('듀얼가드 · 토스 두 번째')&&ys.length>8&&ys.every(v=>v>=10&&v<=206)
+      &&/class="pf-halo"/.test(html)&&G.S.length===4&&!/pf-sess/.test(one)&&!/pf-halo/.test(one),JSON.stringify(paths.map(m=>[m[2],m[4]||''])));
+    const L=[{y:50},{y:52},{y:51},{y:200}], R=c.pfSpread(L,18,204,13), ly=R.map(o=>o.ly).sort((a,b)=>a-b);
+    t('L7 끝 값 글자가 겹치지 않음(13px 이상) · 위아래 순서 그대로 · 칸 안(아래 끝 넘으면 위로)',ly.every((v,i)=>!i||v-ly[i-1]>=13-1e-9)&&L[0].ly<L[2].ly&&L[2].ly<L[1].ly&&ly[ly.length-1]<=204&&ly[0]>=18,JSON.stringify(R));
+    const bind=fnOf(S.idx,'function pfChartBind()');
+    t('L8 값 상자: 세션별 그날 값(이름 · 무리 색 · 시작 전 세션 뺌) · 이름은 textContent',/for\(const s of \(G\.S\|\|\[\]\)\)\{ const v=p\.by&&p\.by\[s\.j\]; if\(v!=null\) line\(s\.color,pfUsdPlain\(v\),s\.name,true\); \}/.test(bind)
+      &&/sp\.className='nm'; sp\.textContent=label;/.test(bind)); }
   return check4(S,t,E,bad);
 }
 
@@ -324,15 +350,15 @@ function check4(S,t,E,bad){
   { const c={};vm.createContext(c);vm.runInContext(fnOf(S.idx,'function pfWanted(x)'),c);
     const v=[{paper:false},{paper:false,portfolio:true},{paper:false,portfolio:false},{paper:true},{paper:true,portfolio:true},null].map(x=>c.pfWanted(x));
     t('O1 pfWanted — 실계좌: 고른 적 없음·켬 → 넣음 · 끔 → 뺌 / 모의(켜 둬도)·없음 → 뺌',JSON.stringify(v)==='[true,true,false,false,false,false]',JSON.stringify(v)); }
-  // O2·O3 뺀 세션 안내 — 기록 있는 실계좌 세션 중 끈 것만 · 듀얼 가드 장부 포함 · 누르면 그 세션으로
+  // O2·O3 뺀 세션 안내 — 기록 있는 실계좌 세션 중 끈 것만 · 듀얼가드 장부 포함 · 누르면 그 세션으로
   { const c={planLiveDoc:{portfolio:false,startCapital:20000,alphaLedger:{base:{cash:1},events:[{id:'e'}]}},PF:{over:{}},
       S:{plan:{sessions:[]},inf:{sessions:[{id:'a',name:'키움 SOXL',paper:false,portfolio:false,hist:[{d:1}]},{id:'b',name:'빈',paper:false,portfolio:false,hist:[]},
           {id:'c',name:'모의',paper:true,portfolio:false,hist:[{d:1}]},{id:'d',name:'넣음',paper:false,hist:[{d:1}]}]},
         dca:{sessions:[{id:'q',name:'TQQQ 적립',paper:false,portfolio:false,hist:[{d:1}]}]}},
-      PAPER_TABS:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼 가드']],planPaperRetired:()=>false};
+      PAPER_TABS:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼가드']],planPaperRetired:()=>false};
     vm.createContext(c);vm.runInContext(['function pfNum(v)','function pfEsc(x)','function pfWanted(x)','function pfPlanWanted(stored, ov)','function pfLedgerUsed(l)','function pfPlanLedgers(withOff)','function pfOffList()','function pfOffHtml()'].map(m=>fnOf(S.idx,m)).join('\n'),c);
     const L=c.pfOffList(),h=c.pfOffHtml();
-    t('O2 뺀 세션 안내 — 듀얼 가드 현재 투자중 · 무매 키움 SOXL · 적립 TQQQ(기록 있는 실계좌 중 끈 것) · 빈 세션·모의·켠 세션은 안 적음 · 누르면 그 세션으로',
+    t('O2 뺀 세션 안내 — 듀얼가드 현재 투자중 · 무매 키움 SOXL · 적립 TQQQ(기록 있는 실계좌 중 끈 것) · 빈 세션·모의·켠 세션은 안 적음 · 누르면 그 세션으로',
       L.map(x=>x.tab+':'+x.id).join()==='plan:cur,inf:a,dca:q'&&/뺀 세션 3개/.test(h)&&/data-pftab="inf" data-pfid="a"/.test(h)&&/data-pftab="plan" data-pfid="cur"/.test(h)&&/「💰 포트폴리오에 넣기」/.test(h),JSON.stringify(L));
     c.planLiveDoc.portfolio=true;c.S.inf.sessions[0].portfolio=true;c.S.dca.sessions[0].portfolio=true;
     t('O3 다 넣으면 안내 없음',c.pfOffList().length===0&&c.pfOffHtml()===''); }
@@ -363,7 +389,7 @@ function check4(S,t,E,bad){
     return check5(S,t,E,bad);
   })();
 }
-/* ── O(듀얼 가드). 플랜 세션 설정 — 설정 모듈 · 현재 투자중 저장(fiveYearPlanV2.portfolio) · 설정창 잠금 ── */
+/* ── O(듀얼가드). 플랜 세션 설정 — 설정 모듈 · 현재 투자중 저장(fiveYearPlanV2.portfolio) · 설정창 잠금 ── */
 function check5(S,t,E,bad){
   const M=(()=>{const c={};vm.createContext(c);vm.runInContext(S.set,c);return c.JKPlanSessionSettings;})();
   const seed={id:'s1',horizon:5,paper:false,settings:{startCapital:5000,monthlyAdd:0,targetCapital:9000,startDate:'2026-01-02'},ledger:{base:{date:'2026-01-02',cash:5000},events:[]}};
@@ -371,7 +397,7 @@ function check5(S,t,E,bad){
   const x1=M.update(seed,inp({portfolio:false}),opt),x2=M.update(x1,inp({portfolio:true}),opt),x3=M.update(x1,inp({}),opt),x4=M.update(x1,inp({paper:true,portfolio:true,start:'2025-01-02'}),opt);
   t('O8 플랜 세션 설정 모듈 — 운영 세션은 고른 값(끔 → false · 켬 → true) · 값을 안 넘기면 그대로 · 모의로 바꾸면 손대지 않음 · 캐시 판 3',
     x1.portfolio===false&&x2.portfolio===true&&x3.portfolio===false&&x4.portfolio===false&&x4.paper===true&&/<script src="\/plan-session-settings\.js\?v=3"><\/script>/.test(S.plan),JSON.stringify([x1.portfolio,x2.portfolio,x3.portfolio,x4.portfolio]));
-  // O9 듀얼 가드 설정창 저장 — 현재 투자중은 planPortfolio(→ 원장) · 세션은 세션 값 · 모의 새 세션은 값 없음
+  // O9 듀얼가드 설정창 저장 — 현재 투자중은 planPortfolio(→ 원장) · 세션은 세션 값 · 모의 새 세션은 값 없음
   const P={};const el=(id,o={})=>P[id]=Object.assign({value:'',checked:false,disabled:false,textContent:'',hidden:false},o);
   el('assetSessionPaper',{checked:false});el('assetSessionName',{value:'현재 투자중'});el('assetSessionCapital',{value:'20000'});el('assetSessionMonthly',{value:'0'});el('assetSessionTarget',{value:'150000'});
   el('assetSessionStart',{value:'2026-01-02'});el('assetSessionPf',{checked:false});el('assetSessionPfHint');el('assetSessionModal',{hidden:false});el('assetSessionCreate');
@@ -388,7 +414,7 @@ function check5(S,t,E,bad){
     await c.createAssetSession();
     c.assetEditingId='s1';P.assetSessionName.value='세션';P.assetSessionCapital.value='5000';P.assetSessionTarget.value='9000';P.assetSessionPf.checked=false;await c.createAssetSession();
     c.assetEditingId=null;P.assetSessionPaper.checked=true;P.assetSessionName.value='모의';await c.createAssetSession();
-    t('O9 듀얼 가드 설정창 저장 — 현재 투자중 끔 → 원장 저장 때 planPortfolio=false · 세션 끔 → 그 세션 portfolio:false · 모의 새 세션은 값 없음',
+    t('O9 듀얼가드 설정창 저장 — 현재 투자중 끔 → 원장 저장 때 planPortfolio=false · 세션 끔 → 그 세션 portfolio:false · 모의 새 세션은 값 없음',
       log.join(' | ')==='cloud:false | state:[false] | state:[false,"-"]',log.join(' | '));
     // O10 원장에 적고 읽기 — readForm 이 portfolio 를 적고, apply 가 읽는다(없으면 넣음)
     const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:false,planCurName:''};
@@ -402,7 +428,7 @@ function check5(S,t,E,bad){
     const u={$:id=>Q[id],assetPfPick:true};vm.createContext(u);vm.runInContext(fnOf(S.plan,'function assetPfInit(on)')+fnOf(S.plan,'function assetPfUI(paper)'),u);
     u.assetPfInit(true);u.assetPfUI(false);const s0=[Q.assetSessionPf.checked,Q.assetSessionPf.disabled];u.assetPfUI(true);const s1=[Q.assetSessionPf.checked,Q.assetSessionPf.disabled,/모의 세션은 넣지 않습니다/.test(Q.assetSessionPfHint.textContent)];
     u.assetPfUI(false);const s2=[Q.assetSessionPf.checked,Q.assetSessionPf.disabled];u.assetPfInit(false);const s3=[Q.assetSessionPf.checked];
-    t('O11 듀얼 가드 설정창 — 켠 채 열림 · 모의 세션이면 잠금(꺼짐) · 운영으로 돌리면 원래 값(켬) · 끈 세션은 꺼진 채 · 배선(설정 열기 · 종류 바꿈 · 새 세션 켬)',
+    t('O11 듀얼가드 설정창 — 켠 채 열림 · 모의 세션이면 잠금(꺼짐) · 운영으로 돌리면 원래 값(켬) · 끈 세션은 꺼진 채 · 배선(설정 열기 · 종류 바꿈 · 새 세션 켬)',
       s0.join()==='true,false'&&s1.join()==='false,true,true'&&s2.join()==='true,false'&&s3.join()==='false'
       &&/assetPfInit\(x\?x\.portfolio!==false:planPortfolio!==false\)/.test(fnOf(S.plan,'async function editAssetSession(mode)'))&&/assetPfUI\(paper\)/.test(fnOf(S.plan,'function syncAssetSessionModal()'))
       &&/assetPfInit\(true\)/.test(fnOf(S.plan,'function openAssetSessionModal()'))&&/id="assetSessionPf"/.test(S.plan),JSON.stringify([s0,s1,s2,s3]));
@@ -415,14 +441,14 @@ const MUT=[
   ['합계: 원화 세션을 환율로 안 나눔','idx',s=>s.replace("let k=1; if(r.cur==='krw'){ if(!(+fx>0)){ missing++; continue; } k=1/(+fx); }","let k=1;")],
   ['합계: 시세 대기 줄을 그대로 더함','idx',s=>s.replace("if(!r||r.pending||!Number.isFinite(+r.total)){ missing++; continue; }","if(!r||!Number.isFinite(+r.total)){ missing++; continue; }")],
   ['합계: 나간 돈을 지금 계좌로 셈','idx',s=>s.replace("now+=t-o; out+=o;","now+=t; out+=o;")],
-  ['듀얼 가드 줄: 투입에 입출금 빠짐','idx',s=>s.replace("inflow=Math.max(0,(+L.start||0)+(+c.netFlow||0))","inflow=Math.max(0,(+L.start||0))")],
-  ['듀얼 가드 목록: 모의 세션도 넣음','idx',s=>s.replace("if(!x||x.paper||planPaperRetired(x)) continue;","if(!x||planPaperRetired(x)) continue;")],
+  ['듀얼가드 줄: 투입에 입출금 빠짐','idx',s=>s.replace("inflow=Math.max(0,(+L.start||0)+(+c.netFlow||0))","inflow=Math.max(0,(+L.start||0))")],
+  ['듀얼가드 목록: 모의 세션도 넣음','idx',s=>s.replace("if(!x||x.paper||planPaperRetired(x)) continue;","if(!x||planPaperRetired(x)) continue;")],
   ['실전 채우기: 모의 세션도 넣음','idx',s=>s.replace("pick=x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)","pick=x=>!!x&&(live?((x.hist||[]).length>0):!!x.paper)")],
   ['실전 채우기: 모의 체결을 굴림','idx',s=>s.replace("if(!live){                          // 실전 세션엔 모의 체결을 만들지 않는다","if(true){")],
-  ['듀얼 가드 탭이 무매 오른쪽','idx',s=>s.replace('    <button class="tab" data-t="dg">듀얼 가드</button>\n    <button class="tab on" data-t="inf">무한매수법</button>','    <button class="tab on" data-t="inf">무한매수법</button>\n    <button class="tab" data-t="dg">듀얼 가드</button>')],
-  ['듀얼 가드가 S.activeTab 에 들어감','idx',s=>s.replace("  if(S.opView!=='dg'){ S.opView='dg'; save(); }","  S.activeTab='dg'; if(S.opView!=='dg'){ S.opView='dg'; save(); }")],
+  ['듀얼가드 탭이 무매 오른쪽','idx',s=>s.replace('    <button class="tab" data-t="dg">듀얼가드</button>\n    <button class="tab on" data-t="inf">무한매수법</button>','    <button class="tab on" data-t="inf">무한매수법</button>\n    <button class="tab" data-t="dg">듀얼가드</button>')],
+  ['듀얼가드가 S.activeTab 에 들어감','idx',s=>s.replace("  if(S.opView!=='dg'){ S.opView='dg'; save(); }","  S.activeTab='dg'; if(S.opView!=='dg'){ S.opView='dg'; save(); }")],
   ['ASAP 탭 다시 보임','idx',s=>s.replace('.tab[data-t="asap"]:not(.on){display:none}','.tab[data-t="asap"]:not(.on){}')],
-  ['포트폴리오에서도 바닥글 숨김(듀얼 가드 보던 채)','idx',s=>s.replace('body.dgview:not(.portfoliopage) .wrap>footer','body.dgview .wrap>footer')],
+  ['포트폴리오에서도 바닥글 숨김(듀얼가드 보던 채)','idx',s=>s.replace('body.dgview:not(.portfoliopage) .wrap>footer','body.dgview .wrap>footer')],
   ['플랜 창: 모의 장부도 보냄','plan',s=>s.replace("if(!paper){msg.ledger=cloneObj(alphaLedger);","if(true){msg.ledger=cloneObj(alphaLedger);")],
   ['플랜 창 모드: 창 밖에서도 머리말 숨김','plan',s=>s.replace("if(!/[?&]embed=1(&|$)/.test(location.search)||window.parent===window) return;","if(!/[?&]embed=1(&|$)/.test(location.search)) return;")],
   ['받는 쪽: 모의도 받음','idx',s=>s.replace("if(d.paper){ if(isPfPage()) pfRender(); return; }","")],
@@ -430,17 +456,24 @@ const MUT=[
   ['합친 MDD: 시간가중 대신 총자산÷투입','idx',s=>s.replace("if(prev&&prev.tot>0){ const r=(tot-(inflow-prev.inflow))/prev.tot-1; if(Number.isFinite(r)) idx*=1+r; }","idx=tot/inflow;")],
   ['양도세: 공제를 전략마다 뺌','idx',s=>s.replace("const taxable=Math.max(0,total-ded);","const taxable=items.reduce((a,it)=>a+Math.max(0,it.krw-ded),0);")],
   ['양도세: 결제일 대신 체결일 해','idx',s=>s.replace("const sd=T.settleDate(p.date);","const sd=p.date;")],
-  ['목표: 듀얼 가드·섀넌 거꾸로','idx',s=>s.replace("const PF_TARGET={plan:5/6, ivs:1/6};","const PF_TARGET={plan:1/6, ivs:5/6};")],
+  ['목표: 듀얼가드·섀넌 거꾸로','idx',s=>s.replace("const PF_TARGET={plan:5/6, ivs:1/6};","const PF_TARGET={plan:1/6, ivs:5/6};")],
   ['날마다 값: 끝 날짜를 종가 끝으로 고정','idx',s=>s.replace("const end={date:lastH>endD?lastH:endD, tot:R.total,","const end={date:endD, tot:R.total,")],
-  ['듀얼 가드 추이: 입금을 투입에 안 넣음','idx',s=>s.replace("const inflow=Math.max(0,(+L.start||0)+(+st.netFlow||0)); if(!(inflow>0)) continue;","const inflow=Math.max(0,(+L.start||0)); if(!(inflow>0)) continue;")],
+  ['듀얼가드 추이: 입금을 투입에 안 넣음','idx',s=>s.replace("const inflow=Math.max(0,(+L.start||0)+(+st.netFlow||0)); if(!(inflow>0)) continue;","const inflow=Math.max(0,(+L.start||0)); if(!(inflow>0)) continue;")],
   ['합친 추이: 원화 줄을 환율 없이 섞음','idx',s=>s.replace("let k=1; if(r.cur==='krw'){ if(!(+fx>0)) continue; k=1/(+fx); }","let k=1;")],
+  ['세션 선: 나간 돈을 안 뺌(합 ≠ 합친 평가액)','idx',s=>s.replace("tot+=t1; inflow+=(+x.last.inflow)*x.k; out+=o1; by.push(t1-o1); }","tot+=t1; inflow+=(+x.last.inflow)*x.k; out+=o1; by.push(t1); }")],
+  ['세션 선: 하나여도 그림','idx',s=>s.replace("const ss=(C&&C.sess)||[]; if(ss.length<2) return [];","const ss=(C&&C.sess)||[]; if(!ss.length) return [];")],
+  ['세션 선: 무리 색 대신 한 색','idx',s=>s.replace("return {j, color:g.color, dash:","return {j, color:'#9085e9', dash:")],
+  ['세션 선: 같은 무리도 같은 모양','idx',s=>s.replace("dash:PF_DASH[(k+(g===PF_OTHER?1:0))%PF_DASH.length]","dash:''")],
+  ['끝 값: 겹침 안 막음(제자리)','idx',s=>s.replace("  const a=items.slice().sort((p,q)=>p.y-q.y);\n","  const a=items.slice().sort((p,q)=>p.y-q.y); a.forEach(o=>{o.ly=o.y;}); return items;\n")],
+  ['값 상자: 세션 줄 없음','idx',s=>s.replace("    for(const s of (G.S||[])){ const v=p.by&&p.by[s.j]; if(v!=null) line(s.color,pfUsdPlain(v),s.name,true); }","")],
+  ['합친 선 색: 예전 파랑(듀얼가드 보라와 색약에서 못 가름)','idx',s=>s.replace("#pfPage{--pf-val:#e8ecf7;","#pfPage{--pf-val:#3987e5;")],
   // 💰 포트폴리오에 넣기 (2026-11-09)
   ['넣을지 판단: 끈 세션도 넣음','idx',s=>s.replace("function pfWanted(x){ return !!x && !x.paper && x.portfolio!==false; }","function pfWanted(x){ return !!x && !x.paper; }")],
   ['실전 채우기: 포트폴리오 선택 무시','idx',s=>s.replace("pick=x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)","pick=x=>!!x&&(live?(!x.paper&&(x.hist||[]).length>0):!!x.paper)")],
   ['시세 선취: 끈 세션 종목도 받음','idx',s=>s.replace("if(!sess||(live?(!pfWanted(sess)||!(sess.hist||[]).length):!sess.paper))continue;","if(!sess||(live?(sess.paper||!(sess.hist||[]).length):!sess.paper))continue;")],
-  ['듀얼 가드 목록: 현재 투자중 선택 무시','idx',s=>s.replace("if(curL&&pfLedgerUsed(curL)){ const on=pfPlanWanted(five,o);","if(curL&&pfLedgerUsed(curL)){ const on=true;")],
-  ['듀얼 가드 목록: 세션 선택 무시','idx',s=>s.replace("const on=pfPlanWanted(x,ov); if(!on&&!withOff) continue;","const on=true; if(!on&&!withOff) continue;")],
-  ['듀얼 가드: 창이 보낸 선택 무시','idx',s=>s.replace("function pfPlanWanted(stored, ov){ return (ov&&typeof ov.portfolio==='boolean')?ov.portfolio:!(stored&&stored.portfolio===false); }","function pfPlanWanted(stored, ov){ return !(stored&&stored.portfolio===false); }")],
+  ['듀얼가드 목록: 현재 투자중 선택 무시','idx',s=>s.replace("if(curL&&pfLedgerUsed(curL)){ const on=pfPlanWanted(five,o);","if(curL&&pfLedgerUsed(curL)){ const on=true;")],
+  ['듀얼가드 목록: 세션 선택 무시','idx',s=>s.replace("const on=pfPlanWanted(x,ov); if(!on&&!withOff) continue;","const on=true; if(!on&&!withOff) continue;")],
+  ['듀얼가드: 창이 보낸 선택 무시','idx',s=>s.replace("function pfPlanWanted(stored, ov){ return (ov&&typeof ov.portfolio==='boolean')?ov.portfolio:!(stored&&stored.portfolio===false); }","function pfPlanWanted(stored, ov){ return !(stored&&stored.portfolio===false); }")],
   ['세션 설정(편집): 고른 값을 저장 안 함','idx',s=>s.replace("const pf=$('sess_pf'); if(!t.paper&&pf) t.portfolio=!!pf.checked;","const pf=$('sess_pf');")],
   ['세션 설정(새로): 고른 값을 저장 안 함','idx',s=>s.replace("const pf=$('sess_pf'); if(!s.paper&&pf) s.portfolio=!!pf.checked;","const pf=$('sess_pf');")],
   ['세션 설정: 모의에서도 넣기를 고를 수 있음','idx',s=>s.replace("if(paper){ if(!c.disabled) _sessPfPick=c.checked; c.checked=false; c.disabled=true; }","if(paper){ }")],
@@ -457,7 +490,7 @@ const MUT=[
 (async()=>{
   const bad=await check(SRC);
   if(bad.length){console.error('FAIL\n  '+bad.join('\n  '));process.exit(1);}
-  console.log('PASS 포트폴리오·듀얼 가드 탭: 장부 이동 = 옛 코드(603 장부) · 합계(환율·대기·나간 돈·비중) · 듀얼 가드 줄 · 장부 목록 · 실전 채우기(모의 제외·모의 체결 없음) · 탭 순서·ASAP 숨김·메뉴 · 창 모드 · 알림 주고받기');
+  console.log('PASS 포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드(603 장부) · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 장부 목록 · 실전 채우기(모의 제외·모의 체결 없음) · 탭 순서·ASAP 숨김·메뉴 · 창 모드 · 알림 주고받기');
   let red=0;
   for(const [name,key,mut] of MUT){
     const m=mut(SRC[key]);assert.notEqual(m,SRC[key],'변이 대상 없음: '+name);

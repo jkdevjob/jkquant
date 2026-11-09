@@ -1,21 +1,21 @@
 'use strict';
 // UI value fixtures; these are not market data or investment-performance tests.
-// 2026-11-08: 5년 플랜 하나 · 규칙 하나(새 규칙·공격형 폐지) · 🤖 듀얼 가드 한눈에 띠(오늘 판단 · TECL 전체 비중 · Guard · 다음 경계).
+// 2026-11-08: 5년 플랜 하나 · 규칙 하나(새 규칙·공격형 폐지) · 🤖 듀얼가드 한눈에 띠(오늘 판단 · TECL 전체 비중 · Guard · 다음 경계).
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const src=fs.readFileSync('plan.html','utf8');
 function fn(s,m){const a=s.indexOf(m);assert(a>=0,m);let i=s.indexOf('{',a),n=0;for(;i<s.length;i++){if(s[i]==='{')n++;if(s[i]==='}'&&!--n)return s.slice(a,i+1);}throw Error(m);}
 function check(source=src){
   const els=new Map(),el=id=>{if(!els.has(id))els.set(id,{textContent:'old',innerHTML:'',style:{}});return els.get(id);};
   const D={teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01};
-  const c={PATH_DEFAULTS:{alpha:D},horizonStrategy:()=>({years:5,key:'dualGuard',name:'5년 · 듀얼 가드'}),document:{querySelectorAll:()=>[]},$:el,activeHorizon:5,horizonRebalancePending:false,setTxt:(id,v)=>el(id).textContent=v};
+  const c={PATH_DEFAULTS:{alpha:D},horizonStrategy:()=>({years:5,key:'dualGuard',name:'5년 · 듀얼가드'}),document:{querySelectorAll:()=>[]},$:el,activeHorizon:5,horizonRebalancePending:false,setTxt:(id,v)=>el(id).textContent=v};
   vm.createContext(c);c.window=c;vm.runInContext(fs.readFileSync('plan-session-engine.js','utf8'),c);   // 판정(alphaDecide)·전략 이름(STRATEGY)은 모의 엔진과 같은 글자
   for(const m of ['function planStrategy()','function planStrategyLabel()','function alphaRuleSet()','function renderHorizonCopy()'])vm.runInContext(fn(source,m),c);
   c.renderHorizonCopy();
   assert.equal(el('alphaEv1Label').textContent,'TECL σ20');assert(el('alphaEv2Sub').textContent.includes('σ20'));assert(el('alphaEv2Sub').textContent.includes('최대70%'));
   assert(el('alphaEv2Sub').textContent.includes('w=(55%/σ20)²'),el('alphaEv2Sub').textContent);   // 목표 변동성은 공식 55% 하나(공격형 60% 폐지)
   assert(el('alphaExplain').innerHTML.includes('10%p를 초과'));assert.equal(el('alphaEv3Label').textContent,'TECL 몫 안의 현재 비율');
-  assert(el('alphaExplain').innerHTML.includes('듀얼 가드 v1.0'),'설명 머리에 전략 이름·판');
-  assert(el('alphaStrategyTitle').textContent.startsWith('듀얼 가드'),el('alphaStrategyTitle').textContent);
+  assert(el('alphaExplain').innerHTML.includes('듀얼가드 v1.0'),'설명 머리에 전략 이름·판');
+  assert(el('alphaStrategyTitle').textContent.startsWith('듀얼가드'),el('alphaStrategyTitle').textContent);
   assert(el('alphaValidation').innerHTML.includes('연 30.9% · MDD 40.6%'),'앱 엔진 체결로 다시 잰 값');
   Object.assign(c,{realizedVol:(rows,n)=>{assert.equal(n,20);return .503;},indicatorSeries:(rows,n)=>{assert.equal(n,225);return [63.459];},num:(id,f=0)=>({aTeclQty:64,aTqqqQty:38,aSgovQty:6,aCash:70,startCapital:10000}[id]??f),usd:x=>'$'+x.toFixed(2),usd2:x=>'$'+x.toFixed(2),alphaWeightHistory:()=>[],alphaSvg:()=>'',alphaCloseFillEditor:()=>{},ALPHA_FEE_RATE:.001,alphaFee:()=>0,alphaOrderHtml:()=>'',waitHtml:()=>'',pendingAlphaOrders:[]});
   vm.runInContext(fn(source,'function alphaExplainBounds(target,current,band)'),c);   // renderAlphaPlan 이 부르는 도우미(plan 1.43.35 에서 추가) — 없으면 시험이 ReferenceError
@@ -50,7 +50,7 @@ function check(source=src){
   // 불러오는 중 띠
   c.renderDualGuardStrip(null);assert(strip().includes('시세를 불러오는 중'));
 }
-check();console.log('PASS native plan UI: σ20/config labels,70% sleeve,90.4%→63.3%,9.6pp hold,Guard ON/OFF,듀얼 가드 한눈에 띠,stale exp1 ignored');
+check();console.log('PASS native plan UI: σ20/config labels,70% sleeve,90.4%→63.3%,9.6pp hold,Guard ON/OFF,듀얼가드 한눈에 띠,stale exp1 ignored');
 for(const [label,mutant]of [
   ['옛 지표 이름',src.replace("'TECL σ'+PATH_DEFAULTS.alpha.ivsLook","'TECL σ15'")],
   ['전체비중과 슬리브 혼동',src.replace("(curTeclW*100).toFixed(1)","(sleeveNow*100).toFixed(1)")],

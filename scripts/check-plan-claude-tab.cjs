@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-/* 자산플랜 v2.0.0 — 🤖 클로드 / ⚡ 지피티 탭 · 5년 '듀얼 가드' 하나 (2026-11-08)
+/* 자산플랜 v2.0.0 — 🤖 클로드 / ⚡ 지피티 탭 · 5년 '듀얼가드' 하나 (2026-11-08)
  * 사용자: "새규칙이 기존보다 낫지 않다면 버려 · 10. 15. 20년은 삭제하고 · 여기에도 클로드 버전과 지피티 버전으로 탭 만들자 ·
  *         넌 클로드 탭만 담당하고 현재 5년 플랜 전략 이름도 정하고".
  * 실제 파일(엔진 · 설정 모듈 · plan.html · index.html)의 함수를 그대로 돌려 값으로 확인하고,
@@ -40,7 +40,7 @@ async function check(S){
   const bad=[];const t=(name,cond,info)=>{if(!cond)bad.push(name+(info?' · '+info:''));};
   const E=loadEngine(S.eng);
   // ── A. 엔진
-  t('A1 전략 이름·판 — 듀얼 가드 v1.0 · 클로드 담당',E.STRATEGY&&E.STRATEGY.name==='듀얼 가드'&&E.STRATEGY.version==='1.0'&&E.STRATEGY.owner==='claude'&&/TECL 역분산 70%/.test(E.STRATEGY.summary),JSON.stringify(E.STRATEGY));
+  t('A1 전략 이름·판 — 듀얼가드 v1.0 · 클로드 담당',E.STRATEGY&&E.STRATEGY.name==='듀얼가드'&&E.STRATEGY.version==='1.0'&&E.STRATEGY.owner==='claude'&&/TECL 역분산 70%/.test(E.STRATEGY.summary),JSON.stringify(E.STRATEGY));
   t('A2 규칙은 base 하나 — exp1·exp2·모르는 이름도 base',Object.keys(E.ALPHA_RULES).join()==='base'&&['exp1','exp2','zzz',undefined].every(k=>E.alphaRules(k).key==='base'&&E.alphaRules(k).exp===false)&&E.alphaRules('base').guardOff===.01&&E.alphaRules('base').bandUp===.10,Object.keys(E.ALPHA_RULES).join());
   const RR=x=>E.retiredReason(x);
   t('A3 폐지 판정 — 10·15·20년 · 새 규칙 · 공격형 / 5년 기본은 아님',
@@ -78,7 +78,7 @@ async function check(S){
   const P=S.plan;
   t('C1 기간 탭·규칙 선택이 없다',!/data-horizon=/.test(P)&&!/id="horizonTabs"/.test(P)&&!/class="horizon-tab/.test(P)&&!/id="alphaRules"/.test(P)&&!/id="assetSessionRules/.test(P)&&!/function renderAlternativePlan/.test(P)&&!/function setHorizon/.test(P));
   const at=k=>P.indexOf(k);
-  t('C2 클로드/지피티 탭 없음 — 탭·지피티 칸·plan-gpt.js·지피티 저장 창구 모두 없고 듀얼 가드 화면 하나(세션 줄 → 상태줄 → 상세 탭 → 머리 카드 → 주문표 순 · 운영 탭과 같은 차례)',
+  t('C2 클로드/지피티 탭 없음 — 탭·지피티 칸·plan-gpt.js·지피티 저장 창구 모두 없고 듀얼가드 화면 하나(세션 줄 → 상태줄 → 상세 탭 → 머리 카드 → 주문표 순 · 운영 탭과 같은 차례)',
     !/id="aiTabs"|class="ai-tab|data-ai=|id="pane-gpt"|id="pane-claude"|planGptRoot|plan-gpt\.js|PLANGPT_ACCOUNT|planGptAccount|function planAiTab|location\.hash==='#gpt'/.test(P)&&S.gptFiles.length===0
     &&at('id="assetSessionChips"')>0&&at('id="assetSessionChips"')<at('id="assetStatusline"')&&at('id="assetStatusline"')<at('id="assetDetailTabs"')&&at('id="assetDetailTabs"')<at('id="dgStrip"')
     &&at('id="dgStrip"')<at('id="alphaOrderSection"')&&at('id="alphaOrderSection"')<at('id="alphaResetSection"')&&!/id="assetSessionCard"/.test(P),S.gptFiles.join());
@@ -93,17 +93,24 @@ async function check(S){
     const r1=run('x1'),r2=run('b'),r3=run('h10');
     t('C4 세션 목록 — 5년 기본만(a·b) · 폐지 5개는 숨김(지우지 않음)',r1.list==='a,b',r1.list);
     t('C4 폐지 세션이 선택돼 있었으면 현재 투자중으로(x1·h10 → 없음) · 기본 모의는 그대로(b)',r1.active===''&&r3.active===''&&r2.active==='b',JSON.stringify([r1.active,r2.active,r3.active]));
-    t('C5 칩에 폐지 세션 이름 없음 · 상태 줄에 "듀얼 가드 v1.0" · 숨긴 수 5개 안내(운영 탭처럼 세션 이름 없이 전략 요약)',!/새 규칙 모의|공격형 모의|10년 세션|15년 세션|20년 세션/.test(r1.chips)&&/기본 운영/.test(r1.chips)&&/기본 모의/.test(r1.chips)
-      &&r1.state==='듀얼 가드 v1.0 · 숨긴 예전 세션 5개'&&r2.state==='듀얼 가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 5개',r1.state+' | '+r2.state);
+    t('C5 칩에 폐지 세션 이름 없음 · 상태 줄에 "듀얼가드 v1.0" · 숨긴 수 5개 안내(운영 탭처럼 세션 이름 없이 전략 요약)',!/새 규칙 모의|공격형 모의|10년 세션|15년 세션|20년 세션/.test(r1.chips)&&/기본 운영/.test(r1.chips)&&/기본 모의/.test(r1.chips)
+      &&r1.state==='듀얼가드 v1.0 · 숨긴 예전 세션 5개'&&r2.state==='듀얼가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 5개',r1.state+' | '+r2.state);
   }
   t('C6 딥링크 — 5년 · 폐지 안 된 세션만 연다',/if\(q&&\+q\.horizon===5&&!planRetired\(q\)\)\{/.test(fnOf(P,'async function finishPlanOpen(user)')));
-  t('C7 머리 카드 — 이름·판은 엔진 STRATEGY',/\$\("stageTitle"\)\.textContent=P\.name;if\(\$\("dgVer"\)\)\$\("dgVer"\)\.textContent="v"\+P\.version;/.test(fnOf(P,'function render()'))&&/id="stageTitle">듀얼 가드<\/span><span class="dg-ver" id="dgVer">v1\.0<\/span>/.test(P));
+  t('C7 머리 카드 — 이름·판은 엔진 STRATEGY',/\$\("stageTitle"\)\.textContent=P\.name;if\(\$\("dgVer"\)\)\$\("dgVer"\)\.textContent="v"\+P\.version;/.test(fnOf(P,'function render()'))&&/id="stageTitle">듀얼가드<\/span><span class="dg-ver" id="dgVer">v1\.0<\/span>/.test(P));
 
   // ── D. index.html (모의 목록)
   const X=S.idx;
   { const opts=(st,win)=>{const ctx=vm.createContext({curOf:()=>'usd',wnCur:v=>v+'$',imRowsOf:()=>[],maCond:()=>({}),...(win?{window:win}:{})});vm.runInContext(fnOf(X,'function paperOpts(tab, st)'),ctx);return ctx.paperOpts('plan',st).join(' / ');};
     const a=opts({horizon:5,monthlyAdd:0},{JKPlanSessionEngine:E}),b=opts({horizon:5,monthlyAdd:70},{JKPlanSessionEngine:E}),c=opts({horizon:5,monthlyAdd:0},null);
-    t('D1 모의 목록 설명 — "5년 듀얼 가드 v1.0" · 목돈/월 · 실험적 꼬리표 없음 · 엔진 없어도 같은 이름',a.startsWith('5년 듀얼 가드 v1.0')&&a.includes('목돈')&&b.includes('월')&&!/실험적|새 규칙|공격형/.test(a+b)&&c.startsWith('5년 듀얼 가드 v1.0'),[a,b,c].join(' | ')); }
+    t('D1 모의 목록 설명 — "듀얼가드 v1.0"(\'5년\' 없음 · 2026-11-09 사용자: "5년이라는 말은 전부 지워") · 목돈/월 · 실험적 꼬리표 없음 · 엔진 없어도 같은 이름',a.startsWith('듀얼가드 v1.0')&&a.includes('목돈')&&b.includes('월')&&!/실험적|새 규칙|공격형|5년/.test(a+b+c)&&c.startsWith('듀얼가드 v1.0'),[a,b,c].join(' | ')); }
+  /* 이름(2026-11-09 사용자: "듀얼 가드를 전부 듀얼가드로 바꾸고 5년이라는 말은 전부 지워") — 띄어 쓴 이름 없음 · 플랜 화면 글자(주석 뺀)에 '5년' 없음 ·
+     원장 칸 이름 · 새 세션 기본 이름. 엔진 공용 주석(여러 파일이 같은 글자)은 화면에 안 보여 그대로 둔다. */
+  { const code=x=>x.replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:'"])\/\/[^\n]*/g,'$1').replace(/<!--[\s\S]*?-->/g,'');
+    const left=(code(P).match(/[^\n]{0,30}5년[^\n]{0,30}/g)||[]);
+    t('E1 이름: "듀얼가드"(띄어쓰기 없음 — 엔진·플랜·운영) · 플랜 화면 글자에 "5년" 없음 · 원장 칸 이름 · 새 세션 기본 이름',
+      !/듀얼 가드/.test(S.eng+P+X)&&E.STRATEGY.name==='듀얼가드'&&!left.length&&/fiveYearPlanV2:'듀얼가드', fiveYearPlan:'듀얼가드\(옛\)'/.test(X)
+      &&/\|\|'듀얼가드 세션';/.test(S.set)&&!/년 세션/.test(S.set),JSON.stringify(left)); }
   { const ctx=vm.createContext({window:{JKPlanSessionEngine:E}});vm.runInContext(fnOf(X,'function planPaperRetired(sess)'),ctx);
     const r=[{horizon:10},{horizon:5,settings:{alphaRules:'exp1'}},{horizon:5,settings:{alphaRules:'exp2'}},{horizon:5,settings:{alphaRules:'base'}},{horizon:5,settings:{}}].map(s=>ctx.planPaperRetired(s));
     t('D2 모의 목록 폐지 판정 = 엔진 retiredReason',JSON.stringify(r)==='[true,true,true,false,false]',JSON.stringify(r)); }
@@ -118,7 +125,7 @@ async function check(S){
 (async()=>{
   const bad=await check(SRC);
   if(bad.length){console.error('FAIL plan claude tab:\n  '+bad.join('\n  '));process.exit(1);}
-  console.log('PASS 듀얼 가드 하나: 엔진(이름·규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전) · 설정 · 클로드/지피티 탭 없음 · 폐지 세션 숨김 · 모의 목록');
+  console.log('PASS 듀얼가드 하나: 엔진(이름·규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전) · 설정 · 클로드/지피티 탭 없음 · 폐지 세션 숨김 · 모의 목록');
   const MUT=[
     ['엔진: 새 규칙 벌 되살림','eng',s=>s.replace("  base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false}\n};","  base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false},\n  exp1:{key:'exp1',name:'새 규칙 (실험적 확장)',guardOn:.01,guardOff:.03,bandDn:.01,bandUp:.15,tqReb:.02,exp:true}\n};").replace("function alphaRules(key){return ALPHA_RULES.base;}","function alphaRules(key){return ALPHA_RULES[key]||ALPHA_RULES.base;}")],
     ['엔진: 폐지 판정이 늘 빈칸','eng',s=>s.replace("function retiredReason(x){\n  if(!x)return '';","function retiredReason(x){\n  return '';")],
@@ -133,7 +140,11 @@ async function check(S){
     ['플랜: 숨긴 세션 수 안내 없음','plan',s=>s.replace("tail=gone?' · 숨긴 예전 세션 '+gone+'개':''","tail=''")],
     ['모의 목록: 폐지 세션도 재생','idx',s=>s.replace("if(planPaperRetired(sess)){ _tick(); continue; }","")],
     ['모의 목록: 폐지 판정이 늘 아님','idx',s=>s.replace("function planPaperRetired(sess){const E=window.JKPlanSessionEngine;return !!(E&&E.retiredReason&&E.retiredReason(sess));}","function planPaperRetired(sess){return false;}")],
-    ['모의 목록: 옛 이름(역분산+Guard)','idx',s=>s.replace("bits.push(`5년 ${P.name} v${P.version}`);","bits.push('5년 역분산+Guard');")],
+    ['모의 목록: 옛 이름(역분산+Guard)','idx',s=>s.replace("bits.push(`${P.name} v${P.version}`);","bits.push('역분산+Guard');")],
+    ['모의 목록: "5년" 되살림(옛 코드)','idx',s=>s.replace("bits.push(`${P.name} v${P.version}`);","bits.push(`5년 ${P.name} v${P.version}`);")],
+    ['플랜 화면: "5년" 글자 되살림','plan',s=>s.replace('<h2>6. 성장 시나리오</h2>','<h2>6. 5년 성장 시나리오</h2>')],
+    ['엔진: 이름 띄어쓰기 되살림','eng',s=>s.replace("name:'듀얼가드',owner:'claude'","name:'듀얼 가드',owner:'claude'")],
+    ['설정: 새 세션 기본 이름 "5년 세션"(옛 코드)','set',s=>s.replace("||'듀얼가드 세션';","||x.horizon+'년 세션';")],
   ];
   let red=0;
   for(const [name,key,mut] of MUT){
