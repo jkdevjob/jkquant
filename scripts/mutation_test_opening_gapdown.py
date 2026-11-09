@@ -1,11 +1,13 @@
 """Mutations for D-1 opening_gapdown_v1 (Python research + JS live path) and D-3 btc_dip24_v1.
-Each mutant must make test_opening_gapdown.py or test_opening_gapdown.mjs fail. Working files are not edited."""
+Each mutant must make test_opening_gapdown.py or test_opening_gapdown.mjs fail. Working files are not edited.
+Mutants run in a thread pool (one temp folder each, os.cpu_count() workers); JKQ_MUT_ONLY=<label substring> runs a subset."""
 from pathlib import Path
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 
 ROOT = Path(__file__).resolve().parent
 API = ROOT.parent / "functions" / "api"
@@ -431,30 +433,74 @@ def run_js(folder, worker_src=None):
     return r.returncode != 0 and "AssertionError" in (r.stderr + r.stdout), (r.stdout + r.stderr)[-800:]
 
 
-for label, filename, before, after in PY:
+def mutate_py(case):
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
         for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "backtest_etf_overnight.py", "claude_lab.py", "test_opening_gapdown.py"):
             shutil.copy(ROOT / name, folder / name)
+        # claude_lab.krx_holidays() 는 __file__ 옆의 functions/api/_krx_calendar.js 를 읽는다 — 사본 폴더에도 둬야 휴장 시험이 변이와 무관하게 빨간불이 되지 않는다
+        (folder / "functions" / "api").mkdir(parents=True)
+        shutil.copy(API / "_krx_calendar.js", folder / "functions" / "api" / "_krx_calendar.js")
+        if case is None:                                             # 대조군: 변이 없는 사본 — 초록이어야 하네스가 유효하다
+            killed, log = run_py(folder)
+            return "control (py)", killed, log
+        label, filename, before, after = case
         path = folder / filename
         src = path.read_text(encoding="utf-8")
         assert before in src, label + ": target missing"
         path.write_text(src.replace(before, after, 1), encoding="utf-8")
         killed, log = run_py(folder)
-        assert killed, label + ": survived\n" + log
-        print("PASS killed:", label)
-for label, filename, before, after in JS:
+        return label, killed, log
+
+
+def mutate_js(case):
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
         for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js", "_paper-trading.js", "_opening-execution.js", "_research-broker.js", "_research-orders.js", "_market-day-cache.js"):
             shutil.copy(API / name, folder / name)
         worker_src = folder / "worker_index.js"                  # 'worker' = worker/opening-scheduler/src/index.js 사본(시험이 JKQ_WORKER_SRC 로 읽는다)
         shutil.copy(ROOT.parent / "worker" / "opening-scheduler" / "src" / "index.js", worker_src)
+        if case is None:                                             # 대조군: 변이 없는 사본
+            killed, log = run_js(folder, worker_src)
+            return "control (js)", killed, log
+        label, filename, before, after = case
         path = worker_src if filename == "worker" else folder / filename
         src = path.read_text(encoding="utf-8")
         assert before in src, label + ": target missing"
         path.write_text(src.replace(before, after, 1), encoding="utf-8")
         killed, log = run_js(folder, worker_src)
-        assert killed, label + ": survived\n" + log
-        print("PASS killed:", label)
-print("D-1/D-3 mutations: ALL PASS")
+        return label, killed, log
+
+
+def mutate(item):
+    kind, case = item
+    return (mutate_py if kind == "py" else mutate_js)(case)
+
+
+if __name__ == "__main__":
+    # 변이마다 임시 폴더가 따로라 서로 안 겹친다. JS 시험은 타이머 대기(사본 하나 19초 · CPU 0.4초)라 코어 수보다 많이 같이 돈다
+    # (399개를 하나씩 돌리면 17분). 결과는 목록 순서로 적는다. 대조군(변이 없는 사본) 둘이 초록이어야 '잡힘'이 뜻이 있다.
+    workers = max(4, min(16, (os.cpu_count() or 1) * 3))
+    items = [("py", c) for c in PY] + [("js", c) for c in JS]
+    only = os.environ.get("JKQ_MUT_ONLY")                      # 개발용: 이름에 이 글자가 든 변이만(예: JKQ_MUT_ONLY="max24")
+    if only:
+        items = [x for x in items if only in x[1][0]]
+    items = [("py", None), ("js", None)] + items
+    survived, bad_control = [], []
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for (kind, case), (label, killed, log) in zip(items, ex.map(mutate, items)):
+            if case is None:
+                if killed:
+                    bad_control.append(label)
+                    print("FAIL control: 변이 없는 사본이 이미 빨간불 — 하네스 무효:", label + "\n" + log)
+                else:
+                    print("PASS control: 변이 없는 사본은 초록 —", label)
+            elif killed:
+                print("PASS killed:", label)
+            else:
+                survived.append(label)
+                print("FAIL survived:", label + "\n" + log)
+    if bad_control or survived:
+        print("D-1/D-3 mutations: %d control failed · %d survived — %s" % (len(bad_control), len(survived), ", ".join(bad_control + survived)))
+        sys.exit(1)
+    print("D-1/D-3 mutations: ALL PASS (%d mutants · 2 controls · %d workers)" % (len(items) - 2, workers))

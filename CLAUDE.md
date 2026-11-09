@@ -31,7 +31,10 @@
 node scripts/check-before-push.cjs
 ```
 
-`check.yml`의 모든 검사와 Worker dry-run을 로컬에서도 같은 순서로 실행한다.
+검사 단계 목록은 `.github/check-steps.yml` **한 곳** — GitHub 검증(`check.yml` 조각 4개 → `check` 로 합침)과
+이 스크립트가 같은 목록을 같은 명령으로 돈다. 새 검사는 `check-steps.yml` 에 단계로 넣는다(`check.yml` 은 건드리지 않는다).
+로컬은 기본이 **병렬**(코어 수만큼 · 무거운 단계부터 · 4코어 약 2분 30초)이고 `--serial` 이 옛 방식(차례대로 · 약 8분)이다.
+`--only=<이름 정규식>` 으로 바꾼 구간만 먼저 돌릴 수 있고, `--shard=k/4` 는 GitHub 조각 k 와 같은 부분집합이다.
 부분 검사만 통과하고 Ready for review로 바꾸지 않는다. `--offline`은 개발 중에만 쓰며,
 생략한 외부 빌드는 GitHub 검증 성공을 확인한 뒤 병합한다.
 
