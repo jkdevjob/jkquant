@@ -1,5 +1,13 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 지피티 G1 BTC 재현·시간순 검증
+
+- 395완료일×2후보 **790회 운영/연구 함수 일치·차이0**. 원천 결손은 제외, 원본/장부 덮어쓰기 없음.
+- 11/8 12:35→12:40→13:35 순손익 **−0.1737876974%**는 실제 일일 운영 API 확정1건과 일치. 누적 history API timeout에 따른 CSV 대체/11/8 누락은 별도 미해결.
+- G1 값 시험 PASS: 완료세션·실제 API·시간순 구간 비중복270일·명시 비용 스트레스. 3변이 감지 PASS(거래량되돌림40건·동일봉진입390건·비용제거390건 결과 차이).
+- 보고 schema 검증 PASS, `tests/gpt-morning-report.test.mjs` **19 PASS / 0 FAIL**. 준비 workflow `42578532171` 성공; 서버 응답 ok:true·duplicate:true·queued:null·dueAt:null. 기발송 준비 미완료 영수증 push1/1·Telegram sent이며 지연 연구 전송·기기 수신을 확인한 것이 아님.
+- 전체 check-before-push: **진행 중**. 최초 Windows 실행은 누락 pyarrow/기본한글인코딩 및 격리 자식 Python의 bs4 경로 문제로 중단했다. 저장소 검사/무관한 기능을 바꾸지 않고 작업 폴더의 독립 환경으로 보완 중. 최종 전체 PASS 전 Ready/병합하지 않는다.
+
 ## 2026-11-09 · 클라우드 저장 실패 "undefined" is not valid JSON · v3.122.2
 
 - 재현: `check-history-preservation.cjs` 가 실제 저장 함수(`_commitStateRemote`)를 가짜 Firestore 로 돌린다.
