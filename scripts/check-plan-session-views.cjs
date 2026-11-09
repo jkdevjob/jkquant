@@ -14,7 +14,7 @@ async function main(){
   assert.deepEqual(tabs.map(x=>x.dataset.assetDetail),['current','analysis','history','explain']);
   const c=vm.createContext({document:{querySelectorAll:s=>s==='[data-asset-detail]'?tabs:panels}});
   vm.runInContext(fn('function setAssetDetail(name)'),c);
-  for(const [name,ids] of Object.entries({current:['alphaOrderSection','alphaAccountSection','alphaTaxSection'],analysis:['assetPaperPanel','alphaEvidenceSection'],history:['alphaHistorySection','alphaResetSection'],explain:['alphaStrategySection']})){
+  for(const [name,ids] of Object.entries({current:['dgHero','alphaOrderSection','alphaAccountSection','alphaTaxSection'],analysis:['assetPaperPanel','alphaEvidenceSection'],history:['alphaHistorySection','alphaResetSection'],explain:['alphaStrategySection']})){
     c.setAssetDetail(name);
     assert.deepEqual(panels.filter(p=>!p.hidden).map(p=>p.id),ids);
     assert.equal(tabs.filter(t=>t['aria-selected']==='true').length,1);
@@ -47,7 +47,7 @@ async function main(){
   const box={sessions:[{id:'a',name:'A',horizon:5},{id:'b',name:'B',horizon:5}],activeByHorizon:{5:'a'}};
   let loaded=0;
   const d=vm.createContext({assetPlanBox:()=>box,confirm:()=>true,cloneObj:x=>JSON.parse(JSON.stringify(x)),liveState:{plan:{sessions:box.sessions,activeByHorizon:box.activeByHorizon}},assetPaperCache:{},writeAssetSessionLocal:()=>{},saveOperatingState:async()=>true,loadActiveAssetSessionView:async()=>loaded++});
-  vm.runInContext(fn('async function deleteAssetSession(id)'),d);
+  vm.runInContext('var assetSwitchChain=Promise.resolve();'+fn('function assetSwitchIdle()')+fn('async function deleteAssetSession(id)'),d);   // 삭제도 앞 세션 전환이 끝난 뒤(2026-11-09)
   await d.deleteAssetSession('b');assert.equal(box.activeByHorizon[5],'a');assert.equal(loaded,1);
   await d.deleteAssetSession('a');assert.equal(box.activeByHorizon[5],'');assert.equal(loaded,2);
   console.log('PASS deleting inactive/active session preserves correct selection');

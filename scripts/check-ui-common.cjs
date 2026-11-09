@@ -82,7 +82,7 @@ t('U5 자산플랜 맨 위 "다음 단계 조건" 카드를 뺐다 — 화면·�
   assert(!/>다음 단계 조건</.test(pl) && !/id="nextRule"|id="nextNote"/.test(pl),'카드 없음');
   assert(!/\$\("nextRule"\)|\$\("nextNote"\)/.test(pl),'없는 칸을 채우는 코드도 없음(있으면 화면 갱신이 멈춘다)');
   assert(!/페이지 열기 → 오늘 주문 확인 → 체결 반영/.test(pl),'A탭 문구 없음');
-  const hero=(pl.match(/<div class="hero">([\s\S]*?)\n  <\/div>\n/)||['',''])[1];
+  const hero=(pl.match(/<div class="hero"[^>]*>([\s\S]*?)\n  <\/div>\n/)||['',''])[1];
   assert.equal((hero.match(/<section class="card">/g)||[]).length,1,'hero 카드 하나');
   assert(/\.hero\{display:grid;grid-template-columns:1fr;/.test(pl),'한 칸 전체 폭');
 });

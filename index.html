@@ -683,7 +683,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.121.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.122.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1802,7 +1802,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.121.0</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.122.0</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -9077,6 +9077,14 @@ function dgEnsureFrame(extra){
   const w=$('dgWait'); if(w) w.remove();
   return dgFrameEl;
 }
+/* 듀얼 가드 창을 뒤에서 미리 연다(2026-11-09 사용자: "듀얼가드 접근시 또 로그인 하지 말고") — 로그인 · DB 원장을 다 읽고 잠깐 쉰 뒤.
+   탭을 누를 때는 창이 이미 열려 있어 그 안의 '불러오는 중'을 다시 보지 않는다. 창 안 로그인은 이 화면 것을 이어받는다(plan.html planAdoptParentUser).
+   모의 성과 페이지(/paper)는 재생 계산이 무거워 미리 열지 않는다. */
+let _dgPreloadTimer=null;
+function dgPreload(){
+  if(dgFrameEl||_dgPreloadTimer||!curUid||isPaperPage()) return;
+  _dgPreloadTimer=setTimeout(()=>{ _dgPreloadTimer=null; if(!dgFrameEl&&curUid&&!isPaperPage()) dgEnsureFrame(); },1500);
+}
 /* 창 높이 = 화면 높이 − 창 윗변(문서 기준). 운영 화면 자체는 스크롤하지 않고 창 안에서만 스크롤한다. */
 function dgSize(){
   if(!dgFrameEl||!isDgView()) return;
@@ -10675,7 +10683,8 @@ function setupSessbar(){
     const add=e.target.closest('[data-add]');
     if(add){openSess();return;}
     const chip=e.target.closest('[data-sid]');
-    if(chip){switchSess(chip.getAttribute('data-sid'));}
+    /* 보고 있는 세션을 누르면 세션 설정(이름 · 모의투자 · 포트폴리오) — 두 번 누름과 같은 창. 듀얼 가드 세션 줄과 같은 동작(2026-11-09) */
+    if(chip){ const id=chip.getAttribute('data-sid'); if(String(tabBox().active)===String(id)) editSess(id); else switchSess(id); }
   });
   bar.addEventListener('dblclick',e=>{
     const chip=e.target.closest('[data-sid]');
@@ -10778,7 +10787,7 @@ function openSess(){ _sessEditId=null;
   const k=$('sess_kis'); if(k)k.checked=false; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display='none';
   const d=$('sess_simstart'); if(d) d.value=paperPreferredSimStart();   // 새 세션도 모의성과의 마지막 전체 적용 시작일을 승계
-  $('sessModal').classList.add('on'); }
+  $('sessModal')._openedAt=Date.now(); $('sessModal').classList.add('on'); }
 /* 기존 세션 편집 — 이름·모의 여부·모의 시작일. 세션칩 더블탭으로 연다. */
 function editSess(id){
   const box=tabBox(), s=box.sessions.find(x=>x.id===id); if(!s) return;
@@ -10792,7 +10801,7 @@ function editSess(id){
   const k=$('sess_kis'); if(k)k.checked=!!s.kis; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display=s.paper?'':'none';
   const d=$('sess_simstart'); if(d) d.value=paperStart(s)||paperPreferredSimStart();
-  $('sessModal').classList.add('on');
+  $('sessModal')._openedAt=Date.now(); $('sessModal').classList.add('on');
 }
 /* 한투 연결 상태를 그 자리에서 보여준다.
    키가 안 꽂혀 있는데 체크만 되면 '왜 주문이 안 나가지'가 된다. */
@@ -11038,7 +11047,9 @@ function openSettings(){
 }
 function closeSettings(){$('setModal').classList.remove('on')}
 // 모달 배경(어두운 영역) 클릭 시 닫기 — box 내부 클릭은 무시
-['setModal','sessModal','paperModal'].forEach(id=>{ const m=$(id); if(m) m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('on'); }); });
+/* 바깥(어두운 바탕)을 누르면 닫는다. 단 막 연 0.45초 안의 누름은 무시 — 보고 있는 세션 칩을 두 번 누르면 첫 누름에 창이 열리고
+   둘째 누름이 그 바탕에 떨어져 바로 닫히던 일(2026-11-09 · 보고 있는 칩을 누르면 세션 설정)을 막는다. */
+['setModal','sessModal','paperModal'].forEach(id=>{ const m=$(id); if(m) m.addEventListener('click',e=>{ if(e.target===m && Date.now()-(m._openedAt||0)>450) m.classList.remove('on'); }); });
 // 짝=1배수일 때만 1배 계좌 입력을 보이고, 고정5:5면 s0·룩백을 흐리게 한다
 function syncIvsSetUI(park,ticker,mode){
   const off=(mode==='fix');
@@ -11787,6 +11798,7 @@ async function retryDbLoad(){
     setSync('ok');
     paperPageAuto();
     pfPageAuto();
+    dgPreload();
   }catch(e){
     console.error('db retry',e);
     authWarn('로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다 — '+(e&&e.message||e));
@@ -11955,6 +11967,7 @@ function initAuth(){
       setSync('ok');
       paperPageAuto();           // /paper 로 열었으면 이제(클라우드 기록을 맞춘 뒤) 모의 성과를 채운다
       pfPageAuto();              // /portfolio 로 열었으면 실투자 합산도 같은 때에
+      dgPreload();               // 듀얼 가드 창을 뒤에서 미리 연다(탭을 눌렀을 때 다시 여는 중·로그인 화면이 안 보이게)
       /* 접속 기록은 앱을 여는 것보다 중요하지 않다. 실패해도 거래 원장/모의성과는 그대로 쓴다. */
       void withTimeout(touchProfile(user), 8000, '프로필 기록').catch(e=>console.warn('profile',e));
     }catch(e){

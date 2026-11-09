@@ -10633,10 +10633,10 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   const pePath=__d+'/plan-session-engine.js', pe=fs.existsSync(pePath)?fs.readFileSync(pePath,'utf8'):'';
 
-  ok('A 듀얼 가드 화면에 공통 세션바와 +세션 모달 (기간 탭 · 클로드/지피티 탭 없음)',
-     /id="assetSessionCard"/.test(pl) && /id="assetSessionChips"/.test(pl)
-     && /id="assetSessionAdd"/.test(pl) && /id="assetSessionModal"/.test(pl)
-     && pl.indexOf('id="dgStrip"')>=0 && pl.indexOf('id="dgStrip"')<pl.indexOf('id="assetSessionCard"') && !/data-horizon=/.test(pl) && !/id="pane-gpt"/.test(pl));
+  ok('A 듀얼 가드 화면 맨 위에 운영 탭과 같은 세션 줄(+ 세션 칩 · 세션 설정 창) · 상태줄 ⚙️ 설정 (기간 탭 · 클로드/지피티 탭 없음)',
+     /class="dg-sessbar" id="assetSessionChips"/.test(pl) && /data-asess-add="1"/.test(pl) && /id="assetSettingsBtn"/.test(pl)
+     && /id="assetSessionModal"/.test(pl) && !/id="assetSessionCard"/.test(pl)
+     && pl.indexOf('id="assetSessionChips"')>=0 && pl.indexOf('id="assetSessionChips"')<pl.indexOf('id="dgStrip"') && !/data-horizon=/.test(pl) && !/id="pane-gpt"/.test(pl));
 
   ok('B 세션은 5년만 · 폐지된 기간·규칙 세션은 숨기고(planRetired) 현재 투자중 플랜은 Firebase 원장과 분리',
      /filter\(x=>x&&\+x\.horizon===\+h&&!planRetired\(x\)\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
@@ -10647,7 +10647,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
      /id="alphaOrderSection"/.test(pl) && /id="alphaAccountSection"/.test(pl)
      && /id="alphaHistorySection"/.test(pl) && /id="alphaEvidenceSection"/.test(pl)
      && /id="alphaStrategySection"/.test(pl)
-     && pl.indexOf('id="assetSessionCard"')<pl.indexOf('id="alphaOrderSection"'));
+     && pl.indexOf('id="assetSessionChips"')<pl.indexOf('id="alphaOrderSection"'));
 
   ok('D 모의 세션은 실제 장부와 분리해 자동재생하고 직접수정 UI를 막는다',
      /JKPlanSessionSettings\.update/.test(extractFn(pl,'async function createAssetSession()'))
@@ -12755,6 +12755,10 @@ Promise.all(PENDING).then(()=>{
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼 가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼 가드 줄 · 실전 채우기(모의 제외) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 23종',
      ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 41/41 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+  /* 2026-11-09 — 운영 › 듀얼 가드 탭을 다른 운영 탭처럼(세션 줄 맨 위 · 보고 있는 칩/두 번 누르면 세션 설정 · 끌어서 순서 · ⚙️ 설정 따로 · 창 안 다시 로그인 없음) */
+  const pdg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-dg-tab.cjs')],{encoding:'utf8'});
+  ok('듀얼 가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 변이 19종',
+     pdg.status===0&&(pdg.stdout||'').includes('ALL PASS dg tab · 변이 19/19 red'),(pdg.stdout||'').slice(-600)+(pdg.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
   ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));

@@ -373,7 +373,7 @@ function check5(S,t,E,bad){
     x1.portfolio===false&&x2.portfolio===true&&x3.portfolio===false&&x4.portfolio===false&&x4.paper===true&&/<script src="\/plan-session-settings\.js\?v=3"><\/script>/.test(S.plan),JSON.stringify([x1.portfolio,x2.portfolio,x3.portfolio,x4.portfolio]));
   // O9 듀얼 가드 설정창 저장 — 현재 투자중은 planPortfolio(→ 원장) · 세션은 세션 값 · 모의 새 세션은 값 없음
   const P={};const el=(id,o={})=>P[id]=Object.assign({value:'',checked:false,disabled:false,textContent:'',hidden:false},o);
-  el('assetSessionKind',{value:'live'});el('assetSessionName',{value:'현재 투자중'});el('assetSessionCapital',{value:'20000'});el('assetSessionMonthly',{value:'0'});el('assetSessionTarget',{value:'150000'});
+  el('assetSessionPaper',{checked:false});el('assetSessionName',{value:'현재 투자중'});el('assetSessionCapital',{value:'20000'});el('assetSessionMonthly',{value:'0'});el('assetSessionTarget',{value:'150000'});
   el('assetSessionStart',{value:'2026-01-02'});el('assetSessionPf',{checked:false});el('assetSessionPfHint');el('assetSessionModal',{hidden:false});el('assetSessionCreate');
   const box={sessions:[{id:'s1',horizon:5,paper:false,name:'세션',settings:{startCapital:5000,monthlyAdd:0,targetCapital:9000,startDate:'2026-01-02'},ledger:{base:{date:'2026-01-02',cash:5000},events:[]}}],activeByHorizon:{}};
   const log=[];
@@ -383,11 +383,11 @@ function check5(S,t,E,bad){
     applyAssetSettings(){},alphaSyncInputs(){},localSave(){},closeAssetSessionModal(){},renderAssetSessions(){},loadActiveAssetSessionView:async()=>{},planSid:()=>'new1',alert:m=>log.push('alert:'+m)};
   c.cloudSave=async()=>{log.push('cloud:'+c.planPortfolio);return true;};
   c.saveOperatingState=async()=>{log.push('state:'+JSON.stringify(box.sessions.map(x=>x.portfolio===undefined?'-':x.portfolio)));return true;};
-  vm.createContext(c);vm.runInContext(fnOf(S.plan,'async function createAssetSession()'),c);
+  vm.createContext(c);vm.runInContext(fnOf(S.plan,'function assetModalPaper()')+fnOf(S.plan,'async function createAssetSession()'),c);
   return (async()=>{
     await c.createAssetSession();
     c.assetEditingId='s1';P.assetSessionName.value='세션';P.assetSessionCapital.value='5000';P.assetSessionTarget.value='9000';P.assetSessionPf.checked=false;await c.createAssetSession();
-    c.assetEditingId=null;P.assetSessionKind.value='paper';P.assetSessionName.value='모의';await c.createAssetSession();
+    c.assetEditingId=null;P.assetSessionPaper.checked=true;P.assetSessionName.value='모의';await c.createAssetSession();
     t('O9 듀얼 가드 설정창 저장 — 현재 투자중 끔 → 원장 저장 때 planPortfolio=false · 세션 끔 → 그 세션 portfolio:false · 모의 새 세션은 값 없음',
       log.join(' | ')==='cloud:false | state:[false] | state:[false,"-"]',log.join(' | '));
     // O10 원장에 적고 읽기 — readForm 이 portfolio 를 적고, apply 가 읽는다(없으면 넣음)
@@ -404,7 +404,7 @@ function check5(S,t,E,bad){
     u.assetPfUI(false);const s2=[Q.assetSessionPf.checked,Q.assetSessionPf.disabled];u.assetPfInit(false);const s3=[Q.assetSessionPf.checked];
     t('O11 듀얼 가드 설정창 — 켠 채 열림 · 모의 세션이면 잠금(꺼짐) · 운영으로 돌리면 원래 값(켬) · 끈 세션은 꺼진 채 · 배선(설정 열기 · 종류 바꿈 · 새 세션 켬)',
       s0.join()==='true,false'&&s1.join()==='false,true,true'&&s2.join()==='true,false'&&s3.join()==='false'
-      &&/assetPfInit\(x\?x\.portfolio!==false:planPortfolio!==false\)/.test(fnOf(S.plan,'function editAssetSession()'))&&/assetPfUI\(paper\)/.test(fnOf(S.plan,'function syncAssetSessionModal()'))
+      &&/assetPfInit\(x\?x\.portfolio!==false:planPortfolio!==false\)/.test(fnOf(S.plan,'async function editAssetSession(mode)'))&&/assetPfUI\(paper\)/.test(fnOf(S.plan,'function syncAssetSessionModal()'))
       &&/assetPfInit\(true\)/.test(fnOf(S.plan,'function openAssetSessionModal()'))&&/id="assetSessionPf"/.test(S.plan),JSON.stringify([s0,s1,s2,s3]));
     return bad;
   })();
