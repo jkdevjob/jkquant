@@ -9,7 +9,8 @@
   - 새 변이 5종(재계산 · 포트폴리오에서도 뺌 · 시세 선취 · 목록 요약 · 전체 적용) 모두 빨간불.
 - `check-paper-apply-navigation.cjs` 통과 — 앱 paperSessions 그대로 · 전체 적용 뒤 ASAP 모의 세션의 시작일·기록이 그대로.
 - check-history-preservation · check-login-quote-paper 통과.
-- `check-plan-claude-tab.cjs` ALL PASS · 변이 23/23 — E1 이 영어 '5 YEAR'·'5-YEAR' 도 본다(사용자 화면 '5 YEAR · DUAL GUARD').
+- `check-login-quote-paper.cjs` ALL PASS — 새 'P2 지난 목록 캐시 판 ≥7': 판 6 지난 목록(ASAP 줄)은 실패 대체 화면에도 안 씀 · 지금 판은 씀. 판 6 으로 되돌린 파일에선 이 시험이 FAIL(변이 확인).
+- `check-plan-claude-tab.cjs` ALL PASS · 변이 23/23 — E1 이 영어 '5 YEAR'·'5-YEAR' 도 본다(사용자 화면 '5 YEAR · DUAL GUARD'). D4 캐시 판 ≥7 · 변이 판 7→6 빨간불.
 - 운영 파일 확인(v3.123.2 · 듀얼가드 v2.5.3, 병합 전): 띄어 쓴 '듀얼 가드' 0 · 화면 '5년 플랜' 0(주석만) · '5 YEAR' 2(이번에 지움). 사용자 화면의 나머지 옛 글자는 새로고침 전 예전 판.
 
 ## 2026-11-09 · 화면 글자 '플랜' → '듀얼가드' · v3.123.2 (듀얼가드 v2.5.3)

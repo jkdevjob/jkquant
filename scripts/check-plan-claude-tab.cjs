@@ -118,7 +118,7 @@ async function check(S){
   { const fill=fnOf(X,'async function paperFillAll(opt)'),pre=fnOf(X,'async function paperPrefetchQuotes(opt)'),i=fill.indexOf("if(tab==='plan'){"),j=fill.indexOf('if(planPaperRetired(sess)){ _tick(); continue; }'),k=fill.indexOf('replayPlanPaper(sess)');
     t('D3 모의 목록 채우기 — 폐지 세션은 재생 전에 건너뜀 · 미리 받기도 남은 세션만',i>=0&&j>i&&k>j&&/if\(tab==='plan'\)\{ if\(!planPaperRetired\(sess\)\) \['TECL','TQQQ','SGOV'\]/.test(pre),[i,j,k].join()); }
   { const v=+((X.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1]),pv=(P.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1],iv=(X.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1];
-    t('D4 지난 순위 캐시 판 ≥6 (폐지 세션 줄 · 옛 이름 글자 다시 셈) · 두 화면 엔진 판 같음(≥5)',v>=6&&pv===iv&&+pv>=5,JSON.stringify({v,pv,iv})); }
+    t('D4 지난 순위 캐시 판 ≥7 (폐지 세션 줄 · 옛 이름 글자 · ASAP 모의 줄 다시 셈) · 두 화면 엔진 판 같음(≥5)',v>=7&&pv===iv&&+pv>=5,JSON.stringify({v,pv,iv})); }
 
   return bad;
 }
@@ -149,7 +149,7 @@ async function check(S){
     ['듀얼가드 화면: "플랜" 글자 되살림','plan',s=>s.replace('<label>듀얼가드 시작일</label>','<label>플랜 시작일</label>')],
     ['듀얼가드 화면: 머리글 "5 YEAR" 되살림(옛 코드)','plan',s=>s.replace("setTxt('alphaHorizonEyebrow','DUAL GUARD · v'+P.version);","setTxt('alphaHorizonEyebrow','5 YEAR · DUAL GUARD · v'+P.version);")],
     ['운영: "플랜" 글자 되살림','idx',s=>s.replace("'듀얼가드 세금 점검과 같은 계산(결제일 환율 · 선입선출)'","'플랜 세금 점검과 같은 계산(결제일 환율 · 선입선출)'")],
-    ['모의 목록 캐시 판: 옛 판(옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=6;','const PAPER_VIEW_CACHE_VER=5;')],
+    ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=7;','const PAPER_VIEW_CACHE_VER=6;')],
     ['엔진: 폐지 안내 "폐지된 플랜"(옛 글자)','eng',s=>s.replace("error:'폐지된 세션 — '+gone","error:'폐지된 플랜 — '+gone")],
   ];
   let red=0;
