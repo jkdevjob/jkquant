@@ -15,7 +15,7 @@
 - `scripts/check-plan-claude-tab.cjs` ALL PASS · 변이 23/23 — A5 GOLD 를 세후 배당으로 갱신(lump 112,072.66 → 112,054.01 · monthly 128,292.51 → 128,274.85 · 체결 82 → 81 · ledger/nav 해시). 캐시 판 변이는 정규식으로(판 8).
 - `scripts/check-portfolio.cjs` ALL PASS · 변이 63/63(A4 엔진 캐시 판 7) · `check-inf-record-quantity`(하네스에 infRevDay1·imRevOrders·revGapOf·imMomAt·recDateFor) · `check-plan-deposit` 6/6 · `check-plan-evidence` 4/4 · `check-plan-signal-fill`(엔진 판 ≥2) · `check-plan-warmup` · `check-login-quote-paper` · `check-history-preservation` · `check-dual-currency` · `check-paper-replay` · `check-ma150-cutover` · `check-plan-session-*` · `check-plan-history-pnl` · `check-plan-tax` · `check-no-browser-storage` · `check-navigation-races` · `check-paper-apply-navigation` 전부 PASS.
 - 회귀 `node regression-check.js index.html backtest.html testdata` **2819 PASS / 0 FAIL — ALL PASS**(기준 2818 + 제15차 래퍼 1). 하네스에 새 함수(imMomAt · infRevDay1 · recDateFor)를 넣고, 바뀐 글자를 보는 정규식 5곳(1일차 날로 · 리버스매도/매수 자동 채움 · 8-④ 리버스 칸 · 모멘텀 quoteOf · dg 변이 25종)을 새 글자로 바꿨다 — 값 시험은 그대로.
-- `check-before-push`: 실행 중 결과는 아래 줄에 적는다(완료 전엔 미확인).
+- `check-before-push` **57/57 PASS**(Worker dry-run · 파이썬 시험 포함 · 전체 모드 · 이 PR 트리 bfc9c0f 와 같은 코드).
 - 바뀌는 숫자(배포 뒤 사용자 확인): 로테 운영 세션의 분석 탭·포트폴리오(청산 반영) · 로테 진입 추천 주수 · 적립 운영·모의 배수 판정(체결가 200일선) · 듀얼가드 모의 결과(배당 ×0.846) · VR 재생(auto·기준일). 사용자 장부 기록은 바꾸지 않았다.
 - 미확인: 실제 계좌 화면(로테 운영 세션이 있을 때 분석 탭 현금·실현) · 듀얼가드 실전 세션 장부가 과거에 덮어 써졌는지(DB 기록 비교는 사용자 계정에서만 가능).
 
