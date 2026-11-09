@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "date": "2026-11-09",
+  "preparedAt": "2026-11-09T07:17:35.505603+00:00",
+  "mainSha": "58ff4131462bff9f147d5b339cbe61c2b946a4ea",
+  "summary": "지연 제출: 11/8 BTC 1건 −0.1738% 확정·국내/SOXL 휴장. G1 거래량1.5배는 395일/790회 원본 엔진 일치, 시간순 후보 PF0.367·일평균−0.0775%로 기각. UTC 부분 자료 제외로 KST 완료일이 빠지는 원인 확인. 운영 변경 없음.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "collecting",
+      "findings": "11/8 BTC 운영 1건 −0.1738% 확정, 국내·미국 주식은 주말 휴장이다. 휴장 0%는 성과 관찰일에 더하지 않았다. BTC 11/9는 미확정이며, 오늘 데이트레이딩 3건 −1.25%는 전일과 분리했다. 16시 공개 API·최신 봇 원본을 조회했다. 오늘 07:50 시한이 지나 지연 제출한다. 08:00:02 서버 영수증은 push 1/1·실패 0, Telegram sent이나 당시 제출 파일이 없어 준비 미완료 보고에 해당한다. 기기 실제 표시는 미확인이다. 11/3·4·9는 브랜치 제출/prepare 실행이 없었으며 예약 미실행과 제출 전 실패 중 원인은 미확인이다.",
+      "nextTest": "실제 작성 시각으로 8탭을 제출하고 workflow의 ok·queued·duplicate·dueAt을 확인한다. 기발송 원본·영수증을 바꾸거나 직접 알림을 추가 발송하지 않는다. 누락일의 모델 실행·제출 이력을 추적한다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant-presale-alert.mumae4.workers.dev/health",
+        "https://github.com/jkdevjob/jkquant/actions?query=branch%3Aresearch%2Fgpt-morning",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-11-09-research.json"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "blocked",
+      "findings": "11/8 휴장·신규 거래 0건. 최근 11/6은 원본 감시 27/27·운영 0건이다. main 잠금 combo_pb05_e0920과 혼합 history의 버전/모집단은 구분한다. 저장 참고치 16매매일/89건: 평균 일수익 −0.6447%, PF 0.4377, MDD −9.9216%, 최악일 −2.5497%, +1%일 0. 11/5 루닛 원본/현대차 저장 및 −1.9584%/−2.2015% 불일치는 미해결이다. 그림자 20일/16건·PF 0.0849로 표본/기대값 미달. 활성 후보는 10개이며 1위의 기존 7세션 기록을 새 전향 성과로 세지 않았다.",
+      "nextTest": "G2: 당시 Top100→원본 signalId→매수/매도→outcome→집계를 고정 버전·비용으로 연결한다. 당일 원본과 저장 결과의 종목 불일치가 해소되기 전 개선 채택은 blocked. 장후 모집단을 당시 모집단으로 대체하지 않는다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=opening&from=2026-10-01&to=2026-11-08",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/opening-history/2026-11-06.json",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/opening-history/2026-11-05.json",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "no_change",
+      "findings": "11/8 휴장·신규 거래 0건. 최근 11/6 HLB·한미약품·삼성바이오 각 +1.75%, 고정 3슬롯 일수익 +1.75%. 10/1 이후 26관찰일/72건: 일평균 −0.3963%, PF 0.5082, MDD −12.0877%, 최악일 −1.25%, +1%일 1. 37건 버전 공란은 추정하지 않았다. 그림자 25일/75건: 일평균 −0.1646%, PF 0.7330으로 기대값 미달. 최소상승2% 후보의 기존 7일/20건·PF 1.024 보류 유지. 순위 1위는 3세션으로 자동승격 요건 미달. 오늘 11/9의 −1.25%는 11/8 성과에 합치지 않았다.",
+      "nextTest": "G3: 최소상승2% 외 조건·0.25% 비용·3슬롯을 고정하고 다음 겹치지 않는 시간순 구간을 누적한다. 기존 5일 WF와 후속 2일을 새 독립 WF로 세지 않는다. 등록 후 표본·양의 기대값·PF1.10·위험·+0.10%p 비용 스트레스 전 보류.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-11-08",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/daytrading-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/daily1-shadow/latest.json",
+        "https://jkquant.pages.dev/api/scalping-shadow-ranking"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "verified",
+      "findings": "확인 범위는 원천 재현 일치이며 개선 채택이 아니다. 11/8 완료 288봉: 12:35 신호→12:40 진입→13:35 시간청산, 비용0.14% 후 −0.1738%로 일일 운영 API와 일치. G1 가설(거래량1.2→1.5배)을 사전 등록 후 운영/연구 함수 395일×2=790회 대조, 차이0. 전체 후보 PF0.362·일평균−0.0772%·MDD−27.3409%; 9개 시간순 평가270일 모두 음의 구간, 후보 일평균−0.0775%(메인−0.0881%). 추가비용0.10%p 시 후보−0.1238%/일로 기각. 누적 API는 timeout으로 11/8을 누락하며, 봇은 UTC11/8 228봉을 통째로 제외했다. 공개 원천을 별도 보존해 복구했고 기존 원본/장부는 수정하지 않았다.",
+      "nextTest": "기대값·PF·위험 미달로 새 버전·승격 없음. 10/18·19 결손을 0으로 채우지 않는다. 부분 UTC 원본도 별도 보존하여 완료 KST 날을 잃지 않게 하는 수집 보완이 다음 우선순위다. 오늘 등록 이후 전향 표본은 0일/0건으로 따로 둔다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-11-09-research.json",
+        "https://github.com/jkdevjob/jkquant/actions/runs/42574643580",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-11-08"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "no_change",
+      "findings": "11/8 KST에 끝나는 미국11/7은 휴장·신규0건이다. 최근 미국11/6 −1.4% 손절은 기보고 거래다. 누적 운영/수입 기록 27일/12건: 일평균−0.2222%, PF0.5238, MDD−9.3979%, 최악일−1.4%, +1%일3. 원본은 미국11/6까지31완료 세션으로 첫40세션 시간순 검증 전이다. 기존 고정 holdout 10일/5건의 PF1.048·비용 +0.10%p 일평균−0.0300% 보류를 유지한다. 그림자27일/2건은 표본 부족, PF999는 손실 없음 표식이다. 오늘 새 미국 종목 백테스트/원금별 성과를 만들지 않았다.",
+      "nextTest": "G4: 40완료 세션의 첫30학습/10검증을 기다린다. 새 미국 백테스트는 원금1만$/10만$를 함께 제시한다. 11/2·3 운영/재구성 차이와 시세 수정 이력을 보존하고 09:30ET=23:30KST·16시ET=익일06시를 맞춘다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-11-08",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/07b3498c1a55ecd5bd1352fae5b01d57b1338177/research/gpt-morning/2026-11-08-research.json"
+      ]
+    },
+    {
+      "tab": "closing30",
+      "status": "collecting",
+      "findings": "11/8 휴장·신규 거래0건. 11/9 02:00 생성된 누적 연구는12아카이브일이며 종가30분 baseline 청산21건/미정산12건이다. 신호별 비용 후 평균−0.0528%, PF0.8142, 거래 단위 MDD−3.0536%로 계좌 일손익과 구분한다. 개별 종목 종가 베팅은 확정0건/미정산36건으로 수익률을0으로 만들지 않았다. 오류 배열은0이나 익일 청산 확정 및 충분한 시간순 표본을 확보했다는 뜻은 아니다. 기존 메인/그림자·주문 경로는 유지했다.",
+      "nextTest": "당시 종가30분 원본과 공식 종가/다음 거래일 시가·청산 체결을 연결하고 전향 표본을 누적한다. 미정산 원본은 보존한다. 개별 종가 베팅의 하루 보유 제한 적용 범위는 미확인 요구사항으로 남기고 임의로 전략을 바꾸지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/nightly-research/closing30.json",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/closing30/",
+        "https://github.com/jkdevjob/jkquant/blob/58ff4131462bff9f147d5b339cbe61c2b946a4ea/scripts/nightly_closing30_research.py"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "no_change",
+      "findings": "어제 국내 휴장·신규 등록/진입/청산0건. API는 11/9 생성됐지만 가격 기준일은 여전히11/5다. 누적216등록/183종목·195진입·21대기, hold1260 청산0/보유195, stop12_trail35 청산58/보유137. 최대16세션으로20세션 이상 성숙 표본0, 2/5/10배 달성0. 원천 누락181·미거래30은 지연/제외로 표시한다. 규칙 v1.0.0과 등록 시점·실패군을 보존하며 미성숙 관찰 극값을 계좌 수익률로 해석하지 않았다.",
+      "nextTest": "새 KRX 확정 자료가 나오면 등록일과 신호일을 모두 지난 첫 거래 가능 종가만 진입으로 인정한다. 20/60/120/252/756/1260세션 성숙 전 결론 금지. 실패 대조군·공시 접수시점·정지/폐지 정산·유동성 비용은 별도 가설로 검증한다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/tenbagger-research",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/58ff4131462bff9f147d5b339cbe61c2b946a4ea/TENBAGGER_FORWARD_RESEARCH.md"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "11/8 국내·미국 주식은 휴장이다. 대결 API는 여전히502(branch tree HTTP403)라 동일 날짜/자금/비용의 우열을 검증하지 못했다. Claude 연구 원본은11/9 10:49 생성본까지 읽었으며 파일·전략·주문을 바꾸지 않았다. GPT BTC는00시/KRW-BTC, Claude는09시/ETH 세션으로 달력 날짜 수익만 직접 비교하지 않는다. 신호 손익·수량0·미정산·실제 모의 체결을 구분하고 새 전향 성과나 우승을 주장하지 않았다.",
+      "nextTest": "공통 완료 거래일·당시 버전·동일 자본·같은 비용과 빈 슬롯 현금을 맞춘다. API403과 원본/요약 반영 범위를 우선 추적한다. 클로드 자료는 읽기만 하며 새 전략·주문 경로가 필요하면 근거를 만든 뒤 사용자에게 묻는다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-duel",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/claude-lab/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/2b6a32d7a6cf637c04048da817229ed166454e60/data/claude-live/",
+        "https://github.com/jkdevjob/jkquant/blob/58ff4131462bff9f147d5b339cbe61c2b946a4ea/CLAUDE-SCALPING-RESEARCH.md"
+      ]
+    }
+  ]
+}
