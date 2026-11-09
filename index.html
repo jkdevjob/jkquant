@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 운영</title>
-<script src="/plan-session-engine.js?v=6"></script>
+<script src="/plan-session-engine.js?v=7"></script>
 <script src="/plan-tax-check.js?v=1"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
@@ -701,7 +701,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.124.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.124.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1820,7 +1820,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.124.0</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.124.1</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -2841,12 +2841,16 @@ function computeInf(){
    · 룩어헤드 없음: 주문을 낼 시점에 이미 확정된 종가까지만 사용.
    · 전반전에서만 실효 — 후반전은 익절가가 평단보다 위라 어차피 닿지 않는다.                        */
 const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
-function imMomNow(){
+function imMomNow(){ return imMomAt(null); }
+/* 20일 상승률 — date 를 주면 그 날짜 '전날' 까지의 확정 종가로 센다 (제15차). 기록 시트가 지난 체결(종가일 date)을 채울 때
+   주문을 낸 아침 기준(전일 종가)으로 재야 주문표·모의·백테·서버(imMomOf)와 같은 창이다 — 예전엔 종가일 자체를 끝으로 잡아 하루 늦었다. */
+function imMomAt(date){
   const _Qm=quoteOf('inf');
   /* 확정된 봉만 쓴다 (7차 점검 ⑧). 시세 응답에는 장중이면 아직 움직이는 오늘 봉이 들어 있다 —
      그걸 마지막 종가로 치면 20일 창이 하루 밀리고 오늘 현재가가 섞인다. 모의·백테는 전일 확정 종가 기준이다. */
   const _st=(curStrat()&&curStrat().settings)||{};
-  const ds=settledBars((_Qm&&_Qm.days)||infChartData||[], curOf(_st));
+  let ds=settledBars((_Qm&&_Qm.days)||infChartData||[], curOf(_st));
+  if(date) ds=ds.filter(d=>d&&d.date<date);
   if(!ds||ds.length<IM_MOM_LEN+1) return null;
   const n=ds.length, a=ds[n-1]&&ds[n-1].close, b=ds[n-1-IM_MOM_LEN]&&ds[n-1-IM_MOM_LEN].close;
   return (a>0&&b>0) ? (a/b-1)*100 : null;
@@ -3070,7 +3074,7 @@ function imRegime(closes, ticker, shortMA){
   // V5.0 국면: 합성 1배지수 > 200일선 AND > 단기이평(20/30/50일) — 둘 다 위여야 상승국면.
   const SM = shortMA || 30;
   const n=closes.length;
-  const lev=(ticker==='QLD'||ticker==='USD'||ticker==='SSO')?2:3;
+  const lev=maLevOf(ticker);   // 배수표 한 곳 (제15차)
   if(n<200) return {ready:false, up:null, syn:null, synMa:null, synMa50:null, shortMA:SM};
   const syn=[100]; for(let i=1;i<n;i++){ const r=closes[i]/closes[i-1]-1; syn.push(syn[i-1]*(1+r/lev)); }
   // 200일·단기 SMA 시계열 (차트용)
@@ -3195,6 +3199,14 @@ function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
    넘어가면 1일차 종가로 본다. 날짜를 모르면 1일차 거래가 장부에 있는지로 대신 본다.
    운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
 function imRevExitDue(c, close, target, date){ return !!(c && c.reverseActive && (!c.reverseDay1 || !!(date && c.revFrom && date>c.revFrom)) && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
+/* 리버스 1일차인가 — 장부 상태가 DAY1 이어도 소진한 날(revFrom) 뒤의 확정 종가가 있으면 1일차는 지났다 (제15차).
+   1일차 매도가 보유÷10 = 0주면 기록이 안 남아 장부는 DAY1 에 머무는데, 백테 runIM 은 날로 1일차를 넘긴다(reverseDay1=false).
+   주문표·기록 시트·모의가 이 판정을 써 2일차부터 별지점 매도·쿼터매수를 낸다 — 복귀 판정(imRevExitDue)과 같은 날짜 비교. */
+function infRevDay1(c, closeDate){
+  if(!c||!c.reverseDay1) return false;
+  const d=closeDate||((typeof infSettledLast==='function'&&infSettledLast()||{}).date)||'';
+  return !(d && c.revFrom && d>c.revFrom);
+}
 /* 리버스 쿼터매수 gap — 별지점에서 이만큼 아래에 LOC를 건다.
    예전엔 분할매수 '줄 간격 %'(st.gap)을 같이 썼는데, 그건 일반모드 분할매수용이라
    그걸 바꾸면 리버스 주문가까지 따라 움직였다. 게다가 백테는 2.5%가 못 박혀 있어
@@ -3299,7 +3311,9 @@ function calcStarPoint(c){
   /* 확정된 봉 중 마지막 5개 (7차 점검 ⑧). 장중에 주문표를 열면 시세의 마지막 봉은 아직 움직이는
      오늘 봉이다 — 그걸 넣으면 별지점에 오늘 현재가가 섞인다. 모의(row.i−5…row.i−1)·백테(closeHist)는
      확정 종가만 쓴다. */
-  const q5=(_Q5&&_Q5.days)?settledBars(_Q5.days, curOf(c.st||{})).filter(d=>d&&d.close>0).slice(-5):null;
+  /* starBefore — 그 날짜 '전' 봉까지만 (제15차). 기록 시트가 지난 체결(종가일)을 채울 때 주문을 낸 아침 기준(종가일 전 5거래일)으로 센다. 없으면 마지막 확정 봉까지(주문표). */
+  const before=c&&c.starBefore;
+  const q5=(_Q5&&_Q5.days)?settledBars(_Q5.days, curOf(c.st||{})).filter(d=>d&&d.close>0&&(!before||d.date<before)).slice(-5):null;
   if(q5&&q5.length===5){
     const a=imTickRound(q5.reduce((s,d)=>s+d.close,0)/5, curOf(c.st||{}));   // 센트 반올림 — 모의·백테·플랜과 같다 (제10차)
     return {val:a, src:`직전 5거래일 평균 (${q5[0].date}~${q5[4].date})`};
@@ -3357,7 +3371,7 @@ function renderOrder(){
   if(c.reverseActive){
     const quarterBuy=c.bal/4;
     const gap=revGapOf(st);          // 리버스 전용 (분할매수 '줄 간격'과 다른 값)
-    const isDay1 = c.reverseDay1;    // 상태머신이 DAY1 이면 무조건 MOC 매도 (판정은 computeInf 한 곳)
+    const isDay1 = infRevDay1(c, _sl&&_sl.date);    // 상태머신 DAY1 + 소진 뒤 확정 종가가 아직 없을 때만 1일차 (제15차 · 백테와 같이 날로 넘긴다)
     const exitPrice = c.avg*exitMulOf(c.tp);
     let rh=(revAuto||'')+imAutoTpBadge(c);   // 복귀 직후 T 가 여전히 분할−1 을 넘어 새 1일차로 들어온 경우의 안내 · 익절 자동이면 복귀선 근거
 
@@ -4243,6 +4257,29 @@ function settledBars(rows,cur){ const cut=simCutoff(cur); if(!rows||typeof rows!
 /* 종가가 확정된 마지막 봉 {date,close}. LOC 체결가·주문표는 전부 이걸 쓴다.
    실시간가는 장중엔 현재가, 마감 직후엔 아직 안 굳은 값이라 종가 자리에 오면 안 된다. */
 function settledLast(rows,cur){ const r=settledBars(rows,cur); return r.length?r[r.length-1]:null; }
+/* 기록 날짜 기본값 — 거래소 날짜 (제15차). 예전엔 UTC 오늘(toISOString)이라 한국 낮(09시 이후)에 적는 전날 LOC 체결이
+   미국 거래일보다 하루 뒤 날짜로 들어갔다 — 자동 채움이 그 체결을 '다음 날 것' 으로 보고 장부에서 빼고, 익절 자동의 사이클
+   시작일·리버스 복귀 판정(revFrom)이 하루 밀렸다. 개장 전이면 마지막 확정 봉의 날짜(없으면 직전 평일), 장중·마감 뒤면 그 거래소의 오늘. */
+function tradeDateDefault(cur, days){
+  const n=_exchNow(cur), open=(cur==='krw')?9*60:9*60+30;
+  if(n.min>=open) return n.date;
+  const sl=(days&&days.length)?settledLast(days,cur):null;
+  if(sl&&sl.date) return sl.date;
+  const y=new Date(n.date+'T00:00:00Z'); do{ y.setUTCDate(y.getUTCDate()-1); }while(y.getUTCDay()===0||y.getUTCDay()===6);
+  return y.toISOString().slice(0,10);
+}
+/* 탭의 기록 날짜 기본값 — 그 탭 세션의 통화와 시세 봉으로 (종목이 다른 시세는 안 쓴다). */
+function recDateFor(tab){
+  const st=(curStrat()&&curStrat().settings)||{};
+  const Q=(tab==='inf'||tab==='vr')?quoteOf(tab)
+        :tab==='ma'?((typeof maQuoteData!=='undefined')?maQuoteData:null)
+        :tab==='ivs'?((typeof ivsQuoteData!=='undefined')?ivsQuoteData:null)
+        :tab==='dca'?((typeof dcaQuoteData!=='undefined')?dcaQuoteData:null)
+        :tab==='asap'?((typeof asapQuoteData!=='undefined')?asapQuoteData:null):null;
+  const sym=String(st.ticker||'').toUpperCase();
+  const days=(Q&&Q.days&&(!sym||String(Q.symbol||'').toUpperCase()===sym))?Q.days:null;
+  return tradeDateDefault(curOf(st), days);
+}
 /* 지금 시점의 확정 종가 {date, close}. lastQuote.inf.last를 그냥 쓰면 안 된다 —
    그 값은 '시세를 불러온 순간'에 정해진 것이라, 페이지를 열어 둔 채 장 마감·정산
    시각을 넘기면 옛 종가에 그대로 멈춘다(실측: 기록 날짜 9/2에 8/31 종가가 채워졌다).
@@ -4342,7 +4379,10 @@ function infSimForward(startFrom){
       if(revOn && !inRev && (st.div-c.T)<1 && c.qty>0){ inRev=true; revDay1=true; }   // 소진 → 새 리버스 1일차
 
       if(revOn && inRev && c.qty>0 && c.avg>0){
-        const day1=revDay1; revDay1=false;
+        /* 1일차는 소진한 날 바로 다음 거래일 하루뿐 — 1일차 매도가 0주(보유<10)라 기록이 없어도 날이 지나면 2일차다 (제15차).
+           예전엔 장부 상태(DAY1)를 그대로 받아 재생을 쪼개 돌릴 때마다 1일차가 되살아났다(한 번에 돌리면 4건, 매일 열면 0건). */
+        const prevD=(O[row.i-1]&&O[row.i-1].date)||'';
+        const day1=revDay1 && !(c.revFrom && prevD && prevD>c.revFrom); revDay1=false;
         /* 하루 주문은 imRevOrders 한 곳에서 — 운영 주문표·백테·플랜과 같은 글자 (제10차 P0-1).
            1일차 MOC · 2일차부터 별지점 LOC 매도 + 잔금÷4 쿼터매수 · 잔금÷4 로 1주도 못 사면(중간 소진) MOC.
            별지점 = 직전 5거래일 종가 평균(오늘 제외 · 센트 반올림) · 0 = 공식(별지점−$0.01), gap>0 = 사용자 변형 */
@@ -4470,7 +4510,9 @@ function computeVr(){
   let cost=0, realized=0, fees=0;
   const flows=[];
   let pool=st.startpool||0, V=st.startv||0;
-  let vSet=V>0, sawBuy=false;
+  /* 사이클을 한 번이라도 넘긴 세션(startCyc>0)의 V=0 은 '인출로 0 까지 잘린 V' 다 — 첫 매수금으로 되살리지 않는다(재생·백테도 V 0 이면 사다리가 선다 · 제15차).
+     예전엔 V>0 만 봐서 V 가 0 으로 잘린 인출식 세션이 다음 로드에서 첫 매수금(V₀) 밴드로 매매를 다시 시작했다. */
+  let vSet=V>0||(+st.startCyc>0), sawBuy=false;
   const carriedIn=V>0 && !(st.startCyc>0);
   let curCyc=0, cycStartPool=pool, cycTrade=0, cycDiv=0, cycBuySpent=0, cycHasTrade=false;
   // 예약 사다리는 사이클 시작 보유수량으로 고정한다. 이미 체결된 차수도 이력에서 복원한다.
@@ -4542,6 +4584,16 @@ function vrNextDue(s){
 /* 이번 사이클이 언제 시작됐나.
    설정 cycStart가 우선이고, 없으면 이력에서 되찾는다 —
    첫 매수만 하고 아직 한 번도 '다음 사이클 진입'을 안 누른 계좌도 D-day가 나와야 한다. */
+/* 기록 날짜가 속한 사이클 번호 — 손으로 적는 체결은 '지금 사이클' 이 아니라 그 날짜의 사이클에 붙인다 (제15차).
+   예전엔 1주차 진입 뒤 0주차 날짜로 적은 체결에 cyc 1 이 붙어, 날짜 정렬상 자동 적립 앞에 서서 1주차가 적립 전에 시작된 걸로 세어졌다
+   (사이클 시작 Pool 4,100 → 4,000 · 한도 3,075 → 2,915). 사이클 시작일은 설정(cycStart)과 진입 기록(cycLog.from)에 있다. */
+function vrCycOfDate(c, date){
+  const st=c.st||{}, cur=c.curCyc||0;
+  if(!date||!st.cycStart||date>=st.cycStart) return cur;
+  const log=Array.isArray(st.cycLog)?st.cycLog:[];
+  for(let i=log.length-1;i>=0;i--){ const e=log[i]; if(e&&e.from&&date>=e.from&&(+e.cyc||0)<cur) return +e.cyc||0; }
+  return log.length&&log[0]&&log[0].from&&date<log[0].from ? Math.max(0,(+log[0].cyc||0)) : cur;
+}
 function vrCycStart(c){
   if(c.st.cycStart) return c.st.cycStart;
   const h=c.hist||[];
@@ -4814,8 +4866,8 @@ function renderVrTable(){
 function quickLadder(type,price,qty){
   const c=computeVr(), q=Math.max(1,Math.floor(+qty||1));
   if(!confirm(`${type==='buy'?'매수':'매도'} ${wn(price)} × ${q}주를 지금 기록할까요?`))return;
-  const date=new Date().toISOString().slice(0,10);
-  const rec={type,date,price:+price,qty:q,cyc:c.curCyc,ts:Date.now()};
+  const date=recDateFor('vr');   // 거래소 날짜 (제15차)
+  const rec={type,date,price:+price,qty:q,cyc:vrCycOfDate(c,date),ts:Date.now()};
   const h=curStrat().hist; h.push(rec); sortHist(h); save(); refreshVr();
   alert('기록됨 ✓');
 }
@@ -5147,7 +5199,14 @@ function renderVrHist(){
 /* 합성 1배지수(레버리지 일수익률÷배수 누적)의 N일 SMA로 보유/현금 신호.
    백테스트 runMA200과 동일 규약 · 레버리지 규약은 무매 국면(imRegime)과 동일(USD·QLD·SSO=2배, 그 외 3배). */
 let maQuoteData=null;   // {symbol, days:[{date,close}], last, price, currency, src}
-function maLevOf(t){ const s=String(t||'').toUpperCase(); return (s==='QLD'||s==='USD'||s==='SSO')?2:3; }
+/* 레버리지 배수 — 백테 META 와 같은 표 (제15차). 예전엔 QLD·USD·SSO 만 2, 나머지는 전부 3 이라 SPYU(4×)·국내 2×·1× 종목의
+   합성 1배지수가 틀렸다(TQQQ 1,500일에서 배수 3↔2 는 신호가 다른 날 11일). 표에 없는 종목은 3(공식 종목이 전부 3×).
+   표는 함수 안에 둔다 — 회귀가 이 함수만 떼어 돌린다. imRegime(V5.0 국면)도 이 함수를 쓴다. */
+function maLevOf(t){
+  const LEV={SSO:2,UPRO:3,SPYU:4,QLD:2,TQQQ:3,USD:2,SOXL:3,TECL:3,KORU:3,QQQ:1,QYLD:1,JEPQ:1,QQQI:1,GPIQ:1,'418660':2,'423920':2};
+  const s=String(t||'').toUpperCase().replace(/\.K[SQ]$/,'');
+  return LEV[s]||3;
+}
 
 /* ── 로테 신호 조건 (백테 backtest.html _maHold/_maEntry와 동일 정의) ──
    a = 합성 1배지수 > 200일선 · b = 50일선 > 200일선(골든크로스)
@@ -5272,9 +5331,9 @@ function renderMaNow(){
   // 판단 (신호 vs 내 포지션)
   let v='';
   if(hold && c.pos!=='hold'){
-    const qty=price>0?Math.floor((st.principal||0)/price):0;
+    const E=maEntryQty(curStrat().hist, price, +st.principal||0), qty=E.qty;   // 모의·백테와 같은 식 — 장부 현금 전액 (제15차)
     v=`<div class="oitem b"><span class="tag">진입</span><span class="nm">현금 → 100% 매수 전환</span><span class="pr">${px(price)}</span></div>
-       <p class="note" style="margin-top:8px">약 ${qty}주 매수 (원금 ${wn(st.principal)} 기준). 아래 <b>🟢 진입 기록</b>으로 남기세요.</p>`;
+       <p class="note" style="margin-top:8px">약 ${qty}주 매수 (장부 현금 ${wn(E.cash)} · 수수료 포함 · 모의·백테와 같은 식). 아래 <b>🟢 진입 기록</b>으로 남기세요.</p>`;
   }else if(!hold && c.pos==='hold'){
     v=`<div class="oitem s"><span class="tag">청산</span><span class="nm">보유 → 전액 현금 전환</span><span class="pr">${px(price)}</span></div>
        <p class="note" style="margin-top:8px">보유분 전량 매도 후 현금 보유. 아래 <b>🔴 청산 기록</b>으로 남기세요.</p>`;
@@ -5429,13 +5488,28 @@ function maReplay(){
   alert(`${rec.length}건 생성됨 ✓`);
   return true;
 }
+/* 운영 진입 주수 — 모의 재생(maReplay)·백테(runMA200)와 같은 식: 장부 현금 ÷ (가격×(1+수수료)) 내림 (제15차).
+   예전엔 원금÷가격이라 첫 진입은 수수료만큼 현금을 넘고(10,000$/30$ → 333주 = 10,014.98$), 청산 뒤 다시 들어갈 때는
+   실현손익·배당을 빼고 사서(+50% 뒤 222주 vs 331주) 전략의 '100% 보유' 가 아니었다. 화면 안내(renderMaNow)와 기록 버튼이 같이 쓴다. */
+function maEntryQty(hist, price, principal){
+  const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
+  const L=maLedger(hist, price, principal);
+  return {qty:(price>0)?imBuyQty(L.cash, price, FEE):0, cash:L.cash, held:L.qty};
+}
 function maRecord(type){
   const c=computeMa(), st=curStrat().settings;
   const price=c.ready?(c.price||c.lastClose):inputNum('ma_price');
   if(!price||price<=0){ alert('먼저 🔄 자동으로 현재가를 불러오거나 직접 입력하세요.'); return; }
-  let rec; const date=new Date().toISOString().slice(0,10);
-  if(type==='in'){ const qty=Math.floor((st.principal||0)/price)||0; rec={type:'in',date,price:+price,qty,ts:Date.now()}; }
-  else{ rec={type:'out',date,price:+price,ts:Date.now()}; }
+  let rec; const date=recDateFor('ma'), h0=curStrat().hist;
+  if(type==='in'){
+    const E=maEntryQty(h0, price, +st.principal||0);
+    if(!(E.qty>0)){ alert(`장부 현금 ${wn(E.cash)}으로는 1주도 살 수 없습니다. 설정에서 원금을 확인하세요.`); return; }
+    rec={type:'in',date,price:+price,qty:E.qty,ts:Date.now()};
+  }else{
+    // 청산 수량을 적는다 — 장부(maLedger)가 수량 없는 청산도 전량으로 세지만, 기록이 스스로 말하게 (제15차)
+    const held=maLedger(h0, price, +st.principal||0).qty;
+    rec={type:'out',date,price:+price,ts:Date.now()}; if(held>0) rec.qty=held;
+  }
   if(!confirm(`${type==='in'?'진입(매수)':'청산(현금)'} ${px(price)}${rec.qty?' × '+rec.qty+'주':''}\n오늘(${date}) 기록할까요?`))return;
   const h=curStrat().hist; h.push(rec); sortHist(h); save(); refreshMa();
   alert('기록됨 ✓');
@@ -5444,7 +5518,7 @@ function delMa(i){ if(!confirm('이 기록을 삭제할까요?'))return; curStra
 /* 배당 (7차 D8) — 보유 중 받은 세후 배당. 현금으로 들어와 다음 진입 때 같이 쓴다(백테 runMA200 과 같다). */
 function maDivRecord(){
   const amt=+unComma(prompt('배당 금액($, 세후)을 입력하세요','0')||''); if(!isFinite(amt)||amt<=0) return;
-  const date=prompt('배당락일 (YYYY-MM-DD)', new Date().toISOString().slice(0,10)); if(!date) return;
+  const date=prompt('배당락일 (YYYY-MM-DD)', recDateFor('ma')); if(!date) return;
   const h=curStrat().hist; h.push({type:'div',date,amt:+amt,ts:Date.now()}); sortHist(h); save(); refreshMa();
 }
 let editMaIdx=-1;
@@ -5471,7 +5545,7 @@ function saveMaEdit(){
   const price=+unComma($('em_price').value);
   if(!price){alert('단가를 입력하세요');return}
   const rec={ts:h.ts||Date.now(), type, date, price};
-  if(type==='in'){ const qty=+$('em_qty').value; if(qty)rec.qty=qty; }
+  { const qty=+$('em_qty').value; if(qty>0)rec.qty=qty; }   // 청산도 수량을 지킨다 — 예전엔 진입만 적어 재생이 만든 청산을 고치면 수량이 사라졌다 (제15차)
   hist[editMaIdx]=rec; sortHist(hist); save(); refreshMa(); closeEditMa();
 }
 function delMaFromEdit(){ if(editMaIdx<0){closeEditMa();return;} const i=editMaIdx; closeEditMa(); delMa(i); }
@@ -5637,7 +5711,7 @@ function computeDca(){
                    .map(h=>({date:h.date, q:(+h.amt)/(+h.price)})).sort((a,b)=>a.date<b.date?-1:1);
     let bi=0, held=0;
     for(const d of divs){
-      while(bi<buys.length && buys[bi].date<=d.date){ held+=buys[bi].q; bi++; }
+      while(bi<buys.length && buys[bi].date<d.date){ held+=buys[bi].q; bi++; }   // 락일 당일 적립은 못 받는다 — 백테 _dcaOne 과 같다 (제15차)
       if(held<=0) continue;
       const cash=(held+divShares)*(+d.amount||0);
       if(!(cash>0)) continue;
@@ -5820,7 +5894,7 @@ function computeIvs(){
       // 매수 재원: 예수금 + (짝=1배수면 1배 매도분)
       const fund = X1 ? cash + qty1*price1 : cash;
       const spend=Math.min(fund,notional); out.side='buy';
-      out.orderQty=Math.floor(spend*(1-IVS_FEE)/price);
+      out.orderQty=imBuyQty(spend, price, IVS_FEE);   // 배정금 ÷ (가격×(1+수수료)) — 재생·백테와 같은 식 (제15차 · 7-⑰이 로테 재생만 고쳤다)
     }else{ out.side='sell'; out.orderQty=Math.min(qty,Math.floor(-notional/price)); }
     out.orderAmt=(out.orderQty||0)*price;
     out.orderFee=out.orderAmt*IVS_FEE;
@@ -5830,7 +5904,7 @@ function computeIvs(){
       const cashAfter = cash + (out.side==='sell'? out.orderAmt-out.orderFee : -(out.orderAmt+out.orderFee));
       const tB=(1-out.w)*eq, need=tB-qty1*price1;
       if(need>0){ const sp=Math.min(Math.max(cashAfter,0),need);
-        out.side1='buy'; out.orderQty1=Math.floor(sp*(1-IVS_FEE)/price1); }
+        out.side1='buy'; out.orderQty1=imBuyQty(sp, price1, IVS_FEE); }
       else { out.side1='sell'; out.orderQty1=Math.min(qty1,Math.floor(-need/price1)); }
       out.orderAmt1=(out.orderQty1||0)*price1;
       out.orderFee1=out.orderAmt1*IVS_FEE;
@@ -5840,9 +5914,9 @@ function computeIvs(){
   // ── 이번 달 투입 ── 목표 비중대로 나눠 산다 (백테 검증된 방식)
   if(out.monthly>0 && price>0){
     const mA=out.monthly*out.w, mB=out.monthly-mA;
-    out.addQty=Math.floor(mA*(1-IVS_FEE)/price);
+    out.addQty=imBuyQty(mA, price, IVS_FEE);
     out.addAmt=(out.addQty||0)*price;
-    if(X1&&price1>0){ out.addQty1=Math.floor(mB*(1-IVS_FEE)/price1); out.addAmt1=(out.addQty1||0)*price1; }
+    if(X1&&price1>0){ out.addQty1=imBuyQty(mB, price1, IVS_FEE); out.addAmt1=(out.addQty1||0)*price1; }
     else { out.addCash=mB; }   // 짝이 현금·국채면 나머지는 예수금으로
   }
   // 트리거 가격 — 이 밖으로 나가야 밴드를 벗어난다 (σ·1배 가격이 그대로라는 가정)
@@ -6115,7 +6189,7 @@ function ivsCash(kind){
   const nm=kind==='add'?'입금':kind==='div'?'배당(세후)':'출금';
   const amt=+prompt(`${nm} 금액($)을 입력하세요`,'0'); if(!isFinite(amt)||amt<=0) return;
   const memo=prompt(`메모 (예: ${kind==='add'?'예수금 이자, 추가 투입':kind==='div'?'분기 분배금':'양도세 납부, 인출'})`,'')||'';
-  const date=prompt('날짜 (YYYY-MM-DD)', new Date().toISOString().slice(0,10)); if(!date) return;
+  const date=prompt('날짜 (YYYY-MM-DD)', recDateFor('ivs')); if(!date) return;
   /* 배당은 입금과 다르다 (7차 D8) — 입금은 '넣은 돈' 이라 수익률 분모가 되지만 배당은 계좌 안에서 생긴 수입이다 */
   const extra=(kind==='div')?{leg:'lev', sym:String(curStrat().settings.ticker||'').toUpperCase()}:{};
   curStrat().hist.push({type:kind,date,amt:+amt,memo:memo.trim()||undefined,...extra,ts:Date.now()});
@@ -6132,7 +6206,7 @@ function ivsRecord(){
   const c=computeIvs();
   if(!c.ready){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
   if(!c.hit || !c.orderQty){ alert('지금은 주문할 것이 없습니다.'); return; }
-  const date=new Date().toISOString().slice(0,10);
+  const date=recDateFor('ivs');   // 거래소 날짜 (제15차)
   const L=`${c.side==='buy'?'매수':'매도'} ${c.sym} ${nfix(c.orderQty,0)}주 × ${px(c.price)}`;
   const L1=(c.X1&&c.orderQty1>0)?`\n${c.side1==='buy'?'매수':'매도'} ${c.sym1} ${nfix(c.orderQty1,0)}주 × ${px(c.price1)}`:'';
   if(!confirm(`${L}${L1}\n\n오늘(${date}) 체결로 기록할까요?`)) return;
@@ -6152,7 +6226,7 @@ function ivsAddMonthly(){
   const c=computeIvs();
   if(!c.ready){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
   if(!(c.monthly>0)){ alert('설정에서 월 투입액을 먼저 넣으세요.'); return; }
-  const date=new Date().toISOString().slice(0,10);
+  const date=recDateFor('ivs');   // 거래소 날짜 (제15차)
   const l1=`${c.sym} ${nfix(c.addQty||0,0)}주 × ${px(c.price)} = ${px(c.addAmt||0)}`;
   const l2=c.X1?`\n${c.sym1} ${nfix(c.addQty1||0,0)}주 × ${px(c.price1)} = ${px(c.addAmt1||0)}`
                :`\n예수금 ${px(c.addCash||0)}`;
@@ -6170,7 +6244,7 @@ function ivsSeed(){
   $('sd_lev_lbl').textContent=sym+' 보유 주식수';
   $('sd_x1_lbl').textContent=sym1+' 보유 주식수';
   $('sd_x1box').style.display=X1?'':'none';
-  $('sd_date').value=new Date().toISOString().slice(0,10);
+  $('sd_date').value=recDateFor('ivs');   // 거래소 날짜 (제15차)
   ['sd_qty','sd_price','sd_qty1','sd_price1'].forEach(id=>{const e=$(id); if(e) e.value='0';});
   ['sd_qty','sd_price','sd_qty1','sd_price1'].forEach(id=>{const e=$(id); if(e) e.oninput=()=>{commaInput(e);syncSeedNote();};});
   syncSeedNote();
@@ -6192,7 +6266,7 @@ function saveIvsSeed(){
   const q=+unComma($('sd_qty').value)||0, p=+unComma($('sd_price').value)||0;
   const q1=X1?(+unComma($('sd_qty1').value)||0):0, p1=X1?(+unComma($('sd_price1').value)||0):0;
   if(q<=0 && q1<=0){ alert('등록할 보유분이 없습니다.'); return; }
-  const date=$('sd_date').value||new Date().toISOString().slice(0,10);
+  const date=$('sd_date').value||recDateFor('ivs');
   if(q>0)  curStrat().hist.push({type:'buy',leg:'lev',sym,   date,price:p, qty:q, amt:q*p,  fee:0,seed:true,ts:1});
   if(q1>0) curStrat().hist.push({type:'buy',leg:'x1', sym:sym1,date,price:p1,qty:q1,amt:q1*p1,fee:0,seed:true,ts:2});
   sortHist(curStrat().hist); save(); refreshIvs(); pushRemote&&pushRemote(); closeIvsSeed();
@@ -6209,10 +6283,14 @@ async function _fetchDailyDivRaw(symbol){
     if(r.ok){
       const j=await r.json();
       if(j && j.series && j.series.length){
-        const days=j.series.map(d=>({date:d.date,close:+d.close})).filter(d=>d.close>0);
+        const daysAdj=j.series.map(d=>({date:d.date,close:+d.close})).filter(d=>d.close>0);
         const raw=(j.raw||[]).map(d=>({date:d.date,close:+d.close})).filter(d=>d.close>0);
-        const last=j.last?{date:j.last.date,close:+j.last.close}:days[days.length-1];
-        return {symbol:SYM,last,days,raw,dividends:j.dividends||[],splits:j.splits||[],
+        /* 200일선·'종가' 표시·판정은 체결가 계열(raw = 분할만 소급한 실제 종가) — 백테 _dcaMA(M)·runASAP 과 같은 기준 (제15차).
+           예전엔 adjclose(배당 재투자 반영)로 200일선을 그어 배당만큼 선이 낮아져 '종가 ≤ 200일선' 배수 구간이 한쪽으로만 줄었다
+           (월분배 12% 픽스처 212일 · 총투입 −11.3%). 배당은 dividends 이벤트로 따로 더한다. raw 가 없으면(폴백) 예전처럼 조정 계열. */
+        const days=raw.length?raw:daysAdj;
+        const last=raw.length?days[days.length-1]:(j.last?{date:j.last.date,close:+j.last.close}:days[days.length-1]);
+        return {symbol:SYM,last,days,daysAdj,raw,priceBasis:(raw.length?'trade':'adjusted'),dividends:j.dividends||[],splits:j.splits||[],
                 price:(j.price!=null&&+j.price>0)?+j.price:last.close,
                 currency:j.currency||'USD',src:(j.src||'api')};
       }
@@ -6398,7 +6476,7 @@ function dcaRecord(){
   const mul=c.lump?1:(c.ready?c.todayMul:1);
   const amt=(+st.amount||0)*mul;
   if(amt<=0){ alert(c.lump?'설정에서 거치 원금을 입력하세요.':'설정에서 1회 적립액을 입력하세요.'); return; }
-  const date=new Date().toISOString().slice(0,10);
+  const date=recDateFor('dca');   // 거래소 날짜 (제15차)
   // 거치식은 원금을 한 번만 넣는 것이라, 이미 기록이 있으면 되묻는다
   if(c.lump && c.pos.nBuy>0 && !confirm(`거치식인데 이미 매수 기록이 ${c.pos.nBuy}건 있습니다.\n그래도 추가로 기록할까요?`)) return;
   const msg = c.lump
@@ -6754,7 +6832,7 @@ function renderAsapHist(){
 function asapRecord(kind){
   const c=computeAsap(), st=curStrat().settings;
   const price=c.ready?(c.price||c.lastClose):inputNum('asap_price');
-  const amt=inputNum('asap_amt'), date=new Date().toISOString().slice(0,10);
+  const amt=inputNum('asap_amt'), date=recDateFor('asap');   // 거래소 날짜 (제15차)
   const pos=c.ready?c.pos:asapPos(curStrat().hist);
   let rec;
   if(kind==='sgov'){
@@ -7585,8 +7663,9 @@ function maLedger(hist, price, principal){
     // 배당 (7차 D8) — 보유 중 받은 세후 배당은 현금으로 들어온다. 매매가 아니라 평단·보유는 그대로.
     if(x.type==='div'){ const a=+x.amt||0; if(a>0){ cash+=a; divs+=a; } return; }
     const q=+x.qty||0, pr=+x.price||0;
-    if(!(q>0)||!(pr>0)) return;
+    if(!(pr>0)) return;
     if(x.type==='in'){
+      if(!(q>0)) return;
       const gross=pr*q, fee=(x.fee!=null?+x.fee:gross*FEE);
       /* 매수 수수료는 현금에서 나가는데 평단에는 안 들어가고 있었다 —
          그만큼 실현손익이 부풀려져, 다 청산한 계좌인데도 실현 수익률이
@@ -7595,7 +7674,9 @@ function maLedger(hist, price, principal){
       const nq=qty+q; avg=nq>0?(avg*qty+pr*q+fee)/nq:(q>0?(pr*q+fee)/q:pr); qty=nq;
       totbuy+=gross; cash-=gross+fee; fees+=fee;
     }else if(x.type==='out'){
-      const sq=q>0?Math.min(q,qty):qty; const gross=pr*sq;
+      /* 수량이 없으면 전량 — 운영 '청산 기록'(maRecord)은 전량 매도다. 예전엔 수량 검사가 먼저 돌아 수량 없는 청산을 통째로
+         건너뛰었다(분석 탭·모의 성과·포트폴리오가 다 판 세션을 계속 보유로 셌다 · 제15차). */
+      const sq=q>0?Math.min(q,qty):qty; if(!(sq>0)) return; const gross=pr*sq;
       const fee=(x.fee!=null?+x.fee:gross*FEE);
       const pnl=(pr-avg)*sq-fee;                 // 실현손익도 수수료 차감 후 (백테와 동일)
       realized+=pnl; totsell+=gross; cash+=gross-fee; fees+=fee;
@@ -7680,7 +7761,7 @@ function divIncome(divs, lots, reinv){
   if(!divs||!divs.length||!lots||!lots.length) return out;
   let li=0, held=0;
   for(const d of divs){
-    while(li<lots.length && lots[li].date<=d.date){ held+=lots[li].q; li++; }
+    while(li<lots.length && lots[li].date<d.date){ held+=lots[li].q; li++; }   // 락일 당일 매수는 못 받는다 — 백테 divCash·재생(그날 매매 전 보유)과 같다 (제15차)
     if(!(held>0)) continue;
     const cash=held*(+d.amount||0);
     if(!(cash>0)) continue;
@@ -8395,7 +8476,7 @@ function paperFxFallback(){
    - 평소 모의 페이지를 열 때는 저장된 표를 즉시 보여 주고 전 전략 재생을 다시 하지 않는다.
    - 하루가 바뀌었거나 원장이 바뀌면 백그라운드에서 한 번만 증분 갱신한다.
    - 전체 적용/오늘 갱신은 force=true로 명시적으로 다시 계산한다. */
-const PAPER_VIEW_CACHE_VER=7;   // 7: ASAP 모의 줄 빼기 — ASAP 줄이 든 지난 목록을 재계산 실패 대체 화면에도 안 씀 (2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?") · 6: 줄 설명·이름에 남은 옛 글자(띄어 쓴 이름 · '5년'이 붙은 설명)를 다시 셈 (2026-11-09 사용자: 이름은 '듀얼가드' · '5년' 지움) · 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
+const PAPER_VIEW_CACHE_VER=8;   // 8: 제15차 — 로테 청산 장부·적립 200일선 체결가 계열·분배금 락일 당일 제외·듀얼가드 배당 세후 (2026-11-09) · 7: ASAP 모의 줄 빼기 — ASAP 줄이 든 지난 목록을 재계산 실패 대체 화면에도 안 씀 (2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?") · 6: 줄 설명·이름에 남은 옛 글자(띄어 쓴 이름 · '5년'이 붙은 설명)를 다시 셈 (2026-11-09 사용자: 이름은 '듀얼가드' · '5년' 지움) · 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
 let _paperViewRefreshPromise=null;
 function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
 function paperViewSig(){
@@ -10182,16 +10263,20 @@ function vrReplay(){
     // ② 오늘 장 마감 종가/장부로 다음 V를 계산한다. 새 사다리는 다음 거래일부터.
     let guard=0;
     while(due && d>=due && guard++<10){
-      cycLog.push({cyc, dates:`${md(cycStartDate)}~${md(d)}`, V:+V.toFixed(2),
+      cycLog.push({cyc, from:cycStartDate, dates:`${md(cycStartDate)}~${md(d)}`, V:+V.toFixed(2),
         lo:+(V*(1-band)).toFixed(2), up:+(V*(1+band)).toFixed(2),
         trade:+cycTrade.toFixed(2), startPool:+cycStartPool.toFixed(2),
         E:+(shares*c).toFixed(2), close:+c.toFixed(4)});
       const TR=vrCycleTransition(V, pool, shares*c, G, mode, isAccum?contrib:withdraw, formula);   // 공용 전환식 (제8차 8-⑦)
       V=TR.nextV;
-      cyc++; cycTrade=0; cycDiv=0; cycBuySpent=0; cycStartDate=d;cycBaseQty=shares;cycSellFilled=0;cycBuyFilled=0;
-      if(isAccum){ pool=TR.nextPool; rec.push({type:'add',date:d,amt:+TR.actual,cyc,sim:true,ts:rec.length+1}); }
+      /* 새 사이클 시작일은 기준일(due · 14일 격자)이다 — 실제 거래일 d 로 적으면 기준일이 휴장일 때 격자가 하루 밀린다
+         (12-02 휴장 → 12-03 → 다음 12-17, 모의·백테는 12-16 · 제15차). 모의 vrStepCycle·운영 진입도 기준일을 적는다.
+         적립·인출 기록에는 auto 를 붙인다 — computeVr 가 '적립 뒤 Pool' 을 사이클 시작 Pool(한도 밑천)로 잡는 표식이다.
+         예전엔 빠져 있어 저장 뒤 한도가 적립 전 Pool 로 세어졌다(적립 100 → 한도 7,738 vs 7,663 · 재생 뒤 이어가기가 백테와 갈림). */
+      cyc++; cycTrade=0; cycDiv=0; cycBuySpent=0; cycStartDate=due;cycBaseQty=shares;cycSellFilled=0;cycBuyFilled=0;
+      if(isAccum){ pool=TR.nextPool; if(TR.actual>0) rec.push({type:'add',date:d,amt:+TR.actual,cyc,sim:true,auto:true,ts:rec.length+1}); }
       else if(isWd){ pool=TR.nextPool; totalWd+=TR.actual;
-        if(TR.actual>0) rec.push({type:'wd',date:d,amt:+TR.actual,cyc,sim:true,ts:rec.length+1}); }
+        if(TR.actual>0) rec.push({type:'wd',date:d,amt:+TR.actual,cyc,sim:true,auto:true,ts:rec.length+1}); }
       cycStartPool=pool;
       due=vrNextDue(due);
     }
@@ -10246,7 +10331,7 @@ function vrFirstBuy(){
   const F=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
   const qty=Math.floor(amt/(pr*(1+F)));
   if(qty<1){ alert('초기 투자금이 수수료 포함 1주 값보다 작습니다.'); return; }
-  const date=new Date().toISOString().slice(0,10), fee=qty*pr*F;
+  const date=recDateFor('vr'), fee=qty*pr*F;   // 거래소 날짜 (제15차)
   const left=amt-qty*pr-fee;
   if(!confirm(`첫 매수 ${tickerLabel(st.ticker)} ${nfix(qty,0)}주 × ${wn(pr)} = ${wn(qty*pr)}\n`
     +`수수료 ${wn(fee)}\n`
@@ -10283,6 +10368,8 @@ function saveVrEdit(){
     const price=+unComma($('ev_price').value), qty=+$('ev_qty').value;
     if(!price||!qty){alert('단가와 수량을 입력하세요');return}
     rec.price=price; rec.qty=qty; delete rec.amt;
+    /* 수수료가 적힌 기록(모의·첫 매수)은 단가·수량을 고치면 수수료도 다시 센다 — 옛 수수료가 남으면 Pool 이 그만큼 어긋난다 (제15차) */
+    if(h.fee!=null&&(price!==+h.price||qty!==+h.qty)) rec.fee=+(price*qty*((typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025)).toFixed(6);
   } else {
     const amt=+unComma($('ev_amt').value);
     if(!amt){alert('금액을 입력하세요');return}
@@ -10297,7 +10384,7 @@ function delVr(i){if(!confirm('이 거래를 삭제할까요?'))return;curStrat(
 /* ════════ 하단 거래기록 바텀시트 ════════ */
 function fmtDateK(d){const dt=d?new Date(d+'T00:00:00'):new Date();const wd=['일','월','화','수','목','금','토'][dt.getDay()];return `${dt.getMonth()+1}월 ${dt.getDate()}일 (${wd})`}
 function openSheet(){
-  const today=new Date().toISOString().slice(0,10);
+  const today=recDateFor(S.activeTab==='inf'?'inf':'vr');   // 거래소 날짜 — 한국 낮에 적는 전날 체결은 그 거래일 (제15차)
   $('sheet_date').textContent=fmtDateK(today)+(S.activeTab==='inf'?` · ${computeInf().T<computeInf().st.div/2?'전반전':'후반전'}`:'');
   $('sheet_title').textContent= S.activeTab==='inf'?'오늘의 거래 기록':'거래 기록';
   $('sheet_body').innerHTML = S.activeTab==='inf'?sheetInfHTML(today):sheetVrHTML(today);
@@ -10325,7 +10412,10 @@ function sheetInfHTML(today){
        바로 아래 리버스 입력칸과 서로 다른 걸 권했다. 1일차·중간 소진은 무조건 MOC 매도라 그대로 권하고,
        그 밖의 날은 종가가 주문표 별지점 이상이면 리버스매도 · 아래면 리버스매수라 아래에서 고르게 한다.
        별지점은 주문표와 같은 calcStarPoint (확정 봉 기준) — 기록하는 날의 주문 별지점과 하루 어긋날 수 있어 수치로 권하지 않는다. */
-    const R=imRevOrders({day1:c.reverseDay1, qty:c.qty, bal:c.bal, star5:c.reverseDay1?0:calcStarPoint(c).val, div:st.div, gap:revGapOf(st)});
+    /* 기록할 날(마지막 확정 종가일)의 주문은 그 전 봉을 보고 냈다 — 1일차 판정·별지점을 그 기준으로 (주문표와 같다 · 제15차) */
+    const _Q0=quoteOf('inf'), _pb=((_Q0&&_Q0.days)||[]).filter(d=>d&&d.close>0&&_sl0&&d.date<_sl0.date), _pd=_pb.length?_pb[_pb.length-1].date:null;
+    const _d1=_pd?infRevDay1(c,_pd):!!c.reverseDay1;
+    const R=imRevOrders({day1:_d1, qty:c.qty, bal:c.bal, star5:_d1?0:calcStarPoint(Object.assign({},c,{starBefore:_sl0&&_sl0.date})).val, div:st.div, gap:revGapOf(st)});
     if(R.mode==='day1'||R.mode==='spent'){
       recoKind='리버스매도'; recoQty=R.sell?R.sell.q:0; recoPrice=lastClose;
       recoLine = R.sell ? `${R.mode==='day1'?'리버스 1일차':'리버스 중간 소진'} — 보유÷${R.sellDiv} 무조건 MOC ${recoQty}주 (종가 체결)`
@@ -10337,8 +10427,16 @@ function sheetInfHTML(today){
     }
   }else if(B1.spent && c.qty>0){
     // 쿼터매도는 별지점 그대로(매수만 −0.01) — 주문표의 '쿼터매도 (¼·별지점)'과 같은 가격이어야 한다.
-    recoKind='쿼터매도'; recoQty=Math.max(1,Math.floor(c.qty/4)); recoPrice=imStarPx(c.avg,starPct(st.ticker,st.div,c.T,c.tp),curOf(st));
-    recoLine=`원금 소진(T=${fmtT(c.T)}≥${st.div}) · 별지점 ${wn(recoPrice)} × ${recoQty}주 방어`;
+    /* 주문표와 같은 수량 — 보유÷4 내림이 0주(보유 1~3주)면 쿼터매도 주문이 없고 익절 지정가(나머지 전부)만 있다 (제15차).
+       예전엔 최소 1주를 억지로 권해 주문표(쿼터매도 없음)와 달랐고, 소진 문구도 'T≥분할' 로 실제 조건(T>분할−1)과 어긋났다. */
+    const q4=Math.floor(c.qty/4);
+    if(q4>0){
+      recoKind='쿼터매도'; recoQty=q4; recoPrice=imStarPx(c.avg,starPct(st.ticker,st.div,c.T,c.tp),curOf(st));
+      recoLine=`원금 소진(T=${fmtT(c.T)}>${st.div-1}) · 별지점 ${wn(recoPrice)} × ${recoQty}주 방어`;
+    }else{
+      recoKind='지정가매도'; recoQty=c.qty; recoPrice=+(c.avg*(1+c.tp/100)).toFixed(2);
+      recoLine=`원금 소진(T=${fmtT(c.T)}>${st.div-1}) · 보유 ${c.qty}주 ÷ 4 = 0주라 쿼터매도 없음 · 익절 지정가 ${wn(recoPrice)} × ${c.qty}주만 (주문표와 같다)`;
+    }
   }else{
     const g=B1.spent?null:infSuggest('1회매수'), b=g&&g.buyFill;
     if(b&&b.qty>0){
@@ -10354,7 +10452,9 @@ function sheetInfHTML(today){
   // 추천이 '매수 없음'이면 기록할 거래가 없으므로 '이대로 기록' 버튼을 내린다 (유효한 거래종류가 아님).
   h+=`<div class="reco"><div class="rl"><div class="rt">📌 오늘의 추천</div><div class="rmain">${recoKind}</div><div class="rsub">${recoLine}${recoQty>0?' · 아래에서 직접 선택 · T값 자동 계산':' · 필요하면 아래에서 직접 선택'}</div></div>`
     +(recoQty>0?`<button class="rgo" onclick="sheetPickInf('${recoKind}',${recoPrice||0},${recoQty})">이대로 기록</button>`:'')+`</div>`;
-  const reverse = revEnabled(st) && c.T>st.div-1 && c.qty>0;   // 규칙 없는 분할엔 리버스 입력칸이 없다 (제8차 8-④)
+  /* 리버스 입력칸 — 장부가 리버스 진행 중(c.reverseActive)이거나 지금 소진이면. 예전엔 T 로만 봐서 첫 리버스매도 뒤(T×0.9 → T≤분할−1)
+     칸이 사라졌고, 일반 종류로 적으면 장부가 조용히 리버스를 빠져나갔다 (제15차). 규칙 없는 분할엔 리버스 입력칸이 없다 (제8차 8-④) */
+  const reverse = !!c.reverseActive || (revEnabled(st) && c.T>st.div-1 && c.qty>0);
   if(reverse){
     const sellDiv=st.div>=40?20:10;
     h+=`<div class="sheetseclbl" style="color:var(--sell)">리버스모드 (원금 소진 · T>${st.div-1})</div>`;
@@ -10430,17 +10530,23 @@ function infSuggest(kind){
   const B=imBuy1(c), buy1=B.spent?0:B.amt;
   const star=imStarPx(c.avg,starPct(st.ticker,st.div,c.T,c.tp),curOf(st));   // 이번 사이클 익절% 기준 (익절 자동 · 실험)
   let eff=c.tp;
-  if(st.tgtDyn===true){ const m=imMomNow(); if(m!=null) eff=imTgtOf(c.tp,m); }
+  if(st.tgtDyn===true){ const m=imMomAt(closeDate); if(m!=null) eff=imTgtOf(c.tp,m); }   // 20일 창은 체결일 '전날' 까지 — 주문표·모의·백테·서버와 같은 창 (제15차)
   const tgt=c.avg>0?c.avg*(1+eff/100):0;
   const qSell=Math.floor(c.qty/4), sellDiv=st.div>=40?20:10;
+  /* 1일차 판정은 그 주문을 낸 아침의 확정 봉(종가일 전 봉)으로 — 주문표가 그날 아침 본 것과 같다. 전 봉이 없으면 장부 상태 그대로. */
+  const prevDate=prior.length?prior[prior.length-1].date:null;
+  const _d1=prevDate?infRevDay1(c, prevDate):!!c.reverseDay1;
+  const RV=c.reverseActive?imRevOrders({day1:_d1, qty:c.qty, bal:c.bal, star5:_d1?0:calcStarPoint(Object.assign({},c,{starBefore:closeDate})).val, div:st.div, gap:revGapOf(st)}):null;
   const buyAt=(k)=>({price:close, qty:k===buyFill.kind?buyFill.qty:0});
   const S={
     '1회매수':  buyAt('1회매수'),
     '절반매수':  buyAt('절반매수'),
     '쿼터매도':  {price:close, qty:Math.min(qSell,c.qty)},                  // 별지점 LOC = 종가 체결
     '지정가매도':{price:tgt,   qty:Math.max(0,c.qty-qSell)},                // 익절 지정가 = 목표가 체결
-    '리버스매도':{price:close, qty:c.qty>0?Math.min(c.qty,Math.floor(c.qty/sellDiv)):0},   // 내림 0주면 0 (원문)
-    '리버스매수':{price:close, qty:imRevBuyQty(c.bal, close)},   // 원문: 잔금÷4 (강제 1주 없음)
+    /* 리버스 — 주문표와 같은 주문(imRevOrders)에서, 종가가 조건을 만족한 쪽만 수량을 채운다 (제15차).
+       예전엔 쿼터매수 수량을 종가로 다시 셌다(잔금 3,600 · 매수가 60 · 종가 50 → 주문 15주인데 18주 · 종가 61 미체결 날에도 11주). */
+    '리버스매도':{price:close, qty:(RV&&RV.sell&&(RV.mode!=='normal'||close>=RV.sell.price))?RV.sell.q:0},
+    '리버스매수':{price:close, qty:(RV&&RV.buy&&close<=RV.buy.price)?RV.buy.q:0},
   };
   if(isCx(kind)){
     const bk=kind.includes('1회매수')?'1회매수':'절반매수';
@@ -10453,7 +10559,7 @@ function sheetSelInf(kind){
   shKind=kind;
   document.querySelectorAll('#sheet .kindopt').forEach(o=>o.classList.toggle('sel',o.dataset.kind===kind));
   const sym=(curCurrency()==='krw')?'₩':'$';
-  const today=new Date().toISOString().slice(0,10);
+  const today=recDateFor('inf');   // 거래소 날짜 (제15차)
   let f=`<div class="field"><label>날짜</label><input id="sh_date" type="date" value="${today}" onchange="sheetTprev()"></div>`;
   if(isCx(kind)){
     // 복합: 매도 + 매수 각각
@@ -10520,8 +10626,8 @@ function sheetSelInf(kind){
         const _rd=$('sh_date')&&$('sh_date').value;
         const stale = g.closeDate && _rd && _rd>g.closeDate;
         hint.innerHTML=`🔄 <b>자동 채움</b> · ${bits.join(' · ')} — 실제 체결이 다르면 고쳐서 기록하세요`
-          + (stale?`<br><b style="color:var(--gold)">⚠ 기록 날짜(${_rd.slice(5).replace('-','/')})와 종가 날짜(${g.closeDate.slice(5).replace('-','/')})가 다릅니다.</b> `
-              +`장 마감 후 ${SETTLE_LAG_MIN}분이 지나야 그날 종가가 확정됩니다 — 조금 뒤 새로고침하거나, 체결가를 직접 입력하세요.`:''); } } }
+          + (stale?`<br><b style="color:var(--gold)">⚠ 기록 날짜(${_rd.slice(5).replace('-','/')})가 확정 종가 날짜(${g.closeDate.slice(5).replace('-','/')})보다 뒤입니다.</b> `
+              +`LOC 체결은 종가 날짜의 거래입니다 — 날짜를 ${g.closeDate.slice(5).replace('-','/')}로 맞추세요. (장 마감 직후면 ${SETTLE_LAG_MIN}분 뒤 새로고침하면 그날 종가가 확정됩니다.)`:''); } } }
   sheetTprev();
   $('sheet_form').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -10533,7 +10639,7 @@ function sheetToggleTman(){ const on=$('sh_tman_on').checked; $('sh_tman_wrap').
 function sheetTvirtual(){
   if(!shKind||isAmtKind(shKind)) return null;
   const n=id=>{ const e=$(id); return e?(+unComma(e.value)||0):0; };
-  const date=($('sh_date')&&$('sh_date').value)||new Date().toISOString().slice(0,10);
+  const date=($('sh_date')&&$('sh_date').value)||recDateFor('inf');
   const v={date, kind:shKind, ts:Date.now()+1e6, __preview:true};
   if(isCx(shKind)){ v.sellPrice=n('sh_s_price'); v.sellQty=n('sh_s_qty'); v.buyPrice=n('sh_b_price'); v.buyQty=n('sh_b_qty');
     if(!(v.sellQty>0)||!(v.buyQty>0)) return null; }
@@ -10653,7 +10759,7 @@ function sheetSelVr(t){
 }
 function sheetSaveVr(){
   const date=$('shv_date').value;
-  const curCyc=computeVr().curCyc;
+  const curCyc=vrCycOfDate(computeVr(),date);   // 그 날짜의 사이클 (제15차)
   let rec;
   if(shVrType==='buy'||shVrType==='sell'){
     const price=+unComma($('shv_price').value),qty=+$('shv_qty').value;

@@ -12,7 +12,7 @@
   document.documentElement.classList.add('embed');
   var b=document.createElement('base'); b.target='_top'; document.head.appendChild(b); })();
 </script>
-<script src="/plan-session-engine.js?v=6"></script>
+<script src="/plan-session-engine.js?v=7"></script>
 <script src="/plan-session-settings.js?v=3"></script>
 <script src="/plan-tax-check.js?v=1"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
@@ -368,7 +368,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.5.4</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.5.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1001,6 +1001,11 @@ let planLinks={inf:"",vr:"",sleeve:""};
 let sleeveSessions=[];
 let sleeveLedger={startQLD:0,startSGOV:0,startCash:0,trades:[]};
 let alphaLedger={base:{date:"",tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
+/* 화면 장부(alphaLedger)가 지금 어느 세션의 것인가 — '' 는 현재 투자중(원장 fiveYearPlanV2), 세션 id 는 그 세션, null 은 아직 아무것도 안 올림 (제15차).
+   syncActiveAssetSessionFromView 는 이 값이 활성 세션 id 와 같을 때만 화면 장부를 세션에 쓴다. 예전엔 무조건 썼다 — 앱을 열 때
+   cloudLoad(현재 투자중 장부를 화면에) → refreshLive 끝의 render()→localSave() 가 아직 화면에 안 올라온 활성 실전 세션 X 에
+   현재 투자중 장부·설정을 덮어 썼고, 세션 전환 중(활성은 B · 화면은 A) render() 가 돌면 B 장부에 A 장부가 들어갔다. */
+let viewBoundSid=null;
 let pendingAlphaOrders=[], alphaEditingId="";
 const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t*0.25,
   '지정가매도+1회매수':t=>t*0.25+1,'지정가매도+절반매수':t=>t*0.25+0.5,
@@ -1204,6 +1209,8 @@ function writeAssetSessionLocal(){
 }
 function syncActiveAssetSessionFromView(){
   const x=activeAssetSession();if(!x||x.paper)return false;
+  // 화면 장부가 이 세션 것일 때만 쓴다 — 다른 세션(또는 현재 투자중) 장부를 옮겨 적지 않는다 (제15차 · 장부 안전)
+  if(typeof viewBoundSid!=='undefined'&&viewBoundSid!==x.id)return false;
   x.settings=assetSessionSettingsFromView();
   x.ledger=cloneObj(alphaLedger);
   x.updatedAt=Date.now();writeAssetSessionLocal();return true;
@@ -1248,7 +1255,7 @@ async function replayAssetPaperSession(x,applyView){
     assetPaperCache[x.id]=R;
     if(applyView&&isCurrent()){
       applyAssetSettings(x);
-      alphaLedger=cloneObj(R.ledger||assetLedgerSeed(x.simStart,+x.settings.startCapital||0));
+      alphaLedger=cloneObj(R.ledger||assetLedgerSeed(x.simStart,+x.settings.startCapital||0));viewBoundSid=x.id;
       alphaSyncInputs();document.body.classList.add('asset-paper-mode');
       const pr=$('assetPaperResult');if(pr){pr.hidden=false;pr.innerHTML=assetPaperStatsHtml(x,R);}
       renderAlphaLedger();render();refreshAlphaFromCache();
@@ -1295,11 +1302,12 @@ async function loadActiveAssetSessionView(refresh=true){
   applyAssetSettings(x);
   if(x.paper){
     document.body.classList.add('asset-paper-mode');
-    alphaLedger=assetLedgerSeed(x.simStart,+x.settings.startCapital||0);alphaSyncInputs();renderAlphaLedger();
+    alphaLedger=assetLedgerSeed(x.simStart,+x.settings.startCapital||0);viewBoundSid=x.id;alphaSyncInputs();renderAlphaLedger();
     const pr=$('assetPaperResult');pr.hidden=false;pr.textContent='모의 거래이력과 성과를 계산하는 중…';
     renderAssetSessions();await replayAssetPaperSession(x,true);if(refresh&&revision===assetViewRevision)await refreshLive();return;
   }
   alphaLedger=cloneObj(x.ledger||assetLedgerSeed((x.settings&&x.settings.startDate)||todayISO(),+(x.settings&&x.settings.startCapital)||20000));
+  viewBoundSid=x.id;   // 이제 화면 장부는 이 세션 것 — 여기서부터 localSave 가 세션에 쓴다 (제15차)
   alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
   const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
   renderAssetSessions();renderAlphaLedger();render();refreshAlphaFromCache();if(refresh)await refreshLive();
@@ -1403,7 +1411,7 @@ async function createAssetSession(){
     if(id==='current'){
       planPortfolio=x.portfolio!==false;
       planCurName=String(x.name||'').trim()==='현재 투자중'?'':String(x.name||'').trim();   // 이름 — 원장(fiveYearPlanV2.sessionName)에 적는다
-      applyAssetSettings(x);alphaLedger=x.ledger;alphaSyncInputs();localSave();await cloudSave();
+      applyAssetSettings(x);alphaLedger=x.ledger;viewBoundSid='';alphaSyncInputs();localSave();await cloudSave();
     }else{
       if(original)box.sessions[box.sessions.indexOf(original)]=x;else box.sessions.push(x);
       box.activeByHorizon[horizon]=x.id;delete assetPaperCache[x.id];
@@ -2066,7 +2074,7 @@ async function advancePlanVrCycle(){
   if(flowAmt>0){
     vr.hist.push({type:r.type,date:pendingVrCycle.date,amt:+flowAmt.toFixed(6),cyc:newCyc,auto:true,ts:Date.now()});
   }
-  st.startv=+r.nextV.toFixed(6);st.startCyc=newCyc;st.cycStart=pendingVrCycle.date;
+  st.startv=+r.nextV.toFixed(6);st.startCyc=newCyc;st.cycStart=pendingVrCycle.due||pendingVrCycle.date;   // 새 사이클 시작일 = 기준일(14일 격자) — 실제 거래일로 적으면 휴장 뒤 격자가 밀린다 (제15차)
   if(!Array.isArray(st.cycLog))st.cycLog=[];
   st.cycLog.push({cyc:newCyc-1,from:null,dates:'듀얼가드 확정',V:+c.V.toFixed(2),lo:+c.lo.toFixed(2),up:+c.up.toFixed(2),E:+r.ev.toFixed(2),close:+pendingVrCycle.close.toFixed(4)});
   st.cycLog=st.cycLog.slice(-120);
@@ -2217,6 +2225,15 @@ function quoteToDaily(SYM, j){
 const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30};      // 정규장 마감 (거래소 현지시각)
 const SETTLE_LAG_MIN=20;
 /* 포맷터는 시간대별로 한 번만 만들고, 같은 초 안의 호출은 같은 값을 돌려준다(분 단위만 쓰므로 결과는 같다). 앱(index)과 글자 그대로 같다. */
+/* 기록 날짜 기본값 — 미국 거래일 (제15차 · 앱 tradeDateDefault 와 같은 규약). 예전엔 브라우저 날짜(KST)라 한국 낮에 적는
+   전날 체결(12-30 미국 체결을 12-31 에 기록)이 하루 뒤로 들어가 세후 연도 귀속·입금 맞춤 순서가 밀렸다.
+   개장(09:30 ET) 전이면 직전 평일, 장중·마감 뒤면 미국 오늘. */
+function tradeDateDefault(){
+  const n=_exchNow('usd');
+  if(n.min>=9*60+30) return n.date;
+  const y=new Date(n.date+'T00:00:00Z'); do{ y.setUTCDate(y.getUTCDate()-1); }while(y.getUTCDay()===0||y.getUTCDay()===6);
+  return y.toISOString().slice(0,10);
+}
 function _exchNow(cur){
   const tz=(cur==='krw')?'Asia/Seoul':'America/New_York';
   const F=_exchNow._fmt||(_exchNow._fmt={}), M=_exchNow._memo||(_exchNow._memo={});
@@ -2730,6 +2747,7 @@ function apply(o){
     alphaLedger={base:{date:todayISO(),tecl:Math.max(0,Math.floor(+all.aTeclQty||0)),tqqq:Math.max(0,Math.floor(+all.aTqqqQty||0)),sgov:Math.max(0,Math.floor(+all.aSgovQty||0)),cash:Number.isFinite(+all.aCash)?+all.aCash:Math.max(1,+all.startCapital||20000),avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
   }
   Object.entries(all).forEach(([k,v])=>{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=(v===true||v==='true');else el.value=v;});
+  viewBoundSid='';   // 화면 장부 = 현재 투자중(원장) — 실전 세션에는 쓰지 않는다 (제15차)
   alphaSyncInputs();
 }
 function localSave(){
@@ -2867,7 +2885,7 @@ function renderAlphaLedger(){
 }
 function alphaOpenFillEditor(){
   if(!pendingAlphaOrders.length){alert('현재 반영할 주문이 없습니다. A탭을 다시 열어 최신 주문을 확인하세요.');return;}
-  $('alphaFillDate').value=todayISO();
+  $('alphaFillDate').value=tradeDateDefault();   // 미국 거래일 — 한국 낮에 적는 전날 체결은 그 거래일 (제15차)
   $('alphaFillRows').innerHTML=pendingAlphaOrders.map((o,i)=>'<div class="alpha-fill-row" data-fill-i="'+i+'"><div class="tag">'+o.sym+'</div><div class="'+(o.side==='buy'?'pos':'neg')+'">'+(o.side==='buy'?'매수':'매도')+'</div><div class="field"><label>실제 수량 (최대 '+o.qty+')</label><input type="number" class="afQty" min="0" max="'+o.qty+'" step="1" value="'+o.qty+'"></div><div class="field"><label>실제 체결가 ($)</label><input type="number" class="afPrice" min="0" step="0.0001" value="'+Number(o.price).toFixed(4)+'"></div></div>').join('');
   $('alphaFillPanel').hidden=false;alphaCloseEdit();
 }
@@ -2941,7 +2959,7 @@ async function alphaDeleteEvent(id){
 /* 현금 기록 추가 — SGOV 는 매달 분배금을 준다. 이 기록이 없으면 앱 현금이 토스 계좌보다 계속 작아져
    주문 수량이 어긋난다(20년 플랜은 SGOV 가 60%). 배당은 세후 실제 입금액 · 입금·출금은 계좌에 들고 난 금액. */
 async function alphaAddCashEvent(){
-  const date=($('alphaCashDate')&&$('alphaCashDate').value)||todayISO(),kind=$('alphaCashKind').value,amt=Math.round((+$('alphaCashAmt').value||0)*100)/100;
+  const date=($('alphaCashDate')&&$('alphaCashDate').value)||tradeDateDefault(),kind=$('alphaCashKind').value,amt=Math.round((+$('alphaCashAmt').value||0)*100)/100;
   if(!['div','dep','wd'].includes(kind)||!(amt>0)){alert('구분과 금액을 확인하세요.');return;}
   const candidate=JSON.parse(JSON.stringify(alphaLedger));candidate.events=Array.isArray(candidate.events)?candidate.events:[];
   candidate.events.push({id:Date.now()+'_c',type:'cash',date,kind,amount:amt});
@@ -3273,7 +3291,7 @@ $("assetSessionChips").addEventListener("dblclick",e=>{
   window.addEventListener("mouseup",()=>{ if(dgDragStart||dgDragEl)dgDragStop(); });
 })();
 $("alphaRecordFill").addEventListener("click",alphaOpenFillEditor);
-$("alphaCashAdd").addEventListener("click",alphaAddCashEvent);if($("alphaCashDate"))$("alphaCashDate").value=todayISO();
+$("alphaCashAdd").addEventListener("click",alphaAddCashEvent);if($("alphaCashDate"))$("alphaCashDate").value=tradeDateDefault();
 $("alphaFillSave").addEventListener("click",alphaSaveFills);
 $("alphaFillCancel").addEventListener("click",alphaCloseFillEditor);
 $("alphaEditSave").addEventListener("click",alphaSaveEdit);

@@ -31,8 +31,10 @@ const tecl=[];{let p=50;for(let k=0;k<D.length;k++){const r=(k>=VOL0&&k<VOL1)?.0
 const sgov=D.map((d,k)=>({date:d,close:100*Math.pow(1.0001,k)})),sgovDiv=D.filter((d,k)=>k%21===5).map(d=>({date:d,amount:.35}));
 const BASE={startDate:D[START],principal:100000,tecl,tqqq,sgov,sgovDiv};
 /* 기준값 — 개편 전 엔진(main 0b2cb4c · plan-session-engine.js)으로 같은 자료를 돌린 결과. 개편 뒤에도 장부·평가액이 글자까지 같아야 한다. */
-const GOLD={lump:{monthlyAdd:0,total:112072.65925706532,nTrade:8,ledger:'52510c9b',nav:'48ebfb5b'},
-            monthly:{monthlyAdd:500,total:128292.50862924177,nTrade:82,ledger:'72bd28b2',nav:'50ed85a'}};
+/* 2026-11-09 제15차: 모의 배당이 세후(×0.846 · 앱 다른 모의 엔진과 같은 규약)로 바뀌어 값이 조금 내렸다(lump 112072.66 → 112054.01 · monthly 128292.51 → 128274.85 · 체결 82 → 81).
+   규칙(판정·주수)은 그대로다 — A5 의 '규칙 없음 = base = 기간 생략' 동일성과 check-plan-deposit 운영=모의 대조가 그걸 본다. */
+const GOLD={lump:{monthlyAdd:0,total:112054.00985706532,nTrade:8,ledger:'2d760fe',nav:'379a4e4d'},
+            monthly:{monthlyAdd:500,total:128274.85026545452,nTrade:81,ledger:'5bd7b102',nav:'6de2a465'}};
 
 function el(extra={}){return Object.assign({hidden:false,dataset:{},tabIndex:0,attrs:{},_cls:new Set(),classList:{toggle(c,on){on?this.o._cls.add(c):this.o._cls.delete(c);},contains(c){return this.o._cls.has(c);}},setAttribute(k,v){this.attrs[k]=String(v);}},extra);}
 
@@ -149,7 +151,7 @@ async function check(S){
     ['듀얼가드 화면: "플랜" 글자 되살림','plan',s=>s.replace('<label>듀얼가드 시작일</label>','<label>플랜 시작일</label>')],
     ['듀얼가드 화면: 머리글 "5 YEAR" 되살림(옛 코드)','plan',s=>s.replace("setTxt('alphaHorizonEyebrow','DUAL GUARD · v'+P.version);","setTxt('alphaHorizonEyebrow','5 YEAR · DUAL GUARD · v'+P.version);")],
     ['운영: "플랜" 글자 되살림','idx',s=>s.replace("'듀얼가드 세금 점검과 같은 계산(결제일 환율 · 선입선출)'","'플랜 세금 점검과 같은 계산(결제일 환율 · 선입선출)'")],
-    ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=7;','const PAPER_VIEW_CACHE_VER=6;')],
+    ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace(/const PAPER_VIEW_CACHE_VER=\d+;/,'const PAPER_VIEW_CACHE_VER=6;')],   // 판은 계속 오른다(제15차 8) — 옛 판 6 으로 되돌리면 빨간불
     ['엔진: 폐지 안내 "폐지된 플랜"(옛 글자)','eng',s=>s.replace("error:'폐지된 세션 — '+gone","error:'폐지된 플랜 — '+gone")],
   ];
   let red=0;

@@ -26,10 +26,10 @@ function planCtx(S,extra={}){
     {id:'B',name:'B 운영',horizon:5,paper:false,settings:{},ledger:{events:['b']}},
     {id:'C',name:'C 모의',horizon:5,paper:true,simStart:'2025-01-02',settings:{},ledger:null}],activeByHorizon:{5:'A'}};
   const log={saves:0,loads:0,edits:[],alerts:[]};
-  const c={box,log,activeHorizon:5,alphaLedger:{events:['a']},liveState:{},window:{JKPlanSessionEngine:{retiredReason:x=>+x.horizon!==5?'기간 폐지':''}},
+  const c={box,log,activeHorizon:5,alphaLedger:{events:['a']},viewBoundSid:'A',liveState:{},window:{JKPlanSessionEngine:{retiredReason:x=>+x.horizon!==5?'기간 폐지':''}},   // 화면 장부는 A 것 (제15차 viewBoundSid)
     assetPlanBox:()=>box,assetSessionSettingsFromView:()=>({startCapital:1}),closeAssetSessionModal(){},clearRequestedAssetSessionLink(){},localSave(){},
     saveOperatingState:async()=>{log.saves++;await sleep(8);return c.saveOk!==false;},
-    loadActiveAssetSessionView:async()=>{log.loads++;await sleep(8);const x=c.activeAssetSession();c.alphaLedger=JSON.parse(JSON.stringify(x?(x.ledger||{events:[]}):{events:['cur']}));},
+    loadActiveAssetSessionView:async()=>{log.loads++;await sleep(8);const x=c.activeAssetSession();c.alphaLedger=JSON.parse(JSON.stringify(x?(x.ledger||{events:[]}):{events:['cur']}));c.viewBoundSid=x?x.id:'';},
     renderAssetSessions(){},alert:m=>log.alerts.push(m),console,setTimeout,Promise,JSON,Date,Map,Set,String,Number,Array,Math,...extra};
   vm.createContext(c);
   vm.runInContext('var assetSwitchChain=Promise.resolve();\n'+['function planRetired(x)','function activeAssetSession()','function cloneObj(v)','function writeAssetSessionLocal()',
@@ -49,6 +49,19 @@ async function check(S){
     t('A2 보고 있는 세션을 다시 고르면 아무것도 안 한다(저장·다시 그리기 0번)',c.log.saves===before,c.log.saves-before);
     await c.selectAssetSession('');
     t('A3 현재 투자중으로 돌아가기도 같은 줄(장부 그대로 · 화면은 현재 투자중)',c.box.activeByHorizon[5]===''&&JSON.stringify(c.alphaLedger.events)==='["cur"]'); }
+
+  // ── A4. 화면 장부는 묶인 세션에만 저장된다 (제15차 · 부팅 순서 · 전환 창)
+  //   앱을 열면 cloudLoad→apply() 가 '현재 투자중' 장부를 화면에 올리고, refreshLive 끝의 render()→localSave() 가 그 화면 장부를 활성 세션에 쓰려 든다 —
+  //   아직 세션 장부를 화면에 올리기(loadActiveAssetSessionView) 전이다. 묶임(viewBoundSid)이 다르면 쓰지 않아야 한다.
+  { const c=planCtx(S);
+    c.alphaLedger={events:['cur']}; c.viewBoundSid='';
+    const r1=c.syncActiveAssetSessionFromView();
+    t('A4 부팅 순서 — 화면이 현재 투자중 장부(묶임 \'\')이면 활성 실전 세션 A 에 쓰지 않는다',r1===false&&JSON.stringify(c.box.sessions[0].ledger.events)==='["a"]',JSON.stringify(c.box.sessions[0].ledger));
+    c.viewBoundSid='A'; const r2=c.syncActiveAssetSessionFromView();
+    t('A4 화면이 A 에 묶이면 A 에 쓴다',r2===true&&JSON.stringify(c.box.sessions[0].ledger.events)==='["cur"]',JSON.stringify(c.box.sessions[0].ledger));
+    c.box.activeByHorizon[5]='B'; c.alphaLedger={events:['a2']};
+    const r3=c.syncActiveAssetSessionFromView();
+    t('A4 전환 창 — 활성은 B 인데 화면이 아직 A 장부면 B 에 쓰지 않는다',r3===false&&JSON.stringify(c.box.sessions[2].ledger.events)==='["b"]',JSON.stringify(c.box.sessions[2].ledger)); }
 
   // ── B. 설정 창은 앞 전환이 끝난 뒤
   { const c=planCtx(S);const el=()=>({value:'',checked:false,disabled:false,textContent:'',dataset:{},hidden:true});const E={};
@@ -196,7 +209,11 @@ async function check(S){
 }
 
 const MUT=[
-  ['세션 바꾸기: 앞 전환을 안 기다림(옛 코드)','plan',s=>s.replace("  await prev.catch(()=>{});\n  if(String((activeAssetSession()||{}).id||'')===String(id||''))return;","  if(String((activeAssetSession()||{}).id||'')===String(id||''))return;")],
+  /* 제15차 뒤로는 화면 장부 묶임 가드(viewBoundSid)가 전환 경쟁을 한 번 더 막는다 — 줄 세우기(await prev)만 되돌리면 가드가 받아 내므로,
+     줄 세우기 변이는 가드도 같이 빼고 돌린다(줄 세우기 자체가 살아 있는지 본다). 가드 변이는 따로(A4). */
+  ['세션 바꾸기: 앞 전환을 안 기다림(옛 코드)','plan',s=>s.replace("  await prev.catch(()=>{});\n  if(String((activeAssetSession()||{}).id||'')===String(id||''))return;","  if(String((activeAssetSession()||{}).id||'')===String(id||''))return;")
+      .replace("  if(typeof viewBoundSid!=='undefined'&&viewBoundSid!==x.id)return false;\n","")],
+  ['장부 안전: 화면 장부 묶임 가드 없음(옛 코드 · 부팅·전환 창에서 다른 장부를 세션에 씀)','plan',s=>s.replace("  if(typeof viewBoundSid!=='undefined'&&viewBoundSid!==x.id)return false;\n","")],
   ['세션 바꾸기: 보고 있는 세션도 다시 저장','plan',s=>s.replace("  if(String((activeAssetSession()||{}).id||'')===String(id||''))return;   // 이미 보고 있는 세션","  // 이미 보고 있는 세션")],
   ['설정 창: 앞 전환을 안 기다림','plan',s=>s.replace("async function editAssetSession(mode){\n  await assetSwitchIdle();","async function editAssetSession(mode){")],
   ['순서: 숨긴 세션도 섞음','plan',s=>s.replace("const out=(sessions||[]).slice();slots.forEach((i,k)=>{out[i]=moving[k];});return out;","return moving.concat((sessions||[]).filter(x=>!(x&&pos.has(String(x.id)))));")],

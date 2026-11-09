@@ -15,14 +15,15 @@ function scope(src){
   const quote={symbol:'SOXL',price:999,days:[{date:'2026-11-04',close:94},{date:'2026-11-05',close:40.87}]};
   const elements={};
   const ctx=vm.createContext({console,curStrat:()=>e,quoteOf:()=>quote,
-    infSettledLast:()=>quote.days[quote.days.length-1],curOf:()=>'usd',inputNum:()=>0,
+    infSettledLast:()=>quote.days[quote.days.length-1],curOf:()=>'usd',inputNum:()=>0,recDateFor:()=>'2026-11-05',   // 기록 날짜 기본값 = 거래소 날짜 (제15차)
     curCurrency:()=>'usd',sheetTprev:()=>{},nfix:(v,n)=>(+v).toFixed(n),SETTLE_LAG_MIN:30,
     document:{querySelectorAll:()=>[]},
     $:id=>elements[id]||(elements[id]={value:id==='sh_date'?'2026-11-05':'',style:{},innerHTML:'',scrollIntoView(){}}),
     wn:v=>'$'+(+v).toFixed(2)});
   const names=['computeInf','infRecordState','infRecordBuy','infSuggest','sheetInfHTML','sheetSelInf','fieldPriceQty','kindOptHTML','fmtT',
     'imBuy1','imBuyOrders','imBigPct','imRowsOf','imTickRound','vrTick','vrTickDn','imStarPx','imBuyPx',
-    'starPct','reverseT','isBuy','isSell','isAmtKind','imCycleEnds','imDayOpenAfter','revSupported','revEnabled','imRevBuyQty'];
+    'starPct','reverseT','isBuy','isSell','isAmtKind','imCycleEnds','imDayOpenAfter','revSupported','revEnabled','imRevBuyQty',
+    'infRevDay1','imRevOrders','revGapOf','imMomAt'];   // 제15차 — 기록 시트가 리버스 주문·1일차·익절 조절 창을 주문표와 같은 함수로 센다
   const at=src.indexOf('const KIND_T=');
   vm.runInContext(src.slice(at,src.indexOf('};',at)+2)+'\n'+
     'const REV_DIVS=[20,40], IM_BIG_DEFAULT=20, IM_ROWS_DEFAULT=3; let _infReplayAsOf="", _infResume=null;\n'+

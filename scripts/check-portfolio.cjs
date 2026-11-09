@@ -97,7 +97,7 @@ function check(S){
       /function alphaEventList\(ledger=alphaLedger\)\{return JKPlanSessionEngine\.ledgerEvents\(ledger\);\}/.test(S.plan)
       &&/function alphaLedgerCalc\(ledger=alphaLedger\)\{return JKPlanSessionEngine\.ledgerCalc\(ledger\);\}/.test(S.plan)
       &&!/S\.tradePnl\[e\._i\]=/.test(S.plan));
-    t('A4 엔진 캐시 판 6 — 플랜·운영 둘 다(새 함수를 옛 캐시 엔진으로 부르지 않게)',/plan-session-engine\.js\?v=6"/.test(S.plan)&&/plan-session-engine\.js\?v=6"/.test(S.idx)); }
+    t('A4 엔진 캐시 판 7 — 플랜·운영 둘 다(새 함수를 옛 캐시 엔진으로 부르지 않게 · 제15차 배당 세후로 6 → 7)',/plan-session-engine\.js\?v=7"/.test(S.plan)&&/plan-session-engine\.js\?v=7"/.test(S.idx)); }
 
   // ── B. 합계
   { const c={};vm.createContext(c);vm.runInContext(fnOf(S.idx,'function pfOutAmt(r)')+fnOf(S.idx,'function pfSummary(rows, fx)'),c);

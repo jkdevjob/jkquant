@@ -11,7 +11,7 @@ const js=fs.readFileSync(enginePath,'utf8'),pl=fs.readFileSync(planPath,'utf8'),
 const ctx={};vm.runInNewContext(js,ctx);
 const E=ctx.JKPlanSessionEngine;
 function eq(a,b){assert.equal(JSON.stringify(a),JSON.stringify(b));}
-assert.equal(E.VERSION,2);assert.equal(E.ORDER_SIZING_BASIS,'previous-settled-close');
+assert.ok(E.VERSION>=2);assert.equal(E.ORDER_SIZING_BASIS,'previous-settled-close');   // 엔진 판 ≥2 (제15차: 3 — 배당 세후 · 주수 기준은 그대로)
 assert.match(pl,/plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/);assert.match(idx,/plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/);   // 캐시 판은 모의 규칙 v2 이상이면 된다(엔진이 바뀔 때마다 올린다 — plan 1.44.0 에서 3)
 // Planned trade sizes are determined only with the previously settled price (5-year plan only — 10/15/20 retired 2026-11-08).
 const fixed=s=>{assert(!/\b(?:ep\.TECL|ep\.TQQQ|ep\.SGOV)\b/.test(s));};

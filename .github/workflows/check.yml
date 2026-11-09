@@ -78,6 +78,7 @@ jobs:
         run: |
           node scripts/check-dual-currency.cjs
           node scripts/check-plan-evidence.cjs
+          node scripts/check-ops-audit.cjs
 
       - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
         run: node scripts/check-sticky-layout.cjs

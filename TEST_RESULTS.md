@@ -1,5 +1,24 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 운영 메뉴 전 전략 점검(제15차) · v3.124.1 (듀얼가드 v2.5.5 · 엔진 판 3)
+
+- 점검 방법: 전략별 점검(무매 · VR · 로테/섀넌/적립/ASAP · 듀얼가드)을 실코드 추출 하네스로 돌려 운영 ↔ 모의 ↔ 백테 ↔ 서버·플랜을 맞댔다(재구현 없음). 고친 15건·보고만 한 것은 `AUDIT-SELF-REVIEW.md` 제15차 장.
+- `scripts/check-ops-audit.cjs` **ALL PASS · 변이 21/21 빨간불**(새 파일 · check.yml 추가).
+  - R1 로테 장부: 100@100 → 청산@120(수량 없음) → 보유 0 · 현금 11,945 · 실현 +1,945 (예전 보유 100 · 현금 0 · 실현 0).
+  - R2 로테 진입: +50% 사이클 뒤 현금 14,932.56 → 331주 (예전 원금÷가격 222주) · 첫 진입 332주(333주는 10,014.98 > 10,000).
+  - R3 배수표 = 백테 META 16종목 · `.KS` 꼬리 · 기본 3.
+  - D1 기록 날짜: 11/10 09:30·12:00·21:00 KST → 11-09 · 미국 장중 → 11-10 · 국내 08:30 → 전날 · 기록 함수 14곳 recDateFor.
+  - D2 분배금: 락일 당일 매수 0 · 전날 100. D3 적립 로더: days = raw(10 · 10.1) · daysAdj 보존 · priceBasis trade · 폴백 adjusted.
+  - S1 섀넌: 10,000 / 99.7503 → 100주(옛 식 99). I1 무매 시트: 소진 3주 → 지정가매도 3주 · 리버스 진행 중 T 17.55 리버스 칸 · 2일차 쿼터매수 15주(종가 50 · 옛 18주) · 종가 61 → 0 · 1일차 MOC 10주 · imMomAt(1/22) = +20%.
+  - V1 VR: auto 적립 → 사이클 시작 Pool 100(없으면 0) · V 0 유지(startCyc 3) · 날짜의 사이클(1/15 → 0 · 1/16 → 1). P1 듀얼가드: viewBoundSid 선언·묶음·가드 · 모의 배당 = 보유 × 1$ × 0.846.
+- `scripts/check-dg-tab.cjs` **ALL PASS · 변이 25/25** — 새 A4(부팅 순서 · 전환 창에서 화면 장부를 세션에 쓰지 않음) · 새 변이 '가드 없음' 빨간불 · 줄 세우기 변이는 가드도 같이 빼고 돌림.
+- `scripts/check-plan-claude-tab.cjs` ALL PASS · 변이 23/23 — A5 GOLD 를 세후 배당으로 갱신(lump 112,072.66 → 112,054.01 · monthly 128,292.51 → 128,274.85 · 체결 82 → 81 · ledger/nav 해시). 캐시 판 변이는 정규식으로(판 8).
+- `scripts/check-portfolio.cjs` ALL PASS · 변이 63/63(A4 엔진 캐시 판 7) · `check-inf-record-quantity`(하네스에 infRevDay1·imRevOrders·revGapOf·imMomAt·recDateFor) · `check-plan-deposit` 6/6 · `check-plan-evidence` 4/4 · `check-plan-signal-fill`(엔진 판 ≥2) · `check-plan-warmup` · `check-login-quote-paper` · `check-history-preservation` · `check-dual-currency` · `check-paper-replay` · `check-ma150-cutover` · `check-plan-session-*` · `check-plan-history-pnl` · `check-plan-tax` · `check-no-browser-storage` · `check-navigation-races` · `check-paper-apply-navigation` 전부 PASS.
+- 회귀 `node regression-check.js index.html backtest.html testdata` **2819 PASS / 0 FAIL — ALL PASS**(기준 2818 + 제15차 래퍼 1). 하네스에 새 함수(imMomAt · infRevDay1 · recDateFor)를 넣고, 바뀐 글자를 보는 정규식 5곳(1일차 날로 · 리버스매도/매수 자동 채움 · 8-④ 리버스 칸 · 모멘텀 quoteOf · dg 변이 25종)을 새 글자로 바꿨다 — 값 시험은 그대로.
+- `check-before-push`: 실행 중 결과는 아래 줄에 적는다(완료 전엔 미확인).
+- 바뀌는 숫자(배포 뒤 사용자 확인): 로테 운영 세션의 분석 탭·포트폴리오(청산 반영) · 로테 진입 추천 주수 · 적립 운영·모의 배수 판정(체결가 200일선) · 듀얼가드 모의 결과(배당 ×0.846) · VR 재생(auto·기준일). 사용자 장부 기록은 바꾸지 않았다.
+- 미확인: 실제 계좌 화면(로테 운영 세션이 있을 때 분석 탭 현금·실현) · 듀얼가드 실전 세션 장부가 과거에 덮어 써졌는지(DB 기록 비교는 사용자 계정에서만 가능).
+
 ## 2026-11-09 · 포트폴리오 세션별 · 종목별 보유 · v3.124.0
 
 - `check-portfolio.cjs` **ALL PASS · 변이 63/63 빨간불**(새 P1~P9 · 변이 10종).

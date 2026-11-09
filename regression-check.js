@@ -2461,7 +2461,7 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
     const KIND=idx.slice(idx.indexOf('const KIND_T='), idx.indexOf('};', idx.indexOf('const KIND_T='))+2);
     const need=['function computeInf()','function imBuy1(c)','function starPct(ticker,div,T,base)',
       'function reverseT(kind,t,div)','function oitem(cls,name,tag,price,qty)','function renderOrder()',
-      'function imMomNow()','function imTgtOf(base, mom)','function calcStarPoint(c)',
+      'function imMomNow()','function imMomAt(date)','function infRevDay1(c, closeDate)','function imTgtOf(base, mom)','function calcStarPoint(c)',
       'function quoteOf(tab)','function revGapOf(st)','function exitMulOf(base)','function isAmtKind(k)',
       'function fmtT(t)','function isSell(k)','function isBuy(k)','function isCx(k)',
       // 7차 ⑧ — 별지점·익절 조절이 확정 봉만 쓴다. 실코드 그대로, 시계만 고정해서 넣는다
@@ -2819,7 +2819,7 @@ console.log('\n[47] 남의 종가로 내 세션을 세지 않는다');
   const mustGuard=[
     ['무매 분석 평가금',   'function renderInfAnal()',   'inf'],
     ['확정 종가',         'function infSettledLast()',  'inf'],
-    ['모멘텀',            'function imMomNow()',        'inf'],
+    ['모멘텀',            'function imMomAt(date)',     'inf'],   // imMomNow 는 imMomAt(null) 로 위임 (제15차)
     ['오늘 주문 제안',     'function infSuggest(kind)',  'inf'],
     ['VR 평가금',         'function vrEval(c)',         'vr'],
     ['VR 현재가',         'function vrLastPrice(c)',    'vr'],
@@ -4554,7 +4554,7 @@ console.log('\n[72] 리버스 — 상태머신·별지점·gap');
     ok('복귀선 바로 위면 1회분이 없어도 복귀한다', !bad, bad||''); }
   ok('운영 재생기도 진입할 때마다 1일차를 세운다',
      /if\(revOn && !inRev && \(st\.div-c\.T\)<1 && c\.qty>0\)\{ inRev=true; revDay1=true; \}/.test(idx)
-     && /const day1=revDay1; revDay1=false;/.test(idx));
+     && /const day1=revDay1 && !\(c\.revFrom && prevD && prevD>c\.revFrom\); revDay1=false;/.test(idx));   // 1일차는 소진 다음 거래일 하루뿐 — 날로 넘긴다 (제15차)
   ok('옛 reverseTraded 추론이 사라졌다', !/reverseTraded/.test(idx) && !/inReverseNow/.test(idx));
 }
 
@@ -6453,7 +6453,7 @@ console.log('\n[90] 무매 리버스 매도수량 — 원문 내림, 0주면 매
   ok('모의체결에 1주 강제가 없다',
      !/Math\.max\(1,Math\.floor\(c\.qty\/sellDiv\)\)/.test(idx));
   ok('기록 기본값에도 1주 강제가 없다',
-     /'리버스매도':\{price:close, qty:c\.qty>0\?Math\.min\(c\.qty,Math\.floor\(c\.qty\/sellDiv\)\):0\}/.test(idx));
+     /'리버스매도':\{price:close, qty:\(RV&&RV\.sell&&\(RV\.mode!=='normal'\|\|close>=RV\.sell\.price\)\)\?RV\.sell\.q:0\}/.test(idx));   // 주문표 주문(imRevOrders)의 수량 그대로 — 1주 강제 없음 (제15차)
   ok('0주면 주문행 대신 이유를 적는다 (1일차·중간 소진·일반 세 갈래)',
      (idx.match(/🚫 무한매도 없음 — 보유 \$\{c\.qty\}주 ÷ \$\{sellDiv\} = 0주\(내림\)/g)||[]).length===1
      && (extractFn(idx,'function renderOrder()').match(/ : noSell;/g)||[]).length===3,
@@ -6850,7 +6850,9 @@ console.log('\n[97] 무매 리버스 쿼터매수 — 원문 배정액(잔금÷4
   ok('운영 주문표가 헬퍼를 쓴다', /const R=imRevOrders\(\{day1:isDay1, qty:c\.qty, bal:c\.bal, star5, div:st\.div, gap\}\);/.test(idx));
   ok('모의체결이 헬퍼를 쓴다', /const R=imRevOrders\(\{day1, qty:c\.qty, bal:c\.bal, star5, div:st\.div, gap:revGapOf\(st\)\}\);/.test(idx)
      && /if\(R\.sell && \(R\.sell\.tag==='MOC' \|\| cl>=R\.sell\.price\)\) put\('리버스매도'/.test(idx));
-  ok('기록 기본값도 헬퍼를 쓴다', /'리버스매수':\{price:close, qty:imRevBuyQty\(c\.bal, close\)\}/.test(idx));
+  ok('기록 기본값도 헬퍼를 쓴다 (제15차: 주문표와 같은 imRevOrders 주문 · 종가가 주문가 이하일 때만 쿼터매수 수량)',
+     /const RV=c\.reverseActive\?imRevOrders\(\{day1:_d1, qty:c\.qty, bal:c\.bal, star5:_d1\?0:calcStarPoint\(Object\.assign\(\{\},c,\{starBefore:closeDate\}\)\)\.val, div:st\.div, gap:revGapOf\(st\)\}\):null;/.test(idx)
+     && /'리버스매수':\{price:close, qty:\(RV&&RV\.buy&&close<=RV\.buy\.price\)\?RV\.buy\.q:0\}/.test(idx));
   /* 7차 ① — 주수를 금액으로 되돌렸다 다시 나누면 1주가 사라진다. 주수를 그대로 넘겨야 한다 */
   ok('백테 두 엔진이 헬퍼를 쓴다',
      (bt.match(/_buyN\(c,R\.buy\.q\)/g)||[]).length===2
@@ -7409,7 +7411,7 @@ const __P7={};
   const quoteOfTk=tk=>({symbol:tk, ohlc:ohlcOf(tk), days:DAYS[tk].map(d=>({date:d,close:M[tk][d][C]})), priceBasis:'trade', dividends:[]});
   // ── 운영: renderOrder 실코드 (한 번만 컴파일하고 상태만 바꿔 부른다) ──
   const need=['function computeInf()','function imBuy1(c)','function starPct(ticker,div,T,base)','function reverseT(kind,t,div)',
-    'function oitem(cls,name,tag,price,qty)','function renderOrder()','function imMomNow()','function imTgtOf(base, mom)',
+    'function oitem(cls,name,tag,price,qty)','function renderOrder()','function imMomNow()','function imMomAt(date)','function infRevDay1(c, closeDate)','function imTgtOf(base, mom)',
     'function calcStarPoint(c)','function revGapOf(st)','function exitMulOf(base)','function quoteOf(tab)','function fmtT(t)',
     'function isSell(k)','function isBuy(k)','function isCx(k)','function isAmtKind(k)','function simCutoff(cur)',
     'function settledBars(rows,cur)','function curOf(st)','function isKrCode(t)','function imRowsNote(n)','function imAutoTpBadge(c)',
@@ -7905,7 +7907,7 @@ console.log('\n[109] 7차 — 서버 자동주문 입력 · 한투 전송 · VR 
    되돌려도 회귀가 초록불이었다(변이 시험 20건 중 2건 생존). 둘 다 값으로 묶는다. */
 console.log('\n[110] 7차 ⑧·⑭ — 익절 조절 20일 창 · VR 수동 진입 평가금 (값으로)');
 {
-  { const mom=extractFn(idx,'function imMomNow()');
+  { const mom=extractFn(idx,'function imMomAt(date)');   // imMomNow() = imMomAt(null) — 창 계산은 여기 한 곳 (제15차)
     let CUT='2099-12-31';
     const sb=(rows,cur)=>(rows||[]).filter(r=>r.date<=CUT);
     const mk=(days)=>new Function('quoteOf','curStrat','settledBars','curOf','infChartData','IM_MOM_LEN',
@@ -8644,7 +8646,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
     ${fnOf(idx,['function infRecordState(date)','function infRecordBuy(c, close, prevClose)','function infSuggest(kind)',
       'function imBuyOrders(o)','function imRowsOf(st)','function imBigPct(st)','function imStarPx(avg, pct, cur)',
       'function imBuyPx(star)','function imTickRound(p, cur)','function vrTick(p, cur)','function vrTickDn(p, cur)',
-      'function imRevBuyQty(balance, buyPrice)'])}
+      'function imRevBuyQty(balance, buyPrice)','function infRevDay1(c, closeDate)','function imRevOrders(o)','function revGapOf(st)','function imMomAt(date)'])}
     ${extractFn(idx,'function sheetInfHTML(today)')}
     return sheetInfHTML;`)(computeInf, starPct, v=>'$'+(+v).toFixed(2));
   const rowBars=(n,start,px)=>{ const out=[]; const d0=new Date(start+'T00:00:00Z');
@@ -8695,7 +8697,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
   ok('제8차 8-③ 모의가 revEnabled 를 쓴다', /const revOn=revEnabled\(st\);/.test(extractFn(idx,'function infSimForward(startFrom)'))
      && !/const revOn=\(st\.reverse===true\);/.test(idx));
   ok('제8차 8-④ 기록시트·장부·서버·플랜이 지원 분할을 본다',
-     /const reverse = revEnabled\(st\) && c\.T>st\.div-1 && c\.qty>0;/.test(extractFn(idx,'function sheetInfHTML(today)'))
+     /const reverse = !!c\.reverseActive \|\| \(revEnabled\(st\) && c\.T>st\.div-1 && c\.qty>0\);/.test(extractFn(idx,'function sheetInfHTML(today)'))   // 제15차: 장부가 리버스 진행 중이면 T 와 무관하게 리버스 칸
      && /const reverseActive = revEnabled\(st\) && revState!=='NORMAL' && qty>0;/.test(idx)
      && /const reverseActive = revEnabled\(st\) && revState !== "NORMAL" && qty > 0;/.test(imSrc8)
      && /reverseActive:st\.reverse===true&&REV_DIVS_PLAN\.includes\(\+st\.div\)&&revState!=='NORMAL'&&qty>0/.test(pl));
@@ -9212,7 +9214,7 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
   { const sheet=new Function('computeInf','starPct','wn','revGapOf', `
       const infSettledLast=()=>({close:60,date:'2026-06-09'}), inputNum=()=>0, curOf=()=>'usd';
       const $=()=>({value:''}), quoteOf=()=>({days:[60.5,60.2,60.1,60,60.3].map((c,i)=>({date:'2026-06-0'+(i+3),close:c}))}), settledBars=r=>r;
-      ${fnOf(idx,['function kindOptHTML(name,tval,cls,reco)','function fmtT(t)','function imBuy1(c)','function calcStarPoint(c)'])}
+      ${fnOf(idx,['function kindOptHTML(name,tval,cls,reco)','function fmtT(t)','function imBuy1(c)','function calcStarPoint(c)','function infRevDay1(c, closeDate)'])}
       ${extractFn(idx,'function sheetInfHTML(today)')}
       return sheetInfHTML;`)(computeInf, starPct, v=>'$'+(+v).toFixed(2), new Function('REV_GAP_DEF', extractFn(idx,'function revGapOf(st)')+'\nreturn revGapOf;')(0));
     const st={ticker:'SOXL',div:20,target:20,principal:10000,compound:true,reverse:true};
@@ -9535,10 +9537,10 @@ console.log('\n[125] 제12차 — VR 적립식 첫 매수 · 무매 리버스 1�
     ok('① 첫 매수 금액 값표 7칸 — 적립 5,000/250→5,000 · 적립 0/250→250 · 거치·인출 0→0 · 거치 8,000 · 모드 없음(=적립) 0/250→250 · 초기 없음→10,000',
        bad.length===0, JSON.stringify(bad));
     const run=(st,pr)=>{ const sess={settings:{...st},hist:[]}; let msg='';
-      const f=new Function('computeVr','vrLastPrice','alert','confirm','curStrat','tickerLabel','wn','nfix','sortHist','save','refreshVr','pushRemote','vrDue','IVS_FEE',
+      const f=new Function('computeVr','vrLastPrice','alert','confirm','curStrat','tickerLabel','wn','nfix','sortHist','save','refreshVr','pushRemote','vrDue','IVS_FEE','recDateFor',
         extractFn(idx,'function vrFirstAmt(st)')+'\n'+extractFn(idx,'function vrFirstBuy()')+'\nreturn vrFirstBuy;')(
         ()=>{ __strat=sess; return computeVr(); }, ()=>pr, m=>{ msg+=m; }, ()=>true, ()=>sess, t=>t, v=>String(v), v=>String(v),
-        ()=>{}, ()=>{}, ()=>{}, null, ()=>null, 0.0025);
+        ()=>{}, ()=>{}, ()=>{}, null, ()=>null, 0.0025, ()=>'2026-01-02');   // 기록 날짜 기본값은 거래소 날짜(제15차 recDateFor)
       f(); return {h:sess.hist, msg}; };
     const base={ticker:'TQQQ',formula:'basic',g:10,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'};
     const a=run({...base,mode:0.75,initAmt:0,add:250},50), b=run({...base,mode:0.75,initAmt:5000,add:250},50), z=run({...base,mode:0.5,initAmt:0,add:0},50);
@@ -10725,7 +10727,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   const plan=fs.readFileSync(path.join(__d,'plan.html'),'utf8');
   const shared=fs.readFileSync(path.join(__d,'plan-session-engine.js'),'utf8');
   ok('H3 모의 규칙 v2 · 운영/모의 동일 주수 기준 · 캐시 버전',
-    /VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)
+    /VERSION:[2-9],ORDER_SIZING_BASIS:'previous-settled-close'/.test(shared)   // 엔진 판 ≥2 (제15차: 3 — 배당 세후)
     && /plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/.test(plan)   // 캐시 판 ≥2 (엔진이 바뀔 때마다 올린다 — plan 1.44.0 에서 3)
     && /plan-session-engine\.js\?v=(?:[2-9]|\d{2,})\b/.test(idx)
     && (()=>{ /* 모의 규칙 v2 가 들어간 버전 이상이면 된다 — 숫자를 딱 고정하면 다음 배포(버전 올림)마다 깨진다 */
@@ -12715,8 +12717,12 @@ Promise.all(PENDING).then(()=>{
      ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 63/63 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   /* 2026-11-09 — 운영 › 듀얼가드 탭을 다른 운영 탭처럼(세션 줄 맨 위 · 보고 있는 칩/두 번 누르면 세션 설정 · 끌어서 순서 · ⚙️ 설정 따로 · 창 안 다시 로그인 없음) */
   const pdg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-dg-tab.cjs')],{encoding:'utf8'});
-  ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 변이 24종',
-     pdg.status===0&&(pdg.stdout||'').includes('ALL PASS dg tab · 변이 24/24 red'),(pdg.stdout||'').slice(-600)+(pdg.stderr||''));
+  ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 화면 장부 묶임(부팅·전환 창 보호 · 제15차) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 변이 25종',
+     pdg.status===0&&(pdg.stdout||'').includes('ALL PASS dg tab · 변이 25/25 red'),(pdg.stdout||'').slice(-600)+(pdg.stderr||''));
+  /* 2026-11-09 — 제15차 운영 메뉴 전 전략 점검: 로테 장부·진입 수량·배수표 · 기록 날짜 · 분배금 락일 · 적립 체결가 계열 · 섀넌 수량식 · 무매 기록 시트 · VR · 듀얼가드 장부 묶임·배당 세후 */
+  const pop=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ops-audit.cjs')],{encoding:'utf8'});
+  ok('제15차 운영 점검 값 시험 + 변이 21종 (scripts/check-ops-audit.cjs)',
+     pop.status===0&&(pop.stdout||'').includes('ALL PASS ops audit · 변이 21/21 red'),(pop.stdout||'').slice(-600)+(pop.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
   ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));

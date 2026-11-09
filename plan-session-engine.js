@@ -5,6 +5,7 @@ const DEFAULTS={
   5:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01}
 };
 const FEE_RATE=.001;
+const DIV_TAX=.154;   // 배당소득세 — 모의 재생의 배당은 세후로 들어온다 (앱 DIV_TAXRATE 와 같은 값 · 제15차)
 /* 🤖 클로드 탭 5년 플랜 — '듀얼가드' (2026-11-08 사용자: "현재 5년 플랜 전략 이름도 정하고 · 넌 클로드 탭만 담당").
    TECL 은 변동성으로 크기를 정하고(역분산 · 변동성 가드), TQQQ 는 추세로 켜고 끈다(SMA225 · 추세 가드) — 두 겹의 가드.
    화면(plan.html)·모의 목록(index.html)이 이 이름과 판 번호를 함께 쓴다(같은 걸 두 군데서 세지 않는다). */
@@ -200,7 +201,9 @@ function replay(opt){
       cash+=monthlyAdd;inflow+=monthlyAdd;addCash(ledger,date,'dep',monthlyAdd,seq++);lastMonth=month;force=true;
     }else if(month!==lastMonth)lastMonth=month;
 
-    const dc=pos.TECL*(div.TECL.get(date)||0)+pos.TQQQ*(div.TQQQ.get(date)||0)+pos.SGOV*(div.SGOV.get(date)||0);
+    /* 배당은 세후(배당소득세 15.4%)로 들어온다 — 앱의 다른 모의 엔진(divCashQ · DIV_TAXRATE)·백테와 같은 규약 (제15차).
+       예전엔 세전 총액이라 모의가 운영(실제 입금액 = 세후)보다 배당을 15% 많이 받았다(SGOV 연 4~5% × 비중 → NAV 연 ≤0.2%p). 락일 즉시 입금 근사는 그대로. */
+    const dc=(pos.TECL*(div.TECL.get(date)||0)+pos.TQQQ*(div.TQQQ.get(date)||0)+pos.SGOV*(div.SGOV.get(date)||0))*(1-DIV_TAX);
     if(dc>0){cash+=dc;addCash(ledger,date,'div',dc,seq++);}
 
     const p=i-1;
@@ -248,5 +251,5 @@ function replay(opt){
   return {horizon,rules:RULES.key,orderSizingVersion:2,ledger,nav,stats:stats(nav,nTrade),lastDecision,last:nav[nav.length-1]||null,error:''};
 }
 
-g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,retiredReason,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,ledgerEvents,ledgerCalc,replay,stats};
+g.JKPlanSessionEngine={VERSION:3,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,retiredReason,alphaDecide,yearDoneAt,FEE_RATE,DIV_TAX,alphaFee,ledgerEvents,ledgerCalc,replay,stats};
 })(typeof window!=='undefined'?window:globalThis);
