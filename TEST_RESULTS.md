@@ -8,7 +8,7 @@
 - 보고 schema 검증 PASS, `tests/gpt-morning-report.test.mjs` **19 PASS / 0 FAIL**. 준비 workflow `42578532171` 성공; 서버 응답 ok:true·duplicate:true·queued:null·dueAt:null. 기발송 준비 미완료 영수증 push1/1·Telegram sent이며 지연 연구 전송·기기 수신을 확인한 것이 아님.
 - 부분 UTC 보존 수정: 실제 파일 쓰기/읽기 **값3·변이3 PASS**. 옛 자료 폐기·옛 정본만 읽기·같은 스냅샷 덮어쓰기 복귀를 모두 감지. 부분 자료 수정본을 별도 해시로 보존하고 수집 시각순으로 읽으며 정본 겹침 우선·중복0도 확인했다.
 - 실제 원천을 별도 임시 폴더에 쓴 결과: UTC11/7 정본 바이트 불변, 부분 UTC 원본으로 **KST11/8 288봉·기준 손익−0.1737876974%·그림자 날짜 복원 PASS**. 운영 장부는 변경하지 않았다. 수정 뒤 G1 395일×2 대조/3변이 재실행 PASS, 기존 BTC 경계와 daily1 shadow 시험 PASS.
-- 전체 check-before-push: Windows 실행은 14/57의 리눅스 전용 Git 경로/충돌 재현 환경에서 중단(전체 PASS 아님). 라이브러리·인코딩은 작업 폴더 환경에서 보완했으며 저장소의 무관한 시험/기능은 수정하지 않았다. **정본 리눅스 전체 CI 진행 중**, 성공 확인 전 Ready/병합하지 않는다.
+- 전체 검사: Windows check-before-push는 14/57의 리눅스 전용 Git 경로/충돌 재현 환경에서 중단(로컬 전체 PASS 아님). 동일한 정본 `check.yml`을 Linux에서 실행한 [42581591143](https://github.com/jkdevjob/jkquant/actions/runs/42581591143)은 **57단계 전부 PASS**, 엔진 회귀 **2,830 PASS / 0 FAIL**(검증 head `fd4014d2`). 공용 검사에 포함된 GPT·Claude 양쪽 기존 시험과 새 BTC 값3/변이3도 성공했다. 이후 합친 최신 main을 포함한 PR 최종 CI는 별도 확인한다.
 
 ## 2026-11-09 · 무매 서버 자동주문(모의) 예약 삭제 · v3.123.1
 
