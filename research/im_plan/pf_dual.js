@@ -18,7 +18,10 @@ const SYN=(()=>{ const T=q(path.join(__dirname,'data','SYNTECL_S.json')),Q=q(pat
 const lastOf=a=>a.days[a.days.length-1].date;
 const OUT=process.argv[2]||'pf_dual_out.json', FROM_REAL=process.env.FROM_REAL||'2011-04-01', ONLY=process.env.ONLY||'';
 const CFG=[['1만$',10000,0],['10만$',100000,0],['3만$+월210',30000,210]];
-const COMBOS=[['D 듀얼100%',{dual:1,legs:[]}],['C 듀얼5/6+섀넌1/6',{dual:5/6,legs:[['iv',1/6]]}],['C3 듀얼2/3+섀넌1/3',{dual:2/3,legs:[['iv',1/3]]}]];
+// WS="0,1/12,1/8,1/6,1/5,1/4,1/3" 이면 섀넌 비중 격자(이어서 사용자: "최적 비율이 그럼 5/6 + 1/6인거야?") — 이름 'W<섀넌 %>'
+const WS=(process.env.WS||'').split(',').map(x=>x.trim()).filter(Boolean).map(x=>{ const m=x.match(/^(\d+)\/(\d+)$/); return m?+m[1]/+m[2]:+x; });
+const COMBOS=WS.length?WS.map(w=>[`W${(w*100).toFixed(1)}`,{dual:1-w,legs:w>0?[['iv',w]]:[]}])
+  :[['D 듀얼100%',{dual:1,legs:[]}],['C 듀얼5/6+섀넌1/6',{dual:5/6,legs:[['iv',1/6]]}],['C3 듀얼2/3+섀넌1/3',{dual:2/3,legs:[['iv',1/3]]}]];
 const ded=(pnl,w)=>pnl>0?Math.max(0,pnl*1350-250e4*w)*0.22/1350:0;
 function acc(w){ let N=0,Lost=0,year='',rg=0,last=null; const s=()=>Math.max(0,(N-Lost)/N);
   return { step(date,Eq,inflow,x){ if(!(Eq>0)||!(inflow>0)) return; const y=String(date).slice(0,4);
@@ -48,8 +51,13 @@ const HOOK=()=>{ const patch=(name,from,to)=>{ let s=window[name].toString(); if
       const V=+n.total+lv; if(prevV!=null){ const F=+n.inflow-prevIn; nav*=(V-F)/prevV; if(nav>pk) pk=nav; else mdd=Math.max(mdd,(pk-nav)/pk); } prevV=V; prevIn=+n.inflow; if(keep) curve.push([n.date,nav]); }
     return {mdd:mdd*100,curve}; };
   const one=async(D,cap,M,s,e,keepCurve)=>{ const duals={}, legs={}, pre={};
-    for(const w of [...new Set(COMBOS.map(c=>c[1].dual))]){ const R=E.replay({horizon:5,rules:'base',startDate:s,endDate:e,principal:cap*w,monthlyAdd:M,tecl:D.T.days,tqqq:D.Q.days,sgov:D.G.days,teclDiv:D.T.div,tqqqDiv:D.Q.div,sgovDiv:D.G.div});
+    for(const w of [...new Set(COMBOS.map(c=>c[1].dual))]){ if(!(w>0)) continue;   // 듀얼 0(섀넌 100%)은 아래에서 날짜만 빌린다
+      const R=E.replay({horizon:5,rules:'base',startDate:s,endDate:e,principal:cap*w,monthlyAdd:M,tecl:D.T.days,tqqq:D.Q.days,sgov:D.G.days,teclDiv:D.T.div,tqqqDiv:D.Q.div,sgovDiv:D.G.div});
       if(!R.stats||!R.nav.length) return null; duals[w]={R,at:dualAfterTax(R,w)}; }
+    // 이어서 사용자: "usd 섀넌 100%와 듀얼 100%도 비교해" — 듀얼 0 = 빈 다리(값 0 · 날짜는 같은 창 듀얼 nav 또는 TECL 거래일). 월 납입은 듀얼 다리로만 가므로 섀넌 100% 는 월 납입 없는 1만$·10만$ 만 견준다.
+    if(COMBOS.some(c=>!(c[1].dual>0))){ const any=Object.values(duals)[0];
+      const nav=(any?any.R.nav.map(n=>n.date):D.T.days.filter(d=>d.date>=s&&d.date<=e).map(d=>d.date)).map(date=>({date,total:0,inflow:0}));
+      duals[0]={R:{nav,stats:{yrs:any?any.R.stats.yrs:(new Date(e)-new Date(s))/(365.25*864e5)}},at:{held:0,liq:0,inflow:0}}; }
     for(const [k,w] of COMBOS.flatMap(c=>c[1].legs)){ const id=k+'@'+w.toFixed(4); if(!legs[id]) legs[id]=Object.assign(await leg(k,k==='iv'?D.iv:D.im,cap*w,s,e,w),{w}); if(keepCurve&&!pre[id]) pre[id]=await leg(k,k==='iv'?D.iv:D.im,cap*w,s,e,1e9); }
     const yrs=Object.values(duals)[0].R.stats.yrs, out={s,yrs,legs:Object.fromEntries(Object.entries(legs).map(([k,L])=>[k,{final:L.final,unr:L.unr,...L.extra}]))};
     for(const [nm,c] of COMBOS){ const {R,at}=duals[c.dual], Ls=c.legs.map(([k,w])=>legs[k+'@'+w.toFixed(4)]);

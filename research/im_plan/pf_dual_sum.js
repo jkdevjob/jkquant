@@ -15,13 +15,13 @@ for(const lab of ['real','syn'].filter(x=>R[x])){ const L=R[lab]; console.log(`\
     console.log(`    창마다 1등: `+C.map(c=>`${n(c)} ${wins[c]}`).join(' · '));
     const pair=(a,b,key='held',flt=()=>true)=>{ const r=rows.filter(x=>flt(x.s)); if(!r.length) return '—'; const rat=r.map(x=>x[a][key]/x[b][key]); return `×${med(rat).toFixed(3)}(${p0(r.filter(x=>x[a][key]>x[b][key]).length/r.length*100)})`; };
     const dm=(a,b)=>{ const d=rows.map(r=>r[a].mdd-r[b].mdd); return `MDD 차 중앙 ${f(med(d))}%p · 작은 창 ${p0(d.filter(x=>x<0).length/d.length*100)}`; };
-    console.log(`    짝(앞÷뒤 · 높은 창): C÷D ${pair(C[1],C[0])} · C3÷D ${pair(C[2],C[0])} · C3÷C ${pair(C[2],C[1])} | 다 팔면 C÷D ${pair(C[1],C[0],'liq')} · C3÷D ${pair(C[2],C[0],'liq')} · C3÷C ${pair(C[2],C[1],'liq')}`);
-    console.log(`      C−D ${dm(C[1],C[0])} | C3−D ${dm(C[2],C[0])} | C3−C ${dm(C[2],C[1])}`);
+    console.log(`    짝(앞÷뒤 · 높은 창): ${n(C[1])}÷${n(C[0])} ${pair(C[1],C[0])} · ${n(C[2])}÷${n(C[0])} ${pair(C[2],C[0])} · ${n(C[2])}÷${n(C[1])} ${pair(C[2],C[1])} | 다 팔면 ${pair(C[1],C[0],'liq')} · ${pair(C[2],C[0],'liq')} · ${pair(C[2],C[1],'liq')}`);
+    console.log(`      ${n(C[1])}−${n(C[0])} ${dm(C[1],C[0])} | ${n(C[2])}−${n(C[0])} ${dm(C[2],C[0])} | ${n(C[2])}−${n(C[1])} ${dm(C[2],C[1])}`);
     const sp=lab==='real'?[['2011~15',s=>s<'2016-01-01'],['2016~',s=>s>='2016-01-01']]:[['2000~04',s=>s<'2005-01-01'],['2005~09',s=>s>='2005-01-01'&&s<'2010-01-01'],['2010~',s=>s>='2010-01-01']];
-    console.log(`    시기별: `+sp.map(([nm,fl])=>`${nm} C÷D ${pair(C[1],C[0],'held',fl)} · C3÷D ${pair(C[2],C[0],'held',fl)}`).join(' | '));
+    console.log(`    시기별: `+sp.map(([nm,fl])=>`${nm} ${n(C[1])}÷${n(C[0])} ${pair(C[1],C[0],'held',fl)} · ${n(C[2])}÷${n(C[0])} ${pair(C[2],C[0],'held',fl)}`).join(' | '));
     const P=X.path; console.log(`    한 길 ${P.s}~(${P.yrs.toFixed(1)}년): `+C.map(c=>`${n(c)} ${f(P[c].cagrH)}%/${P[c].mdd.toFixed(1)}`).join(' · ')+'  (세후 연/MDD)');
     if(P[C[0]].curvePre){ console.log(`      세전 곡선 MDD: `+C.map(c=>`${n(c)} ${P[c].mddPre.toFixed(1)}`).join(' · '));
       const yr={}; for(const c of C){ yr[c]={}; let prevY=null, base=null, last=null; for(const [d,v] of P[c].curvePre){ const y=d.slice(0,4); if(y!==prevY){ if(prevY) yr[c][prevY]=(last/base-1)*100; base=last??v; prevY=y; } last=v; } yr[c][prevY]=(last/base-1)*100; }
-      console.log(`      연도별(세전 · D/C/C3 · C−D): `+Object.keys(yr[C[0]]).map(y=>`${y} ${C.map(c=>f(yr[c][y],0)).join('/')} (${f(yr[C[1]][y]-yr[C[0]][y])})`).join(' · ')); }
-    console.log(`      위기 낙폭(D·C·C3): `+crisis[lab].map(([nm,a,b])=>`${nm} ${C.map(c=>ddIn(P[c].curve,a,b).toFixed(0)).join('/')}`).join(' · '));
+      console.log(`      연도별(세전 · ${C.map(n).join('/')} · 둘째−첫째): `+Object.keys(yr[C[0]]).map(y=>`${y} ${C.map(c=>f(yr[c][y],0)).join('/')} (${f(yr[C[1]][y]-yr[C[0]][y])})`).join(' · ')); }
+    console.log(`      위기 낙폭(${C.map(n).join('·')}): `+crisis[lab].map(([nm,a,b])=>`${nm} ${C.map(c=>ddIn(P[c].curve,a,b).toFixed(0)).join('/')}`).join(' · '));
     const lg=Object.keys(rows[0].legs); console.log(`      섀넌 다리(5년 뒤 ÷ 넣은 돈 중앙): `+lg.map(id=>{ const w=+id.split('@')[1], cap=R.meta.cfg.find(z=>z[0]===cl)[1]*w; return `${id} ×${med(rows.map(r=>r.legs[id].final/cap)).toFixed(2)} · 넣은 돈 아래 ${rows.filter(r=>r.legs[id].final<cap).length}창`; }).join(' · ')); } }
