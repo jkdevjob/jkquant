@@ -689,7 +689,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.123.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.123.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1808,7 +1808,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.123.0</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.123.1</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -1857,7 +1857,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
     <!-- 리버스 gap 은 하방 LOC 와 상관없다 — 예전엔 아래 rows_fields 안에 있어서 하방 LOC 를 꺼 두면 같이 잠겼다 -->
     <div class="field"><label>리버스 쿼터매수 gap % <span class="hint">0 = 기본(별지점 −$0.01 · 원문은 '별지점 아래'까지만) · 0보다 크면 변형</span></label><input id="set_revgap" type="number" inputmode="decimal" value="0"></div>
     <div class="field"><label>아래로 LOC 매수 추가 줄 수 <span class="hint">추가 자체는 V4.0 정식 · 1회매수금÷(수량+k) · 줄 수 3은 JK 투자 기본값(원문에 개수 없음) · 0이면 끔(변형)</span></label><input id="set_rows" type="number" inputmode="numeric" value="3" min="0" max="20"></div>
-    <p class="note" style="margin:-2px 0 8px">처음매수·전반전·후반전 모두 본 주문 아래로 1주씩 LOC 를 더 겁니다 (V4.0 정식). 종가가 내려갈수록 같은 1회매수금으로 더 삽니다. 모의·백테·서버 자동주문이 같은 주문을 씁니다.</p>
+    <p class="note" style="margin:-2px 0 8px">처음매수·전반전·후반전 모두 본 주문 아래로 1주씩 LOC 를 더 겁니다 (V4.0 정식). 종가가 내려갈수록 같은 1회매수금으로 더 삽니다. 모의·백테·주문표가 같은 주문을 씁니다.</p>
     <div class="note" style="margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:9px;line-height:1.65"><b>옵션 설명</b><br><b>익절 변환 자동 · 끔</b> — 설정한 목표 수익률을 모든 사이클에 고정 적용합니다.<br><b>익절 변환 자동 · 켬</b> — 사이클 시작 전날 종가가 <b>MA150 아래</b>이거나 <b>120일 수익률 &gt; +100% 이면서 120일 연환산 변동성 &gt; 90%</b>이면 10%, 그 외에는 20%로 시작합니다. 20% 사이클 진행 중 전날 종가가 <b>MA150의 90% 미만 (−10%)</b>이 되면 10%로 한 번 낮추고 다시 20%로 올리지 않습니다.</div>
   </div>
   <div id="set_vr" style="display:none">
@@ -3780,12 +3780,12 @@ function kisManualOnly(){ return todayOrders.filter(o=>o && o.qty>0 && o.tag==='
    그 모델과 다르다 — 세 모델(백테·모의·실주문)이 같은 척하면 안 된다. 주문 화면·세션 설정 두 곳이
    이 한 문구를 쓴다. */
 function kisAutoLimitsNote(){
-  return `<div class="note" style="margin-top:6px;color:var(--gold)">⚠ <b>V4.0 완전 자동 아님</b> — 한투 주문(이 버튼·서버 자동주문)은 백테·모의와 같은 체결 모델이 아닙니다.<br>`
-    +`· <b>일반모드만 지원</b> — 리버스모드 세션은 서버 자동주문이 건너뜁니다 (리버스 자동주문 미지원)<br>`
+  return `<div class="note" style="margin-top:6px;color:var(--gold)">⚠ <b>V4.0 완전 자동 아님</b> — 한투 주문(이 버튼)은 백테·모의와 같은 체결 모델이 아닙니다. <b>서버 자동주문은 껐습니다(2026-11-09)</b> — 주문은 이 버튼을 눌러야 나갑니다.<br>`
+    +`· <b>일반모드만 지원</b> — 서버 자동주문(지금 꺼짐)은 리버스모드 세션을 건너뜁니다 (리버스 자동주문 미지원)<br>`
     +`· <b>LOC는 일반 지정가로 근사</b> — 한투 해외주식은 지정가만 받습니다. 백테·모의는 LOC를 종가 체결로 셉니다<br>`
     +`· <b>MOC 는 한투로 보내지 않음</b> — 리버스 1일차·중간 소진의 무조건 매도(MOC)는 증권사 앱에서 장마감 시장가로 직접 내야 합니다<br>`
     +`· <b>체결내역 자동 동기화 없음</b> — 실제 체결은 거래이력에 직접 기록해야 앱 장부가 맞습니다<br>`
-    +`· <b>익절 지정가 유효시간이 백테와 다름</b> — 서버 자동주문은 마감 전 1시간(15:00~16:00 ET) 안에 들어갑니다. 백테는 하루 전체 고가가 닿으면 체결로 셉니다</div>`;
+    +`· <b>익절 지정가 유효시간이 백테와 다름</b> — 한투 지정가는 이 버튼으로 낸 뒤에만 체결됩니다. 백테는 하루 전체 고가가 닿으면 체결로 셉니다</div>`;
 }
 function renderKisPanel(){
   const box=$('o_kis'); if(!box) return;
