@@ -15,7 +15,7 @@
 
 `date`는 보고일 KST, `preparedAt`은 실제 작성 완료 ISO 시각, `mainSha`는 확인한 main 40자리 SHA, `summary`는 260자 이하이다. 개인정보·계좌 식별자·API 키·실계좌 주문/잔액은 기록하지 않는다.
 
-`sections`에 아래 일곱 `tab`을 각각 한 번 넣는다. 각 항목은 `status`, `findings`, `nextTest`, `evidence`를 가진다.
+`sections`에 아래 여덟 `tab`을 각각 한 번 넣는다. 각 항목은 `status`, `findings`, `nextTest`, `evidence`를 가진다. 실제 정본은 `functions/api/_gpt_morning_report.js`의 `GPT_REPORT_TABS`이며 종가 탭을 빠뜨리지 않는다.
 
 | tab | 검토 |
 |---|---|
@@ -24,6 +24,7 @@
 | daytrading | 슬롯 계좌손익·체결 품질·재현성 |
 | crypto | 코인 시간대·추세/변동성·완료 봉/비용 |
 | soxl | 미국 거래일·DST·당일청산·변동성/비용 |
+| closing30 | 종가 30분·개별 종목 종가 베팅·당일/익일 확정·미정산 구분 |
 | tenbagger | 고정 가설·등록 후 관찰·실패 대조·미성숙 표본 |
 | duel | 지피티와 클로드를 같은 날짜/자금/비용 조건으로 대조 |
 
