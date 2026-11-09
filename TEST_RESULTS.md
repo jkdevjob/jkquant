@@ -1,5 +1,16 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 포트폴리오 평가액 추이 — 세션별 · 종목별 보기 · 선 골라 보기 · v3.126.0
+
+- `check-portfolio.cjs` **ALL PASS · 변이 73/73 빨간불**(새 Q1~Q6 · 변이 10종).
+  - Q1 날마다 종목 합 + 현금 = 합친 평가액(듀얼가드 · 무매(나간 돈 20) · 원화 적립 · hv 없는 옛 점) · 원화 005930 140,000원 → 100$.
+  - Q2 종목 11개 → 일곱 선(지금 금액 순 · 검증한 색 순서) + '그 밖 4종목'(다 판 SOXL 포함) · 현금 선 · 다 판 종목은 0.
+  - Q3 합친 선·투입 끄면 그 선·낙폭 띠·끝 점 없음 · 세로 축은 켜 둔 작은 선에 맞춤 · 다 끄면 안내.
+  - Q5 운영 그릇 — USD 2주 × 종가 · SMH 1주 × 짝 종가 · 현금 55 = k 60 − 나간 돈 5 · 끝 값 지금 시세.
+  - Q6 듀얼가드 — TECL 5 × 100 · SGOV 3 × 100 · 현금 1,200 · 끝 값 보유 × 지금가.
+- 그림 캡처(390px · 세션 4 · 종목 11): 세션별 · 종목별 둘 다 가로 넘침 없음.
+- 실제 계좌 숫자로 본 그림은 배포 뒤 사용자 확인.
+
 ## 2026-11-09 · 메뉴 관리 — 메뉴마다 하위 탭 숨김·순서 · v3.125.0 (관리자 v0.13.0)
 
 - `check-subtabs.cjs` **ALL PASS · 변이 13/13 빨간불**.
@@ -11,6 +22,7 @@
 - check-ui-common · test_tenbagger_ui · test_tenbagger_claude · check-portfolio 63/63 · check-plan-claude-tab 23/23 통과(jk-access.js 를 쓰는 시험).
 - 관리자 화면 하위 탭 칸 휴대폰(360·390px) 캡처 — 가로 넘침 없음 · 탭 하나 한 줄.
 - `check-before-push`: 1~54 단계 PASS · 55 회귀 1건 FAIL — '메뉴 정책 값 시험'이 jk-access.js 함수를 떼어 돌리는데 menuDefaults·normalizeMenuConfig 가 이제 SUB_TABS·SUB_MODES·subDefaults 를 써서 ReferenceError → 시험이 그 셋도 함께 가져가게 고친 뒤 회귀 **2819 PASS / 0 FAIL** · 56 모의 재생 · 57 MA150 PASS.
+- 배포 확인(PR #631 squash f81d12f · GitHub check · regression 통과): curl 운영 index v3.125.0 · /admin v0.13.0 · subBlockHtml · /jk-access.js SUB_TABS · applySubTabs · .jk-sub-hidden CSS · index ASAP 대기 CSS 각 1.
 - 실제 Firestore 저장·다른 기기 반영은 배포 뒤 사용자 확인.
 
 ## 2026-11-09 · 포트폴리오 세션별 · 종목별 보유 · v3.124.0
