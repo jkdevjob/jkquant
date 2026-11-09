@@ -709,7 +709,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.126.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1828,7 +1828,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.126.0</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.0</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -7521,6 +7521,37 @@ function _paperAsap(sess, from){
 }
 /* 모의 성과 — 전 전략의 모의 세션을 한 줄씩. "결과만 확인"용.
    compute*()가 활성 탭만 읽으므로 여기서는 기록에서 직접 투입·평가를 뽑는다. */
+/* 운영 탭 기본 순서(HTML 순서 · 시험 F1 이 같음을 확인) — 관리자 하위 탭 정책이 오면 화면 단추의 CSS order·숨김이 우선(opTabOrder) */
+const OP_TABS=['dg','inf','vr','ma','ivs','dca','asap'];
+/* 운영 탭 순서 — 화면의 탭 단추(하위 탭 정책이 매긴 style.order · jk-sub-hidden) 기준. all:true 면 숨긴 탭도(모의 목록 정렬용). 화면이 없으면 기본 순서 */
+function opTabOrder(opt){
+  const all=!!(opt&&opt.all), D=(typeof document!=='undefined'&&document.querySelectorAll)?[...document.querySelectorAll('.tabs .tab[data-t]')]:[];
+  if(!D.length) return OP_TABS.slice();
+  return D.map((b,i)=>({t:b.dataset.t, hid:!!(b.classList&&b.classList.contains('jk-sub-hidden')), o:+(b.style&&b.style.order)||(i+1)*1000}))
+    .filter(x=>all||!x.hid).sort((a,b)=>a.o-b.o).map(x=>x.t);
+}
+/* 운영 첫 화면 = 보이는 첫 탭 (2026-11-09 사용자: "운영메뉴 들어가면 왜 섀넌이 선택되지 항상? 마지막 보던거나 무조건 첫 탭으로 가").
+   지난번 탭(S.activeTab · S.opView)은 기기 공용 원장에 저장돼 다른 기기가 보던 탭(섀넌)이 따라왔다. 브라우저 저장소는 안 쓰므로 기기별 '마지막 탭'은 둘 수 없다 → 늘 첫 탭.
+   첫 탭이 듀얼가드면 그 화면(openDualGuard) · 아니면 그 탭 단추를 누른다. 모의(/paper)·포트폴리오(/portfolio) 페이지에선 탭을 열지 않는다.
+   사용자가 탭을 고른 뒤(또는 모의·포트폴리오에서 세션으로 들어온 뒤)엔 하위 탭 정책이 늦게 와도 첫 탭으로 되돌리지 않는다(_userTabbed). */
+let _userTabbed=false;
+function opOpenFirst(){
+  if(_userTabbed||isPaperPage()||isPfPage()) return false;
+  const first=opTabOrder()[0]; if(!first) return false;
+  const shown=isDgView()?'dg':((document.querySelector('.tabs .tab.on')||{}).dataset||{}).t;
+  if(shown===first) return true;                       // 이미 그 탭 — 다시 누르면 시세를 또 받는다
+  if(first==='dg'){ openDualGuard(); return true; }
+  const tb=document.querySelector(`.tabs .tab[data-t="${first}"]`); if(tb) tb.click(); else { S.activeTab=first; save(); }
+  return true;
+}
+document.addEventListener('jk-subtabs',()=>{ if(appStarted) try{ opOpenFirst(); }catch(e){ console.error(e); } });   // 하위 탭 정책이 늦게 오면 그 기준 첫 탭으로(사용자가 아직 안 골랐을 때만)
+/* 모의 목록 줄 순서 = 운영 탭 순서(숨긴 탭 포함 · 듀얼가드 줄은 plan → dg) → 그 탭 세션바 순서(box.sessions)
+   (2026-11-09 사용자: "모의투자에서 보이는 순서를 운영탭 세션 순서대로 표출해"). 그릴 때 정렬한다 — 지난 목록 캐시 순서가 어떻든 지금 탭·세션 순서를 따른다 */
+function paperOrderRows(rows){
+  const ord=opTabOrder({all:true}), rank=t=>{ const i=ord.indexOf(t==='plan'?'dg':t); return i<0?ord.length:i; };
+  const idx=r=>{ const b=S&&S[r.tab], i=(b&&b.sessions)?b.sessions.findIndex(x=>x&&x.id===r.id):-1; return i<0?1e9:i; };
+  return (rows||[]).map((r,i)=>({r,i})).sort((a,b)=>rank(a.r.tab)-rank(b.r.tab)||idx(a.r)-idx(b.r)||a.i-b.i).map(x=>x.r);
+}
 const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','섀넌(역분산)'],
                   ['ma','200일선 로테'],['dca','매수적립'],['asap','ASAP'],['plan','듀얼가드']];   // 'plan' = 듀얼가드(옛 이름 자산플랜 · 2026-11-09)
 /* ASAP 모의 뺌 — ASAP 은 운영에서 숨겼다(v3.119.0). 모의투자(목록 paperSummary · 재계산 paperFillAll · 시세 선취 paperPrefetchQuotes ·
@@ -8568,7 +8599,7 @@ async function openPaper(){
     if(last){ rows=JSON.parse(JSON.stringify(last.rows)); paperStaleNote=true; }
     else rows=cache&&cache.rows ? JSON.parse(JSON.stringify(cache.rows)) : paperSummary();
   }
-  rows=rows||[];
+  rows=(typeof paperOrderRows==='function')?paperOrderRows(rows||[]):(rows||[]);   // 운영 탭 → 세션바 순서(2026-11-09) · typeof 는 함수만 떼어 돌리는 시험 때문(paperLoadingProgress 와 같은 식)
   /* 원화 금액은 현재 환율로 그린다 — 아직 안 왔으면 잠깐(최대 4초) 기다린다. 그래도 없으면 마지막 실제 환율로 */
   if(!(typeof liveFX!=='undefined'&&liveFX) && rows.some(r=>r&&r.cur!=='krw') && typeof loadFX==='function')
     await Promise.race([loadFX().catch(()=>{}), new Promise(r=>setTimeout(r,4000))]);
@@ -9765,6 +9796,7 @@ window.addEventListener('message',e=>{
    switchSess가 서브탭을 '현재'로 되돌리므로 거래이력 열기는 반드시 그 뒤여야 한다.
    서브탭은 id가 탭마다 다르다(inf-rec·ma-hist…) — 이름으로 찾아 규칙이 바뀌어도 안 깨지게 한다. */
 function gotoSess(tab, id){
+  _userTabbed=true;   // 모의·포트폴리오에서 세션으로 들어옴 — 첫 탭으로 되돌리지 않는다
   if(tab==='plan'){
     const box=S.plan,x=box&&box.sessions&&box.sessions.find(s=>s.id===id);if(!x)return;
     /* 듀얼가드는 운영 탭이 됐다(2026-11-09) — 그 탭 안의 플랜 화면을 그 세션으로 연다(플랜 화면의 ?session= 딥링크 그대로) */
@@ -11537,7 +11569,8 @@ function holdScroll(y){
 }
 function setupTabs(){
   document.querySelectorAll('.tab').forEach(t=>{
-    t.onclick=()=>{
+    t.onclick=(ev)=>{
+      if(ev&&ev.isTrusted) _userTabbed=true;   // 사용자가 고른 탭 — 하위 탭 정책이 늦게 와도 첫 탭으로 안 되돌린다(프로그램 클릭은 isTrusted=false)
       if(t.dataset.t==='dg'){ openDualGuard(); return; }   // 듀얼가드는 전략 탭(S.activeTab)이 아니다 — 화면만 바꾼다(openDualGuard)
       closeDualGuardView();
       document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
@@ -12106,10 +12139,13 @@ function startApp(){
   setupTabs();setupSegs();setupSessbar();
   /* ASAP 탭은 숨겼다(2026-11-09 사용자) — 지난번에 ASAP 을 보고 있었어도 첫 화면은 무한매수법. ASAP 세션은 모의 목록·포트폴리오에서 열린다. */
   if(S.activeTab==='asap')S.activeTab='inf';
-  if(S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
+  /* 운영 화면은 지난 탭(S.activeTab · S.opView)을 따라가지 않고 보이는 첫 탭을 연다(opOpenFirst · 2026-11-09).
+     모의·포트폴리오 페이지는 탭을 안 열고 전략 문맥만 지난 탭에 맞춘다(화면엔 안 보인다 · 예전 그대로). */
+  const onOp=!isPaperPage()&&!isPfPage();
+  if(!onOp&&S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
   refreshAll();
   if(S.activeTab==='ma'||S.activeTab==='asap')hideFab(); else showFab();
-  if(S.opView==='dg') openDualGuard();   // 지난번에 듀얼가드를 보고 있었으면 그 화면으로(다른 기기도 같다 — 원장에 적힌다)
+  if(onOp) opOpenFirst();
   /* 주문 권한은 서버가 정한다. 답이 오면 주문 패널을 다시 그린다 —
      기다렸다 시작하면 서버가 늦을 때 앱이 통째로 늦어진다. */
   try{ kisSyncOwner().then(ok=>{ if(ok) try{ renderOrder(); }catch(e){} }); }catch(e){}

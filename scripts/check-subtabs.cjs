@@ -72,6 +72,7 @@ async function check(S){
     const other=await run('/backtest',USR,data);
     t('S3 목록에 없는 페이지 — 아무것도 안 바꾸고 준비 표시도 없음',other.B.every(b=>b.style.order===undefined&&!b.cls.has('jk-sub-hidden'))&&!other.L.html.has('jk-subtabs-ready'));
     t('S3 숨긴 탭도 지금 열린 탭(on · aria-selected)은 CSS 가 남긴다 — 옮길 때까지',S.acc.includes('.jk-sub-hidden:not(.on):not([aria-selected="true"]){display:none!important}')); }
+  t('S3 정책을 탭 단추에 적용한 뒤 운영 화면에 알린다(jk-subtabs — 첫 탭을 그 순서로 다시 고름)',/document\.dispatchEvent\(new CustomEvent\('jk-subtabs'/.test(fnOf(S.acc,'function applySubTabs(user,cfg)')));
   // ── S4 목록 = 각 페이지의 실제 탭
   { const strip=h=>h.replace(/<[^>]*>/g,'').replace(/\s+/g,' ').trim();
     for(const [p,def] of Object.entries(A.SUB_TABS)){
@@ -129,6 +130,7 @@ const MUT=[
   ['관리자: 저장 문서에 하위 탭 빠짐','admin',s=>s.replace("  return {items,subs,updatedAt:Date.now(),updatedBy:normEmail(me&&me.email)};","  return {items,updatedAt:Date.now(),updatedBy:normEmail(me&&me.email)};")],
   ['관리자: 위아래 뒤 순서 다시 안 매김','admin',s=>s.replace("  [L[i],L[j]]=[L[j],L[i]]; L.forEach((z,k)=>z.order=(k+1)*10); paintMenus(); queueMenuSave();","  [L[i],L[j]]=[L[j],L[i]]; paintMenus(); queueMenuSave();")],
   ['관리자: 되돌리기에서 하위 탭 그대로','admin',s=>s.replace("  subDraft=subDraftFrom(window.JKAccess?JKAccess.menuDefaults():{});   // 하위 탭도 기본(페이지 순서 · ASAP 숨김)\n","")],
+  ['적용: 운영 화면에 안 알림(jk-subtabs 없음)','acc',s=>s.replace(/    try\{ if\(typeof CustomEvent==='function'&&document\.dispatchEvent\) document\.dispatchEvent\(new CustomEvent\('jk-subtabs'[^\n]*\n/,'')],
   ['운영: ASAP CSS 를 정책 뒤에도 강제(옛 규칙)','idx',s=>s.replace('html:not(.jk-subtabs-ready) .tab[data-t="asap"]:not(.on){display:none}','.tab[data-t="asap"]:not(.on){display:none}')],
 ];
 (async()=>{

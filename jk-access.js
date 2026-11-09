@@ -122,6 +122,7 @@
       b.classList.toggle('jk-sub-hidden',!r.visible); b.style.order=String(r.rank);
     });
     document.documentElement.classList.add('jk-subtabs-ready');
+    try{ if(typeof CustomEvent==='function'&&document.dispatchEvent) document.dispatchEvent(new CustomEvent('jk-subtabs',{detail:{page:page}})); }catch(e){}   // 운영 화면이 첫 탭을 이 순서로 다시 고른다(opOpenFirst)
   }
   function readMenuConfig(fb){
     return fb.getDoc(fb.doc(fb.db,'settings','siteMenu')).then(function(snap){

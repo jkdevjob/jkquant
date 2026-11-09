@@ -12714,11 +12714,11 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 73/73 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 80/80 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   /* 2026-11-09 — 관리자 › 메뉴 관리: 메뉴마다 하위 탭 공개범위(공개/관리자만/숨김)·순서 (jk-access.js SUB_TABS · admin v0.13.0) */
   const pst=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-subtabs.cjs')],{encoding:'utf8'});
   ok('하위 탭 숨김·순서: 설정 정리(ASAP 기본 숨김·새 탭 맨 뒤) · 공개범위 · 적용(모의 주소·열린 탭) · 목록 = 페이지 7곳 실제 탭 · 관리자 화면 · 변이 13종',
-     pst.status===0&&(pst.stdout||'').includes('ALL PASS sub tabs · 변이 13/13 red'),(pst.stdout||'').slice(-600)+(pst.stderr||''));
+     pst.status===0&&(pst.stdout||'').includes('ALL PASS sub tabs · 변이 14/14 red'),(pst.stdout||'').slice(-600)+(pst.stderr||''));
   /* 2026-11-09 — 운영 › 듀얼가드 탭을 다른 운영 탭처럼(세션 줄 맨 위 · 보고 있는 칩/두 번 누르면 세션 설정 · 끌어서 순서 · ⚙️ 설정 따로 · 창 안 다시 로그인 없음) */
   const pdg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-dg-tab.cjs')],{encoding:'utf8'});
   ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 변이 24종',

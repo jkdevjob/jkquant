@@ -195,15 +195,45 @@ function check(S){
 function check2(S,t,E,bad){
   // ── F. 화면 구조
   { const tabs=(S.idx.match(/<div class="tabs">([\s\S]*?)<\/div>/)||['',''])[1],order=[...tabs.matchAll(/data-t="(\w+)"/g)].map(m=>m[1]).join();
-    t('F1 운영 탭 순서 — 듀얼가드 맨 왼쪽(무매보다 왼쪽) · ASAP 은 맨 끝에 남되 숨김',order==='dg,inf,vr,ma,ivs,dca,asap'&&/\.tab\[data-t="asap"\]:not\(\.on\)\{display:none\}/.test(S.idx),order);
+    t('F1 운영 탭 순서 — 듀얼가드 맨 왼쪽(무매보다 왼쪽) · ASAP 은 맨 끝에 남되 숨김 · 기본 순서 상수(OP_TABS)가 HTML 과 같음',order==='dg,inf,vr,ma,ivs,dca,asap'&&/\.tab\[data-t="asap"\]:not\(\.on\)\{display:none\}/.test(S.idx)
+      &&/const OP_TABS=\['dg','inf','vr','ma','ivs','dca','asap'\];/.test(S.idx),order);
     const st=fnOf(S.idx,'function setupTabs()'),od=fnOf(S.idx,'function openDualGuard(extra)'),sa=fnOf(S.idx,'function startApp()');
     t('F2 듀얼가드 탭은 S.activeTab 에 안 들어간다 — 누르면 화면만 바꾸고(opView) 다른 탭이 지운다',
       /if\(t\.dataset\.t==='dg'\)\{ openDualGuard\(\); return; \}/.test(st)&&st.indexOf("openDualGuard(); return;")<st.indexOf('S.activeTab=t.dataset.t')&&/closeDualGuardView\(\);/.test(st)
       &&!/S\.activeTab\s*=/.test(od)&&/S\.opView='dg'/.test(od)&&/\/plan\?embed=1/.test(fnOf(S.idx,'function dgEnsureFrame(extra)')));
-    t('F3 첫 화면 — ASAP 을 보고 있었어도 무한매수법 · 듀얼가드를 보고 있었으면 듀얼가드',/if\(S\.activeTab==='asap'\)S\.activeTab='inf';/.test(sa)&&/if\(S\.opView==='dg'\) openDualGuard\(\);/.test(sa)
-      &&sa.indexOf("if(S.activeTab==='asap')S.activeTab='inf';")<sa.indexOf('const tb=document.querySelector'));
+    t('F3 첫 화면 — 운영은 보이는 첫 탭(opOpenFirst · 지난 탭·듀얼가드 화면 복원 없음) · ASAP 문맥은 무한매수법으로 · 모의·포트폴리오 페이지는 전략 문맥만 지난 탭',
+      /if\(S\.activeTab==='asap'\)S\.activeTab='inf';/.test(sa)&&/const onOp=!isPaperPage\(\)&&!isPfPage\(\);/.test(sa)&&/if\(!onOp&&S\.activeTab!=='inf'\)\{ const tb=document\.querySelector/.test(sa)
+      &&/if\(onOp\) opOpenFirst\(\);/.test(sa)&&sa.indexOf('showFab();')<sa.indexOf('if(onOp) opOpenFirst();')&&!/S\.opView==='dg'/.test(sa)
+      &&sa.indexOf("if(S.activeTab==='asap')S.activeTab='inf';")<sa.indexOf('const onOp='));
     t('F4 모의 목록 듀얼가드 줄 → 운영 › 듀얼가드 탭 안에서 그 세션(딥링크) · 다른 전략 줄은 듀얼가드를 보고 있어도 그 탭으로',
       /openDualGuard\('session='\+encodeURIComponent\(id\)/.test(fnOf(S.idx,'function gotoSess(tab, id)'))&&/if\(S\.activeTab!==tab \|\| isDgView\(\)\)\{/.test(fnOf(S.idx,'function gotoSess(tab, id)')));
+    /* ── F5~F8 첫 탭 · 모의 목록 순서 (2026-11-09 사용자: "모의투자에서 보이는 순서를 운영탭 세션 순서대로 표출해 / 운영메뉴 들어가면 왜 섀넌이 선택되지 항상? / 마지막 보던거나 무조건 첫 탭으로 가") ── */
+    const mkDoc=(spec,shown)=>{ const btns=spec.map(([t,o,h])=>({dataset:{t},style:{order:o==null?'':String(o)},classList:{contains:c=>c==='jk-sub-hidden'?!!h:(c==='on'&&t===shown)},clicks:0,click(){ this.clicks++; }}));
+      return {btns,document:{querySelectorAll:q=>q==='.tabs .tab[data-t]'?btns:[],querySelector:q=>{ const m=q.match(/data-t="(\w+)"/); if(m) return btns.find(b=>b.dataset.t===m[1])||null; if(q==='.tabs .tab.on') return btns.find(b=>b.dataset.t===shown)||null; return null; }}}; };
+    const runF=(doc,extra)=>{ const c=Object.assign({S:{activeTab:'ivs'},OP_TABS:['dg','inf','vr','ma','ivs','dca','asap'],_userTabbed:false,isPaperPage:()=>false,isPfPage:()=>false,isDgView:()=>false,dg:0,save(){},console,Math,Object,Array},extra||{},{document:doc});
+      c.openDualGuard=()=>{ c.dg++; }; vm.createContext(c); vm.runInContext(fnOf(S.idx,'function opTabOrder(opt)')+'\n'+fnOf(S.idx,'function opOpenFirst()')+'\n'+fnOf(S.idx,'function paperOrderRows(rows)'),c); return c; };
+    const DEF=[['dg'],['inf'],['vr'],['ma'],['ivs'],['dca'],['asap']], POL=[['dg',2],['inf',1],['vr',4],['ma',3,true],['ivs',5],['dca',6],['asap',7,true]];
+    { const a=runF(mkDoc(DEF).document), b=runF(mkDoc(POL).document), n=runF(undefined);
+      t('F5 탭 순서 — 정책 전엔 HTML 순서 · 정책(CSS order·숨김) 뒤엔 그 순서로 숨긴 탭 빼고 · all 이면 숨긴 탭도 · 화면이 없으면 기본 상수',
+        a.opTabOrder().join()==='dg,inf,vr,ma,ivs,dca,asap'&&b.opTabOrder().join()==='inf,dg,vr,ivs,dca'&&b.opTabOrder({all:true}).join()==='inf,dg,ma,vr,ivs,dca,asap'&&n.opTabOrder().join()==='dg,inf,vr,ma,ivs,dca,asap',
+        JSON.stringify([a.opTabOrder(),b.opTabOrder(),b.opTabOrder({all:true}),n.opTabOrder()])); }
+    { const SS={plan:{sessions:[{id:'p1'},{id:'p2'}]},inf:{sessions:[{id:'i1'},{id:'i2'}]},ivs:{sessions:[{id:'v1'}]},ma:{sessions:[{id:'m1'}]}};
+      const c=runF(mkDoc(POL).document,{S:SS}), rows=[{tab:'ivs',id:'v1'},{tab:'inf',id:'i2'},{tab:'plan',id:'p2'},{tab:'ma',id:'m1'},{tab:'inf',id:'i1'},{tab:'plan',id:'p1'},{tab:'inf',id:'zz'}];
+      const out=c.paperOrderRows(rows).map(r=>r.id).join(), d=runF(mkDoc(DEF).document,{S:SS}).paperOrderRows(rows).map(r=>r.id).join();
+      t('F6 모의 목록 순서 — 운영 탭 순서(정책 · 숨긴 로테이션도 그 자리 · 듀얼가드 줄 = dg) → 세션바 순서 · 모르는 세션은 그 탭 맨 뒤 · 기본 순서면 듀얼가드부터',
+        out==='i1,i2,zz,p1,p2,m1,v1'&&d==='p1,p2,i1,i2,zz,m1,v1'&&c.paperOrderRows([]).length===0,out+' | '+d); }
+    { const D1=mkDoc([['dg',1,true],['inf',2],['ivs',3]],'ivs'), c1=runF(D1.document); const r1=c1.opOpenFirst();
+      const D2=mkDoc(DEF,'ivs'), c2=runF(D2.document); const r2=c2.opOpenFirst();
+      const D3=mkDoc(DEF,'ivs'), c3=runF(D3.document,{_userTabbed:true}); const r3=c3.opOpenFirst();
+      const D4=mkDoc(DEF,'ivs'), c4=runF(D4.document,{isPaperPage:()=>true}); const r4=c4.opOpenFirst();
+      const D5=mkDoc([['inf',1],['ivs',2]],'inf'), c5=runF(D5.document); const r5=c5.opOpenFirst();
+      t('F7 첫 탭 열기 — 듀얼가드가 숨겨지면 다음 보이는 탭(무매)을 누름 · 기본이면 듀얼가드 화면 · 사용자가 고른 뒤엔 안 함 · 모의 페이지에선 안 함 · 이미 그 탭이면 다시 안 누름',
+        r1===true&&D1.btns[1].clicks===1&&c1.dg===0&&r2===true&&c2.dg===1&&D2.btns.every(b=>!b.clicks)&&r3===false&&D3.btns.every(b=>!b.clicks)&&c3.dg===0&&r4===false&&c4.dg===0&&r5===true&&D5.btns.every(b=>!b.clicks),
+        JSON.stringify([r1,D1.btns.map(b=>b.clicks),c1.dg,r2,c2.dg,r3,r4,r5])); }
+    t('F8 배선 — 탭 단추는 사용자 클릭(isTrusted)만 기억 · 세션으로 들어오면 기억 · 정책 알림(jk-subtabs) 받으면 다시 고름 · 모의 목록은 그릴 때 정렬 · jk-access 가 정책 적용 뒤 알림',
+      /if\(ev&&ev\.isTrusted\) _userTabbed=true;/.test(st)&&/^function gotoSess\(tab, id\)\{\n  _userTabbed=true;/.test(fnOf(S.idx,'function gotoSess(tab, id)'))
+      &&/document\.addEventListener\('jk-subtabs',\(\)=>\{ if\(appStarted\) try\{ opOpenFirst\(\); \}/.test(S.idx)&&/rows=\(typeof paperOrderRows==='function'\)\?paperOrderRows\(rows\|\|\[\]\):\(rows\|\|\[\]\);/.test(fnOf(S.idx,'async function openPaper()'))
+      &&/document\.dispatchEvent\(new CustomEvent\('jk-subtabs'/.test(fnOf(S.acc,'function applySubTabs(user,cfg)')));
     const menuBad=PAGES.filter(f=>{const s=rd(f);return !/<a href="\/portfolio"[^>]*><span class="mi">💰<\/span>포트폴리오<\/a>/.test(s)||/>자산플랜<\/a>/.test(s);});
     t('F5 모든 페이지 메뉴: 자산플랜 → 💰 포트폴리오(/portfolio)',menuBad.length===0,menuBad.join());
     t('F6 메뉴 정책: 포트폴리오 20번 공개 · /plan 은 메뉴에서 숨기고 주소 권한만(듀얼가드) · 머리말 이름',
@@ -640,6 +670,13 @@ const MUT=[
   ['그림: 끈 선도 세로 축에 넣음','idx',s=>s.replace("let lo=Infinity, hi=-Infinity; for(const s of V) for(const v of s.vals)","let lo=Infinity, hi=-Infinity; for(const s of ALL) for(const v of s.vals)")],
   ['그림: 합친 선 꺼도 낙폭 띠','idx',s=>s.replace("const band=(TOT&&a>=0&&b>a&&C.mdd>=0.05)","const band=(a>=0&&b>a&&C.mdd>=0.05)")],
   ['끄기: 늘 세션별 목록을 바꿈','idx',s=>s.replace("  const m=PF.chartMode==='tk'?'tk':'sess'; PF.chartOff=PF.chartOff||{};","  const m='sess'; PF.chartOff=PF.chartOff||{};")],
+  ['첫 탭: 숨긴 탭도 첫 탭 후보','idx',s=>s.replace("    .filter(x=>all||!x.hid).sort((a,b)=>a.o-b.o).map(x=>x.t);","    .filter(x=>true).sort((a,b)=>a.o-b.o).map(x=>x.t);")],
+  ['첫 화면: 지난 듀얼가드 화면 복원(옛 코드)','idx',s=>s.replace("  if(onOp) opOpenFirst();\n","  if(S.opView==='dg') openDualGuard();\n")],
+  ['모의 목록: 정렬 안 함','idx',s=>s.replace("  rows=(typeof paperOrderRows==='function')?paperOrderRows(rows||[]):(rows||[]);","  rows=rows||[];")],
+  ['모의 목록: 세션바 순서 무시','idx',s=>s.replace("||idx(a.r)-idx(b.r)||a.i-b.i","||a.i-b.i")],
+  ['모의 목록: 듀얼가드 줄을 탭 순서에 못 맞춤(plan→dg 없음)','idx',s=>s.replace("ord.indexOf(t==='plan'?'dg':t)","ord.indexOf(t)")],
+  ['세션으로 들어와도 첫 탭으로 되돌림','idx',s=>s.replace("  _userTabbed=true;   // 모의·포트폴리오에서 세션으로 들어옴 — 첫 탭으로 되돌리지 않는다\n","")],
+  ['정책 적용 뒤 운영 화면에 안 알림','acc',s=>s.replace(/    try\{ if\(typeof CustomEvent==='function'&&document\.dispatchEvent\) document\.dispatchEvent\(new CustomEvent\('jk-subtabs'[^\n]*\n/,"")],
 ];
 (async()=>{
   const bad=await check(SRC);
