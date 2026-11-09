@@ -365,7 +365,7 @@
       pop.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('a'))pop.hidden=true;});
     });
   }
-  var HEADER_LABELS={'/':'운영','/paper':'모의투자','/portfolio':'포트폴리오','/plan':'듀얼 가드','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/swim':'수영대회','/workout':'운동 타이머','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
+  var HEADER_LABELS={'/':'운영','/paper':'모의투자','/portfolio':'포트폴리오','/plan':'듀얼가드','/backtest':'백테','/scalping':'연구(지피티)','/claude':'연구(클로드)','/ipo':'공모주','/realestate':'부동산','/job':'JOB','/swim':'수영대회','/workout':'운동 타이머','/settings':'설정','/admin':'관리자','/tenbagger':'텐배거'};
   function routeKey(){var p=(location.pathname||'/').replace(/\/index\.html$/,'/').replace(/\.html$/,'').replace(/\/$/,'')||'/';return p;}
   function normalizeHeader(){
     if(!document.querySelector)return;

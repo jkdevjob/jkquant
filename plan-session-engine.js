@@ -5,10 +5,10 @@ const DEFAULTS={
   5:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01}
 };
 const FEE_RATE=.001;
-/* 🤖 클로드 탭 5년 플랜 — '듀얼 가드' (2026-11-08 사용자: "현재 5년 플랜 전략 이름도 정하고 · 넌 클로드 탭만 담당").
+/* 🤖 클로드 탭 5년 플랜 — '듀얼가드' (2026-11-08 사용자: "현재 5년 플랜 전략 이름도 정하고 · 넌 클로드 탭만 담당").
    TECL 은 변동성으로 크기를 정하고(역분산 · 변동성 가드), TQQQ 는 추세로 켜고 끈다(SMA225 · 추세 가드) — 두 겹의 가드.
    화면(plan.html)·모의 목록(index.html)이 이 이름과 판 번호를 함께 쓴다(같은 걸 두 군데서 세지 않는다). */
-const STRATEGY={key:'dualGuard',name:'듀얼 가드',owner:'claude',version:'1.0',since:'2026-11-08',
+const STRATEGY={key:'dualGuard',name:'듀얼가드',owner:'claude',version:'1.0',since:'2026-11-08',
   summary:'TECL 역분산 70% + TQQQ 추세 Guard 30% + SGOV'};
 /* 5년 플랜 규칙 — 플랜 화면(renderAlphaPlan)과 모의 재생(replay)이 같은 alphaDecide 로 판정한다 (같은 걸 두 군데서 세지 않는다).
    규칙은 하나(base)뿐이다. 2026-11-08 폐지: exp1 '새 규칙'·exp2 '공격형' — 앱 엔진(전일 종가 주수)·세후로 다시 재니 기본보다 낫지 않았다
@@ -52,7 +52,7 @@ function alphaFee(q,p){
   const gross=Math.max(0,(+q||0)*(+p||0));
   return gross<=10?0:Math.floor(gross*FEE_RATE*100)/100;
 }
-/* 운영 장부(듀얼 가드 '현재 투자중'·운영 세션) — base(시작 잔고) + events(체결·현금·보정)를 날짜 → 기록 순서로 걸어 지금 수량·평단·현금을 센다.
+/* 운영 장부(듀얼가드 '현재 투자중'·운영 세션) — base(시작 잔고) + events(체결·현금·보정)를 날짜 → 기록 순서로 걸어 지금 수량·평단·현금을 센다.
    플랜 화면(plan.html alphaEventList·alphaLedgerCalc)과 포트폴리오(index.html)가 이 두 함수를 같이 쓴다 — 같은 장부를 두 곳에서 따로 세지 않는다.
    2026-11-09 plan.html 에서 그대로 옮겼다(내용 같음 · scripts/check-portfolio.cjs 가 옮기기 전 코드와 결과가 같은지 본다). */
 function ledgerEvents(ledger){

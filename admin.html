@@ -745,7 +745,7 @@ function menuBase(){
     {path:'/ipo',label:'공모주',mode:'public',order:70},{path:'/realestate',label:'부동산',mode:'public',order:75},{path:'/job',label:'JOB',mode:'public',order:80},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
-  return src.filter(x=>x.path!=='/tenbagger').filter(x=>!x.navHidden).map(x=>({path:x.path,label:x.label,mode:x.mode,order:x.order}));   // 메뉴에 안 보이는 주소(텐배거 · 듀얼 가드 /plan — 운영 탭 안)는 목록에서 뺀다
+  return src.filter(x=>x.path!=='/tenbagger').filter(x=>!x.navHidden).map(x=>({path:x.path,label:x.label,mode:x.mode,order:x.order}));   // 메뉴에 안 보이는 주소(텐배거 · 듀얼가드 /plan — 운영 탭 안)는 목록에서 뺀다
 }
 function renderMenus(el){
   el.innerHTML='<div class="card"><h3><span class="dot"></span>공용 메뉴 관리</h3>'
