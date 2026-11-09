@@ -78,22 +78,23 @@ async function check(S){
   const P=S.plan;
   t('C1 기간 탭·규칙 선택이 없다',!/data-horizon=/.test(P)&&!/id="horizonTabs"/.test(P)&&!/class="horizon-tab/.test(P)&&!/id="alphaRules"/.test(P)&&!/id="assetSessionRules/.test(P)&&!/function renderAlternativePlan/.test(P)&&!/function setHorizon/.test(P));
   const at=k=>P.indexOf(k);
-  t('C2 클로드/지피티 탭 없음 — 탭·지피티 칸·plan-gpt.js·지피티 저장 창구 모두 없고 듀얼 가드 화면 하나(머리 카드 → 세션 → 주문표 순)',
+  t('C2 클로드/지피티 탭 없음 — 탭·지피티 칸·plan-gpt.js·지피티 저장 창구 모두 없고 듀얼 가드 화면 하나(세션 줄 → 상태줄 → 상세 탭 → 머리 카드 → 주문표 순 · 운영 탭과 같은 차례)',
     !/id="aiTabs"|class="ai-tab|data-ai=|id="pane-gpt"|id="pane-claude"|planGptRoot|plan-gpt\.js|PLANGPT_ACCOUNT|planGptAccount|function planAiTab|location\.hash==='#gpt'/.test(P)&&S.gptFiles.length===0
-    &&at('id="dgStrip"')>0&&at('id="dgStrip"')<at('id="assetSessionCard"')&&at('id="assetSessionCard"')<at('id="alphaOrderSection"')&&at('id="alphaOrderSection"')<at('id="alphaResetSection"'),S.gptFiles.join());
+    &&at('id="assetSessionChips"')>0&&at('id="assetSessionChips"')<at('id="assetStatusline"')&&at('id="assetStatusline"')<at('id="assetDetailTabs"')&&at('id="assetDetailTabs"')<at('id="dgStrip"')
+    &&at('id="dgStrip"')<at('id="alphaOrderSection"')&&at('id="alphaOrderSection"')<at('id="alphaResetSection"')&&!/id="assetSessionCard"/.test(P),S.gptFiles.join());
   { // 폐지 세션 숨김 — 실제 assetSessionList · activeAssetSession · renderAssetSessions
     const L=[{id:'a',name:'기본 운영',horizon:5,paper:false,settings:{alphaRules:'base'}},{id:'b',name:'기본 모의',horizon:5,paper:true,simStart:'2025-01-02',settings:{}},
       {id:'h10',name:'10년 세션',horizon:10,paper:true,settings:{}},{id:'h15',name:'15년 세션',horizon:15,paper:false,settings:{}},{id:'h20',name:'20년 세션',horizon:20,paper:true,settings:{}},
       {id:'x1',name:'새 규칙 모의',horizon:5,paper:true,simStart:'2025-01-02',settings:{alphaRules:'exp1'}},{id:'x2',name:'공격형 모의',horizon:5,paper:true,simStart:'2025-01-02',settings:{alphaRules:'exp2'}}];
     const run=(active)=>{const box={sessions:JSON.parse(JSON.stringify(L)),activeByHorizon:{5:active}},V={assetSessionChips:{innerHTML:''},assetSessionState:{className:'',textContent:''}};
-      const ctx=vm.createContext({window:{JKPlanSessionEngine:E},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5});
+      const ctx=vm.createContext({window:{JKPlanSessionEngine:E},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5,dgDragEl:null});
       for(const m of ['function planStrategy()','function planStrategyLabel()','function planRetired(x)','function assetSessionList(h=activeHorizon)','function activeAssetSession()','function renderAssetSessions()'])vm.runInContext(fnOf(P,m),ctx);
       ctx.renderAssetSessions();return {list:ctx.assetSessionList().map(x=>x.id).join(),active:(ctx.activeAssetSession()||{}).id||'',chips:V.assetSessionChips.innerHTML,state:V.assetSessionState.textContent};};
     const r1=run('x1'),r2=run('b'),r3=run('h10');
     t('C4 세션 목록 — 5년 기본만(a·b) · 폐지 5개는 숨김(지우지 않음)',r1.list==='a,b',r1.list);
     t('C4 폐지 세션이 선택돼 있었으면 현재 투자중으로(x1·h10 → 없음) · 기본 모의는 그대로(b)',r1.active===''&&r3.active===''&&r2.active==='b',JSON.stringify([r1.active,r2.active,r3.active]));
-    t('C5 칩에 폐지 세션 이름 없음 · 상태 줄에 "듀얼 가드 v1.0" · 숨긴 수 5개 안내',!/새 규칙 모의|공격형 모의|10년 세션|15년 세션|20년 세션/.test(r1.chips)&&/기본 운영/.test(r1.chips)&&/기본 모의/.test(r1.chips)
-      &&r1.state.startsWith('현재 투자중 · 듀얼 가드 v1.0')&&r1.state.includes('폐지된 플랜 세션 5개 숨김')&&r2.state.startsWith('모의투자 · 2025-01-02 시작 · 듀얼 가드 v1.0'),r1.state+' | '+r2.state);
+    t('C5 칩에 폐지 세션 이름 없음 · 상태 줄에 "듀얼 가드 v1.0" · 숨긴 수 5개 안내(운영 탭처럼 세션 이름 없이 전략 요약)',!/새 규칙 모의|공격형 모의|10년 세션|15년 세션|20년 세션/.test(r1.chips)&&/기본 운영/.test(r1.chips)&&/기본 모의/.test(r1.chips)
+      &&r1.state==='듀얼 가드 v1.0 · 숨긴 예전 세션 5개'&&r2.state==='듀얼 가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 5개',r1.state+' | '+r2.state);
   }
   t('C6 딥링크 — 5년 · 폐지 안 된 세션만 연다',/if\(q&&\+q\.horizon===5&&!planRetired\(q\)\)\{/.test(fnOf(P,'async function finishPlanOpen(user)')));
   t('C7 머리 카드 — 이름·판은 엔진 STRATEGY',/\$\("stageTitle"\)\.textContent=P\.name;if\(\$\("dgVer"\)\)\$\("dgVer"\)\.textContent="v"\+P\.version;/.test(fnOf(P,'function render()'))&&/id="stageTitle">듀얼 가드<\/span><span class="dg-ver" id="dgVer">v1\.0<\/span>/.test(P));
@@ -126,10 +127,10 @@ async function check(S){
     ['설정: 넘긴 규칙을 다시 저장','set',s=>s.replace("x.settings.alphaRules='base';","if(input.rules!=null)x.settings.alphaRules=String(input.rules);")],
     ['플랜: 세션 목록이 폐지 세션도 보임','plan',s=>s.replace("sessions.filter(x=>x&&+x.horizon===+h&&!planRetired(x));}","sessions.filter(x=>x&&+x.horizon===+h);}")],
     ['플랜: 폐지 세션 선택이 살아남음','plan',s=>s.replace("x.id===id&&+x.horizon===+activeHorizon&&!planRetired(x))||null;","x.id===id&&+x.horizon===+activeHorizon)||null;")],
-    ['플랜: 10년 탭 되살림','plan',s=>s.replace('  <div class="hero">','  <button class="horizon-tab" data-horizon="10">10년</button>\n  <div class="hero">')],
-    ['플랜: 클로드/지피티 탭 되살림','plan',s=>s.replace('  <div class="hero">','  <nav class="plan-tabs" id="aiTabs"><button class="ai-tab on" data-ai="claude">🤖 클로드</button><button class="ai-tab" data-ai="gpt">⚡ 지피티</button></nav>\n  <div class="hero">')],
+    ['플랜: 10년 탭 되살림','plan',s=>s.replace('  <div class="hero" id="dgHero"','  <button class="horizon-tab" data-horizon="10">10년</button>\n  <div class="hero" id="dgHero"')],
+    ['플랜: 클로드/지피티 탭 되살림','plan',s=>s.replace('  <div class="hero" id="dgHero"','  <nav class="plan-tabs" id="aiTabs"><button class="ai-tab on" data-ai="claude">🤖 클로드</button><button class="ai-tab" data-ai="gpt">⚡ 지피티</button></nav>\n  <div class="hero" id="dgHero"')],
     ['플랜: 지피티 저장 창구 되살림','plan',s=>s.replace('onAuthStateChanged(auth,async user=>{','function setPlanGptAccount(user){window.PLANGPT_ACCOUNT=null;}\nonAuthStateChanged(auth,async user=>{')],
-    ['플랜: 숨긴 세션 수 안내 없음','plan',s=>s.replace("tail=gone?' · 폐지된 플랜 세션 '+gone+'개 숨김(10·15·20년 · 새 규칙 · 공격형 — 기록은 그대로)':''","tail=''")],
+    ['플랜: 숨긴 세션 수 안내 없음','plan',s=>s.replace("tail=gone?' · 숨긴 예전 세션 '+gone+'개':''","tail=''")],
     ['모의 목록: 폐지 세션도 재생','idx',s=>s.replace("if(planPaperRetired(sess)){ _tick(); continue; }","")],
     ['모의 목록: 폐지 판정이 늘 아님','idx',s=>s.replace("function planPaperRetired(sess){const E=window.JKPlanSessionEngine;return !!(E&&E.retiredReason&&E.retiredReason(sess));}","function planPaperRetired(sess){return false;}")],
     ['모의 목록: 옛 이름(역분산+Guard)','idx',s=>s.replace("bits.push(`5년 ${P.name} v${P.version}`);","bits.push('5년 역분산+Guard');")],

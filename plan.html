@@ -226,12 +226,27 @@ th:first-child,td:first-child{text-align:left}
   .steps{grid-template-columns:1fr}.alloc-row{grid-template-columns:125px 1fr 46px}.stage-title{font-size:20px}.ledger-summary{grid-template-columns:1fr}.ledger-form{grid-template-columns:1fr}.sessionbar{grid-template-columns:1fr}
 }
 /* 자산플랜 세션 */
-.asset-session-card{padding:12px 14px}.asset-session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.asset-session-chips{display:flex;gap:7px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
-.asset-session-chip{flex:0 0 auto;border:1px solid var(--border2);background:var(--surf2);color:var(--dim);border-radius:999px;padding:8px 11px;font-weight:800;font-size:11px}
-.asset-session-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.asset-session-chip .paper{color:var(--gold);margin-left:4px}.asset-session-chip .x{color:var(--red);margin-left:7px;font-weight:900}
-.asset-session-state{font-size:10.5px;color:var(--dim);margin-top:7px}.asset-session-state.paper{color:var(--gold)}
+.asset-session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+/* 세션 줄 · 상태줄 · 상세 탭 — 운영의 다른 탭(index.html .sessbar · .sesschip · .statusline · .setpill · .chip)과 같은 값(2026-11-09 사용자:
+   "듀얼가드를 운영에 다른 탭과 같이 변경해 설정을 따로 빼고 세션을 위로 올리고 … 세션 드래그 가능하게 / 다른 탭이랑 최대한 비슷하게").
+   누르면 전환 · 두 번 누르면 세션 설정 · 길게 눌러 끌면 순서. 세 줄이 위에 차례로 붙는다(--dg-h1 · --dg-h2 는 dgStickyOffsets 가 잰다). */
+.dg-sessbar{position:sticky;top:0;z-index:31;background:var(--bg);display:flex;gap:7px;align-items:center;margin:0;padding:11px 0 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.dg-sessbar::-webkit-scrollbar{display:none}
+.dg-sesschip{padding:8px 13px;border-radius:10px;background:var(--surf);border:1px solid var(--border);color:var(--dim);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.dg-sesschip.on{background:#262a52;color:var(--accent);border-color:var(--accent)}
+.dg-sesschip.add{color:#646e93}
+.dg-sesschip .paperbadge{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:5px;background:rgba(245,196,81,.18);color:var(--gold);font-size:9.5px;font-weight:800;vertical-align:middle}
+.dg-sesschip .sessdel{color:var(--red);font-weight:800;margin-left:2px;opacity:.7}
+.dg-sessbar.dragmode .dg-sesschip:not(.dragging){transition:transform .12s ease}
+.dg-sesschip.dragging{position:relative;z-index:2;opacity:.9;transform:scale(1.07);box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.dg-statusline{position:sticky;top:var(--dg-h1,49px);z-index:30;background:var(--bg);display:flex;gap:6px;align-items:center;padding:7px 0 9px;flex-wrap:wrap;font-size:11.5px;border-bottom:1px solid var(--border)}
+.dg-statusline .asset-session-state{color:var(--dim)}.dg-statusline .asset-session-state.paper{color:var(--gold)}
+.dg-statusline .dg-badges{display:inline-flex;gap:6px;flex-wrap:wrap}
+.dg-statusline span.badge{display:inline-block;padding:2px 8px;margin:0;border:0;border-radius:6px;font-weight:700;font-size:10.5px;line-height:1.6}
+.dg-statusline .badge.set{background:#262a52;color:var(--accent)}.dg-statusline .badge.warn{background:#3a3320;color:var(--gold)}.dg-statusline .badge.ok{background:#13321f;color:var(--green)}
+.setpill{margin-left:auto;flex-shrink:0;background:var(--surf2);border:1px solid var(--border);color:var(--dim);padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+.setpill:hover{border-color:var(--accent);color:var(--accent)}
+[data-asset-view][hidden]{display:none!important}
 .plan-recovery{margin:-2px 0 12px;padding:12px 14px;border:1px solid rgba(245,196,81,.48);border-radius:12px;background:rgba(245,196,81,.075)}
 .plan-recovery[hidden]{display:none}.plan-recovery b{color:var(--gold)}.plan-recovery .sub{margin-top:4px;line-height:1.55}
 .plan-recovery-controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.plan-recovery-controls select{min-height:40px;max-width:100%;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--text);padding:7px 9px}
@@ -243,9 +258,15 @@ th:first-child,td:first-child{text-align:left}
 .asset-session-paper{margin-top:8px;padding:9px 10px;border:1px solid rgba(245,196,81,.25);border-radius:9px;background:rgba(245,196,81,.05)}
 .asset-session-paper-result{margin:10px 0 0;padding:10px;border:1px solid var(--border2);border-radius:9px;background:rgba(139,140,240,.05)}
 .asset-session-paper-result .kpis{margin-top:7px}
-.asset-detail-tabs{display:flex;gap:7px;margin:0 0 12px;overflow-x:auto}
-.asset-detail-tab{border:1px solid var(--border2);border-radius:9px;background:var(--surf2);color:var(--dim);padding:10px 16px;font:inherit;font-weight:800;white-space:nowrap;cursor:pointer}
-.asset-detail-tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.asset-detail-tabs{position:sticky;top:var(--dg-h2,88px);z-index:29;background:var(--bg);display:flex;gap:6px;flex-wrap:wrap;padding:10px 0 8px;margin:0 0 8px}
+.asset-detail-tab{padding:7px 14px;border-radius:20px;background:var(--surf);border:1px solid var(--border);color:var(--dim);font-size:12.5px;font-weight:600;font-family:inherit;white-space:nowrap;cursor:pointer;transition:.15s;-webkit-tap-highlight-color:transparent}
+.asset-detail-tab.on{background:var(--surf2);color:var(--text);border-color:var(--accent)}
+/* 세션 설정 창 — 운영처럼 두 갈래: 세션(이름 · 모의투자 · 포트폴리오) / ⚙️ 설정(금액 · 시작일) */
+#assetSessionModal .asset-session-head{flex-wrap:nowrap;align-items:flex-start}
+#assetSessionModal .asm-x{flex-shrink:0;background:none;border:none;color:var(--dim);font-size:22px;line-height:1;cursor:pointer;padding:2px 6px;align-self:flex-start}
+#assetSessionModal .asm-x:hover{color:var(--text)}
+#assetSessionModal[data-mode="session"] .asm-settings{display:none!important}
+#assetSessionModal[data-mode="settings"] .asm-session{display:none!important}
 [data-asset-view][hidden]{display:none!important}
 body.asset-paper-mode #alphaRecordFill,body.asset-paper-mode #alphaCashRec,body.asset-paper-mode #alphaResetSection{display:none!important}
 body.asset-paper-mode .ledger-del{display:none!important}
@@ -279,6 +300,14 @@ html.had-user #authgate .bootwait{display:block}
 @keyframes bwspin{to{transform:rotate(360deg)}}
 #authgate .bootwait .bw-help{margin-top:18px;font-size:11.5px;color:#646e93;line-height:1.6}   /* 운영 화면과 같은 여는 중 화면(색도 운영 --faint) */
 #authgate .gbox{max-width:360px;width:100%;text-align:center}
+/* 운영 › 듀얼 가드 창 안(html.embed) — 따로 로그인하지 않는다(2026-11-09 사용자: "듀얼가드 접근시 또 로그인 하지 말고").
+   운영 화면이 이미 로그인했다: 로그인 상자·앱 첫 화면(JK 투자 로고) 대신 작은 '불러오는 중'만 보이고, 로그인은 운영 화면 것을 이어받는다(planAdoptParentUser).
+   DB 연결이 끊긴 때의 '다시 연결' 상자(embed-dberr)는 그대로 보인다. */
+html.embed #authgate{background:var(--bg)}
+html.embed #authgate .bootwait .bw-logo,html.embed #authgate .bootwait .bw-help{display:none}
+html.embed:not(.embed-dberr) #authgate .gbox{display:none}
+html.embed:not(.embed-dberr) #authgate .bootwait{display:block}
+html.embed.plan-hydrating body::after{content:'듀얼 가드 불러오는 중…'}
 #authgate .glogo{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
 #authgate .glogo .v{color:var(--gold)}
 #authgate .gsub{color:var(--dim);font-size:13px;margin-bottom:32px;line-height:1.6}
@@ -332,13 +361,14 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
   /* 이미 로그인됐고 DB 원장을 읽는 중이면 로그인 상자를 띄우지 않는다 — 예전엔 아이폰에서 원장 읽기가 8초를 넘으면
      로그인된 사람에게 '로그인' 상자가 떠서 다른 페이지와 다른 로그인 화면처럼 보였다(2026-10-07 사용자 화면). */
   if(window.__planAuthUser) return;   // 아래 줄은 지금 단계(이용 승인 · 원장 불러오는 중)가 이미 적어 둠
+  if(h.classList.contains('embed')) return;   // 운영 › 듀얼 가드 창 안 — 로그인은 운영 화면 것을 이어받는다(로그인 상자를 띄우지 않는다)
   h.classList.remove('had-user'); var e=document.getElementById('gerr');
   /* Firebase 가 이미 '로그아웃'이라고 답했으면 늦어진 게 아니다 — 로그인 상자만 두고 겁주는 문구는 달지 않는다 */
   if(e&&!e.textContent&&!window.__planAuthResolved) e.textContent='로그인 확인이 늦어지고 있습니다 — 다시 로그인하거나 새로고침해 주세요.'; }, 8000);
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼 가드 <span class="ver">v2.4.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼 가드 <span class="ver">v2.5.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -363,7 +393,17 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 
   <!-- 듀얼 가드(클로드 담당) — 매매 규칙은 plan-session-engine.js(STRATEGY '듀얼 가드') · 연구는 research/daily 브랜치 research/im_plan/.
        클로드/지피티 탭은 2026-11-09 사용자 지시("듀얼가드 클로드 지피티는 탭 삭제해 너꺼 하나로 갈거야")로 없앴다 — 화면 하나. -->
-  <div class="hero">
+  <!-- 세션 줄 · 상태줄 · 상세 탭 — 운영의 다른 탭과 같은 차례(세션 → 상태줄 ⚙️ 설정 → 현재·분석·거래이력·설명). -->
+  <div class="dg-sessbar" id="assetSessionChips" role="tablist" aria-label="듀얼 가드 세션 — 누르면 전환 · 두 번 누르면 세션 설정 · 길게 눌러 끌면 순서"></div>
+  <div class="dg-statusline" id="assetStatusline"><span class="asset-session-state" id="assetSessionState">현재 투자중 플랜</span><span class="dg-badges" id="assetStatusBadges"></span><button type="button" class="setpill" id="assetSettingsBtn" title="설정 — 시작자산 · 월 추가 투자 · 목표자산 · 시작일">⚙️ 설정</button></div>
+  <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
+    <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaTaxSection">현재</button>
+    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaEvidenceSection assetPaperPanel">분석</button>
+    <button class="asset-detail-tab" id="assetHistoryTab" data-asset-detail="history" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaHistorySection alphaResetSection">거래이력</button>
+    <button class="asset-detail-tab" id="assetExplainTab" data-asset-detail="explain" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaStrategySection">설명</button>
+  </nav>
+
+  <div class="hero" id="dgHero" data-asset-view="current">
     <section class="card">
       <div class="stage-head">
         <div><div class="sub" id="stageSource">🤖 클로드 · 5년 플랜</div><div class="stage-title dg-title"><span id="stageTitle">듀얼 가드</span><span class="dg-ver" id="dgVer">v1.0</span></div><div class="sub" id="stageDesc">TECL 역분산 70% + TQQQ 추세 Guard 30% + SGOV</div></div>
@@ -379,22 +419,6 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="bar-meta"><span id="goalPct">목표 0%</span><span id="timeText">남은 기간 계산 중</span></div>
     </section>
   </div>
-
-  <section class="card asset-session-card" id="assetSessionCard">
-    <div class="asset-session-head">
-      <div><h2 style="margin-bottom:2px">세션</h2><div class="sub">전략별로 계좌를 따로 운영할 수 있습니다. 모의 세션은 실제 장부와 분리되고 모의투자 성과에 함께 표시됩니다.</div></div>
-      <div class="btnrow"><button class="btn" id="assetSessionEdit">⚙ 세션 설정</button><button class="btn primary" id="assetSessionAdd">+ 세션</button></div>
-    </div>
-    <div class="asset-session-chips" id="assetSessionChips"></div>
-    <div class="asset-session-state" id="assetSessionState">현재 투자중 플랜</div>
-  </section>
-
-  <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
-    <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaTaxSection">현재</button>
-    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaEvidenceSection assetPaperPanel">분석</button>
-    <button class="asset-detail-tab" id="assetHistoryTab" data-asset-detail="history" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaHistorySection alphaResetSection">거래이력</button>
-    <button class="asset-detail-tab" id="assetExplainTab" data-asset-detail="explain" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaStrategySection">설명</button>
-  </nav>
 
   <div class="plan-panel on" data-ppanel="alpha">
     <div class="guidehero">
@@ -850,28 +874,28 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
   </section>
 </div>
 
-<div class="asset-session-modal" id="assetSessionModal" role="dialog" aria-modal="true" aria-labelledby="assetSessionModalTitle" hidden>
+<div class="asset-session-modal" id="assetSessionModal" data-mode="session" role="dialog" aria-modal="true" aria-labelledby="assetSessionModalTitle" hidden>
   <div class="box">
     <div class="asset-session-head">
-      <div><h2 id="assetSessionModalTitle" style="margin-bottom:2px">자산플랜 세션 추가</h2><div class="sub" id="assetSessionModalStrategy">현재 전략을 새 세션으로 만듭니다.</div></div>
-      <button class="btn" id="assetSessionClose">닫기</button>
+      <div><h2 id="assetSessionModalTitle" style="margin-bottom:2px">세션 추가</h2><div class="sub" id="assetSessionModalStrategy">현재 전략을 새 세션으로 만듭니다.</div></div>
+      <button type="button" class="asm-x" id="assetSessionClose" aria-label="닫기">✕</button>
     </div>
     <div class="grid">
-      <div class="field" style="grid-column:1/-1"><label>세션 이름</label><input id="assetSessionName" type="text"></div>
-      <div class="field"><label>시작자산 ($)</label><input id="assetSessionCapital" type="number" min="1" step="100"></div>
-      <div class="field"><label>월 추가 투자 ($)</label><input id="assetSessionMonthly" type="number" min="0" step="10"></div>
-      <div class="field"><label>목표자산 ($)</label><input id="assetSessionTarget" type="number" min="1" step="100"></div>
-      <div class="field"><label>세션 종류</label><select id="assetSessionKind"><option value="live">운영 세션</option><option value="paper">모의투자 세션</option></select></div>
+      <div class="field asm-session" style="grid-column:1/-1"><label>세션 이름</label><input id="assetSessionName" type="text"></div>
+      <label class="asset-session-pf asm-session" id="assetSessionPaperRow" style="grid-column:1/-1;margin-top:0"><input type="checkbox" id="assetSessionPaper"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span class="sub">— 실제 매매 없이 연습용 · 과거 시세로 자동 재생</span></span></label>
+      <div class="field asm-settings"><label>시작자산 ($)</label><input id="assetSessionCapital" type="number" min="1" step="100"></div>
+      <div class="field asm-settings"><label>월 추가 투자 ($)</label><input id="assetSessionMonthly" type="number" min="0" step="10"></div>
+      <div class="field asm-settings"><label>목표자산 ($)</label><input id="assetSessionTarget" type="number" min="1" step="100"></div>
       <div class="field" id="assetSessionStartWrap"><label id="assetSessionStartLabel">시작일</label><input id="assetSessionStart" type="date"></div>
     </div>
-    <label class="asset-session-pf" id="assetSessionPfRow"><input type="checkbox" id="assetSessionPf" checked> <span><b style="color:var(--accent)">💰 포트폴리오</b>에 넣기 <span class="sub" id="assetSessionPfHint">— 운영 › 포트폴리오 합계·추이·양도세에 더합니다</span></span></label>
+    <label class="asset-session-pf asm-session" id="assetSessionPfRow"><input type="checkbox" id="assetSessionPf" checked> <span><b style="color:var(--accent)">💰 포트폴리오</b>에 넣기 <span class="sub" id="assetSessionPfHint">— 운영 › 포트폴리오 합계·추이·양도세에 더합니다</span></span></label>
     <div class="asset-session-paper" id="assetSessionPaperNote">운영 세션은 실제 체결을 직접 기록합니다. 모의투자 세션은 과거 시세로 자동 재생하며 실제 거래이력을 변경하지 않습니다.</div>
     <div class="btnrow"><button class="btn primary" id="assetSessionCreate">세션 만들기</button><button class="btn" id="assetSessionCancel">취소</button></div>
   </div>
 </div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updateCurrentUser } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 import { initializeFirestore, doc, getDoc as nativeGetDoc, setDoc, runTransaction as nativeRunTransaction, deleteField } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { createPaperStore } from '/jk-paper-store.mjs?v=1.0.2';
 const {getDoc,runTransaction}=createPaperStore({doc,getDoc:nativeGetDoc,setDoc,runTransaction:nativeRunTransaction,deleteField});
@@ -1006,6 +1030,70 @@ let assetEditingId=null,assetModalHorizon=5,assetModalRevision=0,assetSessionSav
    '현재 투자중'은 fiveYearPlanV2.portfolio, 추가 세션은 세션의 portfolio. 고른 적 없으면 넣음(예전 포트폴리오 그대로) · 모의 세션은 넣지 않는다(실제 돈만).
    포트폴리오(index.html pfPlanWanted)는 저장된 값과 이 창이 보낸 값(planEmbedPost)을 읽는다. */
 let planPortfolio=true,assetPfPick=true;
+/* 세션 바꾸기는 한 번에 하나씩(2026-11-09) — 앞 전환이 화면 장부를 그 세션 것으로 다 바꾼 뒤에 다음 전환 · 설정 열기를 한다.
+   전환은 '보던 세션 장부를 화면에서 거둬 저장 → 새 세션 장부를 화면에 올림' 순서라, 앞 전환이 끝나기 전에 다음 것이 시작되면
+   화면에 남은 앞 세션 장부가 뒤 세션에 옮겨 적힐 수 있다(세션 줄을 빨리 연달아 누르거나 두 번 누를 때). */
+let assetSwitchChain=Promise.resolve(),assetModalOpenedAt=0;
+function assetSwitchIdle(){return assetSwitchChain.catch(()=>{});}
+function assetModalPaper(){const c=$('assetSessionPaper');return !!(c&&c.checked);}
+function setAssetModalMode(m){const el=$('assetSessionModal');if(el)el.dataset.mode=m==='settings'?'settings':'session';return el?el.dataset.mode:'session';}
+/* 세션 줄 · 상태줄 높이를 재서 상세 탭이 그 밑에 붙게 한다(운영 updateStickyOffsets 와 같은 일) */
+function dgStickyOffsets(){
+  const a=$('assetSessionChips'),b=$('assetStatusline');if(!a||!b)return;
+  const h1=a.offsetHeight||0,h2=h1+(b.offsetHeight||0),r=document.documentElement.style;
+  r.setProperty('--dg-h1',h1+'px');r.setProperty('--dg-h2',h2+'px');
+}
+/* 세션 줄 끌어서 순서 바꾸기 — 운영 세션바(index.html)와 같은 규칙: 손가락은 길게 눌러(350ms) 집고 · 먼저 움직이면 스크롤,
+   마우스는 조금만 움직여도 집는다. '현재 투자중'(맨 앞)과 '+ 세션'은 움직이지 않는다. 놓으면 보이는 세션 순서를 저장한다. */
+const DG_DRAG_HOLD=350,DG_DRAG_SLOP=8;
+let dgDragEl=null,dgDragTimer=null,dgDragStart=null,dgDragMoved=false,dgDragEndAt=0;
+function dgChipEls(){const bar=$('assetSessionChips');return bar?[...bar.querySelectorAll('[data-asess]')].filter(c=>c.dataset.asess):[];}
+function dgDragBegin(chip){dgDragEl=chip;dgDragMoved=false;chip.classList.add('dragging');$('assetSessionChips').classList.add('dragmode');if(navigator.vibrate){try{navigator.vibrate(12);}catch(e){}}}
+function dgDragDown(chip,x,y,isMouse){
+  if(dgChipEls().length<2)return;                       // 하나면 정렬할 게 없다
+  dgDragStart={x,y,chip,mouse:isMouse};clearTimeout(dgDragTimer);
+  dgDragTimer=setTimeout(()=>{if(dgDragStart)dgDragBegin(dgDragStart.chip);},DG_DRAG_HOLD);
+}
+function dgDragMove(x,y){                                // 스크롤을 막아야 하면 true
+  if(dgDragEl){dgDragOver(x);return true;}
+  if(!dgDragStart)return false;
+  if(Math.hypot(x-dgDragStart.x,y-dgDragStart.y)<=DG_DRAG_SLOP)return false;
+  if(dgDragStart.mouse){clearTimeout(dgDragTimer);dgDragBegin(dgDragStart.chip);return true;}
+  clearTimeout(dgDragTimer);dgDragTimer=null;dgDragStart=null;return false;   // 터치로 먼저 움직임 = 스크롤
+}
+function dgDragChipOf(t){if(!t||!t.closest||t.closest('[data-asess-del]')||t.closest('[data-asess-add]'))return null;const c=t.closest('[data-asess]');return c&&c.dataset.asess?c:null;}
+function dgDragOver(x){
+  if(!dgDragEl)return;const bar=$('assetSessionChips');
+  for(const c of dgChipEls()){
+    if(c===dgDragEl)continue;const r=c.getBoundingClientRect();
+    if(x<r.left+r.width/2){if(c.previousSibling!==dgDragEl){bar.insertBefore(dgDragEl,c);dgDragMoved=true;}return;}
+  }
+  const add=bar.querySelector('[data-asess-add]');if(add&&add.previousSibling!==dgDragEl){bar.insertBefore(dgDragEl,add);dgDragMoved=true;}
+}
+function dgDragStop(){
+  clearTimeout(dgDragTimer);dgDragTimer=null;dgDragStart=null;
+  if(!dgDragEl)return;
+  dgDragEl.classList.remove('dragging');$('assetSessionChips').classList.remove('dragmode');
+  const moved=dgDragMoved;dgDragEl=null;dgDragMoved=false;dgDragEndAt=Date.now();
+  if(moved)assetReorderSessions(dgChipEls().map(c=>c.dataset.asess));else renderAssetSessions();
+}
+/* 보이는 세션 순서대로 다시 줄 세운다 — 숨긴 세션(폐지 기간·규칙 · 다른 기간)은 제자리. 화면과 목록이 어긋나면 바꾸지 않는다(세션을 잃지 않게). */
+function assetReorderList(sessions,order){
+  const ids=(order||[]).map(String),pos=new Map(ids.map((id,i)=>[id,i])),slots=[],moving=[];
+  (sessions||[]).forEach((x,i)=>{if(x&&pos.has(String(x.id))){slots.push(i);moving.push(x);}});
+  if(moving.length!==ids.length||pos.size!==ids.length)return (sessions||[]).slice();
+  moving.sort((a,c)=>pos.get(String(a.id))-pos.get(String(c.id)));
+  const out=(sessions||[]).slice();slots.forEach((i,k)=>{out[i]=moving[k];});return out;
+}
+async function assetReorderSessions(order){
+  await assetSwitchIdle();
+  const b=assetPlanBox(),before=b.sessions.slice(),next=assetReorderList(b.sessions,order);
+  if(next.every((x,i)=>x===before[i])){renderAssetSessions();return false;}
+  b.sessions=next;writeAssetSessionLocal();renderAssetSessions();
+  const ok=await saveOperatingState();
+  if(!ok){b.sessions=before;writeAssetSessionLocal();renderAssetSessions();alert('세션 순서를 Firebase DB에 저장하지 못해 원래 순서로 되돌렸습니다.');}
+  return ok;
+}
 function assetPfInit(on){assetPfPick=!!on;const c=$('assetSessionPf');if(c){c.disabled=false;c.checked=!!on;}}
 function assetPfUI(paper){
   const c=$('assetSessionPf'),h=$('assetSessionPfHint');if(!c)return;
@@ -1169,22 +1257,29 @@ async function replayAssetPaperSession(x,applyView){
     return null;
   }
 }
+/* 세션 줄 — 운영 탭 세션바와 같은 칩: 누르면 전환(보고 있는 칩을 누르면 세션 설정) · 두 번 누르면 세션 설정 · 길게 눌러 끌면 순서 ·
+   ✕ 는 보고 있는 세션에만 · 맨 끝 '+ 세션'. '현재 투자중'(Firebase 원장 fiveYearPlanV2)은 늘 맨 앞이고 지우거나 옮기지 않는다. */
 function renderAssetSessions(){
   const b=assetPlanBox(),box=$('assetSessionChips'),st=$('assetSessionState');if(!box)return;
+  if(dgDragEl)return;                                   // 끄는 중엔 다시 그리지 않는다(손가락 밑 칩이 사라지지 않게)
   const list=assetSessionList(),active=activeAssetSession(),gone=b.sessions.filter(x=>x&&planRetired(x)).length;
-  let h='<button class="asset-session-chip '+(!active?'on':'')+'" data-asess="">현재 투자중</button>';
+  const q=v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+  let h='<div class="dg-sesschip'+(!active?' on':'')+'" data-asess="" role="tab" aria-selected="'+(!active)+'" title="두 번 누르면 세션 설정">현재 투자중</div>';
   for(const x of list){
-    h+='<button class="asset-session-chip '+(active&&active.id===x.id?'on':'')+'" data-asess="'+String(x.id).replace(/"/g,'&quot;')+'">'+
-      String(x.name||'세션').replace(/</g,'&lt;')+(x.paper?' <span class="paper">모의</span>':'')+
-      '<span class="x" data-asess-del="'+String(x.id).replace(/"/g,'&quot;')+'">×</span></button>';
+    const on=!!(active&&active.id===x.id);
+    h+='<div class="dg-sesschip'+(on?' on':'')+'" data-asess="'+q(x.id)+'" role="tab" aria-selected="'+on+'" title="두 번 누르면 세션 설정 · 길게 눌러 끌면 순서 변경">'+
+      q(x.name||'세션')+(x.paper?'<span class="paperbadge">모의</span>':'')+(on?'<span class="sessdel" data-asess-del="'+q(x.id)+'" title="세션 삭제"> ✕</span>':'')+'</div>';
   }
+  h+='<div class="dg-sesschip add" data-asess-add="1" role="button">+ 세션</div>';
   box.innerHTML=h;
   if(st){
-    const name=planStrategyLabel(),tail=gone?' · 폐지된 플랜 세션 '+gone+'개 숨김(10·15·20년 · 새 규칙 · 공격형 — 기록은 그대로)':'';
-    if(!active){st.className='asset-session-state';st.textContent='현재 투자중 · '+name+tail;}
-    else if(active.paper){st.className='asset-session-state paper';st.textContent='모의투자 · '+active.simStart+' 시작 · '+name+tail;}
-    else{st.className='asset-session-state';st.textContent='운영 세션 · '+name+tail;}
+    /* 운영 탭 상태줄처럼 세션 이름은 빼고(세션 줄과 겹친다) 전략 요약만 — 모의면 시작일 · 숨긴 예전 세션 수 */
+    const name=planStrategyLabel(),tail=gone?' · 숨긴 예전 세션 '+gone+'개':'';
+    st.title=gone?'폐지된 플랜 세션(10·15·20년 · 새 규칙 · 공격형) — 기록은 그대로 두고 목록에서만 숨겼습니다':'';
+    if(active&&active.paper){st.className='asset-session-state paper';st.textContent=name+' · 모의 '+active.simStart+'~'+tail;}
+    else{st.className='asset-session-state';st.textContent=name+tail;}
   }
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(dgStickyOffsets);
 }
 async function loadActiveAssetSessionView(refresh=true){
   const revision=++assetViewRevision;
@@ -1207,6 +1302,10 @@ async function loadActiveAssetSessionView(refresh=true){
   renderAssetSessions();renderAlphaLedger();render();refreshAlphaFromCache();if(refresh)await refreshLive();
 }
 async function selectAssetSession(id){
+  const prev=assetSwitchChain;let release;assetSwitchChain=new Promise(r=>release=r);
+  try{
+  await prev.catch(()=>{});
+  if(String((activeAssetSession()||{}).id||'')===String(id||''))return;   // 이미 보고 있는 세션 — 두 번 누름의 두 번째 누름 등은 아무것도 안 한다
   closeAssetSessionModal();
   const cur=activeAssetSession();
   if(cur&&!cur.paper)syncActiveAssetSessionFromView();
@@ -1223,46 +1322,53 @@ async function selectAssetSession(id){
     return;
   }
   await loadActiveAssetSessionView(true);
+  }finally{release();}
 }
 function openAssetSessionModal(){
-  assetEditingId=null;assetModalHorizon=activeHorizon;assetModalRevision++;
+  assetEditingId=null;assetModalHorizon=activeHorizon;assetModalRevision++;assetModalOpenedAt=Date.now();
+  setAssetModalMode('session');
   const list=assetSessionList();
   $('assetSessionName').value=planStrategy().name+' 세션 '+(list.length+1);
   $('assetSessionCapital').value=Math.max(1,num('startCapital',20000));
   $('assetSessionMonthly').value=Math.max(0,num('monthlyAdd',0));
   $('assetSessionTarget').value=Math.max(1,num('targetCapital',150000));
-  $('assetSessionKind').value='live';
+  $('assetSessionPaper').checked=false;
   assetPfInit(true);   // 새 운영 세션은 포트폴리오에 넣는 게 기본
   const min=new Date();min.setFullYear(min.getFullYear()-3);
   $('assetSessionStart').min=min.toISOString().slice(0,10);$('assetSessionStart').max=todayISO();$('assetSessionStart').value=todayISO();
-  $('assetSessionName').disabled=false;$('assetSessionKind').disabled=false;
-  $('assetSessionModalTitle').textContent='자산플랜 세션 추가';$('assetSessionCreate').textContent='세션 만들기';
+  $('assetSessionName').disabled=false;$('assetSessionPaper').disabled=false;
+  $('assetSessionModalTitle').textContent='세션 추가';$('assetSessionCreate').textContent='만들기';
   syncAssetSessionModal();
-  $('assetSessionModalStrategy').textContent='🤖 '+planStrategyLabel()+' — '+planStrategy().summary;
+  $('assetSessionModalStrategy').textContent='🤖 '+planStrategyLabel()+' — 시작자산 · 월 추가 투자 · 목표는 지금 화면 값으로 만들고, 만든 뒤 ⚙️ 설정에서 바꿉니다.';
   $('assetSessionModal').hidden=false;
 }
-function editAssetSession(){
+/* 보고 있는 세션의 설정 창 — mode 'session': 이름 · 모의투자 · 포트폴리오(세션 줄을 두 번 누름 · 보고 있는 칩을 누름) / 'settings': 금액 · 시작일(상태줄 ⚙️ 설정).
+   앞 세션 전환이 끝난 뒤에 연다 — 화면 장부가 그 세션 것이 된 다음에 화면 값을 세션에 거둔다(syncActiveAssetSessionFromView). */
+async function editAssetSession(mode){
+  await assetSwitchIdle();
   const x=activeAssetSession();
   if(x&&!x.paper)syncActiveAssetSessionFromView();
   openAssetSessionModal();assetEditingId=x?x.id:'current';
+  const m=setAssetModalMode(mode);
   const st=x?x.settings:assetSessionSettingsFromView();
   $('assetSessionName').value=x?x.name:'현재 투자중';
-  $('assetSessionName').disabled=!x;$('assetSessionKind').disabled=!x;
-  $('assetSessionKind').value=x&&x.paper?'paper':'live';
+  $('assetSessionName').disabled=!x;$('assetSessionPaper').disabled=!x;
+  $('assetSessionPaper').checked=!!(x&&x.paper);
   assetPfInit(x?x.portfolio!==false:planPortfolio!==false);
   $('assetSessionCapital').value=st.startCapital;$('assetSessionMonthly').value=st.monthlyAdd;
   $('assetSessionTarget').value=st.targetCapital;$('assetSessionStart').value=x&&x.paper?x.simStart:st.startDate;
-  $('assetSessionModalTitle').textContent='자산플랜 세션 설정';$('assetSessionCreate').textContent='변경 저장';
+  $('assetSessionModalTitle').textContent=m==='settings'?'설정 · '+(x?x.name:'현재 투자중'):'세션 설정';$('assetSessionCreate').textContent='저장';
+  $('assetSessionModalStrategy').textContent=m==='settings'?'🤖 '+planStrategyLabel()+' — 시작자산 · 월 추가 투자 · 목표자산 · 시작일':'이름 · 모의투자 여부 · 포트폴리오에 넣을지를 바꿀 수 있습니다.';
   syncAssetSessionModal();
 }
 function syncAssetSessionModal(){
-  const paper=$('assetSessionKind').value==='paper';
+  const paper=assetModalPaper(),mode=(($('assetSessionModal')||{}).dataset||{}).mode||'session';
   assetPfUI(paper);
   const x=assetEditingId==='current'?{ledger:alphaLedger}:assetPlanBox().sessions.find(s=>s.id===assetEditingId);
   const locked=!paper&&x&&window.JKPlanSessionSettings.hasLedgerActivity(x.ledger);
   if(!paper&&x&&x.liveSettings){$('assetSessionCapital').value=x.liveSettings.startCapital;$('assetSessionStart').value=x.liveSettings.startDate;}
   $('assetSessionCapital').disabled=!!locked;$('assetSessionStart').disabled=!!locked;
-  $('assetSessionStartWrap').style.display='';
+  $('assetSessionStartWrap').style.display=(mode==='settings')===!paper?'':'none';   // 세션 창엔 모의 시작일(모의일 때)만 · ⚙️ 설정엔 운영 시작일(운영일 때)만
   const min=new Date();min.setFullYear(min.getFullYear()-3);
   $('assetSessionStart').min=paper?min.toISOString().slice(0,10):'';
   $('assetSessionStartLabel').textContent=paper?'모의 시작일':'시작일';
@@ -1277,7 +1383,7 @@ async function createAssetSession(){
   if(assetSessionSaving)return;
   ensureLiveBoxes();
   const revision=assetModalRevision,horizon=assetModalHorizon,id=assetEditingId;
-  const input={paper:$('assetSessionKind').value==='paper',name:$('assetSessionName').value,capital:$('assetSessionCapital').value,monthly:$('assetSessionMonthly').value,target:$('assetSessionTarget').value,start:$('assetSessionStart').value,
+  const input={paper:assetModalPaper(),name:$('assetSessionName').value,capital:$('assetSessionCapital').value,monthly:$('assetSessionMonthly').value,target:$('assetSessionTarget').value,start:$('assetSessionStart').value,
     portfolio:!!($('assetSessionPf')&&$('assetSessionPf').checked)};
   const box=assetPlanBox(),original=id==='current'?{id,horizon,paper:false,portfolio:planPortfolio!==false,settings:assetSessionSettingsFromView(),ledger:cloneObj(alphaLedger)}:box.sessions.find(x=>x.id===id);
   if(id&&!original)return;
@@ -1304,6 +1410,7 @@ async function createAssetSession(){
   finally{assetSessionSaving=false;$('assetSessionCreate').disabled=false;}
 }
 async function deleteAssetSession(id){
+  await assetSwitchIdle();   // 세션을 바꾸는 중이면 다 바뀐 뒤에(화면 장부가 그 세션 것이 된 다음)
   const b=assetPlanBox(),x=b.sessions.find(s=>s.id===id);if(!x)return;
   if(!confirm("'"+(x.name||'세션')+"'을 삭제할까요?\n삭제는 Firebase DB에 즉시 반영되며 다른 세션은 그대로입니다."))return;
   const before=cloneObj(liveState),beforePaper=assetPaperCache[id];
@@ -1415,6 +1522,13 @@ function planRebaseOperating(base,candidate,remote){
       rm.set(id,ns);
     }
     out.plan.sessions=[...rm.values()];
+    /* 세션 줄을 끌어서 순서를 바꿨으면(이 탭의 순서가 읽었던 순서와 다르면) 그 순서를 지킨다 — 다른 기기에서 새로 생긴 세션은 뒤에 */
+    const ord=a=>(Array.isArray(a)?a:[]).filter(Boolean).map(x=>String(x.id||'')),bo=ord(Bp.sessions),co=ord(Cp.sessions);
+    const both=co.filter(id=>bo.includes(id)),bOrd=bo.filter(id=>both.includes(id));
+    if(both.join('\u0001')!==bOrd.join('\u0001')){
+      const ci=new Map(co.map((id,i)=>[id,i])),rank=x=>ci.has(String(x.id||''))?ci.get(String(x.id||'')):1e9;
+      out.plan.sessions.sort((a,c)=>rank(a)-rank(c));
+    }
   }
   return out;
 }
@@ -2360,6 +2474,10 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
 function renderDualGuardStrip(o){
   const el=$('dgStrip');if(!el)return;
   const chip=(k,v,sub,cls)=>'<div class="dg-chip'+(cls?' '+cls:'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+sub+'</div></div>';
+  const sb=$('assetStatusBadges');   // 상태줄 배지(운영 탭 상태줄의 신호 배지 자리) — 아래 띠와 같은 값
+  if(sb)sb.innerHTML=o?('<span class="badge '+(o.guard==='ON'?'ok':'set')+'" title="TQQQ 추세 Guard">Guard '+o.guard+'</span>'
+    +(o.orders?'<span class="badge warn" title="오늘 예상 주문">주문 '+o.orders+'건</span>':'<span class="badge set" title="오늘 예상 주문">'+(o.need?'조정 0건':'유지')+'</span>')):'';
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(dgStickyOffsets);
   if(!o){el.innerHTML=chip('오늘 판단','—','시세를 불러오는 중…')+chip('① TECL · 전체 자산','—','현재 → 목표')+chip('② TQQQ Guard','—','SMA225 대비')+chip('다음 Guard 경계','—','확정 종가 기준');return;}
   const pp=v=>(v*100).toFixed(1)+'%';
   el.innerHTML=
@@ -3105,8 +3223,8 @@ const d=defaults();
 apply(d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("taxOtherKrw").addEventListener("change",()=>{render();cloudSave();});   // 연말 세금 점검 — 다른 해외주식 실현손익(원) · 플랜 설정과 함께 저장
-$("assetSessionAdd").addEventListener("click",openAssetSessionModal);
-$("assetSessionEdit").addEventListener("click",editAssetSession);
+$("assetSettingsBtn").addEventListener("click",()=>editAssetSession('settings'));   // 상태줄 ⚙️ 설정 — 금액 · 시작일(운영 탭의 ⚙️ 설정과 같은 자리)
+window.addEventListener("resize",()=>{try{dgStickyOffsets();}catch(e){}});
 $("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});
 $("assetDetailTabs").addEventListener("keydown",e=>{
   const tabs=Array.from(document.querySelectorAll('[data-asset-detail]')),i=tabs.indexOf(e.target);
@@ -3117,13 +3235,37 @@ $("assetDetailTabs").addEventListener("keydown",e=>{
 $("assetSessionClose").addEventListener("click",closeAssetSessionModal);
 $("assetSessionCancel").addEventListener("click",closeAssetSessionModal);
 $("assetSessionCreate").addEventListener("click",createAssetSession);
-$("assetSessionKind").addEventListener("change",syncAssetSessionModal);
+$("assetSessionPaper").addEventListener("change",syncAssetSessionModal);
 $("assetSessionModal").addEventListener("keydown",e=>{if(e.key==='Escape')closeAssetSessionModal();});
-$("assetSessionModal").addEventListener("click",e=>{if(e.target===$("assetSessionModal"))closeAssetSessionModal();});
+$("assetSessionModal").addEventListener("click",e=>{if(e.target===$("assetSessionModal")&&Date.now()-assetModalOpenedAt>450)closeAssetSessionModal();});   // 막 연 0.45초 안의 바깥 누름은 무시(칩 두 번 누름의 둘째 누름)
+/* 세션 줄 — 운영 탭 세션바와 같은 동작. 누르면 전환 · 보고 있는 칩을 누르거나 두 번 누르면 세션 설정 · ✕ 삭제 · '+ 세션' 추가 · 길게 눌러 끌면 순서. */
+function dgChipActivate(id){
+  id=String(id||'');
+  if(String((activeAssetSession()||{}).id||'')===id){ if($("assetSessionModal").hidden)editAssetSession('session'); return; }
+  selectAssetSession(id);
+}
 $("assetSessionChips").addEventListener("click",e=>{
+  if(Date.now()-dgDragEndAt<250)return;                  // 방금 순서만 바꿨다 — 전환이 아니다
   const d=e.target.closest("[data-asess-del]");if(d){e.stopPropagation();deleteAssetSession(d.dataset.asessDel);return;}
-  const b=e.target.closest("[data-asess]");if(b)selectAssetSession(b.dataset.asess||'');
+  if(e.target.closest("[data-asess-add]")){openAssetSessionModal();return;}
+  const b=e.target.closest("[data-asess]");if(b)dgChipActivate(b.dataset.asess||'');
 });
+$("assetSessionChips").addEventListener("dblclick",e=>{
+  if(e.target.closest("[data-asess-del]")||e.target.closest("[data-asess-add]"))return;
+  const b=e.target.closest("[data-asess]");if(!b)return;
+  const id=String(b.dataset.asess||'');
+  assetSwitchIdle().then(()=>{ if(String((activeAssetSession()||{}).id||'')===id&&$("assetSessionModal").hidden)editAssetSession('session'); });
+});
+(()=>{ const bar=$("assetSessionChips");
+  bar.addEventListener("touchstart",e=>{ if(e.touches.length!==1)return; const chip=dgDragChipOf(e.target); if(!chip)return;
+    const t=e.touches[0]; dgDragDown(chip,t.clientX,t.clientY,false); },{passive:true});
+  bar.addEventListener("touchmove",e=>{ const t=e.touches[0]; if(!t)return; if(dgDragMove(t.clientX,t.clientY))e.preventDefault(); },{passive:false});   // 집힌 뒤에만 스크롤을 막는다
+  ["touchend","touchcancel"].forEach(ev=>bar.addEventListener(ev,dgDragStop));
+  bar.addEventListener("contextmenu",e=>{ if(dgDragEl||dgDragStart)e.preventDefault(); });   // 집는 동안 길게누름 메뉴·글자 선택이 뜨지 않게
+  bar.addEventListener("mousedown",e=>{ if(e.button!==0)return; const chip=dgDragChipOf(e.target); if(!chip)return; dgDragDown(chip,e.clientX,e.clientY,true); });
+  window.addEventListener("mousemove",e=>{ if(dgDragStart||dgDragEl)dgDragMove(e.clientX,e.clientY); });
+  window.addEventListener("mouseup",()=>{ if(dgDragStart||dgDragEl)dgDragStop(); });
+})();
 $("alphaRecordFill").addEventListener("click",alphaOpenFillEditor);
 $("alphaCashAdd").addEventListener("click",alphaAddCashEvent);if($("alphaCashDate"))$("alphaCashDate").value=todayISO();
 $("alphaFillSave").addEventListener("click",alphaSaveFills);
@@ -3172,7 +3314,7 @@ renderHorizonCopy();renderDualGuardStrip(null);
 function planGate(on){
   const h=document.documentElement;
   h.classList.remove('plan-hydrating');
-  if(on){h.classList.add('authed');h.classList.remove('had-user');return;}
+  if(on){h.classList.add('authed');h.classList.remove('had-user');h.classList.remove('embed-dberr');return;}
   h.classList.remove('authed');h.classList.remove('had-user');
 }
 window.planLoginImpl=()=>{
@@ -3214,11 +3356,33 @@ function planLoginBoxReset(){
 }
 function showPlanDbRetry(e){
   planGate(false);
+  document.documentElement.classList.add('embed-dberr');   // 창 안에서도 '다시 연결' 상자는 보인다(로그인 상자가 아니라 DB 연결)
   const sub=document.querySelector('#authgate .gsub');if(sub)sub.textContent='로그인은 됐습니다 — Firebase DB 원장 연결만 실패했습니다. 아래 버튼으로 다시 연결하세요.';
   const er=$("gerr");
   if(er)er.textContent='로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다. 브라우저 저장본으로 대신 열지 않습니다 — '+((e&&e.message)||e||'연결 실패');
   const b=$("gbtn");
   if(b){b.disabled=false;b.textContent='Firebase DB 다시 연결';b.onclick=()=>window.planRetryDbImpl();}
+}
+/* 운영 › 듀얼 가드 창 안(같은 출처의 운영 화면 속)인가 */
+function planEmbedded(){ return document.documentElement.classList.contains('embed')&&window.parent!==window; }
+/* 창 안에서 이 화면의 Firebase 가 로그인을 못 찾았으면(첫 확인이 늦거나 이 창에서만 비어 있을 때) 운영 화면(부모 창)의 로그인을 그대로 이어받는다 —
+   다시 로그인하지 않는다(2026-11-09 사용자). 부모가 아직 로그인 전이면 로그인될 때까지 조용히 기다린다(로그인 상자를 띄우지 않는다). */
+let planAdoptTimer=null;
+async function planAdoptParentUser(){
+  try{
+    const P=window.parent,pu=P&&P.fb&&P.fb.auth&&P.fb.auth.currentUser;
+    if(!pu)return false;
+    await updateCurrentUser(auth,pu);   // 같은 Firebase 프로젝트의 로그인 — onAuthStateChanged 가 그 사용자로 다시 불린다
+    return !!auth.currentUser;
+  }catch(e){ console.warn('plan adopt parent login',e); return false; }
+}
+function planWaitParentUser(){
+  const h=document.documentElement;h.classList.add('had-user');
+  const n=$('bwText');if(n)n.textContent='운영 화면 로그인을 이어받는 중…';
+  if(planAdoptTimer)return;
+  const tick=async()=>{ if(auth.currentUser){clearInterval(planAdoptTimer);planAdoptTimer=null;return;}
+    if(await planAdoptParentUser()){clearInterval(planAdoptTimer);planAdoptTimer=null;} };
+  planAdoptTimer=setInterval(tick,1500);tick();
 }
 window.planRetryDbImpl=async()=>{
   const user=auth.currentUser;
@@ -3233,6 +3397,7 @@ onAuthStateChanged(auth,async user=>{
   window.__planAuthResolved=true;   // Firebase 가 답했다 — 8초 타이머가 '늦어지고 있습니다'를 달지 않게
   window.__planAuthUser=!!user;     // 로그인됐다 — 8초 타이머가 로그인 상자를 띄우지 않게(원장 읽는 중)
   /* 로그인 전에는 아무것도 열지 않는다 — 본문을 숨기고, 클라우드 장부·시세 로딩도 시작하지 않는다. */
+  if(!user&&planEmbedded()){ planWaitParentUser(); return; }   // 운영 › 듀얼 가드 창 안 — 로그인 상자 대신 운영 화면 로그인을 이어받는다
   if(!user){ planLoginBoxReset(); planGate(false); userBadge(null); JKAccess.hide(); JKAccess.setAdmin(false); JKAccess.cacheSet(null); return; }
   planBootNote('로그인은 확인됐습니다. 이용 승인 확인 중…');
   /* 승인된 계정만 연다. 승인 대기·거절·확인 실패면 본문을 열지 않고 그 화면으로 덮는다(열린 뒤 취소돼도 덮는다). */
