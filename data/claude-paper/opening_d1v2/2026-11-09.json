@@ -1,0 +1,83 @@
+{
+  "date": "2026-11-09",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": 1.904311573356151,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "하나머티리얼즈",
+      "code": "166090",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 35950,
+      "exitTime": "10:00 매도",
+      "exitPrice": 37000,
+      "qty": 0,
+      "pnlPct": 2.273477051460365,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:13",
+        "expectedPrice": 27400,
+        "basePrice": 36700,
+        "expectedGapPct": -25.34059945504087,
+        "rsi14Prev": 26.642,
+        "qualified": 61,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "에이프릴바이오",
+      "code": "397030",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 10560,
+      "exitTime": "10:00 매도",
+      "exitPrice": 10840,
+      "qty": 0,
+      "pnlPct": 2.137424242424251,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:13",
+        "expectedPrice": 8200,
+        "basePrice": 10700,
+        "expectedGapPct": -23.364485981308412,
+        "rsi14Prev": 26.274,
+        "qualified": 61,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "유진테크",
+      "code": "084370",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 71800,
+      "exitTime": "10:00 매도",
+      "exitPrice": 73200,
+      "qty": 0,
+      "pnlPct": 1.3020334261838369,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:13",
+        "expectedPrice": 58800,
+        "basePrice": 73600,
+        "expectedGapPct": -20.108695652173914,
+        "rsi14Prev": 27.07,
+        "qualified": 61,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "메인 매매일(통과 61종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-11-10T05:02:10.895428+09:00"
+}
