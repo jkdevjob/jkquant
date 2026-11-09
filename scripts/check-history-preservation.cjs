@@ -212,5 +212,59 @@ const sheetCase=()=>{
     ok('운영 저장: 원장 문자열을 한 번만 만들어도 저장 원장 = 기준본 = 마지막 저장본 · 화면 원장은 그대로 · 저장 시각 갱신',
       okSave===true && C.lastPushedJSON===JSON.stringify(stored) && JSON.stringify(C.stateDbBase)===JSON.stringify(stored)
       && JSON.stringify(C.S)===before && stored._updated>=t0 && JSON.stringify({...stored,_updated:5})===before && docs.get('users/u1').stateV2Rev===1); }
+  /* 저장 뒤 합치기 — 값이 undefined 인 칸(2026-11-09 사용자 화면 "클라우드 저장에 실패했습니다 — "undefined" is not valid JSON").
+     모의 목록 계산(paperFillAll)이 듀얼 가드 묶음(S.plan)에 없는 active 칸을 undefined 로 되돌려 만들고, 다른 창이 먼저 저장한
+     원장과 합칠 때 JSON.parse(undefined) 로 터졌다 — DB 저장은 됐지만 실패로 보이고 이 창은 다른 창 변경을 못 받았다. */
+  const r3={ts:3,date:'2026-09-03',kind:'1회매수',price:9,qty:1};
+  const undefSave=async src=>{
+    const names=['_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey','_histEntries','_rebaseRecordArray','_statePlainObject','_stateValEq','_rebaseObjectFields','_rebaseStateOnRemote',
+      '_historySignature','_stateHistoryMap','validState','dbPlanWrite','fsDocParts','fsDocBytes','fsValueBytes','utf8Len','_staleStateGuard'];
+    const base={activeTab:'inf',_updated:5,inf:{active:'i1',sessions:[{id:'i1',hist:[r1]}]},vr:{active:'v',sessions:[{id:'v',hist:[]}]},ma:{sessions:[]},ivs:{sessions:[]},dca:{sessions:[]},asap:{sessions:[]},plan:{sessions:[],activeByHorizon:{}}};
+    const remote=JSON.parse(JSON.stringify(base));remote.inf.sessions[0].hist.push(r2);remote._updated=6;   // 다른 창이 먼저 저장(판 3)
+    const docs=new Map([['users/u1',{stateV2:remote,stateV2Rev:3}]]),errs=[];
+    const C=vm.createContext({console:{error(){},warn(){},log(){}},JSON,Date,Math,Map,Set,Object,Array,String,
+      setSync:()=>{},dbSizeReport:(b,e)=>{if(e)errs.push(String(e&&e.message||e));},dbErrKind:()=>'other',dbErrBytes:()=>0,ensureBoxes:()=>{},refreshAll:()=>{},pushRemoteNow:async()=>true,
+      sortHist:a=>a.sort((x,y)=>String(x.date||'').localeCompare(String(y.date||''))||((x.ts||0)-(y.ts||0))),
+      window:{fb:{db:{},doc:(db,...p)=>({path:p.join('/')}),deleteField:()=>null,
+        runTransaction:async(db,f)=>{const w=[];const out=await f({get:async r=>({exists:()=>docs.has(r.path),data:()=>JSON.parse(JSON.stringify(docs.get(r.path)))}),set:(r,d)=>w.push([r.path,d])});
+          for(const [k,d] of w)docs.set(k,JSON.parse(JSON.stringify({...(docs.get(k)||{}),...d})));return out;}}}});
+    const local=JSON.parse(JSON.stringify(base));local.inf.sessions[0].hist.push(r3);
+    vm.runInContext(names.map(n=>fn(src,'function '+n+'(')).join('\n')+'\n'+fn(src,'async function _commitStateRemote(where)')
+      +"\nconst DB_DOC_LIMIT=1048576, DB_DOC_WARN=Math.round(DB_DOC_LIMIT*0.8), DB_LEGACY_KEYS=['state','updated','stateRev'];"
+      +"\nvar S="+JSON.stringify(local)+";S.plan.active=undefined;S.inf.sessions[0].memo=undefined;"   // 모의 목록 계산 뒤 모습(undefined 칸)
+      +"\nvar curUid='u1',stateCloudHydrated=true,stateCloudRev=2,stateCloudHistorySig='',stateDbBase="+JSON.stringify(base)+",stateCloudPending=true,lastPushedJSON='',_dbPlan=null,_dbForceArchive=false,_dbArchiveBlocked=false,_dbArchivedNote='';",C);
+    const okSave=await C._commitStateRemote('t'),stored=docs.get('users/u1');
+    return {okSave,errs,stored,S:C.S,rev:C.stateCloudRev};
+  };
+  const undefOk=R=>R.okSave===true&&!R.errs.length&&R.stored.stateV2Rev===4&&R.rev===4
+    &&JSON.stringify(R.stored.stateV2.inf.sessions[0].hist.map(x=>x.ts))==='[1,2,3]'          // 다른 창 기록(2) + 이 창 기록(3) 둘 다 DB 에
+    &&JSON.stringify(R.S.inf.sessions[0].hist.map(x=>x.ts))==='[1,2,3]'                      // 이 창 장부도 다른 창 기록을 받는다
+    &&!Object.prototype.hasOwnProperty.call(R.S.plan,'active')&&!('active' in R.stored.stateV2.plan);   // undefined 칸을 다시 만들지 않는다
+  { const R=await undefSave(idx);
+    ok('저장 뒤 합치기: undefined 칸(S.plan.active · 세션 memo)이 있어도 성공 — 오류 없음 · DB = 다른 창 기록 + 이 창 기록 · 이 창도 합친 장부 · active 칸 안 만듦',undefOk(R)); }
+  /* 모의 목록 계산(paperFillAll) 뒤 S.plan 에 active 칸이 생기지 않는다 — 듀얼 가드 모의 세션만 있는 경우를 그대로 돌린다 */
+  const fillPlan=async src=>{
+    const C=vm.createContext({console:{error(){},warn(){},log(){}},JSON,Date,Math,Map,Set,Object,Array,String,Promise,performance:{now:()=>0},
+      S:{activeTab:'inf',inf:{active:'i1',sessions:[{id:'i1',hist:[]}]},plan:{sessions:[{id:'p1',paper:true,hist:[]}],activeByHorizon:{}}},
+      PAPER_TABS:[['inf','무한매수법'],['plan','듀얼 가드']],_paperFilling:false,_paperSliceAt:0,_fillQuoteCache:null,lastQuote:{},
+      infQuoteCache:null,maQuoteData:null,ivsQuoteData:null,ivsQuote1:null,dcaQuoteData:null,asapQuoteData:null,infChartData:null,vrChartData:null,
+      pfWanted:x=>!!x&&!x.paper,paperLoadingProgress(){},paperPrefetchQuotes:async()=>{},paperBreathe:async()=>{},planPaperRetired:()=>false,
+      loadPlanPaperData:async()=>{},replayPlanPaper(){},paperStatPlan:()=>({tab:'plan'})});
+    vm.runInContext(fn(src,'async function paperFillAll(opt)'),C);
+    const rows=await C.paperFillAll({});
+    return {rows,plan:C.S.plan,inf:C.S.inf};
+  };
+  { const R=await fillPlan(idx);
+    ok('모의 목록 계산 뒤 S.plan 에 active 칸이 생기지 않음(듀얼 가드 묶음엔 원래 없다) · 다른 탭 active 는 그대로',
+      R.rows.length===1&&!Object.prototype.hasOwnProperty.call(R.plan,'active')&&R.inf.active==='i1'); }
+  /* 변이 — 옛 코드로 되돌리면 빨간불 */
+  { const MUT=[
+      ['합치기: undefined 칸도 있는 칸으로 봄(옛 코드)',s=>s.replace("const has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k)&&o[k]!==undefined;","const has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);"),src=>undefSave(src).then(R=>!undefOk(R))],
+      ['저장 뒤: 이 창 active 를 undefined 라도 덮음(옛 코드)',s=>s.replace("if(next[t]&&current[t]&&current[t].active!==undefined)next[t].active=current[t].active;","if(next[t]&&current[t])next[t].active=current[t].active;"),src=>undefSave(src).then(R=>!undefOk(R))],
+      ['모의 목록: S.plan 에 active=undefined 를 만듦(옛 코드)',s=>s.replace("if(prevAct===undefined) delete box.active; else box.active=prevAct;","box.active=prevAct;"),src=>fillPlan(src).then(R=>Object.prototype.hasOwnProperty.call(R.plan,'active'))],
+    ];
+    for(const [name,mut,red] of MUT){ const m=mut(idx); assert.notEqual(m,idx,'변이 대상 없음: '+name);
+      let isRed=false; try{ isRed=await red(m); }catch(e){ isRed=true; }
+      ok('변이 빨간불: '+name,isRed); } }
   console.log('ALL HISTORY PRESERVATION CHECKS PASS');
 })().catch(e=>{console.error(e);process.exit(1);});

@@ -1,5 +1,15 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 클라우드 저장 실패 "undefined" is not valid JSON · v3.122.2
+
+- 재현: `check-history-preservation.cjs` 가 실제 저장 함수(`_commitStateRemote`)를 가짜 Firestore 로 돌린다.
+  - 상황: 다른 창이 먼저 저장(판 3 · 기록 2) · 이 창은 기록 3 추가 · 모의 목록 계산 뒤 모습(`S.plan.active=undefined` · 세션 `memo=undefined`).
+  - 옛 코드(배포된 v3.122.1): 오류 `"undefined" is not valid JSON`(사용자 화면 문구 그대로) · 저장 함수 실패 반환 · DB 는 판 4 로 저장됨 · 이 창 장부는 [1,3] (다른 창 기록 2 를 못 받음).
+  - 고친 코드: 오류 없음 · DB [1,2,3] · 이 창 장부 [1,2,3] · `S.plan` 에 active 칸 없음.
+- 모의 목록 계산(`paperFillAll` 실제 함수 · 듀얼 가드 모의 세션) 뒤 `S.plan` 에 active 칸이 생기지 않음 · 무매 active 그대로.
+- 변이 3종 빨간불: 합치기 옛 코드 · 저장 뒤 active 덮기 옛 코드 · 모의 목록 옛 되돌리기.
+- 미확인: 사용자 화면에서 새로고침 뒤 오류가 다시 안 뜨는지.
+
 ## 2026-11-09 · 듀얼 가드 '현재 투자중' 이름 바꾸기 · v3.122.1 (플랜 v2.5.1)
 
 - 고치기 전 확인(로컬 브라우저 · 배포된 v3.122.0 코드)
@@ -15,6 +25,7 @@
 - check-portfolio 41/41 · check-plan-claude-tab 14/14 통과.
 - 전체 회귀 2830 PASS / 0 FAIL. `check-before-push` 57단계 전부 PASS — 전체 검증(외부 빌드·Worker dry-run 포함 · `--offline` 아님).
 - 미확인: 실제 계정에서 이름 바꾼 뒤 다른 기기로 열기 · iPhone Safari.
+- 병합 뒤(6c69981) 운영 확인: curl 운영 v3.122.1(두 곳) · /plan v2.5.1 · '현재 투자중' 이름 코드 있음 · index·plan 해시가 로컬과 같다. GitHub regression 통과(06:02~06:04 UTC).
 
 ## 2026-11-09 · 운영 › 듀얼 가드 탭을 다른 운영 탭처럼 · v3.122.0 (플랜 v2.5.0)
 

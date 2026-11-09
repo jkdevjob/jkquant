@@ -683,7 +683,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.122.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.122.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1802,7 +1802,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.122.1</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.122.2</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -8279,7 +8279,7 @@ async function paperFillAll(opt){
         }catch(e){ console.error('paperFill',tab,e); }
         _tick();
       }
-      box.active=prevAct;
+      if(prevAct===undefined) delete box.active; else box.active=prevAct;   // 듀얼 가드 묶음(S.plan)엔 active 칸이 없다 — undefined 칸을 새로 만들지 않는다
     }
   } finally {
     S.activeTab=prevTab;
@@ -11412,10 +11412,14 @@ function _stateValEq(a,b){
 function _rebaseObjectFields(base,candidate,remote,skip){
   const B=_statePlainObject(base)?base:{},C=_statePlainObject(candidate)?candidate:{},R=_statePlainObject(remote)?remote:{};
   const out=JSON.parse(JSON.stringify(R)), omit=skip||new Set();
+  /* 값이 undefined 인 칸은 '없음'이다 — 저장(JSON)이 빼고 쓰는 것과 같은 뜻. 예전엔 있는 칸으로 보고 JSON.parse(undefined) 로 복사하다 터졌다
+     (2026-11-09 사용자 화면 "클라우드 저장에 실패했습니다 — "undefined" is not valid JSON": 저장 뒤 다른 창 변경을 이 창 장부에 합칠 때 —
+     DB 저장은 됐지만 실패로 보이고, 이 창이 다른 창 변경을 못 받아 다음 저장마다 같은 오류가 났다). */
+  const has=(o,k)=>Object.prototype.hasOwnProperty.call(o,k)&&o[k]!==undefined;
   const keys=new Set([...Object.keys(B),...Object.keys(C)]);
   for(const k of keys){
     if(omit.has(k))continue;
-    const bh=Object.prototype.hasOwnProperty.call(B,k), ch=Object.prototype.hasOwnProperty.call(C,k), rh=Object.prototype.hasOwnProperty.call(R,k);
+    const bh=has(B,k), ch=has(C,k), rh=has(R,k);
     if(!ch){
       if(bh)delete out[k];                 // 이 탭에서 실제 삭제
       continue;                            // base에도 없으면 untouched → remote 유지
@@ -11519,7 +11523,7 @@ async function _commitStateRemote(where){
       const current=S, next=_rebaseStateOnRemote(submitted,current,candidate);
       next.activeTab=current.activeTab;
       for(const t of ['inf','vr','ma','ivs','dca','asap','plan']){
-        if(next[t]&&current[t])next[t].active=current[t].active;
+        if(next[t]&&current[t]&&current[t].active!==undefined)next[t].active=current[t].active;
       }
       S=next;ensureBoxes();try{refreshAll();}catch(e){console.warn('db rebase refresh',e);}
     }
