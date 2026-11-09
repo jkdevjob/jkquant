@@ -32,6 +32,22 @@
        목록 맨 끝에 둔다: 텐배거 숨김 시험의 변이가 파일의 첫 ',navHidden:true'(텐배거)를 지운다. */
     {path:'/plan',label:'듀얼가드',mode:'public',order:21,navHidden:true}
   ];
+  /* 하위 탭 정책 — 메뉴마다 그 화면의 탭을 공개/관리자만/숨김 · 순서(2026-11-09 사용자: "각 메뉴별로 하위탭들도 숨기거나 위치 변경 가능하게 하자").
+     같은 settings/siteMenu 문서의 subs 칸({경로: {탭 키: {mode, order}}})에 둔다. 화면에서만 가린다 — 데이터 권한은 그대로다.
+     지금 열려 있는 탭은 숨김이어도 다른 탭으로 옮길 때까지 보인다(옛 ASAP 규칙과 같음 · 갑자기 빈 화면이 되지 않게).
+     관리자 화면의 탭은 넣지 않는다 — '메뉴 관리'를 숨겨 스스로 잠그는 일이 없게. 목록은 각 페이지의 실제 탭과 같아야 한다(시험 S4).
+     items: [탭 키, 이름, 기본 공개범위(없으면 공개)] — 기본 순서는 페이지 HTML 순서. */
+  var SUB_TABS={
+    '/':{sel:'.tabs .tab[data-t]',attr:'data-t',items:[['dg','듀얼가드'],['inf','무한매수법'],['vr','밸류리밸런싱'],['ma','로테이션'],['ivs','섀넌'],['dca','적립·거치'],['asap','ASAP','hidden']]},
+    '/scalping':{sel:'.strategy-tabs .strategy-tab[data-strategy]',attr:'data-strategy',items:[['daily','📅 오늘'],['opening','⚡ 시초가 돌파'],['daytrading','📈 데이트레이딩'],['closing30','🌇 종가 30분'],['closing_bet','🌙 개별 종목 종가 베팅'],['crypto','₿ 비트코인'],['soxl','⚡ SOXL'],['tenbagger','🔟 텐배거 연구'],['duel','🆚 클로드 대결'],['trades','📚 전체 매매이력']]},
+    '/claude':{sel:'#tabs .tab[data-tab]',attr:'data-tab',items:[['today','📅 오늘'],['opening','⚡ 시초가'],['daytrading','📈 데이트레이딩'],['crypto','₿ 비트코인'],['soxl','⚡ SOXL'],['close30','⏰ 종가 30분'],['tenbagger','🔟 텐배거'],['duel','🆚 GPT 대결']]},
+    '/realestate':{sel:'#tabs .tab[data-tab]',attr:'data-tab',items:[['claude','🤖 클로드'],['gpt','⚡ 지피티']]},
+    '/job':{sel:'#tabs .tab[data-cat]',attr:'data-cat',items:[['all','전체'],['java_ai','Java·AI'],['regular_dev','개발자 정규직'],['salary500','월 500+'],['salary450','월 450~499'],['short_term','단기알바'],['scrap','★ 스크랩'],['applied','✓ 지원완료']]},
+    '/settings':{sel:'.tabs .tab[data-settings-tab]',attr:'data-settings-tab',items:[['notifications','🔔 알림'],['paper','🧪 모의투자']]},
+    '/workout':{sel:'.mode-tabs [data-mode]',attr:'data-mode',items:[['round','라운드'],['tabata','타바타'],['stopwatch','스톱워치']]}
+  };
+  var SUB_ALIAS={'/portfolio':'/','/paper':'/'};   // 운영 파일(index.html)이 포트폴리오·모의도 그린다 — 탭 줄은 같은 것
+  var SUB_MODES=['public','admin','hidden'];
   var menuCache=null, menuSeq=0;
   /* 메뉴 순서·표시는 DB 설정(settings/siteMenu)을 읽어야 안다. 그 전엔 페이지 HTML 의 기본 순서라,
      페이지를 옮기자마자 ☰ 를 누르면 기본 순서가 보였다가 잠시 뒤 바뀌었다(2026-10-12 사용자).
@@ -57,9 +73,13 @@
              '/claude.html':'/claude','/tenbagger.html':'/tenbagger','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/swim.html':'/swim','/workout.html':'/workout','/settings.html':'/settings','/admin.html':'/admin'};
     return map[p]||p;
   }
+  function subDefaults(){
+    var s={}; Object.keys(SUB_TABS).forEach(function(p){ s[p]={}; SUB_TABS[p].items.forEach(function(it,i){ s[p][it[0]]={mode:it[2]||'public',order:(i+1)*10}; }); });
+    return s;
+  }
   function menuDefaults(){
     var items={}; MENU_ITEMS.forEach(function(x){items[x.path]={mode:x.mode,order:x.order};});
-    return {items:items,updatedAt:0,updatedBy:''};
+    return {items:items,subs:subDefaults(),updatedAt:0,updatedBy:''};
   }
   function normalizeMenuConfig(data){
     var d=menuDefaults(),src=data&&data.items&&typeof data.items==='object'?data.items:{};
@@ -71,8 +91,37 @@
       if(x.after&&!src[x.path]&&src[x.after]&&Number.isFinite(+src[x.after].order)) order=+src[x.after].order+5;
       d.items[x.path]={mode:mode,order:order};
     });
+    /* 하위 탭 — 모르는 키는 버리고, 없는 키는 기본값. 저장된 순서가 있는 페이지에 새로 생긴 탭은 맨 뒤(1000+)로 */
+    var ss=data&&data.subs&&typeof data.subs==='object'?data.subs:{};
+    Object.keys(SUB_TABS).forEach(function(p){
+      var sp=ss[p]&&typeof ss[p]==='object'?ss[p]:{}, saved=Object.keys(sp).length>0;
+      SUB_TABS[p].items.forEach(function(it,i){
+        var v=sp[it[0]]||{};
+        d.subs[p][it[0]]={mode:SUB_MODES.indexOf(v.mode)>=0?v.mode:(it[2]||'public'),order:Number.isFinite(+v.order)?+v.order:(i+1)*10+(saved?1000:0)};
+      });
+    });
     d.updatedAt=+(data&&data.updatedAt)||0; d.updatedBy=String(data&&data.updatedBy||'');
     return d;
+  }
+  function subPage(path){ var p=menuPath(path); return SUB_ALIAS[p]||p; }
+  /* 페이지 하나의 하위 탭 — 순서대로 [{key,label,mode,order,visible}] · visible = 공개 또는 (관리자만 & 관리자) */
+  function subTabState(cfg,page,admin){
+    var def=SUB_TABS[page]; if(!def) return [];
+    var conf=(cfg&&cfg.subs&&cfg.subs[page])||{};
+    return def.items.map(function(it,i){
+      var v=conf[it[0]]||{}, mode=SUB_MODES.indexOf(v.mode)>=0?v.mode:(it[2]||'public');
+      return {key:it[0],label:it[1],mode:mode,order:Number.isFinite(+v.order)?+v.order:(i+1)*10,visible:mode==='public'||(mode==='admin'&&!!admin),i:i};
+    }).sort(function(a,b){ return a.order-b.order||a.i-b.i; });
+  }
+  /* 지금 페이지의 탭 단추에 적용 — 숨김은 클래스(지금 열린 탭은 CSS 가 남김) · 순서는 CSS order(단추를 옮기지 않는다 · 각 페이지의 탭 코드는 그대로) */
+  function applySubTabs(user,cfg){
+    var page=subPage(location.pathname), def=SUB_TABS[page]; if(!def) return;
+    var by={}; subTabState(cfg,page,isAdminEmail(user&&user.email)).forEach(function(x,i){ by[x.key]={visible:x.visible,rank:i+1}; });
+    Array.prototype.forEach.call(document.querySelectorAll(def.sel),function(b){
+      var r=by[b.getAttribute(def.attr)]; if(!r) return;   // 목록에 없는 탭은 손대지 않는다
+      b.classList.toggle('jk-sub-hidden',!r.visible); b.style.order=String(r.rank);
+    });
+    document.documentElement.classList.add('jk-subtabs-ready');
   }
   function readMenuConfig(fb){
     return fb.getDoc(fb.doc(fb.db,'settings','siteMenu')).then(function(snap){
@@ -136,6 +185,7 @@
         }
       }
     });
+    try{ applySubTabs(user,cfg); }catch(e){ console.warn('sub tabs',e); }
     menuWaitEnd();
   }
   async function applyMenuConfig(user,fb,opt){
@@ -229,6 +279,7 @@
   }).join('') // 인증/DB 응답 전과 메뉴 대기 한도 뒤에도 통합된 메뉴는 숨긴다.
    +'html:not(.jk-admin) a[href="/scalping"],html:not(.jk-admin) a[href="/claude"],html:not(.jk-admin) a[href="/admin"]{display:none!important}'
    +'.jk-menu-hidden{display:none!important}'
+   +'.jk-sub-hidden:not(.on):not([aria-selected="true"]){display:none!important}'   // 숨긴 하위 탭 — 지금 열린 탭은 옮길 때까지 남긴다
    +'html.jk-guard:not(.jk-ok) body{overflow:hidden}'
    +'html.jk-guard:not(.jk-ok) body>*:not(#jkgate){visibility:hidden}'
    +'#jkgate{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:24px;'
@@ -431,5 +482,5 @@
                    bindAdminApprovalPush:bindAdminApprovalPush,
                    cacheOk:cacheOk, cacheSet:cacheSet, setAdmin:setAdmin, show:show, hide:hide, showing:showing, guard:guard,
                    menuPath:menuPath, menuDefaults:menuDefaults, normalizeMenuConfig:normalizeMenuConfig, loadMenuConfig:loadMenuConfig,
-                   applyMenuConfig:applyMenuConfig, menuAccess:menuAccess};
+                   applyMenuConfig:applyMenuConfig, menuAccess:menuAccess, SUB_TABS:SUB_TABS, subPage:subPage, subTabState:subTabState, applySubTabs:applySubTabs};
 })();

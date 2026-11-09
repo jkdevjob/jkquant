@@ -68,8 +68,9 @@ span.badge{display:inline-block;padding:2px 8px;margin:0;border:0;border-radius:
 .tab[data-t="ivs"].on{background:linear-gradient(135deg,#b4407f,#7a2453)}
 .tab[data-t="dg"].on{background:linear-gradient(135deg,#7c3aed,#4c1d95)}
 /* ASAP 탭은 숨긴다(2026-11-09 사용자: '운영메뉴 탭이 너무 꽉차면 제일 성과없는 asap 탭을 숨기고'). 기록·코드는 그대로 —
-   모의 목록·포트폴리오에서 그 세션을 누르면 열리고, 열려 있는 동안만 탭이 보인다. */
-.tab[data-t="asap"]:not(.on){display:none}
+   모의 목록·포트폴리오에서 그 세션을 누르면 열리고, 열려 있는 동안만 탭이 보인다.
+   이제 관리자 › 메뉴 관리의 하위 탭 정책(jk-access.js SUB_TABS · ASAP 기본 '전체 숨김')이 정한다 — 이 줄은 정책을 받기 전까지만 가린다. */
+html:not(.jk-subtabs-ready) .tab[data-t="asap"]:not(.on){display:none}
 /* 운영 › 듀얼가드 — 플랜 화면(/plan?embed=1)을 그대로 넣는다(화면·장부·저장 한 벌). 창 높이는 화면에 맞추고 안에서 스크롤한다 —
    창 안의 확인 상자(세션 설정 등)가 늘 보이게. 세션바·상태줄·기록 버튼은 이 전략 것이 아니라 숨긴다. */
 section#dg{padding:0}
@@ -701,7 +702,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.124.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.125.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1820,7 +1821,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.124.0</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.125.0</b> · 2026-11-09</div>
   </footer>
 </div>
 
