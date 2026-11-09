@@ -11,7 +11,18 @@
 - check-history-preservation · check-login-quote-paper 통과.
 - `check-login-quote-paper.cjs` ALL PASS — 새 'P2 지난 목록 캐시 판 ≥7': 판 6 지난 목록(ASAP 줄)은 실패 대체 화면에도 안 씀 · 지금 판은 씀. 판 6 으로 되돌린 파일에선 이 시험이 FAIL(변이 확인).
 - `check-plan-claude-tab.cjs` ALL PASS · 변이 23/23 — E1 이 영어 '5 YEAR'·'5-YEAR' 도 본다(사용자 화면 '5 YEAR · DUAL GUARD'). D4 캐시 판 ≥7 · 변이 판 7→6 빨간불.
+- `check-before-push` **57/57 PASS**(main #627 합치기 전 트리 · 2410ccc). 검사 중 회귀 시험 설명 글자의 작은따옴표가 문자열을 끊어 regression-check.js 가 문법 오류로 시작도 못 하던 것을 찾아 고침(2410ccc · 이번 판 795eb2d 에서 생김) — 회귀 단계(55/57) ALL PASS.
 - 운영 파일 확인(v3.123.2 · 듀얼가드 v2.5.3, 병합 전): 띄어 쓴 '듀얼 가드' 0 · 화면 '5년 플랜' 0(주석만) · '5 YEAR' 2(이번에 지움). 사용자 화면의 나머지 옛 글자는 새로고침 전 예전 판.
+
+## 2026-11-09 · 지피티 G1 BTC 재현·시간순 검증
+
+- 395완료일×2후보 **790회 운영/연구 함수 일치·차이0**. 원천 결손은 제외, 원본/장부 덮어쓰기 없음.
+- 11/8 12:35→12:40→13:35 순손익 **−0.1737876974%**는 실제 일일 운영 API 확정1건과 일치. 누적 history API timeout에 따른 CSV 대체/11/8 누락은 별도 미해결.
+- G1 값 시험 PASS: 완료세션·실제 API·시간순 구간 비중복270일·명시 비용 스트레스. 3변이 감지 PASS(거래량되돌림40건·동일봉진입390건·비용제거390건 결과 차이).
+- 보고 schema 검증 PASS, `tests/gpt-morning-report.test.mjs` **19 PASS / 0 FAIL**. 준비 workflow `42578532171` 성공; 서버 응답 ok:true·duplicate:true·queued:null·dueAt:null. 기발송 준비 미완료 영수증 push1/1·Telegram sent이며 지연 연구 전송·기기 수신을 확인한 것이 아님.
+- 부분 UTC 보존 수정: 실제 파일 쓰기/읽기 **값3·변이3 PASS**. 옛 자료 폐기·옛 정본만 읽기·같은 스냅샷 덮어쓰기 복귀를 모두 감지. 부분 자료 수정본을 별도 해시로 보존하고 수집 시각순으로 읽으며 정본 겹침 우선·중복0도 확인했다.
+- 실제 원천을 별도 임시 폴더에 쓴 결과: UTC11/7 정본 바이트 불변, 부분 UTC 원본으로 **KST11/8 288봉·기준 손익−0.1737876974%·그림자 날짜 복원 PASS**. 운영 장부는 변경하지 않았다. 수정 뒤 G1 395일×2 대조/3변이 재실행 PASS, 기존 BTC 경계와 daily1 shadow 시험 PASS.
+- 전체 검사: Windows check-before-push는 14/57의 리눅스 전용 Git 경로/충돌 재현 환경에서 중단(로컬 전체 PASS 아님). 동일한 정본 `check.yml`을 Linux에서 실행한 [42581591143](https://github.com/jkdevjob/jkquant/actions/runs/42581591143)은 **57단계 전부 PASS**, 엔진 회귀 **2,830 PASS / 0 FAIL**(검증 head `fd4014d2`). 공용 검사에 포함된 GPT·Claude 양쪽 기존 시험과 새 BTC 값3/변이3도 성공했다. 이후 합친 최신 main을 포함한 PR 최종 CI는 별도 확인한다.
 
 ## 2026-11-09 · 화면 글자 '플랜' → '듀얼가드' · v3.123.2 (듀얼가드 v2.5.3)
 
