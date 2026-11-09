@@ -51,12 +51,10 @@ html.embed .wrap{padding-top:10px}
 .mi{width:18px;text-align:center}
 .hero{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px}   /* 다음 단계 안내 카드는 뺐다(2026-10-07 사용자 요청) — 단계 카드 하나가 전체 폭 */
 .plan-tabs{position:sticky;top:0;z-index:50;background:rgba(15,19,32,.96);backdrop-filter:blur(10px);display:flex;gap:7px;overflow-x:auto;padding:9px 0 10px;margin:-2px 0 12px;-webkit-overflow-scrolling:touch}
-.plan-tab,.ai-tab{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:9px 13px;font-weight:800;font-size:12px}
-.plan-tab.on,.ai-tab.on{background:var(--accent);border-color:var(--accent);color:white}
+.plan-tab{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:9px 13px;font-weight:800;font-size:12px}
+.plan-tab.on{background:var(--accent);border-color:var(--accent);color:white}
 .plan-panel{display:none}.plan-panel.on{display:block}
-/* 🤖 클로드 / ⚡ 지피티 탭 (텐배거·부동산과 같은 방식) · 듀얼 가드 한눈에 띠 */
-.ai-tab{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;font-size:13px}
-.ai-pane[hidden]{display:none!important}
+/* 듀얼 가드 한눈에 띠 (클로드/지피티 탭은 2026-11-09 사용자 지시로 없앴다 — 클로드 화면 하나) */
 .dg-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .dg-ver{font-size:11px;font-weight:900;color:var(--gold);border:1px solid rgba(245,196,81,.45);border-radius:999px;padding:2px 8px;letter-spacing:.02em}
 .dg-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px}
@@ -338,7 +336,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼 가드 <span class="ver">v2.2.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼 가드 <span class="ver">v2.3.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -361,13 +359,8 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
     </div>
   </div>
 
-  <nav class="plan-tabs" id="aiTabs" role="tablist" aria-label="자산플랜 담당">
-    <button class="ai-tab on" data-ai="claude" role="tab" aria-selected="true" aria-controls="pane-claude">🤖 클로드</button>
-    <button class="ai-tab" data-ai="gpt" role="tab" aria-selected="false" aria-controls="pane-gpt" tabindex="-1">⚡ 지피티</button>
-  </nav>
-
-  <!-- 🤖 클로드 탭 전용 — 화면은 #pane-claude · 매매 규칙은 plan-session-engine.js(STRATEGY '듀얼 가드') · 연구는 research/daily 브랜치 research/im_plan/ -->
-  <div class="ai-pane" id="pane-claude" role="tabpanel" aria-label="클로드 5년 플랜 · 듀얼 가드">
+  <!-- 듀얼 가드(클로드 담당) — 매매 규칙은 plan-session-engine.js(STRATEGY '듀얼 가드') · 연구는 research/daily 브랜치 research/im_plan/.
+       클로드/지피티 탭은 2026-11-09 사용자 지시("듀얼가드 클로드 지피티는 탭 삭제해 너꺼 하나로 갈거야")로 없앴다 — 화면 하나. -->
   <div class="hero">
     <section class="card">
       <div class="stage-head">
@@ -551,13 +544,6 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
     </div>
   </div>
 
-  </div><!-- /#pane-claude -->
-
-  <!-- ⚡ 지피티 탭 전용 — 클로드 탭의 화면·장부·엔진(plan-session-engine.js)과 섞지 않는다. 내용은 plan-gpt.js 가 그린다. -->
-  <div class="ai-pane" id="pane-gpt" role="tabpanel" aria-label="지피티 자산플랜" hidden>
-    <div id="planGptRoot"><section class="card gpt-empty"><h2>⚡ 지피티 자산플랜</h2><div class="sub">지피티 탭을 불러오는 중…</div></section></div>
-  </div>
-  <script src="/plan-gpt.js?v=1.0.0" defer></script>
 
   <div class="plan-panel" data-ppanel="classic" hidden aria-hidden="true" style="display:none">
     <div class="guidehero">
@@ -910,7 +896,7 @@ const PATH_DEFAULTS={
   alpha:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01},
   classic:{infWeight:.50,vrWeight:.50,infDiv:20,infTarget:20,infBig:20,infReverse:false,infRows:3,vrG:11,vrBand:35,vrFormula:'basic',vrStockPct:.60,vrPoolLimit:.50}
 };
-/* 🤖 클로드 탭 — 5년 플랜 하나(2026-11-08 사용자: "10·15·20년은 삭제하고 · 현재 5년 플랜 전략 이름도 정하고").
+/* 듀얼 가드(클로드 담당) — 5년 플랜 하나(2026-11-08 사용자: "10·15·20년은 삭제하고 · 현재 5년 플랜 전략 이름도 정하고").
    이름·판 번호·요약은 엔진(plan-session-engine.js STRATEGY)이 정본이다 — 플랜 화면과 모의 목록이 같은 글자를 쓴다. */
 function planStrategy(){const E=window.JKPlanSessionEngine;return (E&&E.STRATEGY)||{key:'dualGuard',name:'듀얼 가드',version:'1.0',since:'2026-11-08',summary:'TECL 역분산 70% + TQQQ 추세 Guard 30% + SGOV'};}
 function planStrategyLabel(){const P=planStrategy();return P.name+' v'+P.version;}
@@ -942,20 +928,10 @@ function renderHorizonCopy(){
     +'<b>① 변동성 가드 (TECL)</b> — 전체 자산의'+tw+'%를 TECL 몫으로 정하고, 최근'+D.ivsLook+'거래일 변동성에 따라 그 안의 투자비율을 조절합니다(흔들림이 크면 덜 담는다). 목표와 현재 비율의 차이가 <b>10%p를 초과</b>하면 리밸런싱합니다. <b>TECL 목표100%는 전체 자산의'+tw+'%</b>를 뜻합니다.<br>'
     +'<b>② 추세 가드 (TQQQ)</b> — TQQQ'+gw+'%는 SMA'+D.guardMA+' ±1.0% 경계를 넘을 때만 켜고(ON) 끕니다(OFF). 남는 금액은 SGOV에 둡니다.<br>'
     +'<b>입금</b> — 입금을 기록하면 다음 주문에서 TECL·TQQQ·SGOV 전체를 목표 비중으로 맞춥니다(모의 계산과 같은 규칙).<br>'
-    +'<span class="sub">🤖 클로드 탭 전략 · 판 '+P.version+' ('+(P.since||'2026-11-08')+'~). 매일 연구로 검증하고, 규칙을 바꿀 때는 판 번호를 올려 예전 기록과 섞지 않습니다. 10·15·20년 플랜과 새 규칙·공격형은 2026-11-08 폐지했습니다(예전 세션은 지우지 않고 숨김).</span>';
+    +'<span class="sub">🤖 클로드 담당 전략 · 판 '+P.version+' ('+(P.since||'2026-11-08')+'~). 매일 연구로 검증하고, 규칙을 바꿀 때는 판 번호를 올려 예전 기록과 섞지 않습니다. 10·15·20년 플랜과 새 규칙·공격형은 2026-11-08 폐지했습니다(예전 세션은 지우지 않고 숨김).</span>';
   if($('alphaValidation'))$('alphaValidation').innerHTML='<b>앱 엔진과 같은 체결로 다시 잰 값</b><br><span class="sub">전일 확정종가로 주수 · 다음 거래일 종가 체결 · 수수료 0.1% · 해외주식 양도세 22%(250만원 공제) 세후 · 2011-04~2026-11 시작 · 2만$ 거치: 전 구간 연 30.9% · MDD 40.6%. 같은 조건에서 새 규칙 29.9%/38.1% · 공격형 30.7%/42.1%로 기본보다 낫지 않아 폐지했습니다(연구 2026-11-08).</span><br>'
     +'<b>⚠️ 과거 롤링 연구치 재검증 대기</b><br><span class="sub">기존 137개 시작구간 CAGR/MDD는 주문 수량을 미확정 다음날 종가로 계산한 현재 모의 체결규칙과 동일한 조건에서 다시 검증되지 않았습니다. 주문수량 규칙 v2 적용 후 전체·롤링 검증 전에는 공식 성과로 표시하지 않습니다. 운영 전략 기본값은 그대로입니다.</span>';
 }
-/* 🤖 클로드 / ⚡ 지피티 탭 — 텐배거·부동산과 같은 방식(#gpt 로 바로 열림). 지피티 칸은 plan-gpt.js 가 그리고 클로드 칸의 장부·엔진과 섞지 않는다. */
-function planAiTab(t){
-  const tab=t==='gpt'?'gpt':'claude';
-  document.querySelectorAll('#aiTabs .ai-tab').forEach(b=>{const on=b.dataset.ai===tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;});
-  ['claude','gpt'].forEach(k=>{const p=$('pane-'+k);if(p)p.hidden=k!==tab;});
-  try{const u=new URL(location.href);u.hash=tab==='gpt'?'gpt':'';history.replaceState(null,'',u.pathname+u.search+u.hash);}catch(e){}
-  return tab;
-}
-
-
 let activePlanTab='alpha';
 function setPlanTab(name,scroll=true){
   activePlanTab=name;
@@ -3163,8 +3139,6 @@ $("slSymbol").addEventListener("change",()=>{const q=liveQuotes[$("slSymbol").va
 $("slBody").addEventListener("click",e=>{const b=e.target.closest("[data-id]");if(b)delLedgerTrade(b.dataset.id);});
 document.querySelectorAll(".step").forEach(b=>b.addEventListener("click",()=>{$("stageMode").value=b.dataset.step;render()}));
 document.querySelectorAll('.plan-tab[data-ptab]').forEach(b=>b.addEventListener('click',()=>{setPlanTab(b.dataset.ptab);if(b.dataset.ptab==='alpha')refreshLive();}));
-$('aiTabs').addEventListener('click',e=>{const b=e.target.closest('.ai-tab');if(b)planAiTab(b.dataset.ai);});
-if(location.hash==='#gpt')planAiTab('gpt');
 setPlanTab('alpha',false);
 if($('targetDate'))$('targetDate').value=plusYears($('startDate').value||todayISO(),activeHorizon);
 renderHorizonCopy();renderDualGuardStrip(null);
@@ -3233,39 +3207,17 @@ window.planRetryDbImpl=async()=>{
   try{await finishPlanOpen(user);}
   catch(e){console.error('plan db retry',e);showPlanDbRetry(e);}
 };
-/* ⚡ 지피티 탭 창구(2026-11-08) — 지피티(plan-gpt.js)는 이 창구로 '자기 칸'(users/{uid}/planGpt/notebook)만 읽고 쓴다.
-   클로드 탭 장부(users/{uid} 의 fiveYearPlanV2 · stateV2)와 엔진(plan-session-engine.js)은 지피티가 건드리지 않는다.
-   부동산 지피티(REGPT_ACCOUNT)와 같은 모양 — 로그인·이용 승인이 끝나면 window.PLANGPT_ACCOUNT 를 열고 'plangpt-account' 를 알린다.
-   로그아웃·승인 취소면 null. 저장은 revision 을 맞춰야 하고(다른 기기 저장과 겹치면 거절), 계정이 바뀌면 읽기·쓰기를 막는다.
-   모의투자 저장 도우미(createPaperStore)는 users/{uid} 문서용이라 여기엔 원래 Firestore 함수를 쓴다. 계약: docs/PLAN_GPT_TAB.md */
-function planGptAccount(user){
-  const ref=doc(db,'users',user.uid,'planGpt','notebook');
-  const mine=()=>{if(auth.currentUser?.uid!==user.uid)throw new Error('로그인 계정이 바뀌었습니다. 다시 불러오세요.');};
-  return {uid:user.uid,
-    async load(){mine();const snap=await nativeGetDoc(ref);mine();return snap.exists()?snap.data():{schemaVersion:1,revision:0,settings:{},items:[]};},
-    async save(next,expectedRevision){
-      mine();return nativeRunTransaction(db,async tx=>{
-        mine();const snap=await tx.get(ref),revision=snap.exists()?(+snap.data().revision||0):0;mine();
-        if(revision!==expectedRevision)throw new Error('다른 기기에서 기록이 바뀌었습니다. 다시 불러온 뒤 저장하세요.');
-        const saved={...next,schemaVersion:1,revision:revision+1,updatedAt:new Date().toISOString()};
-        tx.set(ref,saved);return saved;
-      });
-    }};
-}
-function setPlanGptAccount(user){window.PLANGPT_ACCOUNT=user?planGptAccount(user):null;window.dispatchEvent(new CustomEvent('plangpt-account'));}
 onAuthStateChanged(auth,async user=>{
   window.__planAuthResolved=true;   // Firebase 가 답했다 — 8초 타이머가 '늦어지고 있습니다'를 달지 않게
   window.__planAuthUser=!!user;     // 로그인됐다 — 8초 타이머가 로그인 상자를 띄우지 않게(원장 읽는 중)
   /* 로그인 전에는 아무것도 열지 않는다 — 본문을 숨기고, 클라우드 장부·시세 로딩도 시작하지 않는다. */
-  if(!user){ setPlanGptAccount(null); planLoginBoxReset(); planGate(false); userBadge(null); JKAccess.hide(); JKAccess.setAdmin(false); JKAccess.cacheSet(null); return; }
-  if(window.PLANGPT_ACCOUNT&&window.PLANGPT_ACCOUNT.uid!==user.uid)setPlanGptAccount(null);   // 다른 계정으로 바뀌면 지피티 창구부터 닫는다
+  if(!user){ planLoginBoxReset(); planGate(false); userBadge(null); JKAccess.hide(); JKAccess.setAdmin(false); JKAccess.cacheSet(null); return; }
   planBootNote('로그인은 확인됐습니다. 이용 승인 확인 중…');
   /* 승인된 계정만 연다. 승인 대기·거절·확인 실패면 본문을 열지 않고 그 화면으로 덮는다(열린 뒤 취소돼도 덮는다). */
-  const planLock=acc=>{ setPlanGptAccount(null); planGate(false);
+  const planLock=acc=>{ planGate(false);
     JKAccess.show(acc.state,{user,prof:acc.prof,login:()=>window.planLoginImpl(),logout:()=>signOut(auth),
       retry:()=>location.reload(),saveNote:n=>JKAccess.saveNote(user,planFb,n)}); };
   if(!await JKAccess.admit(user,planFb,{lock:planLock})) return;
-  setPlanGptAccount(user);   // 승인된 본인 — 지피티 탭 창구 열기(자기 칸만)
   userBadge(user);
   document.documentElement.classList.add('plan-hydrating');
   try{await finishPlanOpen(user);}
