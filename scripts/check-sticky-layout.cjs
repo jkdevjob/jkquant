@@ -9,7 +9,7 @@ assert(start>=0&&end>start,'공용 고정 코드');
 const code=ui.slice(start,end);
 const routes=[
   ['index.html','header','.tabs'],['index.html','header','.tabs','/paper'],
-  ['plan.html','.top','.plan-tabs'],['backtest.html','.top','.stabs-sticky'],
+  ['backtest.html','.top','.stabs-sticky'],   // 듀얼 가드(plan.html)는 2026-11-09 클로드/지피티 탭을 없애 고정 탭 줄이 없다
   ['scalping.html','header','.strategy-tabs'],['claude.html','header','.tabs'],
   ['ipo.html','header','#ipoWrap>.subnav'],['realestate.html','header','.tabs'],
   ['job.html','header','.tabs'],['settings.html','header','.tabs'],['admin.html','header','#nav'],
@@ -116,8 +116,10 @@ for(const [name,mutCode,mutCss] of [
 }
 const immediate=code.replace('else Promise.resolve().then(mount);','else mount();');
 assert.notEqual(immediate,code,'defer 초기화 변이가 실제 소스를 변경한다');
-for(const route of [routes[2],routes[3]]){
+const topRoutes=routes.filter(r=>r[1]==='.top');   // 머리말을 옮겨 붙이는 화면(.top) — 듀얼 가드(plan.html)는 탭 줄이 없어져(2026-11-09) 백테만 남았다
+assert(topRoutes.length>=1,'.top 화면이 하나는 있어야 defer 변이를 잰다');
+for(const route of topRoutes){
   assert.throws(()=>verifyReadyHeader(route,390,'interactive',immediate),assert.AssertionError,'이동 전 행을 잡는 옛 defer 동작을 검사에서 잡는다');
 }
-console.log('PASS mutation defer 초기화 즉시 실행 복귀 (plan/backtest)');
+console.log('PASS mutation defer 초기화 즉시 실행 복귀 ('+topRoutes.map(r=>r[0].replace('.html','')).join('/')+')');
 console.log('ALL PASS sticky: '+routes.length+' routes × 4 widths; 144 unified header lifecycle cases; 4 mutations');
