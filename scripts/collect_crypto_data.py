@@ -10,6 +10,7 @@ Research/data only. This script never places orders.
 from __future__ import annotations
 
 import gzip
+import hashlib
 import json
 import os
 import time
@@ -118,6 +119,26 @@ def fetch_range(start_dt: datetime, end_dt: datetime):
     return out, calls
 
 
+def write_partial(day, rows, expected):
+    """Keep incomplete UTC evidence immutably; adjacent KST days may be complete."""
+    raw = json.dumps(rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    snapshot = hashlib.sha256(raw).hexdigest()
+    folder = ROOT / "partials" / day
+    folder.mkdir(parents=True, exist_ok=True)
+    out = folder / f"{snapshot}.json.gz"
+    payload = {
+        "schema": 1, "source": "upbit", "market": MARKET, "unitMinutes": UNIT,
+        "sessionDateUtc": day, "collectedAt": datetime.now(KST).isoformat(),
+        "barCount": len(rows), "expectedBars": expected, "partial": True,
+        "barsSha256": snapshot, "bars": rows,
+    }
+    try:
+        with out.open("xb") as f:
+            f.write(gzip.compress(json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"), mtime=0))
+    except FileExistsError:
+        pass  # Repeated observations never rewrite an earlier snapshot.
+
+
 def write_days(bars):
     grouped = {}
     for b in bars:
@@ -134,6 +155,7 @@ def write_days(bars):
         rows.sort(key=lambda x: x["tUtc"])
         if len(rows) < min_bars:
             incomplete.append((d, len(rows)))
+            write_partial(d, rows, expected)
             continue
 
         payload = {
@@ -189,6 +211,7 @@ def main():
         "daysWritten": len(written),
         "lastWritten": written[-1][0] if written else None,
         "incompleteDays": incomplete[:10],
+        "partialSnapshotsRetained": sum(1 for _ in (ROOT / "partials").glob("*/*.json.gz")),
     }, ensure_ascii=False, indent=2))
 
     if not written and not have:

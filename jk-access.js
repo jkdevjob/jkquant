@@ -32,6 +32,22 @@
        목록 맨 끝에 둔다: 텐배거 숨김 시험의 변이가 파일의 첫 ',navHidden:true'(텐배거)를 지운다. */
     {path:'/plan',label:'듀얼가드',mode:'public',order:21,navHidden:true}
   ];
+  /* 하위 탭 정책 — 메뉴마다 그 화면의 탭을 공개/관리자만/숨김 · 순서(2026-11-09 사용자: "각 메뉴별로 하위탭들도 숨기거나 위치 변경 가능하게 하자").
+     같은 settings/siteMenu 문서의 subs 칸({경로: {탭 키: {mode, order}}})에 둔다. 화면에서만 가린다 — 데이터 권한은 그대로다.
+     지금 열려 있는 탭은 숨김이어도 다른 탭으로 옮길 때까지 보인다(옛 ASAP 규칙과 같음 · 갑자기 빈 화면이 되지 않게).
+     관리자 화면의 탭은 넣지 않는다 — '메뉴 관리'를 숨겨 스스로 잠그는 일이 없게. 목록은 각 페이지의 실제 탭과 같아야 한다(시험 S4).
+     items: [탭 키, 이름, 기본 공개범위(없으면 공개)] — 기본 순서는 페이지 HTML 순서. */
+  var SUB_TABS={
+    '/':{sel:'.tabs .tab[data-t]',attr:'data-t',items:[['dg','듀얼가드'],['inf','무한매수법'],['vr','밸류리밸런싱'],['ma','로테이션'],['ivs','섀넌'],['dca','적립·거치'],['asap','ASAP','hidden']]},
+    '/scalping':{sel:'.strategy-tabs .strategy-tab[data-strategy]',attr:'data-strategy',items:[['daily','📅 오늘'],['opening','⚡ 시초가 돌파'],['daytrading','📈 데이트레이딩'],['closing30','🌇 종가 30분'],['closing_bet','🌙 개별 종목 종가 베팅'],['crypto','₿ 비트코인'],['soxl','⚡ SOXL'],['tenbagger','🔟 텐배거 연구'],['duel','🆚 클로드 대결'],['trades','📚 전체 매매이력']]},
+    '/claude':{sel:'#tabs .tab[data-tab]',attr:'data-tab',items:[['today','📅 오늘'],['opening','⚡ 시초가'],['daytrading','📈 데이트레이딩'],['crypto','₿ 비트코인'],['soxl','⚡ SOXL'],['close30','⏰ 종가 30분'],['tenbagger','🔟 텐배거'],['duel','🆚 GPT 대결']]},
+    '/realestate':{sel:'#tabs .tab[data-tab]',attr:'data-tab',items:[['claude','🤖 클로드'],['gpt','⚡ 지피티']]},
+    '/job':{sel:'#tabs .tab[data-cat]',attr:'data-cat',items:[['all','전체'],['java_ai','Java·AI'],['regular_dev','개발자 정규직'],['salary500','월 500+'],['salary450','월 450~499'],['short_term','단기알바'],['scrap','★ 스크랩'],['applied','✓ 지원완료']]},
+    '/settings':{sel:'.tabs .tab[data-settings-tab]',attr:'data-settings-tab',items:[['notifications','🔔 알림'],['paper','🧪 모의투자']]},
+    '/workout':{sel:'.mode-tabs [data-mode]',attr:'data-mode',items:[['round','라운드'],['tabata','타바타'],['stopwatch','스톱워치']]}
+  };
+  var SUB_ALIAS={'/portfolio':'/','/paper':'/'};   // 운영 파일(index.html)이 포트폴리오·모의도 그린다 — 탭 줄은 같은 것
+  var SUB_MODES=['public','admin','hidden'];
   var menuCache=null, menuSeq=0;
   /* 메뉴 순서·표시는 DB 설정(settings/siteMenu)을 읽어야 안다. 그 전엔 페이지 HTML 의 기본 순서라,
      페이지를 옮기자마자 ☰ 를 누르면 기본 순서가 보였다가 잠시 뒤 바뀌었다(2026-10-12 사용자).
@@ -57,9 +73,13 @@
              '/claude.html':'/claude','/tenbagger.html':'/tenbagger','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/swim.html':'/swim','/workout.html':'/workout','/settings.html':'/settings','/admin.html':'/admin'};
     return map[p]||p;
   }
+  function subDefaults(){
+    var s={}; Object.keys(SUB_TABS).forEach(function(p){ s[p]={}; SUB_TABS[p].items.forEach(function(it,i){ s[p][it[0]]={mode:it[2]||'public',order:(i+1)*10}; }); });
+    return s;
+  }
   function menuDefaults(){
     var items={}; MENU_ITEMS.forEach(function(x){items[x.path]={mode:x.mode,order:x.order};});
-    return {items:items,updatedAt:0,updatedBy:''};
+    return {items:items,subs:subDefaults(),updatedAt:0,updatedBy:''};
   }
   function normalizeMenuConfig(data){
     var d=menuDefaults(),src=data&&data.items&&typeof data.items==='object'?data.items:{};
@@ -71,8 +91,38 @@
       if(x.after&&!src[x.path]&&src[x.after]&&Number.isFinite(+src[x.after].order)) order=+src[x.after].order+5;
       d.items[x.path]={mode:mode,order:order};
     });
+    /* 하위 탭 — 모르는 키는 버리고, 없는 키는 기본값. 저장된 순서가 있는 페이지에 새로 생긴 탭은 맨 뒤(1000+)로 */
+    var ss=data&&data.subs&&typeof data.subs==='object'?data.subs:{};
+    Object.keys(SUB_TABS).forEach(function(p){
+      var sp=ss[p]&&typeof ss[p]==='object'?ss[p]:{}, saved=Object.keys(sp).length>0;
+      SUB_TABS[p].items.forEach(function(it,i){
+        var v=sp[it[0]]||{};
+        d.subs[p][it[0]]={mode:SUB_MODES.indexOf(v.mode)>=0?v.mode:(it[2]||'public'),order:Number.isFinite(+v.order)?+v.order:(i+1)*10+(saved?1000:0)};
+      });
+    });
     d.updatedAt=+(data&&data.updatedAt)||0; d.updatedBy=String(data&&data.updatedBy||'');
     return d;
+  }
+  function subPage(path){ var p=menuPath(path); return SUB_ALIAS[p]||p; }
+  /* 페이지 하나의 하위 탭 — 순서대로 [{key,label,mode,order,visible}] · visible = 공개 또는 (관리자만 & 관리자) */
+  function subTabState(cfg,page,admin){
+    var def=SUB_TABS[page]; if(!def) return [];
+    var conf=(cfg&&cfg.subs&&cfg.subs[page])||{};
+    return def.items.map(function(it,i){
+      var v=conf[it[0]]||{}, mode=SUB_MODES.indexOf(v.mode)>=0?v.mode:(it[2]||'public');
+      return {key:it[0],label:it[1],mode:mode,order:Number.isFinite(+v.order)?+v.order:(i+1)*10,visible:mode==='public'||(mode==='admin'&&!!admin),i:i};
+    }).sort(function(a,b){ return a.order-b.order||a.i-b.i; });
+  }
+  /* 지금 페이지의 탭 단추에 적용 — 숨김은 클래스(지금 열린 탭은 CSS 가 남김) · 순서는 CSS order(단추를 옮기지 않는다 · 각 페이지의 탭 코드는 그대로) */
+  function applySubTabs(user,cfg){
+    var page=subPage(location.pathname), def=SUB_TABS[page]; if(!def) return;
+    var by={}; subTabState(cfg,page,isAdminEmail(user&&user.email)).forEach(function(x,i){ by[x.key]={visible:x.visible,rank:i+1}; });
+    Array.prototype.forEach.call(document.querySelectorAll(def.sel),function(b){
+      var r=by[b.getAttribute(def.attr)]; if(!r) return;   // 목록에 없는 탭은 손대지 않는다
+      b.classList.toggle('jk-sub-hidden',!r.visible); b.style.order=String(r.rank);
+    });
+    document.documentElement.classList.add('jk-subtabs-ready');
+    try{ if(typeof CustomEvent==='function'&&document.dispatchEvent) document.dispatchEvent(new CustomEvent('jk-subtabs',{detail:{page:page}})); }catch(e){}   // 운영 화면이 첫 탭을 이 순서로 다시 고른다(opOpenFirst)
   }
   function readMenuConfig(fb){
     return fb.getDoc(fb.doc(fb.db,'settings','siteMenu')).then(function(snap){
@@ -136,6 +186,7 @@
         }
       }
     });
+    try{ applySubTabs(user,cfg); }catch(e){ console.warn('sub tabs',e); }
     menuWaitEnd();
   }
   async function applyMenuConfig(user,fb,opt){
@@ -229,6 +280,7 @@
   }).join('') // 인증/DB 응답 전과 메뉴 대기 한도 뒤에도 통합된 메뉴는 숨긴다.
    +'html:not(.jk-admin) a[href="/scalping"],html:not(.jk-admin) a[href="/claude"],html:not(.jk-admin) a[href="/admin"]{display:none!important}'
    +'.jk-menu-hidden{display:none!important}'
+   +'.jk-sub-hidden:not(.on):not([aria-selected="true"]){display:none!important}'   // 숨긴 하위 탭 — 지금 열린 탭은 옮길 때까지 남긴다
    +'html.jk-guard:not(.jk-ok) body{overflow:hidden}'
    +'html.jk-guard:not(.jk-ok) body>*:not(#jkgate){visibility:hidden}'
    +'#jkgate{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:24px;'
@@ -241,7 +293,7 @@
    +'#jkgate .jg{background:#fff;color:#1f1f1f}#jkgate .jg svg{width:20px;height:20px}'
    +'#jkgate .j2{background:#1e2540;color:#e8ecf7;border:1px solid #34406a}'
    +'#jkgate textarea{width:100%;min-height:64px;margin-top:4px;padding:10px;border-radius:10px;border:1px solid #34406a;background:#171c2e;color:#e8ecf7;font:inherit;font-size:13px;resize:vertical}'
-   +'#jkgate .jm{color:#f87b8c;font-size:12px;margin-top:12px;min-height:16px;line-height:1.6}#jkgate .jok{color:#36d399}'
+   +'#jkgate .jm{color:#f87b8c;font-size:12px;margin-top:12px;min-height:16px;line-height:1.6}#jkgate .jok{color:#36d399}#jkgate .jwarn{color:#f5c451;font-size:12px;line-height:1.6;margin-top:10px}'
    +'#jkgate .jspin{display:inline-block;width:16px;height:16px;border:2.5px solid #2a3354;border-top-color:#8b8cf0;border-radius:50%;animation:jkspin .7s linear infinite;vertical-align:-3px;margin-right:7px}'
    +'@keyframes jkspin{to{transform:rotate(360deg)}}';
   try{ var st=document.createElement('style'); st.id='jkaccess-css'; st.textContent=css; (document.head||html).appendChild(st); }catch(e){}
@@ -251,6 +303,35 @@
 
   var G='<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
   function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  /* ── 앱 내장 브라우저 판별 · 로그인 오류 글자 — 운영(index)·듀얼가드(plan)·이 게이트(guard)가 같은 한 벌을 쓴다
+     (2026-11-09 새 사용자 화면 "Firebase: Error (auth/cancelled-popup-request)." — 코드가 날것으로 보였고, 앱 안 브라우저 안내는 운영 페이지에만 있었다) ── */
+  var INAPP_UA=[[/NAVER/i,'네이버 앱'],[/KAKAOTALK/i,'카카오톡'],[/Instagram/i,'인스타그램'],
+    [/FBAN|FBAV|FB_IAB/i,'페이스북'],[/\bLine\//i,'라인'],[/DaumApps/i,'다음 앱'],
+    [/\bBand\//i,'밴드'],[/everytimeApp/i,'에브리타임'],[/Snapchat/i,'스냅챗'],[/TwitterAndroid|Twitter for/i,'X(트위터)']];
+  function inAppName(ua){
+    ua=(ua==null?((typeof navigator!=='undefined'&&navigator.userAgent)||''):String(ua));
+    for(var i=0;i<INAPP_UA.length;i++) if(INAPP_UA[i][0].test(ua)) return INAPP_UA[i][1];
+    /* 이름을 모르는 앱 내장 브라우저 — 구글은 앱 내장 화면(WebView)에서 로그인을 막는다.
+       iOS 의 진짜 브라우저(사파리·크롬·파이어폭스·엣지·웨일)는 UA 끝에 Safari/ 가 붙는데 내장 화면은 안 붙는다.
+       홈 화면에 추가한 앱(standalone)도 안 붙으므로 그건 뺀다. 안드로이드 내장 화면은 '; wv)' 가 붙는다. */
+    var standalone=false;
+    try{ standalone=(typeof navigator!=='undefined'&&navigator.standalone===true)||(typeof window!=='undefined'&&!!window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches); }catch(e){}
+    if(/iPhone|iPad|iPod/i.test(ua) && /AppleWebKit/i.test(ua) && !/Safari\//i.test(ua) && !standalone) return '앱 내장 브라우저';
+    if(/Android/i.test(ua) && /; wv\)/i.test(ua)) return '앱 내장 브라우저';
+    return null;
+  }
+  function inAppHint(){ var nm=inAppName(); return nm?(nm+' 안에서는 구글 로그인이 막힙니다 — 오른쪽 위 ⋯(또는 공유) 메뉴에서 「다른 브라우저로 열기」(Safari·Chrome)로 여세요.'):''; }
+  /* 로그인 오류 → 사람이 읽을 글자. '' 이면 보여 줄 것 없음 — 'auth/cancelled-popup-request' 는 새 요청이 앞 팝업을 대신했다는 뜻이라 그 요청이 제 결과를 알린다 */
+  function loginErrorText(e){
+    var code=String(e&&(e.code||e.message)||'');
+    if(code==='auth/cancelled-popup-request') return '';
+    if(code==='auth/popup-closed-by-user') return '로그인 창이 닫혔어요. 다시 눌러 주세요.';
+    if(code==='auth/popup-blocked'){ var h=inAppHint(); return h||'팝업이 차단됐어요. 브라우저 주소창의 팝업 차단을 허용하거나, Safari·Chrome 기본 브라우저로 열어 다시 시도하세요.'; }
+    if(code==='auth/network-request-failed') return '인터넷 연결을 확인한 뒤 다시 눌러 주세요.';
+    if(code==='auth/unauthorized-domain') return '이 주소에서는 로그인할 수 없습니다 — 관리자에게 알려 주세요. (허용되지 않은 도메인)';
+    if(code==='auth/operation-not-supported-in-this-environment') return '이 브라우저에서는 구글 로그인을 열 수 없습니다 — Safari·Chrome 기본 브라우저로 여세요.';
+    return '로그인 실패: '+(code||'알 수 없는 오류');
+  }
   function el(){
     var g=document.getElementById('jkgate');
     if(!g && document.body){ g=document.createElement('div'); g.id='jkgate'; g.setAttribute('role','dialog'); g.setAttribute('aria-modal','true'); document.body.appendChild(g); }
@@ -300,7 +381,8 @@
       body='<div class="js"><span class="jspin"></span>로그인 확인 중…</div>';
     }else if(state==='signedout'){
       body='<div class="js">로그인해야 볼 수 있습니다.<br>처음이면 로그인할 때 <b>이용 신청</b>이 접수되고,<br>관리자가 승인하면 열립니다.</div>'
-          +'<button class="jbtn jg" data-jk="login">'+G+'Google로 로그인</button>';
+          +'<button class="jbtn jg" data-jk="login">'+G+'Google로 로그인</button>'
+          +(inAppHint()?'<div class="js jwarn">⚠ '+esc(inAppHint())+'</div>':'');   // 앱 안(카카오톡 등)에선 구글이 로그인을 막는다 — 누르기 전에 안내
     }else if(state==='pending'){
       var note=(o.prof&&o.prof.reqNote)||'';
       body='<div class="js">이용 신청이 접수되었습니다 — '+who+'<br>관리자가 승인하면 바로 사용할 수 있습니다.</div>'
@@ -399,9 +481,15 @@
      o.onUser(user|null): 배지 같은 것 · o.onOk(user): 승인 뒤 한 번(페이지 자료 불러오기). */
   function guard(fb, o){
     o=o||{}; html.classList.add('jk-guard');
+    var loginBusy=false;
+    function setLoginBusy(on){ var g=document.getElementById('jkgate'), b=(g&&typeof g.querySelector==='function')?g.querySelector('[data-jk="login"]'):null; if(b) b.disabled=!!on; }
     var login=function(){
+      /* 한 번에 하나 — 팝업이 떠 있는 동안 또 누르면 Firebase 가 앞 요청을 취소하며 'auth/cancelled-popup-request' 를 냈다(2026-11-09 새 사용자 화면). */
+      if(loginBusy) return;
+      loginBusy=true; setLoginBusy(true); msg('구글 로그인 창을 열었습니다 — 그 창에서 계정을 고르세요.', true);
       var p=new fb.GoogleAuthProvider(); try{ p.setCustomParameters({prompt:'select_account'}); }catch(e){}
-      return fb.signInWithPopup(fb.auth, p).catch(function(e){ msg((e&&e.code==='auth/popup-blocked')?'팝업이 막혔습니다 — 팝업을 허용한 뒤 다시 눌러 주세요.':((e&&e.message)||'로그인 실패')); });
+      return fb.signInWithPopup(fb.auth, p).then(function(){ msg(''); }, function(e){ msg(loginErrorText(e)); })
+        .then(function(){ loginBusy=false; setLoginBusy(false); });
     };
     var logout=function(){ return fb.signOut(fb.auth); };
     var resolved=false, startedUid=null;   // 같은 화면에서 다른 계정으로 다시 로그인하면 그 계정 자료를 다시 부른다
@@ -431,5 +519,6 @@
                    bindAdminApprovalPush:bindAdminApprovalPush,
                    cacheOk:cacheOk, cacheSet:cacheSet, setAdmin:setAdmin, show:show, hide:hide, showing:showing, guard:guard,
                    menuPath:menuPath, menuDefaults:menuDefaults, normalizeMenuConfig:normalizeMenuConfig, loadMenuConfig:loadMenuConfig,
-                   applyMenuConfig:applyMenuConfig, menuAccess:menuAccess};
+                   applyMenuConfig:applyMenuConfig, menuAccess:menuAccess, SUB_TABS:SUB_TABS, subPage:subPage, subTabState:subTabState, applySubTabs:applySubTabs,
+                   inAppName:inAppName, loginErrorText:loginErrorText};
 })();

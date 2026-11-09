@@ -150,18 +150,19 @@ function check(S){
     t('D6 고른 적 없거나(undefined) 켠 장부는 넣는다 — 예전 포트폴리오 그대로',c.pfPlanLedgers().map(x=>x.key).join()==='cur,live1'); }
 
   // ── E. 실전 세션 채우기
-  { const mk=()=>{const log={auto:0,vr:0,inf:0,loaders:[]};
+  { const mk=(asap)=>{const log={auto:0,vr:0,inf:0,loaders:[]};
       const S0={activeTab:'inf',inf:{active:'i1',sessions:[{id:'i1',paper:false,settings:{ticker:'SOXL'},hist:[{d:1}]},{id:'ip',paper:true,settings:{ticker:'SOXL'},hist:[{d:1}]},{id:'i0',paper:false,settings:{ticker:'SOXL'},hist:[]},
           {id:'i2',paper:false,portfolio:false,settings:{ticker:'TECL'},hist:[{d:1}]}]},
         dca:{active:'d1',sessions:[{id:'d1',paper:false,settings:{ticker:'TQQQ',mode:'dca'},hist:[{d:1}]}]},
         plan:{sessions:[{id:'pl',paper:false,horizon:5,settings:{},ledger:{base:{},events:[{id:1}]}},{id:'pp',paper:true,horizon:5,simStart:'2026-01-02',settings:{}}]}};
+      if(asap) S0.asap={active:'a1',sessions:[{id:'a1',paper:false,settings:{ticker:'QLD'},hist:[{d:1}]},{id:'ap',paper:true,settings:{ticker:'UPRO'},hist:[{d:1}]}]};
       const ctx={S:S0,_paperFilling:false,_fillQuoteCache:null,infChartData:[],vrChartData:[],lastQuote:{inf:{symbol:'SOXL'},dca:null,plan:null},
         infQuoteCache:null,maQuoteData:null,ivsQuoteData:null,ivsQuote1:null,dcaQuoteData:null,asapQuoteData:null,
-        PAPER_TABS:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼가드']],
-        PAPER_CACHESYM:{inf:()=>'SOXL',dca:()=>'TQQQ'},PAPER_LOADERS:{inf:async f=>log.loaders.push('inf'),dca:async f=>log.loaders.push('dca')},
+        PAPER_TABS:asap?[['inf','무한매수법'],['dca','매수적립'],['asap','ASAP'],['plan','듀얼가드']]:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼가드']],
+        PAPER_CACHESYM:{inf:()=>'SOXL',dca:()=>'TQQQ',asap:()=>'QLD'},PAPER_LOADERS:{inf:async f=>log.loaders.push('inf'),dca:async f=>log.loaders.push('dca'),asap:async f=>log.loaders.push('asap')},
         fetchDaily:async s=>{(log.fd=log.fd||[]).push(s);return {};},fetchDailyDiv:async()=>({}),
         divCashOn:()=>false,warmDiv:async()=>{},ivsX1Of:x=>x,paperAuto:()=>{log.auto++;},vrSimForward:()=>{log.vr++;},infSimForward:()=>{log.inf++;},paperStart:()=>'2025-01-02',
-        paperStat:(tab,x)=>({tab,id:x.id,price:tab==='dca'?0:10}),stratStatusHtml:(tab,x)=>'ST:'+tab+':'+x.id,
+        paperStat:(tab,x)=>{ (log.stat=log.stat||[]).push(tab+':'+x.id); return {tab,id:x.id,price:tab==='dca'?0:10}; },stratStatusHtml:(tab,x)=>'ST:'+tab+':'+x.id,
         planPaperRetired:()=>false,loadPlanPaperData:async()=>({}),replayPlanPaper:()=>({}),paperStatPlan:x=>({tab:'plan',id:x.id}),
         console:{error(){},warn(){}},Map,Promise,Set};
       vm.createContext(ctx);vm.runInContext(fnOf(S.idx,'function pfWanted(x)')+fnOf(S.idx,'async function paperBreathe()')+fnOf(S.idx,'async function paperPrefetchQuotes(opt)')+fnOf(S.idx,'async function paperFillAll(opt)'),ctx);
@@ -176,6 +177,17 @@ function check(S){
       t('E5 끝나면 탭·세션·재생 표시가 그대로',A.ctx.S.activeTab==='inf'&&A.ctx.S.inf.active==='i1'&&A.ctx._paperFilling===false&&A.ctx._fillQuoteCache===null);
       const B=mk(),rows2=await B.ctx.paperFillAll();
       t('E6 모의(기본) — 예전 그대로: 모의 세션(무매 ip · 플랜 pp)만 · 모의 체결을 굴린다 · 상태줄 글자 없음',rows2.map(r=>r.tab+':'+r.id).join()==='inf:ip,plan:pp'&&B.log.auto===1&&B.log.inf===1&&!rows2[0].status,rows2.map(r=>r.tab+':'+r.id).join()+' auto='+B.log.auto);
+      /* ASAP 모의 뺌(2026-11-09 사용자: "운영 asap를 가려서 asap에 딸린 세션을 모의투자 해지 못하네 asap 세션은 전체 모의투자 해지해") */
+      const C8=mk(true),r8=await C8.ctx.paperFillAll({live:true});
+      t('E8 ASAP 실계좌 — 포트폴리오(live)엔 그대로(기록 있는 a1 · 시세 QLD 선취) · 모의 ap 는 아님',r8.map(r=>r.tab+':'+r.id).join()==='inf:i1,dca:d1,asap:a1'&&(C8.log.fd||[]).includes('QLD')&&!(C8.log.fd||[]).includes('UPRO'),JSON.stringify([r8.map(r=>r.tab+':'+r.id),C8.log.fd]));
+      const C9=mk(true),r9=await C9.ctx.paperFillAll();
+      t('E9 ASAP 모의 — 모의 목록 재계산에서 뺀다: 줄 없음 · 재생(로더·paperStat) 안 함 · 시세(UPRO) 안 받음 · 세션·기록 그대로',r9.map(r=>r.tab+':'+r.id).join()==='inf:ip,plan:pp'&&!C9.log.loaders.includes('asap')&&!(C9.log.stat||[]).some(x=>x.startsWith('asap'))&&!(C9.log.fd||[]).includes('UPRO')
+        &&C9.ctx.S.asap.sessions[1].paper===true&&C9.ctx.S.asap.sessions[1].hist.length===1&&C9.ctx.S.asap.active==='a1',JSON.stringify([r9.map(r=>r.tab+':'+r.id),C9.log]));
+      { const S1={inf:{sessions:[{id:'ip',paper:true}]},asap:{sessions:[{id:'ap',paper:true}]}};
+        const sum=new Function('PAPER_TABS','S','paperStat',fnOf(S.idx,'function paperSummary()')+'\nreturn paperSummary;')([['inf','무매'],['asap','ASAP']],S1,(tab,x)=>({tab,id:x.id,price:1}));
+        const ps=new Function('PAPER_TABS','S',fnOf(S.idx,'function paperSessions()')+'\nreturn paperSessions;')([['inf','무매'],['asap','ASAP']],S1);
+        const rows=sum(), all=ps();
+        t('E10 ASAP 모의 — 목록 요약(paperSummary)·전체 적용 대상(paperSessions)에서도 뺀다',rows.map(r=>r.tab).join()==='inf'&&all.map(x=>x[0]).join()==='inf',JSON.stringify([rows,all.map(x=>x[0])])); }
       return check2(S,t,E,bad);
     });
   }
@@ -183,15 +195,45 @@ function check(S){
 function check2(S,t,E,bad){
   // ── F. 화면 구조
   { const tabs=(S.idx.match(/<div class="tabs">([\s\S]*?)<\/div>/)||['',''])[1],order=[...tabs.matchAll(/data-t="(\w+)"/g)].map(m=>m[1]).join();
-    t('F1 운영 탭 순서 — 듀얼가드 맨 왼쪽(무매보다 왼쪽) · ASAP 은 맨 끝에 남되 숨김',order==='dg,inf,vr,ma,ivs,dca,asap'&&/\.tab\[data-t="asap"\]:not\(\.on\)\{display:none\}/.test(S.idx),order);
+    t('F1 운영 탭 순서 — 듀얼가드 맨 왼쪽(무매보다 왼쪽) · ASAP 은 맨 끝에 남되 숨김 · 기본 순서 상수(OP_TABS)가 HTML 과 같음',order==='dg,inf,vr,ma,ivs,dca,asap'&&/\.tab\[data-t="asap"\]:not\(\.on\)\{display:none\}/.test(S.idx)
+      &&/const OP_TABS=\['dg','inf','vr','ma','ivs','dca','asap'\];/.test(S.idx),order);
     const st=fnOf(S.idx,'function setupTabs()'),od=fnOf(S.idx,'function openDualGuard(extra)'),sa=fnOf(S.idx,'function startApp()');
     t('F2 듀얼가드 탭은 S.activeTab 에 안 들어간다 — 누르면 화면만 바꾸고(opView) 다른 탭이 지운다',
       /if\(t\.dataset\.t==='dg'\)\{ openDualGuard\(\); return; \}/.test(st)&&st.indexOf("openDualGuard(); return;")<st.indexOf('S.activeTab=t.dataset.t')&&/closeDualGuardView\(\);/.test(st)
       &&!/S\.activeTab\s*=/.test(od)&&/S\.opView='dg'/.test(od)&&/\/plan\?embed=1/.test(fnOf(S.idx,'function dgEnsureFrame(extra)')));
-    t('F3 첫 화면 — ASAP 을 보고 있었어도 무한매수법 · 듀얼가드를 보고 있었으면 듀얼가드',/if\(S\.activeTab==='asap'\)S\.activeTab='inf';/.test(sa)&&/if\(S\.opView==='dg'\) openDualGuard\(\);/.test(sa)
-      &&sa.indexOf("if(S.activeTab==='asap')S.activeTab='inf';")<sa.indexOf('const tb=document.querySelector'));
+    t('F3 첫 화면 — 운영은 보이는 첫 탭(opOpenFirst · 지난 탭·듀얼가드 화면 복원 없음) · ASAP 문맥은 무한매수법으로 · 모의·포트폴리오 페이지는 전략 문맥만 지난 탭',
+      /if\(S\.activeTab==='asap'\)S\.activeTab='inf';/.test(sa)&&/const onOp=!isPaperPage\(\)&&!isPfPage\(\);/.test(sa)&&/if\(!onOp&&S\.activeTab!=='inf'\)\{ const tb=document\.querySelector/.test(sa)
+      &&/if\(onOp\) opOpenFirst\(\);/.test(sa)&&sa.indexOf('showFab();')<sa.indexOf('if(onOp) opOpenFirst();')&&!/S\.opView==='dg'/.test(sa)
+      &&sa.indexOf("if(S.activeTab==='asap')S.activeTab='inf';")<sa.indexOf('const onOp='));
     t('F4 모의 목록 듀얼가드 줄 → 운영 › 듀얼가드 탭 안에서 그 세션(딥링크) · 다른 전략 줄은 듀얼가드를 보고 있어도 그 탭으로',
       /openDualGuard\('session='\+encodeURIComponent\(id\)/.test(fnOf(S.idx,'function gotoSess(tab, id)'))&&/if\(S\.activeTab!==tab \|\| isDgView\(\)\)\{/.test(fnOf(S.idx,'function gotoSess(tab, id)')));
+    /* ── F5~F8 첫 탭 · 모의 목록 순서 (2026-11-09 사용자: "모의투자에서 보이는 순서를 운영탭 세션 순서대로 표출해 / 운영메뉴 들어가면 왜 섀넌이 선택되지 항상? / 마지막 보던거나 무조건 첫 탭으로 가") ── */
+    const mkDoc=(spec,shown)=>{ const btns=spec.map(([t,o,h])=>({dataset:{t},style:{order:o==null?'':String(o)},classList:{contains:c=>c==='jk-sub-hidden'?!!h:(c==='on'&&t===shown)},clicks:0,click(){ this.clicks++; }}));
+      return {btns,document:{querySelectorAll:q=>q==='.tabs .tab[data-t]'?btns:[],querySelector:q=>{ const m=q.match(/data-t="(\w+)"/); if(m) return btns.find(b=>b.dataset.t===m[1])||null; if(q==='.tabs .tab.on') return btns.find(b=>b.dataset.t===shown)||null; return null; }}}; };
+    const runF=(doc,extra)=>{ const c=Object.assign({S:{activeTab:'ivs'},OP_TABS:['dg','inf','vr','ma','ivs','dca','asap'],_userTabbed:false,isPaperPage:()=>false,isPfPage:()=>false,isDgView:()=>false,dg:0,save(){},console,Math,Object,Array},extra||{},{document:doc});
+      c.openDualGuard=()=>{ c.dg++; }; vm.createContext(c); vm.runInContext(fnOf(S.idx,'function opTabOrder(opt)')+'\n'+fnOf(S.idx,'function opOpenFirst()')+'\n'+fnOf(S.idx,'function paperOrderRows(rows)'),c); return c; };
+    const DEF=[['dg'],['inf'],['vr'],['ma'],['ivs'],['dca'],['asap']], POL=[['dg',2],['inf',1],['vr',4],['ma',3,true],['ivs',5],['dca',6],['asap',7,true]];
+    { const a=runF(mkDoc(DEF).document), b=runF(mkDoc(POL).document), n=runF(undefined);
+      t('F5 탭 순서 — 정책 전엔 HTML 순서 · 정책(CSS order·숨김) 뒤엔 그 순서로 숨긴 탭 빼고 · all 이면 숨긴 탭도 · 화면이 없으면 기본 상수',
+        a.opTabOrder().join()==='dg,inf,vr,ma,ivs,dca,asap'&&b.opTabOrder().join()==='inf,dg,vr,ivs,dca'&&b.opTabOrder({all:true}).join()==='inf,dg,ma,vr,ivs,dca,asap'&&n.opTabOrder().join()==='dg,inf,vr,ma,ivs,dca,asap',
+        JSON.stringify([a.opTabOrder(),b.opTabOrder(),b.opTabOrder({all:true}),n.opTabOrder()])); }
+    { const SS={plan:{sessions:[{id:'p1'},{id:'p2'}]},inf:{sessions:[{id:'i1'},{id:'i2'}]},ivs:{sessions:[{id:'v1'}]},ma:{sessions:[{id:'m1'}]}};
+      const c=runF(mkDoc(POL).document,{S:SS}), rows=[{tab:'ivs',id:'v1'},{tab:'inf',id:'i2'},{tab:'plan',id:'p2'},{tab:'ma',id:'m1'},{tab:'inf',id:'i1'},{tab:'plan',id:'p1'},{tab:'inf',id:'zz'}];
+      const out=c.paperOrderRows(rows).map(r=>r.id).join(), d=runF(mkDoc(DEF).document,{S:SS}).paperOrderRows(rows).map(r=>r.id).join();
+      t('F6 모의 목록 순서 — 운영 탭 순서(정책 · 숨긴 로테이션도 그 자리 · 듀얼가드 줄 = dg) → 세션바 순서 · 모르는 세션은 그 탭 맨 뒤 · 기본 순서면 듀얼가드부터',
+        out==='i1,i2,zz,p1,p2,m1,v1'&&d==='p1,p2,i1,i2,zz,m1,v1'&&c.paperOrderRows([]).length===0,out+' | '+d); }
+    { const D1=mkDoc([['dg',1,true],['inf',2],['ivs',3]],'ivs'), c1=runF(D1.document); const r1=c1.opOpenFirst();
+      const D2=mkDoc(DEF,'ivs'), c2=runF(D2.document); const r2=c2.opOpenFirst();
+      const D3=mkDoc(DEF,'ivs'), c3=runF(D3.document,{_userTabbed:true}); const r3=c3.opOpenFirst();
+      const D4=mkDoc(DEF,'ivs'), c4=runF(D4.document,{isPaperPage:()=>true}); const r4=c4.opOpenFirst();
+      const D5=mkDoc([['inf',1],['ivs',2]],'inf'), c5=runF(D5.document); const r5=c5.opOpenFirst();
+      t('F7 첫 탭 열기 — 듀얼가드가 숨겨지면 다음 보이는 탭(무매)을 누름 · 기본이면 듀얼가드 화면 · 사용자가 고른 뒤엔 안 함 · 모의 페이지에선 안 함 · 이미 그 탭이면 다시 안 누름',
+        r1===true&&D1.btns[1].clicks===1&&c1.dg===0&&r2===true&&c2.dg===1&&D2.btns.every(b=>!b.clicks)&&r3===false&&D3.btns.every(b=>!b.clicks)&&c3.dg===0&&r4===false&&c4.dg===0&&r5===true&&D5.btns.every(b=>!b.clicks),
+        JSON.stringify([r1,D1.btns.map(b=>b.clicks),c1.dg,r2,c2.dg,r3,r4,r5])); }
+    t('F8 배선 — 탭 단추는 사용자 클릭(isTrusted)만 기억 · 세션으로 들어오면 기억 · 정책 알림(jk-subtabs) 받으면 다시 고름 · 모의 목록은 그릴 때 정렬 · jk-access 가 정책 적용 뒤 알림',
+      /if\(ev&&ev\.isTrusted\) _userTabbed=true;/.test(st)&&/^function gotoSess\(tab, id\)\{\n  _userTabbed=true;/.test(fnOf(S.idx,'function gotoSess(tab, id)'))
+      &&/document\.addEventListener\('jk-subtabs',\(\)=>\{ if\(appStarted\) try\{ opOpenFirst\(\); \}/.test(S.idx)&&/rows=\(typeof paperOrderRows==='function'\)\?paperOrderRows\(rows\|\|\[\]\):\(rows\|\|\[\]\);/.test(fnOf(S.idx,'async function openPaper()'))
+      &&/document\.dispatchEvent\(new CustomEvent\('jk-subtabs'/.test(fnOf(S.acc,'function applySubTabs(user,cfg)')));
     const menuBad=PAGES.filter(f=>{const s=rd(f);return !/<a href="\/portfolio"[^>]*><span class="mi">💰<\/span>포트폴리오<\/a>/.test(s)||/>자산플랜<\/a>/.test(s);});
     t('F5 모든 페이지 메뉴: 자산플랜 → 💰 포트폴리오(/portfolio)',menuBad.length===0,menuBad.join());
     t('F6 메뉴 정책: 포트폴리오 20번 공개 · /plan 은 메뉴에서 숨기고 주소 권한만(듀얼가드) · 머리말 이름',
@@ -253,11 +295,14 @@ function check3(S,t,E,bad){
   const T=(()=>{const c={};c.window=c;vm.createContext(c);vm.runInContext(S.tax,c);return c.JKPlanTaxCheck;})();
   const helpers=['function pfOutAmt(r)','function pfPlanSeries(L, Q, E, row)','function pfCombine(rows, fx)','function pfOpTaxKrw(series, T, fx, year)','function pfApplyTax(rows, T, fxDays, year, E)',
     'function pfTaxSummary(rows, T, year)','function pfTargetView(Z)','function pfUsdPlain(v)','function pfCompact(v)','function pfNiceTicks(lo, hi, n)','function pfPct(v)','function pfEsc(x)','function pfChartHtml(C)','function pfMonthTable(C)',
-    'function pfGroup(tab)','function pfSessName(r)','function pfSessLines(C)','function pfSpread(items, top, bottom, gap)','function pfSw(color,dash)'];
+    'function pfGroup(tab)','function pfSessName(r)','function pfSessLines(C)','function pfSpread(items, top, bottom, gap)','function pfSw(color,dash)',
+    'function pfTkName(k)','function pfChartSeries(C, mode)','function pfChartToggle(key)'];
   const c={PF:{chartGeo:null},$:()=>({clientWidth:640}),Math,Object,Number,String,Set,Map,console:{warn(){}}};vm.createContext(c);
   vm.runInContext(helpers.map(m=>fnOf(S.idx,m)).join('\n')+'\n'+((S.idx.match(/const PF_TARGET=\{[^}]*\};/)||[''])[0]).replace('const PF_TARGET','var PF_TARGET')
     +'\n'+((S.idx.match(/const PF_GROUP=\{.*\};/)||[''])[0]).replace('const PF_GROUP','var PF_GROUP')+'\n'+((S.idx.match(/const PF_OTHER=\{[^}]*\};/)||[''])[0]).replace('const PF_OTHER','var PF_OTHER')
-    +'\n'+((S.idx.match(/const PF_DASH=\[[^\]]*\];/)||[''])[0]).replace('const PF_DASH','var PF_DASH'),c);
+    +'\n'+((S.idx.match(/const PF_DASH=\[[^\]]*\];/)||[''])[0]).replace('const PF_DASH','var PF_DASH')
+    +'\n'+((S.idx.match(/const PF_TK_COLORS=\[[^\]]*\];/)||[''])[0]).replace('const PF_TK_COLORS','var PF_TK_COLORS')+'\n'+((S.idx.match(/const PF_CASH_COLOR='[^']*';/)||[''])[0]).replace('const PF_CASH_COLOR','var PF_CASH_COLOR')
+    +'\nvar refreshed=0; function pfChartRefresh(){ refreshed++; }',c);
   // ── I. 운영 세션 날마다 값 — paperMdd 걸음이 그릇(_pfSeriesSink)에 넣는다 · 끝 값은 지금 시세 · 끝 날짜는 마지막 기록 날까지
   { const md=fnOf(S.idx,'function paperMdd(tab, sess, R, hist)');
     const days=[1,2,3,4,5].map(i=>({date:'2026-01-0'+i,close:10*i}));
@@ -339,8 +384,70 @@ function check3(S,t,E,bad){
     const L=[{y:50},{y:52},{y:51},{y:200}], R=c.pfSpread(L,18,204,13), ly=R.map(o=>o.ly).sort((a,b)=>a-b);
     t('L7 끝 값 글자가 겹치지 않음(13px 이상) · 위아래 순서 그대로 · 칸 안(아래 끝 넘으면 위로)',ly.every((v,i)=>!i||v-ly[i-1]>=13-1e-9)&&L[0].ly<L[2].ly&&L[2].ly<L[1].ly&&ly[ly.length-1]<=204&&ly[0]>=18,JSON.stringify(R));
     const bind=fnOf(S.idx,'function pfChartBind()');
-    t('L8 값 상자: 세션별 그날 값(이름 · 무리 색 · 시작 전 세션 뺌) · 이름은 textContent',/for\(const s of \(G\.S\|\|\[\]\)\)\{ const v=p\.by&&p\.by\[s\.j\]; if\(v!=null\) line\(s\.color,pfUsdPlain\(v\),s\.name,true\); \}/.test(bind)
+    t('L8 값 상자: 켜 둔 세션·종목의 그날 값(이름 · 색 · 시작 전 뺌) · 합친 선·투입은 켜 둔 때만 · 이름은 textContent',/for\(const s of \(G\.S\|\|\[\]\)\)\{ const v=s\.vals\[i\]; if\(v!=null\) line\(s\.color,pfUsdPlain\(v\),s\.name,true\); \}/.test(bind)
+      &&/if\(G\.T\) line\('var\(--pf-val\)'/.test(bind)&&/if\(G\.I\) line\('var\(--pf-in\)'/.test(bind)
       &&/sp\.className='nm'; sp\.textContent=label;/.test(bind)); }
+  /* ── 추이 그림 세션별 · 종목별 보기 · 선 켜고 끄기(2026-11-09 사용자: "평가액 추이 그래프를 세션별 종목별로 선택해서 볼수 있게 해") ── */
+  { const d=i=>'2026-06-0'+i;
+    const A={tab:'plan',cur:'usd',key:'cur',label:'듀얼가드',name:'현재 투자중',series:[1,2,3].map(i=>({date:d(i),tot:100+i,inflow:100,out:0,hv:{TECL:60+i,TQQQ:30},cash:10}))};
+    const B={tab:'inf',cur:'usd',id:'b1',label:'무한매수법',name:'키움',series:[{date:d(2),tot:520,inflow:500,out:20,hv:{SOXL:400},cash:100},{date:d(3),tot:530,inflow:500,out:20,hv:{},cash:510}]};
+    const K={tab:'dca',cur:'krw',id:'k1',label:'적립',name:'국내',series:[{date:d(1),tot:140000,inflow:140000,out:0,hv:{'005930':140000},cash:0},{date:d(3),tot:154000,inflow:140000,out:0,hv:{'005930':154000},cash:0}]};
+    const O={tab:'vr',cur:'usd',id:'o1',label:'VR',name:'옛 점',series:[{date:d(1),tot:50,inflow:50,out:0},{date:d(3),tot:55,inflow:50,out:0}]};   // hv 없는 옛 점
+    const C=c.pfCombine([A,B,K,O],1400), P=C.points;
+    const sumOk=P.every(p=>near(Object.values(p.tk).reduce((a,v)=>a+v,0)+p.cash,p.now,1e-9));
+    t('Q1 날마다 종목 합 + 현금 = 합친 평가액(나간 돈 뺀 지금 계좌) · 원화 종목은 환율로(krw: 붙임) · 이월 · 다 판 종목은 빠짐 · hv 없는 옛 점은 그 밖(?)',
+      sumOk&&near(P[0].tk['krw:005930'],100)&&near(P[1].tk.SOXL,400)&&P[2].tk.SOXL===undefined&&near(P[2].cash,10+510)&&near(P[1].tk['krw:005930'],100)&&near(P[2].tk['krw:005930'],110)&&near(P[2].tk['?'],55)&&near(P[1].tk.TECL,62),
+      JSON.stringify(P.map(p=>[p.tk,p.cash,p.now])));
+    const T7={tab:'dca',cur:'usd',id:'z',label:'적립',name:'여럿',series:[{date:d(1),tot:36,inflow:36,out:0,hv:{AA:1,BB:2,CC:3,DD:4,EE:5,FF:6,GG:7,HH:8},cash:0},{date:d(3),tot:36,inflow:36,out:0,hv:{AA:1,BB:2,CC:3,DD:4,EE:5,FF:6,GG:7,HH:8},cash:0}]};
+    const SR=c.pfChartSeries(c.pfCombine([A,B,T7],1),'tk'), tl=SR.filter(s=>!s.base), nm=tl.map(s=>s.name);
+    t('Q2 종목별 선 — 지금 금액 순 · 일곱 색(검증한 순서) · 여덟째부터 그 밖 한 선(회색 점선 · 다 판 SOXL 포함) · 현금 선 · 다 판 종목은 0(끊기지 않게) · 시작 전 null · 첫째 합친 · 끝 투입',
+      SR[0].key==='total'&&SR[SR.length-1].key==='inflow'&&nm.slice(0,3).join()==='TECL,TQQQ,HH'&&tl[0].color==='#3987e5'&&tl[1].color==='#d95926'&&tl[6].color==='#e66767'
+      &&nm.includes('그 밖 4종목')&&tl.find(s=>s.key==='t:*').dash==='5 3'&&nm.includes('현금·예수금')
+      &&near(tl.find(s=>s.key==='t:*').vals[0],3+2+1)&&near(tl.find(s=>s.key==='t:*').vals[1],3+2+1+400)&&(()=>{ const x=c.pfChartSeries(c.pfCombine([A,B],1),'tk').find(s=>s.key==='t:SOXL'); return !!x&&x.vals[0]===null&&x.vals[1]===400&&x.vals[2]===0; })(),JSON.stringify(nm));
+    c.PF.chartMode='tk'; c.PF.chartOff={sess:new Set(),tk:new Set()};
+    const h1=c.pfChartHtml(C), g1=c.PF.chartGeo;
+    t('Q3 종목별 그림 — 보기 단추(종목별 눌림) · 종목 선 · 이름 단추마다 켜고 끄기(눌림) · 합친 선·투입 그대로',/data-pfmode="tk" aria-pressed="true"/.test(h1)&&/data-pfmode="sess" aria-pressed="false"/.test(h1)
+      &&(h1.match(/class="pf-sess"/g)||[]).length===g1.S.length&&g1.S.some(s=>s.name==='SOXL')&&(h1.match(/class="pf-chip" data-pfser=/g)||[]).length===c.pfChartSeries(C,'tk').length&&/class="pf-line pf-val"/.test(h1)&&/class="pf-line pf-in"/.test(h1)&&g1.T&&g1.I,h1.slice(0,300));
+    c.PF.chartOff.tk=new Set(['total','inflow']);
+    const h2=c.pfChartHtml(C), g2=c.PF.chartGeo, ys=[...h2.matchAll(/<path d="([^"]*)" class="pf-sess"/g)].flatMap(m=>[...m[1].matchAll(/[ML][\d.]+ ([\d.]+)/g)].map(q=>+q[1]));
+    t('Q3 합친 선·투입 끄면 — 그 선·낙폭 띠·끝 점 없음 · 세로 축은 켜 둔 선(작은 값)에 맞춤 · 꺼진 단추는 aria-pressed=false',
+      !/pf-line pf-val/.test(h2)&&!/pf-line pf-in/.test(h2)&&!/class="pf-band"/.test(h2)&&!/class="pf-dot"/.test(h2)&&!g2.T&&!g2.I&&Math.min(...ys)<40&&/data-pfser="total" aria-pressed="false"/.test(h2),JSON.stringify([Math.min(...ys),Math.max(...ys)]));
+    { const DD={tab:'plan',cur:'usd',key:'cur',series:[{date:d(1),tot:100,inflow:100,out:0,hv:{TECL:90},cash:10},{date:d(2),tot:120,inflow:100,out:0,hv:{TECL:110},cash:10},{date:d(3),tot:90,inflow:100,out:0,hv:{TECL:80},cash:10}]};
+      const CD=c.pfCombine([DD],1); c.PF.chartMode='sess'; c.PF.chartOff={sess:new Set(),tk:new Set()}; const on=c.pfChartHtml(CD); c.PF.chartOff.sess=new Set(['total']); const offT=c.pfChartHtml(CD);
+      t('Q3 낙폭 띠는 합친 선의 것 — 켜면 그림(−25%) · 끄면 없음',/class="pf-band"/.test(on)&&!/class="pf-band"/.test(offT)&&near(CD.mdd,25),String(CD.mdd)); c.PF.chartMode='tk'; c.PF.chartOff={sess:new Set(),tk:new Set()}; }
+    c.PF.chartOff.tk=new Set(c.pfChartSeries(C,'tk').map(s=>s.key));
+    const h3=c.pfChartHtml(C);
+    t('Q3 다 끄면 — 그림 대신 안내 · 이름 단추는 남음(다시 켤 수 있게) · 값 상자 자리 없음',/보일 선을 하나 이상 켜세요/.test(h3)&&/class="pf-chip"/.test(h3)&&c.PF.chartGeo===null&&!/role="img"/.test(h3)&&!/id="pfChart"/.test(h3));
+    c.PF.chartMode='sess'; c.PF.chartOff={sess:new Set(),tk:new Set(['total'])}; const r0=c.refreshed; c.pfChartToggle('s:inf:b1');
+    t('Q4 끄기는 지금 보기(세션별) 목록에만 · 종목별 끈 것은 그대로 · 그림 칸만 다시 그림 · 세션 열쇠 = 탭:세션',c.PF.chartOff.sess.has('s:inf:b1')&&c.PF.chartOff.tk.has('total')&&c.refreshed===r0+1
+      &&c.pfChartSeries(C,'sess').some(s=>s.key==='s:inf:b1')&&c.pfChartSeries(C,'sess').some(s=>s.key==='s:plan:cur'));
+    c.pfChartToggle('s:inf:b1'); c.PF.chartOff={sess:new Set(),tk:new Set()};
+    c.PF.chartMode='tk'; c.pfChartToggle('t:SOXL');
+    t('Q4 종목별 보기에서 끄면 종목별 목록에만(세션별은 그대로)',c.PF.chartOff.tk.has('t:SOXL')&&!c.PF.chartOff.sess.has('t:SOXL'));
+    c.PF.chartMode='sess'; c.PF.chartOff={sess:new Set(),tk:new Set()};
+    const rend=fnOf(S.idx,'function pfRender()'), clk=S.idx.slice(S.idx.indexOf("document.addEventListener('click',e=>{\n  const b=e.target&&e.target.closest&&e.target.closest('#pfPage button');"));
+    t('Q4 배선 — 화면이 그림 칸(pfChartWrap)·PF.C 를 두고 · 보기 단추·이름 단추 누름 → 보기 바꿈·켜고 끄기 · 처음은 세션별 · 종목별은 처음에 합친 선·투입 꺼 둠',
+      /PF\.C=C;/.test(rend)&&/<div id="pfChartWrap">'\+pfChartHtml\(C\)\+'<\/div>'/.test(rend)&&/b\.dataset\.pfmode\)\{ PF\.chartMode=b\.dataset\.pfmode==='tk'\?'tk':'sess'; pfChartRefresh\(\); return; \}/.test(clk)
+      &&/b\.dataset\.pfser\)\{ pfChartToggle\(b\.dataset\.pfser\); return; \}/.test(clk)&&/chartMode:'sess', chartOff:\{sess:new Set\(\), tk:new Set\(\['total','inflow'\]\)\}/.test(S.idx)); }
+  // ── Q5 운영 세션 그릇 — 날마다 종목별 값(주식 × 종가 · 1배수 짝) · 계좌 현금(나머지 − 나간 돈) · 끝 값도
+  { const md=fnOf(S.idx,'function paperMdd(tab, sess, R, hist)');
+    const days=[1,2,3].map(i=>({date:'2026-07-0'+i,close:10*i})), hist=[{date:'2026-07-01'},{date:'2026-07-02'}];
+    const raw=(tab,sess)=>({inflow:100,qty:2,qty1:1,price1:50,sym:'USD',sym1:'SMH',k:60,price:0,realized:0,out:{saved:5,withdrawn:0},turnover:0,cost:0});
+    const k=new Function('PAPER_DAYS','PAPER_CACHESYM','paperRaw','ivsQuote1','console','paperAfterTaxAcc','PAPER_NOFEE_TABS',
+      'var _pfSeriesSink=[];'+md+'\nparaperMdd=null; paperMdd("ivs",{settings:{ticker:"USD"},hist:'+JSON.stringify(hist)+'},{qty:2,qty1:1,price:33,price1:55,sym:"USD",sym1:"SMH",k:60,inflow:100,total:2*33+55+60,realized:0,out:{saved:5,withdrawn:0}},'+JSON.stringify(hist)+'); return _pfSeriesSink;')(
+      {ivs:()=>days},{ivs:()=>'USD'},raw,{days:[{date:'2026-07-01',close:50},{date:'2026-07-02',close:52},{date:'2026-07-03',close:54}]},{error(){}},()=>({step(){},done(){return null;}}),new Set());
+    t('Q5 그릇 — 날마다 hv{USD: 2×종가, SMH: 1×짝 종가} · 현금 = k 60 − 나간 돈 5 = 55 · 끝 값은 지금 시세(USD 2×33 · SMH 1×55) · hv 합 + 현금 + 나간 돈 = 총자산',
+      k.length===3&&k[0].hv.USD===20&&k[0].hv.SMH===50&&k[0].cash===55&&k[1].hv.SMH===52&&k[2].hv.USD===66&&k[2].hv.SMH===55&&k[2].cash===55
+      &&k.every(q=>near(Object.values(q.hv).reduce((a,v)=>a+v,0)+q.cash+q.out,q.tot)),JSON.stringify(k)); }
+  // ── Q6 듀얼가드 날마다 값 — 종목별(TECL·TQQQ·SGOV × 그날 종가) · 계좌 현금 · 끝 값은 줄의 보유 × 지금가
+  { const days=k=>[1,2,3].map(i=>({date:'2026-08-0'+i,close:k*i}));
+    const Q={TECL:{days:days(50)},TQQQ:{days:days(40)},SGOV:{days:[1,2,3].map(i=>({date:'2026-08-0'+i,close:100}))}};
+    const L={start:2000,from:'2026-08-01',ledger:{base:{date:'2026-08-01',cash:2000},events:[{id:'b',type:'trade',date:'2026-08-02',symbol:'TECL',side:'buy',qty:5,price:100,fee:0},{id:'c',type:'trade',date:'2026-08-02',symbol:'SGOV',side:'buy',qty:3,price:100,fee:0}]}};
+    const row={pending:false,total:1200+5*160+3*101,inflow:2000,hold:{TECL:5,TQQQ:0,SGOV:3,cash:1200},px:{TECL:160,TQQQ:120,SGOV:101}};
+    const s=c.pfPlanSeries(L,Q,E,row);
+    t('Q6 듀얼가드 — 날마다 hv(TECL 5×100 · SGOV 3×100) · 현금 1,200 · hv 합 + 현금 = 총자산 · 끝 값 = 보유 × 지금가(TECL 5×160 · SGOV 3×101)',
+      s.length===3&&s[0].cash===2000&&Object.keys(s[0].hv).length===0&&s[1].hv.TECL===500&&s[1].hv.SGOV===300&&s[1].cash===1200&&s[2].hv.TECL===800&&s[2].hv.SGOV===303&&s[2].cash===1200
+      &&s.every(q=>near(Object.values(q.hv).reduce((a,v)=>a+v,0)+q.cash,q.tot)),JSON.stringify(s)); }
   return check4(S,t,E,bad);
 }
 
@@ -432,8 +539,60 @@ function check5(S,t,E,bad){
       s0.join()==='true,false'&&s1.join()==='false,true,true'&&s2.join()==='true,false'&&s3.join()==='false'
       &&/assetPfInit\(x\?x\.portfolio!==false:planPortfolio!==false\)/.test(fnOf(S.plan,'async function editAssetSession(mode)'))&&/assetPfUI\(paper\)/.test(fnOf(S.plan,'function syncAssetSessionModal()'))
       &&/assetPfInit\(true\)/.test(fnOf(S.plan,'function openAssetSessionModal()'))&&/id="assetSessionPf"/.test(S.plan),JSON.stringify([s0,s1,s2,s3]));
-    return bad;
+    return check6(S,t,E,bad);
   })();
+}
+
+/* P 세션별 · 종목별 보유(index v3.124.0 · 2026-11-09 사용자: "포트폴리오에 세션별과 종목별 보유량 수익률 현재금액과 그래프 그려")
+   — 수량·원가는 그 전략 계산 그대로(paperStat 이 넘긴 hold · 듀얼가드 ledgerCalc 평단) · 종목 합 + 현금 = 지금 계좌 · 같은 종목 합침 · 원화 환산 */
+function check6(S,t,E,bad){
+  const helpers=['function pfOutAmt(r)','function pfSummary(rows, fx)','function pfGroup(tab)','function pfQty(q)','function pfPositions(r)','function pfByTicker(rows, fx)',
+    'function pfHoldText(P, r)','function pfSessHtml(Z)','function pfTickerHtml(B)','function pfUsdPlain(v)','function pfUsd2(v)','function pfPct(v)','function pfEsc(x)','function pfSessName(r)'];
+  const c={Math,Object,Number,String,Map,Set};vm.createContext(c);
+  vm.runInContext(helpers.map(m=>fnOf(S.idx,m)).join('\n')
+    +'\n'+((S.idx.match(/const PF_GROUP=\{.*\};/)||[''])[0]).replace('const PF_GROUP','var PF_GROUP')+'\n'+((S.idx.match(/const PF_OTHER=\{[^}]*\};/)||[''])[0]).replace('const PF_OTHER','var PF_OTHER')
+    +'\n'+((S.idx.match(/const PF_CASH_COLOR='[^']*';/)||[''])[0]).replace('const PF_CASH_COLOR','var PF_CASH_COLOR'),c);
+  // 줄: 듀얼가드(pfPlanRow 꼴) · 무매 SOXL · 섀넌 USD + SMH(1배수) · 적립 USD(같은 종목 합침) · 원화 적립 · ASAP 리저브 · 시세 대기(VR)
+  const plan={tab:'plan',label:'듀얼가드',name:'현재 투자중',cur:'usd',total:0,inflow:20000,out:0,ret:null,hold:{TECL:64,TQQQ:38,SGOV:6,cash:1234.5},avg:{TECL:95,TQQQ:80,SGOV:null},px:{TECL:98,TQQQ:62,SGOV:100.5}};
+  plan.total=1234.5+64*98+38*62+6*100.5; plan.ret=(plan.total/plan.inflow-1)*100;
+  const inf={tab:'inf',label:'무한매수법',sym:'SOXL',name:'40분할',cur:'usd',price:50,total:120*50+800+70,inflow:7000,out:{saved:50,withdrawn:20},ret:5,
+    hold:{sym:'SOXL',qty:120,cost:5400,sym1:'',qty1:0,price1:0,cost1:0,cash:800}};
+  const ivs={tab:'ivs',label:'섀넌',sym:'USD',name:'USD 1배수',cur:'usd',price:60,total:30*60+10*250+300,inflow:4000,out:{saved:0,withdrawn:0},ret:15,
+    hold:{sym:'USD',qty:30,cost:1500,sym1:'SMH',qty1:10,price1:250,cost1:2300,cash:300}};
+  const dca={tab:'dca',label:'적립',sym:'USD',name:'매일',cur:'usd',price:60,total:2.5*60,inflow:120,out:{saved:0,withdrawn:0},ret:25,hold:{sym:'USD',qty:2.5,cost:120,sym1:'',qty1:0,price1:0,cost1:0,cash:0}};
+  const krw={tab:'dca',label:'적립',sym:'005930',name:'삼성',cur:'krw',price:70000,total:10*70000,inflow:600000,out:null,ret:16.7,hold:{sym:'005930',qty:10,cost:600000,sym1:'',qty1:0,price1:0,cost1:0,cash:0}};
+  const asap={tab:'asap',label:'ASAP',sym:'UPRO',name:'',cur:'usd',price:80,total:5*80+600,inflow:900,out:null,ret:11,hold:{sym:'UPRO',qty:5,cost:350,sym1:'',qty1:0,price1:0,cost1:0,cash:600}};
+  const pend={tab:'vr',label:'VR',sym:'TQQQ',cur:'usd',price:0,total:999,inflow:1,pending:true,hold:{sym:'TQQQ',qty:3,cost:100,cash:5}};
+  const rows=[plan,inf,ivs,dca,krw,asap,pend], fx=1400;
+  const Z=c.pfSummary(rows,fx), B=c.pfByTicker(rows,fx), sum=B.list.reduce((a,x)=>a+x.usd,0)+B.cash;
+  t('P1 종목별 평가 합 + 현금 = 지금 계좌(pfSummary now) — 같은 돈을 나눠 보일 뿐(나간 돈 · 시세 대기 줄 제외 · 원화 환산)',near(sum,Z.now,1e-6)&&near(B.total,Z.now,1e-6),JSON.stringify({sum,now:Z.now}));
+  const U=B.list.find(x=>x.sym==='USD'), T=B.list.find(x=>x.sym==='TECL'), G=B.list.find(x=>x.sym==='SGOV'), K=B.list.find(x=>x.sym==='005930'), M=B.list.find(x=>x.sym==='SMH');
+  t('P2 같은 종목(USD — 섀넌 30주 + 적립 2.5주)은 합친다 · 평단 = 원가 합 ÷ 수량 · 수익률 = 평가 ÷ 원가 − 1 · 전략 칸 둘(섀넌 · 그 밖)',
+    !!U&&near(U.qty,32.5)&&near(U.val,32.5*60)&&near(U.avg,1620/32.5)&&near(U.ret,(1950/1620-1)*100)&&U.n===2&&U.by.size===2,JSON.stringify(U&&{q:U.qty,v:U.val,a:U.avg,r:U.ret,n:U.n}));
+  t('P3 듀얼가드 평단 = 엔진 장부 평단(TECL 95) · 평단 모르면(SGOV) 수익률·평가손익·평단 없음(0 으로 꾸미지 않음) · 1배수 짝(SMH)은 제 원가',
+    !!T&&near(T.avg,95)&&near(T.ret,(98/95-1)*100)&&!!G&&G.ret===null&&G.pnl===null&&G.avg===null&&!!M&&near(M.cost,2300)&&near(M.ret,(2500/2300-1)*100),JSON.stringify([T&&T.ret,G&&[G.ret,G.pnl],M&&M.ret]));
+  t('P4 원화 종목은 원화 그대로(수량·평가) · 길이·비중만 환율로 달러 환산 · 환율 없으면 빼고 셈(missing)',
+    !!K&&near(K.val,700000)&&near(K.usd,500)&&B.missing===0&&(()=>{const b=c.pfByTicker(rows,0);return b.missing===1&&!b.list.some(x=>x.sym==='005930');})(),JSON.stringify(K&&{v:K.val,u:K.usd}));
+  t('P5 현금 = 계좌에 남은 돈만(무매 나간 돈 70 은 빼고 · ASAP 리저브 600 포함) · 시세 대기 줄(VR) 보유는 안 더함 · 큰 순서',
+    near(B.cash,1234.5+800+300+600)&&!B.list.some(x=>x.sym==='TQQQ'&&x.qty===41)&&B.list.every((x,i)=>!i||B.list[i-1].usd>=x.usd),JSON.stringify({cash:B.cash,order:B.list.map(x=>x.sym)}));
+  const hs=c.pfSessHtml(Z), ht=c.pfTickerHtml(B);
+  t('P6 세션별 막대 — 큰 순서 · 가장 큰 세션 = 100% · 보유 글자(SOXL 120주 · 현금 $800.00 · 1배수 짝 · ASAP 리저브) · 수익률',
+    /세션별/.test(hs)&&/width:100\.00%/.test(hs)&&hs.indexOf('SOXL 120주 · 현금 $800.00')>0&&hs.indexOf('USD 30주 · SMH 10주 · 현금 $300.00')>0&&hs.indexOf('UPRO 5주 · 리저브 $600.00')>0&&/\+5\.0%/.test(hs),hs.slice(0,300));
+  t('P7 종목별 막대 — USD 32.5주 · 평단 · 현재가 · 평가손익 · 두 전략 칸(색) · 원화는 원 · 현금 줄',
+    ht.indexOf('32.5주 · 평단 $49.85 · 현재가 $60.00 · 평가손익 +$330.00')>0&&ht.indexOf('섀넌 · 적립 · 2세션')>0&&(ht.match(/<i style="flex:/g)||[]).length>=B.list.length+1&&ht.indexOf('700,000원')>0&&/현금·예수금/.test(ht)&&ht.indexOf('background:#d55181')>0,ht.slice(0,400));
+  // P8 paperStat — 포트폴리오 채우기 동안(그릇 있음)만 보유를 넘긴다 · 현금 = 나머지(k) − 나간 돈 · 1배수 짝 원가는 따로 · 모의 목록 줄엔 없음
+  { const st=fnOf(S.idx,'function paperStat(tab, sess)');
+    const R={inflow:1000,total:1500,price:60,sym:'USD',qty:10,qty1:2,price1:250,sym1:'SMH',out:{saved:30,withdrawn:20},realized:0,turnover:0,cost:900,cost1:400,k:1500-600-500};
+    const run=sink=>new Function('S','paperRaw','paperMdd','paperStatPlan','paperStart','tradeCount','paperOpts','curOf','paperInflowWon',(sink?'var _pfSeriesSink=[];':'')+st+'\nreturn paperStat;')(
+      {activeTab:'inf',ivs:{active:'z'}},()=>R,()=>null,()=>null,()=>'',()=>0,()=>'',()=>'usd',()=>0)('ivs',{id:'a',name:'n',settings:{},hist:[{date:'2026-01-02'}]});
+    const a=run(true), b=run(false), h=a&&a.hold;
+    t('P8 paperStat 보유 — 그릇 있을 때만 hold · 주 원가 = 900 − 400 · 짝 SMH 2주 원가 400 · 현금 = k 400 − 나간 돈 50 = 350 · 모의 목록 줄엔 없음',
+      !!h&&h.sym==='USD'&&h.qty===10&&near(h.cost,500)&&h.sym1==='SMH'&&h.qty1===2&&near(h.cost1,400)&&near(h.cash,350)&&!!b&&b.hold===undefined,JSON.stringify(h)); }
+  t('P9 배선 — pfRender 가 세션별·종목별을 합친 추이 아래에 · 카드 보유 = pfHoldText · paperRaw 섀넌 sym1·cost1 · pfPlanRow 평단(avg)',
+    /h\+=pfSessHtml\(Z\)\+pfTickerHtml\(pfByTicker\(rows,fx\)\);/.test(fnOf(S.idx,'function pfRender()'))&&/extra\.push\(pfHoldText\(P,r\)\)/.test(fnOf(S.idx,'function pfCard(r,Z)'))
+      &&/sym1=s1;/.test(fnOf(S.idx,'function paperRaw(tab, sess)'))&&/cost1=\(c\.avg1\|\|0\)\*\(c\.qty1\|\|0\); cost=\(c\.avg\|\|0\)\*\(c\.qty\|\|0\)\+cost1;/.test(fnOf(S.idx,'function paperRaw(tab, sess)'))
+      &&/avg:\{TECL:c\.avgTecl,TQQQ:c\.avgTqqq,SGOV:c\.avgSgov\}/.test(fnOf(S.idx,'function pfPlanRow(L, Q, E)')));
+  return bad;
 }
 
 const MUT=[
@@ -460,12 +619,17 @@ const MUT=[
   ['날마다 값: 끝 날짜를 종가 끝으로 고정','idx',s=>s.replace("const end={date:lastH>endD?lastH:endD, tot:R.total,","const end={date:endD, tot:R.total,")],
   ['듀얼가드 추이: 입금을 투입에 안 넣음','idx',s=>s.replace("const inflow=Math.max(0,(+L.start||0)+(+st.netFlow||0)); if(!(inflow>0)) continue;","const inflow=Math.max(0,(+L.start||0)); if(!(inflow>0)) continue;")],
   ['합친 추이: 원화 줄을 환율 없이 섞음','idx',s=>s.replace("let k=1; if(r.cur==='krw'){ if(!(+fx>0)) continue; k=1/(+fx); }","let k=1;")],
-  ['세션 선: 나간 돈을 안 뺌(합 ≠ 합친 평가액)','idx',s=>s.replace("tot+=t1; inflow+=(+x.last.inflow)*x.k; out+=o1; by.push(t1-o1); }","tot+=t1; inflow+=(+x.last.inflow)*x.k; out+=o1; by.push(t1); }")],
+  ['ASAP 모의: 재계산에 다시 넣음(옛 코드)','idx',s=>s.replace("      if(!live&&tab==='asap') continue;         // ASAP 모의 뺌(PAPER_TABS 주석)\n","")],
+  ['ASAP 실계좌: 포트폴리오에서도 뺌','idx',s=>s.replace("      if(!live&&tab==='asap') continue;         // ASAP 모의 뺌(PAPER_TABS 주석)","      if(tab==='asap') continue;")],
+  ['ASAP 모의: 시세 선취에 다시 넣음','idx',s=>s.replace("    if(!live&&tab==='asap') continue;   // ASAP 모의 뺌(PAPER_TABS 주석)\n","")],
+  ['ASAP 모의: 목록 요약에 다시 넣음','idx',s=>s.replace("if(!box||!box.sessions||tab==='asap') return;   // ASAP 모의 뺌(PAPER_TABS 주석)\n    box.sessions.forEach(sess=>{","if(!box||!box.sessions) return;\n    box.sessions.forEach(sess=>{")],
+  ['ASAP 모의: 전체 적용에 다시 넣음','idx',s=>s.replace("if(!box||!box.sessions||tab==='asap') return;   // ASAP 모의 뺌(PAPER_TABS 주석)\n    box.sessions.forEach(x=>{","if(!box||!box.sessions) return;\n    box.sessions.forEach(x=>{")],
+  ['세션 선: 나간 돈을 안 뺌(합 ≠ 합친 평가액)','idx',s=>s.replace("tot+=t1; inflow+=(+x.last.inflow)*x.k; out+=o1; by.push(t1-o1);\n","tot+=t1; inflow+=(+x.last.inflow)*x.k; out+=o1; by.push(t1);\n")],
   ['세션 선: 하나여도 그림','idx',s=>s.replace("const ss=(C&&C.sess)||[]; if(ss.length<2) return [];","const ss=(C&&C.sess)||[]; if(!ss.length) return [];")],
   ['세션 선: 무리 색 대신 한 색','idx',s=>s.replace("return {j, color:g.color, dash:","return {j, color:'#9085e9', dash:")],
   ['세션 선: 같은 무리도 같은 모양','idx',s=>s.replace("dash:PF_DASH[(k+(g===PF_OTHER?1:0))%PF_DASH.length]","dash:''")],
   ['끝 값: 겹침 안 막음(제자리)','idx',s=>s.replace("  const a=items.slice().sort((p,q)=>p.y-q.y);\n","  const a=items.slice().sort((p,q)=>p.y-q.y); a.forEach(o=>{o.ly=o.y;}); return items;\n")],
-  ['값 상자: 세션 줄 없음','idx',s=>s.replace("    for(const s of (G.S||[])){ const v=p.by&&p.by[s.j]; if(v!=null) line(s.color,pfUsdPlain(v),s.name,true); }","")],
+  ['값 상자: 세션 줄 없음','idx',s=>s.replace("    for(const s of (G.S||[])){ const v=s.vals[i]; if(v!=null) line(s.color,pfUsdPlain(v),s.name,true); }","")],
   ['합친 선 색: 예전 파랑(듀얼가드 보라와 색약에서 못 가름)','idx',s=>s.replace("#pfPage{--pf-val:#e8ecf7;","#pfPage{--pf-val:#3987e5;")],
   // 💰 포트폴리오에 넣기 (2026-11-09)
   ['넣을지 판단: 끈 세션도 넣음','idx',s=>s.replace("function pfWanted(x){ return !!x && !x.paper && x.portfolio!==false; }","function pfWanted(x){ return !!x && !x.paper; }")],
@@ -486,6 +650,33 @@ const MUT=[
   ['플랜 원장: portfolio 를 안 읽음','plan',s=>s.replace("  planPortfolio=all.portfolio!==false;\n","")],
   ['플랜 창: 선택을 안 보냄','plan',s=>s.replace("      msg.portfolio=x?x.portfolio!==false:planPortfolio!==false;msg.name=","      msg.name=")],
   ['플랜 설정창: 모의 세션도 넣기 고를 수 있음','plan',s=>s.replace("if(paper){if(!c.disabled)assetPfPick=c.checked;c.checked=false;c.disabled=true;}","if(paper){}")],
+  ['종목별: 현금을 안 더함','idx',s=>s.replace("    cash+=P.cash*k;\n  }\n  const list=[...m.values()]","  }\n  const list=[...m.values()]")],
+  ['종목별: 같은 종목을 세션마다 따로 셈','idx',s=>s.replace("const key=P.cur+':'+p.sym;","const key=P.cur+':'+p.sym+':'+(r.id||r.key||r.name);")],
+  ['종목별: 원화를 환율로 안 나눔','idx',s=>s.replace("    let k=1; if(P.cur==='krw'){ if(!(+fx>0)){ missing++; continue; } k=1/(+fx); }\n    for(const p of P.list){","    let k=1;\n    for(const p of P.list){")],
+  ['종목별: 시세 대기 줄도 더함','idx',s=>s.replace("    if(!r||r.pending||!Number.isFinite(+r.total)) continue;\n    const P=pfPositions(r);","    if(!r) continue;\n    const P=pfPositions(r);")],
+  ['종목별: 평단 모르면 원가 0 으로 셈','idx',s=>s.replace("if(p.cost==null) x.costOk=false; else x.cost+=p.cost;","x.cost+=p.cost||0;")],
+  ['paperStat 보유: 현금에 나간 돈 포함','idx',s=>s.replace("cash:(+R.k||0)-outAmt};","cash:(+R.k||0)};")],
+  ['paperStat 보유: 모의 목록 줄에도 넣음','idx',s=>s.replace("  if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink)\n    row.hold=","  if(true)\n    row.hold=")],
+  ['paperStat 보유: 짝 원가를 주 종목에 섞음','idx',s=>s.replace("cost:Math.max(0,(+R.cost||0)-(+R.cost1||0)),","cost:+R.cost||0,")],
+  ['카드: 보유 글자 안 적음','idx',s=>s.replace("  { const P=pfPositions(r); if(P) extra.push(pfHoldText(P,r)); }","")],
+  ['듀얼가드 줄: 평단 빠짐','idx',s=>s.replace(" avg:{TECL:c.avgTecl,TQQQ:c.avgTqqq,SGOV:c.avgSgov},","")],
+  ['합친 추이: 종목별에 현금 안 더함','idx',s=>s.replace("cash+=(+x.last.cash||0)*x.k; }","}")],
+  ['합친 추이: 원화 종목을 환율로 안 나눔','idx',s=>s.replace("tk[pre+s]=(tk[pre+s]||0)+(+hv[s]||0)*x.k;","tk[pre+s]=(tk[pre+s]||0)+(+hv[s]||0);")],
+  ['합친 추이: hv 없는 옛 점을 버림','idx',s=>s.replace("      else tk['?']=(tk['?']||0)+(t1-o1); }\n","      }\n")],
+  ['그릇: 종목별 값 안 넣음','idx',s=>s.replace("_pfSeriesSink.push({date:row.date, tot, inflow:cur.inflow, out:o, realized:+cur.realized||0, hv, cash:(+cur.k||0)-o});","_pfSeriesSink.push({date:row.date, tot, inflow:cur.inflow, out:o, realized:+cur.realized||0, hv:{}, cash:(+cur.k||0)-o});")],
+  ['그릇: 현금에 나간 돈 포함','idx',s=>s.replace("hv, cash:(+cur.k||0)-o}); }","hv, cash:(+cur.k||0)}); }")],
+  ['듀얼가드 날마다: 종목별 빠짐','idx',s=>s.replace("    const hv={}; if(st.tecl) hv.TECL=st.tecl*last.TECL;","    const hv={}; if(false) hv.TECL=st.tecl*last.TECL;")],
+  ['종목별 선: 다 판 뒤 끊김(null)','idx',s=>s.replace("if(v!=null){ on=true; return v; } return on?0:null; });","if(v!=null){ on=true; return v; } return null; });")],
+  ['그림: 끈 선도 세로 축에 넣음','idx',s=>s.replace("let lo=Infinity, hi=-Infinity; for(const s of V) for(const v of s.vals)","let lo=Infinity, hi=-Infinity; for(const s of ALL) for(const v of s.vals)")],
+  ['그림: 합친 선 꺼도 낙폭 띠','idx',s=>s.replace("const band=(TOT&&a>=0&&b>a&&C.mdd>=0.05)","const band=(a>=0&&b>a&&C.mdd>=0.05)")],
+  ['끄기: 늘 세션별 목록을 바꿈','idx',s=>s.replace("  const m=PF.chartMode==='tk'?'tk':'sess'; PF.chartOff=PF.chartOff||{};","  const m='sess'; PF.chartOff=PF.chartOff||{};")],
+  ['첫 탭: 숨긴 탭도 첫 탭 후보','idx',s=>s.replace("    .filter(x=>all||!x.hid).sort((a,b)=>a.o-b.o).map(x=>x.t);","    .filter(x=>true).sort((a,b)=>a.o-b.o).map(x=>x.t);")],
+  ['첫 화면: 지난 듀얼가드 화면 복원(옛 코드)','idx',s=>s.replace("  if(onOp) opOpenFirst();\n","  if(S.opView==='dg') openDualGuard();\n")],
+  ['모의 목록: 정렬 안 함','idx',s=>s.replace("  rows=(typeof paperOrderRows==='function')?paperOrderRows(rows||[]):(rows||[]);","  rows=rows||[];")],
+  ['모의 목록: 세션바 순서 무시','idx',s=>s.replace("||idx(a.r)-idx(b.r)||a.i-b.i","||a.i-b.i")],
+  ['모의 목록: 듀얼가드 줄을 탭 순서에 못 맞춤(plan→dg 없음)','idx',s=>s.replace("ord.indexOf(t==='plan'?'dg':t)","ord.indexOf(t)")],
+  ['세션으로 들어와도 첫 탭으로 되돌림','idx',s=>s.replace("  _userTabbed=true;   // 모의·포트폴리오에서 세션으로 들어옴 — 첫 탭으로 되돌리지 않는다\n","")],
+  ['정책 적용 뒤 운영 화면에 안 알림','acc',s=>s.replace(/    try\{ if\(typeof CustomEvent==='function'&&document\.dispatchEvent\) document\.dispatchEvent\(new CustomEvent\('jk-subtabs'[^\n]*\n/,"")],
 ];
 (async()=>{
   const bad=await check(SRC);

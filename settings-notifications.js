@@ -104,7 +104,7 @@ const NOTIFY_DEFS=[
    desc:"매일 오전 8:10경 청약 중·7일 내 청약 예정·당일 상장 종목과 공모가/경쟁률 기반 투자 조사 점수를 보내드립니다."},
   {topic:"presale",href:"/realestate",icon:"🏢",name:"대전·세종 신규분양",
    desc:"대전·세종 일반·무순위/잔여·임의공급 신규공고를 30분 간격으로 확인하고 분양가·주변 실거래 기반 점수로 안내합니다."},
-  {topic:"research",href:"/scalping",icon:"🔬",name:"연구 결과 · 무매·플랜·클로드 텐배거",
+  {topic:"research",href:"/scalping",icon:"🔬",name:"연구 결과 · 무매·듀얼가드·클로드 텐배거",
    desc:"무매·듀얼가드 연구 결과와 클로드 텐배거 모의 매수·매도 알림입니다. 지피티 텐배거는 연구(지피티) 전체 탭 설정에서 관리합니다."},
   {topic:"job",href:"/job",icon:"💼",name:"대전·세종 JOB 신규공고",
    desc:"30분마다 채용공고를 확인하고 새 공고가 있을 때만 알려줍니다."},

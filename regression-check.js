@@ -1331,10 +1331,12 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   {
     const vm=require('vm'), box={location:{origin:'https://jkquant.pages.dev',pathname:'/job'},URL};
     const menuDecl=(acc.match(/var MENU_ITEMS=\[[\s\S]*?\n  \];/)||[''])[0];
+    /* 하위 탭(2026-11-09) — menuDefaults·normalizeMenuConfig 가 SUB_TABS·SUB_MODES·subDefaults 를 쓴다 */
+    const subDecl=((acc.match(/var SUB_TABS=\{[\s\S]*?\n  \};/)||[''])[0])+'\n'+((acc.match(/var SUB_MODES=\[[^\n]*\];/)||[''])[0]);
     const adminDecl=(acc.match(/var ADMIN_EMAILS=\[[^\n]+\];/)||[''])[0];
     const fn=n=>optFn(acc,'function '+n+'(');
     try{
-      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
+      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+subDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('subDefaults')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
         +'\nthis.out={d:menuDefaults(),n:normalizeMenuConfig({items:{"/job":{mode:"hidden",order:5},"/plan":{mode:"admin",order:6}}}),a:menuAccess({email:"user@example.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job"),b:menuAccess({email:"jk82investing@gmail.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job")};',box);
       ok('메뉴 정책 값 시험 — 기본/숨김/관리자 우회',
          box.out.d.items['/plan'].mode==='public' && box.out.d.items['/scalping'].mode==='admin'
@@ -1475,7 +1477,7 @@ console.log('[24-1] 모의 설정 지문 — 무매 주문 설정 변경 시 성
    그 세션이 왜 그 숫자가 나왔는지다. */
 console.log('[25] 모의 성과 → 분석 이동');
 {
-  ok('성과 줄이 어느 세션인지 안다', /return \{tab, id:sess\.id, name:sess\.name/.test(idx));
+  ok('성과 줄이 어느 세션인지 안다', /const row=\{tab, id:sess\.id, name:sess\.name/.test(idx) && /\n  return row;\n\}\nfunction paperSummary\(\)/.test(idx));   // 2026-11-09 포트폴리오 보유(hold)를 붙이려고 row 로 받은 뒤 돌려준다
   /* 줄 전체를 누르게 했더니 숫자를 보려고 짚기만 해도 화면이 넘어갔다 —
      이제 '전략 이름'만 누른다. 줄에는 onclick 이 남아 있으면 안 된다. */
   ok('전략 이름을 누르면 이동',
@@ -4082,7 +4084,7 @@ console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
      마지막 거래일에서 끊으면 그 사이 낙폭을 통째로 놓친다. */
   ok('시세가 있는 끝까지 본다', /const D=days\.filter\(d=>d&&d\.date>=from&&d\.close>0\);/.test(md));
   ok('paperRaw 가 k 와 주식 수를 돌려준다',
-     /k: total - qty\*price - qty1\*price1/.test(idx) && /return \{inflow, total, price, sym, qty, qty1, price1, out:_out,/.test(idx));
+     /k: total - qty\*price - qty1\*price1/.test(idx) && /return \{inflow, total, price, sym, qty, qty1, price1, sym1, out:_out,/.test(idx));   // sym1 = 섀넌 1배수 짝 종목(포트폴리오 종목별 · 2026-11-09)
   // 열 자리 — TR(토탈리턴 · 옛 '최종')과 현재 사이 (10-21 순서 TR · MDD · MAR · 평가)
   { const op=(()=>{ try{ return extractFn(idx,'async function openPaper()'); }catch(e){ return ''; } })();
     const iF=op.indexOf('>TR</th>'), iM=op.indexOf('>MDD</th>'), iN=op.indexOf('>현재</th>');
@@ -10684,7 +10686,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
     const start=rows[330].date;
     for(const y of [10,15,20]){   // 2026-11-08 폐지 — 다른 규칙으로 몰래 재생하지 않고 거절한다
       const R=E.replay({horizon:y,startDate:start,principal:10000,monthlyAdd:100,tecl:T,tqqq:Q,sgov:G});
-      ok('J '+y+'년 모의 — 폐지된 플랜이라 재생 거절(거래 없음)',R&&/^폐지된 플랜 — /.test(R.error)&&R.stats===null&&R.ledger.events.length===0,R&&R.error);
+      ok('J '+y+'년 모의 — 폐지된 플랜이라 재생 거절(거래 없음)',R&&/^폐지된 세션 — /.test(R.error)&&R.stats===null&&R.ledger.events.length===0,R&&R.error);
     }
     for(const y of [5]){
       const R=E.replay({horizon:y,startDate:start,principal:10000,monthlyAdd:100,tecl:T,tqqq:Q,sgov:G});
@@ -12703,16 +12705,28 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-08 — 5년 규칙 벌(새 규칙·공격형) 시험 2개(check-plan-rules-exp · check-plan-rules-session)는 규칙 폐지와 함께 빠졌다.
      폐지 자체(규칙 하나 · 10·15·20년 거절 · 폐지 세션 숨김 · 기본 결과 = 개편 전 엔진)와 클로드/지피티 탭이 없는지는 check-plan-claude-tab 이 본다. */
   const pct=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-claude-tab.cjs')],{encoding:'utf8'});
-  ok('듀얼가드 하나(클로드/지피티 탭 없음 · 2026-11-09): 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·폐지 세션 숨김·모의 목록·이름(띄어쓰기·"5년" 없음)·변이 18종',
-     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 18/18 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
+  ok('듀얼가드 하나(클로드/지피티 탭 없음 · 2026-11-09): 규칙 하나·폐지 판정·재생 거절·기본 결과 = 개편 전 엔진·폐지 세션 숨김·모의 목록·이름(띄어쓰기·"5년"·"플랜" 없음)·모의 캐시 판·영어 "5 YEAR" 없음·변이 23종',
+     pct.status===0&&(pct.stdout||'').includes('ALL PASS plan claude tab · 변이 23/23 red'),(pct.stdout||'').slice(-600)+(pct.stderr||''));
   /* 2026-11-08 — 입금 맞춤: 모의 엔진은 입금일 전체 맞춤(force)인데 운영 화면은 신호 없으면 현금으로 두던 갈림을 고침(plan 2.0.1) */
   const pdp=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-deposit.cjs')],{encoding:'utf8'});
   ok('자산플랜 입금 맞춤: 마지막 체결 뒤 입금 → 전체 맞춤 · 운영 주문표 = 모의 엔진 입금일 체결(21일 전부) · 변이 6종',
      pdp.status===0&&(pdp.stdout||'').includes('ALL PASS plan deposit · 변이 6/6 red'),(pdp.stdout||'').slice(-600)+(pdp.stderr||''));
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
-  ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 48종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 48/48 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+  ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 80/80 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+  /* 2026-11-09 — 섀넌 기록 시트: 탭마다 제 양식 · 저장은 주문대로 체결 기록과 같은 길(_ivsPush) · FAB 규칙 */
+  const pis=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ivs-sheet.cjs')],{encoding:'utf8'});
+  ok('섀넌 기록 시트: 양식(5종 · 1배수 짝 선택) · 저장(매수·매도 수수료 자동 · 입금·출금·배당 · 날짜 정렬) · 검증 · 라우팅 · FAB 규칙 · 변이 6종',
+     pis.status===0&&(pis.stdout||'').includes('ALL PASS ivs sheet · 변이 6/6 red'),(pis.stdout||'').slice(-600)+(pis.stderr||''));
+  /* 2026-11-09 — 로그인 게이트: 팝업 한 번에 하나 · 오류 글자 한 벌 · 앱 내장 브라우저 안내 (새 사용자 'auth/cancelled-popup-request') */
+  const plg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-login-gate.cjs')],{encoding:'utf8'});
+  ok('로그인 게이트: 팝업 한 번에 하나 · 취소 조용히 · 닫음·차단·네트워크·도메인 글자 · 앱 안 안내 · index·plan 같은 벌 · 변이 8종',
+     plg.status===0&&(plg.stdout||'').includes('ALL PASS login gate · 변이 8/8 red'),(plg.stdout||'').slice(-600)+(plg.stderr||''));
+  /* 2026-11-09 — 관리자 › 메뉴 관리: 메뉴마다 하위 탭 공개범위(공개/관리자만/숨김)·순서 (jk-access.js SUB_TABS · admin v0.13.0) */
+  const pst=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-subtabs.cjs')],{encoding:'utf8'});
+  ok('하위 탭 숨김·순서: 설정 정리(ASAP 기본 숨김·새 탭 맨 뒤) · 공개범위 · 적용(모의 주소·열린 탭) · 목록 = 페이지 7곳 실제 탭 · 관리자 화면 · 변이 13종',
+     pst.status===0&&(pst.stdout||'').includes('ALL PASS sub tabs · 변이 14/14 red'),(pst.stdout||'').slice(-600)+(pst.stderr||''));
   /* 2026-11-09 — 운영 › 듀얼가드 탭을 다른 운영 탭처럼(세션 줄 맨 위 · 보고 있는 칩/두 번 누르면 세션 설정 · 끌어서 순서 · ⚙️ 설정 따로 · 창 안 다시 로그인 없음) */
   const pdg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-dg-tab.cjs')],{encoding:'utf8'});
   ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 변이 24종',

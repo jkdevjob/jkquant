@@ -61,7 +61,11 @@ await t('L2 자산플랜 8초 타이머도 Firebase 가 답했으면 "늦어지�
   assert(/onAuthStateChanged\(auth,async user=>\{\s*\n\s*window\.__planAuthResolved=true;/.test(plan));
 });
 await t('L3 앱 내장 브라우저 감지 — 이름을 아는 앱 + 이름 모르는 iOS/안드로이드 내장 화면 · 진짜 브라우저·홈 화면 앱은 아님',async()=>{
-  const src=(html.match(/const INAPP_UA=\[[\s\S]*?\]\];/)||[''])[0]+'\n'+fn('function inAppName(ua){');
+  // 판별 표·함수는 jk-access.js 한 곳으로 옮겼다(2026-11-09) — index 는 위임한다
+  const acc=fs.readFileSync(path.join(ROOT,'jk-access.js'),'utf8');
+  const src=(acc.match(/var INAPP_UA=\[[\s\S]*?\]\];/)||[''])[0]+'\n'+fnOf(acc,'function inAppName(ua){');
+  assert(/function inAppName\(ua\)\{ return \(window\.JKAccess&&JKAccess\.inAppName\)\?JKAccess\.inAppName\(ua\):null; \}/.test(html),'index 는 jk-access 판별에 위임');
+  assert(!/const INAPP_UA=/.test(html),'index 에 표가 남아 있으면 두 군데');
   const mk=(standalone)=>new Function('navigator','window',src+'\nreturn inAppName;')({userAgent:'',standalone},{matchMedia:()=>({matches:false})});
   const f=mk(false), fs_=mk(true);
   const iOS='Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko)';
@@ -226,6 +230,15 @@ await t('P2 첫 화면: 오늘 결과가 없으면 목록을 비우고 "조회 �
     [['inf','무매'],['vr','VR']],{inf:{sessions:[{paper:true,id:'a'}]},vr:{sessions:[{paper:true,id:'b'}]}},(tab)=>({tab,price:tab==='inf'?0:12}));
   const rows=sum(); assert.equal(rows[0].pending,true); assert.equal(rows[1].pending,undefined);
   assert(/r\.pending\s*\n?\s*\? `<td colspan="8" style="color:var\(--faint\)">계산 중/.test(op),'아직 계산 전 줄은 실패로 안 보인다');
+});
+await t('P2 지난 목록 캐시 판 ≥7 — ASAP 모의 줄이 든 지난 결과(판 6)는 재계산 실패 대체 화면에도 안 쓴다 · 값 및 변이 1종',async()=>{
+  // 2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?" — ASAP 모의를 목록에서 뺀 판(v3.123.3)은 지난 목록 캐시 판도 올린다
+  const verify=src=>{ const V=+((src.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1]);
+    const L=new Function('S','PAPER_VIEW_CACHE_VER',fnOf(src,'function paperViewCacheLast()')+'\nreturn paperViewCacheLast;');
+    assert.equal(L({paperViewCache:{ver:6,sig:'v6',rows:[{tab:'asap',price:1},{tab:'inf',price:1}]}},V)(),null,'판 6 지난 목록(ASAP 줄)은 안 씀');
+    assert.equal(L({paperViewCache:{ver:V,sig:'now',rows:[{tab:'inf',price:1}]}},V)().sig,'now','지금 판 지난 목록은 씀'); };
+  verify(html);
+  assert.throws(()=>verify(html.replace(/const PAPER_VIEW_CACHE_VER=\d+;/,'const PAPER_VIEW_CACHE_VER=6;')),assert.AssertionError,'변이(판 6)가 값 단언에 걸려야 함');
 });
 await t('P2 VR 모의 평가는 그 세션 종목 시세만 쓴다 — 없으면 평단 대체(가짜 0% 손익) 대신 0(시세 대기)',async()=>{
   const pr=fn('function paperRaw(tab, sess)');

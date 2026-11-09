@@ -1,5 +1,104 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 섀넌 기록 시트 · v3.127.2
+
+- `check-ivs-sheet.cjs` **ALL PASS · 변이 6/6 빨간불**(실제 함수를 가짜 화면에서).
+  - V2 매수 13 × 53.83 → buy · lev · USD · 699.79 · 수수료 699.79×0.25% · 11-10 입금보다 앞에 정렬 · save→refresh→push→close. 1배수 짝 매도 → x1 · SMH. 국채면 x1 골라도 lev. 입금 1,000(쉼표)·출금 200·배당 3.5 → 날짜순.
+  - V3 단가 없음·수량 0·금액 없음·날짜 없음 → 알림 4 · 기록 0 · 저장 없음.
+- check-portfolio 80/80(F3 FAB 줄 순서 그대로) 통과.
+- 실제 토스 USD 매수 입력은 배포 뒤 사용자 확인.
+
+## 2026-11-09 · 로그인 게이트 — 팝업 한 번에 하나 · 오류 글자 한 벌 · 앱 내장 브라우저 안내 · v3.127.1 (듀얼가드 v2.5.5)
+
+- `check-login-gate.cjs` **ALL PASS · 변이 8/8 빨간불**(실제 jk-access 를 가짜 문서·가짜 Firebase 로).
+  - G1 떠 있는 동안 두 번 눌러도 signInWithPopup 1회 · 단추 disabled · 끝나면 풀림 · 취소 '' · 닫음·차단(기본/카카오톡 UA)·네트워크·도메인·모름·코드 없음 글자 · 실패 뒤 재시도 가능 · select_account 유지.
+  - G2 판별 8 UA(Safari·CriOS·네이버·카카오톡·이름 없는 iOS 내장·안드로이드 Chrome·안드로이드 wv·인스타) · 홈 화면 앱은 아님.
+  - G3 카카오톡 UA 로그인 화면에 ⚠ 「다른 브라우저로 열기」 · Safari 는 없음.
+- check-login-quote-paper(L3 jk-access 판별 + index 위임) · check-ui-common · check-subtabs 14/14 · check-plan-claude-tab 23/23 · tests/swim 17 통과.
+- 실제 기기에서 그 사용자가 다시 로그인하는 것은 배포 뒤 확인 — 앱 안 브라우저였다면 안내대로 기본 브라우저로 열어야 한다(구글이 WebView 로그인을 막는다).
+
+## 2026-11-09 · 모의 목록 = 운영 탭·세션 순서 · 운영 첫 화면 = 첫 탭 · v3.127.0
+
+- `check-portfolio.cjs` **ALL PASS · 변이 80/80 빨간불**(새 F5~F8 · 변이 7종).
+  - F5 정책 전 dg,inf,vr,ma,ivs,dca,asap · 정책(order 1~7 · ma·asap 숨김) 뒤 inf,dg,vr,ivs,dca · all 은 숨긴 탭 포함 · 화면 없으면 기본 상수.
+  - F6 일곱 줄 → 정책 순서 i1,i2,zz(모르는 세션 맨 뒤),p1,p2,m1(숨긴 로테이션도 제자리),v1 · 기본 순서면 듀얼가드 줄부터.
+  - F7 듀얼가드 숨김 → 무매 단추 클릭 1 · 기본 → 듀얼가드 화면 1 · 사용자가 고른 뒤 0 · 모의 페이지 0 · 이미 그 탭이면 다시 안 누름.
+- `check-subtabs.cjs` ALL PASS · 변이 14/14(알림 제거 빨간불). check-paper-apply-navigation · check-login-quote-paper · check-ui-common · check-plan-claude-tab 23/23 통과.
+- 실제 기기(폰·PC)에서 운영을 열 때 첫 탭으로 가는지는 배포 뒤 사용자 확인.
+
+## 2026-11-09 · 포트폴리오 평가액 추이 — 세션별 · 종목별 보기 · 선 골라 보기 · v3.126.0
+
+- `check-portfolio.cjs` **ALL PASS · 변이 73/73 빨간불**(새 Q1~Q6 · 변이 10종).
+  - Q1 날마다 종목 합 + 현금 = 합친 평가액(듀얼가드 · 무매(나간 돈 20) · 원화 적립 · hv 없는 옛 점) · 원화 005930 140,000원 → 100$.
+  - Q2 종목 11개 → 일곱 선(지금 금액 순 · 검증한 색 순서) + '그 밖 4종목'(다 판 SOXL 포함) · 현금 선 · 다 판 종목은 0.
+  - Q3 합친 선·투입 끄면 그 선·낙폭 띠·끝 점 없음 · 세로 축은 켜 둔 작은 선에 맞춤 · 다 끄면 안내.
+  - Q5 운영 그릇 — USD 2주 × 종가 · SMH 1주 × 짝 종가 · 현금 55 = k 60 − 나간 돈 5 · 끝 값 지금 시세.
+  - Q6 듀얼가드 — TECL 5 × 100 · SGOV 3 × 100 · 현금 1,200 · 끝 값 보유 × 지금가.
+- 그림 캡처(390px · 세션 4 · 종목 11): 세션별 · 종목별 둘 다 가로 넘침 없음.
+- 배포 확인(PR #632 squash ae8def6 · GitHub check · regression 통과): curl 운영 index v3.126.0(#appVerTop·#appVer) · pfChartSeries · data-pfmode · pfChartToggle · PF_TK_COLORS · 종목별 처음 꺼 둠 · 그릇 hv·cash 각 1.
+- 실제 계좌 숫자로 본 그림은 배포 뒤 사용자 확인.
+
+## 2026-11-09 · 메뉴 관리 — 메뉴마다 하위 탭 숨김·순서 · v3.125.0 (관리자 v0.13.0)
+
+- `check-subtabs.cjs` **ALL PASS · 변이 13/13 빨간불**.
+  - S1 정리: 저장값 그대로 · 잘못된 공개범위는 기본 · 모르는 키·페이지 버림 · 저장된 페이지의 새 탭은 1000+ · ASAP 기본 숨김.
+  - S2 상태: 일반 사용자 = inf·ma·ivs·dca · 관리자 = + 관리자만(dg) · 숨김(vr)·ASAP 은 둘 다 안 보임.
+  - S3 적용(가짜 문서에서 applyMenuConfig 그대로): 숨김 클래스 · CSS order 1~7 · /paper·/portfolio 도 운영 정책 · 목록에 없는 탭·페이지는 그대로 · 준비 표시.
+  - S4 목록 = 페이지 7곳의 실제 탭 단추(키·이름·순서).
+  - S5 관리자 함수(menuDraftConfig · moveSub · subModeChange · resetMenus · subBlockHtml) 값.
+- check-ui-common · test_tenbagger_ui · test_tenbagger_claude · check-portfolio 63/63 · check-plan-claude-tab 23/23 통과(jk-access.js 를 쓰는 시험).
+- 관리자 화면 하위 탭 칸 휴대폰(360·390px) 캡처 — 가로 넘침 없음 · 탭 하나 한 줄.
+- `check-before-push`: 1~54 단계 PASS · 55 회귀 1건 FAIL — '메뉴 정책 값 시험'이 jk-access.js 함수를 떼어 돌리는데 menuDefaults·normalizeMenuConfig 가 이제 SUB_TABS·SUB_MODES·subDefaults 를 써서 ReferenceError → 시험이 그 셋도 함께 가져가게 고친 뒤 회귀 **2819 PASS / 0 FAIL** · 56 모의 재생 · 57 MA150 PASS.
+- 배포 확인(PR #631 squash f81d12f · GitHub check · regression 통과): curl 운영 index v3.125.0 · /admin v0.13.0 · subBlockHtml · /jk-access.js SUB_TABS · applySubTabs · .jk-sub-hidden CSS · index ASAP 대기 CSS 각 1.
+- 실제 Firestore 저장·다른 기기 반영은 배포 뒤 사용자 확인.
+
+## 2026-11-09 · 포트폴리오 세션별 · 종목별 보유 · v3.124.0
+
+- `check-portfolio.cjs` **ALL PASS · 변이 63/63 빨간불**(새 P1~P9 · 변이 10종).
+  - P1 종목별 평가 합 + 현금 = pfSummary now(나간 돈 · 시세 대기 · 원화 줄 포함 일곱 줄).
+  - P2 USD 섀넌 30주 + 적립 2.5주 → 32.5주 · 평단 49.85 · 수익률 +20.4%.
+  - P3 듀얼가드 TECL 평단 95(엔진) · SGOV 평단 없음 → 수익률 '—'.
+  - P8 paperStat — 그릇 있을 때만 hold · 주 원가 500 = 900 − 짝 400 · 현금 350 = k 400 − 나간 돈 50.
+- `check-before-push`: 1~54 단계 PASS · 55 회귀에서 2건 FAIL(원문 모양 검사 — paperStat 이 `const row=` 로 받아 돌려주고 paperRaw 반환에 sym1 이 붙어 옛 정규식이 못 찾음) → 정규식을 지금 모양으로 고친 뒤 회귀 **2818 PASS / 0 FAIL** · 56 모의 재생 · 57 MA150 PASS.
+- 배포 확인(PR #630 squash fd94f28 · GitHub check · regression 통과): curl 운영 index v3.124.0(#appVerTop·#appVer) · pfSessHtml · pfTickerHtml · pfByTicker · 화면 배선 · paperStat hold 각 1.
+- 실제 계좌 숫자로 그린 화면은 배포 뒤 사용자 확인 — 시험은 가짜 줄로 값만 본다.
+
+## 2026-11-09 · ASAP 세션을 모의투자에서 뺌 · 영어 '5 YEAR' 머리글 삭제 · v3.123.3 (듀얼가드 v2.5.4)
+
+- `check-portfolio.cjs` **ALL PASS · 변이 53/53 빨간불**.
+  - E8: 실계좌 ASAP(기록 있음)은 포트폴리오(live)에 그대로 · 시세 선취.
+  - E9: 모의 ASAP 은 모의 재계산에서 빠짐 — 줄 없음 · 로더·paperStat 안 부름 · 시세 안 받음 · 세션·기록·보던 칸 그대로.
+  - E10: 목록 요약(paperSummary) · 전체 적용 대상(paperSessions)에서도 빠짐.
+  - 새 변이 5종(재계산 · 포트폴리오에서도 뺌 · 시세 선취 · 목록 요약 · 전체 적용) 모두 빨간불.
+- `check-paper-apply-navigation.cjs` 통과 — 앱 paperSessions 그대로 · 전체 적용 뒤 ASAP 모의 세션의 시작일·기록이 그대로.
+- check-history-preservation · check-login-quote-paper 통과.
+- `check-login-quote-paper.cjs` ALL PASS — 새 'P2 지난 목록 캐시 판 ≥7': 판 6 지난 목록(ASAP 줄)은 실패 대체 화면에도 안 씀 · 지금 판은 씀. 판 6 으로 되돌린 파일에선 이 시험이 FAIL(변이 확인).
+- `check-plan-claude-tab.cjs` ALL PASS · 변이 23/23 — E1 이 영어 '5 YEAR'·'5-YEAR' 도 본다(사용자 화면 '5 YEAR · DUAL GUARD'). D4 캐시 판 ≥7 · 변이 판 7→6 빨간불.
+- `check-before-push` **57/57 PASS**(main #627 합치기 전 트리 · 2410ccc). 검사 중 회귀 시험 설명 글자의 작은따옴표가 문자열을 끊어 regression-check.js 가 문법 오류로 시작도 못 하던 것을 찾아 고침(2410ccc · 이번 판 795eb2d 에서 생김) — 회귀 단계(55/57) ALL PASS.
+- 배포 확인(PR #629 squash 36e0f81 · GitHub check · regression 통과): curl 운영 index v3.123.3(#appVerTop·#appVer) · `PAPER_VIEW_CACHE_VER=7` · ASAP 제외 코드 · /plan v2.5.4 · 머리글 'DUAL GUARD' · '5 YEAR' 0개.
+- 운영 파일 확인(v3.123.2 · 듀얼가드 v2.5.3, 병합 전): 띄어 쓴 '듀얼 가드' 0 · 화면 '5년 플랜' 0(주석만) · '5 YEAR' 2(이번에 지움). 사용자 화면의 나머지 옛 글자는 새로고침 전 예전 판.
+
+## 2026-11-09 · 지피티 G1 BTC 재현·시간순 검증
+
+- 395완료일×2후보 **790회 운영/연구 함수 일치·차이0**. 원천 결손은 제외, 원본/장부 덮어쓰기 없음.
+- 11/8 12:35→12:40→13:35 순손익 **−0.1737876974%**는 실제 일일 운영 API 확정1건과 일치. 누적 history API timeout에 따른 CSV 대체/11/8 누락은 별도 미해결.
+- G1 값 시험 PASS: 완료세션·실제 API·시간순 구간 비중복270일·명시 비용 스트레스. 3변이 감지 PASS(거래량되돌림40건·동일봉진입390건·비용제거390건 결과 차이).
+- 보고 schema 검증 PASS, `tests/gpt-morning-report.test.mjs` **19 PASS / 0 FAIL**. 준비 workflow `42578532171` 성공; 서버 응답 ok:true·duplicate:true·queued:null·dueAt:null. 기발송 준비 미완료 영수증 push1/1·Telegram sent이며 지연 연구 전송·기기 수신을 확인한 것이 아님.
+- 부분 UTC 보존 수정: 실제 파일 쓰기/읽기 **값3·변이3 PASS**. 옛 자료 폐기·옛 정본만 읽기·같은 스냅샷 덮어쓰기 복귀를 모두 감지. 부분 자료 수정본을 별도 해시로 보존하고 수집 시각순으로 읽으며 정본 겹침 우선·중복0도 확인했다.
+- 실제 원천을 별도 임시 폴더에 쓴 결과: UTC11/7 정본 바이트 불변, 부분 UTC 원본으로 **KST11/8 288봉·기준 손익−0.1737876974%·그림자 날짜 복원 PASS**. 운영 장부는 변경하지 않았다. 수정 뒤 G1 395일×2 대조/3변이 재실행 PASS, 기존 BTC 경계와 daily1 shadow 시험 PASS.
+- 전체 검사: Windows check-before-push는 14/57의 리눅스 전용 Git 경로/충돌 재현 환경에서 중단(로컬 전체 PASS 아님). 동일한 정본 `check.yml`을 Linux에서 실행한 [42581591143](https://github.com/jkdevjob/jkquant/actions/runs/42581591143)은 **57단계 전부 PASS**, 엔진 회귀 **2,830 PASS / 0 FAIL**(검증 head `fd4014d2`). 공용 검사에 포함된 GPT·Claude 양쪽 기존 시험과 새 BTC 값3/변이3도 성공했다. 이후 합친 최신 main을 포함한 PR 최종 CI는 별도 확인한다.
+
+## 2026-11-09 · 화면 글자 '플랜' → '듀얼가드' · v3.123.2 (듀얼가드 v2.5.3)
+
+- `check-plan-claude-tab.cjs` **ALL PASS · 변이 22/22 빨간불**.
+  - E1: 듀얼가드·운영 화면 글자(주석 뺀)에 '플랜' 0 · '5년' 0 · 띄어 쓴 이름 0 · 엔진 '폐지된 세션'.
+  - D4: 모의 목록 캐시 판 ≥6.
+  - 새 변이: 듀얼가드 화면 '플랜' 되살림 · 운영 '플랜' 되살림 · 캐시 판 5 · 엔진 '폐지된 플랜'.
+- 알림 시험(settings-notifications · research-notify · gpt-common-notifications) 24 통과 — 새 이름 '무매·듀얼가드·클로드 텐배거' · '🔬 무매·듀얼가드 연구'.
+- check-plan-signal-fill · check-portfolio 48/48 · check-dg-tab 24/24 · check-history-preservation 통과.
+- 파일 훑기: index · plan · 엔진 · 설정 · 세금 · 메뉴 · 알림 설정 · Worker · backtest · admin · settings 의 화면 글자에 '플랜'·띄어 쓴 이름 0.
+- check-before-push 57단계 PASS(main #623 합친 뒤 · 회귀 2817/0). 병합 뒤(d5e1c87) 운영 확인: curl v3.123.2(두 곳) · /plan v2.5.3 · 캐시 판 6 · 엔진 '폐지된 세션' · 알림 설정 이름 · 해시 일치 · Worker 배포 워크플로 성공(08:09 UTC).
+
 ## 2026-11-09 · 무매 서버 자동주문(모의) 예약 삭제 · v3.123.1
 
 - 전체 회귀 **2817 PASS / 0 FAIL** (예약 크론 검사 · 워크플로 로그 검사를 대상이 없어 뺀 수).
@@ -22,6 +121,7 @@
 - 색 검증(dataviz validate_palette · 바탕 #171c2e): 무리 색 세 개 모든 짝 PASS(색약 ΔE 13.0↑ · 일반 19.7↑ · 대비 3:1↑). 금색↔초록 색약 ΔE 6.9 WARN → 투입 점선으로 가름. 예전 파랑↔보라 ΔE 1.9 FAIL → 합친 선 흰색.
 - 눈 확인: 앱 함수(pfCombine · pfChartHtml · pfChartBind)를 그대로 떼어 세션 셋(듀얼가드 · 무매 · 섀넌)으로 그림 → 폰 390 · PC 1280 오류 0 · 가로 넘침 0 · 끝 값 안 겹침 · 값 상자 이름 간격 고침.
 - 미확인: 실제 계정 데이터로 본 포트폴리오 화면.
+- 병합 뒤(01b5ec3) 운영 확인: curl 운영 v3.123.0(두 곳) · /plan v2.5.2 · 엔진 이름 '듀얼가드' · 띄어 쓴 이름 0 · index·plan 해시가 로컬과 같다. GitHub 검사 3개 통과(regression 07:10~07:12 · check 07:10~07:32 UTC) · main 푸시 검증 통과(07:10~07:31).
 
 ## 2026-11-09 · 클라우드 저장 실패 "undefined" is not valid JSON · v3.122.2
 
@@ -32,7 +132,7 @@
 - 모의 목록 계산(`paperFillAll` 실제 함수 · 듀얼 가드 모의 세션) 뒤 `S.plan` 에 active 칸이 생기지 않음 · 무매 active 그대로.
 - 변이 3종 빨간불: 합치기 옛 코드 · 저장 뒤 active 덮기 옛 코드 · 모의 목록 옛 되돌리기.
 - `check-before-push` 57단계 전부 PASS(전체 회귀 2830 PASS / 0 FAIL 포함 · `--offline` 아님).
-- 병합 뒤(58ff413) 운영 확인: curl 운영 v3.122.2(두 곳) · 고친 합치기·되돌리기 코드 있음 · index 해시가 로컬과 같다.
+- 병합 뒤(58ff413) 운영 확인: curl 운영 v3.122.2(두 곳) · 고친 합치기·되돌리기 코드 있음 · index 해시가 로컬과 같다. GitHub 검사 3개 통과(check 06:45~07:06 UTC).
 - 미확인: 사용자 화면에서 새로고침 뒤 오류가 다시 안 뜨는지.
 
 ## 2026-11-09 · 듀얼 가드 '현재 투자중' 이름 바꾸기 · v3.122.1 (플랜 v2.5.1)
