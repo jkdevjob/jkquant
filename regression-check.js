@@ -12754,8 +12754,8 @@ Promise.all(PENDING).then(()=>{
      pdp.status===0&&(pdp.stdout||'').includes('ALL PASS plan deposit · 변이 6/6 red'),(pdp.stdout||'').slice(-600)+(pdp.stderr||''));
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼 가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
-  ok('포트폴리오·듀얼 가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼 가드 줄 · 실전 채우기(모의 제외) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 변이 16종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 16/16 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+  ok('포트폴리오·듀얼 가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼 가드 줄 · 실전 채우기(모의 제외) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 23종',
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 23/23 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
   ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));

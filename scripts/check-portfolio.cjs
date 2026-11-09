@@ -14,7 +14,7 @@
  */
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
 const root=path.join(__dirname,'..'),rd=f=>fs.readFileSync(path.join(root,f),'utf8');
-const SRC={idx:rd('index.html'),plan:rd('plan.html'),eng:rd('plan-session-engine.js'),acc:rd('jk-access.js'),ui:rd('jk-ui.js'),admin:rd('admin.html')};
+const SRC={idx:rd('index.html'),plan:rd('plan.html'),eng:rd('plan-session-engine.js'),acc:rd('jk-access.js'),ui:rd('jk-ui.js'),admin:rd('admin.html'),tax:rd('plan-tax-check.js')};
 const PAGES=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html','workout.html','swim.html'];
 const fnOf=(src,marker)=>{const s=src.indexOf(marker);if(s<0)throw Error('없음: '+marker);let i=src.indexOf('{',s),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(s,i+1);}throw Error(marker);};
 const near=(a,b,e=1e-6)=>Math.abs(a-b)<=e;
@@ -227,6 +227,75 @@ function check2(S,t,E,bad){
     const txt=c2.pfDgText({key:'cur',name:'현재 투자중'});
     t('H3 모의 세션 알림 → 값은 안 받고(dg·over 비어 있음) 오늘 칸에 "모의 세션 보는 중 — 「현재 투자중」 선택 시 표시"',
       Object.keys(c2.PF.dg).length===0&&Object.keys(c2.PF.over).length===0&&c2.PF.dgSeen&&c2.PF.dgSeen.paper===true&&txt.includes('모의 세션 보는 중')&&txt.includes('「현재 투자중」'),txt); }
+  return check3(S,t,E,bad);
+}
+/* ── v2 (2026-11-09 사용자: "합친 평가액 추이와 합친 MDD, 올해 양도세 합산(250만원 공제는 사람당 한 번), 목표 비중(듀얼 가드 5/6 : 섀넌 1/6) 대비 표시") ── */
+function check3(S,t,E,bad){
+  const T=(()=>{const c={};c.window=c;vm.createContext(c);vm.runInContext(S.tax,c);return c.JKPlanTaxCheck;})();
+  const helpers=['function pfOutAmt(r)','function pfPlanSeries(L, Q, E, row)','function pfCombine(rows, fx)','function pfOpTaxKrw(series, T, fx, year)','function pfApplyTax(rows, T, fxDays, year, E)',
+    'function pfTaxSummary(rows, T, year)','function pfTargetView(Z)','function pfUsdPlain(v)','function pfCompact(v)','function pfNiceTicks(lo, hi, n)','function pfPct(v)','function pfEsc(x)','function pfChartHtml(C)','function pfMonthTable(C)'];
+  const c={PF:{chartGeo:null},$:()=>({clientWidth:640}),Math,Object,Number,String,Set,Map,console:{warn(){}}};vm.createContext(c);
+  vm.runInContext(helpers.map(m=>fnOf(S.idx,m)).join('\n')+'\n'+((S.idx.match(/const PF_TARGET=\{[^}]*\};/)||[''])[0]).replace('const PF_TARGET','var PF_TARGET'),c);
+  // ── I. 운영 세션 날마다 값 — paperMdd 걸음이 그릇(_pfSeriesSink)에 넣는다 · 끝 값은 지금 시세 · 끝 날짜는 마지막 기록 날까지
+  { const md=fnOf(S.idx,'function paperMdd(tab, sess, R, hist)');
+    const days=[1,2,3,4,5].map(i=>({date:'2026-01-0'+i,close:10*i}));
+    const hist=[{date:'2026-01-01'},{date:'2026-01-03'},{date:'2026-01-09'}];
+    const raw=(tab,sess)=>{const n=sess.hist.length;return {inflow:100,qty:2,k:50,price:0,realized:n*5,out:{saved:n,withdrawn:0},turnover:0,cost:0};};
+    const run=(withSink)=>new Function('PAPER_DAYS','PAPER_CACHESYM','paperRaw','ivsQuote1','console','paperAfterTaxAcc','PAPER_NOFEE_TABS',
+      (withSink?'var _pfSeriesSink=[];':'')+md+'\nreturn {r:paperMdd("vr",{settings:{ticker:"SOXL"},hist:'+JSON.stringify(hist)+'},{qty1:0,price:77,inflow:100,total:999,realized:42,out:{saved:3,withdrawn:4}},'+JSON.stringify(hist)+'),sink:'+(withSink?'_pfSeriesSink':'null')+'};')(
+      {vr:()=>days},{vr:()=>'SOXL'},raw,undefined,{error(){}},()=>({step(){},done(){return null;}}),new Set());
+    const A=run(true),B=run(false),k=A.sink||[];
+    t('I1 날마다 값: 총자산 = 주식×종가 + 나머지(k) · 투입 · 나간 돈 · 누적 실현손익(그날까지 기록)',k.length===6&&k[0].tot===2*10+50&&k[2].tot===2*30+50&&k[2].realized===10&&k[2].out===2&&k[1].inflow===100,JSON.stringify(k));
+    t('I2 끝 값은 지금 시세(목록·카드와 같은 값) · 날짜는 종가 끝(01-05)보다 늦은 마지막 기록 날(01-09)',k[5]&&k[5].date==='2026-01-09'&&k[5].tot===999&&k[5].realized===42&&k[5].out===7,JSON.stringify(k[5]));
+    t('I3 그릇이 없으면(모의 목록) 예전 그대로 — 결과 같음',JSON.stringify(A.r)===JSON.stringify(B.r)&&B.sink===null); }
+  // ── M. 합친 추이 · MDD — 시간가중(새 세션이 들어온 날 섞임으로 가짜 낙폭을 만들지 않는다)
+  { const d=i=>'2026-02-0'+i;
+    const A={tab:'plan',cur:'usd',series:[1,2,3,4,5].map((i)=>({date:d(i),tot:[100,110,121,108.9,120][i-1],inflow:100,out:0}))};
+    const B={tab:'ivs',cur:'usd',series:[{date:d(3),tot:1000,inflow:1000,out:0},{date:d(5),tot:1000,inflow:1000,out:0}]};
+    const K={tab:'dca',cur:'krw',series:[{date:d(1),tot:140000,inflow:140000,out:0},{date:d(5),tot:140000,inflow:140000,out:0}]};
+    const C=c.pfCombine([A,B,K],1400),day4=(108.9+1000+100)/(121+1000+100)-1;
+    t('M1 시간가중: 새 세션(1,000$)이 들어온 날은 손실이 아니다 · 진짜 하락(−10%)만 희석돼 잡힌다',near(C.mdd,-day4*100,1e-9)&&C.mddPeak===d(3)&&C.mddTrough===d(4),JSON.stringify([C.mdd,-day4*100,C.mddPeak,C.mddTrough]));
+    t('M2 줄마다 이월(그날 값 없으면 직전) · 원화 줄은 환율로 나눔 · 시작 전엔 0',C.points.length===5&&near(C.points[3].tot,108.9+1000+100)&&near(C.points[0].inflow,200)&&near(C.points[2].inflow,1200),JSON.stringify(C.points.map(p=>[p.tot,p.inflow])));
+    t('M3 환율이 없으면 원화 줄은 빼고 합친다(0 으로 섞지 않음)',c.pfCombine([A,K],0).points.every(p=>p.inflow===100),'');
+    t('M4 나간 돈 — 그림 평가액(now)은 지금 계좌 · 낙폭은 나간 돈 포함(tot)',(()=>{const R=c.pfCombine([{tab:'inf',cur:'usd',series:[{date:d(1),tot:100,inflow:100,out:0},{date:d(2),tot:100,inflow:100,out:30}]}],1);return R.points[1].now===70&&R.mdd===0;})()); }
+  // ── N. 듀얼 가드 날마다 값 — 기록이 늘어나는 날마다 엔진 ledgerCalc · 투입 = 시작금 + 입금 − 출금 · 끝 = 지금 값
+  { const days=k=>[1,2,3,4,5].map(i=>({date:'2026-03-0'+i,close:k*i}));
+    const Q={TECL:{days:days(50)},TQQQ:{days:days(40)},SGOV:{days:[1,2,3,4,5].map(i=>({date:'2026-03-0'+i,close:100}))}};
+    const L={start:1000,from:'2026-03-01',ledger:{base:{date:'2026-03-01',cash:1000},events:[
+      {id:'b',type:'trade',date:'2026-03-02',symbol:'TECL',side:'buy',qty:5,price:100,fee:0.5},{id:'p',type:'cash',kind:'dep',date:'2026-03-04',amount:500},
+      {id:'w',type:'cash',kind:'wd',date:'2026-03-07',amount:100}]}};
+    const s1=c.pfPlanSeries(L,Q,E,{pending:false,total:4321,inflow:1400});
+    t('N1 날마다: 03-02 체결 뒤 현금 499.5 + TECL 5×100 · 03-03 5×150 · 03-04 입금 → 투입 1,500',s1.length===6&&near(s1[1].tot,499.5+500)&&near(s1[2].tot,499.5+750)&&s1[3].inflow===1500&&s1[0].inflow===1000&&near(s1[0].tot,1000),JSON.stringify(s1));
+    t('N2 끝 = 줄의 지금 값 · 종가 뒤(03-07) 출금 기록 → 그 날짜로 하나 더',s1[5].date==='2026-03-07'&&s1[5].tot===4321&&s1[5].inflow===1400&&s1[4].date==='2026-03-05',JSON.stringify(s1.slice(-2))); }
+  // ── J. 올해 양도세 — 운영 줄 추정(결제일 해 · 결제일 환율) · 듀얼 가드는 플랜 세금 점검과 같은 계산 · 공제는 사람당 한 번
+  { const fx=T.fxFn([{date:'2026-01-02',close:1000},{date:'2026-07-01',close:1100}]);
+    const ser=[{date:'2026-06-01',realized:100},{date:'2026-06-02',realized:100},{date:'2026-12-30',realized:150},{date:'2026-12-31',realized:170}];
+    const o=c.pfOpTaxKrw(ser,T,fx,'2026');
+    t('J1 운영 줄: 06-01 매도 100$×1,000 + 12-30 매도 50$×1,100(결제 12-31) · 12-31 매도는 결제가 다음 해(01-04)라 뺌',near(o.krw,100*1000+50*1100)&&o.n===2,JSON.stringify(o));
+    const rows=[{tab:'plan',tax:{exact:true,krw:2000000,n:3}},{tab:'ivs',tax:{est:true,krw:2000000,n:2}},{tab:'dca',tax:{domestic:true}},{tab:'inf',tax:{missing:true}},{tab:'dca',tax:{est:true,krw:0,n:0}}];
+    const X=c.pfTaxSummary(rows,T,'2026');
+    t('J2 공제 250만원은 합친 뒤 한 번: 400만 − 250만 = 150만 × 22% = 33만 · 듀얼 가드 밖 200만 · 국내 1 · 빠짐 1 · 매도 없는 줄은 표에서 뺌',X.total===4000000&&X.taxable===1500000&&near(X.tax,330000)&&X.other===2000000&&X.domestic===1&&X.skipped===1&&X.items.length===2&&X.room===-1500000,JSON.stringify(X));
+    const L={base:{date:'2026-01-02',tecl:10,avgTecl:50,cash:0},events:[{id:'s',type:'trade',date:'2026-05-01',symbol:'TECL',side:'sell',qty:4,price:80,fee:0.32}]};
+    const FX=[{date:'2026-01-02',close:1300},{date:'2026-05-04',close:1400}];
+    const pr={tab:'plan',cur:'usd',ledgerRef:L,px:{TECL:90}},or={tab:'ivs',cur:'usd',series:[{date:'2026-05-01',realized:20}]},kr={tab:'dca',cur:'krw'};
+    c.pfApplyTax([pr,or,kr],T,FX,'2026',E);
+    const ref=T.check({ledger:L,prices:{TECL:90},fxSeries:FX,year:'2026',feeFn:E.alphaFee});
+    t('J3 듀얼 가드 = plan-tax-check check(선입선출 원화 · 플랜 화면과 같은 값) · 운영 = 추정 · 국내 = 제외',pr.tax.exact&&near(pr.tax.krw,ref.realized.fifo)&&pr.tax.n===1&&or.tax.est&&near(or.tax.krw,20*1400)&&kr.tax.domestic===true,JSON.stringify([pr.tax,or.tax,ref.realized])); }
+  // ── K. 목표 비중 5/6 : 1/6 — 두 전략 합 기준 모자람/넘침 · 무매가 끝나 옮길 때의 몫
+  { const P=(tab,now,label)=>({r:{tab,label},now});
+    const V=c.pfTargetView({parts:[P('plan',25000,'듀얼 가드'),P('inf',10000,'무한매수법'),P('dca',228,'매수적립')]});
+    t('K1 섀넌 0 · 듀얼 가드 25,000 → 섀넌 4,166.67 모자람 · 무매 10,000 까지 옮기면 섀넌 +5,833.33 · 듀얼 가드 +4,166.67 · 적립은 목표 밖',
+      V.wPlan===1&&near(V.gapIvs,25000/6)&&near(V.gapPlan,-25000/6)&&near(V.moveIvs,35000/6)&&near(V.movePlan,35000*5/6-25000)&&V.otherBy['매수적립']===228,JSON.stringify(V));
+    const V2=c.pfTargetView({parts:[P('plan',25000,''),P('ivs',5000,'')]});
+    t('K2 목표대로(25,000 : 5,000) → 모자람 0 · 무매 없으면 옮길 몫 없음',near(V2.gapIvs,0)&&near(V2.wIvs,1/6)&&V2.moveIvs===null,JSON.stringify(V2)); }
+  // ── L. 그림 — 선 2개(평가액 · 투입) · 한 축 · 범례 · 낙폭 띠 · 값 상자는 textContent · 검증한 색
+  { const C=c.pfCombine([{tab:'plan',cur:'usd',series:[{date:'2026-04-01',tot:100,inflow:100},{date:'2026-04-02',tot:120,inflow:100},{date:'2026-04-03',tot:90,inflow:100},{date:'2026-04-06',tot:95,inflow:100}]}],1);
+    const html=c.pfChartHtml(C),bind=fnOf(S.idx,'function pfChartBind()');
+    t('L1 그림: 평가액·투입 선 · 끝 값 표시 · 범례 · 최대 낙폭 띠(04-02→04-03 · −25%) · 접근 이름',/class="pf-line pf-in"/.test(html)&&/class="pf-line pf-val"/.test(html)&&/class="pf-end">\$95</.test(html)&&/합친 평가액\(지금 계좌\)/.test(html)&&/투입 원금/.test(html)&&/class="pf-band"/.test(html)&&/role="img"/.test(html)&&near(C.mdd,25)&&C.mddPeak==='2026-04-02',html.slice(0,200));
+    t('L2 값 상자는 textContent 로만 · 손가락(pointerdown)·화살표 키로도 · 색은 검증한 쌍(#3987e5 · #c98500)',/textContent/.test(bind)&&!/innerHTML/.test(bind)&&/pointerdown/.test(bind)&&/ArrowLeft/.test(bind)&&/--pf-val:#3987e5;--pf-in:#c98500/.test(S.idx));
+    t('L3 비중 막대는 무리 넷(듀얼 가드·섀넌·무매·그 밖)만 — 모든 짝이 갈리는 색(검증) · 2px 틈',/plan:\{label:'듀얼 가드',color:'#9085e9'\},ivs:\{label:'섀넌',color:'#d55181'\},inf:\{label:'무한매수법',color:'#008300'\}/.test(S.idx)&&/const PF_OTHER=\{label:'그 밖',color:'#c9cdd9'\};/.test(S.idx)&&/\.pf-bar\{display:flex;gap:2px;/.test(S.idx)&&!/PF_COLOR/.test(S.idx));
+    t('L4 화면 배선: 합친 MDD 칸 · 추이 · 목표 · 양도세(세금 모듈 불러옴) · 환율 KRW=X',/합친 MDD/.test(fnOf(S.idx,'function pfRender()'))&&/pfChartHtml\(C\)/.test(fnOf(S.idx,'function pfRender()'))&&/pfTargetHtml\(V\)/.test(fnOf(S.idx,'function pfRender()'))&&/pfTaxHtml\(X,T\)/.test(fnOf(S.idx,'function pfRender()'))
+      &&/<script src="\/plan-tax-check\.js\?v=1"><\/script>/.test(S.idx)&&/fetchDaily\('KRW=X'\)/.test(fnOf(S.idx,'async function pfRefresh(force)'))); }
   return bad;
 }
 
@@ -247,6 +316,13 @@ const MUT=[
   ['플랜 창 모드: 창 밖에서도 머리말 숨김','plan',s=>s.replace("if(!/[?&]embed=1(&|$)/.test(location.search)||window.parent===window) return;","if(!/[?&]embed=1(&|$)/.test(location.search)) return;")],
   ['받는 쪽: 모의도 받음','idx',s=>s.replace("if(d.paper){ if(isPfPage()) pfRender(); return; }","")],
   ['받는 쪽: 다른 계정도 받음','idx',s=>s.replace("if(!d||d.type!=='jk-dg'||!curUid||d.uid!==curUid) return;","if(!d||d.type!=='jk-dg') return;")],
+  ['합친 MDD: 시간가중 대신 총자산÷투입','idx',s=>s.replace("if(prev&&prev.tot>0){ const r=(tot-(inflow-prev.inflow))/prev.tot-1; if(Number.isFinite(r)) idx*=1+r; }","idx=tot/inflow;")],
+  ['양도세: 공제를 전략마다 뺌','idx',s=>s.replace("const taxable=Math.max(0,total-ded);","const taxable=items.reduce((a,it)=>a+Math.max(0,it.krw-ded),0);")],
+  ['양도세: 결제일 대신 체결일 해','idx',s=>s.replace("const sd=T.settleDate(p.date);","const sd=p.date;")],
+  ['목표: 듀얼 가드·섀넌 거꾸로','idx',s=>s.replace("const PF_TARGET={plan:5/6, ivs:1/6};","const PF_TARGET={plan:1/6, ivs:5/6};")],
+  ['날마다 값: 끝 날짜를 종가 끝으로 고정','idx',s=>s.replace("const end={date:lastH>endD?lastH:endD, tot:R.total,","const end={date:endD, tot:R.total,")],
+  ['듀얼 가드 추이: 입금을 투입에 안 넣음','idx',s=>s.replace("const inflow=Math.max(0,(+L.start||0)+(+st.netFlow||0)); if(!(inflow>0)) continue;","const inflow=Math.max(0,(+L.start||0)); if(!(inflow>0)) continue;")],
+  ['합친 추이: 원화 줄을 환율 없이 섞음','idx',s=>s.replace("let k=1; if(r.cur==='krw'){ if(!(+fx>0)) continue; k=1/(+fx); }","let k=1;")],
 ];
 (async()=>{
   const bad=await check(SRC);

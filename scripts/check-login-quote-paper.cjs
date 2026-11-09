@@ -171,7 +171,7 @@ await t('Q5 환율 실패도 Pages 운영에서 공개 프록시 연쇄대기로
 await t('P0 모의성과 시세는 종목별 병렬 선취 후 전략 재생만 순차로 한다',async()=>{
   const fill=fn('async function paperFillAll(opt)');
   const pre=fn('async function paperPrefetchQuotes(opt)');
-  assert(/await paperPrefetchQuotes\(opt\)/.test(fill))   // opt.live — 포트폴리오(실전 세션)도 같은 선취를 탄다(2026-11-09);
+  assert(/await paperPrefetchQuotes\(opt\)/.test(fill));   // opt.live — 포트폴리오(실전 세션)도 같은 선취를 탄다(2026-11-09)
   assert(/Promise\.all\(\[\.\.\.px\]/.test(pre),'price prefetch parallel');
   assert(/Promise\.all\(\[\.\.\.dv\]/.test(pre),'dividend prefetch parallel');
   const pp=fn('async function loadPlanPaperData(force)');
