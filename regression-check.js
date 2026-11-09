@@ -12715,6 +12715,10 @@ Promise.all(PENDING).then(()=>{
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
      ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 80/80 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+  /* 2026-11-09 — 섀넌 기록 시트: 탭마다 제 양식 · 저장은 주문대로 체결 기록과 같은 길(_ivsPush) · FAB 규칙 */
+  const pis=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ivs-sheet.cjs')],{encoding:'utf8'});
+  ok('섀넌 기록 시트: 양식(5종 · 1배수 짝 선택) · 저장(매수·매도 수수료 자동 · 입금·출금·배당 · 날짜 정렬) · 검증 · 라우팅 · FAB 규칙 · 변이 6종',
+     pis.status===0&&(pis.stdout||'').includes('ALL PASS ivs sheet · 변이 6/6 red'),(pis.stdout||'').slice(-600)+(pis.stderr||''));
   /* 2026-11-09 — 로그인 게이트: 팝업 한 번에 하나 · 오류 글자 한 벌 · 앱 내장 브라우저 안내 (새 사용자 'auth/cancelled-popup-request') */
   const plg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-login-gate.cjs')],{encoding:'utf8'});
   ok('로그인 게이트: 팝업 한 번에 하나 · 취소 조용히 · 닫음·차단·네트워크·도메인 글자 · 앱 안 안내 · index·plan 같은 벌 · 변이 8종',

@@ -709,7 +709,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1828,7 +1828,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.1</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.2</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -10394,14 +10394,16 @@ function delVr(i){if(!confirm('이 거래를 삭제할까요?'))return;curStrat(
 /* ════════ 하단 거래기록 바텀시트 ════════ */
 function fmtDateK(d){const dt=d?new Date(d+'T00:00:00'):new Date();const wd=['일','월','화','수','목','금','토'][dt.getDay()];return `${dt.getMonth()+1}월 ${dt.getDate()}일 (${wd})`}
 function openSheet(){
+  const tab=S.activeTab;
+  if(tab!=='inf'&&tab!=='vr'&&tab!=='ivs'){ alert('이 전략은 화면의 기록 단추로 기록합니다.'); return; }   // 로테·적립·ASAP 은 FAB 이 없다 — 어쩌다 열려도 남의 양식을 안 보인다
   const today=new Date().toISOString().slice(0,10);
-  $('sheet_date').textContent=fmtDateK(today)+(S.activeTab==='inf'?` · ${computeInf().T<computeInf().st.div/2?'전반전':'후반전'}`:'');
-  $('sheet_title').textContent= S.activeTab==='inf'?'오늘의 거래 기록':'거래 기록';
-  $('sheet_body').innerHTML = S.activeTab==='inf'?sheetInfHTML(today):sheetVrHTML(today);
-  if(S.activeTab==='inf')bindSheetInf(); else bindSheetVr();
+  $('sheet_date').textContent=fmtDateK(today)+(tab==='inf'?` · ${computeInf().T<computeInf().st.div/2?'전반전':'후반전'}`:'');
+  $('sheet_title').textContent= tab==='inf'?'오늘의 거래 기록':tab==='ivs'?'섀넌 거래 기록':'거래 기록';
+  $('sheet_body').innerHTML = tab==='inf'?sheetInfHTML(today):tab==='ivs'?sheetIvsHTML(today):sheetVrHTML(today);   // 탭마다 제 양식(2026-11-09 — 섀넌에 VR 양식이 열리던 것)
+  if(tab==='inf')bindSheetInf(); else if(tab==='vr')bindSheetVr();
   $('sheetbg').classList.add('on');$('sheet').classList.add('on');
 }
-function closeSheet(){$('sheetbg').classList.remove('on');$('sheet').classList.remove('on');shKind=null;shVrType='buy';}
+function closeSheet(){$('sheetbg').classList.remove('on');$('sheet').classList.remove('on');shKind=null;shVrType='buy';shIvsType='buy';shIvsLeg='lev';}
 
 /* ── 무매 시트 ── */
 let shKind=null;
@@ -10762,6 +10764,57 @@ function sheetSaveVr(){
     rec={type:shVrType,date,amt,cyc:curCyc,ts:Date.now()};
   }
   const hh=curStrat().hist; hh.push(rec); sortHist(hh); save(); refreshVr();
+  closeSheet();
+}
+/* ── 섀넌 시트 (2026-11-09 사용자: "섀넌 매수 입력이 안돼" — 섀넌 탭에서 VR 양식(Pool)이 열려 저장이 VR 함수로 갔다) ──
+   기록은 '주문대로 체결 기록'과 같은 길(_ivsPush — 수수료·leg·sym 이 같은 계산) · 입금/출금/배당은 ivsAddMonthly 의 투입 기록과 같은 꼴(computeIvs 가 읽는 그대로).
+   포지션·예수금·평단은 computeIvs 가 기록에서 다시 센다. 시세가 없어도 기록할 수 있다(실제 체결가를 손으로 넣는 용도). */
+let shIvsType='buy', shIvsLeg='lev';
+function sheetIvsHTML(today){
+  const st=curStrat().settings||{}, X1=(st.park||'bill')==='x1', sym=String(st.ticker||'TQQQ').toUpperCase(), sym1=ivsX1Of(sym);
+  const types=[['buy','매수','buy','주식'],['sell','매도','sell','주식'],['add','입금 (예수금 추가)','cx','예수금'],['wd','출금 (예수금 차감)','cx','예수금'],['div','배당 (예수금 입금)','cx','예수금']];
+  let h=`<div class="sheetseclbl">거래 유형</div>`;
+  types.forEach(t=>{ h+=`<div class="kindopt" data-it="${t[0]}" onclick="sheetSelIvs('${t[0]}')"><span class="kn">${t[1]}</span><span class="kt ${t[2]}">${t[3]}</span></div>`; });
+  h+=`<div id="sheet_iform" style="display:none;margin-top:16px">
+    <div class="field"><label>날짜</label><input id="shi_date" type="date" value="${today}"></div>
+    <div id="shi_stock">
+      <div class="field"><label>종목</label>${X1
+        ?`<div id="shi_legs"><div class="kindopt sel" data-leg="lev" onclick="sheetSelIvsLeg('lev')"><span class="kn">${sym}</span><span class="kt buy">주 종목</span></div><div class="kindopt" data-leg="x1" onclick="sheetSelIvsLeg('x1')"><span class="kn">${sym1}</span><span class="kt cx">1배수 짝</span></div></div>`
+        :`<div class="val" id="shi_sym">${sym}</div>`}</div>
+      <div class="grid2">
+        <div class="field"><label>단가 ($)</label><input id="shi_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+        <div class="field"><label>수량 (주)</label><input id="shi_qty" type="number" inputmode="numeric"></div>
+      </div>
+      <div class="fetchnote">수수료 ${(IVS_FEE*100).toFixed(2)}%는 자동으로 붙습니다 — 「주문대로 체결 기록」과 같은 계산.</div>
+    </div>
+    <div id="shi_amtwrap" class="field" style="display:none"><label>금액 ($)</label><input id="shi_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+    <button class="bigbtn" onclick="sheetSaveIvs()">기록하기</button>
+  </div>`;
+  return h;
+}
+function sheetSelIvs(t){
+  shIvsType=t;
+  document.querySelectorAll('#sheet .kindopt').forEach(o=>o.classList.toggle('sel',o.dataset.it===t));
+  $('sheet_iform').style.display='block';
+  const stock=(t==='buy'||t==='sell');
+  $('shi_stock').style.display=stock?'block':'none';
+  $('shi_amtwrap').style.display=stock?'none':'block';
+  $('sheet_iform').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function sheetSelIvsLeg(l){ shIvsLeg=l==='x1'?'x1':'lev'; document.querySelectorAll('#shi_legs .kindopt').forEach(o=>o.classList.toggle('sel',o.dataset.leg===shIvsLeg)); }   // seg 가 아니라 시트의 다른 선택지와 같은 줄(동적 화면이라 setupSegs 대상이 아니다)
+function sheetSaveIvs(){
+  const date=$('shi_date').value; if(!date){ alert('날짜를 입력하세요'); return; }
+  const c=curStrat(), st=c.settings||{}, X1=(st.park||'bill')==='x1', sym=String(st.ticker||'TQQQ').toUpperCase();
+  if(shIvsType==='buy'||shIvsType==='sell'){
+    const price=+unComma($('shi_price').value), qty=+$('shi_qty').value;
+    if(!(price>0)||!(qty>0)){ alert('단가와 수량을 입력하세요'); return; }
+    const leg=(X1&&shIvsLeg==='x1')?'x1':'lev';
+    _ivsPush(leg, shIvsType, qty, price, date, leg==='x1'?ivsX1Of(sym):sym);   // 주문대로 체결 기록과 같은 길(수수료 자동)
+  }else{
+    const amt=+unComma($('shi_amt').value); if(!(amt>0)){ alert('금액을 입력하세요'); return; }
+    c.hist.push({type:shIvsType,date,amt:+amt,ts:Date.now()});   // add·wd·div — computeIvs 가 읽는 꼴
+  }
+  sortHist(c.hist); save(); refreshIvs(); pushRemote&&pushRemote();
   closeSheet();
 }
 function showFab(){const f=$('fab');if(f)f.classList.add('on')}
@@ -11579,7 +11632,7 @@ function setupTabs(){
       S.activeTab=t.dataset.t;save();renderSessbar();renderStatusline();
       if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} showFab(); }
       else if(t.dataset.t==='ma'){ refreshMa(); try{ loadMaData(); }catch(e){console.error(e)} hideFab(); }
-      else if(t.dataset.t==='ivs'){ refreshIvs(); try{ loadIvsData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='ivs'){ refreshIvs(); try{ loadIvsData(); }catch(e){console.error(e)} showFab(); }   // 섀넌도 기록 시트(2026-11-09)
       else if(t.dataset.t==='dca'){ refreshDca(); try{ loadDcaData(); }catch(e){console.error(e)} hideFab(); }
       else if(t.dataset.t==='asap'){ refreshAsap(); try{ loadAsapData(); }catch(e){console.error(e)} hideFab(); }
       else { refreshVr(); try{ fetchQuote('vr'); loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
@@ -12139,7 +12192,7 @@ function startApp(){
   const onOp=!isPaperPage()&&!isPfPage();
   if(!onOp&&S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
   refreshAll();
-  if(S.activeTab==='ma'||S.activeTab==='asap')hideFab(); else showFab();
+  if(S.activeTab==='inf'||S.activeTab==='vr'||S.activeTab==='ivs')showFab(); else hideFab();   // 탭 클릭 규칙과 같게(예전엔 로테·ASAP 만 숨겨 적립에도 보였다)
   if(onOp) opOpenFirst();
   /* 주문 권한은 서버가 정한다. 답이 오면 주문 패널을 다시 그린다 —
      기다렸다 시작하면 서버가 늦을 때 앱이 통째로 늦어진다. */
