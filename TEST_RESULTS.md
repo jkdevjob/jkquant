@@ -1,6 +1,6 @@
 # JKQuant 검증 결과와 미확인 사항
 
-## 2026-11-09 · ASAP 세션을 모의투자에서 뺌 · v3.123.3
+## 2026-11-09 · ASAP 세션을 모의투자에서 뺌 · 영어 '5 YEAR' 머리글 삭제 · v3.123.3 (듀얼가드 v2.5.4)
 
 - `check-portfolio.cjs` **ALL PASS · 변이 53/53 빨간불**.
   - E8: 실계좌 ASAP(기록 있음)은 포트폴리오(live)에 그대로 · 시세 선취.
@@ -8,7 +8,9 @@
   - E10: 목록 요약(paperSummary) · 전체 적용 대상(paperSessions)에서도 빠짐.
   - 새 변이 5종(재계산 · 포트폴리오에서도 뺌 · 시세 선취 · 목록 요약 · 전체 적용) 모두 빨간불.
 - `check-paper-apply-navigation.cjs` 통과 — 앱 paperSessions 그대로 · 전체 적용 뒤 ASAP 모의 세션의 시작일·기록이 그대로.
-- check-history-preservation · check-login-quote-paper · check-plan-claude-tab 통과.
+- check-history-preservation · check-login-quote-paper 통과.
+- `check-plan-claude-tab.cjs` ALL PASS · 변이 23/23 — E1 이 영어 '5 YEAR'·'5-YEAR' 도 본다(사용자 화면 '5 YEAR · DUAL GUARD').
+- 운영 파일 확인(v3.123.2 · 듀얼가드 v2.5.3, 병합 전): 띄어 쓴 '듀얼 가드' 0 · 화면 '5년 플랜' 0(주석만) · '5 YEAR' 2(이번에 지움). 사용자 화면의 나머지 옛 글자는 새로고침 전 예전 판.
 
 ## 2026-11-09 · 화면 글자 '플랜' → '듀얼가드' · v3.123.2 (듀얼가드 v2.5.3)
 
