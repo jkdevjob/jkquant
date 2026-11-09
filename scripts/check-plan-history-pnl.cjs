@@ -2,6 +2,7 @@
 // Run the page's real ledger and renderer; no separate accounting implementation.
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=require('path');
 const html=fs.readFileSync(process.argv[2]||path.join(__dirname,'../plan.html'),'utf8');
+const ENGINE=fs.readFileSync(process.argv[3]||path.join(__dirname,'../plan-session-engine.js'),'utf8');
 function fn(marker){
   const start=html.indexOf(marker);assert(start>=0,marker);
   let i=html.indexOf('{',start),depth=0;
@@ -11,6 +12,7 @@ function fn(marker){
 function page(ledger,capital=10000){
   const els={alphaLedgerBody:{innerHTML:''}},c=vm.createContext({alphaLedger:ledger,liveQuotes:{},
     $:id=>els[id]||null,num:()=>capital,usd2:v=>'$'+Number(v).toFixed(2)});
+  vm.runInContext(ENGINE,c);   // 장부 계산은 엔진(plan-session-engine.js ledgerCalc) 한 곳 — plan.html 의 alphaLedgerCalc 는 그걸 부른다(2026-11-09)
   vm.runInContext(['function alphaEventList(ledger=alphaLedger)','function alphaLedgerCalc(ledger=alphaLedger)',
     'function alphaSyncInputs()','function alphaAvgText(q,avg)','function renderAlphaLedger()'].map(fn).join('\n'),c);
   c.renderAlphaLedger();

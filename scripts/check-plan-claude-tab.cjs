@@ -119,7 +119,7 @@ async function check(S){
   { const ctx=vm.createContext({window:{JKPlanSessionEngine:E}});vm.runInContext(fnOf(X,'function planPaperRetired(sess)'),ctx);
     const r=[{horizon:10},{horizon:5,settings:{alphaRules:'exp1'}},{horizon:5,settings:{alphaRules:'exp2'}},{horizon:5,settings:{alphaRules:'base'}},{horizon:5,settings:{}}].map(s=>ctx.planPaperRetired(s));
     t('D2 모의 목록 폐지 판정 = 엔진 retiredReason',JSON.stringify(r)==='[true,true,true,false,false]',JSON.stringify(r)); }
-  { const fill=fnOf(X,'async function paperFillAll()'),pre=fnOf(X,'async function paperPrefetchQuotes()'),i=fill.indexOf("if(tab==='plan'){"),j=fill.indexOf('if(planPaperRetired(sess)){ _tick(); continue; }'),k=fill.indexOf('replayPlanPaper(sess)');
+  { const fill=fnOf(X,'async function paperFillAll(opt)'),pre=fnOf(X,'async function paperPrefetchQuotes(opt)'),i=fill.indexOf("if(tab==='plan'){"),j=fill.indexOf('if(planPaperRetired(sess)){ _tick(); continue; }'),k=fill.indexOf('replayPlanPaper(sess)');
     t('D3 모의 목록 채우기 — 폐지 세션은 재생 전에 건너뜀 · 미리 받기도 남은 세션만',i>=0&&j>i&&k>j&&/if\(tab==='plan'\)\{ if\(!planPaperRetired\(sess\)\) \['TECL','TQQQ','SGOV'\]/.test(pre),[i,j,k].join()); }
   { const v=+((X.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1]),pv=(P.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1],iv=(X.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1];
     t('D4 지난 순위 캐시 판 ≥5 (폐지 세션 줄 다시 셈) · 두 화면 엔진 판 같음(≥5)',v>=5&&pv===iv&&+pv>=5,JSON.stringify({v,pv,iv})); }

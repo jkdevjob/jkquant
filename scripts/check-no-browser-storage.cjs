@@ -72,7 +72,7 @@ for(const file of FILES){
 
 const exactTitles={
   'index.html':'JK 투자 — 운영',
-  'plan.html':'JK 투자 — 자산플랜',
+  'plan.html':'JK 투자 — 듀얼 가드',   // 2026-11-09 자산플랜 → 듀얼 가드(운영 탭 안) · 메뉴 자리는 포트폴리오
   'backtest.html':'JK 투자 — 백테스트',
   'scalping.html':'JK 투자 — 연구(지피티)',
   'claude.html':'JK 투자 — 연구(클로드)',
