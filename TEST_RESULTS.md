@@ -1,5 +1,15 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 화면 글자 '플랜' → '듀얼가드' · v3.123.1 (듀얼가드 v2.5.3)
+
+- `check-plan-claude-tab.cjs` **ALL PASS · 변이 22/22 빨간불**.
+  - E1: 듀얼가드·운영 화면 글자(주석 뺀)에 '플랜' 0 · '5년' 0 · 띄어 쓴 이름 0 · 엔진 '폐지된 세션'.
+  - D4: 모의 목록 캐시 판 ≥6.
+  - 새 변이: 듀얼가드 화면 '플랜' 되살림 · 운영 '플랜' 되살림 · 캐시 판 5 · 엔진 '폐지된 플랜'.
+- 알림 시험(settings-notifications · research-notify · gpt-common-notifications) 24 통과 — 새 이름 '무매·듀얼가드·클로드 텐배거' · '🔬 무매·듀얼가드 연구'.
+- check-plan-signal-fill · check-portfolio 48/48 · check-dg-tab 24/24 · check-history-preservation 통과.
+- 파일 훑기: index · plan · 엔진 · 설정 · 세금 · 메뉴 · 알림 설정 · Worker · backtest · admin · settings 의 화면 글자에 '플랜'·띄어 쓴 이름 0.
+
 ## 2026-11-09 · 포트폴리오 세션별 선 · 이름 '듀얼가드' · '5년' 삭제 · v3.123.0 (플랜 v2.5.2)
 
 - `check-portfolio.cjs` **ALL PASS · 변이 48/48 빨간불**.

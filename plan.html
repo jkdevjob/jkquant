@@ -283,7 +283,7 @@ html.plan-hydrating #authgate{display:none}
 html.plan-hydrating body>.wrap{visibility:visible!important;pointer-events:none}
 html.plan-hydrating body>.wrap>:not(.top){visibility:hidden!important}
 html.plan-hydrating body::after{
-  content:'로그인 유지 중 · 자산플랜 원장을 동기화하고 있습니다…';
+  content:'로그인 유지 중 · 듀얼가드 원장을 동기화하고 있습니다…';
   position:fixed;z-index:1500;top:38%;left:50%;transform:translateX(-50%);
   width:min(350px,calc(100vw - 40px));padding:20px 16px;text-align:center;
   font-size:13px;font-weight:700;line-height:1.6;color:var(--dim);
@@ -339,7 +339,7 @@ document.documentElement.classList.add('had-user');
   </div>
   <div class="gbox">
     <div class="glogo">JK <span class="v">투자</span></div>
-    <div class="gsub">자산플랜은 로그인해야 볼 수 있습니다.<br>처음이면 로그인할 때 이용 신청이 접수되고, 관리자가 승인하면 열립니다.</div>
+    <div class="gsub">듀얼가드는 로그인해야 볼 수 있습니다.<br>처음이면 로그인할 때 이용 신청이 접수되고, 관리자가 승인하면 열립니다.</div>
     <button id="gbtn" type="button" onclick="planLogin()">
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 로그인
@@ -368,7 +368,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.5.2</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.5.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -395,7 +395,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
        클로드/지피티 탭은 2026-11-09 사용자 지시("듀얼가드 클로드 지피티는 탭 삭제해 너꺼 하나로 갈거야")로 없앴다 — 화면 하나. -->
   <!-- 세션 줄 · 상태줄 · 상세 탭 — 운영의 다른 탭과 같은 차례(세션 → 상태줄 ⚙️ 설정 → 현재·분석·거래이력·설명). -->
   <div class="dg-sessbar" id="assetSessionChips" role="tablist" aria-label="듀얼가드 세션 — 누르면 전환 · 두 번 누르면 세션 설정 · 길게 눌러 끌면 순서"></div>
-  <div class="dg-statusline" id="assetStatusline"><span class="asset-session-state" id="assetSessionState">현재 투자중 플랜</span><span class="dg-badges" id="assetStatusBadges"></span><button type="button" class="setpill" id="assetSettingsBtn" title="설정 — 시작자산 · 월 추가 투자 · 목표자산 · 시작일">⚙️ 설정</button></div>
+  <div class="dg-statusline" id="assetStatusline"><span class="asset-session-state" id="assetSessionState">현재 투자중</span><span class="dg-badges" id="assetStatusBadges"></span><button type="button" class="setpill" id="assetSettingsBtn" title="설정 — 시작자산 · 월 추가 투자 · 목표자산 · 시작일">⚙️ 설정</button></div>
   <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
     <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaTaxSection">현재</button>
     <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaEvidenceSection assetPaperPanel">분석</button>
@@ -515,7 +515,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
           </div>
           <div class="btnrow"><button class="btn primary" id="alphaEditSave">수정 저장</button><button class="btn" id="alphaEditCancel">취소</button></div>
         </div>
-        <div class="alpha-ledger-note">손익금액은 매도 당시 평단 기준이며 수수료 제외입니다. 손익률은 무매와 같이 플랜 시작자금 대비입니다. 매수는 —, 평단을 모르는 매도는 평단 미등록으로 표시합니다.</div>
+        <div class="alpha-ledger-note">손익금액은 매도 당시 평단 기준이며 수수료 제외입니다. 손익률은 무매와 같이 듀얼가드 시작자금 대비입니다. 매수는 —, 평단을 모르는 매도는 평단 미등록으로 표시합니다.</div>
         <div class="table-wrap" style="margin-top:10px">
           <table class="alpha-ledger-table"><thead><tr><th>날짜</th><th>종목</th><th>구분</th><th>수량</th><th>체결가</th><th>수수료</th><th>금액</th><th>손익률</th><th>손익금액</th><th>관리</th></tr></thead><tbody id="alphaLedgerBody"></tbody></table>
         </div>
@@ -562,7 +562,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 
       <div class="card" id="alphaResetSection" data-asset-view="history" hidden style="margin-top:10px;margin-bottom:0">
         <div class="path-holdings">
-          <div class="field"><label>플랜 시작자금 ($)</label><input type="number" id="alphaCapitalInput" min="1" step="100"></div>
+          <div class="field"><label>듀얼가드 시작자금 ($)</label><input type="number" id="alphaCapitalInput" min="1" step="100"></div>
           <div class="field" style="grid-column:span 3"><label>&nbsp;</label><button class="btn" id="alphaReset" style="width:100%">초기화</button></div>
         </div>
         <div class="path-note" id="alphaCapitalNote">금액을 입력하고 초기화를 누르면 보유수량·평단·거래이력을 모두 지우고 입력한 금액의 현금만 가진 최초 상태로 돌아갑니다.</div>
@@ -630,10 +630,10 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       </div>
       <div class="todaybox"><h3>📋 오늘 SOXL 실행</h3><div class="sub" id="soxlTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="soxlTabActions" style="margin-top:8px"></div></div>
       <div class="rulelist">
-        <div class="rule"><span class="num">1</span><div><b>매일 플랜의 주문표만 확인</b><small>별지점·평단·익절 주문 가격과 수량을 앱이 계산합니다. 직접 공식을 다시 계산하지 않습니다.</small></div></div>
-        <div class="rule"><span class="num">2</span><div><b>실제 체결 후 운영 세션에 기록</b><small>플랜에서 선택한 실전 세션 하나만 사용합니다. 새 플랜 세션은 거래 전 빈 상태부터 정상 연동됩니다.</small></div></div>
+        <div class="rule"><span class="num">1</span><div><b>매일 듀얼가드의 주문표만 확인</b><small>별지점·평단·익절 주문 가격과 수량을 앱이 계산합니다. 직접 공식을 다시 계산하지 않습니다.</small></div></div>
+        <div class="rule"><span class="num">2</span><div><b>실제 체결 후 운영 세션에 기록</b><small>듀얼가드에서 선택한 실전 세션 하나만 사용합니다. 새 듀얼가드 세션은 거래 전 빈 상태부터 정상 연동됩니다.</small></div></div>
         <div class="rule"><span class="num">3</span><div><b>성장기에는 복리</b><small>사이클 수익을 다음 사이클 원금에 재투입합니다. 단계전환 시 목표비중 초과분만 QLD/SGOV 축으로 이동합니다.</small></div></div>
-        <div class="rule"><span class="num">4</span><div><b>리버스 주문도 이 화면에서 확인</b><small>직전 5거래일 종가 평균으로 무한매도·쿼터매수 가격과 수량을 플랜에서 직접 계산합니다.</small></div></div>
+        <div class="rule"><span class="num">4</span><div><b>리버스 주문도 이 화면에서 확인</b><small>직전 5거래일 종가 평균으로 무한매도·쿼터매수 가격과 수량을 듀얼가드에서 직접 계산합니다.</small></div></div>
       </div>
       <div class="btnrow"><a href="/" class="btn strategy-link">🏠 SOXL 운영화면 열기</a><a href="/backtest" class="btn strategy-link">📊 무매 백테스트</a></div>
     </div>
@@ -657,10 +657,10 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       </div>
       <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div><div class="btnrow" id="vrCycleActionRow" style="display:none"><button class="btn gold" id="vrCycleAdvanceBtn">다음 사이클 진입</button></div></div>
       <div class="rulelist">
-        <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>플랜에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
-        <div class="rule"><span class="num">2</span><div><b>14일 사이클 · 장 마감 후 확정</b><small>기준일 장중까지는 기존 V 예약표가 유효합니다. 그날 체결을 기록한 뒤 플랜의 ‘다음 사이클 진입’을 눌러 V를 갱신하며, 새 예약표는 다음 거래일부터 적용합니다.</small></div></div>
+        <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>듀얼가드에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
+        <div class="rule"><span class="num">2</span><div><b>14일 사이클 · 장 마감 후 확정</b><small>기준일 장중까지는 기존 V 예약표가 유효합니다. 그날 체결을 기록한 뒤 듀얼가드의 ‘다음 사이클 진입’을 눌러 V를 갱신하며, 새 예약표는 다음 거래일부터 적용합니다.</small></div></div>
         <div class="rule"><span class="num">3</span><div><b>전체 밴드 1주 예약표를 이 화면에 표시</b><small>사이클 Pool 한도 안의 예약매수·예약매도 전 차수를 가격·수량(1주씩 · 보유 210주 이상은 한 줄에 보유÷140 주 — 추정)으로 보여줍니다. 평가금이 밴드 밖이면 닿은 차수가 체결 구간입니다.</small></div></div>
-        <div class="rule"><span class="num">4</span><div><b>월 적립금은 무조건 VR에 넣지 않음</b><small>전체 플랜에서 목표비중보다 부족할 때만 VR 축을 보충합니다.</small></div></div>
+        <div class="rule"><span class="num">4</span><div><b>월 적립금은 무조건 VR에 넣지 않음</b><small>듀얼가드 전체에서 목표비중보다 부족할 때만 VR 축을 보충합니다.</small></div></div>
       </div>
       <div class="btnrow"><a href="/" class="btn strategy-link">🏠 VR 운영화면 열기</a><a href="/backtest" class="btn strategy-link">📊 VR 백테스트</a></div>
     </div>
@@ -739,9 +739,9 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
     <h2>1. 목표 설정</h2>
     <div class="sub">목표와 시간을 바꾸면 단계가 즉시 다시 계산됩니다.</div>
     <div class="grid4" style="margin-top:12px">
-      <div class="field"><label>플랜 시작일</label><input type="date" id="startDate"></div>
+      <div class="field"><label>듀얼가드 시작일</label><input type="date" id="startDate"></div>
       <div class="field"><label>목표일</label><input type="date" id="targetDate"></div>
-      <div class="field"><label>플랜 시작자산 ($)</label><input type="number" id="startCapital" min="0" step="1000"><div class="autosrc" id="startCapitalSrc">처음 시작할 때의 플랜 총자산</div></div>
+      <div class="field"><label>듀얼가드 시작자산 ($)</label><input type="number" id="startCapital" min="0" step="1000"><div class="autosrc" id="startCapitalSrc">처음 시작할 때의 듀얼가드 총자산</div></div>
       <div class="field"><label>목표 자산 ($)</label><input type="number" id="targetCapital" min="1" step="1000"></div>
       <div class="field"><label>월 추가 투자 ($)</label><input type="number" id="monthlyAdd" min="0" step="100"></div>
     </div>
@@ -768,7 +768,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
     <div class="btnrow">
       <button class="btn primary" id="createAllPlanSessions">⚡ 3개 전략 세션 한 번에 생성</button>
       <button class="btn" id="calcBtn">현재 상태 계산</button>
-      <button class="btn" id="setBaselineBtn">현재 플랜자산을 시작자산으로 설정</button>
+      <button class="btn" id="setBaselineBtn">현재 듀얼가드 자산을 시작자산으로 설정</button>
       <button class="btn" id="seedBtn">현재자금을 STEP 1 비중으로 채우기</button>
       <button class="btn gold" id="saveBtn">설정 저장</button>
       <span class="save-state" id="saveState">브라우저에 자동 보관됩니다.</span>
@@ -779,9 +779,9 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
     <div class="ledger-head">
       <div>
         <h2>2. QLD / SGOV 실계좌 장부</h2>
-        <div class="sub">새 세션은 플랜 배정금액 전부를 현금으로 시작합니다. 실제 QLD/SGOV 체결 후 거래를 기록하면 평가액과 비중이 자동 반영됩니다.</div>
+        <div class="sub">새 세션은 듀얼가드 배정금액 전부를 현금으로 시작합니다. 실제 QLD/SGOV 체결 후 거래를 기록하면 평가액과 비중이 자동 반영됩니다.</div>
       </div>
-      <label class="autotoggle" style="margin:0"><input type="checkbox" id="autoSleeve" checked><span><b>장부를 플랜 잔고에 자동반영</b></span></label>
+      <label class="autotoggle" style="margin:0"><input type="checkbox" id="autoSleeve" checked><span><b>장부를 듀얼가드 잔고에 자동반영</b></span></label>
     </div>
     <div class="grid3" style="margin-top:12px">
       <div class="field"><label>장부 시작 QLD 수량</label><input type="number" id="slStartQLD" min="0" step="0.0001"></div>
@@ -955,7 +955,7 @@ function renderHorizonCopy(){
     +'<b>① 변동성 가드 (TECL)</b> — 전체 자산의'+tw+'%를 TECL 몫으로 정하고, 최근'+D.ivsLook+'거래일 변동성에 따라 그 안의 투자비율을 조절합니다(흔들림이 크면 덜 담는다). 목표와 현재 비율의 차이가 <b>10%p를 초과</b>하면 리밸런싱합니다. <b>TECL 목표100%는 전체 자산의'+tw+'%</b>를 뜻합니다.<br>'
     +'<b>② 추세 가드 (TQQQ)</b> — TQQQ'+gw+'%는 SMA'+D.guardMA+' ±1.0% 경계를 넘을 때만 켜고(ON) 끕니다(OFF). 남는 금액은 SGOV에 둡니다.<br>'
     +'<b>입금</b> — 입금을 기록하면 다음 주문에서 TECL·TQQQ·SGOV 전체를 목표 비중으로 맞춥니다(모의 계산과 같은 규칙).<br>'
-    +'<span class="sub">🤖 클로드 담당 전략 · 판 '+P.version+' ('+(P.since||'2026-11-08')+'~). 매일 연구로 검증하고, 규칙을 바꿀 때는 판 번호를 올려 예전 기록과 섞지 않습니다. 10·15·20년 플랜과 새 규칙·공격형은 2026-11-08 폐지했습니다(예전 세션은 지우지 않고 숨김).</span>';
+    +'<span class="sub">🤖 클로드 담당 전략 · 판 '+P.version+' ('+(P.since||'2026-11-08')+'~). 매일 연구로 검증하고, 규칙을 바꿀 때는 판 번호를 올려 예전 기록과 섞지 않습니다. 10·15·20년 기간과 새 규칙·공격형은 2026-11-08 폐지했습니다(예전 세션은 지우지 않고 숨김).</span>';
   if($('alphaValidation'))$('alphaValidation').innerHTML='<b>앱 엔진과 같은 체결로 다시 잰 값</b><br><span class="sub">전일 확정종가로 주수 · 다음 거래일 종가 체결 · 수수료 0.1% · 해외주식 양도세 22%(250만원 공제) 세후 · 2011-04~2026-11 시작 · 2만$ 거치: 전 구간 연 30.9% · MDD 40.6%. 같은 조건에서 새 규칙 29.9%/38.1% · 공격형 30.7%/42.1%로 기본보다 낫지 않아 폐지했습니다(연구 2026-11-08).</span><br>'
     +'<b>⚠️ 과거 롤링 연구치 재검증 대기</b><br><span class="sub">기존 137개 시작구간 CAGR/MDD는 주문 수량을 미확정 다음날 종가로 계산한 현재 모의 체결규칙과 동일한 조건에서 다시 검증되지 않았습니다. 주문수량 규칙 v2 적용 후 전체·롤링 검증 전에는 공식 성과로 표시하지 않습니다. 운영 전략 기본값은 그대로입니다.</span>';
 }
@@ -1278,7 +1278,7 @@ function renderAssetSessions(){
   if(st){
     /* 운영 탭 상태줄처럼 세션 이름은 빼고(세션 줄과 겹친다) 전략 요약만 — 모의면 시작일 · 숨긴 예전 세션 수 */
     const name=planStrategyLabel(),tail=gone?' · 숨긴 예전 세션 '+gone+'개':'';
-    st.title=gone?'폐지된 플랜 세션(10·15·20년 · 새 규칙 · 공격형) — 기록은 그대로 두고 목록에서만 숨겼습니다':'';
+    st.title=gone?'폐지된 세션(10·15·20년 · 새 규칙 · 공격형) — 기록은 그대로 두고 목록에서만 숨겼습니다':'';
     if(active&&active.paper){st.className='asset-session-state paper';st.textContent=name+' · 모의 '+active.simStart+'~'+tail;}
     else{st.className='asset-session-state';st.textContent=name+tail;}
   }
@@ -1375,7 +1375,7 @@ function syncAssetSessionModal(){
   const min=new Date();min.setFullYear(min.getFullYear()-3);
   $('assetSessionStart').min=paper?min.toISOString().slice(0,10):'';
   $('assetSessionStartLabel').textContent=paper?'모의 시작일':'시작일';
-  $('assetSessionPaperNote').textContent=paper?'과거 시세로 거래와 성과를 다시 계산합니다. 모의투자 성과의 자산플랜에서도 비교할 수 있습니다. 실제 거래이력은 보존됩니다.':locked?'기존 거래이력을 유지합니다. 시작자산과 시작일은 거래이력의 시작잔고 수정에서 변경하세요.':'운영 세션은 실제 체결을 직접 기록합니다. 모의에서 운영으로 바꾸면 모의 거래는 가져오지 않습니다.';
+  $('assetSessionPaperNote').textContent=paper?'과거 시세로 거래와 성과를 다시 계산합니다. 모의투자 성과 목록에서도 비교할 수 있습니다. 실제 거래이력은 보존됩니다.':locked?'기존 거래이력을 유지합니다. 시작자산과 시작일은 거래이력의 시작잔고 수정에서 변경하세요.':'운영 세션은 실제 체결을 직접 기록합니다. 모의에서 운영으로 바꾸면 모의 거래는 가져오지 않습니다.';
 }
 function closeAssetSessionModal(){$('assetSessionModal').hidden=true;assetModalRevision++;assetEditingId=null;}
 async function assetFxAt(date){
@@ -2068,7 +2068,7 @@ async function advancePlanVrCycle(){
   }
   st.startv=+r.nextV.toFixed(6);st.startCyc=newCyc;st.cycStart=pendingVrCycle.date;
   if(!Array.isArray(st.cycLog))st.cycLog=[];
-  st.cycLog.push({cyc:newCyc-1,from:null,dates:'플랜 확정',V:+c.V.toFixed(2),lo:+c.lo.toFixed(2),up:+c.up.toFixed(2),E:+r.ev.toFixed(2),close:+pendingVrCycle.close.toFixed(4)});
+  st.cycLog.push({cyc:newCyc-1,from:null,dates:'듀얼가드 확정',V:+c.V.toFixed(2),lo:+c.lo.toFixed(2),up:+c.up.toFixed(2),E:+r.ev.toFixed(2),close:+pendingVrCycle.close.toFixed(4)});
   st.cycLog=st.cycLog.slice(-120);
   pendingVrCycle=null;
   await saveOperatingState();await cloudSave();await refreshLive();
@@ -2364,7 +2364,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=startCap;$('aCash').value=startCap;}
   const AR=alphaRuleSet(),E=window.JKPlanSessionEngine,S0=D.ivsS0,w=Math.min(1,(S0*S0)/(sigma*sigma)),curTeclW=(tq*ts)/signalTotal,sleeveNow=curTeclW/Math.max(D.teclWeight,1e-9);
   // 판정은 모의 엔진과 같은 alphaDecide (규칙은 기본 하나 — 새 규칙·공격형 2026-11-08 폐지).
-  if(!E||!E.alphaDecide){if($('alphaMeta'))$('alphaMeta').textContent='플랜 엔진(plan-session-engine.js)을 불러오지 못했습니다 — 새로고침하세요.';return;}
+  if(!E||!E.alphaDecide){if($('alphaMeta'))$('alphaMeta').textContent='듀얼가드 엔진(plan-session-engine.js)을 불러오지 못했습니다 — 새로고침하세요.';return;}
   const yearStart=!!(E.yearDoneAt&&E.yearDoneAt(qTqqq.settled.date));
   const dec=E.alphaDecide({rules:AR,w,sleeveNow,teclQty:tq,tqqqQty:qq,tqqqClose:qs,sma,tqqqWeight:(qq*qs)/signalTotal,guardWeight:D.guardWeight,yearStart});
   const teclHit=dec.teclHit,upper=dec.upper,lower=dec.lower,guard=dec.guard,guardFlip=dec.guardFlip,tqReb=dec.tqReb;
@@ -3034,7 +3034,7 @@ function render(){
   $("timeText").textContent="목표일까지 약 "+remain+"개월";
   if($("startCapitalSrc")) $("startCapitalSrc").textContent=pg.ready
     ? "시작 "+usd(pg.base)+" → 현재 "+usd(total)+" → 목표 "+usd(pg.target)
-    : "현재 플랜자산을 확인한 뒤 아래 버튼으로 시작점을 확정하세요.";
+    : "현재 듀얼가드 자산을 확인한 뒤 아래 버튼으로 시작점을 확정하세요.";
 
   if($("soxlTargetPct"))$("soxlTargetPct").textContent=(stage<4?STAGES[stage].main[0]:10)+"%";
   if($("tqqqTargetPct"))$("tqqqTargetPct").textContent=(stage<4?STAGES[stage].main[1]:0)+"%";
@@ -3065,7 +3065,7 @@ function render(){
 }
 function setPlanBaseline(){
   const total=num("balMM")+num("balVR")+num("balQLD")+num("balSGOV");
-  if(!(total>0)){alert("현재 플랜 자산이 0입니다. SOXL/TQQQ 운영세션 또는 QLD/SGOV 장부·잔고를 먼저 확인하세요.");return;}
+  if(!(total>0)){alert("현재 듀얼가드 자산이 0입니다. SOXL/TQQQ 운영세션 또는 QLD/SGOV 장부·잔고를 먼저 확인하세요.");return;}
   $("startCapital").value=Math.round(total);
   $("startDate").value=todayISO();
   if(!($("targetDate").value) || days(todayISO(),$("targetDate").value)<=0) $("targetDate").value=plusYears(todayISO(),5);

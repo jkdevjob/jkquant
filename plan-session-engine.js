@@ -26,7 +26,7 @@ function alphaRules(key){return ALPHA_RULES.base;}   // 규칙은 기본 하나 
 function retiredReason(x){
   if(!x)return '';
   const h=+(x.horizon??(x.settings&&x.settings.horizon)??5);
-  if(h!==5)return RETIRED.horizons[h]||(h+'년 플랜');
+  if(h!==5)return RETIRED.horizons[h]||(h+'년 기간');
   const r=String((x.settings&&x.settings.alphaRules)||x.alphaRules||x.rules||'');
   return RETIRED.rules[r]||'';
 }
@@ -178,7 +178,7 @@ function replay(opt){
   const principal=Math.max(0,+opt.principal||0),monthlyAdd=Math.max(0,+opt.monthlyAdd||0);
   /* 폐지된 기간·규칙(10·15·20년 · 새 규칙 · 공격형)은 다른 규칙으로 몰래 다시 계산하지 않는다 — 오류로 돌려준다 */
   const gone=retiredReason({horizon:opt.horizon==null?5:opt.horizon,rules:opt.rules});
-  if(gone)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'폐지된 플랜 — '+gone,retired:gone};
+  if(gone)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'폐지된 세션 — '+gone,retired:gone};
   const horizon=5,RULES=alphaRules(opt.rules);
   if(!start||!(principal>0))return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'시작일 또는 원금 없음'};
   const S=commonSeries(opt.tecl,opt.tqqq,opt.sgov,end);

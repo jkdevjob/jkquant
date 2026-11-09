@@ -57,7 +57,7 @@ for(const h of [5]){
 // Retired horizons are refused — never silently replayed under another rule set.
 for(const h of [10,15,20]){
   const r=run(h);
-  assert.match(r.error,/^폐지된 플랜 — /);assert.equal(r.stats,null);assert.equal(r.nav.length,0);
+  assert.match(r.error,/^폐지된 세션 — /);assert.equal(r.stats,null);assert.equal(r.nav.length,0);
   assert.equal(r.ledger.events.length,0);
 }
 checks++;
