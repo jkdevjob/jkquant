@@ -59,12 +59,12 @@ test("푸시 서버: 감시키 없으면 거부 · research 구독 기기에만 
   const r = await (await app.fetch(req(note, "k1"))).json();
   assert.equal(r.ok, true); assert.deepEqual(pushed, [["https://push.example/a", "research"]], "research 구독 기기에만");
   const a = values.get("latest:research");
-  assert.equal(a.title, "🔬 무매·5년 플랜 연구 10/13"); assert.equal(a.body, note.body); assert.equal(a.type, "research");
+  assert.equal(a.title, "🔬 무매·듀얼가드 연구 10/13"); assert.equal(a.body, note.body); assert.equal(a.type, "research");
   assert.match(a.url, /research\/daily\/research\/im_plan\/RESEARCH_LOG\.md$/);
   const again = await (await app.fetch(req(note, "k1"))).json();
   assert.equal(again.skipped, true); assert.equal(pushed.length, 1, "같은 날 같은 요약은 다시 안 보낸다");
   await app.fetch(req({ date: "2026-10-14", body: "잔금 SGOV 주1회 — 발견", discovery: true }, "k1"));
-  assert.equal(values.get("latest:research").title, "★ 무매·5년 플랜 연구 10/14 — 발견"); assert.equal(pushed.length, 2);
+  assert.equal(values.get("latest:research").title, "★ 무매·듀얼가드 연구 10/14 — 발견"); assert.equal(pushed.length, 2);
   assert.equal((await app.fetch(req({ date: "10/14", body: "x" }, "k1"))).status, 400, "날짜 형식");
   assert.equal((await app.fetch(req({ date: "2026-10-14", body: "" }, "k1"))).status, 400, "빈 요약");
 });
