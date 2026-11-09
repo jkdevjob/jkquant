@@ -1,0 +1,229 @@
+{
+  "schema": 1,
+  "kind": "verification-followup",
+  "reportDate": "2026-11-09",
+  "verificationDateKst": "2026-11-10",
+  "preparedAtUtc": "2026-11-09 23:13:23 UTC",
+  "report": {
+    "branch": "research/gpt-morning",
+    "commit": "602fcba17d820e231ba78122a045e56314e894ed",
+    "submittedAtKst": "2026-11-09 16:18",
+    "deadlineMissed": true,
+    "prepareRun": 42578532171,
+    "response": {
+      "ok": true,
+      "duplicate": true,
+      "queued": null,
+      "dueAt": null
+    },
+    "deliveryReceipt": {
+      "date": "2026-11-09",
+      "push": {
+        "sent": 1,
+        "eligible": 1,
+        "failed": 0
+      },
+      "telegram": {
+        "result": "sent",
+        "tries": 1
+      },
+      "originalPayloadRead": false,
+      "deviceDisplayVerified": false
+    },
+    "noNewResearchAlertResent": true
+  },
+  "research": {
+    "number": "G1",
+    "preregisterCommit": "084149f5c55ff35890deefdea26d3b62814b9ca0",
+    "validDays": 395,
+    "engineComparisons": 790,
+    "mismatches": 0,
+    "decision": "reject volume 1.5 candidate; no adoption",
+    "walkForward": {
+      "evaluationDays": 270,
+      "folds": 9,
+      "positiveCandidateFolds": 0,
+      "profitFactor": 0.36730199507996164,
+      "avgDailyReturnPct": -0.07747102245044256,
+      "stressPlus010AvgDailyPct": -0.12376731874673884
+    },
+    "prospectiveAfterRegistration": {
+      "days": 0,
+      "trades": 0,
+      "scope": "as of original study"
+    }
+  },
+  "release": {
+    "pr": 627,
+    "url": "https://github.com/jkdevjob/jkquant/pull/627",
+    "merged": true,
+    "mergeMethod": "squash",
+    "prHead": "30bbba6322af4be7e9c264758c12532ca55ed8b9",
+    "mergedMainSha": "b71492937bda7fa8e1bd5b1a70de66194a0c625d",
+    "mergedAt": "2026-11-09T08:38:02Z",
+    "checks": [
+      {
+        "scope": "research branch",
+        "head": "fd4014d24442765cfff2f5367e8f50665c6dcee3",
+        "run": 42581591143,
+        "result": "success",
+        "steps": 57,
+        "regressionPass": 2830,
+        "regressionFail": 0
+      },
+      {
+        "scope": "final PR head",
+        "head": "30bbba6322af4be7e9c264758c12532ca55ed8b9",
+        "run": 42584245048,
+        "result": "success",
+        "steps": 57,
+        "regressionPass": 2817,
+        "regressionFail": 0
+      },
+      {
+        "scope": "merged main",
+        "head": "b71492937bda7fa8e1bd5b1a70de66194a0c625d",
+        "run": 42587375767,
+        "result": "success",
+        "steps": 57,
+        "regressionPass": 2817,
+        "regressionFail": 0
+      }
+    ],
+    "currentMainChecked": "4b35763c51aa77df0e3541ee4e47aea94804b993",
+    "targetCryptoFilesChangedSinceMerge": false,
+    "localFullCheck": "not passed: Windows/Linux executable path and race fixture environment differ; authoritative full Linux checks above all passed",
+    "valueAndMutationChecks": {
+      "partialArchive": {
+        "values": 3,
+        "mutationsDetected": 3
+      },
+      "g1MutationsDetected": 3
+    },
+    "noSignalRuleOrderOrLedgerChanges": true
+  },
+  "data": {
+    "verifiedSnapshot": "30f86065a996ec63013df582f466480e7edd80c4",
+    "crypto": {
+      "to": "2026-11-08",
+      "validDays": 395,
+      "trades": 207,
+      "collectorRun": 42587375736,
+      "collectorResult": "success",
+      "partialSnapshotsRetained": 1,
+      "partialFiles": [
+        {
+          "name": "ebd091e0dbd3fc6daeb744b0f89e26e263a4d43c534b44882ca5167df2eeff96.json.gz",
+          "gitBlobSha": "f0a21a930710e3b118b25b5783d21c33fae45412",
+          "size": 7632
+        }
+      ]
+    },
+    "shadow": {
+      "run": 42587709649,
+      "result": "success",
+      "to": "2026-11-08",
+      "days": 37,
+      "trades": 1,
+      "status": "collecting",
+      "initialPushRun": 42587375955,
+      "initialPushRunTo": "2026-11-07",
+      "reasonForRerun": "initial concurrent run read pre-collector data snapshot"
+    },
+    "publicQueries": [
+      {
+        "name": "crypto-research",
+        "url": "https://jkquant.pages.dev/api/crypto-research?gptVerify=b7149293",
+        "at": "2026-11-09T08:40:59.813783+00:00",
+        "http": 200,
+        "keys": [
+          "ok",
+          "schema",
+          "generatedAt",
+          "market",
+          "unitMinutes",
+          "source",
+          "from",
+          "to",
+          "archiveDays",
+          "validDays",
+          "invalidDays",
+          "comparisonStatus",
+          "comparisonRule",
+          "auditRule",
+          "executionModel",
+          "frictionModel",
+          "variants",
+          "rolling30",
+          "latestTrades",
+          "currentSession",
+          "shadowDip24"
+        ],
+        "to": "2026-11-08",
+        "validDays": 395,
+        "status": null,
+        "source": "Upbit public minute candles",
+        "warnings": null,
+        "nestedSummary": {}
+      },
+      {
+        "name": "crypto-history",
+        "url": "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-11-08&gptVerify=b7149293",
+        "at": "2026-11-09T08:41:14.485136+00:00",
+        "http": 200,
+        "keys": [
+          "ok",
+          "strategy",
+          "variant",
+          "market",
+          "source",
+          "durableDbDays",
+          "status",
+          "sourceWarnings",
+          "total",
+          "filtered",
+          "page",
+          "pageSize",
+          "pages",
+          "trades",
+          "summary"
+        ],
+        "to": null,
+        "validDays": null,
+        "status": "degraded",
+        "source": "crypto-research/baseline-trades.csv",
+        "warnings": [
+          "장중 모의장부 조회 실패: The operation was aborted"
+        ],
+        "count": 22,
+        "day1108": [
+          {
+            "date": "2026-11-08",
+            "code": "KRW-BTC",
+            "name": "비트코인",
+            "strategyVersion": "btc_midnight_orb_v2",
+            "signalTime": "12:35",
+            "entryTime": "12:40",
+            "entryPrice": 103588000,
+            "exitTime": "13:35",
+            "exitPrice": 103553000,
+            "reason": "time_exit",
+            "pnl": -0.17378769741668731,
+            "rank": null,
+            "detail": {
+              "openingHigh": 103557000,
+              "signalVwap": 103452694.41554783,
+              "volRatio": 10.458642746188943
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "limits": [
+    "Cumulative paper-ledger API remains degraded with timeout and uses labelled research CSV fallback; restored 11/8 row is visible.",
+    "Private original morning report payload was not read (owner authentication required); receipt and server duplicate response were observed.",
+    "Actual mobile notification display and real broker execution are not verified.",
+    "This is follow-up verification of the 11/9 report, not a new 11/10 research report."
+  ]
+}
