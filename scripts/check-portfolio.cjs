@@ -11,10 +11,12 @@
  *   E 실전 세션 채우기(paperFillAll({live:true})) — 모의 제외 · 기록 없는 세션 제외 · 모의 체결 안 만듦 · 상태줄 글자
  *   F 화면 구조 — 듀얼 가드 탭 맨 왼쪽 · S.activeTab 에 안 들어감 · ASAP 숨김 · 메뉴 포트폴리오 · 플랜 화면 창 모드
  *   G 플랜 창 → 바깥 알림(planEmbedPost) — 모의 장부는 안 보냄 · H 바깥이 받는 쪽 — 같은 출처·창·계정 · 모의 거절
+ *   O 세션 설정 '💰 포트폴리오에 넣기'(index v3.121.0 · plan v2.4.0 · 2026-11-09 사용자: "운영 세션 설정에서 모의투자처럼 포트폴리오에 추가 할지 선택 하게 해")
+ *     — 실계좌만 · 고른 적 없으면 넣음 · 끈 세션은 합계·시세 선취에서 빠짐 · 모의는 잠금 · 듀얼 가드(현재 투자중 · 세션)도 같은 선택 · 창이 보낸 값 우선 · 뺀 세션 안내
  */
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
 const root=path.join(__dirname,'..'),rd=f=>fs.readFileSync(path.join(root,f),'utf8');
-const SRC={idx:rd('index.html'),plan:rd('plan.html'),eng:rd('plan-session-engine.js'),acc:rd('jk-access.js'),ui:rd('jk-ui.js'),admin:rd('admin.html'),tax:rd('plan-tax-check.js')};
+const SRC={idx:rd('index.html'),plan:rd('plan.html'),eng:rd('plan-session-engine.js'),acc:rd('jk-access.js'),ui:rd('jk-ui.js'),admin:rd('admin.html'),tax:rd('plan-tax-check.js'),set:rd('plan-session-settings.js')};
 const PAGES=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html','workout.html','swim.html'];
 const fnOf=(src,marker)=>{const s=src.indexOf(marker);if(s<0)throw Error('없음: '+marker);let i=src.indexOf('{',s),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(s,i+1);}throw Error(marker);};
 const near=(a,b,e=1e-6)=>Math.abs(a-b)<=e;
@@ -130,18 +132,27 @@ function check(S){
         {id:'old10',name:'10년',horizon:10,paper:false,settings:{startCapital:7777},ledger:{base:{cash:7777,tecl:2},events:[{id:'w'}]}},
         {id:'empty',name:'빈 장부',horizon:5,paper:false,settings:{startCapital:3000},ledger:{base:{cash:3000},events:[]}}]}},
       planPaperRetired:x=>!!(E.retiredReason&&E.retiredReason(x))};
-    vm.createContext(c);vm.runInContext(fnOf(S.idx,'function pfNum(v)')+fnOf(S.idx,'function pfLedgerUsed(l)')+fnOf(S.idx,'function pfPlanLedgers()'),c);
+    vm.createContext(c);vm.runInContext(fnOf(S.idx,'function pfNum(v)')+fnOf(S.idx,'function pfWanted(x)')+fnOf(S.idx,'function pfPlanWanted(stored, ov)')+fnOf(S.idx,'function pfLedgerUsed(l)')+fnOf(S.idx,'function pfPlanLedgers(withOff)'),c);
     const a=c.pfPlanLedgers();
     t('D1 현재 투자중 + 실전 세션만 — 모의·10년(폐지)·빈 장부 제외 · 시작금 "20,000" → 20000',a.map(x=>x.key).join()==='cur,live1'&&a[0].start===20000&&a[1].start===5000&&a[1].from==='2026-03-02',JSON.stringify(a.map(x=>[x.key,x.start,x.from])));
     c.PF.over.cur={ledger:{base:{cash:1},events:[{id:'n',type:'trade',date:'2026-11-07',symbol:'SGOV',side:'buy',qty:1,price:100,fee:0}]},startCapital:21000,startDate:'2026-02-02'};
     const b=c.pfPlanLedgers();
     t('D2 듀얼 가드 창이 보낸 최신 장부·시작금을 쓴다(처음 읽은 사본보다 우선)',b[0].ledger===c.PF.over.cur.ledger&&b[0].start===21000&&b[0].from==='2026-02-02',JSON.stringify(b[0]));
-    c.planLiveDoc=null;c.PF.over={};
-    t('D3 듀얼 가드 원장이 없으면 현재 투자중 줄도 없다',c.pfPlanLedgers().map(x=>x.key).join()==='live1'); }
+    const doc0=c.planLiveDoc;c.planLiveDoc=null;c.PF.over={};
+    t('D3 듀얼 가드 원장이 없으면 현재 투자중 줄도 없다',c.pfPlanLedgers().map(x=>x.key).join()==='live1');
+    // 💰 포트폴리오에 넣기 — 현재 투자중(fiveYearPlanV2.portfolio) · 세션(portfolio) · 창이 보낸 값이 저장값보다 우선
+    c.planLiveDoc={...doc0,portfolio:false};c.S.plan.sessions[0].portfolio=false;
+    const off=c.pfPlanLedgers(),all=c.pfPlanLedgers(true);
+    t('D4 끈 장부는 뺀다(현재 투자중 · 실전 세션 모두) · 뺀 것도 달라면(withOff) off 표시로',off.length===0&&all.map(x=>x.key+':'+x.off).join()==='cur:true,live1:true',JSON.stringify([off,all.map(x=>[x.key,x.off])]));
+    c.PF.over={cur:{ledger:doc0.alphaLedger,startCapital:20000,portfolio:true},live1:{ledger:c.S.plan.sessions[0].ledger,portfolio:false}};c.S.plan.sessions[0].portfolio=undefined;
+    t('D5 창(플랜 화면)이 방금 보낸 선택이 저장값보다 우선 — 저장은 뺌·창은 넣음 → 넣음 / 저장은 넣음·창은 뺌 → 뺌',c.pfPlanLedgers().map(x=>x.key+':'+x.off).join()==='cur:false',JSON.stringify(c.pfPlanLedgers().map(x=>[x.key,x.off])));
+    c.PF.over={};c.planLiveDoc={...doc0,portfolio:true};
+    t('D6 고른 적 없거나(undefined) 켠 장부는 넣는다 — 예전 포트폴리오 그대로',c.pfPlanLedgers().map(x=>x.key).join()==='cur,live1'); }
 
   // ── E. 실전 세션 채우기
   { const mk=()=>{const log={auto:0,vr:0,inf:0,loaders:[]};
-      const S0={activeTab:'inf',inf:{active:'i1',sessions:[{id:'i1',paper:false,settings:{ticker:'SOXL'},hist:[{d:1}]},{id:'ip',paper:true,settings:{ticker:'SOXL'},hist:[{d:1}]},{id:'i0',paper:false,settings:{ticker:'SOXL'},hist:[]}]},
+      const S0={activeTab:'inf',inf:{active:'i1',sessions:[{id:'i1',paper:false,settings:{ticker:'SOXL'},hist:[{d:1}]},{id:'ip',paper:true,settings:{ticker:'SOXL'},hist:[{d:1}]},{id:'i0',paper:false,settings:{ticker:'SOXL'},hist:[]},
+          {id:'i2',paper:false,portfolio:false,settings:{ticker:'TECL'},hist:[{d:1}]}]},
         dca:{active:'d1',sessions:[{id:'d1',paper:false,settings:{ticker:'TQQQ',mode:'dca'},hist:[{d:1}]}]},
         plan:{sessions:[{id:'pl',paper:false,horizon:5,settings:{},ledger:{base:{},events:[{id:1}]}},{id:'pp',paper:true,horizon:5,simStart:'2026-01-02',settings:{}}]}};
       const ctx={S:S0,_paperFilling:false,_fillQuoteCache:null,infChartData:[],vrChartData:[],lastQuote:{inf:{symbol:'SOXL'},dca:null,plan:null},
@@ -153,14 +164,15 @@ function check(S){
         paperStat:(tab,x)=>({tab,id:x.id,price:tab==='dca'?0:10}),stratStatusHtml:(tab,x)=>'ST:'+tab+':'+x.id,
         planPaperRetired:()=>false,loadPlanPaperData:async()=>({}),replayPlanPaper:()=>({}),paperStatPlan:x=>({tab:'plan',id:x.id}),
         console:{error(){},warn(){}},Map,Promise,Set};
-      vm.createContext(ctx);vm.runInContext(fnOf(S.idx,'async function paperBreathe()')+fnOf(S.idx,'async function paperPrefetchQuotes(opt)')+fnOf(S.idx,'async function paperFillAll(opt)'),ctx);
+      vm.createContext(ctx);vm.runInContext(fnOf(S.idx,'function pfWanted(x)')+fnOf(S.idx,'async function paperBreathe()')+fnOf(S.idx,'async function paperPrefetchQuotes(opt)')+fnOf(S.idx,'async function paperFillAll(opt)'),ctx);
       return {ctx,log};};
     return Promise.resolve().then(async()=>{
       const A=mk(),rows=await A.ctx.paperFillAll({live:true});
       t('E1 실전 — 기록 있는 실전 세션만(무매 i1 · 적립 d1) · 모의·빈 세션·플랜 제외',rows.map(r=>r.tab+':'+r.id).join()==='inf:i1,dca:d1',rows.map(r=>r.tab+':'+r.id).join());
       t('E2 실전 — 모의 체결을 만들지 않는다(paperAuto·SimForward 0번)',A.log.auto===0&&A.log.vr===0&&A.log.inf===0,JSON.stringify(A.log));
       t('E3 실전 — 줄마다 운영 상태줄 글자(stratStatusHtml) · 시세 없으면 시세 대기',rows[0].status==='ST:inf:i1'&&rows[1].status==='ST:dca:d1'&&rows[1].pending===true&&!rows[0].pending,JSON.stringify(rows));
-      t('E4 실전 — 시세 선취도 실전 세션 종목만(SOXL·TQQQ) · 플랜 세 종목 안 받음',JSON.stringify((A.log.fd||[]).sort())==='["SOXL","TQQQ"]',JSON.stringify(A.log.fd));
+      t('E4 실전 — 시세 선취도 포트폴리오에 넣는 실전 세션 종목만(SOXL·TQQQ) · 끈 세션 종목(TECL)·플랜 세 종목 안 받음',JSON.stringify((A.log.fd||[]).sort())==='["SOXL","TQQQ"]',JSON.stringify(A.log.fd));
+      t('E7 실전 — 「💰 포트폴리오에 넣기」를 끈 실전 세션(무매 i2 · 기록 있음)은 빠진다',!rows.some(r=>r.id==='i2')&&rows.length===2,rows.map(r=>r.tab+':'+r.id).join());
       t('E5 끝나면 탭·세션·재생 표시가 그대로',A.ctx.S.activeTab==='inf'&&A.ctx.S.inf.active==='i1'&&A.ctx._paperFilling===false&&A.ctx._fillQuoteCache===null);
       const B=mk(),rows2=await B.ctx.paperFillAll();
       t('E6 모의(기본) — 예전 그대로: 모의 세션(무매 ip · 플랜 pp)만 · 모의 체결을 굴린다 · 상태줄 글자 없음',rows2.map(r=>r.tab+':'+r.id).join()==='inf:ip,plan:pp'&&B.log.auto===1&&B.log.inf===1&&!rows2[0].status,rows2.map(r=>r.tab+':'+r.id).join()+' auto='+B.log.auto);
@@ -199,8 +211,8 @@ function check2(S,t,E,bad){
     t('F9 플랜 화면 이름 듀얼 가드 · 메뉴는 운영(cur)·포트폴리오',/<title>JK 투자 — 듀얼 가드<\/title>/.test(S.plan)&&/<a href="\/" class="cur"><span class="mi">🏠<\/span>운영<\/a>/.test(S.plan)); }
 
   // ── G. 플랜 창 → 바깥 알림
-  { const sent=[];const mkc=(embed,sess)=>{const w={};w.parent={postMessage:(m,o)=>sent.push({m,o})};
-      const c={document:{documentElement:{classList:{contains:x=>x==='embed'&&embed}}},window:w,location:{origin:'https://jk.example'},auth:{currentUser:{uid:'u1'}},
+  { const sent=[];const mkc=(embed,sess,pp=true)=>{const w={};w.parent={postMessage:(m,o)=>sent.push({m,o})};
+      const c={document:{documentElement:{classList:{contains:x=>x==='embed'&&embed}}},window:w,location:{origin:'https://jk.example'},auth:{currentUser:{uid:'u1'}},planPortfolio:pp,
         activeAssetSession:()=>sess,alphaLedger:{base:{cash:1},events:[{id:'q'}]},cloneObj:v=>JSON.parse(JSON.stringify(v)),num:(id,f)=>id==='startCapital'?20000:f,$:id=>id==='startDate'?{value:'2026-01-02'}:null};
       vm.createContext(c);vm.runInContext(fnOf(S.plan,'function planEmbedPost(o)'),c);return c;};
     const o={date:'2026-11-06',orders:2,orderText:'TQQQ 매도 38주',need:true,guard:'OFF',guardFlip:true};
@@ -208,7 +220,12 @@ function check2(S,t,E,bad){
     const [m1,m2,m3]=sent.map(x=>x.m);
     t('G1 현재 투자중: key cur · 장부·시작금 같이 · 같은 출처로만',sent.length===3&&m1.type==='jk-dg'&&m1.key==='cur'&&m1.uid==='u1'&&!m1.paper&&m1.ledger&&m1.ledger.events.length===1&&m1.startCapital===20000&&sent[0].o==='https://jk.example'&&m1.strip.orders===2,JSON.stringify(sent));
     t('G2 모의 세션은 장부를 안 보낸다(paper 표시만) · 실전 세션은 그 세션 키로',m2&&m2.paper===true&&m2.key==='p1'&&m2.ledger===undefined&&m3&&m3.key==='s9'&&m3.ledger,JSON.stringify([m2,m3]));
-    t('G3 창 밖(주소로 바로 연 화면)·불러오는 중(null)은 보내지 않는다 · 띠를 그릴 때마다 부른다',sent.length===3&&/if\(typeof planEmbedPost==='function'\)planEmbedPost\(o\);/.test(fnOf(S.plan,'function renderDualGuardStrip(o)'))); }
+    t('G3 창 밖(주소로 바로 연 화면)·불러오는 중(null)은 보내지 않는다 · 띠를 그릴 때마다 부른다',sent.length===3&&/if\(typeof planEmbedPost==='function'\)planEmbedPost\(o\);/.test(fnOf(S.plan,'function renderDualGuardStrip(o)')));
+    sent.length=0;
+    mkc(true,null,false).planEmbedPost(o);mkc(true,{id:'s8',paper:false,portfolio:false}).planEmbedPost(o);mkc(true,{id:'s7',paper:false}).planEmbedPost(o);mkc(true,{id:'p2',paper:true,portfolio:true}).planEmbedPost(o);
+    const [g1,g2,g3,g4]=sent.map(x=>x.m);
+    t('G4 「💰 포트폴리오에 넣기」 선택도 같이 보낸다 — 현재 투자중 뺌 → false · 끈 세션 → false · 고른 적 없는 세션·켠 현재 투자중 → true · 모의 세션은 안 보냄',
+      g1&&g1.portfolio===false&&g2&&g2.portfolio===false&&g3&&g3.portfolio===true&&g4&&g4.portfolio===undefined&&m1.portfolio===true,JSON.stringify(sent.map(x=>[x.m.key,x.m.portfolio]))); }
 
   // ── H. 바깥이 받는 쪽
   { const blk=S.idx.slice(S.idx.indexOf("window.addEventListener('message',e=>{"));const code=blk.slice(0,blk.indexOf('\n});')+4);
@@ -220,6 +237,8 @@ function check2(S,t,E,bad){
     t('H1 다른 출처·다른 창·다른 계정·모의·다른 종류는 버린다',!!h&&Object.keys(c.PF.dg).length===0&&Object.keys(c.PF.over).length===0,JSON.stringify(c.PF));
     if(h)ev(good);
     t('H2 우리 창 · 같은 계정 · 실전이면 오늘 판단과 최신 장부를 받는다',!!c.PF.dg.cur&&c.PF.dg.cur.strip.orders===1&&c.PF.over.cur&&c.PF.over.cur.startCapital===20000,JSON.stringify(c.PF));
+    if(h)ev({...good,key:'s5',portfolio:false});
+    t('H4 창이 보낸 「💰 포트폴리오에 넣기」 선택을 받는다(끔 → false) · 안 보냈으면 비워 둔다(저장값을 쓴다)',!!(c.PF.over.s5&&c.PF.over.s5.portfolio===false&&c.PF.over.cur&&c.PF.over.cur.portfolio===undefined),JSON.stringify(c.PF.over));
     // 모의 세션을 보고 있다는 알림은 값은 안 받고 '보는 중' 표시만 — 오늘 칸이 '계산 중'에 멈춰 보이지 않게 이유를 적는다
     const c2={window:{addEventListener:(k,f)=>{if(k==='message')c2.h=f;}},location:{origin:'https://jk.example'},dgFrameEl:frame,curUid:'u1',PF:{dg:{},over:{},dgSeen:null},isPfPage:()=>false,pfRecalcPlan:()=>{},String};
     vm.createContext(c2);vm.runInContext(code,c2);if(c2.h)c2.h({origin:'https://jk.example',source:frame.contentWindow,data:{...good,paper:true,key:'p1'}});
@@ -296,7 +315,99 @@ function check3(S,t,E,bad){
     t('L3 비중 막대는 무리 넷(듀얼 가드·섀넌·무매·그 밖)만 — 모든 짝이 갈리는 색(검증) · 2px 틈',/plan:\{label:'듀얼 가드',color:'#9085e9'\},ivs:\{label:'섀넌',color:'#d55181'\},inf:\{label:'무한매수법',color:'#008300'\}/.test(S.idx)&&/const PF_OTHER=\{label:'그 밖',color:'#c9cdd9'\};/.test(S.idx)&&/\.pf-bar\{display:flex;gap:2px;/.test(S.idx)&&!/PF_COLOR/.test(S.idx));
     t('L4 화면 배선: 합친 MDD 칸 · 추이 · 목표 · 양도세(세금 모듈 불러옴) · 환율 KRW=X',/합친 MDD/.test(fnOf(S.idx,'function pfRender()'))&&/pfChartHtml\(C\)/.test(fnOf(S.idx,'function pfRender()'))&&/pfTargetHtml\(V\)/.test(fnOf(S.idx,'function pfRender()'))&&/pfTaxHtml\(X,T\)/.test(fnOf(S.idx,'function pfRender()'))
       &&/<script src="\/plan-tax-check\.js\?v=1"><\/script>/.test(S.idx)&&/fetchDaily\('KRW=X'\)/.test(fnOf(S.idx,'async function pfRefresh(force)'))); }
-  return bad;
+  return check4(S,t,E,bad);
+}
+
+/* ── O. 세션 설정 '💰 포트폴리오에 넣기' (2026-11-09 사용자: "운영 세션 설정에서 모의투자처럼 포트폴리오에 추가 할지 선택 하게 해") ── */
+function check4(S,t,E,bad){
+  // O1 넣을지 판단은 한 곳(pfWanted) — 포트폴리오 채우기·시세 선취·뺀 세션 목록이 같이 쓴다
+  { const c={};vm.createContext(c);vm.runInContext(fnOf(S.idx,'function pfWanted(x)'),c);
+    const v=[{paper:false},{paper:false,portfolio:true},{paper:false,portfolio:false},{paper:true},{paper:true,portfolio:true},null].map(x=>c.pfWanted(x));
+    t('O1 pfWanted — 실계좌: 고른 적 없음·켬 → 넣음 · 끔 → 뺌 / 모의(켜 둬도)·없음 → 뺌',JSON.stringify(v)==='[true,true,false,false,false,false]',JSON.stringify(v)); }
+  // O2·O3 뺀 세션 안내 — 기록 있는 실계좌 세션 중 끈 것만 · 듀얼 가드 장부 포함 · 누르면 그 세션으로
+  { const c={planLiveDoc:{portfolio:false,startCapital:20000,alphaLedger:{base:{cash:1},events:[{id:'e'}]}},PF:{over:{}},
+      S:{plan:{sessions:[]},inf:{sessions:[{id:'a',name:'키움 SOXL',paper:false,portfolio:false,hist:[{d:1}]},{id:'b',name:'빈',paper:false,portfolio:false,hist:[]},
+          {id:'c',name:'모의',paper:true,portfolio:false,hist:[{d:1}]},{id:'d',name:'넣음',paper:false,hist:[{d:1}]}]},
+        dca:{sessions:[{id:'q',name:'TQQQ 적립',paper:false,portfolio:false,hist:[{d:1}]}]}},
+      PAPER_TABS:[['inf','무한매수법'],['dca','매수적립'],['plan','듀얼 가드']],planPaperRetired:()=>false};
+    vm.createContext(c);vm.runInContext(['function pfNum(v)','function pfEsc(x)','function pfWanted(x)','function pfPlanWanted(stored, ov)','function pfLedgerUsed(l)','function pfPlanLedgers(withOff)','function pfOffList()','function pfOffHtml()'].map(m=>fnOf(S.idx,m)).join('\n'),c);
+    const L=c.pfOffList(),h=c.pfOffHtml();
+    t('O2 뺀 세션 안내 — 듀얼 가드 현재 투자중 · 무매 키움 SOXL · 적립 TQQQ(기록 있는 실계좌 중 끈 것) · 빈 세션·모의·켠 세션은 안 적음 · 누르면 그 세션으로',
+      L.map(x=>x.tab+':'+x.id).join()==='plan:cur,inf:a,dca:q'&&/뺀 세션 3개/.test(h)&&/data-pftab="inf" data-pfid="a"/.test(h)&&/data-pftab="plan" data-pfid="cur"/.test(h)&&/「💰 포트폴리오에 넣기」/.test(h),JSON.stringify(L));
+    c.planLiveDoc.portfolio=true;c.S.inf.sessions[0].portfolio=true;c.S.dca.sessions[0].portfolio=true;
+    t('O3 다 넣으면 안내 없음',c.pfOffList().length===0&&c.pfOffHtml()===''); }
+  // O4~O7 운영 세션 설정창 — 체크 · 모의면 잠금 · 저장(편집·새로)
+  const mkEl=(o={})=>Object.assign({value:'',checked:false,disabled:false,textContent:''},o);
+  const F={sess_name:mkEl({value:'키움 SOXL'}),sess_paper:mkEl(),sess_pf:mkEl({checked:true}),sess_pf_hint:mkEl(),sess_kis:mkEl(),sess_simstart:mkEl({value:'2025-01-02'})};
+  const t0={id:'a',name:'키움 SOXL',paper:false,settings:{ticker:'SOXL'},hist:[{d:1}]};
+  const S0={activeTab:'inf',inf:{active:'a',sessions:[t0]}};
+  const c={S:S0,_sessEditId:null,kisOwner:false,$:id=>F[id],tabBox:()=>S0[S0.activeTab],curStrat:()=>t0,defInfSettings:()=>({}),
+    paperPreferredSimStart:()=>'2025-01-02',paperStart:s=>s.simStart,paperSeedNewSession:async()=>true,saveLocal(){},pushRemoteNow:async()=>true,closeSess(){},refreshAll(){},
+    confirm:()=>true,keepSubnav(){},resetSubnav(){},console,_n:0};
+  for(const n of ['Inf','Ma','Ivs','Dca','Asap','Vr'])c['new'+n+'Session']=name=>({id:'n'+(++c._n),name,settings:{ticker:'TQQQ'},hist:[]});
+  vm.createContext(c);vm.runInContext('var _sessPfPick=true;\n'+fnOf(S.idx,'function sessPfInit(on)')+fnOf(S.idx,'function sessPfUI()')+fnOf(S.idx,'async function createSess()'),c);
+  return (async()=>{
+    c.sessPfInit(t0.portfolio!==false);const init=F.sess_pf.checked;
+    F.sess_pf.checked=false;c._sessEditId='a';await c.createSess();const a1=t0.portfolio;
+    c.sessPfInit(t0.portfolio!==false);const init2=F.sess_pf.checked;F.sess_pf.checked=true;c._sessEditId='a';await c.createSess();const a2=t0.portfolio;
+    t('O4 세션 설정(편집) — 고른 적 없는 세션은 켜진 채 열림 · 끄고 저장 → portfolio:false · 다시 열면 꺼진 채 · 켜고 저장 → true',init===true&&a1===false&&init2===false&&a2===true,JSON.stringify([init,a1,init2,a2]));
+    c.sessPfInit(true);F.sess_paper.checked=true;c.sessPfUI();const lk=[F.sess_pf.disabled,F.sess_pf.checked,/모의 세션은 넣지 않습니다/.test(F.sess_pf_hint.textContent)];
+    F.sess_paper.checked=false;c.sessPfUI();const back=[F.sess_pf.disabled,F.sess_pf.checked];
+    t('O5 모의투자를 켜면 「포트폴리오에 넣기」는 잠기고 꺼짐(실제 돈만) · 모의를 끄면 원래 고른 값(켬)으로',lk.join()==='true,false,true'&&back.join()==='false,true',JSON.stringify([lk,back]));
+    c._sessEditId=null;F.sess_paper.checked=false;c.sessPfInit(true);F.sess_pf.checked=false;await c.createSess();const n1=S0.inf.sessions[S0.inf.sessions.length-1];
+    c._sessEditId=null;F.sess_paper.checked=true;c.sessPfInit(true);c.sessPfUI();await c.createSess();const n2=S0.inf.sessions[S0.inf.sessions.length-1];
+    t('O6 새 세션 — 실계좌에서 끄고 만들면 portfolio:false · 모의 세션은 값을 적지 않는다',n1.paper!==true&&n1.portfolio===false&&n2.paper===true&&!('portfolio' in n2),JSON.stringify([n1,n2]));
+    t('O7 설정창 배선 — 모의 체크가 sessPfUI 를 부름 · 새 세션은 켜고 시작 · 편집은 저장값(고른 적 없으면 켬) · 화면(빈 화면·평소)에 뺀 세션 안내',
+      /id="sess_pf"/.test(S.idx)&&/kisOptUI\(\);sessPfUI\(\)"/.test(S.idx)&&/sessPfInit\(true\)/.test(fnOf(S.idx,'function openSess()'))&&/sessPfInit\(s\.portfolio!==false\)/.test(fnOf(S.idx,'function editSess(id)'))
+      &&(fnOf(S.idx,'function pfRender()').match(/pfOffHtml\(\)/g)||[]).length===2);
+    return check5(S,t,E,bad);
+  })();
+}
+/* ── O(듀얼 가드). 플랜 세션 설정 — 설정 모듈 · 현재 투자중 저장(fiveYearPlanV2.portfolio) · 설정창 잠금 ── */
+function check5(S,t,E,bad){
+  const M=(()=>{const c={};vm.createContext(c);vm.runInContext(S.set,c);return c.JKPlanSessionSettings;})();
+  const seed={id:'s1',horizon:5,paper:false,settings:{startCapital:5000,monthlyAdd:0,targetCapital:9000,startDate:'2026-01-02'},ledger:{base:{date:'2026-01-02',cash:5000},events:[]}};
+  const opt={today:'2026-11-09',minStart:'2023-11-09',fx:1400},inp=o=>Object.assign({paper:false,name:'세션',capital:5000,monthly:0,target:9000,start:'2026-01-02'},o);
+  const x1=M.update(seed,inp({portfolio:false}),opt),x2=M.update(x1,inp({portfolio:true}),opt),x3=M.update(x1,inp({}),opt),x4=M.update(x1,inp({paper:true,portfolio:true,start:'2025-01-02'}),opt);
+  t('O8 플랜 세션 설정 모듈 — 운영 세션은 고른 값(끔 → false · 켬 → true) · 값을 안 넘기면 그대로 · 모의로 바꾸면 손대지 않음 · 캐시 판 3',
+    x1.portfolio===false&&x2.portfolio===true&&x3.portfolio===false&&x4.portfolio===false&&x4.paper===true&&/<script src="\/plan-session-settings\.js\?v=3"><\/script>/.test(S.plan),JSON.stringify([x1.portfolio,x2.portfolio,x3.portfolio,x4.portfolio]));
+  // O9 듀얼 가드 설정창 저장 — 현재 투자중은 planPortfolio(→ 원장) · 세션은 세션 값 · 모의 새 세션은 값 없음
+  const P={};const el=(id,o={})=>P[id]=Object.assign({value:'',checked:false,disabled:false,textContent:'',hidden:false},o);
+  el('assetSessionKind',{value:'live'});el('assetSessionName',{value:'현재 투자중'});el('assetSessionCapital',{value:'20000'});el('assetSessionMonthly',{value:'0'});el('assetSessionTarget',{value:'150000'});
+  el('assetSessionStart',{value:'2026-01-02'});el('assetSessionPf',{checked:false});el('assetSessionPfHint');el('assetSessionModal',{hidden:false});el('assetSessionCreate');
+  const box={sessions:[{id:'s1',horizon:5,paper:false,name:'세션',settings:{startCapital:5000,monthlyAdd:0,targetCapital:9000,startDate:'2026-01-02'},ledger:{base:{date:'2026-01-02',cash:5000},events:[]}}],activeByHorizon:{}};
+  const log=[];
+  const c={$:id=>P[id],window:{JKPlanSessionSettings:M},ensureLiveBoxes(){},assetModalRevision:1,assetModalHorizon:5,activeHorizon:5,assetEditingId:'current',assetSessionSaving:false,assetViewRevision:0,assetPaperCache:{},
+    planPortfolio:true,assetPlanBox:()=>box,cloneObj:v=>JSON.parse(JSON.stringify(v)),alphaLedger:{base:{date:'2026-01-02',cash:20000},events:[]},
+    assetSessionSettingsFromView:()=>({startCapital:20000,monthlyAdd:0,targetCapital:150000,startDate:'2026-01-02'}),confirm:()=>true,assetFxAt:async()=>1400,todayISO:()=>'2026-11-09',
+    applyAssetSettings(){},alphaSyncInputs(){},localSave(){},closeAssetSessionModal(){},renderAssetSessions(){},loadActiveAssetSessionView:async()=>{},planSid:()=>'new1',alert:m=>log.push('alert:'+m)};
+  c.cloudSave=async()=>{log.push('cloud:'+c.planPortfolio);return true;};
+  c.saveOperatingState=async()=>{log.push('state:'+JSON.stringify(box.sessions.map(x=>x.portfolio===undefined?'-':x.portfolio)));return true;};
+  vm.createContext(c);vm.runInContext(fnOf(S.plan,'async function createAssetSession()'),c);
+  return (async()=>{
+    await c.createAssetSession();
+    c.assetEditingId='s1';P.assetSessionName.value='세션';P.assetSessionCapital.value='5000';P.assetSessionTarget.value='9000';P.assetSessionPf.checked=false;await c.createAssetSession();
+    c.assetEditingId=null;P.assetSessionKind.value='paper';P.assetSessionName.value='모의';await c.createAssetSession();
+    t('O9 듀얼 가드 설정창 저장 — 현재 투자중 끔 → 원장 저장 때 planPortfolio=false · 세션 끔 → 그 세션 portfolio:false · 모의 새 세션은 값 없음',
+      log.join(' | ')==='cloud:false | state:[false] | state:[false,"-"]',log.join(' | '));
+    // O10 원장에 적고 읽기 — readForm 이 portfolio 를 적고, apply 가 읽는다(없으면 넣음)
+    const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:false};
+    vm.createContext(r);vm.runInContext(fnOf(S.plan,'function readForm()'),r);const o=r.readForm();
+    const a={$:()=>null,todayISO:()=>'2026-11-09',plusYears:s=>s,planSid:()=>'x',bindSleeveLedger(){},alphaSyncInputs(){},alphaFee:()=>0,ALPHA_FEE_RATE:0.001,planLinks:null,sleeveSessions:null,alphaLedger:null,planPortfolio:true};
+    vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function apply(o)'),a);
+    a.apply({portfolio:false});const p1=a.planPortfolio;a.apply({});const p2=a.planPortfolio;a.apply({portfolio:true});const p3=a.planPortfolio;
+    t('O10 현재 투자중 선택은 원장(fiveYearPlanV2.portfolio)에 적고 읽는다 — 뺌 → false 저장 · 읽기: false → 뺌 · 없음/true → 넣음',o.portfolio===false&&p1===false&&p2===true&&p3===true,JSON.stringify([o.portfolio,p1,p2,p3]));
+    // O11 설정창 — 저장값으로 열고 · 모의 세션이면 잠금 · 운영으로 돌리면 원래 값
+    const Q={assetSessionPf:{checked:false,disabled:false},assetSessionPfHint:{textContent:''}};
+    const u={$:id=>Q[id],assetPfPick:true};vm.createContext(u);vm.runInContext(fnOf(S.plan,'function assetPfInit(on)')+fnOf(S.plan,'function assetPfUI(paper)'),u);
+    u.assetPfInit(true);u.assetPfUI(false);const s0=[Q.assetSessionPf.checked,Q.assetSessionPf.disabled];u.assetPfUI(true);const s1=[Q.assetSessionPf.checked,Q.assetSessionPf.disabled,/모의 세션은 넣지 않습니다/.test(Q.assetSessionPfHint.textContent)];
+    u.assetPfUI(false);const s2=[Q.assetSessionPf.checked,Q.assetSessionPf.disabled];u.assetPfInit(false);const s3=[Q.assetSessionPf.checked];
+    t('O11 듀얼 가드 설정창 — 켠 채 열림 · 모의 세션이면 잠금(꺼짐) · 운영으로 돌리면 원래 값(켬) · 끈 세션은 꺼진 채 · 배선(설정 열기 · 종류 바꿈 · 새 세션 켬)',
+      s0.join()==='true,false'&&s1.join()==='false,true,true'&&s2.join()==='true,false'&&s3.join()==='false'
+      &&/assetPfInit\(x\?x\.portfolio!==false:planPortfolio!==false\)/.test(fnOf(S.plan,'function editAssetSession()'))&&/assetPfUI\(paper\)/.test(fnOf(S.plan,'function syncAssetSessionModal()'))
+      &&/assetPfInit\(true\)/.test(fnOf(S.plan,'function openAssetSessionModal()'))&&/id="assetSessionPf"/.test(S.plan),JSON.stringify([s0,s1,s2,s3]));
+    return bad;
+  })();
 }
 
 const MUT=[
@@ -306,7 +417,7 @@ const MUT=[
   ['합계: 나간 돈을 지금 계좌로 셈','idx',s=>s.replace("now+=t-o; out+=o;","now+=t; out+=o;")],
   ['듀얼 가드 줄: 투입에 입출금 빠짐','idx',s=>s.replace("inflow=Math.max(0,(+L.start||0)+(+c.netFlow||0))","inflow=Math.max(0,(+L.start||0))")],
   ['듀얼 가드 목록: 모의 세션도 넣음','idx',s=>s.replace("if(!x||x.paper||planPaperRetired(x)) continue;","if(!x||planPaperRetired(x)) continue;")],
-  ['실전 채우기: 모의 세션도 넣음','idx',s=>s.replace("pick=x=>!!x&&(live?(!x.paper&&(x.hist||[]).length>0):!!x.paper)","pick=x=>!!x&&(live?((x.hist||[]).length>0):!!x.paper)")],
+  ['실전 채우기: 모의 세션도 넣음','idx',s=>s.replace("pick=x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)","pick=x=>!!x&&(live?((x.hist||[]).length>0):!!x.paper)")],
   ['실전 채우기: 모의 체결을 굴림','idx',s=>s.replace("if(!live){                          // 실전 세션엔 모의 체결을 만들지 않는다","if(true){")],
   ['듀얼 가드 탭이 무매 오른쪽','idx',s=>s.replace('    <button class="tab" data-t="dg">듀얼 가드</button>\n    <button class="tab on" data-t="inf">무한매수법</button>','    <button class="tab on" data-t="inf">무한매수법</button>\n    <button class="tab" data-t="dg">듀얼 가드</button>')],
   ['듀얼 가드가 S.activeTab 에 들어감','idx',s=>s.replace("  if(S.opView!=='dg'){ S.opView='dg'; save(); }","  S.activeTab='dg'; if(S.opView!=='dg'){ S.opView='dg'; save(); }")],
@@ -323,6 +434,25 @@ const MUT=[
   ['날마다 값: 끝 날짜를 종가 끝으로 고정','idx',s=>s.replace("const end={date:lastH>endD?lastH:endD, tot:R.total,","const end={date:endD, tot:R.total,")],
   ['듀얼 가드 추이: 입금을 투입에 안 넣음','idx',s=>s.replace("const inflow=Math.max(0,(+L.start||0)+(+st.netFlow||0)); if(!(inflow>0)) continue;","const inflow=Math.max(0,(+L.start||0)); if(!(inflow>0)) continue;")],
   ['합친 추이: 원화 줄을 환율 없이 섞음','idx',s=>s.replace("let k=1; if(r.cur==='krw'){ if(!(+fx>0)) continue; k=1/(+fx); }","let k=1;")],
+  // 💰 포트폴리오에 넣기 (2026-11-09)
+  ['넣을지 판단: 끈 세션도 넣음','idx',s=>s.replace("function pfWanted(x){ return !!x && !x.paper && x.portfolio!==false; }","function pfWanted(x){ return !!x && !x.paper; }")],
+  ['실전 채우기: 포트폴리오 선택 무시','idx',s=>s.replace("pick=x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)","pick=x=>!!x&&(live?(!x.paper&&(x.hist||[]).length>0):!!x.paper)")],
+  ['시세 선취: 끈 세션 종목도 받음','idx',s=>s.replace("if(!sess||(live?(!pfWanted(sess)||!(sess.hist||[]).length):!sess.paper))continue;","if(!sess||(live?(sess.paper||!(sess.hist||[]).length):!sess.paper))continue;")],
+  ['듀얼 가드 목록: 현재 투자중 선택 무시','idx',s=>s.replace("if(curL&&pfLedgerUsed(curL)){ const on=pfPlanWanted(five,o);","if(curL&&pfLedgerUsed(curL)){ const on=true;")],
+  ['듀얼 가드 목록: 세션 선택 무시','idx',s=>s.replace("const on=pfPlanWanted(x,ov); if(!on&&!withOff) continue;","const on=true; if(!on&&!withOff) continue;")],
+  ['듀얼 가드: 창이 보낸 선택 무시','idx',s=>s.replace("function pfPlanWanted(stored, ov){ return (ov&&typeof ov.portfolio==='boolean')?ov.portfolio:!(stored&&stored.portfolio===false); }","function pfPlanWanted(stored, ov){ return !(stored&&stored.portfolio===false); }")],
+  ['세션 설정(편집): 고른 값을 저장 안 함','idx',s=>s.replace("const pf=$('sess_pf'); if(!t.paper&&pf) t.portfolio=!!pf.checked;","const pf=$('sess_pf');")],
+  ['세션 설정(새로): 고른 값을 저장 안 함','idx',s=>s.replace("const pf=$('sess_pf'); if(!s.paper&&pf) s.portfolio=!!pf.checked;","const pf=$('sess_pf');")],
+  ['세션 설정: 모의에서도 넣기를 고를 수 있음','idx',s=>s.replace("if(paper){ if(!c.disabled) _sessPfPick=c.checked; c.checked=false; c.disabled=true; }","if(paper){ }")],
+  ['뺀 세션 안내: 빈 세션도 적음','idx',s=>s.replace("if(x&&!x.paper&&!pfWanted(x)&&(x.hist||[]).length) out.push","if(x&&!x.paper&&!pfWanted(x)) out.push")],
+  ['받는 쪽: 창이 보낸 선택을 버림','idx',s=>s.replace("    portfolio:typeof d.portfolio==='boolean'?d.portfolio:undefined};","};")],
+  ['플랜 설정 모듈: 선택 저장 안 함','set',s=>s.replace("  if(!paper&&typeof input.portfolio==='boolean')x.portfolio=input.portfolio;","")],
+  ['플랜 설정 모듈: 모의로 바꿀 때도 덮어씀','set',s=>s.replace("  if(!paper&&typeof input.portfolio==='boolean')x.portfolio=input.portfolio;","  if(typeof input.portfolio==='boolean')x.portfolio=input.portfolio;")],
+  ['플랜 현재 투자중: 선택을 원장 저장 전에 안 넣음','plan',s=>s.replace("      planPortfolio=x.portfolio!==false;\n","")],
+  ['플랜 원장: portfolio 를 안 적음','plan',s=>s.replace("  o.portfolio=planPortfolio!==false;","")],
+  ['플랜 원장: portfolio 를 안 읽음','plan',s=>s.replace("  planPortfolio=all.portfolio!==false;\n","")],
+  ['플랜 창: 선택을 안 보냄','plan',s=>s.replace("      msg.portfolio=x?x.portfolio!==false:planPortfolio!==false;}","}")],
+  ['플랜 설정창: 모의 세션도 넣기 고를 수 있음','plan',s=>s.replace("if(paper){if(!c.disabled)assetPfPick=c.checked;c.checked=false;c.disabled=true;}","if(paper){}")],
 ];
 (async()=>{
   const bad=await check(SRC);
