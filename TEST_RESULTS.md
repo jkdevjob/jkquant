@@ -20,6 +20,7 @@
   - P3 듀얼가드 TECL 평단 95(엔진) · SGOV 평단 없음 → 수익률 '—'.
   - P8 paperStat — 그릇 있을 때만 hold · 주 원가 500 = 900 − 짝 400 · 현금 350 = k 400 − 나간 돈 50.
 - `check-before-push`: 1~54 단계 PASS · 55 회귀에서 2건 FAIL(원문 모양 검사 — paperStat 이 `const row=` 로 받아 돌려주고 paperRaw 반환에 sym1 이 붙어 옛 정규식이 못 찾음) → 정규식을 지금 모양으로 고친 뒤 회귀 **2818 PASS / 0 FAIL** · 56 모의 재생 · 57 MA150 PASS.
+- 배포 확인(PR #630 squash fd94f28 · GitHub check · regression 통과): curl 운영 index v3.124.0(#appVerTop·#appVer) · pfSessHtml · pfTickerHtml · pfByTicker · 화면 배선 · paperStat hold 각 1.
 - 실제 계좌 숫자로 그린 화면은 배포 뒤 사용자 확인 — 시험은 가짜 줄로 값만 본다.
 
 ## 2026-11-09 · ASAP 세션을 모의투자에서 뺌 · 영어 '5 YEAR' 머리글 삭제 · v3.123.3 (듀얼가드 v2.5.4)
