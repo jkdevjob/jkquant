@@ -32,6 +32,7 @@ function update(session,input,options){
     x.ledger={base:{date:start,tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
   }
   if(restoring)delete x.liveSettings;
+  if(!paper&&typeof input.portfolio==='boolean')x.portfolio=input.portfolio;   // '💰 포트폴리오에 넣기' — 운영(실계좌) 세션만 고른다 · 모의로 바꿀 땐 예전 값을 그대로 둔다
   x.updatedAt=Date.now();
   return x;
 }

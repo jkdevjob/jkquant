@@ -299,6 +299,8 @@ body.portfoliopage #fab{display:none!important}
 .pf-card .open{margin-top:8px;width:100%;padding:8px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-weight:700;font-size:12.5px;cursor:pointer}
 .pf-pos{color:var(--buy)}.pf-neg{color:var(--sell)}
 .pf-note{font-size:11.5px;color:var(--faint);line-height:1.6;margin-top:10px}
+.pf-off{color:var(--dim)}
+.pf-offbtn{display:inline-block;margin:2px 2px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:11.5px;font-weight:700;cursor:pointer;max-width:100%;overflow-wrap:anywhere}
 /* 💰 포트폴리오 v2 — 합친 추이 그림 · 목표 비중 · 올해 양도세 (2026-11-09) */
 #pfPage{--pf-val:#3987e5;--pf-in:#c98500;--pf-band:rgba(154,166,201,.13)}
 .pf-sec{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px;min-width:0}
@@ -681,7 +683,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.120.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.121.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1800,7 +1802,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.120.0</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.121.0</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -2003,7 +2005,9 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <h3 id="sess_title">세션(계좌) 추가</h3><p id="sess_desc">증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ</p>
   <div class="field"><label>세션 이름</label><input id="sess_name" type="text" placeholder="키움 SOXL"></div>
   <label style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;cursor:pointer;color:var(--dim);font-size:13px">
-    <input type="checkbox" id="sess_paper" style="width:16px;height:16px" onchange="document.getElementById('sess_simstart_wrap').style.display=this.checked?'':'none';kisOptUI()"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span style="color:var(--faint)">— 실제 매매 없이 연습용</span></span></label>
+    <input type="checkbox" id="sess_paper" style="width:16px;height:16px" onchange="document.getElementById('sess_simstart_wrap').style.display=this.checked?'':'none';kisOptUI();sessPfUI()"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span style="color:var(--faint)">— 실제 매매 없이 연습용</span></span></label>
+  <label id="sess_pf_row" style="display:flex;align-items:center;gap:8px;margin:-4px 0 10px;cursor:pointer;color:var(--dim);font-size:13px">
+    <input type="checkbox" id="sess_pf" style="width:16px;height:16px" checked> <span><b style="color:var(--vio)">💰 포트폴리오</b>에 넣기 <span id="sess_pf_hint" style="color:var(--faint)">— 합계·추이·양도세에 더합니다</span></span></label>
   <div id="sess_simstart_wrap" style="display:none">
     <div class="field"><label>모의 시작일 <span class="hint">이 날부터 오늘까지 자동으로 굴립니다</span></label><input id="sess_simstart" type="date"></div>
 
@@ -8191,11 +8195,11 @@ async function paperBreathe(){
    필요한 종목을 먼저 병렬로 받아 _memoQuote 캐시에 채우면 10개 세션이어도 네트워크 대기는
    '종목 수의 합'이 아니라 '가장 늦은 한 종목' 수준으로 줄어든다. */
 async function paperPrefetchQuotes(opt){
-  const px=new Set(), dv=new Set(), live=!!(opt&&opt.live);   // live: 포트폴리오 — 실전 세션(기록 있는 것)만
+  const px=new Set(), dv=new Set(), live=!!(opt&&opt.live);   // live: 포트폴리오 — 포트폴리오에 넣는 실전 세션(기록 있는 것)만
   for(const [tab] of PAPER_TABS){
     const box=S&&S[tab], ss=(box&&box.sessions)||[];
     for(const sess of ss){
-      if(!sess||(live?(sess.paper||!(sess.hist||[]).length):!sess.paper))continue;
+      if(!sess||(live?(!pfWanted(sess)||!(sess.hist||[]).length):!sess.paper))continue;
       if(live&&tab==='plan')continue;   // 듀얼 가드 실전 장부는 포트폴리오가 따로(pfPlanRows · 엔진 ledgerCalc)
       if(tab==='plan'){ if(!planPaperRetired(sess)) ['TECL','TQQQ','SGOV'].forEach(x=>px.add(x)); continue; }
       const st=sess.settings||{}, sym=String(st.ticker||'').toUpperCase();
@@ -8213,11 +8217,11 @@ async function paperPrefetchQuotes(opt){
 }
 /* 세션마다 시세를 맞춘 뒤 그 자리에서 성과까지 계산해 돌려준다.
    나중에 한꺼번에 계산하면 캐시에 마지막 세션 시세만 남아 앞 세션이 전부 '시세 대기'가 된다. */
-/* opt.live (포트폴리오 · 2026-11-09): 모의 대신 실전(운영) 세션 — 기록이 있는 것만. 모의 체결(paperAuto·SimForward)은 만들지 않고
+/* opt.live (포트폴리오 · 2026-11-09): 모의 대신 실전(운영) 세션 — 기록이 있고 '💰 포트폴리오에 넣기'(pfWanted)인 것만. 모의 체결(paperAuto·SimForward)은 만들지 않고
    지금 기록 그대로 같은 계산(paperStat)으로 평가만 한다. 시세 칸 되돌리기·저장 막기는 모의와 똑같이 탄다. */
 async function paperFillAll(opt){
   if(_paperFilling) return null;
-  const live=!!(opt&&opt.live), pick=x=>!!x&&(live?(!x.paper&&(x.hist||[]).length>0):!!x.paper);
+  const live=!!(opt&&opt.live), pick=x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper);
   _paperFilling=true;
   _paperSliceAt=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
   const prevTab=S.activeTab; const rows=[];
@@ -9117,22 +9121,45 @@ function pfMoney(v){ return (window.JKMoney&&window.JKMoney.usdHtml)?window.JKMo
 function pfRowMoney(r,v){ return r.cur==='krw'?(Math.round(+v||0).toLocaleString('ko-KR')+'원'):pfMoney(v); }
 /* 계좌 밖으로 나간 돈 — 운영 줄(paperStat)은 out={saved,withdrawn}(단리 인출·출금·현금 분배금 · total 에 들어 있다), 듀얼 가드 줄은 0(출금은 투입에서 뺀다) */
 function pfOutAmt(r){ return typeof r.out==='number'?r.out:((r.out&&((+r.out.saved||0)+(+r.out.withdrawn||0)))||0); }
+/* 포트폴리오에 넣을 세션인가 — 세션 설정의 '💰 포트폴리오에 넣기'(2026-11-09). 실계좌 세션만 · 고른 적 없으면 넣음(예전 그대로) · 끈 세션은 뺀다.
+   모의 세션은 실제 돈이 아니라 넣지 않는다. 운영 세션 채우기·시세 선취·뺀 세션 목록이 이 한 곳을 쓴다. */
+function pfWanted(x){ return !!x && !x.paper && x.portfolio!==false; }
+/* 듀얼 가드 장부(현재 투자중 · 실전 세션)의 선택 — 창(플랜 화면)이 방금 보낸 값이 있으면 그것(이 화면이 처음 읽은 사본보다 새것), 없으면 저장된 값 */
+function pfPlanWanted(stored, ov){ return (ov&&typeof ov.portfolio==='boolean')?ov.portfolio:!(stored&&stored.portfolio===false); }
 function pfLedgerUsed(l){ const b=(l&&l.base)||{}; return (Array.isArray(l&&l.events)&&l.events.length>0)||(+b.tecl||0)>0||(+b.tqqq||0)>0||(+b.sgov||0)>0; }
 /* 듀얼 가드 실전 장부 — '현재 투자중'(fiveYearPlanV2.alphaLedger) + 실전 세션(S.plan · 모의·폐지 제외). 체결·보유가 하나도 없으면 시작 전이라 뺀다.
    PF.over: 듀얼 가드 창이 저장 뒤 보내 준 최신 장부(이 화면이 처음 읽은 사본이 그 뒤 체결 기록으로 낡지 않게 · 이 화면은 장부를 쓰지 않는다). */
-function pfPlanLedgers(){
+function pfPlanLedgers(withOff){   // withOff: 포트폴리오에서 뺀 장부도(off:true) — 뺀 세션 목록용
   const out=[], five=planLiveDoc, o=PF.over.cur, curL=(o&&o.ledger)||(five&&five.alphaLedger);
-  if(curL&&pfLedgerUsed(curL)) out.push({key:'cur', id:'', name:'현재 투자중', ledger:curL,
-    start:pfNum(o&&o.startCapital!=null?o.startCapital:(five&&five.startCapital)),
-    from:String((o&&o.startDate)||(five&&five.startDate)||(curL.base&&curL.base.date)||'')});
+  if(curL&&pfLedgerUsed(curL)){ const on=pfPlanWanted(five,o);
+    if(on||withOff) out.push({key:'cur', id:'', name:'현재 투자중', ledger:curL, off:!on,
+      start:pfNum(o&&o.startCapital!=null?o.startCapital:(five&&five.startCapital)),
+      from:String((o&&o.startDate)||(five&&five.startDate)||(curL.base&&curL.base.date)||'')}); }
   for(const x of ((S.plan&&S.plan.sessions)||[])){
     if(!x||x.paper||planPaperRetired(x)) continue;
     const ov=PF.over[x.id], L=(ov&&ov.ledger)||x.ledger; if(!L||!pfLedgerUsed(L)) continue;
+    const on=pfPlanWanted(x,ov); if(!on&&!withOff) continue;
     const st=x.settings||{};
-    out.push({key:String(x.id), id:String(x.id), name:x.name||'듀얼 가드 세션', ledger:L,
+    out.push({key:String(x.id), id:String(x.id), name:x.name||'듀얼 가드 세션', ledger:L, off:!on,
       start:pfNum(ov&&ov.startCapital!=null?ov.startCapital:st.startCapital), from:String(st.startDate||(L.base&&L.base.date)||'')});
   }
   return out;
+}
+/* 포트폴리오에서 뺀 실전 세션(기록 있는 것) — 화면에 이름을 적어 어디서 다시 넣는지 알려 준다 */
+function pfOffList(){
+  const out=pfPlanLedgers(true).filter(L=>L.off).map(L=>({tab:'plan', id:L.id||'cur', name:'듀얼 가드 · '+L.name}));
+  for(const [tab,label] of PAPER_TABS){
+    if(tab==='plan') continue;
+    for(const x of ((S[tab]&&S[tab].sessions)||[])) if(x&&!x.paper&&!pfWanted(x)&&(x.hist||[]).length) out.push({tab, id:String(x.id), name:label+' · '+(x.name||'세션')});
+  }
+  return out;
+}
+function pfOffHtml(){
+  let L=[]; try{ L=pfOffList(); }catch(e){ return ''; }
+  if(!L.length) return '';
+  return '<div class="pf-note pf-off">🙈 포트폴리오에서 뺀 세션 '+L.length+'개: '
+    +L.map(x=>'<button class="pf-offbtn" data-pftab="'+pfEsc(x.tab)+'" data-pfid="'+pfEsc(x.id)+'">'+pfEsc(x.name)+'</button>').join(' ')
+    +' — 세션 설정(운영 탭은 세션 이름을 두 번 누름 · 듀얼 가드는 ⚙ 세션 설정)에서 「💰 포트폴리오에 넣기」를 켜면 다시 들어갑니다.</div>';
 }
 /* 듀얼 가드 한 줄 — 수량·현금은 엔진 ledgerCalc, 시세는 모의 목록 플랜 줄과 같은 TECL·TQQQ·SGOV(지금가 · 없으면 마지막 종가).
    투입 = 시작금 + 입금 − 출금 — 플랜 화면 목표 진행률의 시작점과 같은 정의(입출금은 번 돈이 아니다). */
@@ -9401,7 +9428,7 @@ function pfCard(r,Z){
 function pfRender(){
   const box=$('pfPage'); if(!box) return;
   const rows=PF.rows, fx=(typeof liveFX!=='undefined'&&liveFX)?liveFX:paperFxFallback();
-  let h='<div class="pf-head"><div><h2>💰 포트폴리오</h2><div class="sub">실제로 투자 중인 것만 — 운영 실전 세션 + 듀얼 가드 장부'
+  let h='<div class="pf-head"><div><h2>💰 포트폴리오</h2><div class="sub">실제로 투자 중인 것만 — 운영 실전 세션 + 듀얼 가드 장부 중 「💰 포트폴리오에 넣기」가 켜진 것'
        +(PF.at?' · '+new Date(PF.at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' 계산':'')+'. 모의 세션은 🧪 모의에서 봅니다.</div></div>'
        +'<button class="fetchbtn" id="pfRefreshBtn"'+(PF.busy?' disabled':'')+'>'+(PF.busy?'계산 중…':'🔄 다시 계산')+'</button></div>';
   if(!rows){
@@ -9410,7 +9437,7 @@ function pfRender(){
     return;
   }
   if(!rows.length){
-    box.innerHTML=h+'<div class="pf-today"><p class="lead" style="margin:0">아직 체결 기록이 있는 실전 세션이 없습니다. 운영 탭의 실전 세션(모의 아님)에 체결을 기록하면 여기에 합쳐집니다.</p></div>';
+    box.innerHTML=h+'<div class="pf-today"><p class="lead" style="margin:0">포트폴리오에 넣은 실전 세션 중 체결 기록이 있는 것이 없습니다. 운영 탭의 실전 세션(모의 아님)에 체결을 기록하면 여기에 합쳐집니다.</p></div>'+pfOffHtml();
     return;
   }
   const Z=pfSummary(rows,fx), C=pfCombine(rows,fx), V=pfTargetView(Z), T=window.JKPlanTaxCheck, X=T?pfTaxSummary(rows,T,PF.year||paperKstDate().slice(0,4)):null;
@@ -9435,7 +9462,7 @@ function pfRender(){
   h+=pfTaxHtml(X,T);
   h+='<div class="pf-cards">'+rows.map(r=>pfCard(r,Z)).join('')+'</div>';
   h+='<div class="pf-note">평가는 지금 시세(장중이면 장중가) 기준 · 원화 종목 세션은 지금 환율로 달러 환산해 더합니다(표시용). 세션별 숫자는 그 전략 화면·모의 목록과 같은 계산입니다 — 무매·VR·섀넌 등은 그 탭의 계산, 듀얼 가드는 플랜 화면 계좌 칸과 같은 장부 계산.'
-    +(Z.missing?' · 시세·환율 대기 '+Z.missing+'개는 합계에서 뺐습니다.':'')+'</div>';
+    +(Z.missing?' · 시세·환율 대기 '+Z.missing+'개는 합계에서 뺐습니다.':'')+'</div>'+pfOffHtml();
   box.innerHTML=h;
   try{ pfChartBind(); }catch(e){ console.warn('portfolio chart',e); }
   try{ if(window.JKMoney) window.JKMoney.paint(); }catch(e){}
@@ -9508,7 +9535,8 @@ window.addEventListener('message',e=>{
   PF.dgSeen={key, paper:!!d.paper};                 // 듀얼 가드 탭이 지금 보고 있는 장부 — '오늘' 칸 안내용
   if(d.paper){ if(isPfPage()) pfRender(); return; } // 모의 세션 값은 받지 않는다(실투자 합계에 안 섞는다)
   PF.dg[key]={strip:d.strip||null, at:Date.now()};
-  if(d.ledger&&typeof d.ledger==='object') PF.over[key]={ledger:d.ledger, startCapital:d.startCapital, startDate:d.startDate};
+  if(d.ledger&&typeof d.ledger==='object') PF.over[key]={ledger:d.ledger, startCapital:d.startCapital, startDate:d.startDate,
+    portfolio:typeof d.portfolio==='boolean'?d.portfolio:undefined};   // 세션 설정의 '💰 포트폴리오에 넣기' — 방금 바꾼 값이 바로 반영되게
   if(isPfPage()) pfRecalcPlan();
 });
 /* 모의 성과 → 그 세션의 거래이력.
@@ -10746,6 +10774,7 @@ function openSess(){ _sessEditId=null;
   $('sess_desc').textContent='증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ';
   $('sess_ok').textContent='만들기';
   $('sess_name').value=''; const p=$('sess_paper'); if(p)p.checked=false;
+  sessPfInit(true);                                // 새 실계좌 세션은 포트폴리오에 넣는 게 기본
   const k=$('sess_kis'); if(k)k.checked=false; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display='none';
   const d=$('sess_simstart'); if(d) d.value=paperPreferredSimStart();   // 새 세션도 모의성과의 마지막 전체 적용 시작일을 승계
@@ -10755,10 +10784,11 @@ function editSess(id){
   const box=tabBox(), s=box.sessions.find(x=>x.id===id); if(!s) return;
   _sessEditId=id;
   $('sess_title').textContent='세션 설정';
-  $('sess_desc').textContent='이름과 모의투자 여부를 바꿀 수 있습니다.';
+  $('sess_desc').textContent='이름 · 모의투자 여부 · 포트폴리오에 넣을지를 바꿀 수 있습니다.';
   $('sess_ok').textContent='저장';
   $('sess_name').value=s.name||'';
   const p=$('sess_paper'); if(p)p.checked=!!s.paper;
+  sessPfInit(s.portfolio!==false);                 // 고른 적 없는 세션(예전 세션)은 넣음 — 예전 포트폴리오 그대로
   const k=$('sess_kis'); if(k)k.checked=!!s.kis; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display=s.paper?'':'none';
   const d=$('sess_simstart'); if(d) d.value=paperStart(s)||paperPreferredSimStart();
@@ -10833,6 +10863,17 @@ async function kisOptUI(){
     +'</p>';
   box.innerHTML=h;
 }
+/* 💰 포트폴리오에 넣기(2026-11-09 사용자: "운영 세션 설정에서 모의투자처럼 포트폴리오에 추가 할지 선택 하게 해").
+   실계좌 세션만 고른다 — 모의 세션은 실제 돈이 아니라 넣지 않는다(모의투자를 켜면 잠그고, 끄면 원래 고른 값으로 돌아온다).
+   넣을지 판단은 pfWanted 한 곳이 한다(포트폴리오 · 시세 선취가 같이 쓴다). */
+let _sessPfPick=true;
+function sessPfInit(on){ _sessPfPick=!!on; const c=$('sess_pf'); if(c){ c.disabled=false; c.checked=!!on; } sessPfUI(); }
+function sessPfUI(){
+  const c=$('sess_pf'), h=$('sess_pf_hint'), paper=!!($('sess_paper')&&$('sess_paper').checked); if(!c) return;
+  if(paper){ if(!c.disabled) _sessPfPick=c.checked; c.checked=false; c.disabled=true; }
+  else if(c.disabled){ c.disabled=false; c.checked=_sessPfPick; }
+  if(h) h.textContent=paper?'— 모의 세션은 넣지 않습니다(실제 돈만)':'— 합계·추이·양도세에 더합니다';
+}
 function closeSess(){$('sessModal').classList.remove('on')}
 async function createSess(){
   const box=tabBox();
@@ -10857,6 +10898,7 @@ async function createSess(){
     // 한투 연결은 모의·실계좌 모두 고를 수 있다 — 다만 종류에 맞는 갈래만 화면에서 열린다
     // 연결 여부만 저장한다 — 어느 갈래로 나갈지는 종목·세션 종류가 정한다
     t.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked); delete t.kisMode;
+    const pf=$('sess_pf'); if(!t.paper&&pf) t.portfolio=!!pf.checked;   // 모의로 바꾼 세션은 예전 선택을 그대로 둔다(다시 실계좌로 바꾸면 그 값)
     saveLocal(); const cloudSave=pushRemoteNow();
     closeSess(); refreshAll(); await cloudSave; return;
   }
@@ -10879,6 +10921,7 @@ async function createSess(){
     if(!(await paperSeedNewSession(S.activeTab,s,s.simStart))) return;
   }
   s.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked);
+  const pf=$('sess_pf'); if(!s.paper&&pf) s.portfolio=!!pf.checked;
   box.sessions.push(s);box.active=s.id;saveLocal();
   const cloudSave=pushRemoteNow();
   closeSess();
