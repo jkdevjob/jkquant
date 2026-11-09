@@ -128,12 +128,24 @@ def kst_hm(t: str) -> str:
     return s[11:16] if len(s) >= 16 else ""
 
 
+def crypto_archive_files(root):
+    # Partial evidence fills missing timestamps; completed canonical UTC files
+    # take precedence for overlaps. Neither reader changes archived bytes.
+    def recorded_at(path):
+        try:
+            with gzip.open(path, "rt", encoding="utf-8") as f:
+                return str(json.load(f).get("collectedAt") or ""), str(path)
+        except Exception:
+            return "", str(path)
+    return sorted((root / "partials").glob("*/*.json.gz"), key=recorded_at) + sorted(root.glob("*.json.gz"))
+
+
 def load_days():
     """Rebuild complete KST calendar days from the raw UTC-day archive files."""
     by_date = {}
     if not DATA.exists():
         return []
-    for p in sorted(DATA.glob("*.json.gz")):
+    for p in crypto_archive_files(DATA):
         try:
             with gzip.open(p, "rt", encoding="utf-8") as f:
                 j = json.load(f)

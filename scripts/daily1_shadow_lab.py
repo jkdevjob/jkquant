@@ -33,6 +33,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from backtest_crypto_orb import crypto_archive_files
 
 KST = ZoneInfo("Asia/Seoul")
 NY = ZoneInfo("America/New_York")
@@ -361,7 +362,7 @@ def daytrading_run():
 def load_crypto_days():
     root = DATA / "crypto" / "KRW-BTC" / "5m"
     by = {}
-    for p in sorted(root.glob("*.json.gz")):
+    for p in crypto_archive_files(root):
         try:
             with gzip.open(p, "rt", encoding="utf-8") as f:
                 j = json.load(f)

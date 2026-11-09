@@ -34,7 +34,7 @@ def main():
         d=b['tKst'][:10];key=b['tUtc'];old=by.setdefault(d,{}).get(key)
         if old and any(old.get(k)!=b.get(k) for k in ['o','h','l','c','v']):revisions.append({'tUtc':key,'old':old,'new':b,'source':source})
         by[d][key]=b
-    for p in sorted((args.sources/'data/crypto/KRW-BTC/5m').glob('*.json.gz')):
+    for p in engine.crypto_archive_files(args.sources/'data/crypto/KRW-BTC/5m'):
         manifest.append({'path':str(p.relative_to(args.sources)),'sha256':digest(p)})
         with gzip.open(p,'rt',encoding='utf-8') as f:j=json.load(f)
         for b in j.get('bars',[]):merge(b,str(p.name))

@@ -236,6 +236,7 @@ jobs:
       - name: BTC 00:00~22:00 기준전략 값·경계 시험
         run: |
           python scripts/test_crypto_midnight_orb.py
+          python scripts/test_crypto_partial_archive.py
           node scripts/test_btc_intraday.mjs
 
       - name: 연구 서버 JS 문법 검사
