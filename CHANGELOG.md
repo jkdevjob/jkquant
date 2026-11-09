@@ -1,5 +1,20 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-09 · 워크플로 정리 — 필요 없는 5개 삭제
+
+- 사용자(11/09): "지금 워크플로 다 분석해서 필요없는건 지우자"
+- main 워크플로 37개를 하나씩 봤다(트리거 · 마지막 실행 · 결과를 읽는 화면/함수 · 다른 파일의 참조).
+- 지움(5):
+  - `opening-year-backfill.yml` — 2025-09-30~2026-09-30 Top100 분봉 1년 백필. 수집이 끝났다(최근 실행 로그 `{"status": "complete", "unresolved": 0}`). 하루 3번 같은 재계산과 체크포인트 커밋만 되풀이했다. 결과(`data/opening-research-year` · `data/scalping-backfill`)를 읽는 화면 · 함수는 없다.
+  - `diagnose-daytrading-push.yml` — 데이트레이딩 웹알림 진단(10/08 한 번).
+  - `job-alert-multisource-test.yml` — 일자리 알림 여러 출처 시험(마지막 10/03).
+  - `telegram-new-room-test.yml` — 텔레그램 방 진단(echo 한 줄만 남은 껍데기 · 09/30).
+  - `job-alert-now.yml` — 일자리 알림 수동 복구(마지막 09/30). `job-alert.yml` 을 손으로 돌리면 같은 스크립트가 같은 하루 1회 가드로 돈다.
+- 남김(쓰지 않아도 이유가 있는 것 3): `daytrading-monitor.yml` · `scalping-duel-summary.yml` — Worker 장애 때 쓰는 수동 예비(`check.yml` · `test_scalping_schedule_policy.mjs` 가 있어야 한다고 검사) · `r10-dart-research.yml` — R10 '보류', 표본이 쌓이면 다시 돌릴 도구. 나머지 29개는 화면 · 알림 · 배포 · 검사가 쓰고 있다.
+- 다른 브랜치에만 있는 옛 연구 워크플로 14개(Actions 목록에 보이는 것)는 main 에 없어 예약으로 돌지 않는다 — 건드리지 않았다.
+- 되살아남 막기: `scripts/test_scalping_schedule_policy.mjs` 에 '지운 5개가 없어야 한다' 검사를 넣었다(옛 브랜치를 합치다 다시 생기면 빨간불). 변이: 3개를 하나씩 되살리면 3/3 빨간불.
+- 함께 봤지만 고치지 않은 것: `autotrade.yml`(무매 자동 주문 · 모의 세션) — 최근 6거래일(미국 10/30~11/06) 실행 12번이 모두 주문 창(마감 전 1시간) 뒤에 도착해 주문이 나가지 않았다(11/07 06:01 로그 '주문 시간이 아닙니다 — 지금 16:01'). 주문 경로라 이 정리에서 빼고 따로 다룬다.
+
 ## 2026-11-09 · 문서: 지피티 매일 연구 지시서 · 연구(클로드) 매일 연구 전용 대화 인계
 
 - 사용자: "지피티도 똑같이 할수 있게 지시서 만들어". `docs/GPT_DAILY_RESEARCH.md` 를 새로 썼다 — 지피티가 연구(지피티) 메뉴 전략을 클로드와 같은 방식으로 매일 연구한다.

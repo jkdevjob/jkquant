@@ -1,5 +1,12 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-09 · 워크플로 정리 — 필요 없는 5개 삭제
+
+- `node scripts/test_scalping_schedule_policy.mjs` 통과 — 새 검사 5줄(지운 5개가 없다).
+- 변이: `opening-year-backfill.yml` · `telegram-new-room-test.yml` · `job-alert-now.yml` 을 하나씩 되살리면 그때마다 빨간불(3/3).
+- 근거 확인: 지운 5개의 파일 이름을 다른 파일이 부르지 않는다(문서 `research/OPENING_YEAR_BACKFILL.md` 만 — 삭제 사실을 적어 고침). 1년 백필 최근 실행(42524530286) 로그 `{"status": "complete", "unresolved": 0}`.
+- 미확인: GitHub Actions 목록에서 지운 워크플로의 옛 실행 기록은 남는다(실행만 안 됨).
+
 ## 2026-11-09 · 연구 매일 연구 인계 확인 · 지피티 지시서(문서만)
 
 - 클로드 11/09 리포트: `claude-research-report.yml` 실행 42529101898 · 08:00:02 KST Worker 응답 `ok:true · report:2026-11-09 · subs 4 · sent [201,201,201,201] · telegram sent`. 웹 알림은 푸시 서비스 접수까지 — 기기 화면 표시는 미확인.
