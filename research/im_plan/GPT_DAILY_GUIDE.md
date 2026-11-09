@@ -10,7 +10,22 @@
 jkdevjob/jkquant 저장소 research/daily 브랜치의 research/im_plan/GPT_DAILY_GUIDE.md 를 끝까지 읽고 그대로 따라라.
 너는 '⚡ 지피티' 담당이다. 매일 정해진 시각에 운영 메뉴(듀얼 가드 포함) · 포트폴리오를 연구해 개선하고,
 결과는 research/im_plan/RESEARCH_LOG_GPT.md 에만 기록해 research/daily 에 푸시한다. 앱 코드와 main 은 건드리지 않는다.
+먼저 0-1 환경 확인과 0-2 첫날 준비를 하고, 매일 08:37(운영 메뉴) · 11:37(포트폴리오) KST 에 4장 절차를 반복하도록 너의 예약 기능에 등록해라.
 ```
+
+## 0-1. 시작 전 환경 확인(매 회차 · 하나라도 안 되면 숫자를 만들지 말고 멈춘 뒤 무엇이 없는지 보고)
+
+1. 저장소: `git clone` 또는 `git fetch` 가 되고, `research/daily` 로 **푸시할 권한**이 있는가(없으면 기록 내용을 대화에 남기고 "푸시 못 함 — 권한 없음"이라고 보고 · PR 로 우회하지 않는다).
+2. Node 18 이상 · Playwright Chromium(`node -e "require('playwright').chromium.launch().then(b=>b.close())"` 가 되는가) — 운영 전략은 브라우저에서 앱 엔진을 돌려야 해서 이게 없으면 시험할 수 없다.
+3. 네트워크: `https://jkquant.pages.dev/api/quote?symbol=SOXL&range=5y&period1=0&period2=$(date +%s)&div=1` 가 받아지는가(시세 · 7장).
+4. 위가 다 되면 `cd research/im_plan && ./fetch.sh && node synsplit.js` 로 자료를 만들고, 첫 회차에는 기준선 하나를 다시 돌려 클로드 기록의 숫자와 같은지 맞춰 본다(예: imh `RUN({tkr:"SOXL",cap:10000,autoTp:true})` — 11-06 자료 · 11-09 엔진에서 최종 503,411.23$ · 사이클 112. 자료나 main 엔진이 바뀌면 달라질 수 있으니 클로드 기록의 가장 최근 값과 비교하고, 다르면 이유를 적는다).
+
+## 0-2. 첫날 준비
+
+- `research/im_plan/RESEARCH_LOG_GPT.md` 를 만든다 — 머리말(이 지시서 링크 · 담당 · 시각) · 장 셋(**운영 메뉴** · **듀얼 가드** · **포트폴리오**) · **일일 기록**. 장마다 "기준선 · 후보 줄 · 기록(날짜순)" 칸을 둔다.
+- `research/gpt/` 폴더를 만든다(내 스크립트 자리 · 첫 파일에 README 한 줄).
+- 매일 예약: 08:37 KST 운영 메뉴 회차 · 11:37 KST 포트폴리오 회차(사용자가 다른 시각을 주면 그것으로). 예약이 실패하면 그 사실을 보고한다.
+- 첫 커밋: "연구(지피티): 지시서대로 기록 파일 신설" → `git pull --rebase origin research/daily` → `git push origin research/daily`.
 
 ## 1. 목적과 역할
 
