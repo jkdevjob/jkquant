@@ -18,7 +18,7 @@ const HOOK=()=>{ const patch=(name,from,to)=>{ let s=window[name].toString(); if
   patch('runIVS','if(i%10===0)snap.push([d,eq]);','window.__EQ.push([d,eq]);if(i%10===0)snap.push([d,eq]);');
   patch('costOf','deduct:COST_DEDUCT,','deduct:COST_DEDUCT*(window.__DEDW??1),'); };
 const PXC={}; const pxPrep=syms=>PXC[syms.join()]||(PXC[syms.join()]=prep(syms));
-const pxRun=(spec,cap,from,to,w,dep)=>{ const P=pxPrep(spec.px), R=spec.rule(P); const o=Object.assign({cap,from,to,fee:spec.fee??FEE,tax:true,dedMul:w,frac:spec.px.some(x=>/^SYN/.test(x)),sizePrev:!!process.env.SIZEPREV},R); if(dep) o.dep={perDay:dep};   // SIZEPREV=1: 주수를 전일 종가로(앱 플랜 엔진과 같게 · 11-08)
+const pxRun=(spec,cap,from,to,w,dep)=>{ const P=pxPrep(spec.px), R=spec.rule(P); const o=Object.assign({cap,from,to,fee:spec.fee??FEE,tax:true,dedMul:w,frac:spec.px.some(x=>/^SYN/.test(x)),sizePrev:!!process.env.SIZEPREV},R); if(dep) o.dep={perDay:dep,every:+process.env.DEPEVERY||1};   // DEPEVERY(11-10): 플랜 입금 간격(달) — 안 주면 매달   // SIZEPREV=1: 주수를 전일 종가로(앱 플랜 엔진과 같게 · 11-08)
   const m=toMap(sim(P,o).eq); return dep?{m,flows:o.flows}:m; };
 const PB={gsb:1e9}, PN={gbOn:.01,gbOff:.03,sbDn:.01,sbUp:.15,gReb:'y'}, PX=Object.assign({s0:.60},PN);
 const LEGS={ IM:{app:'IM',tkr:'SOXL'}, IVS_Uc:{app:'IVS',tkr:'USD',ivs:[.55,40,.15,'iv','cash']},   // 섀넌 USD = 앱 기본값(s0 55 · 40일 · 밴드 15%p · 단기국채)

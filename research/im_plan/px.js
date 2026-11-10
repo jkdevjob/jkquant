@@ -19,9 +19,10 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
   const remY=o.deferDec?(()=>{ const r=new Array(dates.length).fill(0); for(let k=dates.length-2;k>=0;k--) r[k]=dates[k+1].slice(0,4)===dates[k].slice(0,4)?r[k+1]+1:0; return r; })():null; let deferN=0;
   // o.dep(11-08): 적립을 앱 플랜 monthlyAdd 처럼 — 날마다 o.dep.perDay 씩 쌓아 두었다가 달이 바뀐 첫 거래일 아침에 현금으로 넣고 그날 모든 종목을 목표로 맞춘다(강제 리밸런싱).
   //   들어온 돈은 o.flows 에 [날짜, 금액] · 끝날 아직 못 넣은 돈은 현금으로 더한다(낸 돈 합이 매일 적립과 같게). 안 주면 기존과 같다.
+  //   o.dep.every(11-10): 넣는 달 간격 — 2·3·6·12 면 (월−1)%every===0 인 달(3 = 1·4·7·10월)의 첫 거래일에만 넣고 그동안은 쌓아 둔다(밖에 두는 돈 · 이자 없음). 안 주면 매달.
   let depPend=0, depForce=false; if(o.dep) o.flows=o.flows||[];
   for(let k=i0;k<=i1;k++){ const d=dates[k];
-    depForce=false; if(o.dep&&k>i0){ if(d.slice(0,7)!==dates[k-1].slice(0,7)&&depPend>0){ cash+=depPend; o.flows.push([d,depPend]); depPend=0; depForce=true; } depPend+=o.dep.perDay; }
+    depForce=false; if(o.dep&&k>i0){ if(d.slice(0,7)!==dates[k-1].slice(0,7)&&depPend>0&&(!(o.dep.every>1)||(+d.slice(5,7)-1)%o.dep.every===0)){ cash+=depPend; o.flows.push([d,depPend]); depPend=0; depForce=true; } depPend+=o.dep.perDay; }
     if(irx[d]!=null) lastIrx=irx[d];
     if(prevDate&&cash>0){ const gap=Math.max(1,Math.round((Date.parse(d)-Date.parse(prevDate))/864e5)); cash+=cash*Math.max(0,lastIrx/100-0.0009)*(tax?(1-0.154):1)*gap/365; }
     prevDate=d; const y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ const _t=(tax&&yearPnl>0)?Math.max(0,yearPnl-DED)*0.22:0; cash-=_t; if(o.ylog) o.ylog.push([yr,yearPnl,_t,d]); yearPnl=0; yr=y; }   // o.ylog: 해마다 [해, 실현손익, 세금, 낸 날](11-05)
