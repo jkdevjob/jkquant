@@ -149,7 +149,7 @@ async function check(S){
     ['듀얼가드 화면: "플랜" 글자 되살림','plan',s=>s.replace('<label>듀얼가드 시작일</label>','<label>플랜 시작일</label>')],
     ['듀얼가드 화면: 머리글 "5 YEAR" 되살림(옛 코드)','plan',s=>s.replace("$('alphaHorizonEyebrow').textContent='DUAL GUARD · '+v;","$('alphaHorizonEyebrow').textContent='5 YEAR · DUAL GUARD · '+v;")],
     ['운영: "플랜" 글자 되살림','idx',s=>s.replace("'듀얼가드 세금 점검과 같은 계산(결제일 환율 · 선입선출)'","'플랜 세금 점검과 같은 계산(결제일 환율 · 선입선출)'")],
-    ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=7;','const PAPER_VIEW_CACHE_VER=6;')],
+    ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=8;','const PAPER_VIEW_CACHE_VER=6;')],
     ['엔진: 폐지 안내 "폐지된 플랜"(옛 글자)','eng',s=>s.replace("error:'폐지된 세션 — '+gone","error:'폐지된 플랜 — '+gone")],
   ];
   let red=0;

@@ -110,7 +110,7 @@ ok('5년플랜 체결 입력·수정은 DB 실패 시 화면 원복',
   && /const ok=await cloudSave\(\)/.test(fn(plan,'async function alphaSaveEdit()'))
   && /alphaLedger=before/.test(fn(plan,'async function alphaSaveEdit()')));
 
-const pFns=['planStableJson','planRecEntries','planRebaseRecords','planRebaseFiveYear']
+const pFns=['planStableJson','planRecSem','planRecKey','planRecEntries','planRebaseRecords','planRebaseFiveYear']
   .map(n=>fn(plan,'function '+n+'(')).join('\n');
 const PC=vm.createContext({console,Map,JSON,cloneObj:x=>JSON.parse(JSON.stringify(x))});
 vm.runInContext(pFns,PC);
