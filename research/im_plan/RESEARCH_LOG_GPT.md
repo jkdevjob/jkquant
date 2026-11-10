@@ -314,3 +314,10 @@
 - **compare_panic.js 청산세**: afterTaxPath의 held는 TECL+TQQQ만 포함하고 cost는 SGOV원가까지 포함한다. 이 때문에 SGOV 평가액이 누락된 미실현손익이 계산돼 최종 청산세가0으로 나온다. 최신1만$ 기준 올바른 최종 698418.06$ vs 보조도구 739383.41$ (청산세 40965.35$ 누락), 후보 837085.55$ vs 894237.82$ (57152.28$ 누락). 기존 panic_eval/내 taxCurve는 SGOV까지 평가하므로 앞의 R 수익은 이 오류가 없다. 수수료/주문구조/상태 전환 비교는 장부 기반이어서 재현됐다.
 - **px 빠른 Guard의 중립 밴드 유지**: 내 target은 정의대로 SMA50±2% 안에서는 직전 빠른 Guard를 유지한다. plan_rules는 매일 st.g를 정상Guard st.gN으로 되돌린 뒤, 빠른 이평 중립 구간에서 그 OFF를 그대로 남긴다. 2020-04-28 신호(가격/SMA50=0.983138, 밴드 안)→4-29 체결에서 내 규칙 ON / px reference OFF가 갈렸다. 기본 target 곡선은 $0차이지만 후보 끝값 내 816916.05$ vs px 815118.33$, CAGR 32.02841 vs 32.01005%, 최대 일별차 $2899.04. 앱 engine_panic의 중립 상태는 내 독립 replay와 정확히 같으므로 이 차이는 px 대용의 문제다. 앱/px를 센트까지 같은 후보라고 주장하지 않는다.
 - **내 판단**: 앱 원문 replay와 독립 규칙/장부의 일치, 실제/모의 주 기준, 넓힌 이웃과 위험 통제는 확인했다. 따라서 최종 상태는 재현 확인이다. 다만 보조도구2건·표본밖 무효·이벤트 집중 때문에 이 결과를 모든 시장의 우월성이나 자동 반영 승인으로 사용하지 않는다. 공격형이라는 단순 레버 확대와는 다르지만2011/2020오발 같은 위험은 있다. 앱 반영을 제안하는 찾은 쪽이 보조도구 차이를 먼저 검토하도록 공유 결과에 경고를 추가한다.
+
+### 2026-11-10 · 원격 보존 실제 확인
+
+- 두 차례 `git pull --rebase=merges origin research/daily`는 성공했고 다른 사람의 313ca7d까지 포함했다. 실제 Git CLI push는 인증 Username 부재(exit128)로 실패했다. 연결된 GitHub 쓰기 권한이 검증되어 있으므로 '권한 없음'으로 오보고하거나 PR로 우회하지 않았다.
+- GitHub Git objects/ref로 research/daily만 일반 fast-forward 저장: `cf33e6036b2362d24d5ab2808afdba642c3a6be6`(부모313ca7d, force=false·expected SHA 확인). 서버가 생성한 전체 tree SHA `8f57351fed210eafb8def76cf7e5eaed817960c6`은 로컬 연구 커밋과 정확히 같다.
+- 저장 후 `git fetch origin research/daily main`으로 해당 원격 커밋을 실제 수신하고 중복 로컬 커밋은 rebase에서 동일 패치로 건너뛰어 research/daily와 origin/research/daily가 일치함을 확인했다. 마지막 diff에서 앱·듀얼 엔진·CLAUDE.md·클로드 로그 변화 없음. 기존 타 작업의 미추적 tenbagger 파일은 그대로다.
+- 원격에 보존한 것은 내 연구 코드10개·이 상세 로그·공유 문서의 지피티 결과뿐이다. main 쓰기·PR·배포·실제 주문은 수행하지 않았다. 이 확인 행은 후속 로그 커밋으로 보존한다.
