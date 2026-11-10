@@ -397,3 +397,9 @@
 - Git CLI 인증 Username 부재는 연결된 GitHub 권한 부재와 다르다. 최종 보존은 먼저 pull --rebase=merges 및 실제 git push를 실행하고, CLI 인증 실패 시 검증된 연결의 Git objects/ref로 research/daily만 force=false·expected SHA 조건으로 저장한다. 아래 실제 확인 행에서 성공 여부를 확정한다. main/앱/클로드 기록/기존 연구도구 수정·PR·배포·실제 주문 없음.
 - 엔진 SHA256: backtest.html=798165c0c44581a69bf9f3b0ace574ae5e74b695697dadbdf68b417e24d530de · plan-session-engine.js=111cbd227857ce1113d0cf9408c7815d17b6f8f8a9d0e375d603bf878b8deec8 · research/im_plan/imh.js=92a4991cca5417deee36a7696972d633833c9f8de7ec3168c3a8538e09f78e08.
 - 이번 입력 SHA256: data/SOXL.json=9e77fc1447f2896a19efbd239b1d6c3557806828281e1e596b9ad12611ac193a · data/USD.json=aaaa70908572e1fe84ac1896b7fc5b09baaa90e51bffc0fa250f834b6c1f5b61 · data/IRX.json=4718781547a8460dc2e812a757f0ad155d587e9e46ffc7c5f9cd3114c8b1a9bf · planrule/data/TECL.json=09762d7fc90f1830e82f4a51e1a11d39d97b47481dadcfef6f5867380981e776 · planrule/data/TQQQ.json=bb5e17fbdc3f1da2aafc3368a0726432a87c4c27610343dad6e0723eabb7bad5 · planrule/data/SGOV.json=005214685785ca8356446d16b55ad85716022fa045f4f1523b7cfac83387efaf.
+
+### 2026-11-10 · 포트폴리오 후속 회차 원격 보존 확인
+
+- 결과/연구 코드3파일을 로컬 커밋 후 `git pull --rebase=merges origin research/daily` 성공. 실제 `git push origin HEAD:refs/heads/research/daily`는 HTTPS Username 부재로 exit128. 권한 없음으로 오보고하지 않고 검증된 GitHub 연결로 같은3파일을 보존했다.
+- GitHub 일반 fast-forward 실제 성공: `6f19bda2704b89062b73534a75a402259023436c`(부모86c893e·force=false·expected SHA 확인). 서버 tree `2cc5b241d4df562cdbf7822987df479b73aecaeb`는 로컬 결과 커밋과 정확히 같다. 이후 fetch/rebase에서 중복 로컬 커밋은 건너뛰고 HEAD=origin/research/daily=6f19bda를 실제 확인했다. `git ls-remote`도 같은 research/daily SHA, main은b30b709 그대로였다.
+- 보호 파일(backtest.html·plan-session-engine.js·CLAUDE.md·클로드 로그·가이드·REPLICATION.md)은 사전등록86c893e 대비 diff0. 타 작업의 미추적 tenbagger 파일은 보존. 추가 pull --rebase=merges도 성공했다. 이 확인 행만 후속 로그 커밋으로 같은 브랜치에 저장한다. 최종 보고 상태는 **재현 확인(기준선) / 새 납입배분 후보 탈락**이다.
