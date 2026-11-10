@@ -1,5 +1,10 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-10 · 평가액 추이 범례 '평가액' · v3.127.5
+
+- `check-portfolio.cjs` **ALL PASS · 변이 85/85 빨간불** — L1 범례 칩 data-pfser="total" 글자 '평가액' · '지금 계좌)' 없음 · Q7 선 목록 둘째 이름 '평가액'(세션별·종목별) · 변이(옛 이름 '평가액(지금 계좌)') 빨간불.
+- 배포 확인은 병합 뒤 curl.
+
 ## 2026-11-10 · 연구(클로드) 아침 루틴 — v2.27.0 첫 운영일 운영 기록 확인 · R36
 
 - 원천: `scalping-data` 의 `data/opening-gapdown-live/2026-11-09.json`(Worker 단계 기록 · 20:02 UTC 저장) · `data/claude-live/2026-11-09.json`(마감 장부) · `data/claude-lab/latest.json`(11/10 06:28 계산).

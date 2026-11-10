@@ -709,7 +709,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.127.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1828,7 +1828,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.4</b> · 2026-11-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.127.5</b> · 2026-11-09</div>
   </footer>
 </div>
 
@@ -9509,7 +9509,7 @@ function pfTkName(k){ return k==='?'?'종목 모름':String(k).replace(/^krw:/,'
    (2026-11-09 사용자: "평가액 추이 그래프를 세션별 종목별로 선택해서 볼수 있게 해") — 값은 pfCombine 이 이미 센 by·tk·cash 그대로 */
 function pfChartSeries(C, mode){
   const P=(C&&C.points)||[], out=[{key:'inflow', base:'in', name:'원금', color:'var(--pf-in)', vals:P.map(p=>p.inflow)},   // 원금이 맨 앞(2026-11-09 사용자) · 그 다음 평가액 · 선들
-    {key:'total', base:'val', name:'평가액(지금 계좌)', color:'var(--pf-val)', vals:P.map(p=>p.now)}];
+    {key:'total', base:'val', name:'평가액', color:'var(--pf-val)', vals:P.map(p=>p.now)}];
   if(mode==='tk'){
     const last=(P.length&&P[P.length-1].tk)||{}, all=[], seen=new Set();
     P.forEach(p=>Object.keys(p.tk||{}).forEach(k=>{ if(!seen.has(k)){ seen.add(k); all.push(k); } }));
