@@ -29,6 +29,34 @@
       }
     },
     {
+      "tab": "crypto",
+      "version": "g_coin_ma5_s10_hi_both",
+      "name": "평균 5일 · 어제 고가 돌파 · 손절 −10% · BTC·ETH 반반",
+      "rule": "어제 종가 > 5일 평균인 날, 어제 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · BTC·ETH 반반 · 탭 자금 80%",
+      "params": {
+        "ma": 5,
+        "stopPct": 10,
+        "level": "prevhigh",
+        "k": 0.5,
+        "hiN": 1,
+        "lastEntryHour": null,
+        "tabSize": 0.8,
+        "markets": [
+          "KRW-BTC",
+          "KRW-ETH"
+        ]
+      },
+      "effectiveFrom": "2026-11-12",
+      "promotedAt": "2026-11-10T17:17:30.512797+00:00",
+      "prevVersion": "g_coin_ma15_s99_hi7_eth",
+      "by": "auto:arena-7d-top1",
+      "basis": {
+        "labGeneratedAt": "2026-11-11T02:17:30.512809+09:00",
+        "rank": 1,
+        "promotion": "7일 연속 1위 · 순위 점수 +0.594 vs 메인 +0.541"
+      }
+    },
+    {
       "tab": "daytrading",
       "version": "g_etf_th4.75",
       "name": "−4.75% 이하 마감",
