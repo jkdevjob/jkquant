@@ -39,12 +39,22 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
     bandOf:(s,t,c)=>{ if(s===GA&&levTrade) return 0.001; if(p.ladder&&s===p.ladder.sym) return ((p.sbDn!=null&&t<c)?p.sbDn:(p.sbUp!=null&&t>c)?p.sbUp:p.sb)*p.tw*(p.ladder.lev/3); if(s!==R) return ((s===GA||(p.offAsset&&s===p.offAsset))&&t>0&&c>0)?(p.gReb?(isStart(lastK,PER[p.gReb])?(p.gRebB??0.02):Infinity):((p.gsbDn!=null&&t<c)?p.gsbDn:(p.gsbUp!=null&&t>c)?p.gsbUp:(p.gsb??0.02))):0.02;   // gReb: TQQQ 를 정해진 때(월 m·분기 q·반기 h·연 y 첫 거래일)만 목표로 — 그날 gRebB 넘게 벌어졌을 때
       if((p.wkAll&&!isStart(lastK,wk))||(p.wkDn&&t<c&&!isStart(lastK,wk))||(p.moDn&&t<c&&!isStart(lastK,d=>d.slice(0,7)))) return Infinity;
       if((p.wkUp&&t>c&&!isStart(lastK,wk))||(p.moUp&&t>c&&!isStart(lastK,d=>d.slice(0,7)))||(p.qUp&&t>c&&!isStart(lastK,PER.q))) return Infinity;   // TECL 올릴 때만 주(wkUp)·월(moUp)·분기(qUp) 첫 거래일에
+      if(p.shock&&lastSt&&lastSt.shkOn&&t<c) return (p.shock.band??0.01)*p.tw;   // shock 이 걸린 동안 줄이는 쪽은 좁은 밴드(기본 1%p×70%)로 — 안 그러면 목표가 작을 때 10%p 밴드에 막혀 안 판다
       const dnOk=p.sbDnOffN==null||(lastSt&&!lastSt.g&&(lastSt.od||0)>=p.sbDnOffN);   // 변형(11-07): 줄일 때 좁은 밴드(sbDn)를 Guard OFF 가 N 신호일 이상 이어진 뒤에만(V형 급락 바닥에서 바로 팔지 않기)
       return ((p.sbDn!=null&&t<c&&dnOk)?p.sbDn:(p.sbUp!=null&&t>c)?p.sbUp:p.sb)*p.tw; },   // TECL 비중: 내릴 때 sbDn · 올릴 때 sbUp (없으면 sb)
     target(k,cur,st){ lastK=k; let s=rv[k];
       if(pan&&p.panic.sleeve){ const v=pan.v[k]; if(v!=null&&v>=p.panic.hi) st.armS=true; if(st.armS&&v!=null&&v<p.panic.lo){ st.ps=true; st.armS=false; st.psn=(st.psn||0)+1; }   // 슬리브 공포 모드: 진정 신호에 켜고
         if(st.ps&&ivArr&&ivArr[k]!=null&&rv0[k]!=null){ if(rv0[k]<=ivArr[k]) st.ps=false; else s=Math.min(s,ivArr[k]); } }   // σ20 이 내재변동성 아래로 내려오면(지난 폭락 날들이 창에서 빠지면) 보통으로
       let w=Math.min(p.wMax??1,(p.s0*p.s0)/(s*s));   // wMax: TECL 슬리브 상한(기본 1) — 1 보다 크면 잔잔할 때만 더 싣는다
+      // shock(11-10 · 사용자 "시험해봐"): 하락일에만 빨리 줄이는 방아쇠 — 전일(k) 종가까지만 본다. 걸리면 hold 신호일 동안 TECL 슬리브 목표 × mul(올릴 때는 기본 규칙 그대로).
+      //   drop: 하루 수익 ≤ −drop · kSig: 하루 수익 ≤ −kSig × σ20(일간) — 잔잔하던 중의 이례적 하락 · dd:{n,x}: n일 고점 대비 −x 이하(걸려 있는 동안 계속) · days:{n,x}: n일 누적 ≤ −x · sym: 볼 종목(기본 R)
+      if(p.shock){ const S=p.shock, a=P.C[S.sym||R], r=k>0?a[k]/a[k-1]-1:0; let hit=false;
+        if(S.drop!=null&&r<=-S.drop) hit=true;
+        if(S.kSig!=null&&k>0&&rv0[k-1]>0&&r<=-S.kSig*rv0[k-1]/Math.sqrt(252)) hit=true;   // σ 는 그 하락일을 넣기 전(k-1) 값 — 하락일 자신이 σ 를 올려 문턱을 높이지 않게
+        if(S.days&&k>=S.days.n&&a[k]/a[k-S.days.n]-1<=-S.days.x) hit=true;
+        if(S.dd){ let hi=0; for(let j=Math.max(0,k-S.dd.n+1);j<=k;j++) hi=Math.max(hi,a[j]); if(a[k]<=hi*(1-S.dd.x)) hit=true; }
+        if(hit){ st.shk=k; st.shn=(st.shn||0)+1; } st.shkOn=st.shk!=null&&k-st.shk<(S.hold??5);
+        if(st.shkOn) w*=(S.mul??0.5); }
       lastSt=st; const c=P.C[GS][k], m=(gmL&&p.maEns==='avg')?gmL.reduce((a,x)=>a+x[k],0)/gmL.length:gm[k]; if(pan&&st.gN!==undefined) st.g=st.gN; if(st.g===undefined) st.g=c>m;
       if(p.reN&&st.fast){   // 빠른 모드(11-08): 225일선 아래라도 빠른 조건이 깨질 때만 끈다 · 225일선 +gbOn 위로 오르면 보통 모드로
         if(c>m*(1+(p.gbOn??p.gb))) st.fast=false;
