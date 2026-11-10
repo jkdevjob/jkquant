@@ -33,10 +33,10 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
   const rs=p.offRate?(()=>{ const R=p.offRate, m={}; JSON.parse(fs.readFileSync(path.join(__dirname,'data',(R.sym||'TNX')+'.json'))).series.forEach(x=>{ if(x.close>0) m[x.date]=x.close; });
     let last=null; const y=P.dates.map(d=>{ if(m[d]!=null) last=m[d]; return last; }); if(R.mode==='yoy'){ const L=R.lag||252; return y.map((v,k)=>k>=L&&v!=null&&y[k-L]!=null?v<y[k-L]:false); }
     const ma=ind.ma(y.map(v=>v??0),R.ma||200); return y.map((v,k)=>v!=null&&ma[k]>0?v<ma[k]*(1-(R.band||0)):false); })():null;
-  return {deferDec:p.deferDec?Object.assign({},p.deferDec,{sym:R}):undefined, harvest:p.harvest,   // px 옵션 통과(11-08) — 12월 이연 · 연말 세금 최적화(planx VARS 로 쓰려고)
-    assets:[R,GA].concat(extra?[extra.sym]:[]).concat(p.offAsset?[p.offAsset]:[]).concat(p.ladder?[p.ladder.sym]:[]),   // ladder(11-10): 2배 ETF 도 자산 목록에
+  const API={deferDec:p.deferDec?Object.assign({},p.deferDec,{sym:R}):undefined, harvest:p.harvest,   // px 옵션 통과(11-08) — 12월 이연 · 연말 세금 최적화(planx VARS 로 쓰려고)
+    assets:[R,GA].concat(extra?[extra.sym]:[]).concat(p.offAsset?[p.offAsset]:[]).concat(p.ladder?[p.ladder.sym]:[]).concat(p.park?[p.park.sym]:[]),   // ladder(11-10): 2배 ETF 도 자산 목록에
     warm:Math.max(p.ma,p.reMA||0,(p.panic&&p.panic.ma)||0,...(gmL?(p.maList||[200,225,250]):[]),p.look+1,(p.lookDn||0)+1,(p.look2||0)+1,p.rMA||0,extra?(p.dMA||200):0)+1,
-    bandOf:(s,t,c)=>{ if(s===GA&&levTrade) return 0.001; if(p.ladder&&s===p.ladder.sym) return ((p.sbDn!=null&&t<c)?p.sbDn:(p.sbUp!=null&&t>c)?p.sbUp:p.sb)*p.tw*(p.ladder.lev/3); if(s!==R) return ((s===GA||(p.offAsset&&s===p.offAsset))&&t>0&&c>0)?(p.gReb?(isStart(lastK,PER[p.gReb])?(p.gRebB??0.02):Infinity):((p.gsbDn!=null&&t<c)?p.gsbDn:(p.gsbUp!=null&&t>c)?p.gsbUp:(p.gsb??0.02))):0.02;   // gReb: TQQQ 를 정해진 때(월 m·분기 q·반기 h·연 y 첫 거래일)만 목표로 — 그날 gRebB 넘게 벌어졌을 때
+    bandOf:(s,t,c)=>{ if(p.park&&s===p.park.sym) return p.park.band??0.02; if(s===GA&&levTrade) return 0.001; if(p.ladder&&s===p.ladder.sym) return ((p.sbDn!=null&&t<c)?p.sbDn:(p.sbUp!=null&&t>c)?p.sbUp:p.sb)*p.tw*(p.ladder.lev/3); if(s!==R) return ((s===GA||(p.offAsset&&s===p.offAsset))&&t>0&&c>0)?(p.gReb?(isStart(lastK,PER[p.gReb])?(p.gRebB??0.02):Infinity):((p.gsbDn!=null&&t<c)?p.gsbDn:(p.gsbUp!=null&&t>c)?p.gsbUp:(p.gsb??0.02))):0.02;   // gReb: TQQQ 를 정해진 때(월 m·분기 q·반기 h·연 y 첫 거래일)만 목표로 — 그날 gRebB 넘게 벌어졌을 때
       if((p.wkAll&&!isStart(lastK,wk))||(p.wkDn&&t<c&&!isStart(lastK,wk))||(p.moDn&&t<c&&!isStart(lastK,d=>d.slice(0,7)))) return Infinity;
       if((p.wkUp&&t>c&&!isStart(lastK,wk))||(p.moUp&&t>c&&!isStart(lastK,d=>d.slice(0,7)))||(p.qUp&&t>c&&!isStart(lastK,PER.q))) return Infinity;   // TECL 올릴 때만 주(wkUp)·월(moUp)·분기(qUp) 첫 거래일에
       if(p.shock&&lastSt&&lastSt.shkOn&&t<c) return (p.shock.band??0.01)*p.tw;   // shock 이 걸린 동안 줄이는 쪽은 좁은 밴드(기본 1%p×70%)로 — 안 그러면 목표가 작을 때 10%p 밴드에 막혀 안 판다
@@ -78,6 +78,10 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
       if(p.ladder){ const L=p.ladder, lev=L.lev||2; const useL=(p.tw*w<=L.below)&&(cur[L.sym]>0||p.tw*w<=L.below-(L.hyst??0.03)||!(cur[R]>0));   // 2배로 바꾸는 선 below · 다시 3배로 돌아오는 선 below+hyst(왕복 매매 줄이기)
         if(useL&&!(cur[R]>0&&p.tw*w>L.below-(L.hyst??0.03)&&!(cur[L.sym]>0))){ t[L.sym]=Math.min(L.cap??0.7,p.tw*w*3/lev); t[R]=0; } else t[L.sym]=0; } if(rvDn&&rvDn[k]>0){ const wd=Math.min(w,Math.min(1,(p.s0*p.s0)/(rvDn[k]*rvDn[k]))); if(p.tw*wd<(cur[R]||0)) t[R]=p.tw*wd; } t[GA]=st.g?p.gw*((p.gs0&&gvT[k]>0)?Math.min(1,p.gs0*p.gs0/(gvT[k]*gvT[k])):1)*((GL&&!st.pf)?(st.gfrac??1):1):0;
       if(p.offAsset) t[p.offAsset]=st.g?0:((rs?rs[k]:true)?(p.offW??p.gw):0);   // 변형(11-03): Guard OFF 동안 TQQQ 몫(gw)을 SGOV(현금) 대신 offAsset(IEF·TLT·GLD·QQQ 등)으로 — 매매 시점·밴드는 TQQQ 와 같은 규칙(Guard 바뀔 때 · gReb)
+      // park(11-10 · 사용자 "sgov대신 schd사면 어떨까"): 남는 돈(위험자산을 뺀 나머지)을 현금(T-bill) 대신 park.sym 에 둔다 — frac(기본 1) 만큼 · reserve(기본 1%)는 현금으로.
+      //   위험자산이 오늘 매매되면 그 목표, 아니면 지금 비중을 빼고 남는 만큼이 목표(위험자산 매수 날엔 같은 날 먼저 판다 — px 는 매도 먼저). 밴드 park.band(기본 2%p).
+      if(p.park){ const K=p.park; let used=0; for(const s of Object.keys(t)){ if(s===K.sym) continue; const tt=t[s]||0, c=cur[s]||0; const tr=((tt===0)!==(c===0))||Math.abs(tt-c)>API.bandOf(s,tt,c); used+=tr?tt:c; }
+        t[K.sym]=Math.max(0,(1-used-(K.reserve??0.01))*(K.frac??1)); }
       if(extra){ const on=P.C[extra.sym][k]>extra.m[k]; t[extra.sym]=on?extra.w:0; const sum=t[R]+t[G]+t[extra.sym]; if(sum>1){ t[R]*=1/sum; t[G]*=1/sum; t[extra.sym]*=1/sum; } }
-      return t; } }; }
+      return t; } }; return API; }
 module.exports={mk};
