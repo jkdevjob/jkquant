@@ -368,7 +368,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.7.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.7.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1157,7 +1157,7 @@ function planOpHistoryMap(st){
     for(const s of box.sessions){
       if(!s||!s.id)continue;const p=bk+'|'+s.id;m.set(p+'|@session','1');
       (Array.isArray(s.hist)?s.hist:[]).forEach((r,i)=>{
-        const id=r&&r.id!=null?'id:'+r.id:r&&r.ts!=null?'ts:'+r.ts:'fallback:'+String(r&&r.date||'')+':'+String(r&&(r.kind||r.type)||'')+':'+i;
+        const id=planRecKey(r)||'fallback:'+String(r&&r.date||'')+':'+String(r&&(r.kind||r.type)||'')+':'+i;   // 신분은 planRecKey 한 곳 — ts 만 보면 겹친 모의 기록이 지문에서 빠진다
         m.set(p+'|hist|'+id,JSON.stringify(r));
       });
     }
@@ -1166,7 +1166,7 @@ function planOpHistoryMap(st){
     if(!s||!s.id)continue;const p='plan|'+s.id;m.set(p+'|@session','1');const l=s.ledger||{};
     if(l.base)m.set(p+'|@base',JSON.stringify(l.base));
     (Array.isArray(l.events)?l.events:[]).forEach((r,i)=>{
-      const id=r&&r.id!=null?'id:'+r.id:r&&r.ts!=null?'ts:'+r.ts:'fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i;
+      const id=planRecKey(r)||'fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i;
       m.set(p+'|event|'+id,JSON.stringify(r));
     });
   }
@@ -1181,7 +1181,7 @@ function planHistoryMap(o){
   const m=new Map();if(!o||typeof o!=='object')return m;
   const a=o.alphaLedger||{};if(a.base)m.set('alpha|@base',JSON.stringify(a.base));
   (Array.isArray(a.events)?a.events:[]).forEach((r,i)=>{
-    const id=r&&r.id!=null?'id:'+r.id:r&&r.ts!=null?'ts:'+r.ts:'fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i;
+    const id=planRecKey(r)||'fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i;
     m.set('alpha|event|'+id,JSON.stringify(r));
   });
   const ss=Array.isArray(o.sleeveSessions)?o.sleeveSessions:[];
@@ -1554,10 +1554,25 @@ function planStableJson(v){
   };
   try{return JSON.stringify(norm(v));}catch(e){return JSON.stringify(v);}
 }
+/* 기록 한 줄의 신분 — 운영 화면(index.html _histKeyPart · _histSemanticKey)과 같은 규칙이어야 한다(둘이 같은 원장 stateV2 를 합친다).
+   모의 재생(sim·auto)은 여러 날의 거래를 같은 밀리초에 만들어 ts 가 겹친다. ts 만 키로 쓰면 합칠 때 Map 에서 첫 매수·잔돈이 뒤 체결에 덮여 사라진다
+   (2026-11-10 사용자 화면: 밸류리밸런싱 모의 3줄의 투입이 $544 · 세후 +3만% — 이 화면이 세션을 저장하며 운영 원장의 모의 기록 머리를 지웠다.
+    운영 화면은 11-05(#579)에 고쳤고 여기가 남아 있었다). 생성 기록은 내용까지 묶어 식별한다. id 가 있으면 id · 사람이 넣은 기록은 ts · 없으면 ''. */
+function planRecSem(x){
+  if(!x||typeof x!=='object')return planStableJson(x);
+  const o={};Object.keys(x).filter(k=>k!=='id'&&k!=='ts').sort().forEach(k=>{o[k]=x[k];});
+  return planStableJson(o);
+}
+function planRecKey(r){
+  if(r&&r.id!=null)return 'id:'+String(r.id);
+  if(r&&r.ts!=null&&(r.sim||r.auto))return 'generated:'+String(r.ts)+'|'+planRecSem(r);
+  if(r&&r.ts!=null)return 'ts:'+String(r.ts);
+  return '';
+}
 function planRecEntries(a){
   const occ={},out=[];
   for(const r of (Array.isArray(a)?a:[])){
-    let k=r&&r.id!=null?'id:'+String(r.id):r&&r.ts!=null?'ts:'+String(r.ts):'';
+    let k=planRecKey(r);
     if(!k){const sem=planStableJson(r),n=(occ[sem]||0)+1;occ[sem]=n;k='legacy:'+sem+':'+n;}
     out.push([k,r]);
   }
