@@ -616,7 +616,7 @@ await t('P15 자산플랜 시세 — 원장 읽기와 같이 받기 시작 · TE
   let opDone; const op=new Promise(r=>opDone=r);
   const C={$:()=>({disabled:false,textContent:''}),liveBusy:false,liveQuotes:{},fetchPlanQuote:s=>{ log.push('q:'+s); return Q[s]; },
     loadOperatingState:()=>{ log.push('op'); return op; },auth:{currentUser:{uid:'u'}},renderSessionSelectors(){},linkedOpSession:()=>null,liveState:null,planLinks:{},
-    renderAlphaPlan:(a,b,c)=>log.push('alpha:'+[a,b,c].map(x=>x.symbol).join(',')),renderAlphaLedger:()=>log.push('ledger')};
+    renderAlphaPlan:(a,b,c)=>log.push('alpha:'+[a,b,c].map(x=>x.symbol).join(',')),renderAlphaLedger:()=>log.push('ledger'),planPanicIndexLoad:()=>Promise.resolve()};   // 공포 모드 운영 세션이 아니면 지수는 바로 끝난다
   vm.createContext(C); vm.runInContext(head+'\nthis.run=refreshLive;',C);
   const p=C.run();
   assert.deepEqual(log.slice(0,7),['q:SOXL','q:TECL','q:TQQQ','q:QQQ','q:QLD','q:SGOV','op'],'시세 6개를 먼저 부르고 원장을 읽는다');

@@ -12,8 +12,8 @@
   document.documentElement.classList.add('embed');
   var b=document.createElement('base'); b.target='_top'; document.head.appendChild(b); })();
 </script>
-<script src="/plan-session-engine.js?v=7"></script>
-<script src="/plan-session-settings.js?v=4"></script>
+<script src="/plan-session-engine.js?v=8"></script>
+<script src="/plan-session-settings.js?v=5"></script>
 <script src="/plan-tax-check.js?v=1"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
@@ -368,7 +368,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.6.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.7.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -425,6 +425,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="eyebrow" id="alphaHorizonEyebrow">DUAL GUARD</div>
       <h2 id="alphaStrategyTitle">TECL 역분산 70% + TQQQ Guard 30%</h2>
       <div id="assetPaperPanel" data-asset-view="analysis" hidden><div class="asset-session-paper-result" id="assetPaperResult" hidden></div></div>
+      <div id="assetLivePanic" hidden></div>
 
       <div class="todaybox" id="alphaOrderSection" data-asset-view="current">
         <h3>1. 📋 오늘 예상 주문</h3>
@@ -883,11 +884,11 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
     <div class="grid">
       <div class="field asm-session" style="grid-column:1/-1"><label>세션 이름</label><input id="assetSessionName" type="text"></div>
       <label class="asset-session-pf asm-session" id="assetSessionPaperRow" style="grid-column:1/-1;margin-top:0"><input type="checkbox" id="assetSessionPaper"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span class="sub">— 실제 매매 없이 연습용 · 과거 시세로 자동 재생</span></span></label>
-      <label class="asset-session-pf asm-session" id="assetSessionPanicRow" style="grid-column:1/-1;margin-top:0;display:none"><input type="checkbox" id="assetSessionPanic"> <span><b style="color:var(--gold)">공포 모드 v1.1</b> 로 재생 <span class="sub">— 실험적 확장(공식 규칙 아님) · 모의에서만 · VIX 40 이상 뒤 35 아래로 진정하면 TQQQ·TECL 을 더 빨리 다시 싣는다 · 공포가 두 번 오는 장에선 휩쏘로 잃을 수 있다</span></span></label>
       <div class="field asm-settings"><label>시작자산 ($)</label><input id="assetSessionCapital" type="number" min="1" step="100"></div>
       <div class="field asm-settings"><label>월 추가 투자 ($)</label><input id="assetSessionMonthly" type="number" min="0" step="10"></div>
       <div class="field asm-settings"><label>목표자산 ($)</label><input id="assetSessionTarget" type="number" min="1" step="100"></div>
       <div class="field" id="assetSessionStartWrap"><label id="assetSessionStartLabel">시작일</label><input id="assetSessionStart" type="date"></div>
+      <label class="asset-session-pf asm-settings" id="assetSessionPanicRow" style="grid-column:1/-1;margin-top:0"><input type="checkbox" id="assetSessionPanic"> <span><b style="color:var(--gold)">공포 모드 v1.1</b> <span id="assetSessionPanicVerb">로 재생</span> <span class="sub">— 실험적 확장(공식 규칙 아님) · VIX 40 이상 뒤 35 아래로 진정하면 TQQQ·TECL 을 더 빨리 다시 싣는다 · 공포가 두 번 오는 장에선 휩쏘로 잃을 수 있다</span></span></label>
     </div>
     <label class="asset-session-pf asm-session" id="assetSessionPfRow"><input type="checkbox" id="assetSessionPf" checked> <span><b style="color:var(--accent)">💰 포트폴리오</b>에 넣기 <span class="sub" id="assetSessionPfHint">— 운영 › 포트폴리오 합계·추이·양도세에 더합니다</span></span></label>
     <div class="asset-session-paper" id="assetSessionPaperNote">운영 세션은 실제 체결을 직접 기록합니다. 모의투자 세션은 과거 시세로 자동 재생하며 실제 거래이력을 변경하지 않습니다.</div>
@@ -936,14 +937,20 @@ let activeHorizon=5,horizonRebalancePending=false;   // 기간은 5년 하나 �
 function alphaRuleSet(){const E=window.JKPlanSessionEngine;return (E&&E.alphaRules)?E.alphaRules('base'):{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false};}
 /* 폐지된 기간(10·15·20년)·규칙(새 규칙·공격형)으로 만든 세션은 지우지 않고 목록에서 숨긴다. 판정은 엔진 한 곳(retiredReason) — 모의 목록과 같은 함수. */
 /* 세션의 규칙 — 공포 모드(v1.1 실험적 확장)는 모의 세션에서만 쓴다(2026-11-10). 이름은 엔진 strategyLabel 한 곳. */
-function assetRulesOf(x){return (x&&x.paper&&x.settings&&x.settings.alphaRules==='panic')?'panic':'base';}
+function assetRulesOf(x){return x?((x.settings&&x.settings.alphaRules==='panic')?'panic':'base'):(planCurRules==='panic'?'panic':'base');}   // x 없음 = '현재 투자중'(본 장부)
+/* 머리 카드의 판 표시(#dgVer · #alphaHorizonEyebrow) — 보고 있는 세션의 규칙을 따른다: 기본 'v1.0' · 공포 모드 'v1.1 공포(실험)'. 공식 판과 실험 판이 같은 글자로 보이지 않게. */
+function renderPlanVersion(){
+  const E=window.JKPlanSessionEngine,P=planStrategy(),R=(E&&E.alphaRules)?E.alphaRules(assetRulesOf(activeAssetSession())):{version:P.version,exp:false};
+  const v='v'+(R.version||P.version)+(R.exp?' 공포(실험)':'');
+  if($('dgVer'))$('dgVer').textContent=v;if($('alphaHorizonEyebrow'))$('alphaHorizonEyebrow').textContent='DUAL GUARD · '+v;
+}
 function planStrategyLabelOf(x){const E=window.JKPlanSessionEngine;return (E&&E.strategyLabel)?E.strategyLabel(assetRulesOf(x)):planStrategyLabel();}
 function planRetired(x){const E=window.JKPlanSessionEngine;return !!(E&&E.retiredReason&&E.retiredReason(x));}
 function horizonStrategy(){return ASSET_STRATEGIES[activeHorizon]||ASSET_STRATEGIES[5];}
 function setTxt(id,v){const el=$(id);if(el)el.textContent=v;}
 function renderHorizonCopy(){
   const D=PATH_DEFAULTS.alpha,P=planStrategy(),s0=(D.ivsS0*100).toFixed(0),tw=(D.teclWeight*100).toFixed(0),gw=(D.guardWeight*100).toFixed(0);
-  setTxt('alphaHorizonEyebrow','DUAL GUARD · v'+P.version);
+  renderPlanVersion();
   setTxt('alphaStrategyTitle',P.name+' — TECL 역분산 '+tw+'% + TQQQ Guard '+gw+'%');
   setTxt('alphaKpi1Label','① 변동성 가드 · TECL');setTxt('alphaKpi1Value','최대 '+tw+'%');setTxt('alphaKpi1Sub','N'+D.ivsLook+' · s0 '+s0+'% · 밴드 '+(D.ivsBand*100).toFixed(0)+'%p');
   setTxt('alphaKpi2Label','② 추세 가드 · TQQQ');setTxt('alphaKpi2Value','최대 '+gw+'%');setTxt('alphaKpi2Sub','SMA'+D.guardMA+' · ±'+(D.guardBand*100).toFixed(1)+'%');
@@ -1034,6 +1041,8 @@ let assetEditingId=null,assetModalHorizon=5,assetModalRevision=0,assetSessionSav
    '현재 투자중'은 fiveYearPlanV2.portfolio, 추가 세션은 세션의 portfolio. 고른 적 없으면 넣음(예전 포트폴리오 그대로) · 모의 세션은 넣지 않는다(실제 돈만).
    포트폴리오(index.html pfPlanWanted)는 저장된 값과 이 창이 보낸 값(planEmbedPost)을 읽는다. */
 let planPortfolio=true,assetPfPick=true,planCurName='';
+/* '현재 투자중'(본 장부)의 규칙 — 'base' | 'panic'(공포 모드 v1.1 · 2026-11-10 사용자: "운영도 공포모드로 바꿔야 겠다 변경해"). 원장의 alphaRules 에 적는다. 없으면 base. */
+let planCurRules='base';
 /* '현재 투자중'(본 장부 · Firebase fiveYearPlanV2) 이름 — 세션 설정에서 바꿀 수 있다(2026-11-09 사용자: "왜 이제 세션이름을 변경 못하지?").
    원장의 sessionName 에 적는다. 빈칸이면 '현재 투자중'. 장부·세션 구분은 그대로(맨 앞 · 지우거나 옮기지 않음 · 모의로 못 바꿈). */
 function planCurLabel(){return String(planCurName||'').trim()||'현재 투자중';}
@@ -1201,7 +1210,7 @@ function assetSessionSettingsFromView(capOverride){
   return {ticker:'PLAN5',horizon:activeHorizon,startCapital:cap,targetCapital:Math.max(1,num('targetCapital',150000)),monthlyAdd:Math.max(0,num('monthlyAdd',0)),
     targetIncome:Math.max(0,num('targetIncome',0)),stageMode:String($('stageMode').value||'auto'),
     startDate:String($('startDate').value||todayISO()),targetDate:String($('targetDate').value||plusYears(todayISO(),activeHorizon)),
-    engine:'asset-plan-v2',alphaRules:'base'};   // 규칙은 기본 하나(2026-11-08 새 규칙·공격형 폐지)
+    engine:'asset-plan-v2',alphaRules:assetRulesOf(activeAssetSession())};   // 보고 있는 세션의 규칙 그대로(기본 · 공포 모드) — 화면 값을 거둘 때 규칙을 base 로 되돌리지 않는다
 }
 function writeAssetSessionLocal(){
   if(liveState)liveState._updated=Date.now();
@@ -1240,8 +1249,9 @@ function assetPaperStatsHtml(x,R){
 }
 /* 공포 모드(v1.1 실험적 확장) 상태 카드 — 엔진 replay 가 준 R.panic(상태 · 다음 판정 · 전환 기록)을 그대로 보여 준다. 여기서 다시 판정하지 않는다. */
 const PANIC_EV={armed:'무장(VIX ≥ 40)',sleeveOn:'TECL 재가속 시작',sleeveOff:'TECL 재가속 끝(σ20 ≤ 3×VXN)',fastOn:'진정 → TQQQ 빠른 모드 ON',normal:'보통 모드 복귀(SMA225 +1%)'};
-function assetPanicHtml(R){
+function assetPanicHtml(R,o){
   const P=R&&R.panic;if(!P)return '';
+  const live=!!(o&&o.live);
   const st=P.state||{},pp=P.params||{},v=+P.vix,fx=x=>x==null||!isFinite(+x)?'–':(+x).toFixed(2);
   const mode=st.pf?'TQQQ 빠른 모드(SMA'+pp.ma+' ±'+(pp.band*100).toFixed(0)+'%)':st.armed?'무장 — VIX 가 '+pp.lo+' 아래로 내려오길 기다리는 중':'대기(보통 모드)';
   const near=(v>0&&Math.abs(v-pp.hi)<=1)||((st.armed||st.armS)&&v>0&&Math.abs(v-pp.lo)<=1);
@@ -1249,7 +1259,8 @@ function assetPanicHtml(R){
   return '<div class="path-note" id="assetPanicCard" style="margin-top:8px"><b style="color:var(--gold)">공포 모드 v1.1 · 실험적 확장</b> — 공식 규칙이 아닙니다. 기본 규칙과 다른 날은 2011년부터 네 번(2011 · 2015 · 2020 · 2025)뿐이고, 2011 처럼 공포가 두 번 오면 휩쏘로 잃습니다.'+
     '<div style="margin-top:6px"><b>지금 상태</b> · '+mode+(st.ps?' · TECL 재가속 중':'')+' <span class="sub">(판정 '+(P.signalDate||'–')+' 확정값 · VIX '+fx(P.vix)+' · VXN '+fx(P.vxn)+' · 무장 '+pp.hi+' 이상 → 진정 '+pp.lo+' 아래)</span></div>'+
     (near?'<div style="color:var(--gold);margin-top:4px">⚠ VIX 가 경계 근처입니다 — 자료원(시세 API)에 따라 판정이 갈릴 수 있습니다.</div>':'')+
-    (log?'<div style="margin-top:6px"><b>최근 전환</b>'+log+'</div>':'<div class="sub" style="margin-top:6px">이 모의 기간에는 공포 모드가 켜진 적이 없습니다 — 기본 규칙과 같은 결과입니다.</div>')+'</div>';
+    (log?'<div style="margin-top:6px"><b>최근 전환</b>'+log+'</div>':'<div class="sub" style="margin-top:6px">'+(live?'세션 시작일('+o.from+') 뒤로 공포 모드가 켜진 적이 없습니다 — 오늘 주문은 기본 규칙과 같습니다.':'이 모의 기간에는 공포 모드가 켜진 적이 없습니다 — 기본 규칙과 같은 결과입니다.')+'</div>')+
+    (live?'<div class="sub" style="margin-top:4px">운영 세션: 상태가 켜져 있을 때(TQQQ 빠른 모드 · TECL 재가속)만 주문 판정이 기본 규칙과 달라집니다. 세션 설정에서 끌 수 있습니다.</div>':'')+'</div>';
 }
 /* 지수 시세(VIX·VXN) — 공포 모드 모의 재생에만 쓴다. 자료원은 앱 시세 API 하나(/api/quote · 종가). 계좌 시세(liveQuotes)와 섞지 않는다. */
 const planIndexCache={};
@@ -1261,11 +1272,49 @@ async function fetchPlanIndex(sym){
   const rows=quoteToDaily(sym,j).days;   // 모의 목록(index.html fetchDaily)과 같은 변환 — 같은 날 같은 값
   planIndexCache[sym]={at:Date.now(),rows};return rows;
 }
-/* 보고 있는 공포 모드 모의 세션의 '다음 거래일' 판정(엔진 R.panic.next) — 화면 판정일이 재생 자료 끝과 같을 때만. 아니면 null(기본 판정 그대로). */
-function alphaPanicNext(signalDate){
+/* 보고 있는 공포 모드 세션의 '다음 거래일' 판정(엔진 R.panic.next). 공포 모드가 아니면 null(기본 판정 그대로).
+   · 모의 세션: 재생 결과 그대로 — 화면 판정일이 재생 자료 끝과 같을 때만(아니면 null).
+   · 운영 세션(현재 투자중 · 실전 세션): planLivePanic — 판정을 못 하면 {error}(기본 규칙으로 몰래 계산하지 않는다). posOn = 실제 계좌의 TQQQ 보유 여부. */
+function alphaPanicNext(signalDate,posOn){
   const x=activeAssetSession();if(assetRulesOf(x)!=='panic')return null;
+  if(!x||!x.paper)return planLivePanic(x,signalDate,!!posOn);
   const R=assetPaperCache[x.id],P=R&&R.panic;
   return (P&&P.next&&P.signalDate===signalDate)?Object.assign({state:P.state,params:P.params},P.next):null;
+}
+/* 운영 세션의 공포 모드 상태 — 모의와 같은 엔진 replay 를 '세션 시작일부터 판정일까지' 돌려 얻는다(같은 걸 두 군데서 세지 않는다).
+   상태(무장 · 빠른 모드 · 재가속)는 시세(VIX·VXN·TQQQ·TECL)만으로 정해져 계좌 보유와 무관하다 — 그래서 원금은 아무 값(100만$)이나 같다.
+   다음 판정의 보유 여부만 실제 계좌 값(nextPosOn)을 넘긴다. 세션 시작 전의 VIX 는 보지 않는다(모의 세션과 같은 약속). */
+let planIndexError='',planIndexLoading=null;
+const planLivePanicMemo={key:'',out:null};
+function planPanicIndexLoad(){
+  if(assetRulesOf(activeAssetSession())!=='panic')return Promise.resolve();
+  if(planIndexLoading)return planIndexLoading;
+  return planIndexLoading=Promise.all([fetchPlanIndex('^VIX'),fetchPlanIndex('^VXN')]).then(()=>{planIndexError='';},e=>{planIndexError=String(e&&e.message||e);}).then(()=>{planIndexLoading=null;});
+}
+function planLivePanic(x,signalDate,posOn){
+  const E=window.JKPlanSessionEngine,T=liveQuotes.TECL,Q=liveQuotes.TQQQ,G=liveQuotes.SGOV,vix=(planIndexCache['^VIX']||{}).rows,vxn=(planIndexCache['^VXN']||{}).rows;
+  if(!E||!E.replay||!T||!Q||!G)return {error:'시세를 불러오는 중입니다'};
+  if(!(vix&&vix.length)||!(vxn&&vxn.length)){
+    if(!planIndexError&&!planIndexLoading)planPanicIndexLoad().then(()=>{if(!planIndexError)refreshAlphaFromCache();});   // 아직 안 받았으면 받고 한 번 다시 그린다
+    return {error:planIndexError?'VIX·VXN 시세를 받지 못했습니다('+planIndexError+')':'VIX·VXN 시세를 불러오는 중입니다'};
+  }
+  const s0=String(x?((x.settings&&x.settings.startDate)||''):(($('startDate')||{}).value||'')),start=(s0&&s0<signalDate)?s0:signalDate;
+  const key=[x?x.id:'cur',start,signalDate,posOn?1:0,vix.length,vxn.length,T.rows.length,Q.rows.length].join('|');
+  if(planLivePanicMemo.key===key)return planLivePanicMemo.out;
+  const R=E.replay({horizon:5,rules:'panic',startDate:start,endDate:signalDate,principal:1e6,monthlyAdd:0,vix,vxn,nextPosOn:!!posOn,tecl:T.rows,tqqq:Q.rows,sgov:G.rows});
+  const P=R&&R.panic;
+  const out=(R&&!R.error&&P&&P.next&&P.signalDate===signalDate)
+    ?Object.assign({live:true,from:start,state:P.state,params:P.params,log:P.log,signalDate:P.signalDate,vix:P.vix,vxn:P.vxn},P.next)
+    :{error:(R&&R.error)||'판정일 '+signalDate+' 의 공포 모드 상태를 계산하지 못했습니다'};
+  planLivePanicMemo.key=key;planLivePanicMemo.out=out;return out;
+}
+/* 운영 세션에서 공포 모드가 판정을 바꾸는 건 상태가 켜져 있을 때뿐이다 — 그 밖에는 기본 규칙 판정(실제 보유 기준)을 한 글자도 바꾸지 않는다.
+   Guard: 빠른 모드(state.pf)일 때만 엔진 판정 · σ: 재가속(state.ps)일 때만 엔진 σ(기본 σ 보다 클 수 없다). 모의 세션은 재생 판정 그대로. */
+function alphaPanicApply(PX,sigma,decGuard){
+  if(!PX||PX.error)return {sigma,guard:decGuard,own:false,fast:false,sleeve:false};
+  if(!PX.live)return {sigma:PX.sigma>0?PX.sigma:sigma,guard:PX.guard,own:true,fast:!!PX.state.pf,sleeve:PX.sigma>0&&PX.sigma<sigma};
+  const sl=!!PX.state.ps&&PX.sigma>0&&PX.sigma<sigma;
+  return {sigma:sl?PX.sigma:sigma,guard:PX.state.pf?PX.guard:decGuard,own:!!PX.state.pf,fast:!!PX.state.pf,sleeve:sl};   // own — Guard 를 엔진이 정했는가(아니면 기본 판정의 guardFlip 그대로)
 }
 async function replayAssetPaperSession(x,applyView){
   if(!x||!x.paper||!window.JKPlanSessionEngine)return null;
@@ -1302,7 +1351,7 @@ function renderAssetSessions(){
   if(dgDragEl)return;                                   // 끄는 중엔 다시 그리지 않는다(손가락 밑 칩이 사라지지 않게)
   const list=assetSessionList(),active=activeAssetSession(),gone=b.sessions.filter(x=>x&&planRetired(x)).length;
   const q=v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-  let h='<div class="dg-sesschip'+(!active?' on':'')+'" data-asess="" role="tab" aria-selected="'+(!active)+'" title="두 번 누르면 세션 설정">'+q(planCurLabel())+'</div>';
+  let h='<div class="dg-sesschip'+(!active?' on':'')+'" data-asess="" role="tab" aria-selected="'+(!active)+'" title="두 번 누르면 세션 설정">'+q(planCurLabel())+(assetRulesOf(null)==='panic'?'<span class="paperbadge">공포</span>':'')+'</div>';
   for(const x of list){
     const on=!!(active&&active.id===x.id);
     h+='<div class="dg-sesschip'+(on?' on':'')+'" data-asess="'+q(x.id)+'" role="tab" aria-selected="'+on+'" title="두 번 누르면 세션 설정 · 길게 눌러 끌면 순서 변경">'+
@@ -1317,6 +1366,7 @@ function renderAssetSessions(){
     if(active&&active.paper){st.className='asset-session-state paper';st.textContent=name+' · 모의 '+active.simStart+'~'+tail;}
     else{st.className='asset-session-state';st.textContent=name+tail;}
   }
+  renderPlanVersion();
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(dgStickyOffsets);
 }
 async function loadActiveAssetSessionView(refresh=true){
@@ -1396,13 +1446,13 @@ async function editAssetSession(mode){
   $('assetSessionCapital').value=st.startCapital;$('assetSessionMonthly').value=st.monthlyAdd;
   $('assetSessionTarget').value=st.targetCapital;$('assetSessionStart').value=x&&x.paper?x.simStart:st.startDate;
   $('assetSessionModalTitle').textContent=m==='settings'?'설정 · '+(x?x.name:planCurLabel()):'세션 설정';$('assetSessionCreate').textContent='저장';
-  $('assetSessionModalStrategy').textContent=m==='settings'?'🤖 '+planStrategyLabel()+' — 시작자산 · 월 추가 투자 · 목표자산 · 시작일':'이름 · 모의투자 여부 · 포트폴리오에 넣을지를 바꿀 수 있습니다.';
+  $('assetSessionModalStrategy').textContent=m==='settings'?'🤖 '+planStrategyLabelOf(x)+' — 시작자산 · 월 추가 투자 · 목표자산 · 시작일 · 공포 모드(실험)':'이름 · 모의투자 여부 · 포트폴리오에 넣을지를 바꿀 수 있습니다.';
   syncAssetSessionModal();
 }
 function syncAssetSessionModal(){
   const paper=assetModalPaper(),mode=(($('assetSessionModal')||{}).dataset||{}).mode||'session';
   assetPfUI(paper);
-  const pr=$('assetSessionPanicRow');if(pr){pr.style.display=paper?'':'none';if(!paper&&$('assetSessionPanic'))$('assetSessionPanic').checked=false;}   // 공포 모드는 모의 세션에서만 — 운영으로 바꾸면 꺼진다
+  const pv=$('assetSessionPanicVerb');if(pv)pv.textContent=paper?'로 재생':'로 운영 — 오늘 주문 판정이 이 규칙을 따릅니다';   // 공포 모드는 세션마다 ⚙️ 설정에서 고른다(2026-11-10 사용자: "각 세션 옵션 설정에 넣어야") — 모의 · 운영 모두. 운영은 저장할 때 한 번 더 묻는다
   const x=assetEditingId==='current'?{ledger:alphaLedger}:assetPlanBox().sessions.find(s=>s.id===assetEditingId);
   const locked=!paper&&x&&window.JKPlanSessionSettings.hasLedgerActivity(x.ledger);
   if(!paper&&x&&x.liveSettings){$('assetSessionCapital').value=x.liveSettings.startCapital;$('assetSessionStart').value=x.liveSettings.startDate;}
@@ -1427,6 +1477,9 @@ async function createAssetSession(){
   const box=assetPlanBox(),original=id==='current'?{id,horizon,name:planCurLabel(),paper:false,portfolio:planPortfolio!==false,settings:assetSessionSettingsFromView(),ledger:cloneObj(alphaLedger)}:box.sessions.find(x=>x.id===id);
   if(id&&!original)return;
   if(original&&original.paper!==input.paper&&!confirm('세션 종류를 변경할까요? 실제 거래이력은 보존하고, 모의 거래는 운영 거래이력에 복사하지 않습니다.'))return;
+  /* 운영 세션을 공포 모드로 켤 때만 한 번 더 묻는다 — 실제 주문 판정이 바뀐다(이미 공포 모드인 운영 세션을 다시 저장할 땐 안 묻는다) */
+  const livePanicOn=!input.paper&&input.rules==='panic'&&!(original&&!original.paper&&assetRulesOf(original)==='panic');
+  if(livePanicOn&&!confirm('공포 모드 v1.1 은 실험적 확장입니다(공식 규칙 아님).\n\n이 운영 세션의 오늘 주문 판정이 바뀝니다 — VIX 가 40 이상으로 오른 뒤 35 아래로 진정하면 TQQQ·TECL 을 기본 규칙보다 빨리 다시 싣습니다. 공포가 두 번 오는 장에서는 휩쏘로 잃을 수 있습니다.\n\n바꿀까요?'))return;
   assetSessionSaving=true;$('assetSessionCreate').disabled=true;
   try{
     const fx=input.paper?(original&&original.paper&&original.simStart===input.start&&original.paperFxRate>0?original.paperFxRate:await assetFxAt(input.start)):0;
@@ -1439,6 +1492,7 @@ async function createAssetSession(){
     if(id==='current'){
       planPortfolio=x.portfolio!==false;
       planCurName=String(x.name||'').trim()==='현재 투자중'?'':String(x.name||'').trim();   // 이름 — 원장(fiveYearPlanV2.sessionName)에 적는다
+      planCurRules=(x.settings&&x.settings.alphaRules==='panic')?'panic':'base';   // 규칙 — 원장(fiveYearPlanV2.alphaRules)에 적는다
       applyAssetSettings(x);alphaLedger=x.ledger;alphaSyncInputs();localSave();await cloudSave();
     }else{
       if(original)box.sessions[box.sessions.indexOf(original)]=x;else box.sessions.push(x);
@@ -2385,6 +2439,27 @@ function alphaExplainBounds(target,current,band){
   return {low:target-band,high:target+band,gap,distance:Math.max(0,band-gap),
     side:current<target?'부족':current>target?'초과':'일치'};
 }
+/* 운영 세션 공포 모드 상태 카드(#assetLivePanic) — 모의 카드와 같은 글(assetPanicHtml). 공포 모드 운영 세션이 아니면 비운다. */
+function renderLivePanic(PX){
+  const el=$('assetLivePanic');if(!el)return;
+  const x=activeAssetSession(),on=(!x||!x.paper)&&assetRulesOf(x)==='panic';
+  if(!on){el.hidden=true;el.innerHTML='';return;}
+  el.hidden=false;
+  el.innerHTML=(PX&&!PX.error)?assetPanicHtml({panic:{state:PX.state,params:PX.params,log:PX.log,signalDate:PX.signalDate,vix:PX.vix,vxn:PX.vxn}},{live:true,from:PX.from})
+    :'<div class="path-note" id="assetPanicCard" style="margin-top:8px"><b style="color:var(--gold)">공포 모드 v1.1 · 실험적 확장</b> — '+String((PX&&PX.error)||'판정 대기').replace(/</g,'&lt;')+'</div>';
+}
+/* 운영 공포 모드 판정 불가 — 오늘 주문을 비우고 이유를 적는다(기본 규칙 주문을 같은 자리에 보이면 실험 규칙 주문으로 읽힌다). */
+function alphaPanicBlocked(why){
+  const msg='공포 모드 — '+why+' · 오늘 주문을 계산하지 않았습니다(기본 규칙으로 대신 계산하지 않습니다).';
+  if($('alphaMeta'))$('alphaMeta').textContent=msg;
+  if($('alphaDecision')){$('alphaDecision').className='alpha-decision';$('alphaDecision').innerHTML='<b>오늘 판단: 보류</b><br>'+msg.replace(/</g,'&lt;');}
+  pendingAlphaOrders=[];
+  if($('alphaRecordFill')){$('alphaRecordFill').disabled=true;$('alphaRecordFill').textContent='✅ 오늘 주문 체결 반영';}
+  if($('alphaActions'))$('alphaActions').innerHTML=waitHtml('오늘 주문 보류',msg);
+  if($('alphaSummary'))$('alphaSummary').innerHTML='';
+  if($('alphaGuide'))$('alphaGuide').hidden=true;
+  renderDualGuardStrip({hold:msg});
+}
 function renderAlphaPlan(qTecl,qTqqq,qSgov){
   if(!qTecl||!qTqqq||!qSgov||!qTecl.settled||!qTqqq.settled||!qSgov.settled)return;
   const D=PATH_DEFAULTS.alpha,tr=qTecl.rows.filter(x=>x.date<=qTecl.settled.date),qr=qTqqq.rows.filter(x=>x.date<=qTqqq.settled.date);
@@ -2398,14 +2473,17 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   const startCap=Math.max(1,num('startCapital',20000));
   if($('alphaStartState'))$('alphaStartState').textContent=(tq===0&&qq===0&&sq===0&&Math.abs(cash-startCap)<1?'신규 시작 상태 · 현금 '+usd(startCap)+'에서 오늘 주문을 계산합니다.':'운용 중 · 현재 보유수량/현금을 기준으로 필요한 주문만 표시합니다.');
   let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=startCap;$('aCash').value=startCap;}
-  const PX=alphaPanicNext(qTecl.settled.date),sigW=(PX&&PX.sigma>0)?PX.sigma:sigma;   // 공포 모드 모의 세션: TECL 목표의 σ · Guard 는 엔진 판정(R.panic.next) — 그 밖에는 null
+  const PX=alphaPanicNext(qTecl.settled.date,qq>0);   // 공포 모드 세션(모의 · 운영)만 — 그 밖에는 null
+  renderLivePanic(PX);
+  if(PX&&PX.error){alphaPanicBlocked(PX.error);return;}   // 운영 공포 모드인데 판정 불가 — 기본 규칙 주문을 대신 보이지 않는다
+  const sigW=alphaPanicApply(PX,sigma,'').sigma;   // TECL 목표의 σ — 공포 모드 재가속 중이면 엔진 σ
   const AR=alphaRuleSet(),E=window.JKPlanSessionEngine,S0=D.ivsS0,w=Math.min(1,(S0*S0)/(sigW*sigW)),curTeclW=(tq*ts)/signalTotal,sleeveNow=curTeclW/Math.max(D.teclWeight,1e-9);
   // 판정은 모의 엔진과 같은 alphaDecide (규칙은 기본 하나 — 새 규칙·공격형 2026-11-08 폐지).
   if(!E||!E.alphaDecide){if($('alphaMeta'))$('alphaMeta').textContent='듀얼가드 엔진(plan-session-engine.js)을 불러오지 못했습니다 — 새로고침하세요.';return;}
   const yearStart=!!(E.yearDoneAt&&E.yearDoneAt(qTqqq.settled.date));
   const dec=E.alphaDecide({rules:AR,w,sleeveNow,teclQty:tq,tqqqQty:qq,tqqqClose:qs,sma,tqqqWeight:(qq*qs)/signalTotal,guardWeight:D.guardWeight,yearStart});
-  const teclHit=dec.teclHit,upper=dec.upper,lower=dec.lower,tqReb=dec.tqReb,guard=PX?PX.guard:dec.guard,guardFlip=PX?(guard==='ON')!==(qq>0):dec.guardFlip;
-  const panicNote=PX?(PX.state.pf?' · 공포 모드 빠른 Guard(SMA'+PX.params.ma+' ±'+(PX.params.band*100).toFixed(0)+'%)':'')+(sigW<sigma?' · 공포 모드 TECL 재가속(σ '+(sigma*100).toFixed(0)+'% → '+(sigW*100).toFixed(0)+'%)':''):'';
+  const PA=alphaPanicApply(PX,sigma,dec.guard),guard=PA.guard,teclHit=dec.teclHit,upper=dec.upper,lower=dec.lower,tqReb=dec.tqReb,guardFlip=PA.own?(guard==='ON')!==(qq>0):dec.guardFlip;
+  const panicNote=PX?(PA.fast?' · 공포 모드 빠른 Guard(SMA'+PX.params.ma+' ±'+(PX.params.band*100).toFixed(0)+'%)':'')+(PA.sleeve?' · 공포 모드 TECL 재가속(σ '+(sigma*100).toFixed(0)+'% → '+(sigW*100).toFixed(0)+'%)':''):'';
   const dep=alphaDepositPending(),force=!!dep;   // 입금 맞춤 — 모의 엔진의 force(입금일 전체 맞춤)와 같은 규칙
   const needRebalance=teclHit||guardFlip||tqReb||force||horizonRebalancePending||(!tq&&!qq&&!sq);
 
@@ -2463,7 +2541,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   for(const sym of ['TECL','TQQQ','SGOV']){
     const dq=targets[sym]-pos[sym];if(dq>0){const p=pxs[sym],q=Math.min(dq,Math.floor(avail/(p*(1+F))));if(q>0){avail-=q*p+alphaFee(q,p);orders.push({side:'buy',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}}
   }
-  $('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정종가 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% ('+(D.teclWeight*100).toFixed(0)+'% 슬리브 내) · TQQQ '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard+' · '+planStrategyLabel();
+  $('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정종가 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% ('+(D.teclWeight*100).toFixed(0)+'% 슬리브 내) · TQQQ '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard+' · '+planStrategyLabelOf(activeAssetSession());
   if($('alphaRefreshTime'))$('alphaRefreshTime').textContent='시세 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   pendingAlphaOrders=orders.map(o=>({...o}));
   if($('alphaRecordFill')){$('alphaRecordFill').disabled=!orders.length;$('alphaRecordFill').textContent=orders.length?'✅ 오늘 주문 체결 반영 ('+orders.length+'건)':'✅ 오늘 주문 체결 반영';}
@@ -2517,6 +2595,9 @@ function renderDualGuardStrip(o){
   const el=$('dgStrip');if(!el)return;
   const chip=(k,v,sub,cls)=>'<div class="dg-chip'+(cls?' '+cls:'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div><div class="s">'+sub+'</div></div>';
   const sb=$('assetStatusBadges');   // 상태줄 배지(운영 탭 상태줄의 신호 배지 자리) — 아래 띠와 같은 값
+  /* 공포 모드 운영 세션인데 판정 불가(o.hold = 이유) — '불러오는 중'이 아니라 '보류'로 적는다. 바깥 화면(포트폴리오 '오늘')에는 알리지 않는다. */
+  if(o&&o.hold){if(sb)sb.innerHTML='<span class="badge warn" title="공포 모드 판정 불가">주문 보류</span>';
+    el.innerHTML=chip('오늘 판단','보류',String(o.hold).replace(/</g,'&lt;'),'go')+chip('① TECL · 전체 자산','—','현재 → 목표')+chip('② TQQQ Guard','—','SMA225 대비')+chip('다음 Guard 경계','—','확정 종가 기준');return;}
   if(sb)sb.innerHTML=o?('<span class="badge '+(o.guard==='ON'?'ok':'set')+'" title="TQQQ 추세 Guard">Guard '+o.guard+'</span>'
     +(o.orders?'<span class="badge warn" title="오늘 예상 주문">주문 '+o.orders+'건</span>':'<span class="badge set" title="오늘 예상 주문">'+(o.need?'조정 0건':'유지')+'</span>')):'';
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(dgStickyOffsets);
@@ -2656,13 +2737,14 @@ async function refreshLive(){
     [pS,pV,pT,pQ,pG].forEach(p=>p.catch(()=>{}));
     /* 자산플랜 '오늘 주문'(TECL·TQQQ·SGOV + 계좌 칸)은 세 종목이 오면 먼저 그린다 — SOXL·QQQ·QLD 를 기다리지 않게.
        같은 시세·같은 계좌 칸이라 아래 최종 그림과 값이 같다(먼저 보일 뿐). */
-    Promise.all([pV,pT,pG]).then(([v,t,g])=>{ if(liveBusy){ renderAlphaPlan(v,t,g); renderAlphaLedger(); } }).catch(()=>{});
+    const pX=planPanicIndexLoad();   // 공포 모드 운영 세션이면 VIX·VXN 도 받는다(아니면 바로 끝)
+    Promise.all([pV,pT,pG,pX]).then(([v,t,g])=>{ if(liveBusy){ renderAlphaPlan(v,t,g); renderAlphaLedger(); } }).catch(()=>{});
     await loadOperatingState(auth.currentUser);
     renderSessionSelectors();
     const inf=liveState?linkedOpSession(liveState.inf,'SOXL',planLinks.inf):null,vr=liveState?linkedOpSession(liveState.vr,'TECL',planLinks.vr):null;
     const [qs,qv,qt,qqq,qld,sgov]=await Promise.all([pS,pV,pT,pQ,pL,pG]);
     const asof=[qs.settled.date,qv.settled.date,qt.settled.date,qqq.settled.date,sgov.settled.date].filter(Boolean).sort()[0];$('liveSync').textContent=liveStateSource+' · 확정 일봉 '+asof+' 기준';
-    renderAlphaPlan(qv,qt,sgov);
+    await pX;renderAlphaPlan(qv,qt,sgov);
     renderAlphaLedger();
     const actions=[],classicActions=[];
     if(inf){
@@ -2743,12 +2825,14 @@ function readForm(){
   o.alphaLedger=JSON.parse(JSON.stringify(alphaLedger));
   o.portfolio=planPortfolio!==false;   // '현재 투자중'을 포트폴리오에 넣을지(세션 설정)
   o.sessionName=String(planCurName||'').trim();   // '현재 투자중' 이름(세션 설정 · 빈칸이면 '현재 투자중')
+  o.alphaRules=planCurRules==='panic'?'panic':'base';   // '현재 투자중' 규칙(세션 설정 · 공포 모드 v1.1)
   return o;
 }
 function apply(o){
   const all={...defaults(),...o};
   planPortfolio=all.portfolio!==false;
   planCurName=String(all.sessionName||'').trim();
+  planCurRules=all.alphaRules==='panic'?'panic':'base';
   planLinks={inf:String(all.planLinks?.inf||''),vr:String(all.planLinks?.vr||''),sleeve:String(all.planLinks?.sleeve||'')};
   sleeveSessions=Array.isArray(all.sleeveSessions)?all.sleeveSessions:[];
   // v1.4.x 장부를 최초 1회 세션 구조로 마이그레이션
@@ -3058,7 +3142,7 @@ function render(){
   document.querySelectorAll(".step").forEach(b=>b.classList.toggle("on",Number(b.dataset.step)===stage));
   if(activePlanTab==='alpha'){
     const HD=horizonStrategy(),P=planStrategy();
-    $("stageTitle").textContent=P.name;if($("dgVer"))$("dgVer").textContent="v"+P.version;
+    $("stageTitle").textContent=P.name;renderPlanVersion();
     $("stageBadge").textContent=HD.risk;
     $("stageDesc").textContent=P.summary+" · 시작금 "+usd(cap);
     $("stageSource").textContent="🤖 클로드";
