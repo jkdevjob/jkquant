@@ -367,7 +367,7 @@ function check3(S,t,E,bad){
   // ── L. 그림 — 선 2개(평가액 · 투입) · 한 축 · 범례 · 낙폭 띠 · 값 상자는 textContent · 검증한 색
   { const C=c.pfCombine([{tab:'plan',cur:'usd',series:[{date:'2026-04-01',tot:100,inflow:100},{date:'2026-04-02',tot:120,inflow:100},{date:'2026-04-03',tot:90,inflow:100},{date:'2026-04-06',tot:95,inflow:100}]}],1);
     const html=c.pfChartHtml(C),bind=fnOf(S.idx,'function pfChartBind()');
-    t('L1 그림: 평가액·원금 선 · 끝 값 표시 · 범례(평가액(지금 계좌) · 원금) · 최대 낙폭 띠(04-02→04-03 · −25%) · 접근 이름',/class="pf-line pf-in"/.test(html)&&/class="pf-line pf-val"/.test(html)&&/class="pf-end">\$95</.test(html)&&/평가액\(지금 계좌\)/.test(html)&&!/합친 평가액/.test(html)&&/data-pfser="inflow"[^>]*>(?:<i[^>]*><\/i>)?원금</.test(html)&&/class="pf-band"/.test(html)&&/role="img"/.test(html)&&near(C.mdd,25)&&C.mddPeak==='2026-04-02',html.slice(0,200));
+    t('L1 그림: 평가액·원금 선 · 끝 값 표시 · 범례(평가액 · 원금) · 최대 낙폭 띠(04-02→04-03 · −25%) · 접근 이름',/class="pf-line pf-in"/.test(html)&&/class="pf-line pf-val"/.test(html)&&/class="pf-end">\$95</.test(html)&&/data-pfser="total"[^>]*>(?:<i[^>]*><\/i>)?평가액</.test(html)&&!/합친 평가액|지금 계좌\)/.test(html)&&/data-pfser="inflow"[^>]*>(?:<i[^>]*><\/i>)?원금</.test(html)&&/class="pf-band"/.test(html)&&/role="img"/.test(html)&&near(C.mdd,25)&&C.mddPeak==='2026-04-02',html.slice(0,200));
     t('L2 값 상자는 textContent 로만 · 손가락(pointerdown)·화살표 키로도 · 색: 합친 선 흰색(#e8ecf7 — 무리 색과 안 겹침) · 투입 금색 점선(무매 초록과 색약 경고 띠라 모양으로도 가름)',/textContent/.test(bind)&&!/innerHTML/.test(bind)&&/pointerdown/.test(bind)&&/ArrowLeft/.test(bind)&&/--pf-val:#e8ecf7;--pf-in:#c98500/.test(S.idx)
       &&/\.pf-in\{stroke:var\(--pf-in\);stroke-width:1\.5;stroke-dasharray:6 4\}/.test(S.idx));
     t('L3 비중 막대는 무리 넷(듀얼가드·섀넌·무매·그 밖)만 — 모든 짝이 갈리는 색(검증) · 2px 틈',/plan:\{label:'듀얼가드',color:'#9085e9'\},ivs:\{label:'섀넌',color:'#d55181'\},inf:\{label:'무한매수법',color:'#008300'\}/.test(S.idx)&&/const PF_OTHER=\{label:'그 밖',color:'#c9cdd9'\};/.test(S.idx)&&/\.pf-bar\{display:flex;gap:2px;/.test(S.idx)&&!/PF_COLOR/.test(S.idx));
@@ -411,8 +411,8 @@ function check3(S,t,E,bad){
   { const S7=c.pfChartSeries(C,'tk'), SS7=c.pfChartSeries(C,'sess');
     c.PF.chartMode='tk'; c.PF.chartOff={sess:new Set(),tk:new Set()}; const html7=c.pfChartHtml(C); c.PF.chartMode='sess';
     const pf7=S.idx.slice(S.idx.indexOf('function pfChartSeries('),S.idx.indexOf('function pfMonthTable('));
-    t('Q7 선 순서·이름: 원금(맨 앞) → 평가액(지금 계좌) → 선들 — 세션별·종목별 둘 다',
-      S7[0].key==='inflow'&&S7[0].name==='원금'&&S7[1].key==='total'&&S7[1].name==='평가액(지금 계좌)'&&SS7[0].name==='원금'&&SS7[1].name==='평가액(지금 계좌)'&&!S7.slice(2).some(x=>x.base),JSON.stringify(S7.map(x=>x.name)));
+    t('Q7 선 순서·이름: 원금(맨 앞) → 평가액 → 선들 — 세션별·종목별 둘 다',
+      S7[0].key==='inflow'&&S7[0].name==='원금'&&S7[1].key==='total'&&S7[1].name==='평가액'&&SS7[0].name==='원금'&&SS7[1].name==='평가액'&&!S7.slice(2).some(x=>x.base),JSON.stringify(S7.map(x=>x.name)));
     t('Q7 종목별 보기도 처음부터 평가액·원금 선이 그려진다 · 범례 첫 칩이 원금',/class="pf-line pf-val"/.test(html7)&&/class="pf-line pf-in"/.test(html7)&&/pf-legend2"><button[^>]*data-pfser="inflow"/.test(html7),html7.slice(html7.indexOf('pf-legend2'),html7.indexOf('pf-legend2')+200));
     t('Q7 값 상자: 원금 → 평가액 → 선들 → 수익률 · 글자 \'합친 평가액\'·\'투입 원금\'·\'투입\' 없음(그림·표·카드)',
       /if\(G\.I\) line\('var\(--pf-in\)',pfUsdPlain\(p\.inflow\),'원금'\); if\(G\.T\) line\('var\(--pf-val\)',pfUsdPlain\(p\.now\),'평가액'\);/.test(S.idx)
@@ -685,8 +685,8 @@ const MUT=[
   ['그릇: 종목별 값 안 넣음','idx',s=>s.replace("_pfSeriesSink.push({date:row.date, tot, inflow:cur.inflow, out:o, realized:+cur.realized||0, hv, cash:(+cur.k||0)-o});","_pfSeriesSink.push({date:row.date, tot, inflow:cur.inflow, out:o, realized:+cur.realized||0, hv:{}, cash:(+cur.k||0)-o});")],
   ['그릇: 현금에 나간 돈 포함','idx',s=>s.replace("hv, cash:(+cur.k||0)-o}); }","hv, cash:(+cur.k||0)}); }")],
   ['종목별 보기: 처음에 평가액·원금 끔(옛 기본)','idx',s=>s.replace("chartOff:{sess:new Set(), tk:new Set()}};","chartOff:{sess:new Set(), tk:new Set(['total','inflow'])}};")],
-  ['원금 선이 맨 뒤(옛 순서)','idx',s=>s.replace("out=[{key:'inflow', base:'in', name:'원금', color:'var(--pf-in)', vals:P.map(p=>p.inflow)},   // 원금이 맨 앞(2026-11-09 사용자) · 그 다음 평가액 · 선들\n    {key:'total', base:'val', name:'평가액(지금 계좌)', color:'var(--pf-val)', vals:P.map(p=>p.now)}];","out=[{key:'total', base:'val', name:'평가액(지금 계좌)', color:'var(--pf-val)', vals:P.map(p=>p.now)}];").replace("  return out;\n}\nfunction pfChartHtml(C){","  out.push({key:'inflow', base:'in', name:'원금', color:'var(--pf-in)', vals:P.map(p=>p.inflow)});\n  return out;\n}\nfunction pfChartHtml(C){")],
-  ['글자: 평가액 → 합친 평가액(옛 이름)','idx',s=>s.replace("name:'평가액(지금 계좌)'","name:'합친 평가액(지금 계좌)'")],
+  ['원금 선이 맨 뒤(옛 순서)','idx',s=>s.replace("out=[{key:'inflow', base:'in', name:'원금', color:'var(--pf-in)', vals:P.map(p=>p.inflow)},   // 원금이 맨 앞(2026-11-09 사용자) · 그 다음 평가액 · 선들\n    {key:'total', base:'val', name:'평가액', color:'var(--pf-val)', vals:P.map(p=>p.now)}];","out=[{key:'total', base:'val', name:'평가액', color:'var(--pf-val)', vals:P.map(p=>p.now)}];").replace("  return out;\n}\nfunction pfChartHtml(C){","  out.push({key:'inflow', base:'in', name:'원금', color:'var(--pf-in)', vals:P.map(p=>p.inflow)});\n  return out;\n}\nfunction pfChartHtml(C){")],
+  ['글자: 평가액 → 평가액(지금 계좌)(옛 이름)','idx',s=>s.replace("name:'평가액', color:'var(--pf-val)'","name:'평가액(지금 계좌)', color:'var(--pf-val)'")],
   ['새 세션: 날이 셋 미만이면 그릇에도 안 넣음(섀넌 선 빠짐 재현)','idx',s=>s.replace("if(D.length<3 && !sink) return null;","if(D.length<3) return null;")],
   ['새 세션: 끝 값을 셋 미만이면 안 넣음','idx',s=>s.replace("if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){   // 끝 값도 목록·카드와 같은 지금 시세(같은 날이면 바꿔 넣는다) — 날이 셋이 안 되는 새 세션도","if(n>=3&&typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){")],
   ['듀얼가드 날마다: 종목별 빠짐','idx',s=>s.replace("    const hv={}; if(st.tecl) hv.TECL=st.tecl*last.TECL;","    const hv={}; if(false) hv.TECL=st.tecl*last.TECL;")],
