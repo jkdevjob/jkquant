@@ -1,12 +1,23 @@
 // 범용 비중 엔진 — target(k) 는 전일(k-1)까지 확정 자료로 자산별 목표비중을 낸다. 목표와 band 넘게 벌어지거나 0↔보유 전환이면 그 자산만 당일 종가로 맞춘다.
 const fs=require('fs'),path=require('path'); const D=path.join(__dirname,'data');
 const load=s=>JSON.parse(fs.readFileSync(path.join(D,s+'.json'))).series;
-function prep(syms){ const S={}; syms.forEach(s=>{ S[s]={}; load(s).forEach(x=>{ if(x.close>0) S[s][x.date]=x.close; }); });
+function prep(syms,opt){ const S={}; syms.forEach(s=>{ S[s]={}; load(s).forEach(x=>{ if(x.close>0) S[s][x.date]=x.close; }); });
   const irx={}; load('IRX').forEach(x=>irx[x.date]=x.close);
   const dates=Object.keys(S[syms[0]]).filter(d=>syms.every(s=>S[s][d]>0)).sort();
   const C={}; syms.forEach(s=>C[s]=dates.map(d=>S[s][d]));
-  return {S,irx,dates,C,syms}; }
+  const O={};   // opt.ohlc(11-10): 시가·고가·저가(자료의 ohlc 는 종가와 같은 조정 척도 — 확인 11-10) · 없는 날은 종가로 채움 · 범위 기반 변동성(plan_rules volEst)용
+  if(opt&&opt.ohlc) syms.forEach(s=>{ const m={}; (JSON.parse(fs.readFileSync(path.join(D,s+'.json'))).ohlc||[]).forEach(x=>{ if(x.close>0&&x.high>0&&x.low>0) m[x.date]=x; });
+    O[s]={o:dates.map(d=>m[d]?m[d].open||m[d].close:S[s][d]),h:dates.map(d=>m[d]?m[d].high:S[s][d]),l:dates.map(d=>m[d]?m[d].low:S[s][d])}; });
+  return {S,irx,dates,C,syms,O}; }
 const ind={
+  // (11-10) 범위 기반 변동성 — Yang-Zhang(밤 사이 + 시가→종가 + Rogers-Satchell) · Garman-Klass(밤 사이 점프 포함) · 지수가중(EWMA, RiskMetrics λ) — 모두 전일까지 · 연율
+  yz(C,O,n){ const out=[]; const lo=[],lc=[],rs=[]; for(let k=0;k<C.length;k++){ if(k<1){ lo.push(0); lc.push(0); rs.push(0); out.push(null); continue; }
+      const o=O.o[k],h=O.h[k],l=O.l[k],c=C[k]; lo.push(Math.log(o/C[k-1])); lc.push(Math.log(c/o)); rs.push(Math.log(h/c)*Math.log(h/o)+Math.log(l/c)*Math.log(l/o));
+      if(k<n){ out.push(null); continue; } let mo=0,mc=0,vo=0,vc=0,vr=0; for(let j=k-n+1;j<=k;j++){ mo+=lo[j]; mc+=lc[j]; } mo/=n; mc/=n; for(let j=k-n+1;j<=k;j++){ vo+=(lo[j]-mo)**2; vc+=(lc[j]-mc)**2; vr+=rs[j]; } vo/=(n-1); vc/=(n-1); vr/=n;
+      const kk=0.34/(1.34+(n+1)/(n-1)); out.push(Math.sqrt(Math.max(0,vo+kk*vc+(1-kk)*vr)*252)); } return out; },
+  gk(C,O,n){ const out=[], t=[]; for(let k=0;k<C.length;k++){ if(k<1){ t.push(0); out.push(null); continue; } const o=O.o[k],h=O.h[k],l=O.l[k],c=C[k];
+      t.push(0.5*Math.log(h/l)**2-(2*Math.log(2)-1)*Math.log(c/o)**2+Math.log(o/C[k-1])**2); if(k<n){ out.push(null); continue; } let s=0; for(let j=k-n+1;j<=k;j++) s+=t[j]; out.push(Math.sqrt(Math.max(0,s/n)*252)); } return out; },
+  ewma(a,lam,warm){ const out=[]; let v=null; for(let k=0;k<a.length;k++){ if(k<1){ out.push(null); continue; } const r=Math.log(a[k]/a[k-1]); v=v==null?r*r:lam*v+(1-lam)*r*r; out.push(k<(warm||20)?null:Math.sqrt(v*252)); } return out; },
   ma(a,n){ const o=[];let s=0; for(let k=0;k<a.length;k++){ s+=a[k]; if(k>=n) s-=a[k-n]; o.push(k>=n-1?s/n:null);} return o; },
   vol(a,n){ const o=[]; for(let k=0;k<a.length;k++){ if(k<n){o.push(null);continue;} let r=[]; for(let j=k-n+1;j<=k;j++) r.push(a[j]/a[j-1]-1); const m=r.reduce((x,y)=>x+y,0)/n; o.push(Math.sqrt(r.reduce((x,y)=>x+(y-m)**2,0)/n*252)); } return o; },
 };
@@ -39,6 +50,9 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
       if(o.deferDec&&s===o.deferDec.sym&&want>0&&remY[k]<o.deferDec.days){ const gain=g-g*fee-b; if(gain>0&&(!o.deferDec.taxable||yearPnl+gain>DED)){ deferN++; continue; } }   // 12월 이연(전량 청산 = Guard·규칙 0 목표는 미루지 않음)
       cash+=g-g*fee; yearPnl+=g-g*fee-b; basis[s]-=b; q[s]=want; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'s',g/tot]); } }
     for(const s of todo){ const want=shares(tot*(tgt[s]||0)/(o.sizePrev?pp[s]:px[s])); if(want>q[s]){ const n=Math.min(want-q[s],shares(cash/(px[s]*(1+fee)))); if(n>0){ const g=n*px[s]; cash-=g+g*fee; basis[s]+=g+g*fee; q[s]+=n; turn+=g; if(o.cnt) (o.cnt[s]=o.cnt[s]||[]).push([d,'b',g/tot]); } } }
+    if(o.hvIn){ const H=o.hvIn; o._hvLast=o._hvLast||{}; for(const s of syms){ if(!(q[s]>0)) continue; const avg=basis[s]/q[s], p0=px[s]; const unr=(p0-avg)*q[s]; if(!(unr<0)||-unr<H.loss*basis[s]) continue; if(!(yearPnl>DED)) continue; if(o._hvLast[s]!=null&&k-o._hvLast[s]<(H.gap??21)) continue;
+        const per=avg-p0+p0*fee*2; if(per<=0) continue; const need=yearPnl-DED; let n=Math.min(q[s],o.frac?need/per:Math.ceil(need/per)); if(n<=0) continue;
+        const g=n*p0, realized=g-g*fee-avg*n; cash+=g-g*fee; yearPnl+=realized; basis[s]-=avg*n; cash-=g+g*fee; basis[s]+=g+g*fee; turn+=2*g; o._hvLast[s]=k; if(o.hvlog) o.hvlog.push([d,s,-realized]); } }   // o.hvIn(11-10): 연중 손실 수확 — 평가손실 ≥ loss×원가 · 올해 실현이익이 공제를 넘을 때 그 넘는 만큼만 팔고 되산다(같은 종목 gap 일에 한 번 · 수수료 양쪽 · 노출 그대로)
     // o.harvest(11-07): 연말(그해 마지막 거래일 종가) 실현손익을 250만원 공제(DED)에 맞춘다 — 공제 미달이면 평가이익을 팔고 바로 되사 공제를 채움(원가 상향 · 미래 세금↓) · 공제 초과면 평가손실을 팔고 되사 상계(이월공제 없음 → 공제까지만). 수수료 양쪽. 안 주면 기존과 같다.
     if(o.harvest&&(k===i1||dates[k+1].slice(0,4)!==d.slice(0,4))){ const H=o.harvest; let gH=0,lH=0;
       for(const s of syms){ if(!(q[s]>0)) continue; const avg=basis[s]/q[s], p0=px[s];
@@ -47,6 +61,7 @@ function sim(P,o){ const {dates,C,irx}=P; const syms=o.assets; const cap=o.cap||
         else if(H.loss!==false&&p0<avg&&yearPnl>DED){ const per=avg-p0+p0*fee; const need=yearPnl-DED; let n=Math.min(q[s],o.frac?need/per:Math.ceil(need/per)); if(n<=0) continue;
           const g=n*p0, realized=g-g*fee-avg*n; cash+=g-g*fee; yearPnl+=realized; basis[s]-=avg*n; cash-=g+g*fee; basis[s]+=g+g*fee; turn+=2*g; lH+=-realized; } }
       if(o.hlog) o.hlog.push([d.slice(0,4),gH,lH]); }
+    if(o.daily) o.daily.push({d,cash,q:Object.assign({},q),px:Object.assign({},px),st:Object.assign({},st)});   // o.daily(11-10): 날마다 상태(현금·주수·종가·규칙 상태) 기록 — 해부용 · 안 주면 기존과 같다
     eq.push([d,cash+syms.reduce((a,s)=>a+q[s]*px[s],0)]); }
   if(o.dep&&depPend>0){ eq[eq.length-1][1]+=depPend; o.flows.push([eq[eq.length-1][0],depPend]); depPend=0; }   // 못 넣은 적립금은 현금
   if(o.liq){ for(const s of syms){ if(q[s]>0){ const g=q[s]*C[s][i1]; yearPnl+=g-g*fee-basis[s]; eq[eq.length-1][1]-=g*fee; } } }   // liq: 끝날 전부 판다 — 수수료 + 그 이익을 올해 실현분에 넣어 아래 세금

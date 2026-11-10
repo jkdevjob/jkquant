@@ -9,10 +9,10 @@ const fix=(p,pre)=>{ const q=Object.assign({},p); if(q.offAsset&&!q.offAsset.sta
 const f=x=>x.toFixed(1);
 function dd(eq,s,e){ let pk=0,x=0; for(const [d,v] of eq){ if(d>e) break; pk=Math.max(pk,v); if(d>=s) x=Math.max(x,(pk-v)/pk); } return x*100; }
 for(const [lab,P,R,G,from,y0,subs,W] of [
-  ['실제',prep(['TECL','TQQQ'].concat(EXTRA)),'TECL','TQQQ','2011-01-01',2011,[['2011~18','2011-01-01','2018-12-31'],['2019~','2019-01-01',null]],[['2015','2015-06-01','2016-02-29'],['2018','2018-09-01','2018-12-31'],['2020','2020-02-15','2020-03-31'],['2022','2021-12-27','2022-12-31'],['2024-25','2024-07-10','2025-04-30'],['2026-10','2026-10-01','2026-12-31']]],
-  ['합성',prep(['SYNTECL','SYNTQQQ'].concat(EXTRA.map(x=>'SYN'+x))),'SYNTECL','SYNTQQQ','2000-01-01',2000,[['2000~09','2000-01-01','2009-12-31'],['2010~','2010-01-01',null]],[['닷컴','2000-03-10','2002-10-31'],['금융위기','2007-10-09','2009-03-31'],['2022','2021-12-27','2022-12-31']]]]){
+  ['실제',prep(['TECL','TQQQ'].concat(EXTRA.map(x=>x.replace(/^=/,''))),{ohlc:true}),'TECL','TQQQ','2011-01-01',2011,[['2011~18','2011-01-01','2018-12-31'],['2019~','2019-01-01',null]],[['2015','2015-06-01','2016-02-29'],['2018','2018-09-01','2018-12-31'],['2020','2020-02-15','2020-03-31'],['2022','2021-12-27','2022-12-31'],['2024-25','2024-07-10','2025-04-30'],['2026-10','2026-10-01','2026-12-31']]],
+  ['합성',prep(['SYNTECL','SYNTQQQ'].concat(EXTRA.map(x=>x.startsWith('=')?x.slice(1):'SYN'+x)),{ohlc:true}),'SYNTECL','SYNTQQQ','2000-01-01',2000,[['2000~09','2000-01-01','2009-12-31'],['2010~','2010-01-01',null]],[['닷컴','2000-03-10','2002-10-31'],['금융위기','2007-10-09','2009-03-31'],['2022','2021-12-27','2022-12-31']]]]){
   const isSyn=lab==='합성', last=P.dates[P.dates.length-1];
-  const mkO=(p,cap,extra)=>{ const o=Object.assign({cap,fee:p.fee,sizePrev:!!process.env.SIZEPREV},mk(P,R,G,p),extra||{}); if(isSyn) o.frac=true; return o; };   // SIZEPREV=1: 주수를 전일 종가로(앱 엔진과 같게 · 11-09)
+  const mkO=(p,cap,extra)=>{ const o=Object.assign({cap,fee:p.fee,sizePrev:!!process.env.SIZEPREV},mk(P,R,G,p),extra||{}); if(isSyn) o.frac=true; if(p._hvIn) o.hvIn=p._hvIn; if(p._harvest) o.harvest=p._harvest; return o; };   // _hvIn·_harvest(11-10): 세금 절차 옵션을 VARS 로   // SIZEPREV=1: 주수를 전일 종가로(앱 엔진과 같게 · 11-09)
   const wins=(p,cap)=>{ const o=mkO(p,cap), out=[]; for(let y=y0;y<=2021;y++) for(let m=1;m<=12;m++){ const s=`${y}-${String(m).padStart(2,'0')}-01`, e=`${y+5}-${String(m).padStart(2,'0')}-01`; if(e>last) continue; out.push(stats(sim(P,Object.assign({},o,{from:s,to:e})).eq,cap)); } return out; };
   for(const cap of [10000,100000]) for(const bk of BASES){
     const bp=BASE[bk]; const V=[['기준',bp]].concat(Object.entries(VARS).map(([n,p])=>[n,fix(Object.assign({},bp,p),isSyn?'SYN':'')]));
