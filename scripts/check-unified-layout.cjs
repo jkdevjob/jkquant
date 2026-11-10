@@ -30,12 +30,12 @@ assert(mobile.includes('input[type="date"]::-webkit-date-and-time-value'),'WebKi
 const bt=fs.readFileSync('backtest.html','utf8');
 assert(bt.includes('.ctrl-grid>.ctrl:has(>input[type=date]){flex:1 1 100%;width:100%;min-width:0}'),'작은 화면 날짜 전체폭');
 assert(bt.includes('.ctrl input[type=date]{width:100%!important;max-width:none!important;min-width:0!important}'),'날짜 140px 제한 해제');
-for(const p of pages)assert(fs.readFileSync(p,'utf8').includes('/jk-mobile.css?v=1.0.2'),p+' CSS 캐시 버전');
+for(const p of pages)assert(fs.readFileSync(p,'utf8').includes('/jk-mobile.css?v=1.0.3'),p+' CSS 캐시 버전');
 assert(mobile.includes('@media (max-width:768px)'),'모바일 분기 유지');
 assert(/\.wrap\{width:100%!important;max-width:none!important/.test(mobile),'모바일 전체폭 유지');
 for(const p of pages){
   const html=fs.readFileSync(p,'utf8');
-  assert(html.includes('/jk-ui.js?v=1.1.0'),p+' 공용 UI 캐시 버전');
+  assert(html.includes('/jk-ui.js?v=1.1.1'),p+' 공용 UI 캐시 버전');
   assert(html.includes('class="wrap'),p+' wrap 존재');
   assert(html.includes('class="jkmenu'),p+' 공통 메뉴 존재');
 }

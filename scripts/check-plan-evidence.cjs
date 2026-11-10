@@ -9,7 +9,8 @@ function check(source=src){
   const D={teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01};
   const c={PATH_DEFAULTS:{alpha:D},horizonStrategy:()=>({years:5,key:'dualGuard',name:'5년 · 듀얼가드'}),document:{querySelectorAll:()=>[]},$:el,activeHorizon:5,horizonRebalancePending:false,setTxt:(id,v)=>el(id).textContent=v};
   vm.createContext(c);c.window=c;vm.runInContext(fs.readFileSync('plan-session-engine.js','utf8'),c);   // 판정(alphaDecide)·전략 이름(STRATEGY)은 모의 엔진과 같은 글자
-  for(const m of ['function planStrategy()','function planStrategyLabel()','function alphaRuleSet()','function renderHorizonCopy()'])vm.runInContext(fn(source,m),c);
+  vm.runInContext("var planCurRules='base';function activeAssetSession(){return null;}",c);
+  for(const m of ['function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function renderPlanVersion()','function alphaRuleSet()','function renderHorizonCopy()'])vm.runInContext(fn(source,m),c);
   c.renderHorizonCopy();
   assert.equal(el('alphaEv1Label').textContent,'TECL σ20');assert(el('alphaEv2Sub').textContent.includes('σ20'));assert(el('alphaEv2Sub').textContent.includes('최대70%'));
   assert(el('alphaEv2Sub').textContent.includes('w=(55%/σ20)²'),el('alphaEv2Sub').textContent);   // 목표 변동성은 공식 55% 하나(공격형 60% 폐지)
@@ -21,6 +22,7 @@ function check(source=src){
   vm.runInContext(fn(source,'function alphaExplainBounds(target,current,band)'),c);   // renderAlphaPlan 이 부르는 도우미(plan 1.43.35 에서 추가) — 없으면 시험이 ReferenceError
   vm.runInContext(fn(source,'function renderDualGuardStrip(o)'),c);
   vm.runInContext('var alphaLedger={base:{},events:[]};'+fn(source,'function alphaEventList(ledger=alphaLedger)')+fn(source,'function alphaDepositPending(ledger=alphaLedger)'),c);   // 입금 맞춤 판정(plan 2.0.1) — 이 시험의 장부엔 입금이 없다
+  vm.runInContext('var assetPaperCache={};function renderLivePanic(){}'+fn(source,'function planStrategyLabelOf(x)')+fn(source,'function alphaPanicNext(signalDate,posOn)')+fn(source,'function alphaPanicApply(PX,sigma,decGuard)'),c);   // 공포 모드 도우미(v2.6.0) — 현재 투자중은 늘 null(기본 판정)
   vm.runInContext(fn(source,'function renderAlphaPlan(qTecl,qTqqq,qSgov)'),c);
   const quote=(close)=>({rows:[{date:'2026-10-12',close}],settled:{date:'2026-10-12',close},price:close});
   c.renderAlphaPlan(quote(98.875),quote(79),quote(100));

@@ -86,7 +86,7 @@ dialog#viewer[open]{display:flex}dialog#viewer::backdrop{background:rgba(5,8,16,
 </style>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js" data-guard="1"></script>
-<script src="/jk-ui.js?v=1.1.0" defer></script>
+<script src="/jk-ui.js?v=1.1.1" defer></script>
 <script src="/swim-core.js?v=2.1.0"></script>
 <script src="/swim-results.js?v=1.0.0"></script>
 <script type="module">
@@ -101,7 +101,7 @@ const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagra
 const auth=getAuth(app),db=initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
 JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{});
 </script>
-<link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
+<link rel="stylesheet" href="/jk-mobile.css?v=1.0.3">
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/jk-invest-192.png?v=1.0.0">

@@ -35,9 +35,9 @@ function liveContext(S,E){
     activeHorizon:5,horizonRebalancePending:false,pendingAlphaOrders:[],setTxt:(id,v)=>el(id).textContent=v};
   vm.createContext(c);c.window=c;vm.runInContext(S.eng,c);
   vm.runInContext(constOf(S.plan,'const PATH_DEFAULTS={')+constOf(S.plan,'const ALPHA_FEE_RATE='),c);
-  vm.runInContext('this.PATH_DEFAULTS=PATH_DEFAULTS;this.ALPHA_FEE_RATE=ALPHA_FEE_RATE;var alphaLedger={base:{},events:[]};',c);
+  vm.runInContext('this.PATH_DEFAULTS=PATH_DEFAULTS;this.ALPHA_FEE_RATE=ALPHA_FEE_RATE;var alphaLedger={base:{},events:[]};var assetPaperCache={};var planCurRules="base";function renderLivePanic(){}function activeAssetSession(){return null;}',c);
   for(const m of ['function alphaFee(q,p)','function indicatorSeries(a,n)','function realizedVol(rows,n)','function alphaEventList(ledger=alphaLedger)','function alphaDepositPending(ledger=alphaLedger)',
-    'function planStrategy()','function planStrategyLabel()','function alphaRuleSet()','function alphaExplainBounds(target,current,band)','function renderDualGuardStrip(o)','function renderAlphaPlan(qTecl,qTqqq,qSgov)'])vm.runInContext(fnOf(S.plan,m),c);
+    'function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function planStrategyLabelOf(x)','function alphaPanicNext(signalDate,posOn)','function alphaPanicApply(PX,sigma,decGuard)','function alphaRuleSet()','function alphaExplainBounds(target,current,band)','function renderDualGuardStrip(o)','function renderAlphaPlan(qTecl,qTqqq,qSgov)'])vm.runInContext(fnOf(S.plan,m),c);
   return {c,el};
 }
 

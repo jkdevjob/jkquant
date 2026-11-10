@@ -1,5 +1,68 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-11 · 듀얼가드 분석 탭 '📊 투자 성과' — 넣은 돈 · 실현손익 · 총손익 · 듀얼가드 v2.8.0
+
+사용자(11/11): "듀얼 매매이력 보면 손절을 저렇게 많이 했는데 왜 평가손익에선 저렇게 나오지? 그리고 처음에 2만으로 시작했는데" → "다른 전략탭 분석 참고해서 분석탭에 만들어"
+
+- 원인(계산은 맞음): 현재 탭 요약의 평가손익 · 보유원가는 지금 들고 있는 주식만 본다 — 팔아서 확정된 손실과 넣은 돈(시작 + 입금)을 보여 주는 곳이 없었다.
+- `plan.html` v2.8.0: 분석 탭 `#alphaPerfSection` — `alphaPerfCalc`(엔진 장부 값으로 넣은 돈 · 실현 · 평가 · 분배금 · 수수료 · 그 밖 · 종목별) · `alphaPerfHtml` · `renderAlphaPerf`(계좌 카드와 같은 시세로 같이 다시 그림). 현재 탭 칸 이름 '평가손익 (보유분 · 확정 손익은 분석 탭)'.
+- 시험 `scripts/check-plan-perf.cjs`(검사 단계에 추가): 값 시험 · 변이 4종.
+- 앞 작업(SOXL 인버스 비율 전향 시험): PR #650 · squash d463fe6 · 배포 확인 11-10(연구(클로드) v2.28.0 · /api/soxl-inverse 자료 11-09 · 첫 자동 실행 성공 · 거래대금 원자료 수신).
+
+## 2026-11-10 · 연구(클로드) ⚡ SOXL 탭 — '인버스 거래대금 비율' 전향 시험 카드 · 연구(클로드) v2.28.0
+
+사용자(11/10): "요거 괜찮은데 연구해봐"(SOXS/SOXL 거래대금 비율 글) · "듀얼가드 상관없이 저거 자체로만 전략을 쓸수 없을까?" · "그래 첫번째로 가자"(연구 탭에 전향 시험 카드)
+
+- 수집·규칙 `scripts/soxl_inverse/forward.cjs`: 순수 계산(`simulate` — 전일까지의 비율로 오늘 종가 비중) · 덧붙이기(`appendRows`) · 연속 확인(`continuity`) · 화면 묶음(`buildView`). 과거 줄은 `data/soxl-inverse/history-seed.json`(4,184거래일 · 2010-03-12 ~ 2026-11-09) · 고정 규칙은 `data/soxl-inverse/forward-model-1.0.0.json`.
+- 매일 실행 `.github/workflows/soxl-inverse-forward.yml`: 평일 23:10 UTC(한국 다음 날 08:10) + 02:40 UTC 보완 · `scalping-data` 브랜치 `data/soxl-inverse-forward/`(history.json · events.jsonl · latest.json). 알림 단계 없음.
+- 자료 API `functions/api/soxl-inverse.js`: 최신 묶음 그대로 전달 · 첫 실행 전(404)만 '시작 전' · 그 밖의 오류는 502.
+- 화면 `claude-soxl-inverse.js` 1.0.0 · `claude.html` v2.28.0: ⚡ SOXL 탭 맨 위 한 줄(오늘 비율 · 기준까지 거리 · 상태) + 맨 아래 카드(규칙 · 오늘 비율 · 지금 상태 · 등록 뒤 성과 vs SOXL 그냥 보유 · 최근 60거래일 비율 그래프 · 등록 뒤 기록 · 접어 둔 과거 시험).
+- 시험 `scripts/check-soxl-inverse.cjs`(검사 단계 추가): 규칙 · 누적 · 화면 · 자료 API · 연결 값 시험 + 변이 18종.
+- 연구 근거: `research/daily` `research/im_plan/RESEARCH_LOG.md` 10·11번(약한 후보 — 매매 7번 · 낙폭 80% · 다른 3배 짝에서는 안 통함).
+- 앞 작업(밸류리밸런싱 모의 값 v3.129.1): PR #649 · squash 2773a07 · 배포 확인 11-10(운영 index v3.129.1 · 듀얼가드 v2.7.1).
+
+## 2026-11-10 · 밸류리밸런싱 모의 값 이상(투입 $544 · 세후 +3만%) — 듀얼가드 화면 저장이 모의 기록 머리를 지움 · v3.129.1 (듀얼가드 v2.7.1)
+
+사용자(11/10): "밸류리밸린성 값이 이상한데" (모의 목록 화면 — TECL 인출식·거치식 · TQQQ 거치식 줄의 투입 $531·$544·$496 · 세후 TR +27,000~39,000%)
+
+- 원인: 듀얼가드 화면(plan.html)이 운영 원장(stateV2)을 저장할 때, 원격이 그새 바뀌었으면 모든 세션 기록을 3-way 로 합친다. 그 합치기(`planRecEntries`)가 기록을 ts 만으로 Map 에 넣어, 같은 밀리초에 만든 모의 기록(ts 겹침)의 앞줄을 뒤 체결이 덮었다 — 밸류리밸런싱 모의의 첫 매수(init)·잔돈(add)이 사라지면 첫 사다리 매수($544)가 첫 매수로 읽힌다. 운영 화면은 11-05(#579 · v3.115.2)에 같은 문제를 고쳤고 듀얼가드 화면에 남아 있었다. 오늘 듀얼가드 탭에서 세션을 만들고 설정을 저장하며 드러났다.
+- `plan.html` v2.7.1: `planRecKey`·`planRecSem` — 운영 화면 `_histKeyPart` 와 같은 신분 규칙(생성 기록은 ts + 내용). 합치기 · 원장 지문(`planOpHistoryMap`·`planHistoryMap`)이 이 한 곳을 쓴다.
+- `index.html` v3.129.1: 밸류리밸런싱 모의 지문 `ledger3` — 머리가 빠진 모의 장부를 한 번 다시 만든다(시세만으로 정해지는 재생이라 같은 결과로 복구). 모의 목록 캐시 판 8.
+- 시험 `tests/paper-history-identity.test.cjs`: 듀얼가드 화면 저장 뒤 장부 불변 · 두 화면 신분 일치 · 변이 4종 · 복구 지문.
+- 앞 작업(공포 모드 운영 세션 v3.129.0): PR #648 · squash a5d57d8 · 배포 확인 11-10(운영 index v3.129.0 · 듀얼가드 v2.7.0).
+
+## 2026-11-10 · 공포 모드 v1.1 을 운영 세션에도 — 세션마다 ⚙️ 설정에서 고른다 · v3.129.0 (듀얼가드 v2.7.0)
+
+사용자(11/10): "공포모드가 나은데 운영도 공포모드로 바꿔야 겠다 변경해" · "공포모드 설정은 세션에 넣는게 아니라 각 세션 옵션 설정에 넣어야 할거 같다 다른 전략들처럼"
+
+- 엔진 `plan-session-engine.js`(캐시 판 8): `replay` 에 `nextPosOn` — '다음 판정'의 보유 여부만 실제 계좌 값으로(빠른 모드 중립 구간). 상태와 재생 장부는 그대로.
+- 세션 설정 `plan-session-settings.js`(캐시 판 5): `rules==='panic'` 이면 모의 · 운영 모두 `alphaRules:'panic'` 저장.
+- 듀얼가드 화면 `plan.html` v2.7.0: 공포 모드 줄을 ⚙️ 설정 창으로 옮김 · 운영 켤 때 확인 · 본 장부 규칙(`planCurRules` — 원장 `alphaRules`) 저장·읽기 · 화면 값 거둘 때 규칙 유지 · `planLivePanic`(엔진 재생으로 운영 상태) · `alphaPanicApply`(상태가 켜졌을 때만 판정 변경) · `alphaPanicBlocked`(판정 불가 → 주문 보류 · 위 띠 '보류') · 운영 상태 카드(`#assetLivePanic`) · 판 표시(`renderPlanVersion`) · 본 장부 칩 '공포'.
+- 운영 `index.html` v3.129.0: 엔진 캐시 판만.
+- 시험 `check-plan-panic.cjs`: 운영 세션 값 시험(E 묶음) · 변이 35 → 71종. 다른 검사 틀 6개는 새 도우미에 맞춤.
+- 앞 작업(아이폰 머리말 v3.128.1): PR #647 · squash d1e0a6f · 배포 확인 11-10(운영 index v3.128.1 · jk-mobile.css 1.0.3 · jk-ui.js 1.1.1).
+
+## 2026-11-10 · 아이폰 — 머리말이 상태 표시줄 밑에 깔려 三 메뉴가 안 눌림 · v3.128.1
+
+사용자(11/10): "전략 탭부분이 자꾸 위로 붙어서 메뉴를 못누르네" (아이폰 화면 사진)
+
+- 원인: 아이폰 홈 화면 앱은 화면을 상태 표시줄 밑까지 그리는데(viewport-fit=cover) 공용 머리말이 위쪽 안전 영역을 안 봤다 — 머리말(三 단추 13~57px)이 상태 표시줄(59px) 밑에 깔리고 전략 탭만 그 아래로 보였다.
+- `jk-mobile.css` 1.0.3: `.jk-sticky-header` 를 위쪽 안전 영역만큼 내림(테두리로 — 페이지별 안쪽 여백은 그대로) · 가운데 뜨는 창 높이도 그만큼 줄임. 안전 영역이 0이면 아무것도 안 바뀐다.
+- `jk-ui.js` 1.1.1: 좁은 화면 메뉴 펼침을 화면 고정 → 三 단추에 매닮(내려온 머리말과 어긋나지 않게) · 펼침 높이도 안전 영역만큼 줄임.
+- 13개 화면의 공용 파일 캐시 판 갱신 · 시험 `check-sticky-layout.cjs` 에 값 시험 + 변이 4종.
+
+## 2026-11-10 · 듀얼가드 v1.1 '공포 모드' — 실험적 확장 · 모의 세션 선택지 · v3.128.0 (듀얼가드 v2.6.0)
+
+사용자(11/10): "그래 하자" (공포 모드 앱 반영 승인 — 기본은 그대로 · 모의 세션 선택지부터)
+
+- 엔진 `plan-session-engine.js`: `ALPHA_RULES.panic`(hi 40 · lo 35 · SMA50 ±2% · k 3.0 · fbK 3.6) · `panicStep`(하루 판정 · 전일 값만) · `panicState` · `strategyLabel` · `alphaRules('panic')`. replay 가 `vix`·`vxn` 을 받아 날짜 축에 잇고, 공포 모드면 TECL 목표 σ 와 Guard 를 panicStep 값으로 쓴다. 결과에 `panic{log,state,next,signalDate,vix,vxn,params}`(공포 모드일 때만). VIX 없으면 오류. 기본 규칙 경로는 손대지 않았다(결과 JSON 동일).
+- 세션 설정 `plan-session-settings.js`: 모의 세션이고 `rules==='panic'` 일 때만 `alphaRules:'panic'` 저장 — 그 밖은 늘 base.
+- 듀얼가드 화면 `plan.html` v2.6.0: 세션 창 '공포 모드 v1.1 로 재생'(모의일 때만) · 칩 '공포' · 상태줄·성과 머리 이름 · 상태 카드(`assetPanicHtml`) · 지수 시세(`fetchPlanIndex` — 모의 목록과 같은 변환) · 다음 주문 판정이 엔진 next 를 따름(`alphaPanicNext` · 판정일이 재생 자료 끝과 같을 때만).
+- 모의 목록 `index.html` v3.128.0: 공포 모드 세션이 있으면 ^VIX·^VXN 도 받아 재생 · 이름 'v1.1 공포 모드(실험)' · VIX 없으면 줄 비움.
+- 시험 `scripts/check-plan-panic.cjs`(값 + 변이 35종) · 검사 목록·회귀에 연결. 기존 시험은 새 도우미·캐시 판(엔진 7 · 설정 4)·규칙 표(base + panic)에 맞춤.
+- 연구 근거: research/daily `research/im_plan/RESEARCH_LOG.md` 11-10(발견 · 재현 확인 · 도구 오류 4건 정정) · `REPLICATION.md` R-20261110-1.
+- 반영: PR #645 · squash a03fdfb · 배포 확인 11-10(운영 index v3.128.0 · 듀얼가드 v2.6.0).
+
 ## 2026-11-10 · 포트폴리오 글자 '지금 계좌' 삭제 · v3.127.6
 
 사용자(11/10): "지금 계좌는 전부 지워"

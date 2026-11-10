@@ -24,7 +24,7 @@ function update(session,input,options){
   x.name=String(input.name||'').trim()||x.name||'듀얼가드 세션';
   x.paper=paper;x.simStart=paper?start:'';
   x.settings={...st,startCapital:restoring?+liveBase.startCapital:cap,monthlyAdd:monthly,targetCapital:target,startDate:restoring?liveBase.startDate:start};
-  x.settings.alphaRules='base';   // 규칙은 기본 하나(2026-11-08 새 규칙·공격형 폐지) — 무엇을 넘겨도 base 로 저장한다
+  x.settings.alphaRules=input.rules==='panic'?'panic':'base';   // 기본 규칙이 기본 · 공포 모드(v1.1 실험적 확장)는 세션마다 고른다 — 모의(2026-11-10) · 운영(같은 날 사용자 지시). 그 밖의 값은 늘 base
   const end=new Date(x.settings.startDate+'T00:00:00Z');end.setUTCFullYear(end.getUTCFullYear()+Number(x.horizon));
   x.settings.targetDate=end.toISOString().slice(0,10);
   if(paper)x.paperFxRate=Number(o.fx);

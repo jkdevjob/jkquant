@@ -1,9 +1,11 @@
-/* JKQuant common mobile layout v1.0.2 */
+/* JKQuant common mobile layout v1.0.3 */
 /* hidden은 overflow-y:auto도 만들어 sticky가 창 대신 스크롤하지 않는 body/main을 붙잡는다.
    clip은 가로 넘침만 자르고 새 스크롤 영역을 만들지 않는다. 표의 가로 스크롤은 아래 상자가 맡는다. */
 html{max-width:100%;overflow-x:clip;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 body{max-width:100%;min-width:0;overflow-x:clip}
-.jk-sticky-header{position:sticky!important;top:0!important;z-index:60!important;background:var(--bg,#0f1320)}
+/* 아이폰 홈 화면 앱은 화면을 상태 표시줄 밑까지 그린다(viewport-fit=cover). 머리말이 그 밑에 깔리면 三 메뉴가 안 눌린다 —
+   위쪽 안전 영역만큼 머리말을 내린다. 페이지마다 다른 안쪽 여백은 건드리지 않으려고 테두리로 민다. 안전 영역이 0이면 아무것도 안 바뀐다. */
+.jk-sticky-header{position:sticky!important;top:0!important;z-index:60!important;background:var(--bg,#0f1320);border-top:env(safe-area-inset-top,0px) solid var(--bg,#0f1320)!important}
 .jk-sticky-tabs{position:sticky!important;top:var(--jk-header-height,0px)!important;z-index:55!important;background:var(--bg,#0f1320)}
 .jk-sticky-side{position:sticky!important;top:calc(var(--jk-header-height,0px) + 16px)!important}
 .jk-sticky-stack .sessbar{top:calc(var(--jk-header-height,0px) + var(--h1,54px))!important}
@@ -39,7 +41,7 @@ main{max-width:100%;overflow-x:clip}
 .pane{padding:16px 12px!important}.card{overflow-wrap:anywhere}
 .rowline{min-width:0}.rowline .k,.rowline .val{min-width:0}
 .modal-bg,.modal,#chartOverlay{padding-left:8px!important;padding-right:8px!important}
-.modal-card,.modal .box,#chartCard{width:min(100%,calc(100vw - 16px))!important;max-width:100%!important;max-height:calc(100dvh - 16px)!important}
+.modal-card,.modal .box,#chartCard{width:min(100%,calc(100vw - 16px))!important;max-width:100%!important;max-height:calc(100dvh - 16px - 2*env(safe-area-inset-top,0px))!important}
 table{max-width:100%}canvas{max-width:100%!important}
 }
 @media (max-width:560px){

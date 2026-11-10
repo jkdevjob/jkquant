@@ -40,6 +40,8 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
 .tbf-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px;margin-top:8px}.tbf-item{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-size:12.5px}
 .tbf-item .top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.tbf-item .top b{font-size:14px}.tbf-item .r{font-weight:900;font-size:15px;white-space:nowrap}.tbf-item .m{color:var(--dim);margin-top:3px}.tbf-item .s{margin-top:4px;font-size:12px}
 .tbf-ev>div{padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px}.tbf-ev .t{color:var(--faint);font-size:11px;margin-top:2px}
+.siv-strip{display:block;width:100%;text-align:left;color:var(--text);font:inherit;font-size:13px;line-height:1.5;cursor:pointer;margin-top:12px}.siv-strip:hover{border-color:var(--vio)}
+.siv-past{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}.siv-past>summary{cursor:pointer;color:var(--dim);font-size:12.5px;font-weight:700}
 #gate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
 #gate .gbox{max-width:380px;width:100%}#gate .glogo{font-size:26px;font-weight:800;margin-bottom:6px}#gate .gsub{color:var(--dim);font-size:13px;margin-bottom:24px;line-height:1.6}
 #gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
@@ -51,7 +53,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
 </style>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js?v=1.1.0" defer></script>
+<script src="/jk-ui.js?v=1.1.1" defer></script>
 <script type="module">
   // 소유자만 보는 화면 — 단타(GPT)와 같은 Google 로그인 · /api/owner 판정. 자료 API 도 로그인 토큰 없이는 401.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
@@ -63,9 +65,10 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   window.fb = { auth:getAuth(app), db:initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true}), provider:new GoogleAuthProvider(), signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
-<link rel="stylesheet" href="/jk-mobile.css?v=1.0.2">
+<link rel="stylesheet" href="/jk-mobile.css?v=1.0.3">
 
 <script src="/claude-tenbagger.js?v=1.0.0" defer></script>
+<script src="/claude-soxl-inverse.js?v=1.0.0" defer></script>
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/jk-invest-192.png?v=1.0.0">
@@ -82,7 +85,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.27.0</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.28.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -454,6 +457,15 @@ async function loadTbf(){
   finally{TBF_BUSY=false}
   if(TAB==="tenbagger")render();
 }
+// 🧪 인버스 거래대금 비율 전향 시험(⚡ SOXL 탭 맨 아래 카드 · ④ 전략과 별개) — 공개 자료(/api/soxl-inverse), 탭을 처음 열 때 한 번 받는다
+var SIV=null,SIV_BUSY=false;
+async function loadSiv(){
+  if(SIV_BUSY)return;SIV_BUSY=true;
+  try{var r=await fetch("/api/soxl-inverse",{cache:"no-store",headers:{Accept:"application/json"}});var j=await r.json();SIV=r.ok?j:{ok:false,error:j.error||("HTTP "+r.status)}}
+  catch(e){SIV={ok:false,error:String(e&&e.message||e)}}
+  finally{SIV_BUSY=false}
+  if(TAB==="soxl")render();
+}
 function showTab(t){TAB=t;document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});render()}
 // 클로드 vs GPT — 같은 날짜 구간·같은 달력
 function vsRow(label,z){
@@ -594,7 +606,9 @@ function render(){
   }else if(TAB==="duel"){
     html+=duelPage();
   }else if(TAB==="opening"||TAB==="daytrading"||TAB==="crypto"||TAB==="soxl"||TAB==="close30"){
-    html+=tabPage(TAB,T,gd,et,wl);
+    var siv=TAB==="soxl"?window.ClaudeSoxlInverse:null;
+    if(siv&&!SIV)loadSiv();
+    html+=(siv?siv.strip(SIV):"")+tabPage(TAB,T,gd,et,wl)+(siv?siv.view(SIV):"");
   }else{                                       // 옛 '🎯 전체 계좌' 탭은 2026-10-14 사용자 요청으로 지웠다 — 모르는 탭은 오늘 탭으로
     TAB="today";html+=todayPage(lab);
   }

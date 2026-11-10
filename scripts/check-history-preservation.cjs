@@ -110,7 +110,7 @@ ok('5년플랜 체결 입력·수정은 DB 실패 시 화면 원복',
   && /const ok=await cloudSave\(\)/.test(fn(plan,'async function alphaSaveEdit()'))
   && /alphaLedger=before/.test(fn(plan,'async function alphaSaveEdit()')));
 
-const pFns=['planStableJson','planRecEntries','planRebaseRecords','planRebaseFiveYear']
+const pFns=['planStableJson','planRecSem','planRecKey','planRecEntries','planRebaseRecords','planRebaseFiveYear']
   .map(n=>fn(plan,'function '+n+'(')).join('\n');
 const PC=vm.createContext({console,Map,JSON,cloneObj:x=>JSON.parse(JSON.stringify(x))});
 vm.runInContext(pFns,PC);
@@ -248,7 +248,7 @@ const sheetCase=()=>{
       S:{activeTab:'inf',inf:{active:'i1',sessions:[{id:'i1',hist:[]}]},plan:{sessions:[{id:'p1',paper:true,hist:[]}],activeByHorizon:{}}},
       PAPER_TABS:[['inf','무한매수법'],['plan','듀얼가드']],_paperFilling:false,_paperSliceAt:0,_fillQuoteCache:null,lastQuote:{},
       infQuoteCache:null,maQuoteData:null,ivsQuoteData:null,ivsQuote1:null,dcaQuoteData:null,asapQuoteData:null,infChartData:null,vrChartData:null,
-      pfWanted:x=>!!x&&!x.paper,paperLoadingProgress(){},paperPrefetchQuotes:async()=>{},paperBreathe:async()=>{},planPaperRetired:()=>false,
+      pfWanted:x=>!!x&&!x.paper,paperLoadingProgress(){},paperPrefetchQuotes:async()=>{},paperBreathe:async()=>{},planPaperRetired:()=>false,planPaperPanic:()=>false,
       loadPlanPaperData:async()=>{},replayPlanPaper(){},paperStatPlan:()=>({tab:'plan'})});
     vm.runInContext(fn(src,'async function paperFillAll(opt)'),C);
     const rows=await C.paperFillAll({});

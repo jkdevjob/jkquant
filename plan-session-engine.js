@@ -15,13 +15,47 @@ const STRATEGY={key:'dualGuard',name:'듀얼가드',owner:'claude',version:'1.0'
    (2011-04~2026-11 · 2만$ 거치 세후 연 30.9/29.9/30.7% · MDD 40.6/38.1/42.1% · research/im_plan/RESEARCH_LOG.md 11-08 정정).
    10·15·20년 플랜도 같은 날 사용자 지시로 폐지. 예전에 그 규칙·기간으로 만든 세션은 지우지 않고 목록에서 숨긴다(retiredReason). */
 const ALPHA_RULES={
-  base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false}
+  base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:false},
+  /* 공포 모드 v1.1 — 실험적 확장(공식 규칙 아님 · 2026-11-10 사용자 승인 "그래 하자" · 모의 세션에서만 고른다).
+     기본 규칙 위에 얹는다: VIX 전일 종가 ≥ hi 면 '무장' → 무장한 채 < lo 로 내려오면 '진정'.
+     ① 진정일에 Guard OFF 이고 TQQQ > SMA(ma)×(1+band) 면 TQQQ 를 다시 켜고, 그동안은 SMA(ma) ±band 로 켜고 끈다(빠른 모드).
+        TQQQ > SMA225×(1+guardOn) 이면 보통 모드로 돌아가고 무장을 푼다. ② 진정 뒤 TECL σ20 > k×VXN 인 동안 TECL 목표의 σ = min(σ20, k×VXN)
+        (VXN 이 없는 날은 fbK×VIX) — 폭락 날들이 20일 창에서 빠질 때까지만.
+     근거: research/im_plan/RESEARCH_LOG.md 2026-11-10 '공포 모드' · REPLICATION.md R-20261110-1(지피티 재현 확인).
+     앱 엔진 세후 5년 창 128개(2.5만$+월 210$): 연 중앙 28.6 → 30.5% · MDD 중앙 39.1 → 36.8% · 최악 MDD 같음. 이득은 V자 반등 몇 번(2015·2020·2025)에 몰리고
+     2011 같은 두 번 오는 공포에선 휩쏘로 잃는다(×0.95). 1987~99 에는 증거가 없다. */
+  panic:{key:'panic',name:'공포 모드',version:'1.1',guardOn:.01,guardOff:.01,bandDn:.10,bandUp:.10,tqReb:0,exp:true,
+    panic:{hi:40,lo:35,ma:50,band:.02,k:3.0,fbK:3.6}}
 };
 const RETIRED={
   horizons:{10:'10년 추세+폭락매수',15:'15년 Shannon',20:'20년 듀얼모멘텀'},
   rules:{exp1:'새 규칙',exp2:'공격형'}
 };
-function alphaRules(key){return ALPHA_RULES.base;}   // 규칙은 기본 하나 — 예전 세션에 적힌 exp1·exp2 도 판정에는 쓰지 않는다
+function alphaRules(key){const k=String(key&&key.key||key||'');return k==='panic'?ALPHA_RULES.panic:ALPHA_RULES.base;}   // 기본 + 공포 모드(실험) — 예전 세션에 적힌 exp1·exp2 는 판정에 쓰지 않는다
+/* 화면·모의 목록에 쓰는 이름 — 기본 '듀얼가드 v1.0' · 공포 모드 '듀얼가드 v1.1 공포 모드(실험)'. 공식 결과와 실험 결과가 같은 이름으로 보이지 않게 한 곳에서 만든다. */
+function strategyLabel(rules){const R=alphaRules(rules);return STRATEGY.name+' v'+(R.version||STRATEGY.version)+(R.exp?' '+R.name+'(실험)':'');}
+/* 공포 모드 하루 판정 — 전일 확정값만 받는다(룩어헤드 없음). 상태 st={armed,pf,armS,ps,gN} 를 고쳐 쓰고 {guard, sigma, iv, events} 를 돌려준다.
+   a={rules, vix, vxn, tqqqClose, sma(225), fast(SMA ma), sigma(σ20), posOn(TQQQ 보유 중)}
+   st.gN = 보통 Guard(SMA225 ±1%) 상태 — 빈 계좌·중립 밴드는 OFF(기본 규칙과 같은 시작) · st.armed 무장 · st.pf Guard 빠른 모드 · st.armS/ps 슬리브 무장/빠른 모드
+   모의 재생(replay)과 화면(다음 주문 판정)이 이 함수 하나를 쓴다 — 같은 걸 두 군데서 세지 않는다. */
+function panicStep(st,a){
+  const R=a.rules,P=R.panic,ev=[],v=a.vix,c=a.tqqqClose,fm=a.fast,b=P.band;
+  let sigma=a.sigma;
+  const iv=a.vxn!=null&&+a.vxn>0?+a.vxn/100*P.k:(v!=null&&+v>0?+v/100*P.fbK:null);
+  if(v!=null&&v>=P.hi)st.armS=true;
+  if(st.armS&&v!=null&&v<P.lo){st.ps=true;st.armS=false;ev.push('sleeveOn');}
+  if(st.ps&&iv!=null){if(a.sigma<=iv){st.ps=false;ev.push('sleeveOff');}else sigma=Math.min(a.sigma,iv);}
+  const up=a.sma*(1+R.guardOn),lo=a.sma*(1-R.guardOff),wasArmed=st.armed,wasPf=st.pf;
+  if(c>up)st.gN=true;else if(c<lo)st.gN=false;
+  if(v!=null&&v>=P.hi)st.armed=true;
+  let guard;
+  if(st.gN){st.pf=false;st.armed=false;guard='ON';if(wasPf)ev.push('normal');}
+  else if(!st.pf){guard='OFF';if(st.armed&&v!=null&&v<P.lo&&fm>0&&c>fm*(1+b)){st.pf=true;guard='ON';ev.push('fastOn');}}
+  else guard=(fm>0&&c>fm*(1+b))?'ON':(fm>0&&c<fm*(1-b))?'OFF':(a.posOn?'ON':'OFF');
+  if(st.armed&&!wasArmed)ev.push('armed');
+  return {guard,sigma,iv,events:ev};
+}
+function panicState(){return {armed:false,pf:false,armS:false,ps:false,gN:false};}
 /* 세션이 폐지된 기간·규칙으로 만들어졌으면 그 이름을, 아니면 '' — 플랜 화면 세션 목록과 모의 목록이 같은 함수로 거른다 */
 function retiredReason(x){
   if(!x)return '';
@@ -187,6 +221,12 @@ function replay(opt){
   if(startIdx<0)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'시작일 이후 시세 없음'};
 
   const tma225=sma(S.tqqq,225);
+  /* 공포 모드: VIX·VXN 을 날짜 축(TECL·TQQQ 공통 거래일)에 직전 값으로 잇는다. VIX 가 없으면 기본 규칙으로 몰래 계산하지 않고 오류로 돌려준다. */
+  const PN=RULES.panic||null;
+  if(PN&&!(Array.isArray(opt.vix)&&opt.vix.length))return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'공포 모드 — VIX 시세 없음'};
+  const onAxis=rows=>{const m=mapRows(rows);let l=null;return S.dates.map(d=>{if(m.has(d))l=m.get(d);return l;});};
+  const fastMA=PN?sma(S.tqqq,PN.ma):null,vixA=PN?onAxis(opt.vix):null,vxnA=PN?onAxis(opt.vxn):null,pst=PN?panicState():null,plog=[];
+  const panicAt=(st,p,posOn,sigma,mv)=>panicStep(st,{rules:RULES,vix:vixA[p],vxn:vxnA[p],tqqqClose:S.tqqq[p],sma:mv,fast:fastMA[p],sigma,posOn});
   const div={TECL:mapDiv(opt.teclDiv),TQQQ:mapDiv(opt.tqqqDiv),SGOV:mapDiv(opt.sgovDiv)};
   const ledger=initialLedger(start,principal),pos={TECL:0,TQQQ:0,SGOV:0};
   let cash=principal,inflow=principal,nTrade=0,seq=1,lastMonth=start.slice(0,7),lastDecision=null;
@@ -217,12 +257,15 @@ function replay(opt){
 
       const D=DEFAULTS[5],sigma=realizedVol(S.tecl,p,D.ivsLook),mv=tma225[p];
       if(sigma>0&&mv>0){
-        const s0=D.ivsS0,w=Math.min(1,(s0*s0)/(sigma*sigma));
+        const pm=PN?panicAt(pst,p,pos.TQQQ>0,sigma,mv):null;
+        if(pm)for(const e of pm.events)plog.push({date,signalDate:S.dates[p],ev:e,vix:vixA[p],vxn:vxnA[p],sigma,iv:pm.iv,tqqq:sp.TQQQ,sma:mv,fast:fastMA[p]});
+        const s0=D.ivsS0,sigUse=pm?pm.sigma:sigma,w=Math.min(1,(s0*s0)/(sigUse*sigUse));
         const sleeveNow=((pos.TECL*sp.TECL)/Math.max(total,1))/Math.max(D.teclWeight,1e-9);
         // 판정은 공용 alphaDecide (플랜 화면과 같은 글자).
         const dec=alphaDecide({rules:RULES,w,sleeveNow,teclQty:pos.TECL,tqqqQty:pos.TQQQ,tqqqClose:sp.TQQQ,sma:mv,
           tqqqWeight:(pos.TQQQ*sp.TQQQ)/Math.max(total,1),guardWeight:D.guardWeight,yearStart:date.slice(0,4)!==S.dates[p].slice(0,4)});
-        const {teclHit,guard,guardFlip,tqReb}=dec;
+        let {teclHit,guard,guardFlip,tqReb}=dec;
+        if(pm){guard=pm.guard;guardFlip=(guard==='ON')!==(pos.TQQQ>0);}   // 공포 모드: Guard 는 panicStep 이 정한다(보통 모드면 기본 판정과 같다)
         const first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
         need=teclHit||guardFlip||tqReb||force||first||sgNew;
         if(need){
@@ -232,6 +275,7 @@ function replay(opt){
           targetShares={TECL:tt,TQQQ:tq,SGOV:ts};
         }
         meta={horizon,rules:RULES.key,s0,sigma,w,sleeveNow,guard,teclHit,guardFlip,tqReb};
+        if(pm)meta.panic={armed:pst.armed,fast:pst.pf,sleeve:pst.ps,iv:pm.iv,sigmaUsed:sigUse};
       }
 
       if(need){
@@ -245,8 +289,19 @@ function replay(opt){
     nav.push({date,total,inflow,cash,tecl:pos.TECL,tqqq:pos.TQQQ,sgov:pos.SGOV,teclPx:S.tecl[i],tqqqPx:S.tqqq[i],sgovPx:S.sgov[i]});
   }
 
-  return {horizon,rules:RULES.key,orderSizingVersion:2,ledger,nav,stats:stats(nav,nTrade),lastDecision,last:nav[nav.length-1]||null,error:''};
+  const out={horizon,rules:RULES.key,orderSizingVersion:2,ledger,nav,stats:stats(nav,nTrade),lastDecision,last:nav[nav.length-1]||null,error:''};
+  if(PN){
+    /* 화면용: 마지막 확정일(자료 끝) 신호로 본 '다음 거래일' 판정과 상태 — 재생 상태를 복사해 한 걸음만 더 간다(재생 장부는 건드리지 않는다). */
+    const p=S.dates.length-1,sg=p>=0?realizedVol(S.tecl,p,DEFAULTS[5].ivsLook):null,mv=p>=0?tma225[p]:null,st=Object.assign({},pst);
+    /* opt.nextPosOn(true|false) — 운영 세션: '다음 판정'의 보유 여부만 실제 계좌 값으로 바꾼다. 상태(무장·빠른 모드·재가속)는 시세만으로 정해져 보유와 무관하고,
+       보유 여부는 빠른 모드 중립 구간(SMA ±band 사이)에서 '들고 있던 대로'를 정할 때만 쓰인다. 모의 재생은 넘기지 않는다(재생 장부의 보유). */
+    const posNext=typeof opt.nextPosOn==='boolean'?opt.nextPosOn:pos.TQQQ>0;
+    const nx=(sg>0&&mv>0)?panicAt(st,p,posNext,sg,mv):null;
+    out.panic={log:plog,state:st,signalDate:p>=0?S.dates[p]:'',vix:p>=0?vixA[p]:null,vxn:p>=0?vxnA[p]:null,
+      next:nx?{guard:nx.guard,sigma:nx.sigma,sigma20:sg,iv:nx.iv,events:nx.events}:null,params:Object.assign({},PN)};
+  }
+  return out;
 }
 
-g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,retiredReason,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,ledgerEvents,ledgerCalc,replay,stats};
+g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,strategyLabel,panicStep,panicState,retiredReason,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,ledgerEvents,ledgerCalc,replay,stats};
 })(typeof window!=='undefined'?window:globalThis);

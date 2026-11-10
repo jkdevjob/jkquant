@@ -122,4 +122,31 @@ for(const route of topRoutes){
   assert.throws(()=>verifyReadyHeader(route,390,'interactive',immediate),assert.AssertionError,'이동 전 행을 잡는 옛 defer 동작을 검사에서 잡는다');
 }
 console.log('PASS mutation defer 초기화 즉시 실행 복귀 ('+topRoutes.map(r=>r[0].replace('.html','')).join('/')+')');
-console.log('ALL PASS sticky: '+routes.length+' routes × 4 widths; 144 unified header lifecycle cases; 4 mutations');
+// ── 위쪽 안전 영역 — 아이폰 홈 화면 앱은 상태 표시줄 밑까지 그린다. 머리말이 그 밑에 깔리면 三 메뉴가 안 눌린다(2026-11-10 신고).
+//    브라우저 실측(402×874 · 위 59px): 고치기 전 단추 13~57px(상태 표시줄 밑) → 고친 뒤 72~116px · 펼침 127px · 안전 영역 0이면 13~57 · 68 그대로.
+function verifySafeArea(uiSrc=ui,styles=css){
+  const head=declarations(styles,'.jk-sticky-header');
+  assert.equal(head['border-top'],'env(safe-area-inset-top,0px) solid var(--bg,#0f1320)!important','머리말을 위쪽 안전 영역만큼 내린다');
+  const pop=uiSrc.match(/@media\(max-width:600px\)\{\.jkmenu-pop\{([^}]+)\}/);
+  assert(pop,'좁은 화면 메뉴 펼침 규칙');
+  const P=Object.fromEntries(pop[1].split(';').filter(Boolean).map(x=>{const i=x.indexOf(':');return [x.slice(0,i),x.slice(i+1)];}));
+  assert(!('position' in P),'메뉴 펼침은 三 단추에 매단다 — 화면 고정이면 내려온 머리말과 어긋난다');
+  assert(/\.jkmenu\{position:relative!important/.test(uiSrc)&&/\.jkmenu-pop\{position:absolute!important/.test(uiSrc),'매달 기준(.jkmenu) · 기본 absolute');
+  assert.equal(P.top,'55px!important');assert.equal(P.right,'0!important');
+  assert.equal(P['max-height'],'calc(100dvh - 84px - env(safe-area-inset-top,0px))!important','펼침 높이도 안전 영역만큼 줄인다');
+  const box=styles.match(/\.modal-card,\.modal \.box,#chartCard\{[^}]*max-height:([^;}]+)/);
+  assert(box&&box[1]==='calc(100dvh - 16px - 2*env(safe-area-inset-top,0px))!important','가운데 뜨는 창의 위쪽도 상태 표시줄 아래');
+}
+verifySafeArea();console.log('PASS safe-area 머리말 · 메뉴 펼침 · 창 높이');
+const SA_MUT=[
+  ['머리말 안전 영역 제거',ui,css.replace(';border-top:env(safe-area-inset-top,0px) solid var(--bg,#0f1320)!important','')],
+  ['메뉴 펼침 화면 고정 복귀',ui.replace('{.jkmenu-pop{right:0!important;top:55px!important;','{.jkmenu-pop{position:fixed!important;right:12px!important;top:68px!important;'),css],
+  ['펼침 높이 안전 영역 제거',ui.replace('calc(100dvh - 84px - env(safe-area-inset-top,0px))','calc(100dvh - 84px)'),css],
+  ['창 높이 안전 영역 제거',ui,css.replace('calc(100dvh - 16px - 2*env(safe-area-inset-top,0px))','calc(100dvh - 16px)')]
+];
+for(const [name,mutUi,mutCss] of SA_MUT){
+  assert(mutUi!==ui||mutCss!==css,name+' 변이가 실제 소스를 바꾼다');
+  assert.throws(()=>verifySafeArea(mutUi,mutCss),assert.AssertionError,name+'를 검사에서 잡는다');
+  console.log('PASS mutation '+name);
+}
+console.log('ALL PASS sticky: '+routes.length+' routes × 4 widths; 144 unified header lifecycle cases; '+(4+SA_MUT.length)+' mutations');

@@ -11912,7 +11912,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   }
   ok('자산플랜 햄버거는 jk-ui 공용 클릭 핸들러 하나만 쓴다 — 두 번 토글 금지',
      !/\$\("jkmenuBtn"\)\.addEventListener\("click"/.test(pl)
-     && /<script src="\/jk-ui\.js\?v=1\.1\.0" defer><\/script>/.test(pl));
+     && /<script src="\/jk-ui\.js\?v=1\.1\.1" defer><\/script>/.test(pl));
 
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
   {
@@ -12498,7 +12498,7 @@ console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 10개 페이지 전체메
      &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
      &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
   ok('12개 페이지 모두 jk-ui 공용 UI와 같은 공용 메뉴 링크를 사용',
-     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.1\.0" defer><\/script>/.test(s)
+     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js\?v=1\.1\.1" defer><\/script>/.test(s)
        &&['/','/portfolio','/backtest','/scalping','/claude','/paper','/tenbagger','/ipo','/realestate','/job','/workout','/admin'].every(p=>s.includes('href="'+p+'"'));}));   // 자산플랜(/plan) 자리는 포트폴리오(2026-11-09)
 }
 
@@ -12711,6 +12711,10 @@ Promise.all(PENDING).then(()=>{
   const pdp=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-deposit.cjs')],{encoding:'utf8'});
   ok('자산플랜 입금 맞춤: 마지막 체결 뒤 입금 → 전체 맞춤 · 운영 주문표 = 모의 엔진 입금일 체결(21일 전부) · 변이 6종',
      pdp.status===0&&(pdp.stdout||'').includes('ALL PASS plan deposit · 변이 6/6 red'),(pdp.stdout||'').slice(-600)+(pdp.stderr||''));
+  /* 2026-11-10 — 듀얼가드 v1.1 공포 모드(실험적 확장 · 모의 세션 선택지 · 앱 v3.128.0): VIX ≥ 40 무장 → < 35 진정 · Guard SMA50 빠른 모드 · TECL σ = min(σ20, 3×VXN) */
+  const ppn=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-panic.cjs')],{encoding:'utf8'});
+  ok('듀얼가드 공포 모드(실험적 확장): panicStep 판정표 · 재생(기본 결과 그대로 · 정해진 날만 다름 · VIX 없으면 오류 · 룩어헤드 없음 · 무장 없으면 기본 장부) · 모의에서만 저장 · 화면 선택 줄·이름·상태 카드·다음 주문 판정 · 모의 목록 · 변이 35종',
+     ppn.status===0&&(ppn.stdout||'').includes('ALL PASS plan panic · 변이 71/71 red'),(ppn.stdout||'').slice(-600)+(ppn.stderr||''));
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',

@@ -297,7 +297,8 @@
       'header.jk-site-header .userbadge .lo{white-space:nowrap!important;flex:none!important}'+
       '@media(max-width:768px){header.jk-site-header .jk-page-top{height:70px!important;min-height:70px!important;padding:8px 0!important;gap:10px!important}header.jk-site-header .jk-page-heading{font-size:21px!important}header.jk-site-header .userbadge>span{max-width:75px!important}header.jk-site-header .jkmenu-btn{width:44px!important;height:44px!important}}'+
       '@media(max-width:390px){header.jk-site-header .jk-page-heading{font-size:19px!important}header.jk-site-header .jk-page-version{font-size:10px!important;margin-left:5px!important}header.jk-site-header .userbadge img{display:none!important}header.jk-site-header .userbadge>span{max-width:42px!important}header.jk-site-header .hright{gap:6px!important}}'+
-      '@media(max-width:600px){.jkmenu-pop{position:fixed!important;right:12px!important;top:68px!important;width:min(260px,calc(100vw - 24px))!important;max-height:calc(100dvh - 84px)!important}.jkmenu-pop a{min-height:42px!important;font-size:14px!important}#authgate .gbox,#gate .gbox,#jkgate .jb{width:calc(100% - 28px)!important;padding:24px 18px!important}}';
+      /* 좁은 화면 메뉴 펼침 — 三 단추에 매단다(화면 고정 아님). 머리말이 위쪽 안전 영역만큼 내려와도 단추 바로 아래에 붙는다. */
+      '@media(max-width:600px){.jkmenu-pop{right:0!important;top:55px!important;width:min(260px,calc(100vw - 24px))!important;max-height:calc(100dvh - 84px - env(safe-area-inset-top,0px))!important}.jkmenu-pop a{min-height:42px!important;font-size:14px!important}#authgate .gbox,#gate .gbox,#jkgate .jb{width:calc(100% - 28px)!important;padding:24px 18px!important}}';
     (document.head||document.documentElement).appendChild(s);
   }
   /* 다음 HTML을 메뉴를 펼친 동안만 미리 요청한다. 거래 원장·인증 정보는 캐시하지 않는다.
