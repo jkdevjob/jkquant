@@ -1,5 +1,17 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-10 · 연구(클로드) 아침 루틴 — v2.27.0 첫 운영일 운영 기록 확인 · R36
+
+- 원천: `scalping-data` 의 `data/opening-gapdown-live/2026-11-09.json`(Worker 단계 기록 · 20:02 UTC 저장) · `data/claude-live/2026-11-09.json`(마감 장부) · `data/claude-lab/latest.json`(11/10 06:28 계산).
+- ① 10:00 매도: 단계 `exit10` startedAt 01:00:37Z · finishedAt 01:00:45Z · `decisionReason: exit_10am` · prices 3종목(hms 100040 · 100043 · 100045). 마감 장부 `exitRule: exit10` · 3줄 모두 `exitTime "10:00 매도"` · `exitSource: exit10` · dayPct +1.904%(하나머티리얼즈 35,950 → 37,000 · 에이프릴바이오 10,560 → 10,840 · 유진테크 71,800 → 73,200).
+- ① 그림자: preopen `shadow` = variant calib_e4_p5 · rule(breadthGapMax −4 · minQ 7 · pickGapMax −5 · picks 3 · gapFloor −29) · qualified 51 · signal true · source recheck · picks 3(메인과 같음).
+- ② 24시간: etf_buy `max24 {next 2026-11-10, nextOpen true}` · `shadow {variant etf_nolimit, signal false}` · `rule.max24h true` · dropPct −4.21% → 매수 없음. 11/09 장부의 −3.29% 는 11/06(금) 옛 규칙 매수분의 11/09 시가 청산.
+- ⑤: c30_buy 15:00:42 −3.40% → 매수 → 종가 3,525(−0.944%). 모의투자는 세 곳 모두 `모의투자 꺼짐(설정)` · vtsSetting revision 3 · on false.
+- ① 후보 분봉: `news-collect.yml` 최근 예약 실행 11/08 08:52 · 15:54 · 20:23 · 23:57 · 11/09 06:04 · 16:03 UTC(예약은 30분마다) → 11/09 장부 저장(20:02 UTC) 뒤 실행 없음 → 직접 실행 42718856808 성공 · `data/minute-opening/2026-11-09.json` 60종목 · missing 0.
+- 리포트: `claude-research-report.yml` 실행 42718766908 · `{"ok":true,"id":"report:2026-11-10","subs":3,"sent":[201,201,410],"telegram":{"result":"sent","tries":1}}` · 08:14 KST(루틴이 늦게 시작). 기기 화면 표시는 미확인.
+- R36: `python scripts/research/r36_etf24_arena.py latest.json` — 경쟁 달력 2018-04-02~2026-11-06(2,109거래일)에서 경쟁군 점수 6개(−4.25 · −4.75 · −5.5 · −6 · −6.5 · −7.5)가 11/10 경쟁 값과 같음(소수 넷째 자리). 결과는 `CLAUDE-SCALPING-RESEARCH.md` R36. 처음 두 번(2016~ · 11/09 까지)은 점수가 달라 버렸다.
+- 미확인: 10:00 매도 알림이 실제 기기 · 텔레그램에 도착했는지 · 11/09 연구 일봉(일치율 갱신은 11/11).
+
 ## 2026-11-09 · 평가액 추이 — 종목별 보기도 평가액·원금 선 · 글자 '평가액'·'원금' · 원금 맨 앞 · v3.127.4
 
 - `check-portfolio.cjs` **ALL PASS · 변이 85/85 빨간불**(새 Q7 · L1 갱신 · 변이 3종).
