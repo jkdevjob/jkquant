@@ -6,6 +6,7 @@
 // 특수 옵션(페이지 안에서 처리 · 돌린 뒤 원래대로):
 //   tgtDyn:{L,th,mult,cap} — 앱 백테스트의 '익절 동적 조절'(imTgtDyn · 전일까지 L일 상승률 > th% 면 그날 익절 % × mult, 최대 cap) 과 그 주변값
 //   floor:true — 바닥선(imh o.floor): 올린 익절 동안 원래 익절선을 고가로 넘었다가 종가가 그 아래면 다음 날 시가에 익절분(3/4) 매도
+//   dedW:0 — 양도세 공제 배율(11-11 · costOf 고리 · 돌린 뒤 1) · ye:{…} — 연말 세금 정리(imh o.ye)
 //   sleeve:{real,syn,k,mode,fee,tax} — 잔금 중 k×1회분(자산/20)을 넘는 몫을 1배 지수에(imh sgov.sym · 전일 확정 수익률 · 옮길 때 수수료 · tax 면 양도세 장부에)
 const {open}=require('./imh'); const fs=require('fs');
 const DEF={ base:{},
@@ -21,11 +22,12 @@ const W=+(process.env.W||4), OUT=process.argv[2]||'maxret_out.json';
 const SETS={ real:{tk:'SOXL',y0:2010,syms:[{sym:'SOXL'},{sym:'SOXX'},{sym:'QQQ'}]}, syn:{tk:'SYNSOXL_S',y0:1995,syms:[{sym:'SYNSOXL_S'},{sym:'SOX',file:'SOX'},{sym:'NDX',file:'NDX'}]},
   tq:{tk:'TQQQ',y0:2010,syms:[{sym:'TQQQ'},{sym:'QQQ'}]}, tqsyn:{tk:'SYNTQQQ_S',y0:1990,syms:[{sym:'SYNTQQQ_S'},{sym:'NDX',file:'NDX'}]} };   // tq·tqsyn: 다른 기초자산(나스닥 3배)으로 표본 밖 검사 — sleeve 는 real:'QQQ' 처럼 ds 이름으로
 const PAGE_RUN=()=>{ window.RUN2=function(o){
-  const x=Object.assign({},o); delete x.tgtDyn; delete x.sleeve;
+  const x=Object.assign({},o); delete x.tgtDyn; delete x.sleeve; delete x.dedW;
+  if(o.dedW!=null){ if(!window.__dedP){ const s0=costOf.toString(); if(!s0.includes('deduct:COST_DEDUCT,')) throw new Error('costOf 모양이 바뀜'); (0,eval)('costOf='+s0.split('deduct:COST_DEDUCT,').join('deduct:COST_DEDUCT*(window.__DEDW??1),')); window.__dedP=true; } window.__DEDW=o.dedW; }   // dedW(11-11): 양도세 공제 배율(0 = 공제를 다른 계좌가 다 씀)
   if(o.sleeve){ const s=o.sleeve; x.sgov={sym:s[o.ds],k:s.k||10,mode:s.mode||'week',fee:s.fee!=null?s.fee:0.0026,tax:!!s.tax}; }
   if(o.tgtDyn){ const g=o.tgtDyn; window.__mom0=window.__mom0||_imMom; window.__tgt0=window.__tgt0||_imTgtOf;
     _imMom=function(t,L){ return window.__mom0(t,g.L||L); }; _imTgtOf=function(b,m){ return (m!=null&&m>g.th)?Math.min(b*g.mult,g.cap):b; }; imTgtDyn=true; }
-  let r; try{ r=RUN(x); } finally { if(o.tgtDyn){ imTgtDyn=false; _imMom=window.__mom0; _imTgtOf=window.__tgt0; } }
+  let r; try{ r=RUN(x); } finally { window.__DEDW=1; if(o.tgtDyn){ imTgtDyn=false; _imMom=window.__mom0; _imTgtOf=window.__tgt0; } }
   const yrs=(Date.parse(r.last)-Date.parse(r.first))/(365.25*864e5), cagr=(Math.pow(Math.max(r.final,1e-9)/o.cap,1/yrs)-1)*100;
   let pk=0,mdd=0,pd=null,mP=null,mT=null; for(const [d,e] of r.eqs){ if(e>pk){pk=e;pd=d;} else { const dd=(pk-e)/pk; if(dd>mdd){mdd=dd;mP=pd;mT=d;} } } if(r.final<pk&&(pk-r.final)/pk>mdd){ mdd=(pk-r.final)/pk; mP=pd; mT=r.last; }
   return {cagr,mdd:mdd*100,final:r.final,cycles:r.cycles,sg:r.sg,mP,mT,flr:r.flrN}; }; };   // mP·mT: 최대 낙폭의 고점·바닥 날짜

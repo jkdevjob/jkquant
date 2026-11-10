@@ -42,6 +42,11 @@ const SETUP=`(()=>{
   inj('if(_fillHit>=tgt&&q3>0){','if(__H.floor&&q3>0&&avg>0){ const _bt=avg*(1+curTP/100); if(__flrS&&prevC<_bt){ _sell(o,q3,SLIP); tpHit=true; __flrS=false; __H.flrN=(__H.flrN||0)+1; } else if(tgt>_bt&&hi>=_bt) __flrS=true; }\\n      if(!tpHit&&_fillHit>=tgt&&q3>0){');   // 11-09: 익절을 올려 둔 사이 원래 익절선(평단×(1+익절%))을 고가로 넘었다가 종가가 다시 그 아래면 다음 날 시가에 익절분(3/4)을 판다
   inj('if(imCycleEnds(soldToday, shares)){cash+=__res;','if(imCycleEnds(soldToday, shares)){__flrS=false;cash+=__res;');
   inj('if(tpHit) T*=0.25;','if(tpHit){ T*=0.25; __flrS=false; }');   // 익절·바닥선으로 3/4 를 팔면 그 회는 끝 — 다시 익절을 올리고 넘으면 새로 센다
+  // 11-11: 연말 세금 정리(o.ye) — 그해 마지막 거래일 종가(prevC = 새해 첫날 아침에 아는 직전 종가)에 세무 원가(LOT)·그해 실현손익만 바꾼다(평단·T·주수 그대로).
+  //   ① 손실 확정: 실현이익 > 공제이고 세무 원가 > 종가×(1−수수료)면 넘는 만큼만 팔고 되산다 ② 공제 채우기: 실현이익 < 공제이고 이익이면 공제까지 팔고 되사 원가를 올린다.
+  //   수수료 양쪽(슬리피지 없음) · 주당 세금 이득(22% × 손익)이 왕복 수수료보다 클 때만 · 현금이 수수료보다 적으면 그만큼만. o.ye={loss?:false, gain?:false, minLoss?:0.1(평가손이 원가의 이만큼 넘을 때만)}. 안 주면 원래와 같다.
+  inj('const LOT=taxLot();','const LOT=taxLot(); const __ye=(pc)=>{ const Y=__H.ye; if(!CO||!Y||!(shares>=1)||!(LOT.qty>0)||!(pc>0)) return; const DED=_C.deduct/_C.krw, tr=_C.taxRate||0.22, bp=LOT.basis/LOT.qty, net=pc*(1-FEE), f1=pc*FEE; let q=0, kind=""; if(Y.loss!==false&&yearPnl>DED&&net<bp*(1-(Y.minLoss||0))&&tr*(bp-net)>2*f1){ q=Math.ceil((yearPnl-DED)/(bp-net)); kind="L"; } else if(Y.gain!==false&&yearPnl<DED&&net>bp&&tr*(net-bp)>2*f1){ q=Math.floor((DED-yearPnl)/(net-bp)); kind="G"; } q=Math.min(q,Math.floor(shares),Math.floor(LOT.qty)); if(2*q*f1>cash) q=Math.floor(cash/(2*f1)); if(!(q>=1)) return; const fee=q*f1, pnl=lotSell(LOT,q,pc,fee); yearPnl+=pnl; lotBuy(LOT,q,pc,fee); cash-=2*fee; feesTotal+=2*fee; (__H.yeLog||(__H.yeLog=[])).push([curYear,kind,q,pnl,fee*2]); };');
+  inj('else if(_y!==curYear){ _settleTax(c); curYear=_y; } }','else if(_y!==curYear){ if(__H.ye&&!__H.ye.t1) __ye(prevC); _settleTax(c); curYear=_y; } if(__H.ye&&__H.ye.t1&&i>0&&i+1<days.length&&days[i+1].slice(0,4)!==_y&&days[i-1].slice(0,4)===_y) __ye(prevC); }');   // t1: 결제일(T+1) 때문에 마지막 거래일 하루 전 종가에(그해 세금에 들어가는 마지막 체결)
   window.__H={eqs:[]};
   (0,eval)(src);
   window.RUN=function(o){
@@ -54,7 +59,7 @@ const SETUP=`(()=>{
     const IRX=window.__IRX||{}; const irxDates=Object.keys(IRX).sort();
     let lastIrx=0, li=0; const irxAt=d=>{ while(li<irxDates.length&&irxDates[li]<=d){ lastIrx=IRX[irxDates[li]]; li++; } return lastIrx; };
     let prevD=null;
-    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.floor=!!o.floor; if(o.yp) __H.yp=[];
+    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.floor=!!o.floor; __H.ye=o.ye||null; if(o.yp) __H.yp=[];
     if(o.xfer){ const X=o.xfer; let F=1, yr=null, pend=false; __H.xlog=[];   // 조합 입출금(11-06): X={mode:'year'|'oneway'|'band'|'oneband', w, b, pl:{날짜:플랜값}, fee} — 플랜 쪽은 비례 배율 F 로(플랜은 사이클이 없어 비례 근사가 맞다)
       __H.xfer=(d,cash)=>{ const P0=X.pl[d]; if(!(P0>0)) return 0; const P=P0*F, y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ yr=y; if(X.mode==='year'||X.mode==='oneway') pend=true; }
         const t=cash+P, wa=cash/t; let x=cash-t*X.w;   // x>0: 무매 → 플랜
@@ -94,7 +99,7 @@ const SETUP=`(()=>{
     imCostOn=o.cost!==false; imReverse=!!o.reverse;
     const r=runIMx(days,tkr,o.cap||10000,o.divs||20,o.tgt||20,o.compound!==false,o.big);
     Object.assign(IM_AUTOTP,_A0); Object.assign(IM_AUTOTP_M1,_M0); imAutoTP=window.__imAutoTP0;
-    return {trace:o.trace?{tr:__H.tr,m1d:__H.m1d,cyc:__H.cyc}:null, sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, flrN:__H.flrN||0, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, yp:__H.yp||null, xlog:__H.xlog||null, first:days[0], last:days[days.length-1], n:days.length};
+    return {trace:o.trace?{tr:__H.tr,m1d:__H.m1d,cyc:__H.cyc}:null, sg:__H.sg?{fees:__H.sg.fees,yld:__H.sg.yld,n:__H.sg.n}:null, exits:__H.exits, flrN:__H.flrN||0, yeLog:__H.yeLog||null, final:r.final, mdd:r.mdd, cycles:r.cycles, tax:r.tax, fees:r.fees, eqs:__H.eqs, yp:__H.yp||null, xlog:__H.xlog||null, first:days[0], last:days[days.length-1], n:days.length};
   };
 })()`;
 function stats(r,cap){ const yrs=(Date.parse(r.last)-Date.parse(r.first))/(365.25*864e5); const cagr=(Math.pow(r.final/cap,1/yrs)-1)*100;
