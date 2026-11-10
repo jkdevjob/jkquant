@@ -414,9 +414,10 @@ function check3(S,t,E,bad){
     t('Q7 선 순서·이름: 원금(맨 앞) → 평가액 → 선들 — 세션별·종목별 둘 다',
       S7[0].key==='inflow'&&S7[0].name==='원금'&&S7[1].key==='total'&&S7[1].name==='평가액'&&SS7[0].name==='원금'&&SS7[1].name==='평가액'&&!S7.slice(2).some(x=>x.base),JSON.stringify(S7.map(x=>x.name)));
     t('Q7 종목별 보기도 처음부터 평가액·원금 선이 그려진다 · 범례 첫 칩이 원금',/class="pf-line pf-val"/.test(html7)&&/class="pf-line pf-in"/.test(html7)&&/pf-legend2"><button[^>]*data-pfser="inflow"/.test(html7),html7.slice(html7.indexOf('pf-legend2'),html7.indexOf('pf-legend2')+200));
-    t('Q7 값 상자: 원금 → 평가액 → 선들 → 수익률 · 글자 \'합친 평가액\'·\'투입 원금\'·\'투입\' 없음(그림·표·카드)',
+    t('Q7 값 상자: 원금 → 평가액 → 선들 → 수익률 · 글자 \'합친 평가액\'·\'투입 원금\'·\'투입\'·\'지금 계좌\' 없음(그림·표·카드 · 총자산)',
       /if\(G\.I\) line\('var\(--pf-in\)',pfUsdPlain\(p\.inflow\),'원금'\); if\(G\.T\) line\('var\(--pf-val\)',pfUsdPlain\(p\.now\),'평가액'\);/.test(S.idx)
-      &&!/name:'합친 평가액|'투입 원금'|,'투입'\)|<th>투입<\/th>|"k">투입</.test(pf7+S.idx.slice(S.idx.indexOf('function pfMonthTable('),S.idx.indexOf('function pfSessHtml(')))&&/<th>원금<\/th>/.test(S.idx)&&/"k">원금<\/div>/.test(S.idx)); }
+      &&!/name:'합친 평가액|'투입 원금'|,'투입'\)|<th>투입<\/th>|"k">투입</.test(pf7+S.idx.slice(S.idx.indexOf('function pfMonthTable('),S.idx.indexOf('function pfSessHtml(')))&&/<th>원금<\/th>/.test(S.idx)&&/"k">원금<\/div>/.test(S.idx)
+      &&/"k">총자산<\/div>/.test(S.idx)&&!/지금 계좌\)|지금 계좌 금액/.test(S.idx)&&/막대 = 평가액\(/.test(S.idx)); }   // 2026-11-10 사용자 "지금 계좌는 전부 지워" — 화면 글자(카드 · 막대 안내)에 없음
     const T7={tab:'dca',cur:'usd',id:'z',label:'적립',name:'여럿',series:[{date:d(1),tot:36,inflow:36,out:0,hv:{AA:1,BB:2,CC:3,DD:4,EE:5,FF:6,GG:7,HH:8},cash:0},{date:d(3),tot:36,inflow:36,out:0,hv:{AA:1,BB:2,CC:3,DD:4,EE:5,FF:6,GG:7,HH:8},cash:0}]};
     const SR=c.pfChartSeries(c.pfCombine([A,B,T7],1),'tk'), tl=SR.filter(s=>!s.base), nm=tl.map(s=>s.name);
     t('Q2 종목별 선 — 지금 금액 순 · 일곱 색(검증한 순서) · 여덟째부터 그 밖 한 선(회색 점선 · 다 판 SOXL 포함) · 현금 선 · 다 판 종목은 0(끊기지 않게) · 시작 전 null · 첫째 합친 · 끝 투입',
@@ -687,6 +688,7 @@ const MUT=[
   ['종목별 보기: 처음에 평가액·원금 끔(옛 기본)','idx',s=>s.replace("chartOff:{sess:new Set(), tk:new Set()}};","chartOff:{sess:new Set(), tk:new Set(['total','inflow'])}};")],
   ['원금 선이 맨 뒤(옛 순서)','idx',s=>s.replace("out=[{key:'inflow', base:'in', name:'원금', color:'var(--pf-in)', vals:P.map(p=>p.inflow)},   // 원금이 맨 앞(2026-11-09 사용자) · 그 다음 평가액 · 선들\n    {key:'total', base:'val', name:'평가액', color:'var(--pf-val)', vals:P.map(p=>p.now)}];","out=[{key:'total', base:'val', name:'평가액', color:'var(--pf-val)', vals:P.map(p=>p.now)}];").replace("  return out;\n}\nfunction pfChartHtml(C){","  out.push({key:'inflow', base:'in', name:'원금', color:'var(--pf-in)', vals:P.map(p=>p.inflow)});\n  return out;\n}\nfunction pfChartHtml(C){")],
   ['글자: 평가액 → 평가액(지금 계좌)(옛 이름)','idx',s=>s.replace("name:'평가액', color:'var(--pf-val)'","name:'평가액(지금 계좌)', color:'var(--pf-val)'")],
+  ['글자: 총자산 (지금 계좌)(옛 카드 이름)','idx',s=>s.replace('<div class="k">총자산</div>','<div class="k">총자산 (지금 계좌)</div>')],
   ['새 세션: 날이 셋 미만이면 그릇에도 안 넣음(섀넌 선 빠짐 재현)','idx',s=>s.replace("if(D.length<3 && !sink) return null;","if(D.length<3) return null;")],
   ['새 세션: 끝 값을 셋 미만이면 안 넣음','idx',s=>s.replace("if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){   // 끝 값도 목록·카드와 같은 지금 시세(같은 날이면 바꿔 넣는다) — 날이 셋이 안 되는 새 세션도","if(n>=3&&typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){")],
   ['듀얼가드 날마다: 종목별 빠짐','idx',s=>s.replace("    const hv={}; if(st.tecl) hv.TECL=st.tecl*last.TECL;","    const hv={}; if(false) hv.TECL=st.tecl*last.TECL;")],
