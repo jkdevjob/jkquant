@@ -1,0 +1,16 @@
+{
+ "strategyVersion": "1.0.0",
+ "registeredDate": "2026-11-10",
+ "seedThrough": "2026-11-09",
+ "params": {
+  "threshold": 0.7,
+  "hold": 120,
+  "fee": 0.001
+ },
+ "pair": {
+  "inverse": "SOXS",
+  "long": "SOXL"
+ },
+ "rule": "SOXS 거래대금 ÷ SOXL 거래대금 ≥ 70% 인 날 → 다음 거래일 종가에 SOXL 매수 · 마지막 신호 뒤 120거래일 보유 뒤 매도 · 그 밖엔 현금 · 수수료 0.1% · 실주문 없음",
+ "evidence": "research/daily research/im_plan/RESEARCH_LOG.md 2026-11-10 10·11번 — 약한 후보(매매 7번 · 낙폭 80% · 다른 짝에선 안 통함)"
+}

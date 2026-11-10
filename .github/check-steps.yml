@@ -200,6 +200,9 @@
     node scripts/test_tenbagger_claude.cjs
     node --test tests/research-claude-tenbagger.test.mjs
 
+- name: 연구(클로드) SOXL 인버스 거래대금 비율 전향 시험 — 규칙·누적·화면·자료 API 값 시험 + 변이 시험
+  run: node scripts/check-soxl-inverse.cjs
+
 - name: 연구 R11 헤드라인 · 분봉 수집 값 시험
   run: python scripts/test_news_collect.py
 

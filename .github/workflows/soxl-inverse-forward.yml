@@ -1,0 +1,52 @@
+name: SOXL 인버스 거래대금 비율 전향 시험
+
+# 연구(클로드) ⚡ SOXL 탭의 별도 실험 — SOXS 거래대금 ÷ SOXL 거래대금 ≥ 70% 인 날 다음 거래일 종가에 SOXL 을 사서 120거래일 든다(모의 · 실주문 없음 · 알림 없음).
+# 미국 정규장 마감(16:00 ET) 뒤에 그날 한 줄을 덧붙인다. 한 번 적은 줄은 고치지 않는다.
+on:
+  schedule:
+    - cron: "10 23 * * 1-5" # 미국 동부 18:10(겨울) · 19:10(여름) = 한국 다음 날 08:10
+    - cron: "40 2 * * 2-6"  # 원천 자료가 늦은 날 보완(한국 11:40)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/soxl-inverse-forward.yml"
+      - "scripts/soxl_inverse/forward.cjs"
+      - "data/soxl-inverse/forward-model-1.0.0.json"
+
+permissions:
+  contents: write
+concurrency:
+  group: soxl-inverse-forward
+  cancel-in-progress: false
+
+jobs:
+  forward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 그날 비율 한 줄 덧붙이고 고정 규칙으로 모의 장부 갱신 (등록 뒤 신호만)
+        run: node .app/scripts/soxl_inverse/forward.cjs --app .app --out data/soxl-inverse-forward
+      - name: 장부·기록 저장 (scalping-data)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/soxl-inverse-forward
+          if ! git diff --cached --quiet; then
+            git commit -m "data: soxl inverse ratio forward ledger [skip ci]"
+            bash .app/scripts/push-scalping-data.sh
+          fi
