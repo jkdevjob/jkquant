@@ -180,6 +180,14 @@ th:first-child,td:first-child{text-align:left}
 .alpha-account-total{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:9px}
 .alpha-total-cell{background:rgba(139,140,240,.055);border:1px solid var(--border);border-radius:9px;padding:9px}
 .alpha-total-cell .k{font-size:10px;color:var(--dim)}.alpha-total-cell .v{font-size:14px;font-weight:850;margin-top:2px}
+.alpha-perf-hero{display:flex;justify-content:space-between;align-items:baseline;gap:6px 10px;flex-wrap:wrap;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surf2)}
+.alpha-perf-hero .k{font-size:11px;color:var(--dim);font-weight:800}.alpha-perf-hero .v{font-size:21px;font-weight:900;font-variant-numeric:tabular-nums}.alpha-perf-hero .p{font-size:13px;font-weight:800;margin-left:6px}.alpha-perf-hero .r{text-align:right}
+.alpha-perf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.alpha-perf-bar{height:6px;border-radius:4px;background:var(--surf2);margin-top:9px;overflow:hidden}.alpha-perf-bar i{display:block;height:100%;background:var(--vio)}
+.alpha-perf-scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--dim);margin-top:3px}
+.alpha-perf-rows tr.tot td{font-weight:900;border-top:1px solid var(--border2)}.alpha-perf-rows tr.part td:first-child{padding-left:16px;color:var(--dim)}.alpha-perf-rows td small{color:var(--dim);font-weight:600}
+.alpha-perf-note{font-size:11px;color:var(--dim);margin-top:7px;line-height:1.5}
+@media(max-width:780px){.alpha-perf-hero{display:block}.alpha-perf-hero .r{text-align:left;margin-top:9px;padding-top:9px;border-top:1px solid var(--border)}.alpha-perf-hero .v{font-size:18px}.alpha-perf-grid{grid-template-columns:1fr}.alpha-perf-rows td{white-space:normal}}
 .alpha-cash-warn{margin-top:8px;padding:9px 11px;border:1px solid rgba(248,123,140,.42);background:rgba(248,123,140,.07);border-radius:9px;font-size:11px;color:var(--red)}
 .alpha-base-edit-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
 .alpha-ledger-note{font-size:10.5px;color:var(--dim);margin-top:3px}
@@ -368,7 +376,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.7.1</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.8.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -398,7 +406,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
   <div class="dg-statusline" id="assetStatusline"><span class="asset-session-state" id="assetSessionState">현재 투자중</span><span class="dg-badges" id="assetStatusBadges"></span><button type="button" class="setpill" id="assetSettingsBtn" title="설정 — 시작자산 · 월 추가 투자 · 목표자산 · 시작일">⚙️ 설정</button></div>
   <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
     <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaTaxSection">현재</button>
-    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaEvidenceSection assetPaperPanel">분석</button>
+    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaPerfSection alphaEvidenceSection assetPaperPanel">분석</button>
     <button class="asset-detail-tab" id="assetHistoryTab" data-asset-detail="history" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaHistorySection alphaResetSection">거래이력</button>
     <button class="asset-detail-tab" id="assetExplainTab" data-asset-detail="explain" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaStrategySection">설명</button>
   </nav>
@@ -458,7 +466,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
         <div class="alpha-account-total">
           <div class="alpha-total-cell"><div class="k">보유원가</div><div class="v" id="alphaCostTotal">—</div></div>
           <div class="alpha-total-cell"><div class="k">현재평가액</div><div class="v" id="alphaMarketTotal">—</div></div>
-          <div class="alpha-total-cell"><div class="k">평가손익</div><div class="v" id="alphaPnlTotal">—</div></div>
+          <div class="alpha-total-cell"><div class="k">평가손익 (보유분 · 확정 손익은 분석 탭)</div><div class="v" id="alphaPnlTotal">—</div></div>
           <div class="alpha-total-cell"><div class="k">평가손익률 (보유분)</div><div class="v" id="alphaReturnTotal">—</div></div>
           <div class="alpha-total-cell"><div class="k">총자산 (ETF+현금)</div><div class="v" id="alphaAssetTotal">—</div></div>
         </div>
@@ -520,6 +528,11 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
         <div class="table-wrap" style="margin-top:10px">
           <table class="alpha-ledger-table"><thead><tr><th>날짜</th><th>종목</th><th>구분</th><th>수량</th><th>체결가</th><th>수수료</th><th>금액</th><th>손익률</th><th>손익금액</th><th>관리</th></tr></thead><tbody id="alphaLedgerBody"></tbody></table>
         </div>
+      </div>
+
+      <div class="todaybox" id="alphaPerfSection" data-asset-view="analysis" hidden>
+        <h3>📊 투자 성과 <span style="color:var(--dim);font-weight:600">넣은 돈 대비 · 팔아서 확정된 손익 포함</span></h3>
+        <div id="alphaPerfBody">거래이력을 계산하는 중…</div>
       </div>
 
       <div class="todaybox" id="alphaEvidenceSection" data-asset-view="analysis" hidden>
@@ -2891,6 +2904,65 @@ function alphaDepositPending(ledger=alphaLedger){
   return dep;
 }
 function alphaLedgerCalc(ledger=alphaLedger){return JKPlanSessionEngine.ledgerCalc(ledger);}
+/* 📊 투자 성과(분석 탭 · plan 2.8.0 · 사용자 "손절을 저렇게 많이 했는데 왜 평가손익에선 저렇게 나오지" → "다른 전략탭 분석 참고해서 분석탭에 만들어")
+   운영 탭 분석(총 실현손익 · 자산 현황 · 요약)과 같은 구성. 수량·평단·현금·매도 손익·입출금·분배금은 엔진 장부(ledgerCalc) 값을 그대로 쓰고 여기서 다시 세지 않는다.
+   넣은 돈 = 시작자산 + 입금 − 출금(목표 진행률 · 포트폴리오와 같은 정의). 총손익 = 총 자산 − 넣은 돈 = 실현(수수료 제외) + 평가 + 분배금 − 수수료 (+ 잔고 맞춤 등 그 밖). 조회·표시 — 주문과 무관. */
+function alphaPerfCalc(ledger,startCap,prices){
+  const S=alphaLedgerCalc(ledger),K={TECL:['tecl','avgTecl'],TQQQ:['tqqq','avgTqqq'],SGOV:['sgov','avgSgov']};
+  const by={};let realized=0,sells=0,unknownSells=0,fees=0,buyAmt=0,sellAmt=0,unreal=0,pending=false,unknownCost=false;
+  for(const sym in K)by[sym]={qty:S[K[sym][0]],avg:S[K[sym][1]],price:0,value:0,realized:0,unreal:null,sells:0};
+  for(const e of alphaEventList(ledger)){
+    if(e.type!=='trade')continue;
+    const sym=String(e.symbol||'').toUpperCase(),q=Math.max(0,Math.floor(+e.qty||0)),p=Math.max(0,+e.price||0);
+    if(!by[sym]||!q||!(p>0))continue;                       // 엔진이 건너뛰는 줄은 여기서도 건너뛴다
+    fees+=Math.max(0,+e.fee||0);
+    if(e.side==='buy')buyAmt+=q*p;
+    else if(e.side==='sell'){sellAmt+=q*p;sells++;by[sym].sells++;const t=S.tradePnl[e._i];
+      if(t&&Number.isFinite(t.profit)){realized+=t.profit;by[sym].realized+=t.profit;}else unknownSells++;}
+  }
+  for(const sym in by){const b=by[sym],px=Math.max(0,+(prices&&prices[sym])||0);b.price=px;
+    if(b.qty>0&&!px){pending=true;continue;}
+    b.value=b.qty*px;
+    if(b.qty>0&&Number.isFinite(b.avg)){b.unreal=(px-b.avg)*b.qty;unreal+=b.unreal;}else if(b.qty>0)unknownCost=true;}
+  const invested=by.TECL.value+by.TQQQ.value,idle=by.SGOV.value+S.cash,total=invested+idle;
+  const principal=Math.max(0,(+startCap||0)+(+S.netFlow||0)),pnl=total-principal;
+  const other=pnl-(realized+unreal+S.divIn-fees);
+  return {principal,start:+startCap||0,netFlow:+S.netFlow||0,invested,idle,total,pnl,ret:principal>0?pnl/principal*100:null,
+    realized,realizedPct:principal>0?realized/principal*100:null,sells,unknownSells,unreal,divIn:S.divIn,fees,other,buyAmt,sellAmt,by,pending,unknownCost,invalid:!!S.invalid};
+}
+function alphaPerfHtml(P){
+  const sg=v=>(v>=0?'+':'')+usd2(v),col=v=>v>0.004?'var(--green)':v<-0.004?'var(--red)':'var(--dim)',pc=v=>Number.isFinite(v)?(v>=0?'+':'')+v.toFixed(2)+'%':'—';
+  const cell=(k,v,sub)=>'<div class="alpha-total-cell"><div class="k">'+k+'</div><div class="v">'+v+'</div>'+(sub?'<div class="k" style="margin-top:2px">'+sub+'</div>':'')+'</div>';
+  const row=(cls,k,v,c)=>'<tr'+(cls?' class="'+cls+'"':'')+'><td>'+k+'</td><td'+(c?' style="color:'+c+'"':'')+'>'+v+'</td></tr>';
+  const ratio=P.total>0?Math.max(0,Math.min(100,P.invested/P.total*100)):0;
+  let h='<div class="alpha-perf-hero"><div><div class="k">총 실현손익 · 매도 '+P.sells+'건</div><div><span class="v" id="alphaPerfRealized" style="color:'+col(P.realized)+'">'+sg(P.realized)+'</span><span class="p" style="color:'+col(P.realized)+'">'+pc(P.realizedPct)+'</span></div></div>'
+    +'<div class="r"><div class="k">총손익 (넣은 돈 대비)</div><div><span class="v" id="alphaPerfPnl" style="color:'+col(P.pnl)+'">'+(P.pending?'시세 대기':sg(P.pnl))+'</span><span class="p" style="color:'+col(P.pnl)+'">'+(P.pending?'':pc(P.ret))+'</span></div></div></div>';
+  h+='<div class="alpha-perf-grid">'+cell('넣은 돈',usd2(P.principal),'시작 '+usd2(P.start)+(Math.abs(P.netFlow)>0.004?' · 입금−출금 '+sg(P.netFlow):''))
+    +cell('투자 중 (TECL · TQQQ)',P.pending?'—':usd2(P.invested))+cell('대기 (SGOV · 현금)',P.pending?'—':usd2(P.idle))+'</div>'
+    +'<div class="alpha-perf-bar"><i style="width:'+ratio.toFixed(1)+'%"></i></div><div class="alpha-perf-scale"><span>투자 비중</span><span>'+(P.pending?'—':ratio.toFixed(0)+'%')+'</span></div>';
+  h+='<table class="tax-table alpha-perf-rows"><tbody>'
+    +row('','총 자산 <small>ETF + 현금</small>',P.pending?'시세 대기':usd2(P.total))
+    +row('tot','총손익 <small>총 자산 − 넣은 돈</small>',P.pending?'—':sg(P.pnl)+' · '+pc(P.ret),P.pending?'':col(P.pnl))
+    +row('part','├ 실현손익 <small>팔아서 확정 · 수수료 제외</small>',sg(P.realized),col(P.realized))
+    +row('part','├ 평가손익 <small>아직 안 판 몫</small>',P.pending?'—':sg(P.unreal)+(P.unknownCost?'*':''),P.pending?'':col(P.unreal))
+    +row('part','├ 분배금 <small>SGOV 등</small>',sg(P.divIn),col(P.divIn))
+    +row('part',(Math.abs(P.other)>=0.01&&!P.pending?'├':'└')+' 수수료',(P.fees>0?'−':'')+usd2(P.fees),P.fees>0?'var(--red)':'var(--dim)')
+    +(Math.abs(P.other)>=0.01&&!P.pending?row('part','└ 그 밖 <small>잔고 맞춤 · 평단 없는 매도 등</small>',sg(P.other),col(P.other)):'')
+    +row('','총 매수금',usd2(P.buyAmt))+row('','총 매도금',usd2(P.sellAmt))+'</tbody></table>';
+  h+='<table class="tax-table alpha-perf-rows"><thead><tr><th>종목</th><th>실현손익</th><th>평가손익</th><th>합계</th></tr></thead><tbody>'
+    +['TECL','TQQQ','SGOV'].map(sym=>{const b=P.by[sym],u=b.unreal,t=b.realized+(u||0),wait=b.qty>0&&!(b.price>0);
+      return '<tr><td>'+sym+' <small>'+b.qty+'주'+(b.sells?' · 매도 '+b.sells+'건':'')+'</small></td><td style="color:'+col(b.realized)+'">'+sg(b.realized)+'</td><td style="color:'+(u==null?'var(--dim)':col(u))+'">'+(wait?'시세 대기':u==null?(b.qty>0?'평단 미등록':'—'):sg(u))+'</td><td style="color:'+col(t)+'">'+(wait?'—':sg(t))+'</td></tr>';}).join('')+'</tbody></table>';
+  const notes=['현재 탭의 평가손익은 지금 들고 있는 주식만 봅니다 — 팔아서 확정된 손익은 여기 실현손익에 따로 모입니다.'];
+  if(P.unknownSells)notes.push('평단이 없던 매도 '+P.unknownSells+'건은 실현손익에 못 넣었습니다(그 밖에 포함).');
+  if(P.unknownCost)notes.push('* 평단이 등록되지 않은 보유분은 평가손익에서 빠졌습니다.');
+  if(P.invalid)notes.push('거래이력에 오류가 있어 숫자가 실제와 다를 수 있습니다 — 거래이력 탭을 확인하세요.');
+  return h+'<div class="alpha-perf-note">'+notes.join('<br>')+'</div>';
+}
+function renderAlphaPerf(){
+  const el=$('alphaPerfBody');if(!el)return;
+  const prices={};for(const s of ['TECL','TQQQ','SGOV']){const L=liveQuotes[s];prices[s]=L&&+L.price>0?+L.price:(L&&L.settled?+L.settled.close:0);}
+  el.innerHTML=alphaPerfHtml(alphaPerfCalc(alphaLedger,num('startCapital'),prices));
+}
 function alphaSyncInputs(){
   const S=alphaLedgerCalc();
   if($('aTeclQty'))$('aTeclQty').value=S.tecl;
@@ -2983,6 +3055,7 @@ function renderAlphaLedger(){
   if($('alphaReturnTotal')){$('alphaReturnTotal').textContent=Number.isFinite(retTotal)?((retTotal>=0?'+':'')+retTotal.toFixed(2)+'%'):'—';$('alphaReturnTotal').className='v '+(Number.isFinite(retTotal)?(retTotal>=0?'pos':'neg'):'');}
   if($('alphaAssetTotal'))$('alphaAssetTotal').textContent=usd2(assetTotal);
   if($('alphaAcctCashState')){$('alphaAcctCashState').textContent=S.cash<0?'현금 부족 '+usd2(Math.abs(S.cash)):'사용가능 '+usd2(S.cash);$('alphaAcctCashState').className='pl '+(S.cash<0?'neg':'pos');}
+  if(typeof renderAlphaPerf==='function')renderAlphaPerf();   // 📊 투자 성과(분석 탭) — 계좌 카드와 같은 시세·거래이력
   if(typeof renderTaxCheck==='function')renderTaxCheck();   // 🧾 연말 세금 점검 — 계좌 카드와 같은 시세·거래이력 (장부만 떼어 돌리는 시험 문맥에선 없다)
   if($('alphaCashWarn')){const bad=S.cash<-.005;$('alphaCashWarn').hidden=!bad;if(bad)$('alphaCashWarn').textContent='현금이 '+usd2(S.cash)+'입니다. 기록된 매수금액+수수료가 시작 현금을 초과했습니다. 거래이력 또는 시작잔고를 실제 토스 계좌와 맞게 수정하세요.';}
   if($('alphaLedgerBody')){
