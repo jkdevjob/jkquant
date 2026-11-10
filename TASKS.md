@@ -7,6 +7,7 @@
 - 확인: 연구 기준 구현(engine_panic · 지피티 독립 재현과 같은 것)과 516회 재생 장부·평가액 완전 일치 · 실제 시세 API 로 3년 모의 재생(아래 TEST_RESULTS).
 - 미확인: 배포 뒤 로그인한 실제 화면에서 세션을 만들어 본 것은 아님(브라우저 확인은 로그인 없는 시험 페이지) · 실제 주문 경로는 바꾸지 않음(운영 세션은 기본 규칙만).
 - 남은 것(사용자 결정): 실제 투자 세션에 쓸지 — 모의로 기본과 나란히 본 뒤 따로. 연중 손실 수확(연말 세금 카드 확장)은 별도 승인 대기.
+- 배포 확인(11-10): PR #645 squash a03fdfb · GitHub check(조각 4개 + check) · regression success · 운영 curl — index `#appVerTop`·`#appVer` v3.128.0 · /plan v2.6.0 · `id="assetSessionPanic"` 있음 · plan-session-engine.js?v=7 에 `panicStep` · plan-session-settings.js?v=4 에 panic 저장 줄.
 
 ## 2026-11-10 · 포트폴리오 글자 '지금 계좌' 삭제 · v3.127.6
 

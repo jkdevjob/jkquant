@@ -10,6 +10,7 @@
 - 모의 목록 `index.html` v3.128.0: 공포 모드 세션이 있으면 ^VIX·^VXN 도 받아 재생 · 이름 'v1.1 공포 모드(실험)' · VIX 없으면 줄 비움.
 - 시험 `scripts/check-plan-panic.cjs`(값 + 변이 35종) · 검사 목록·회귀에 연결. 기존 시험은 새 도우미·캐시 판(엔진 7 · 설정 4)·규칙 표(base + panic)에 맞춤.
 - 연구 근거: research/daily `research/im_plan/RESEARCH_LOG.md` 11-10(발견 · 재현 확인 · 도구 오류 4건 정정) · `REPLICATION.md` R-20261110-1.
+- 반영: PR #645 · squash a03fdfb · 배포 확인 11-10(운영 index v3.128.0 · 듀얼가드 v2.6.0).
 
 ## 2026-11-10 · 포트폴리오 글자 '지금 계좌' 삭제 · v3.127.6
 
