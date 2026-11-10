@@ -1,5 +1,14 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-11 · 연구(클로드) 아침 루틴 — ③ 자동 승격 확인 · R6
+
+- 원천: `scalping-data` 의 `data/claude-lab/latest.json`(11/11 06:01 생성) · `data/claude-live/2026-11-10.json` · `data/opening-gapdown-live/2026-11-10.json` · `data/claude-lab/review/2026-11-10.json`.
+- 11/10: ① 통과 2(그림자 0) · 매매 없음 / ② 15:21 +9.93% · max24 {next 11/11, nextOpen true} · 그림자 etf_nolimit 매수 없음 / ⑤ 15:00 +10.64% 매수 없음 / ④ 신호 없음 / ③ ETH 쉼. 세 단계 모두 vtsSetting revision 3 · on false · `모의투자 꺼짐(설정)`.
+- ③ 승격: arena log `promote g_coin_ma5_s10_hi_both 7일 연속 1위 → 2026-11-12 부터 메인 (이전 메인 g_coin_ma15_s99_hi7_eth)` · main.crypto.history 2건(10/14 · 11/12) · promotedAt 2026-11-10T17:17:30Z.
+- R6: `r6_freq_beta.py` — 잘라 쓰는 날짜 11/10 에서 경쟁군 안정 점수 ③ 13/13 · ② 11/11 이 11/11 경쟁 값과 같음(② 첫 실행은 9/11 — 사본에 `etf-overnight-research/signals.csv` 가 없어 −3.0 기준이 비었다 · 넣고 다시). 결과는 `CLAUDE-SCALPING-RESEARCH.md` R6.
+- `opening_agreement.py`(11/09 연구 일봉 포함): 메인 날 일치 85%(9 · 13 · 4 · 0) · 그림자 92%(8 · 16 · 1 · 1) · 종목 겹침 메인 6/27 · 그림자 5/24.
+- 미확인: ③ 승격 텔레그램 알림 도착 · 11/11 리포트 수신(08:03 로그 확인 예정).
+
 ## 2026-11-11 · 듀얼가드 분석 탭 '📊 투자 성과' — 넣은 돈 · 실현손익 · 총손익 · 듀얼가드 v2.8.0
 
 - `node scripts/check-plan-perf.cjs` — ALL PASS · 변이 4/4 빨간불(넣은 돈에서 입출금 빠짐 · 실현손익이 합계에서 사라짐 · 분해에서 수수료 빠짐 · 총손익을 평가손익으로).
