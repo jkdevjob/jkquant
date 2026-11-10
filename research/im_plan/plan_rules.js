@@ -58,8 +58,8 @@ function mk(P,R,G,p){ p=Object.assign({tw:.70,gw:.30,look:20,s0:.55,sb:.10,ma:22
       if(p.reN){ if(!st.g){ st.offLow=Math.min(st.offLow??Infinity,c); if((st.od||0)>=p.reN&&((p.reMA&&rmF[k]>0&&c>rmF[k]*(1+(p.gbOn??p.gb)))||(p.reUp&&c>=st.offLow*(1+p.reUp)))){ st.g=true; st.fast=true; st.reLow=st.offLow; } } else if(!st.fast) st.offLow=Infinity; }   // 변형(11-08): OFF 가 reN 신호일 넘으면 TQQQ > reMA일선×(1+gbOn) 또는 OFF 최저가×(1+reUp) 에서 켠다
       if(pan){ st.gN=st.g; const v=pan.v[k], fm=pan.fm[k], b=p.panic.band??0.02; if(v!=null&&v>=p.panic.hi) st.armed=true;
         if(st.gN){ st.pf=false; st.armed=false; }   // 보통 Guard 가 켜지면 공포 모드·무장 해제
-        else if(!st.pf){ if(!p.panic.noGuard&&st.armed&&v!=null&&v<p.panic.lo&&(p.panic.needMA===false||(fm>0&&c>fm*(1+b)))){ st.pf=true; st.g=true; st.pn=(st.pn||0)+1; } }   // noGuard: 슬리브만(Guard 빠른 모드 없음)
-        else { if(fm>0&&c>fm*(1+b)) st.g=true; else if(fm>0&&c<fm*(1-b)) st.g=false; if(p.panic.oneShot&&!st.g) st.pf=false; } }   // 빠른 모드: fm ±band 히스테리시스 · oneShot 이면 한 번 꺼지면 보통 모드로(재진입은 SMA225 +gbOn 에서만)
+        else if(!st.pf){ if(!p.panic.noGuard&&st.armed&&v!=null&&v<p.panic.lo&&(p.panic.needMA===false||(fm>0&&c>fm*(1+b)))){ st.pf=true; st.g=true; st.pg=true; st.pn=(st.pn||0)+1; } }   // noGuard: 슬리브만(Guard 빠른 모드 없음)
+        else { if(fm>0&&c>fm*(1+b)) st.g=true; else if(fm>0&&c<fm*(1-b)) st.g=false; else st.g=!!st.pg; st.pg=st.g; if(p.panic.oneShot&&!st.g) st.pf=false; } }   // 11-10 고침(지피티 검토): 중립 구간에선 직전 빠른 상태(st.pg) 유지 — 예전엔 위에서 st.g 를 보통 Guard(OFF)로 되돌린 채 남겨 2020-04-29 에 정의와 다른 매도가 났다   // 빠른 모드: fm ±band 히스테리시스 · oneShot 이면 한 번 꺼지면 보통 모드로(재진입은 SMA225 +gbOn 에서만)
       if(p.full&&!st.g) w=0;                       // 변형: Guard OFF 면 TECL 도 끔
       if(p.offMul!=null&&!st.g) w*=p.offMul;       // 변형: Guard OFF 동안 TECL 목표에 offMul 곱함(일부만 줄임)
       st.od=st.g?0:(st.od||0)+1; if(p.offLongN&&!st.g&&st.od>p.offLongN) w*=(p.offLongK??0.5);   // 변형(11-04): Guard OFF 가 offLongN 신호일 넘게 이어지면 TECL 목표 × offLongK — 긴 하락장만 줄이기
