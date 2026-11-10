@@ -178,7 +178,7 @@ await t('P0 모의성과 시세는 종목별 병렬 선취 후 전략 재생만 
   assert(/await paperPrefetchQuotes\(opt\)/.test(fill));   // opt.live — 포트폴리오(실전 세션)도 같은 선취를 탄다(2026-11-09)
   assert(/Promise\.all\(\[\.\.\.px\]/.test(pre),'price prefetch parallel');
   assert(/Promise\.all\(\[\.\.\.dv\]/.test(pre),'dividend prefetch parallel');
-  const pp=fn('async function loadPlanPaperData(force)');
+  const pp=fn('async function loadPlanPaperData(force,panic)');   // v3.128.0 — 공포 모드 세션이 있으면 ^VIX·^VXN 도 같은 병렬 선취에
   assert(/Promise\.all\(miss\.map/.test(pp),'plan paper quotes parallel');
 });
 

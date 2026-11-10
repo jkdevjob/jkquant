@@ -86,7 +86,7 @@ async function check(S){
   { const V={assetSessionChips:{innerHTML:''},assetSessionState:{className:'',textContent:'',title:''}};
     const box={sessions:[{id:'A',name:'A 운영',horizon:5,paper:false},{id:'P',name:'모의<1>',horizon:5,paper:true,simStart:'2025-01-02'},{id:'H',name:'10년',horizon:10}],activeByHorizon:{5:'P'}};
     const c={window:{JKPlanSessionEngine:{STRATEGY:{name:'듀얼가드',version:'1.0'},retiredReason:x=>+x.horizon!==5?'x':''}},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5,dgDragEl:null,planCurName:''};
-    vm.createContext(c);vm.runInContext(['function planCurLabel()','function planStrategy()','function planStrategyLabel()','function planRetired(x)','function assetSessionList(h=activeHorizon)','function activeAssetSession()','function renderAssetSessions()'].map(m=>fnOf(S.plan,m)).join('\n'),c);
+    vm.createContext(c);vm.runInContext(['function planCurLabel()','function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function planStrategyLabelOf(x)','function planRetired(x)','function assetSessionList(h=activeHorizon)','function activeAssetSession()','function renderAssetSessions()'].map(m=>fnOf(S.plan,m)).join('\n'),c);
     c.renderAssetSessions();const h=V.assetSessionChips.innerHTML,ids=[...h.matchAll(/data-asess="([^"]*)"/g)].map(m=>m[1]);
     t('D1 칩 차례: 현재 투자중(맨 앞) → 세션들 → + 세션(맨 끝) · 폐지 세션 없음',ids.join()===',A,P'&&/data-asess-add="1"[^>]*>\+ 세션<\/div>$/.test(h)&&!/10년/.test(h),ids.join());
     t('D2 ✕ 는 보고 있는 세션에만(P) · 모의 배지 · 이름은 글자로(<1> 이스케이프)',(h.match(/data-asess-del=/g)||[]).length===1&&/data-asess-del="P"/.test(h)&&/paperbadge">모의/.test(h)&&/모의&lt;1>/.test(h)&&/class="dg-sesschip on" data-asess="P"/.test(h),h.slice(0,300));

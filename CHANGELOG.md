@@ -1,5 +1,16 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-10 · 듀얼가드 v1.1 '공포 모드' — 실험적 확장 · 모의 세션 선택지 · v3.128.0 (듀얼가드 v2.6.0)
+
+사용자(11/10): "그래 하자" (공포 모드 앱 반영 승인 — 기본은 그대로 · 모의 세션 선택지부터)
+
+- 엔진 `plan-session-engine.js`: `ALPHA_RULES.panic`(hi 40 · lo 35 · SMA50 ±2% · k 3.0 · fbK 3.6) · `panicStep`(하루 판정 · 전일 값만) · `panicState` · `strategyLabel` · `alphaRules('panic')`. replay 가 `vix`·`vxn` 을 받아 날짜 축에 잇고, 공포 모드면 TECL 목표 σ 와 Guard 를 panicStep 값으로 쓴다. 결과에 `panic{log,state,next,signalDate,vix,vxn,params}`(공포 모드일 때만). VIX 없으면 오류. 기본 규칙 경로는 손대지 않았다(결과 JSON 동일).
+- 세션 설정 `plan-session-settings.js`: 모의 세션이고 `rules==='panic'` 일 때만 `alphaRules:'panic'` 저장 — 그 밖은 늘 base.
+- 듀얼가드 화면 `plan.html` v2.6.0: 세션 창 '공포 모드 v1.1 로 재생'(모의일 때만) · 칩 '공포' · 상태줄·성과 머리 이름 · 상태 카드(`assetPanicHtml`) · 지수 시세(`fetchPlanIndex` — 모의 목록과 같은 변환) · 다음 주문 판정이 엔진 next 를 따름(`alphaPanicNext` · 판정일이 재생 자료 끝과 같을 때만).
+- 모의 목록 `index.html` v3.128.0: 공포 모드 세션이 있으면 ^VIX·^VXN 도 받아 재생 · 이름 'v1.1 공포 모드(실험)' · VIX 없으면 줄 비움.
+- 시험 `scripts/check-plan-panic.cjs`(값 + 변이 35종) · 검사 목록·회귀에 연결. 기존 시험은 새 도우미·캐시 판(엔진 7 · 설정 4)·규칙 표(base + panic)에 맞춤.
+- 연구 근거: research/daily `research/im_plan/RESEARCH_LOG.md` 11-10(발견 · 재현 확인 · 도구 오류 4건 정정) · `REPLICATION.md` R-20261110-1.
+
 ## 2026-11-10 · 포트폴리오 글자 '지금 계좌' 삭제 · v3.127.6
 
 사용자(11/10): "지금 계좌는 전부 지워"
