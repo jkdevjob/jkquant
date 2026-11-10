@@ -55,7 +55,7 @@ test('completion retries preserve the same session identifier',async()=>{
 });
 test('every existing menu links once to workout; new page uses shared access/header',()=>{
  for(const name of fs.readdirSync('.').filter(x=>x.endsWith('.html'))){const source=fs.readFileSync(name,'utf8');if(!source.includes('jkmenu-pop'))continue;assert.equal((source.match(/<a\b[^>]*href="\/workout"/g)||[]).length,1,name);}
- const source=fs.readFileSync('workout.html','utf8');assert.match(source,/<title>JK 투자 — 운동 타이머<\/title>/);assert.match(source,/jk-access\.js" data-guard="1"/);assert.match(source,/jk-ui\.js\?v=1\.1\.0/);const access=fs.readFileSync('jk-access.js','utf8');assert.match(access,/path:'\/workout',label:'운동 타이머',mode:'public'/);assert.match(access,/'\/workout\.html':'\/workout'/);assert.match(fs.readFileSync('jk-ui.js','utf8'),/'\/workout':'운동 타이머'/);
+ const source=fs.readFileSync('workout.html','utf8');assert.match(source,/<title>JK 투자 — 운동 타이머<\/title>/);assert.match(source,/jk-access\.js" data-guard="1"/);assert.match(source,/jk-ui\.js\?v=1\.1\.1/);const access=fs.readFileSync('jk-access.js','utf8');assert.match(access,/path:'\/workout',label:'운동 타이머',mode:'public'/);assert.match(access,/'\/workout\.html':'\/workout'/);assert.match(fs.readFileSync('jk-ui.js','utf8'),/'\/workout':'운동 타이머'/);
 });
 test('essential timer invariants detect deliberate regressions',async()=>{
  const source=fs.readFileSync('workout-engine.mjs','utf8');

@@ -60,8 +60,8 @@ t('U2 자리 — 오른쪽 가장자리 · 화면 세로 가운데 · 모달(z-i
 t('U3 모든 페이지(13개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
   for(const f of PAGES){
     const s=fs.readFileSync(path.join(ROOT,f),'utf8');
-    assert.equal((s.match(/<script src="\/jk-ui\.js\?v=1\.1\.0" defer><\/script>/g)||[]).length,1,f+' 한 번');
-    assert(/<script src="\/jk-access\.js"[^>]*><\/script>\n<script src="\/jk-ui\.js\?v=1\.1\.0" defer><\/script>/.test(s),f+' jk-access 다음');
+    assert.equal((s.match(/<script src="\/jk-ui\.js\?v=1\.1\.1" defer><\/script>/g)||[]).length,1,f+' 한 번');
+    assert(/<script src="\/jk-access\.js"[^>]*><\/script>\n<script src="\/jk-ui\.js\?v=1\.1\.1" defer><\/script>/.test(s),f+' jk-access 다음');
   }
   const htmls=fs.readdirSync(ROOT).filter(f=>/\.html$/.test(f)).sort();
   assert.deepEqual(htmls,[...PAGES].sort(),'페이지가 늘면 여기에도 넣는다: '+htmls.join(','));
@@ -290,7 +290,7 @@ t('U10 /paper 페이지 상자 — 휴대폰에서 높이 제한 없이 표 전�
   assert.equal(v('padding',375),'12px 8px','폰 폭 여백은 페이지 값(표 칸을 넓게 — U4 폭 계산 근거)');
   assert.equal(v('max-height',1280),'none','넓은 화면도');
   const modal=[E('html'),E('body'),E('div','paperModal',['modal','on']),E('div','',['box'])];   // 운영 화면의 모달은 그대로 화면 높이 제한
-  assert.equal(computed(rules,modal,'max-height',375).v,'calc(100dvh - 16px)','모달일 땐 공용 제한 그대로');
+  assert.equal(computed(rules,modal,'max-height',375).v,'calc(100dvh - 16px - 2*env(safe-area-inset-top,0px))','모달일 땐 공용 제한 그대로');
   assert.equal(computed(rules,modal,'overflow-y',375).v,'auto','모달은 안에서 스크롤');
 });
 t('U11 운영 화면 기록 표 — 휴대폰(≤560px)에선 최소 폭(590·440px)을 풀어 짧은 표는 한 화면에 · 숫자 칸은 줄바꿈 안 함(금액이 두 줄로 안 끊김)',()=>{
