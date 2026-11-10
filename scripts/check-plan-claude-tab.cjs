@@ -87,8 +87,8 @@ async function check(S){
       {id:'h10',name:'10년 세션',horizon:10,paper:true,settings:{}},{id:'h15',name:'15년 세션',horizon:15,paper:false,settings:{}},{id:'h20',name:'20년 세션',horizon:20,paper:true,settings:{}},
       {id:'x1',name:'새 규칙 모의',horizon:5,paper:true,simStart:'2025-01-02',settings:{alphaRules:'exp1'}},{id:'x2',name:'공격형 모의',horizon:5,paper:true,simStart:'2025-01-02',settings:{alphaRules:'exp2'}}];
     const run=(active)=>{const box={sessions:JSON.parse(JSON.stringify(L)),activeByHorizon:{5:active}},V={assetSessionChips:{innerHTML:''},assetSessionState:{className:'',textContent:''}};
-      const ctx=vm.createContext({window:{JKPlanSessionEngine:E},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5,dgDragEl:null,planCurName:''});
-      for(const m of ['function planCurLabel()','function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function planStrategyLabelOf(x)','function planRetired(x)','function assetSessionList(h=activeHorizon)','function activeAssetSession()','function renderAssetSessions()'])vm.runInContext(fnOf(P,m),ctx);
+      const ctx=vm.createContext({window:{JKPlanSessionEngine:E},$:id=>V[id],assetPlanBox:()=>box,activeHorizon:5,dgDragEl:null,planCurName:'',planCurRules:'base',dgStickyOffsets(){} });
+      for(const m of ['function planCurLabel()','function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function renderPlanVersion()','function planStrategyLabelOf(x)','function planRetired(x)','function assetSessionList(h=activeHorizon)','function activeAssetSession()','function renderAssetSessions()'])vm.runInContext(fnOf(P,m),ctx);
       ctx.renderAssetSessions();return {list:ctx.assetSessionList().map(x=>x.id).join(),active:(ctx.activeAssetSession()||{}).id||'',chips:V.assetSessionChips.innerHTML,state:V.assetSessionState.textContent};};
     const r1=run('x1'),r2=run('b'),r3=run('h10');
     t('C4 세션 목록 — 5년 기본만(a·b) · 폐지 5개는 숨김(지우지 않음)',r1.list==='a,b',r1.list);
@@ -97,7 +97,7 @@ async function check(S){
       &&r1.state==='듀얼가드 v1.0 · 숨긴 예전 세션 5개'&&r2.state==='듀얼가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 5개',r1.state+' | '+r2.state);
   }
   t('C6 딥링크 — 5년 · 폐지 안 된 세션만 연다',/if\(q&&\+q\.horizon===5&&!planRetired\(q\)\)\{/.test(fnOf(P,'async function finishPlanOpen(user)')));
-  t('C7 머리 카드 — 이름·판은 엔진 STRATEGY',/\$\("stageTitle"\)\.textContent=P\.name;if\(\$\("dgVer"\)\)\$\("dgVer"\)\.textContent="v"\+P\.version;/.test(fnOf(P,'function render()'))&&/id="stageTitle">듀얼가드<\/span><span class="dg-ver" id="dgVer">v1\.0<\/span>/.test(P));
+  t('C7 머리 카드 — 이름·판은 엔진 STRATEGY',/\$\("stageTitle"\)\.textContent=P\.name;renderPlanVersion\(\);/.test(fnOf(P,'function render()'))&&/if\(\$\('dgVer'\)\)\$\('dgVer'\)\.textContent=v;/.test(fnOf(P,'function renderPlanVersion()'))&&/id="stageTitle">듀얼가드<\/span><span class="dg-ver" id="dgVer">v1\.0<\/span>/.test(P));
 
   // ── D. index.html (모의 목록)
   const X=S.idx;
@@ -132,7 +132,7 @@ async function check(S){
     ['엔진: 폐지 판정이 늘 빈칸','eng',s=>s.replace("function retiredReason(x){\n  if(!x)return '';","function retiredReason(x){\n  return '';")],
     ['엔진: 폐지 기간을 거절하지 않고 재생','eng',s=>s.replace("  if(gone)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'폐지된 세션 — '+gone,retired:gone};\n","")],
     ['엔진: 기본 규칙 Guard 끄기 −1% → −3%','eng',s=>s.replace("base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.01","base:{key:'base',name:'기본 규칙',guardOn:.01,guardOff:.03")],
-    ['설정: 넘긴 규칙을 다시 저장','set',s=>s.replace("x.settings.alphaRules=(paper&&input.rules==='panic')?'panic':'base';","if(input.rules!=null)x.settings.alphaRules=String(input.rules);")],
+    ['설정: 넘긴 규칙을 다시 저장','set',s=>s.replace("x.settings.alphaRules=input.rules==='panic'?'panic':'base';","if(input.rules!=null)x.settings.alphaRules=String(input.rules);")],
     ['플랜: 세션 목록이 폐지 세션도 보임','plan',s=>s.replace("sessions.filter(x=>x&&+x.horizon===+h&&!planRetired(x));}","sessions.filter(x=>x&&+x.horizon===+h);}")],
     ['플랜: 폐지 세션 선택이 살아남음','plan',s=>s.replace("x.id===id&&+x.horizon===+activeHorizon&&!planRetired(x))||null;","x.id===id&&+x.horizon===+activeHorizon)||null;")],
     ['플랜: 10년 탭 되살림','plan',s=>s.replace('  <div class="hero" id="dgHero"','  <button class="horizon-tab" data-horizon="10">10년</button>\n  <div class="hero" id="dgHero"')],
@@ -147,7 +147,7 @@ async function check(S){
     ['엔진: 이름 띄어쓰기 되살림','eng',s=>s.replace("name:'듀얼가드',owner:'claude'","name:'듀얼 가드',owner:'claude'")],
     ['설정: 새 세션 기본 이름 "5년 세션"(옛 코드)','set',s=>s.replace("||'듀얼가드 세션';","||x.horizon+'년 세션';")],
     ['듀얼가드 화면: "플랜" 글자 되살림','plan',s=>s.replace('<label>듀얼가드 시작일</label>','<label>플랜 시작일</label>')],
-    ['듀얼가드 화면: 머리글 "5 YEAR" 되살림(옛 코드)','plan',s=>s.replace("setTxt('alphaHorizonEyebrow','DUAL GUARD · v'+P.version);","setTxt('alphaHorizonEyebrow','5 YEAR · DUAL GUARD · v'+P.version);")],
+    ['듀얼가드 화면: 머리글 "5 YEAR" 되살림(옛 코드)','plan',s=>s.replace("$('alphaHorizonEyebrow').textContent='DUAL GUARD · '+v;","$('alphaHorizonEyebrow').textContent='5 YEAR · DUAL GUARD · '+v;")],
     ['운영: "플랜" 글자 되살림','idx',s=>s.replace("'듀얼가드 세금 점검과 같은 계산(결제일 환율 · 선입선출)'","'플랜 세금 점검과 같은 계산(결제일 환율 · 선입선출)'")],
     ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=7;','const PAPER_VIEW_CACHE_VER=6;')],
     ['엔진: 폐지 안내 "폐지된 플랜"(옛 글자)','eng',s=>s.replace("error:'폐지된 세션 — '+gone","error:'폐지된 플랜 — '+gone")],

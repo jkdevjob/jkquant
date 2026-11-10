@@ -97,7 +97,7 @@ function check(S){
       /function alphaEventList\(ledger=alphaLedger\)\{return JKPlanSessionEngine\.ledgerEvents\(ledger\);\}/.test(S.plan)
       &&/function alphaLedgerCalc\(ledger=alphaLedger\)\{return JKPlanSessionEngine\.ledgerCalc\(ledger\);\}/.test(S.plan)
       &&!/S\.tradePnl\[e\._i\]=/.test(S.plan));
-    t('A4 엔진 캐시 판 7 — 플랜·운영 둘 다(새 함수를 옛 캐시 엔진으로 부르지 않게)',/plan-session-engine\.js\?v=7"/.test(S.plan)&&/plan-session-engine\.js\?v=7"/.test(S.idx)); }
+    t('A4 엔진 캐시 판 8 — 플랜·운영 둘 다(새 함수를 옛 캐시 엔진으로 부르지 않게)',/plan-session-engine\.js\?v=8"/.test(S.plan)&&/plan-session-engine\.js\?v=8"/.test(S.idx)); }
 
   // ── B. 합계
   { const c={};vm.createContext(c);vm.runInContext(fnOf(S.idx,'function pfOutAmt(r)')+fnOf(S.idx,'function pfSummary(rows, fx)'),c);
@@ -523,7 +523,7 @@ function check5(S,t,E,bad){
   const opt={today:'2026-11-09',minStart:'2023-11-09',fx:1400},inp=o=>Object.assign({paper:false,name:'세션',capital:5000,monthly:0,target:9000,start:'2026-01-02'},o);
   const x1=M.update(seed,inp({portfolio:false}),opt),x2=M.update(x1,inp({portfolio:true}),opt),x3=M.update(x1,inp({}),opt),x4=M.update(x1,inp({paper:true,portfolio:true,start:'2025-01-02'}),opt);
   t('O8 플랜 세션 설정 모듈 — 운영 세션은 고른 값(끔 → false · 켬 → true) · 값을 안 넘기면 그대로 · 모의로 바꾸면 손대지 않음 · 캐시 판 4',
-    x1.portfolio===false&&x2.portfolio===true&&x3.portfolio===false&&x4.portfolio===false&&x4.paper===true&&/<script src="\/plan-session-settings\.js\?v=4"><\/script>/.test(S.plan),JSON.stringify([x1.portfolio,x2.portfolio,x3.portfolio,x4.portfolio]));
+    x1.portfolio===false&&x2.portfolio===true&&x3.portfolio===false&&x4.portfolio===false&&x4.paper===true&&/<script src="\/plan-session-settings\.js\?v=5"><\/script>/.test(S.plan),JSON.stringify([x1.portfolio,x2.portfolio,x3.portfolio,x4.portfolio]));
   // O9 듀얼가드 설정창 저장 — 현재 투자중은 planPortfolio(→ 원장) · 세션은 세션 값 · 모의 새 세션은 값 없음
   const P={};const el=(id,o={})=>P[id]=Object.assign({value:'',checked:false,disabled:false,textContent:'',hidden:false},o);
   el('assetSessionPaper',{checked:false});el('assetSessionName',{value:'현재 투자중'});el('assetSessionCapital',{value:'20000'});el('assetSessionMonthly',{value:'0'});el('assetSessionTarget',{value:'150000'});
@@ -544,7 +544,7 @@ function check5(S,t,E,bad){
     t('O9 듀얼가드 설정창 저장 — 현재 투자중 끔 → 원장 저장 때 planPortfolio=false · 세션 끔 → 그 세션 portfolio:false · 모의 새 세션은 값 없음',
       log.join(' | ')==='cloud:false | state:[false] | state:[false,"-"]',log.join(' | '));
     // O10 원장에 적고 읽기 — readForm 이 portfolio 를 적고, apply 가 읽는다(없으면 넣음)
-    const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:false,planCurName:''};
+    const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:false,planCurName:'',planCurRules:'base'};
     vm.createContext(r);vm.runInContext(fnOf(S.plan,'function readForm()'),r);const o=r.readForm();
     const a={$:()=>null,todayISO:()=>'2026-11-09',plusYears:s=>s,planSid:()=>'x',bindSleeveLedger(){},alphaSyncInputs(){},alphaFee:()=>0,ALPHA_FEE_RATE:0.001,planLinks:null,sleeveSessions:null,alphaLedger:null,planPortfolio:true};
     vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function apply(o)'),a);

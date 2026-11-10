@@ -293,7 +293,10 @@ function replay(opt){
   if(PN){
     /* 화면용: 마지막 확정일(자료 끝) 신호로 본 '다음 거래일' 판정과 상태 — 재생 상태를 복사해 한 걸음만 더 간다(재생 장부는 건드리지 않는다). */
     const p=S.dates.length-1,sg=p>=0?realizedVol(S.tecl,p,DEFAULTS[5].ivsLook):null,mv=p>=0?tma225[p]:null,st=Object.assign({},pst);
-    const nx=(sg>0&&mv>0)?panicAt(st,p,pos.TQQQ>0,sg,mv):null;
+    /* opt.nextPosOn(true|false) — 운영 세션: '다음 판정'의 보유 여부만 실제 계좌 값으로 바꾼다. 상태(무장·빠른 모드·재가속)는 시세만으로 정해져 보유와 무관하고,
+       보유 여부는 빠른 모드 중립 구간(SMA ±band 사이)에서 '들고 있던 대로'를 정할 때만 쓰인다. 모의 재생은 넘기지 않는다(재생 장부의 보유). */
+    const posNext=typeof opt.nextPosOn==='boolean'?opt.nextPosOn:pos.TQQQ>0;
+    const nx=(sg>0&&mv>0)?panicAt(st,p,posNext,sg,mv):null;
     out.panic={log:plog,state:st,signalDate:p>=0?S.dates[p]:'',vix:p>=0?vixA[p]:null,vxn:p>=0?vxnA[p]:null,
       next:nx?{guard:nx.guard,sigma:nx.sigma,sigma20:sg,iv:nx.iv,events:nx.events}:null,params:Object.assign({},PN)};
   }
