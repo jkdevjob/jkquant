@@ -21,6 +21,7 @@ function check(source=src){
   vm.runInContext(fn(source,'function alphaExplainBounds(target,current,band)'),c);   // renderAlphaPlan 이 부르는 도우미(plan 1.43.35 에서 추가) — 없으면 시험이 ReferenceError
   vm.runInContext(fn(source,'function renderDualGuardStrip(o)'),c);
   vm.runInContext('var alphaLedger={base:{},events:[]};'+fn(source,'function alphaEventList(ledger=alphaLedger)')+fn(source,'function alphaDepositPending(ledger=alphaLedger)'),c);   // 입금 맞춤 판정(plan 2.0.1) — 이 시험의 장부엔 입금이 없다
+  vm.runInContext('var assetPaperCache={};function activeAssetSession(){return null;}'+fn(source,'function assetRulesOf(x)')+fn(source,'function alphaPanicNext(signalDate)'),c);   // 공포 모드 도우미(v2.6.0) — 현재 투자중은 늘 null(기본 판정)
   vm.runInContext(fn(source,'function renderAlphaPlan(qTecl,qTqqq,qSgov)'),c);
   const quote=(close)=>({rows:[{date:'2026-10-12',close}],settled:{date:'2026-10-12',close},price:close});
   c.renderAlphaPlan(quote(98.875),quote(79),quote(100));
