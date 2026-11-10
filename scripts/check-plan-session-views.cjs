@@ -14,7 +14,7 @@ async function main(){
   assert.deepEqual(tabs.map(x=>x.dataset.assetDetail),['current','analysis','history','explain']);
   const c=vm.createContext({document:{querySelectorAll:s=>s==='[data-asset-detail]'?tabs:panels}});
   vm.runInContext(fn('function setAssetDetail(name)'),c);
-  for(const [name,ids] of Object.entries({current:['dgHero','alphaOrderSection','alphaAccountSection','alphaTaxSection'],analysis:['assetPaperPanel','alphaEvidenceSection'],history:['alphaHistorySection','alphaResetSection'],explain:['alphaStrategySection']})){
+  for(const [name,ids] of Object.entries({current:['dgHero','alphaOrderSection','alphaAccountSection','alphaTaxSection'],analysis:['assetPaperPanel','alphaPerfSection','alphaEvidenceSection'],history:['alphaHistorySection','alphaResetSection'],explain:['alphaStrategySection']})){
     c.setAssetDetail(name);
     assert.deepEqual(panels.filter(p=>!p.hidden).map(p=>p.id),ids);
     assert.equal(tabs.filter(t=>t['aria-selected']==='true').length,1);
@@ -30,7 +30,8 @@ async function main(){
   const p=vm.createContext({console,document:{body:{classList:{add:x=>classes.add(x),remove:x=>classes.delete(x)}}},
     $:id=>els[id],activeAssetSession:()=>selected,setAssetDetail:()=>{},alphaCloseFillEditor:()=>closed++,alphaCloseEdit:()=>closed++,
     applyAssetSettings:()=>{},alphaSyncInputs:()=>{},renderAlphaLedger:()=>{},renderAssetSessions:()=>{},render:()=>{},refreshAlphaFromCache:()=>{},
-    refreshLive:async()=>{},cloneObj:x=>JSON.parse(JSON.stringify(x)),assetPaperStatsHtml:()=>'',fetchPlanQuote:()=>quote,
+    refreshLive:async()=>{},cloneObj:x=>JSON.parse(JSON.stringify(x)),assetPaperStatsHtml:()=>'',assetRulesOf:()=>'base',planPanicIndexLoad:async()=>[null,null],   // 공포 모드 도우미(v3.129.0) — 없으면 재생이 ReferenceError 로 끝나 '늦게 끝난 재생' 경로를 못 본다
+    fetchPlanQuote:()=>quote,
     window:{JKPlanSessionEngine:{replay:()=>({ledger:{base:{cash:12000},events:[]}})}},todayISO:()=> '2025-01-02'});
   vm.runInContext('let assetViewRevision=0,alphaLedger={base:{cash:999},events:[]},liveQuotes={};const assetPaperCache={};'+
     fn('function assetLedgerSeed(date,cap)')+fn('async function replayAssetPaperSession(x,applyView)')+fn('async function loadActiveAssetSessionView(refresh=true)'),p);
