@@ -1,5 +1,17 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-10 · 연구(클로드) ⚡ SOXL 탭 — '인버스 거래대금 비율' 전향 시험 카드 · 연구(클로드) v2.28.0
+
+사용자(11/10): "요거 괜찮은데 연구해봐"(SOXS/SOXL 거래대금 비율 글) · "듀얼가드 상관없이 저거 자체로만 전략을 쓸수 없을까?" · "그래 첫번째로 가자"(연구 탭에 전향 시험 카드)
+
+- 수집·규칙 `scripts/soxl_inverse/forward.cjs`: 순수 계산(`simulate` — 전일까지의 비율로 오늘 종가 비중) · 덧붙이기(`appendRows`) · 연속 확인(`continuity`) · 화면 묶음(`buildView`). 과거 줄은 `data/soxl-inverse/history-seed.json`(4,184거래일 · 2010-03-12 ~ 2026-11-09) · 고정 규칙은 `data/soxl-inverse/forward-model-1.0.0.json`.
+- 매일 실행 `.github/workflows/soxl-inverse-forward.yml`: 평일 23:10 UTC(한국 다음 날 08:10) + 02:40 UTC 보완 · `scalping-data` 브랜치 `data/soxl-inverse-forward/`(history.json · events.jsonl · latest.json). 알림 단계 없음.
+- 자료 API `functions/api/soxl-inverse.js`: 최신 묶음 그대로 전달 · 첫 실행 전(404)만 '시작 전' · 그 밖의 오류는 502.
+- 화면 `claude-soxl-inverse.js` 1.0.0 · `claude.html` v2.28.0: ⚡ SOXL 탭 맨 위 한 줄(오늘 비율 · 기준까지 거리 · 상태) + 맨 아래 카드(규칙 · 오늘 비율 · 지금 상태 · 등록 뒤 성과 vs SOXL 그냥 보유 · 최근 60거래일 비율 그래프 · 등록 뒤 기록 · 접어 둔 과거 시험).
+- 시험 `scripts/check-soxl-inverse.cjs`(검사 단계 추가): 규칙 · 누적 · 화면 · 자료 API · 연결 값 시험 + 변이 18종.
+- 연구 근거: `research/daily` `research/im_plan/RESEARCH_LOG.md` 10·11번(약한 후보 — 매매 7번 · 낙폭 80% · 다른 3배 짝에서는 안 통함).
+- 앞 작업(밸류리밸런싱 모의 값 v3.129.1): PR #649 · squash 2773a07 · 배포 확인 11-10(운영 index v3.129.1 · 듀얼가드 v2.7.1).
+
 ## 2026-11-10 · 밸류리밸런싱 모의 값 이상(투입 $544 · 세후 +3만%) — 듀얼가드 화면 저장이 모의 기록 머리를 지움 · v3.129.1 (듀얼가드 v2.7.1)
 
 사용자(11/10): "밸류리밸린성 값이 이상한데" (모의 목록 화면 — TECL 인출식·거치식 · TQQQ 거치식 줄의 투입 $531·$544·$496 · 세후 TR +27,000~39,000%)

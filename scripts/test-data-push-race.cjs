@@ -51,10 +51,11 @@ try{
     saves+=(text.match(/bash \.app\/scripts\/push-scalping-data\.sh/g)||[]).length;
   }
   // 2026-11-09: 할 일이 끝난 1년 백필(opening-year-backfill.yml · 저장 1곳)을 지워 13→12 · 16→15.
-  assert.equal(writers,12,'텐배거(지피티·클로드) · 헤드라인 수집(연구 R11) 포함 모든 데이터 저장 workflow');
-  assert.equal(saves,15,'조건부 저장 경로까지 전부 공용 저장');
+  // 2026-11-10: SOXL 인버스 거래대금 비율 전향 시험(soxl-inverse-forward.yml · 저장 1곳)을 더해 12→13 · 15→16.
+  assert.equal(writers,13,'텐배거(지피티·클로드) · 헤드라인 수집(연구 R11) · SOXL 인버스 비율 포함 모든 데이터 저장 workflow');
+  assert.equal(saves,16,'조건부 저장 경로까지 전부 공용 저장');
   for(const file of ['daytrading-research.yml','soxl-research.yml','daily1-shadow-research.yml'])
     assert(!fs.readFileSync(path.join(root,'.github/workflows',file),'utf8').includes('- "scalping.html"'),file+' UI 수정은 연구 수집을 실행하지 않음');
-  console.log('PASS 12개 workflow의 모든 저장 경로 공용화 · UI 수정으로 연구 수집 재실행 없음');
+  console.log('PASS 13개 workflow의 모든 저장 경로 공용화 · UI 수정으로 연구 수집 재실행 없음');
 }finally{fs.rmSync(temp,{recursive:true,force:true});}
 console.log('ALL PASS data push race');
