@@ -50,7 +50,7 @@
 - **공용 — 꼭 필요할 때만 최소로**
   - `worker/opening-scheduler`(클로드 ①②⑤ 와 지피티 시초가가 같이 쓴다) · `worker/presale-alert`(웹 푸시 · 텔레그램)
   - 설정 › 모의투자(`_paper-trading.js` · `paper-trading-settings.js` · `settings-paper-trading.js`) · `kis.js` · `_krx_calendar.js` · `_market-day-cache.js` · `telegram.js`
-  - `regression-check.js` · `scripts/check-before-push.cjs` · `.github/workflows/check.yml` · `CLAUDE.md` · 상태 문서 4개(`REQUIREMENTS.md` · `TASKS.md` · `CHANGELOG.md` · `TEST_RESULTS.md`)
+  - `regression-check.js` · `scripts/check-before-push.cjs` · `.github/check-steps.yml`(검사 단계 목록 한 곳 — 새 검사는 여기에) · `.github/workflows/check.yml`(조각 4개 · 건드리지 않음) · `CLAUDE.md` · 상태 문서 4개(`REQUIREMENTS.md` · `TASKS.md` · `CHANGELOG.md` · `TEST_RESULTS.md`)
   - 공용 파일을 고치면 양쪽 시험이 모두 초록이어야 하고 PR 에 그렇게 적는다. 상태 문서는 지피티 장만 더한다. `CLAUDE.md` 는 사용자가 원할 때만 고친다.
 - 어느 쪽 파일인지 애매하면 고치기 전에 사용자에게 묻는다.
 
@@ -104,7 +104,7 @@
    - 보고 제출 단계는 운영 코드 · 전략 · 주문 · 장부를 바꾸지 않는다.
 5. **반영** — 연구 기록과 고친 것을 main 에 넣는다.
    - 코드를 실행할 수 있으면 `node scripts/check-before-push.cjs` 전 단계 PASS(`EXIT 0`) → 지피티 작업 브랜치에 푸시 → PR(Ready) → `check.yml` 초록 → squash merge → 작업 브랜치를 main 에 맞춘다. 빨간불이면 병합하지 않는다.
-   - 전체 검사는 40분쯤 걸린다. 보고를 낸 뒤 백그라운드로 돌린다. `--offline` 은 개발 중에만 쓴다.
+   - 전체 검사는 병렬(기본)로 3분쯤 · `--serial` 이면 8분쯤 걸린다(4코어 기준). 보고를 낸 뒤 백그라운드로 돌린다. `--offline` 은 개발 중에만 쓴다.
    - `check.yml` 은 PR 을 열 때 · Ready 로 바꿀 때 · main 푸시 때만 돈다. 열린 PR 에 커밋을 더 올렸으면 그 브랜치로 `check.yml` 을 `workflow_dispatch` 한다.
    - 고친 것마다 값 시험 + 변이 시험(옛 코드로 되돌리면 빨간불)을 넣는다.
    - 페이지를 바꿨으면 `scalping.html` 머리말 `#scVer` 를 올리고 `curl` 로 배포된 버전을 확인한다.

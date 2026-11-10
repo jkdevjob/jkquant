@@ -12458,7 +12458,7 @@ console.log('\n[SCALPING TODAY KST/AUTO] KST 전일·당일 · 전략분석 자�
 console.log('\n[TENBAGGER] 텐배거 메뉴 · 클로드/지피티 탭 · 분석 값 시험');
 {
   const cp=require('child_process'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
-  const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),tb=fs.readFileSync(__d+'/tenbagger.html','utf8'),ck=fs.readFileSync(__d+'/.github/workflows/check.yml','utf8');
+  const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),tb=fs.readFileSync(__d+'/tenbagger.html','utf8'),ck=fs.readFileSync(__d+'/.github/check-steps.yml','utf8');
   const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','settings.html','admin.html','tenbagger.html'];
   ok('11개 페이지 기존 텐배거 링크·모의/공모주 상대 순서 보존(메뉴 노출은 공용 정책에서 숨김)',
      pages.every(f=>/<a href="\/paper"[^>]*><span class="mi">🧪<\/span>모의<\/a>\s*\n\s*<a href="\/tenbagger"[^>]*><span class="mi">🔟<\/span>텐배거<\/a>\s*\n\s*<a href="\/ipo"/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
@@ -12714,7 +12714,7 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 80/80 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 86/86 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   /* 2026-11-09 — 섀넌 기록 시트: 탭마다 제 양식 · 저장은 주문대로 체결 기록과 같은 길(_ivsPush) · FAB 규칙 */
   const pis=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ivs-sheet.cjs')],{encoding:'utf8'});
   ok('섀넌 기록 시트: 양식(5종 · 1배수 짝 선택) · 저장(매수·매도 수수료 자동 · 입금·출금·배당 · 날짜 정렬) · 검증 · 라우팅 · FAB 규칙 · 변이 6종',
@@ -12727,6 +12727,10 @@ Promise.all(PENDING).then(()=>{
   const pst=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-subtabs.cjs')],{encoding:'utf8'});
   ok('하위 탭 숨김·순서: 설정 정리(ASAP 기본 숨김·새 탭 맨 뒤) · 공개범위 · 적용(모의 주소·열린 탭) · 목록 = 페이지 7곳 실제 탭 · 관리자 화면 · 변이 13종',
      pst.status===0&&(pst.stdout||'').includes('ALL PASS sub tabs · 변이 14/14 red'),(pst.stdout||'').slice(-600)+(pst.stderr||''));
+  /* 2026-11-09 — 검사 단계 목록 한 곳(.github/check-steps.yml) · check-before-push 병렬/조각/offline · GitHub 검증 조각 4개 + check */
+  const pcs=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ci-steps.cjs')],{encoding:'utf8'});
+  ok('검사 단계 한 곳: 목록 파서 · LPT 조각 배정(합 = 전부 · 빈 조각 없음) · 실행기(하나씩·병렬·끊기·조각·--only·offline·pip 한 번) · check.yml 조각 N 일치',
+     pcs.status===0&&(pcs.stdout||'').includes('ALL PASS ci steps'),(pcs.stdout||'').slice(-600)+(pcs.stderr||''));
   /* 2026-11-09 — 운영 › 듀얼가드 탭을 다른 운영 탭처럼(세션 줄 맨 위 · 보고 있는 칩/두 번 누르면 세션 설정 · 끌어서 순서 · ⚙️ 설정 따로 · 창 안 다시 로그인 없음) */
   const pdg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-dg-tab.cjs')],{encoding:'utf8'});
   ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 변이 24종',
