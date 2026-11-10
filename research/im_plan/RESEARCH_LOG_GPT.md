@@ -321,3 +321,5 @@
 - GitHub Git objects/ref로 research/daily만 일반 fast-forward 저장: `cf33e6036b2362d24d5ab2808afdba642c3a6be6`(부모313ca7d, force=false·expected SHA 확인). 서버가 생성한 전체 tree SHA `8f57351fed210eafb8def76cf7e5eaed817960c6`은 로컬 연구 커밋과 정확히 같다.
 - 저장 후 `git fetch origin research/daily main`으로 해당 원격 커밋을 실제 수신하고 중복 로컬 커밋은 rebase에서 동일 패치로 건너뛰어 research/daily와 origin/research/daily가 일치함을 확인했다. 마지막 diff에서 앱·듀얼 엔진·CLAUDE.md·클로드 로그 변화 없음. 기존 타 작업의 미추적 tenbagger 파일은 그대로다.
 - 원격에 보존한 것은 내 연구 코드10개·이 상세 로그·공유 문서의 지피티 결과뿐이다. main 쓰기·PR·배포·실제 주문은 수행하지 않았다. 이 확인 행은 후속 로그 커밋으로 보존한다.
+
+- **마지막 main 원격 추적 보정**: `git ls-remote`의 실제 main은 b30b709인데 이 clone의 fetch refspec이 research/daily 한 개라 앞선 명령이 origin/main(519ae42)을 갱신하지 않았음을 발견했다. `git fetch origin main:refs/remotes/origin/main`으로 b30b709를 실제 수신하고 research/daily에 `git merge --no-edit origin/main` 재확인(이미 포함). 시험한 backtest.html/plan-session-engine.js는 b30b709와 diff 0이므로 엔진 수치는 재실행 불필요. 로컬 fetch 설정에 main 추적을 추가했다. 다음 회차도 원격 main SHA와 추적 SHA 일치를 확인한다. d443c00 후속 확인 커밋까지 fetch/fast-forward 성공, 연구 브랜치와 원격 일치, 보호 파일 불변을 재확인했다.
