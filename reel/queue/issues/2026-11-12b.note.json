@@ -1,0 +1,328 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #12",
+  "color": "yellow"
+ },
+ "out": "queue/issues/2026-11-12_buyout-severance.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "근속 십오 년이면 위로금 스무 달 치, 이십 년이면 서른여섯 달 치래요."
+   },
+   {
+    "id": "news",
+    "text": "하이트진로가 사 년 만에 희망퇴직을 받아요. 술이 덜 팔려서, 롯데칠성에 이어서요.",
+    "gap": 0.35
+   },
+   {
+    "id": "law",
+    "text": "퇴직금은 위로금과 따로, 일 년에 삼십 일 치 평균임금이에요. 월 오백만 원에 이십 년이면 약 일억 원이죠."
+   },
+   {
+    "id": "tip",
+    "text": "이걸 아이알피로 받아 쉰다섯 넘어 연금으로 나눠 받으면, 퇴직소득세를 삼십 퍼센트 덜 내요.",
+    "gap": 0.35
+   },
+   {
+    "id": "gap",
+    "text": "다만 쉰 살에 나오면, 육십구 년생부터는 국민연금까지 십오 년이 남아요."
+   },
+   {
+    "id": "cta",
+    "text": "팔로우해 두시면, 공백 버틸 계산도 이어서 해 드릴게요.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "퇴직금 말고",
+     "x": 120,
+     "y": 450,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "위로금만",
+     "x": 120,
+     "y": 640,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "3년치",
+     "x": 120,
+     "y": 850,
+     "size": 190,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "circle",
+     "target": "cv3",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 10,
+     "width": 8
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "근속 20년 희망퇴직 조건",
+     "x": 130,
+     "y": 1100,
+     "size": 70,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.4,
+     "dur": 0.6
+    }
+   ],
+   "start": 0
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "희망퇴직, 위로금 얼마?",
+     "x": 128,
+     "y": 196,
+     "size": 80,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(하이트진로 11/11 발표 · 서울경제·머니투데이·한국경제)",
+     "x": 140,
+     "y": 310,
+     "size": 34,
+     "font": "pen",
+     "color": "gray",
+     "at": 0.4,
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "r1",
+     "text": "근속 15~20년 → 20개월분",
+     "x": 150,
+     "y": 400,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@news+0.3",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "r2",
+     "text": "20년 이상 → 36개월분",
+     "x": 150,
+     "y": 485,
+     "size": 60,
+     "font": "bold",
+     "color": "red",
+     "at": "@news+1.8",
+     "dur": 0.7
+    },
+    {
+     "type": "circle",
+     "target": "r2",
+     "at": "@news+3.0",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "r3",
+     "text": "(법정 퇴직금은 따로 · 신청 11/11~25 · 15년 이상 근속자)",
+     "x": 150,
+     "y": 585,
+     "size": 30,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news.end-0.6",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 665,
+     "w": 760,
+     "h": 420,
+     "rot": -2,
+     "at": "@law-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "퇴직금 = 1년마다 30일분 평균임금",
+       "x": 46,
+       "y": 32,
+       "size": 44,
+       "font": "bold",
+       "color": "red",
+       "at": "@law+0.3",
+       "dur": 0.7
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "월 500만 원 × 20년 ≈ 1억 원",
+       "x": 46,
+       "y": 120,
+       "size": 48,
+       "font": "bold",
+       "color": "ink",
+       "at": "@law.end-2.6",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "IRP → 55세 넘어 연금으로 받으면",
+       "x": 46,
+       "y": 215,
+       "size": 40,
+       "font": "bold",
+       "color": "blue",
+       "at": "@tip+0.4",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "m4",
+       "text": "퇴직소득세 30%↓",
+       "x": 46,
+       "y": 285,
+       "size": 50,
+       "font": "bold",
+       "color": "blue",
+       "at": "@tip.end-1.4",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m5",
+       "text": "(11년째부터 40% · 21년째부터 50%)",
+       "x": 46,
+       "y": 355,
+       "size": 30,
+       "font": "pen",
+       "color": "gray",
+       "at": "@tip.end",
+       "dur": 0.5
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "50세 퇴직 → 국민연금 65세까지 15년 (69년생~)",
+     "x": 150,
+     "y": 1150,
+     "size": 38,
+     "font": "bold",
+     "color": "ink",
+     "at": "@gap+0.3",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "n10",
+     "text": "(근로자퇴직급여 보장법 · 직접 계산 · 주류 출고량 27년 만에 300만㎘ 아래)",
+     "x": 150,
+     "y": 1225,
+     "size": 26,
+     "font": "pen",
+     "color": "gray",
+     "at": "@gap.end",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1440,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1530,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
