@@ -194,7 +194,7 @@ async function check(S){
        그때 잰 높이 0 이 남으면 상태줄 · 상세 탭이 맨 위(세션 줄 밑)에 겹쳐 가려졌다. 실제 함수 두 개를 그대로 돌린다. */
     const V={assetSessionChips:{offsetHeight:56},assetStatusline:{offsetHeight:55}},vars={},seen=[];let roCb=null;
     const c={$:id=>V[id],document:{documentElement:{style:{setProperty:(k,v)=>{vars[k]=v;}}}},ResizeObserver:class{constructor(cb){roCb=cb;}observe(el){seen.push(el);}}};
-    vm.createContext(c);vm.runInContext('let dgStickyRO=null;\n'+fnOf(P,'function dgStickyOffsets()')+'\n'+fnOf(P,'function dgStickyWatch()'),c);
+    vm.createContext(c);vm.runInContext('let dgStickyRO=null;var dgStickyH={h1:0,h2:0};function dgVpPaint(){}\n'+fnOf(P,'function dgStickyOffsets()')+'\n'+fnOf(P,'function dgStickyWatch()'),c);
     c.dgStickyOffsets();const vis=vars['--dg-h2'];
     V.assetSessionChips.offsetHeight=0;V.assetStatusline.offsetHeight=0;c.dgStickyOffsets();const hid=vars['--dg-h2'];   // 숨은 창 — 그대로 둔다
     c.dgStickyWatch();V.assetSessionChips.offsetHeight=56;V.assetStatusline.offsetHeight=85;if(roCb)roCb([]);const grown=vars['--dg-h2'];   // 다시 보임 · 상태줄 두 줄
