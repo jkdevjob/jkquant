@@ -870,3 +870,9 @@ CAPS=10000,30000,100000 MONTHLY=210 node research/gpt/run.cjs research/im_plan/p
   - `research/im_plan/planrule/data/SGOV.json` = `84b73a75675c9072dd7cfa9ce91a1b86923b6c76eea55794c17da6cc58f226b4`
 
 - 앱·엔진·기존 연구도구·클로드 기록은 수동 수정하지 않았다. 최신main을 연구 브랜치로 읽어온 변경과 내 연구 파일만 보존한다. 변경 결과는 RESEARCH_LOG_GPT.md, 자체코드는research/gpt/, 공유 요청표는 내 결과행/상세만이다. main 푸시·PR·배포·실주문 없음. 문서·연구 도구만 쓰므로 앱 전체 회귀를 실행했다고 주장하지 않는다. 정기 예약 두 개는 유지하며 오늘 수동 보충이 다음 자동 실행의 성공 증거는 아니다. 원격 저장 성공 여부는 아래 최종 확인 행으로 확정한다.
+
+### 2026-11-11 · 오늘 두 회차 원격 보존 실제 확인
+
+- 결과·자체 도구13파일을 `research/daily`에 실제 저장했다: 결과 커밋 `a01f6c5be06f316f5ccb313124c2037a75ca53d2`, 부모8f35754, tree `5ed1d236ad6619f0235a4257adf19050b0a9d4cd`. GitHub 정상 fast-forward(force=false·expected SHA 일치) 성공 뒤 실제 `git fetch origin research/daily`에서 같은 SHA를 확인했고 원격 tree와 로컬 결과 tree가 정확히 같았다.
+- 오늘 운영 메뉴(R1/R2 교차 검토+적립·거치 기준선)와 포트폴리오(R3 교차 검토+원금3벌+기존배분 앱 재현)의 직접 실행·결과 기록·연구 브랜치 보존을 완료했다. R1의 위험 반례, R2의 원요청 허용치와 엄격 MDD 기준 차이, R3의 미완료 통합세금/강건성 실패를 완료된 새 투자전략으로 포장하지 않는다.
+- 최종 pull --rebase=merges도 성공했으며 실제 git push의 Username 부재(exit128)는 연결된 GitHub의 검증된 쓰기 경로로 처리했다. 앱 코드·원본 엔진은 분석 기준 main89d15db와 diff0, 클로드 기록/요청행은 수정0. 남의 미추적 tenbagger 파일도 그대로 보존했다. main 푸시·PR·배포·실주문 없음. 이 확인 행은 후속 기록 커밋으로 같은 연구 브랜치에 보존한다.
