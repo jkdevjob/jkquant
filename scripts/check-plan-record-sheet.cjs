@@ -4,7 +4,7 @@
    사용자: "듀얼가드 거래이력에 있는 기록추가를 무한매수법처럼 현재탭으로 옮기고 버튼 똑같이 만들어"
            "듀얼가드 거래이력에 초기자금은 이미 설정에 있으니 삭제해"
    실제 페이지 함수를 뽑아 그대로 돌린다(재구현 없음).
-     A 단추 — 운영 무한매수법 #fab 과 같은 글자·모양 · 현재 탭에만(data-asset-view) · 모의 세션엔 없음
+     A 단추 — 운영 무한매수법 #fab 과 같은 글자·모양 · 어느 상세 탭에서나(11/11 둘째 요청) · 모의 세션엔 없음
      B 추천 칸 — 오늘 주문 n건(종목·방향·주수) / 보류 이유 / 주문 없음
      C 고르기 — 배당·입금·출금은 그 종류로 현금 칸 · 체결은 주문이 있을 때만 · 서로 닫힘
      D 저장 — 저장되면 창 닫음 · 실패면 그대로 · 저장 중 두 번 눌러도 한 번만
@@ -55,7 +55,7 @@ async function check(S){
     const css=(P.match(/\n#dgFab\{[^}]*\}/)||[''])[0],icss=(S.idx.match(/\n#fab\{[^}]*\}/)||[''])[0];   // 줄 첫머리 규칙(숨김 규칙 말고 본 모양)
     const same=['position:fixed','left:50%','transform:translateX(-50%)','bottom:calc(20px + env(safe-area-inset-bottom))','z-index:80','border-radius:30px','padding:15px 28px','font-size:15px','font-weight:800','box-shadow:0 8px 28px rgba(99,102,217,.5)'];
     t('A1 단추 글자 = 운영 무한매수법 단추(＋ 오늘 기록하기) · 같은 모양 값(자리 · 크기 · 둥글기 · 그림자)',!!fab[1]&&fab[1]===idxFab&&same.every(v=>css.includes(v)&&icss.includes(v))&&/linear-gradient\(135deg,#6366d9,#4b4ec9\)/.test(css)&&/linear-gradient\(135deg,var\(--vio2\),#4b4ec9\)/.test(icss),JSON.stringify({fab:fab[1],idxFab}));
-    t('A2 현재 탭에만(data-asset-view="current" — 다른 탭에선 숨김) · 모의 세션 · 로그인 전 · 원장 읽는 중엔 숨김',/<button type="button" id="dgFab" data-asset-view="current">/.test(P)
+    t('A2 어느 상세 탭에서나(현재 · 분석 · 거래이력 · 설명 — 탭 숨김 표시 없음 · 2026-11-11 사용자 "어느 탭에서나") · 모의 세션 · 로그인 전 · 원장 읽는 중엔 숨김',/<button type="button" id="dgFab">/.test(P)&&!/id="dgFab"[^>]*data-asset-view/.test(P)
       &&/body\.asset-paper-mode #dgFab/.test(P)&&/html\.plan-hydrating #dgFab,html:not\(\.authed\) #dgFab\{display:none!important\}/.test(P)); }
   // ── B 추천 칸
   { const A=sheetCtx(P,{orders:[{sym:'TECL',side:'buy',qty:18},{sym:'TQQQ',side:'sell',qty:38}]});A.c.dgSheetRender();
@@ -110,8 +110,8 @@ async function check(S){
 }
 
 const MUT=[
-  ['단추: 다른 글자','plan',s=>s.replace('id="dgFab" data-asset-view="current">＋ 오늘 기록하기<','id="dgFab" data-asset-view="current">기록 추가<')],
-  ['단추: 모든 탭에 보임','plan',s=>s.replace('<button type="button" id="dgFab" data-asset-view="current">','<button type="button" id="dgFab">')],
+  ['단추: 다른 글자','plan',s=>s.replace('id="dgFab">＋ 오늘 기록하기<','id="dgFab">기록 추가<')],
+  ['단추: 현재 탭에만(옛 코드)','plan',s=>s.replace('<button type="button" id="dgFab">','<button type="button" id="dgFab" data-asset-view="current">')],
   ['단추: 모의 세션에도 보임','plan',s=>s.replace(',body.asset-paper-mode #dgFab,',',')],
   ['추천: 보류 이유 버림','plan',s=>s.replace("(alphaOrderHold?String(alphaOrderHold)+' · ':'유지 구간 · ')","'유지 구간 · '")],
   ['추천: 주문 내용 안 적음','plan',s=>s.replace("pendingAlphaOrders.map(on).join(' · ')+' · 수량·체결가 자동 입력'","'수량·체결가 자동 입력'")],

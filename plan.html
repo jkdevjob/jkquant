@@ -16,6 +16,7 @@
 <script src="/plan-session-settings.js?v=5"></script>
 <script src="/plan-tax-check.js?v=1"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
+<script src="/jk-trade-chart.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.1.1" defer></script>
 <style>
@@ -167,6 +168,7 @@ th:first-child,td:first-child{text-align:left}
 .path-summary b{color:var(--gold)}
 .alpha-account-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .tax-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;font-variant-numeric:tabular-nums}.tax-table th,.tax-table td{padding:5px 6px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}.tax-table th:first-child,.tax-table td:first-child{text-align:left;white-space:normal}.tax-table th{color:var(--dim);font-weight:800;font-size:11px;white-space:normal}
+.tax-table tr.tax-sub th{padding-top:16px;border-top:1px solid var(--border2)}   /* 한 표 안 둘째 묶음 머리 — 칸 줄은 위 묶음과 같다 */
 .tax-sug{margin-top:10px;padding:10px 11px;border-radius:10px;background:var(--surf2);border:1px solid var(--border);font-size:12.5px;line-height:1.65}.tax-sug ul{margin:6px 0 0 18px;padding:0}.tax-foot{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.55}
 .alpha-account-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
 .alpha-account-card{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:11px}
@@ -312,6 +314,9 @@ body.dg-sheet-open #jkToTop{display:none!important}   /* 맨 위로 단추가 �
 #dgSheet .backbtn{background:var(--surf2);color:var(--dim);border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
 #dgSheet .bigbtn{width:100%;padding:15px;border-radius:13px;border:none;color:#fff;font-size:15px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#6366d9,#4b4ec9);font-family:inherit;-webkit-tap-highlight-color:transparent}
 #dgSheet .bigbtn:disabled{opacity:.6;cursor:progress}
+/* 거래이력 그림(jk-trade-chart.js · 2026-11-11) — 거래이력 표 위 */
+.alpha-tc-wrap{margin:10px 0 12px;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--bg)}
+.alpha-tc-h{font-size:13px;font-weight:800;margin:0 0 8px}
 body.asset-paper-mode .ledger-del{display:none!important}
 @media(max-width:480px){.asset-session-modal .grid{grid-template-columns:1fr}}
 /* ── 로그인 게이트 — 자산플랜은 로그인해야 열린다 (운영·단타·관리자 화면과 같은 규칙) ──
@@ -411,7 +416,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.9.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.10.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -513,6 +518,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 
       <div class="card" id="alphaHistorySection" data-asset-view="history" hidden style="margin-top:10px;margin-bottom:0">
         <div class="alpha-account-head"><div><h3 style="margin-bottom:2px">거래이력</h3><div class="alpha-ledger-note" id="assetHistoryNote">잘못 기록한 체결이나 시작잔고는 여기서 수정합니다. 수정 후 현재 수량·평단·현금을 전체 이력 기준으로 다시 계산합니다.</div></div></div>
+        <div class="alpha-tc-wrap"><h4 class="alpha-tc-h">📈 주가와 내 매매</h4><div id="alphaTradeChart"></div></div>
         <div class="alpha-reconcile-panel" id="alphaEditPanel" hidden>
           <b>이력 수정</b>
           <div class="alpha-ledger-note">저장하면 해당 기록 이후의 보유수량·평단가·현금을 날짜 순서대로 다시 계산합니다.</div>
@@ -901,10 +907,10 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
   </section>
 </div>
 
-<!-- 기록 — 무한매수법처럼 현재 탭 화면 아래 가운데 '＋ 오늘 기록하기' → 아래에서 올라오는 기록 창(2026-11-11 사용자:
+<!-- 기록 — 무한매수법처럼 화면 아래 가운데 '＋ 오늘 기록하기'(현재 · 분석 · 거래이력 · 설명 어느 탭에서나 · 2026-11-11 사용자 "어느 탭에서나 … 보이게") → 아래에서 올라오는 기록 창(2026-11-11 사용자:
      "듀얼가드 거래이력에 있는 기록추가를 무한매수법처럼 현재탭으로 옮기고 버튼 똑같이 만들어"). 모양은 운영 #fab · #sheet 와 같은 값.
      저장은 예전 함수 그대로 — 체결 반영 alphaSaveFills · 배당·입금·출금 alphaAddCashEvent(같은 걸 두 군데서 세지 않는다). 모의 세션엔 안 보인다. -->
-<button type="button" id="dgFab" data-asset-view="current">＋ 오늘 기록하기</button>
+<button type="button" id="dgFab">＋ 오늘 기록하기</button>
 <div id="dgSheetBg"></div>
 <div id="dgSheet" role="dialog" aria-modal="true" aria-labelledby="dgSheetTitle" aria-hidden="true">
   <div class="grip"></div>
@@ -1192,6 +1198,7 @@ function setAssetDetail(name){
     b.classList.toggle('on',on);b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;
   });
   document.querySelectorAll('[data-asset-view]').forEach(p=>{p.hidden=p.dataset.assetView!==selected;});
+  if(selected==='history'&&typeof renderAlphaTradeChart==='function')renderAlphaTradeChart();   // 거래이력 그림 — 칸이 보인 뒤 폭을 재고 그린다
 }
 let requestedAssetSessionId=(()=>{try{return new URLSearchParams(location.search).get('session')||'';}catch(e){return '';}})();
 /* 모의성과에서 /plan?session=... 으로 들어오는 값은 '한 번만' 적용하는 딥링크다.
@@ -3053,11 +3060,13 @@ function renderTaxCheck(){
     +(R.other?'<tr><td>다른 해외주식 (입력)</td>'+both(R.other,R.other)+'</tr>':'')
     +'<tr><td><b>합계</b></td>'+both(R.total.fifo,R.total.avg)+'</tr>'
     +'<tr><td>기본공제 250만원까지</td><td>'+taxRoomText(R.room.fifo)+'</td><td>'+taxRoomText(R.room.avg)+'</td></tr>'
-    +'<tr><td>예상 세금 22%</td>'+both(R.tax.fifo,R.tax.avg)+'</tr></tbody></table>';
+    +'<tr><td>예상 세금 22%</td>'+both(R.tax.fifo,R.tax.avg)+'</tr></tbody>';
+  /* '지금 팔면'은 같은 표의 둘째 묶음 — 따로 표를 만들면 칸 폭이 표마다 달라 선입선출 · 이동평균 줄이 어긋났다(2026-11-11 사용자 "이렇게 보이는 것들 줄좀 맞추자") */
   if(R.positions.length){
-    h+='<table class="tax-table"><thead><tr><th>지금 팔면 (평가손익 · 원화)</th><th>선입선출</th><th>이동평균</th></tr></thead><tbody>'
-      +R.positions.map(p=>'<tr><td>'+p.symbol+' '+p.qty+'주'+(p.price>0?' · '+usd2(p.price):'')+'</td>'+(p.unknown?'<td colspan="2">평단 미등록 — 계산 불가</td>':p.unreal?both(p.unreal.fifo.krw,p.unreal.avg.krw):'<td colspan="2">시세 대기</td>')+'</tr>').join('')+'</tbody></table>';
+    h+='<tbody><tr class="tax-sub"><th>지금 팔면 (평가손익 · 원화)</th><th>선입선출</th><th>이동평균</th></tr>'
+      +R.positions.map(p=>'<tr><td>'+p.symbol+' '+p.qty+'주'+(p.price>0?' · '+usd2(p.price):'')+'</td>'+(p.unknown?'<td colspan="2">평단 미등록 — 계산 불가</td>':p.unreal?both(p.unreal.fifo.krw,p.unreal.avg.krw):'<td colspan="2">시세 대기</td>')+'</tr>').join('')+'</tbody>';
   }
+  h+='</table>';
   const dl=R.deadline,mon=+todayISO().slice(5,7),S=R.suggestions,tot=S.reduce((a,x)=>a+x.taxKrw,0),fee=S.reduce((a,x)=>a+x.feeUsd,0);
   const list=S.length?'<ul>'+S.map(x=>'<li><b>'+x.symbol+' '+x.qty+'주 팔고 같은 날 '+x.qty+'주 되사기</b> · 확정 '+taxKrw(x.realized.fifo.krw)+' (선입선출) · '+taxKrw(x.realized.avg.krw)+' (이동평균) · 수수료 약 '+usd2(x.feeUsd)+'</li>').join('')+'</ul>':'';
   let sug='';
@@ -3129,6 +3138,7 @@ function renderAlphaLedger(){
     rows.push('<tr><td>'+String(b.date||'')+'</td><td>시작</td><td class="adjtxt">시작잔고</td><td colspan="6">'+baseParts.join(' · ')+'</td><td><button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-abase="1">수정</button></td></tr>');
     $('alphaLedgerBody').innerHTML=rows.join('');
   }
+  if(typeof renderAlphaTradeChart==='function')renderAlphaTradeChart();   // 거래이력 그림 — 같은 장부 · 거래이력 탭이 보일 때만
 }
 function alphaOpenFillEditor(){
   if(!pendingAlphaOrders.length){alert('현재 반영할 주문이 없습니다. A탭을 다시 열어 최신 주문을 확인하세요.');return;}
@@ -3137,6 +3147,33 @@ function alphaOpenFillEditor(){
   $('alphaFillPanel').hidden=false;alphaCloseEdit();
 }
 function alphaCloseFillEditor(){if($('alphaFillPanel'))$('alphaFillPanel').hidden=true;}
+/* 거래이력 그림 — 주가 + 내 매수 ▲ · 매도 ▼ (jk-trade-chart.js · v2.10.0 · 2026-11-11 사용자 "각전략 세션 거래이력에 투자종목 그래프 … 매수와 매도" → "어 좋아 그렇게 해").
+   보유 · 평단은 엔진 장부 계산(alphaLedgerCalc = ledgerCalc)을 그날까지의 기록으로 다시 불러 얻는다 — 여기서 새로 세지 않는다.
+   매도 손익은 거래이력 표와 같은 tradePnl(매도 당시 평단 · 수수료 제외). 시세는 fetchPlanQuote(체결가 일봉). */
+const ALPHA_TC_KEYS={TECL:['tecl','avgTecl'],TQQQ:['tqqq','avgTqqq'],SGOV:['sgov','avgSgov']};
+function alphaTradeChartData(ledger){
+  const L=ledger||{base:{},events:[]},ev=alphaEventList(L),S=alphaLedgerCalc(L),out={},b=L.base||{};
+  for(const sym of Object.keys(ALPHA_TC_KEYS))out[sym]={sym,trades:[],steps:[],avgLabel:'평단'};
+  const put=(d,X)=>{for(const sym of Object.keys(ALPHA_TC_KEYS)){const [k,ak]=ALPHA_TC_KEYS[sym];out[sym].steps.push({date:d,held:X[k],avg:X[k]>0&&Number.isFinite(X[ak])?X[ak]:null});}};
+  if(b.date)put(String(b.date),alphaLedgerCalc(Object.assign({},L,{events:[]})));   // 시작잔고
+  const dates=[...new Set(ev.filter(e=>e.type==='trade'||e.type==='reconcile').map(e=>String(e.date||'')).filter(Boolean))].sort();
+  for(const d of dates)put(d,alphaLedgerCalc(Object.assign({},L,{events:(L.events||[]).filter(e=>String(e.date||'')<=d)})));   // 그날 끝 장부
+  for(const e of ev){
+    if(e.type!=='trade')continue;const sym=String(e.symbol||'').toUpperCase();if(!out[sym])continue;
+    const pn=S.tradePnl[e._i];
+    out[sym].trades.push({date:String(e.date||''),side:e.side==='sell'?'sell':'buy',qty:Math.floor(+e.qty||0),price:+e.price||0,pnl:e.side==='sell'&&pn&&Number.isFinite(pn.profit)?pn.profit:null});
+  }
+  return out;
+}
+function renderAlphaTradeChart(){
+  const el=$('alphaTradeChart'),sec=$('alphaHistorySection');
+  if(!el||!sec||sec.hidden||!window.JKTradeChart)return;   // 거래이력 탭이 보일 때만(숨은 칸은 폭이 0)
+  let D;try{D=alphaTradeChartData(alphaLedger);}catch(e){console.error('trade chart',e);return;}
+  const syms=Object.keys(D).filter(k=>D[k].trades.length),lastOf=k=>D[k].trades.reduce((a,t)=>t.date>a?t.date:a,'');
+  const latest=syms.slice().sort((a,b)=>lastOf(b).localeCompare(lastOf(a)))[0],x=activeAssetSession();   // 처음엔 가장 최근에 사고판 종목
+  window.JKTradeChart.mount(el,{key:'dg:'+String(x?x.id:'cur'),symbols:syms,symbol:latest,
+    load:sym=>fetchPlanQuote(sym).then(q=>Object.assign({days:(q&&q.rows)||[],cur:'usd'},D[sym]),()=>Object.assign({days:[],cur:'usd'},D[sym]))});
+}
 async function alphaSaveFills(){
   const date=$('alphaFillDate').value||todayISO(),rows=[...$('alphaFillRows').querySelectorAll('[data-fill-i]')],S=alphaLedgerCalc(),next={...S},events=[];
   for(const row of rows){
@@ -3532,6 +3569,7 @@ apply(d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();re
 $("taxOtherKrw").addEventListener("change",()=>{render();cloudSave();});   // 연말 세금 점검 — 다른 해외주식 실현손익(원) · 플랜 설정과 함께 저장
 $("assetSettingsBtn").addEventListener("click",()=>editAssetSession('settings'));   // 상태줄 ⚙️ 설정 — 금액 · 시작일(운영 탭의 ⚙️ 설정과 같은 자리)
 window.addEventListener("resize",()=>{try{dgStickyOffsets();}catch(e){}});
+let alphaTcRz=null;window.addEventListener("resize",()=>{clearTimeout(alphaTcRz);alphaTcRz=setTimeout(()=>{try{renderAlphaTradeChart();}catch(e){}},250);});   // 거래이력 그림 폭
 try{dgStickyWatch();}catch(e){}   // 세션 줄 · 상태줄 크기가 바뀌면(숨었다 다시 보일 때 포함) 상세 탭 붙는 자리를 다시 잰다
 $("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});
 $("assetDetailTabs").addEventListener("keydown",e=>{
