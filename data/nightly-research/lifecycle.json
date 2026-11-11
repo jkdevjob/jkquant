@@ -1017,26 +1017,208 @@
       "replacementRule": "퇴출 즉시 정적+자동생성 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지"
     },
     "closing30": {
-      "day": {
-        "date": "2026-11-11",
-        "leader": null,
-        "leaderStreak": 0,
-        "reviewReady": false,
-        "activeMain": "baseline",
-        "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
+      "schema": 1,
+      "candidateFactory": "prospective-mixed-radix-v2",
+      "minimumActive": 10,
+      "candidatePoolSize": 21,
+      "activeCandidates": [
+        "dip_1",
+        "dip_2",
+        "dip_3",
+        "dip_volume",
+        "dip_vol2",
+        "momentum",
+        "up_1",
+        "up_volume",
+        "flat",
+        "all"
+      ],
+      "reserveCandidates": [
+        "dip_05",
+        "dip_15",
+        "dip_25",
+        "dip_vol12",
+        "dip_vol18",
+        "dip1_vol15",
+        "dip2_vol15",
+        "up_05",
+        "up1_vol15",
+        "flat_05",
+        "cf_g0001"
+      ],
+      "generatedPool": [
+        {
+          "name": "cf_g0001",
+          "generation": 1,
+          "params": {
+            "side": "dip",
+            "threshold": -0.5,
+            "volume": 0
+          },
+          "createdAfter": "2026-11-10",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        }
+      ],
+      "generatedCandidates": [
+        {
+          "name": "cf_g0001",
+          "generation": 1,
+          "params": {
+            "side": "dip",
+            "threshold": -0.5,
+            "volume": 0
+          },
+          "createdAfter": "2026-11-10",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        }
+      ],
+      "factoryGeneration": 1,
+      "lastFactoryDate": "2026-11-10",
+      "retired": [],
+      "poorStreaks": {
+        "dip_1": 0,
+        "dip_2": 0,
+        "dip_3": 0,
+        "dip_volume": 0,
+        "dip_vol2": 0,
+        "momentum": 0,
+        "up_1": 0,
+        "up_volume": 0,
+        "flat": 0,
+        "all": 0
       },
-      "overnight": {
-        "date": "2026-11-12",
-        "leader": null,
-        "leaderStreak": 0,
-        "reviewReady": false,
-        "activeMain": "baseline",
-        "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
+      "lastEvidenceDate": "2026-11-10",
+      "leader": {
+        "name": "flat",
+        "consecutiveResearchSessions": 1,
+        "requiredResearchSessions": 7,
+        "dates": [
+          "2026-11-10"
+        ]
       },
-      "updatedAt": "2026-11-12T03:37:26.674574+09:00",
-      "paperOnly": true,
-      "autoChange": false
+      "autoPromotionCandidate": null,
+      "autoPromotionReady": false,
+      "autoPromotionReason": "1위 유지 1/7 연구세션",
+      "recentChanges": [],
+      "retirementRule": "sampleReady 이후 위험 실패 또는 점수<40·검증우위<0 상태가 3개 서로 다른 연구세션 연속",
+      "replacementRule": "퇴출 즉시 정적+자동생성 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지"
+    },
+    "closing_bet": {
+      "schema": 1,
+      "candidateFactory": "prospective-mixed-radix-v2",
+      "minimumActive": 10,
+      "candidatePoolSize": 21,
+      "activeCandidates": [
+        "dip_1",
+        "dip_2",
+        "dip_3",
+        "dip_volume",
+        "dip_vol2",
+        "momentum",
+        "up_1",
+        "up_volume",
+        "flat",
+        "all"
+      ],
+      "reserveCandidates": [
+        "dip_05",
+        "dip_15",
+        "dip_25",
+        "dip_vol12",
+        "dip_vol18",
+        "dip1_vol15",
+        "dip2_vol15",
+        "up_05",
+        "up1_vol15",
+        "flat_05",
+        "cf_g0001"
+      ],
+      "generatedPool": [
+        {
+          "name": "cf_g0001",
+          "generation": 1,
+          "params": {
+            "side": "dip",
+            "threshold": -0.5,
+            "volume": 0
+          },
+          "createdAfter": "2026-11-10",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        }
+      ],
+      "generatedCandidates": [
+        {
+          "name": "cf_g0001",
+          "generation": 1,
+          "params": {
+            "side": "dip",
+            "threshold": -0.5,
+            "volume": 0
+          },
+          "createdAfter": "2026-11-10",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        }
+      ],
+      "factoryGeneration": 1,
+      "lastFactoryDate": "2026-11-10",
+      "retired": [],
+      "poorStreaks": {
+        "dip_1": 0,
+        "dip_2": 0,
+        "dip_3": 0,
+        "dip_volume": 0,
+        "dip_vol2": 0,
+        "momentum": 0,
+        "up_1": 0,
+        "up_volume": 0,
+        "flat": 0,
+        "all": 0
+      },
+      "lastEvidenceDate": "2026-11-10",
+      "leader": {
+        "name": "up_1",
+        "consecutiveResearchSessions": 1,
+        "requiredResearchSessions": 7,
+        "dates": [
+          "2026-11-10"
+        ]
+      },
+      "autoPromotionCandidate": null,
+      "autoPromotionReady": false,
+      "autoPromotionReason": "1위 유지 1/7 연구세션",
+      "recentChanges": [],
+      "retirementRule": "sampleReady 이후 위험 실패 또는 점수<40·검증우위<0 상태가 3개 서로 다른 연구세션 연속",
+      "replacementRule": "퇴출 즉시 정적+자동생성 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지"
     }
   },
-  "updatedAt": "2026-11-12T03:37:26.048140+09:00"
+  "updatedAt": "2026-11-12T08:24:27.227227+09:00",
+  "legacyClosing30": {
+    "day": {
+      "date": "2026-11-11",
+      "leader": null,
+      "leaderStreak": 0,
+      "reviewReady": false,
+      "activeMain": "baseline",
+      "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
+    },
+    "overnight": {
+      "date": "2026-11-12",
+      "leader": null,
+      "leaderStreak": 0,
+      "reviewReady": false,
+      "activeMain": "baseline",
+      "reason": "7 연속 연구세션 1위 및 OOS 위험조건 필요"
+    },
+    "updatedAt": "2026-11-12T03:37:26.674574+09:00",
+    "paperOnly": true,
+    "autoChange": false
+  }
 }
