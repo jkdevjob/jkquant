@@ -30,7 +30,7 @@ function sheetCtx(src,o={}){
     alphaCloseFillEditor:()=>{E.alphaFillPanel.hidden=true;},alphaOpenFillEditor:()=>{log.openFill++;E.alphaFillPanel.hidden=false;},
     setTimeout:()=>0,Date,String,Promise,console};
   vm.createContext(c);
-  vm.runInContext(fnOf(src,'const DG_CASH_KIND=')+';\n'+['function dgDateK(iso)','function dgSheetForms(kind)','function dgSheetRender()','function dgSheetOpen()','function dgSheetClose()','function dgSheetPick(kind)','async function dgSheetSave(btn,save)'].map(m=>fnOf(src,m)).join('\n'),c);
+  vm.runInContext('function dgVpLock(){}\n'+fnOf(src,'const DG_CASH_KIND=')+';\n'+['function dgDateK(iso)','function dgSheetForms(kind)','function dgSheetRender()','function dgSheetOpen()','function dgSheetClose()','function dgSheetPick(kind)','async function dgSheetSave(btn,save)'].map(m=>fnOf(src,m)).join('\n'),c);
   return {c,E,kinds,body,log};
 }
 /* 엔진 장부 + 저장 함수 두 개 — DB 저장 결과(ok)를 돌려주는지 */

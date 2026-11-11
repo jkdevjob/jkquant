@@ -10,6 +10,7 @@
    여기선 숨기고, 링크는 바깥 창에서 연다. 계산·장부·저장은 그대로 이 페이지가 한다(화면 한 벌). 창 안이 아니면(주소로 바로 열면) 평소 화면. */
 (function(){ try{ if(!/[?&]embed=1(&|$)/.test(location.search)||window.parent===window) return; }catch(e){ return; }
   document.documentElement.classList.add('embed');
+  if(/[?&]autoh=1(&|$)/.test(location.search)) document.documentElement.classList.add('autoh');   // 바깥이 창 높이를 내용에 맞춘다(아래 html.autoh)
   var b=document.createElement('base'); b.target='_top'; document.head.appendChild(b); })();
 </script>
 <script src="/plan-session-engine.js?v=9"></script>
@@ -354,6 +355,16 @@ html.embed #authgate .bootwait .bw-logo,html.embed #authgate .bootwait .bw-help{
 html.embed:not(.embed-dberr) #authgate .gbox{display:none}
 html.embed:not(.embed-dberr) #authgate .bootwait{display:block}
 html.embed.plan-hydrating body::after{content:'듀얼가드 불러오는 중…'}
+/* 운영 › 듀얼가드 창 높이 = 내용 높이(html.autoh · 2026-11-11 사용자: "듀얼가드는 왜 안에 상하 스크롤이 왜 생기는거지" → 1번: 다른 탭처럼 바깥 한 번 스크롤).
+   창 문서는 스크롤하지 않는다. 화면에 붙는 것은 바깥이 알려 주는 '보이는 칸'(dgApplyViewport)에 맞춘다 —
+   세션 줄 · 상태줄 · 상세 탭은 그 칸 위(바깥 탭 줄 바로 밑)에 붙고, 기록 단추 · 시트 · 세션 설정 창 · 로그인 상자는 그 칸 크기의 층(#dgVp · transform 이라 안의 fixed 가 이 층 기준) 안에 있다. */
+html.autoh{overflow:hidden}
+html.autoh #dgVp{position:absolute;left:0;right:0;top:0;height:100vh;transform:translateZ(0);pointer-events:none;z-index:1400}
+html.autoh #dgVp>#dgFab,html.autoh #dgVp>#dgSheet,html.autoh #dgVp>.asset-session-modal,html.autoh #dgVp>#authgate{pointer-events:auto}
+html.autoh #dgFab{bottom:calc(20px + var(--vp-sab,0px))}
+html.autoh #dgSheet{max-height:90%;padding-bottom:calc(24px + var(--vp-sab,0px))}
+html.autoh #dgSheet,html.autoh .asset-session-modal{overscroll-behavior:contain}   /* 시트 · 설정 창 끝에서 바깥 페이지로 스크롤이 넘어가지 않게 */
+html.autoh .asset-session-modal{overflow-y:auto;align-items:flex-start}html.autoh .asset-session-modal .box{margin:auto}   /* 보이는 칸보다 길면 창 안에서 스크롤(위아래가 잘리지 않게) */
 #authgate .glogo{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
 #authgate .glogo .v{color:var(--gold)}
 #authgate .gsub{color:var(--dim);font-size:13px;margin-bottom:32px;line-height:1.6}
@@ -414,7 +425,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.13.1</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.14.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1123,6 +1134,49 @@ function dgStickyOffsets(){
   const s1=a.offsetHeight||0,s2=b.offsetHeight||0;if(!s1||!s2)return;   // 숨은 창 — 0 을 적어 두면 다시 보일 때 두 줄이 맨 위에 겹친다
   const h1=s1,h2=h1+s2,r=document.documentElement.style;
   r.setProperty('--dg-h1',h1+'px');r.setProperty('--dg-h2',h2+'px');
+  dgStickyH.h1=h1;dgStickyH.h2=h2;dgVpPaint();   // 창 높이 = 내용 높이(autoh)면 붙는 위치를 다시 맞춘다
+}
+/* ── 창 높이 = 내용 높이(html.autoh) — 바깥(운영 index.html dgVp)이 스크롤 · 크기가 바뀔 때마다 '보이는 칸'을 알려 준다 ──
+   t = 이 창 문서에서 보이는 칸의 맨 위(바깥 탭 줄 바로 밑) · h = 보이는 높이 · sab = 바깥 화면 아래 안전 여백(홈 막대).
+   세션 줄 · 상태줄 · 상세 탭은 sticky 의 top 을 t(+ 위 줄 높이)로 — 창 문서가 스크롤하지 않아도 그 자리에 붙는다.
+   기록 시트 · 세션 설정 창이 열려 있는 동안은 층을 움직이지 않는다(바깥 스크롤도 잠근다 · 아이폰 키보드가 문서를 밀어도 입력 칸이 따라간다). */
+const dgStickyH={h1:49,h2:88};
+let dgVpLayer=null,dgVpState=null,dgVpLocked=false;
+function dgVpSetup(){
+  if(dgVpLayer||!document.documentElement.classList.contains('autoh'))return;
+  dgVpLayer=document.createElement('div');dgVpLayer.id='dgVp';document.body.appendChild(dgVpLayer);
+  for(const id of ['authgate','dgFab','dgSheetBg','dgSheet','assetSessionModal']){const el=$(id);if(el)dgVpLayer.appendChild(el);}
+  const bg=$('dgSheetBg');if(bg)bg.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});   // 시트 뒤 어두운 바탕을 끌어도 바깥 페이지가 밀리지 않게(아이폰)
+  if(typeof ResizeObserver==='function')new ResizeObserver(()=>dgPostHeight()).observe(document.body);
+  dgPostHeight();
+}
+function dgVpOpen(){return document.body.classList.contains('dg-sheet-open')||!(($('assetSessionModal')||{}).hidden!==false);}
+function dgVpPaint(){
+  if(!dgVpLayer||!dgVpState||dgVpOpen())return;
+  const {t,h,sab}=dgVpState;
+  dgVpLayer.style.top=t+'px';dgVpLayer.style.height=h+'px';dgVpLayer.style.setProperty('--vp-sab',sab+'px');
+  const a=$('assetSessionChips'),b=$('assetStatusline'),c=$('assetDetailTabs');
+  if(a)a.style.top=t+'px';if(b)b.style.top=(t+dgStickyH.h1)+'px';if(c)c.style.top=(t+dgStickyH.h2)+'px';
+}
+window.dgApplyViewport=function(t,h,sab){
+  if(!dgVpLayer)return;
+  dgVpState={t:Math.max(0,Math.round(+t||0)),h:Math.max(0,Math.round(+h||0)),sab:Math.max(0,Math.round(+sab||0))};
+  dgVpPaint();
+};
+/* 시트 · 세션 설정 창을 열고 닫을 때 — 바깥에 스크롤 잠금을 알리고, 닫히면 그동안 온 '보이는 칸'으로 다시 맞춘다 */
+function dgVpLock(){
+  if(!dgVpLayer)return;
+  const on=dgVpOpen();
+  if(on!==dgVpLocked){dgVpLocked=on;try{window.parent.postMessage({type:'jk-dg-lock',on},location.origin);}catch(e){}}
+  if(!on)dgVpPaint();
+}
+/* 내용 높이를 바깥에 알린다 — 불러오는 중 · 숨은 창(다른 탭을 볼 때 폭 0)에서는 알리지 않는다(그때 높이는 엉뚱하다) */
+let dgPostedH=0;
+function dgPostHeight(){
+  if(!dgVpLayer||document.documentElement.classList.contains('plan-hydrating')||!(window.innerWidth>0))return;
+  const cs=getComputedStyle(document.body),h=Math.ceil(document.body.getBoundingClientRect().height+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0));
+  if(!(h>0)||h===dgPostedH)return;dgPostedH=h;
+  try{window.parent.postMessage({type:'jk-dg-h',h},location.origin);}catch(e){}
 }
 let dgStickyRO=null;
 function dgStickyWatch(){
@@ -1523,7 +1577,7 @@ function openAssetSessionModal(){
   $('assetSessionModalTitle').textContent='세션 추가';$('assetSessionCreate').textContent='만들기';
   syncAssetSessionModal();
   $('assetSessionModalStrategy').textContent='🤖 '+planStrategyLabel()+' — 시작자산 · 월 추가 투자 · 목표는 지금 화면 값으로 만들고, 만든 뒤 ⚙️ 설정에서 바꿉니다.';
-  $('assetSessionModal').hidden=false;
+  $('assetSessionModal').hidden=false;dgVpLock();
 }
 /* 보고 있는 세션의 설정 창 — mode 'session': 이름 · 모의투자 · 포트폴리오(세션 줄을 두 번 누름 · 보고 있는 칩을 누름) / 'settings': 금액 · 시작일(상태줄 ⚙️ 설정).
    앞 세션 전환이 끝난 뒤에 연다 — 화면 장부가 그 세션 것이 된 다음에 화면 값을 세션에 거둔다(syncActiveAssetSessionFromView). */
@@ -1558,7 +1612,7 @@ function syncAssetSessionModal(){
   $('assetSessionStartLabel').textContent=paper?'모의 시작일':'시작일';
   $('assetSessionPaperNote').textContent=paper?'과거 시세로 거래와 성과를 다시 계산합니다. 모의투자 성과 목록에서도 비교할 수 있습니다. 실제 거래이력은 보존됩니다.':locked?'기존 거래이력을 유지합니다. 시작자산과 시작일은 거래이력의 시작잔고 수정에서 변경하세요.':'운영 세션은 실제 체결을 직접 기록합니다. 모의에서 운영으로 바꾸면 모의 거래는 가져오지 않습니다.';
 }
-function closeAssetSessionModal(){$('assetSessionModal').hidden=true;assetModalRevision++;assetEditingId=null;}
+function closeAssetSessionModal(){$('assetSessionModal').hidden=true;assetModalRevision++;assetEditingId=null;dgVpLock();}
 async function assetFxAt(date){
   try{const r=await fetch('/api/fx?date='+encodeURIComponent(date),{headers:{Accept:'application/json'}});if(r.ok){const j=await r.json();if(j&&+j.rate>0)return +j.rate;}}catch(e){}
   return 0;
@@ -3322,11 +3376,11 @@ function dgSheetRender(){
 function dgSheetOpen(){
   if(assetPaperMode()){guardAssetPaperEdit();return;}
   dgSheetRender();dgSheetForms(null);
-  const sh=$('dgSheet');$('dgSheetBg').classList.add('on');sh.classList.add('on');sh.setAttribute('aria-hidden','false');sh.scrollTop=0;document.body.classList.add('dg-sheet-open');
+  const sh=$('dgSheet');$('dgSheetBg').classList.add('on');sh.classList.add('on');sh.setAttribute('aria-hidden','false');sh.scrollTop=0;document.body.classList.add('dg-sheet-open');dgVpLock();
 }
 function dgSheetClose(){
   const sh=$('dgSheet');if(!sh)return;
-  dgSheetForms(null);sh.classList.remove('on');sh.setAttribute('aria-hidden','true');$('dgSheetBg').classList.remove('on');document.body.classList.remove('dg-sheet-open');
+  dgSheetForms(null);sh.classList.remove('on');sh.setAttribute('aria-hidden','true');$('dgSheetBg').classList.remove('on');document.body.classList.remove('dg-sheet-open');dgVpLock();
 }
 function dgSheetPick(kind){
   if(kind==='fill'){ if(!pendingAlphaOrders.length){dgSheetRender();return;} dgSheetForms('fill');alphaOpenFillEditor(); }
@@ -3610,6 +3664,7 @@ $("assetSettingsBtn").addEventListener("click",()=>editAssetSession('settings'))
 window.addEventListener("resize",()=>{try{dgStickyOffsets();}catch(e){}});
 let alphaTcRz=null;window.addEventListener("resize",()=>{clearTimeout(alphaTcRz);alphaTcRz=setTimeout(()=>{try{renderAlphaTradeChart();}catch(e){}},250);});   // 거래이력 그림 폭
 try{dgStickyWatch();}catch(e){}   // 세션 줄 · 상태줄 크기가 바뀌면(숨었다 다시 보일 때 포함) 상세 탭 붙는 자리를 다시 잰다
+try{dgVpSetup();}catch(e){console.warn('dg autoh',e);}   // 운영 › 듀얼가드 창 높이 = 내용 높이(바깥이 ?autoh=1 로 열 때만)
 $("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});
 $("assetDetailTabs").addEventListener("keydown",e=>{
   const tabs=Array.from(document.querySelectorAll('[data-asset-detail]')),i=tabs.indexOf(e.target);
@@ -3700,7 +3755,7 @@ renderHorizonCopy();renderDualGuardStrip(null);
    이용 승인(관리자 승인 · 차단)은 jk-access.js 한 곳이 판정한다 — 운영·백테·공모주·JOB 과 같은 글자. */
 function planGate(on){
   const h=document.documentElement;
-  h.classList.remove('plan-hydrating');
+  h.classList.remove('plan-hydrating');dgPostHeight();   // 창 높이 = 내용 높이(autoh) — 불러오는 중이 끝나면 처음 알린다
   if(on){h.classList.add('authed');h.classList.remove('had-user');h.classList.remove('embed-dberr');return;}
   h.classList.remove('authed');h.classList.remove('had-user');
 }
