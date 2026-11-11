@@ -23,7 +23,7 @@ function check(source=src){
   vm.runInContext(fn(source,'function renderDualGuardStrip(o)'),c);
   vm.runInContext('var alphaLedger={base:{},events:[]};'+fn(source,'function alphaEventList(ledger=alphaLedger)')+fn(source,'function alphaDepositPending(ledger=alphaLedger)'),c);   // 입금 맞춤 판정(plan 2.0.1) — 이 시험의 장부엔 입금이 없다
   vm.runInContext('var assetPaperCache={};function renderLivePanic(){}'+fn(source,'function planStrategyLabelOf(x)')+fn(source,'function alphaPanicNext(signalDate,posOn)')+fn(source,'function alphaPanicApply(PX,sigma,decGuard)'),c);   // 공포 모드 도우미(v2.6.0) — 현재 투자중은 늘 null(기본 판정)
-  vm.runInContext(fn(source,'function renderAlphaPlan(qTecl,qTqqq,qSgov)'),c);
+  vm.runInContext(fn(source,'function renderAlphaPlan(qTecl,qTqqq,qSgov,bg)'),c);
   const quote=(close)=>({rows:[{date:'2026-10-12',close}],settled:{date:'2026-10-12',close},price:close});
   c.renderAlphaPlan(quote(98.875),quote(79),quote(100));
   assert.equal(el('alphaTargetW').textContent,'100.0%');assert.equal(el('alphaCurrentW').textContent,'90.4%');assert(el('alphaWeightGap').textContent.includes('전체 자산의 63.3%'));assert(el('alphaWeightGap').textContent.includes('9.6%p'));

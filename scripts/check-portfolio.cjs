@@ -286,8 +286,18 @@ function check2(S,t,E,bad){
     vm.createContext(c2);vm.runInContext(code,c2);if(c2.h)c2.h({origin:'https://jk.example',source:frame.contentWindow,data:{...good,paper:true,key:'p1'}});
     vm.runInContext(fnOf(S.idx,'function pfEsc(x)')+fnOf(S.idx,'function pfDgText(r)'),c2);
     const txt=c2.pfDgText({key:'cur',name:'현재 투자중'});
-    t('H3 모의 세션 알림 → 값은 안 받고(dg·over 비어 있음) 오늘 칸에 "모의 세션 보는 중 — 「현재 투자중」 선택 시 표시"',
-      Object.keys(c2.PF.dg).length===0&&Object.keys(c2.PF.over).length===0&&c2.PF.dgSeen&&c2.PF.dgSeen.paper===true&&txt.includes('모의 세션 보는 중')&&txt.includes('「현재 투자중」'),txt); }
+    t('H3 모의 세션 알림 → 값은 안 받고(dg·over 비어 있음) · 아직 포트폴리오 세션 값이 없으면 오늘 칸은 "계산 중"',
+      Object.keys(c2.PF.dg).length===0&&Object.keys(c2.PF.over).length===0&&c2.PF.dgSeen&&c2.PF.dgSeen.paper===true&&txt.includes('오늘 판단을 계산하는 중')&&!txt.includes('모의 세션 보는 중'),txt);
+    /* H5 (2026-11-11 사용자 "왜 운영에서 선택한 탭이 보이지? 운영에서 포트폴리오로 선택한 세션이 보여야지?") — 창이 모의 세션을 보고 있어도
+       포트폴리오 세션 값(bg)은 받는다 · 보고 있는 장부 표시(dgSeen)는 안 바꾼다 · 장부(over)는 안 받는다 · 모의 bg 는 버린다 · 판정 불가는 '주문 보류' */
+    if(c2.h){ c2.h({origin:'https://jk.example',source:frame.contentWindow,data:{type:'jk-dg',uid:'u1',key:'cur',paper:false,bg:true,strip:{orders:2,orderText:'TECL 매수 3주 · SGOV 매도 1주',guard:'ON',date:'2026-11-10'},ledger:{base:{},events:[]}}});
+      c2.h({origin:'https://jk.example',source:frame.contentWindow,data:{type:'jk-dg',uid:'u1',key:'p9',paper:true,bg:true,strip:{orders:1}}});
+      c2.h({origin:'https://jk.example',source:frame.contentWindow,data:{type:'jk-dg',uid:'u2',key:'s7',paper:false,bg:true,strip:{orders:1}}});
+      c2.h({origin:'https://jk.example',source:frame.contentWindow,data:{type:'jk-dg',uid:'u1',key:'s8',paper:false,bg:true,strip:{hold:'VIX·VXN 시세를 불러오는 중입니다'}}}); }
+    const t5=c2.pfDgText({key:'cur',name:'토스'}),t8=c2.pfDgText({key:'s8',name:'두 번째'});
+    t('H5 탭이 모의 세션을 봐도 포트폴리오 세션(토스) 오늘 판단을 받는다 · 보는 중 표시·장부는 그대로 · 모의·다른 계정 bg 는 버림 · 판정 불가는 주문 보류',
+      !!c2.PF.dg.cur&&c2.PF.dg.cur.strip.orders===2&&c2.PF.dgSeen.key==='p1'&&!c2.PF.over.cur&&!c2.PF.dg.p9&&!c2.PF.dg.s7&&t5.includes('주문 2건')&&t5.includes('TECL 매수 3주')&&t8.includes('주문 보류')&&t8.includes('VIX·VXN'),
+      JSON.stringify({dg:c2.PF.dg,seen:c2.PF.dgSeen,t5,t8})); }
   return check3(S,t,E,bad);
 }
 /* ── v2 (2026-11-09 사용자: "합친 평가액 추이와 합친 MDD, 올해 양도세 합산(250만원 공제는 사람당 한 번), 목표 비중(듀얼가드 5/6 : 섀넌 1/6) 대비 표시") ── */
@@ -574,7 +584,7 @@ function check5(S,t,E,bad){
     const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:false,planCurName:'',planCurRules:'base'};
     vm.createContext(r);vm.runInContext(fnOf(S.plan,'function readForm()'),r);const o=r.readForm();
     const a={$:()=>null,todayISO:()=>'2026-11-09',plusYears:s=>s,planSid:()=>'x',bindSleeveLedger(){},alphaSyncInputs(){},alphaFee:()=>0,ALPHA_FEE_RATE:0.001,planLinks:null,sleeveSessions:null,alphaLedger:null,planPortfolio:true};
-    vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function apply(o)'),a);
+    vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function planLedgerFrom(o,all)')+fnOf(S.plan,'function apply(o)'),a);
     a.apply({portfolio:false});const p1=a.planPortfolio;a.apply({});const p2=a.planPortfolio;a.apply({portfolio:true});const p3=a.planPortfolio;
     t('O10 현재 투자중 선택은 원장(fiveYearPlanV2.portfolio)에 적고 읽는다 — 뺌 → false 저장 · 읽기: false → 뺌 · 없음/true → 넣음',o.portfolio===false&&p1===false&&p2===true&&p3===true,JSON.stringify([o.portfolio,p1,p2,p3]));
     // O11 설정창 — 저장값으로 열고 · 모의 세션이면 잠금 · 운영으로 돌리면 원래 값
@@ -661,6 +671,9 @@ const MUT=[
   ['플랜 창 모드: 창 밖에서도 머리말 숨김','plan',s=>s.replace("if(!/[?&]embed=1(&|$)/.test(location.search)||window.parent===window) return;","if(!/[?&]embed=1(&|$)/.test(location.search)) return;")],
   ['받는 쪽: 모의도 받음','idx',s=>s.replace("if(d.paper){ if(isPfPage()) pfRender(); return; }","")],
   ['받는 쪽: 다른 계정도 받음','idx',s=>s.replace("if(!d||d.type!=='jk-dg'||!curUid||d.uid!==curUid) return;","if(!d||d.type!=='jk-dg') return;")],
+  ['받는 쪽: 포트폴리오 세션 값(bg)을 버림(탭이 보는 세션만 · 옛 코드)','idx',s=>s.replace("  if(d.bg){ if(d.paper) return; PF.dg[key]={strip:d.strip||null, at:Date.now()}; if(isPfPage()) pfRender(); return; }\n","  if(d.bg) return;\n")],
+  ['받는 쪽: bg 가 보는 중 표시를 덮음','idx',s=>s.replace("  if(d.bg){ if(d.paper) return; PF.dg[key]={strip:d.strip||null, at:Date.now()}; if(isPfPage()) pfRender(); return; }\n","  if(d.bg){ PF.dgSeen={key, paper:!!d.paper}; if(d.paper) return; PF.dg[key]={strip:d.strip||null, at:Date.now()}; if(isPfPage()) pfRender(); return; }\n")],
+  ['오늘 칸: 판정 불가를 안 적음','idx',s=>s.replace("  if(o.hold) return '<span class=\"badge warn\">주문 보류</span> '+pfEsc(o.hold);","")],
   ['합친 MDD: 시간가중 대신 총자산÷투입','idx',s=>s.replace("if(prev&&prev.tot>0){ const r=(tot-(inflow-prev.inflow))/prev.tot-1; if(Number.isFinite(r)) idx*=1+r; }","idx=tot/inflow;")],
   ['세금 점검: 무매도 팔고 되사기 후보','idx',s=>s.replace("const PF_TAX_KEEP={inf:","const PF_TAX_KEEP={xinf:")],
   ['세금 점검: 체결 목록 대신 늘 추정','idx',s=>s.replace("if(Array.isArray(r.trades)) sources.push({key, label, tab:r.tab, kind:'trades'","if(false) sources.push({key, label, tab:r.tab, kind:'trades'")],
