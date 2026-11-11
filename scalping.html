@@ -2026,7 +2026,7 @@ async function loadClosing30Research(){
       const z=x.summary||{},name=x.kind==='day'?'closing30':'closing_bet';
       SCORE_CACHE[name]={name,trades:Number(z.trades||0),winRate:z.winRate==null?null:Number(z.winRate),
         avgPnl:z.avgPnl,required:null,edge:null,days:Number(z.observedDays||0),
-        progress:Number(z.tradingDays??z.observedDays??0)+'/20 매매일 · 미확정 '+Number(z.unsettled||0)+'건'};
+        progress:Number(z.tradingDays??z.observedDays??0)+'/20 매매일 · 원본확정 '+Number(z.closedRecorded??z.trades??0)+' / 집계 '+Number(z.trades||0)+' · 미확정 '+Number(z.unsettled||0)+'건'};
       const report=j.strategies?.[name],validation=report?.variants?.find(v=>v.name===selectedMainVariant(name))?.validation;
       if(report){
         CLOSING_RESEARCH_STATE[name]={latest:report.to,outOfSample:validation?{days:validation.tradingDays,trades:validation.trades,
@@ -2725,7 +2725,7 @@ function renderMainStrategyState(kind){
   const cfg=(((PROMOTION_STATE||{}).configs||{})[kind]||{});
   const err=(((PROMOTION_STATE||{}).errors||{})[kind]||'');
   if(err){el.innerHTML='<span class="status-item risk">⚠ 운영 메인 조회 실패</span><span class="status-item">'+esc(err)+'</span>';return;}
-  el.innerHTML='<span class="status-item ok">⭐ 현재 운영 메인: <b>'+esc(label(active))+'</b></span>'+
+  el.innerHTML='<span class="status-item ok">'+(kind.startsWith('closing')?'⭐ 현재 연구 메인':'⭐ 현재 운영 메인')+': <b>'+esc(label(active))+'</b></span>'+
     (pending?'<span class="status-item">⏭ 예약 메인: <b>'+esc(label(pending))+'</b> · '+esc(cfg.effectiveFrom||'다음 세션')+'부터</span>':'')+
     '<span class="status-item">'+(active==='baseline'?'원래 기준전략을 사용 중입니다.':'승격된 전략을 사용 중입니다. 원래 baseline은 연구 비교 기준으로 계속 보존됩니다.')+'</span>'+
     (cfg.updatedAt?'<span class="status-item">설정 '+esc(new Date(cfg.updatedAt).toLocaleString('ko-KR'))+'</span>':'');
