@@ -3,10 +3,13 @@
 /* 🧾 연말 세금 점검 (plan 1.47.0 · 2026-11-07) — plan-tax-check.js 값 시험 + plan.html 연결 + 변이.
  * 사용자: "해"(연말 세금 점검 카드 — 연구 11-07 심층 2: 공제 채우기·손실 상계 세후 CAGR +0.3~0.5%p).
  * 해외주식 양도세: 결제일(미국 T+1 · 2024-05-28 전 T+2) 기준 1년 실현손익 · 공제 250만원 · 22% · 원화 = 결제일 환율(환차손익 포함).
+ * 2026-11-11 사용자 "듀얼가드 현재에 연말 세금 점검 양도세는 포트폴리오로 들어가서 포트폴리오에 속한 전략 전부로 판단해야지"
+ *   → 점검은 💰 포트폴리오(index.html pfTaxCheck)로 · 셈은 portfolio()(전략 여럿 · 공제 한 번 · 팔고 되사기 후보는 규칙이 안 바뀌는 전략만).
+ *   A11~A14 = buildTrades · portfolio() 값 시험 · B = 듀얼가드 화면에서 빠짐 · 포트폴리오 연결.
  */
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..');
-const SRC={mod:fs.readFileSync(path.join(root,'plan-tax-check.js'),'utf8'),plan:fs.readFileSync(path.join(root,'plan.html'),'utf8'),eng:fs.readFileSync(path.join(root,'plan-session-engine.js'),'utf8')};
+const SRC={mod:fs.readFileSync(path.join(root,'plan-tax-check.js'),'utf8'),plan:fs.readFileSync(path.join(root,'plan.html'),'utf8'),eng:fs.readFileSync(path.join(root,'plan-session-engine.js'),'utf8'),idx:fs.readFileSync(path.join(root,'index.html'),'utf8')};
 const load=js=>{const m={exports:{}};vm.runInNewContext(js,{module:m});return m.exports;};
 const fnOf=(src,marker)=>{const s=src.indexOf(marker);assert(s>=0,'없음: '+marker);let i=src.indexOf('{',s),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(s,i+1);}throw Error(marker);};
 const lineOf=(src,start)=>{const s=src.indexOf(start);assert(s>=0,'없음: '+start);return src.slice(s,src.indexOf('\n',s));};
@@ -58,33 +61,77 @@ function check(S){
   // A10 평단 미등록 종목은 제안에서 뺀다
   const C7=T.check({ledger:{base:{date:'2026-01-02',tecl:10,avgTecl:null},events:[]},prices:{TECL:80},fxSeries:FXF,year:'2026'});
   t('A10 평단 미등록 → unknown · 제안 없음',C7.positions[0].unknown===true&&C7.suggestions.length===0);
-  // ── B. plan.html 연결
-  t('B1 현재 탭 카드 · 상태 · 입력',/id="alphaTaxSection" data-asset-view="current"/.test(S.plan)&&S.plan.includes('id="taxBody"')&&S.plan.includes('id="taxStatus"')&&S.plan.includes('<input id="taxOtherKrw"'));
-  t('B2 스크립트 · 계좌 렌더에서 호출 · 설정 저장(defaults·readForm)',S.plan.includes('<script src="/plan-tax-check.js?v=1"></script>')&&fnOf(S.plan,'function renderAlphaLedger(').includes('renderTaxCheck();')&&/taxOtherKrw:0/.test(fnOf(S.plan,'function defaults()'))&&fnOf(S.plan,'function readForm()').includes('"taxOtherKrw"'));
-  // B3 실제 renderTaxCheck 를 돌려 화면 글자 확인(12-20 · 공제 채우기)
-  const els={};const el=id=>els[id]||(els[id]={textContent:'',innerHTML:'',className:'',value:''});el('taxOtherKrw').value='0';
-  const W={JKPlanTaxCheck:T};
-  const c2=vm.createContext({window:W,$:el,liveQuotes:{TECL:{price:80},TQQQ:{settled:{close:0}},SGOV:null},alphaLedger:{base:{date:'2026-01-02',tecl:10,avgTecl:50},events:[]},
-    todayISO:()=>'2026-12-20',num:(id,fb)=>{const v=Number(el(id).value);return Number.isFinite(v)?v:fb;},usd2:v=>'$'+(+v).toFixed(2),alphaFee:(q,p)=>{const g=q*p;return g<=10?0:Math.floor(g*0.1)/100;},assetPaperMode:()=>false,fetch:()=>{throw Error('no fetch');}});
-  vm.runInContext('const planFx={series:'+JSON.stringify(FXF)+',loading:null,error:""};'+lineOf(S.plan,'const taxKrw=')+'\n'+fnOf(S.plan,'function taxRoomText(')+fnOf(S.plan,'function renderTaxCheck()'),c2);
-  c2.renderTaxCheck();
-  const html=el('taxBody').innerHTML;
-  /* B4 (2026-11-11 사용자 "이렇게 보이는 것들 줄좀 맞추자") — 올해 실현 · 공제 · 세금과 '지금 팔면'이 한 표 — 따로 두 표면 칸 폭이 표마다 달라 선입선출 · 이동평균 줄이 어긋난다 */
-  t('B4 세금 표 하나 — 지금 팔면은 같은 표의 둘째 묶음 머리(선입선출 · 이동평균 칸 줄 같음)',(html.match(/<table class="tax-table">/g)||[]).length===1&&(html.match(/<\/table>/g)||[]).length===1
-    &&/<tbody><tr class="tax-sub"><th>지금 팔면 \(평가손익 · 원화\)<\/th><th>선입선출<\/th><th>이동평균<\/th><\/tr><tr><td>TECL 10주/.test(html),html.slice(0,200));
-  t('B3 화면: 공제 채우기 가능 · TECL 10주 팔고 되사기 · 마감 2026-12-30 · 선입선출/이동평균',el('taxStatus').textContent==='공제 채우기 가능'&&html.includes('TECL 10주 팔고 같은 날 10주 되사기')&&html.includes('2026-12-30')&&html.includes('선입선출')&&html.includes('이동평균'),el('taxStatus').textContent+' · '+html.slice(0,160));
+  // ── A11 운영 체결 목록(buildTrades) — 종목 여럿 · 소수 주(적립) · 산 날 · 판 날 환율 · 선입선출/이동평균
+  { const FXA=[{date:'2026-01-01',close:1300},{date:'2026-03-01',close:1400},{date:'2026-06-01',close:1500}];
+    const TR=[{date:'2026-01-05',symbol:'usd',side:'buy',qty:0.5,price:100,fee:0},{date:'2026-02-02',symbol:'SMH',side:'buy',qty:2,price:50,fee:0.1},
+      {date:'2026-03-10',symbol:'USD',side:'buy',qty:0.25,price:120,fee:0},{date:'2026-06-10',symbol:'USD',side:'sell',qty:0.5,price:150,fee:0}];
+    const B=T.buildTrades(TR,T.fxFn(FXA)),s0=B.sells[0];
+    t('A11 소수 주: 선입선출 원화 47,500 · 이동평균 41,166.67 · 남은 USD 0.25주(두 번째 lot) · SMH 2주 원가 130,130원(수수료 포함)',
+      B.sells.length===1&&near(s0.fifo.krw,47500)&&near(s0.avg.krw,41166.667)&&near(s0.fifo.usd,25)&&near(B.pos.USD.qty,0.25,1e-9)&&B.pos.USD.lots.length===1&&near(B.pos.USD.lots[0].costKrw,42000)&&B.pos.SMH.qty===2&&near(B.pos.SMH.costKrw,130130),
+      JSON.stringify({s0,usd:B.pos.USD,smh:B.pos.SMH&&B.pos.SMH.costKrw})); }
+  // ── A12 포트폴리오 · 손실 상계 — 실현손익은 전략 전부 합(공제 한 번) · 팔고 되사기 후보에서 뺀 전략(무매)은 제안 없음
+  const FXC=[{date:'2025-01-01',close:1000}];
+  { const P={key:'P',label:'듀얼가드',tab:'plan',kind:'plan',harvest:true,prices:{TQQQ:40},
+      ledger:{base:{date:'2026-01-02',tecl:100,tqqq:100,avgTecl:50,avgTqqq:50},events:[tr('2026-05-01','TECL','sell',100,80,0)]}};
+    const V={key:'V',label:'섀넌',tab:'ivs',kind:'trades',harvest:true,prices:{USD:90},expect:{USD:5},
+      trades:[{date:'2026-02-02',symbol:'USD',side:'buy',qty:10,price:100,fee:0},{date:'2026-04-01',symbol:'USD',side:'sell',qty:5,price:120,fee:0}]};
+    const I={key:'I',label:'무한매수법',tab:'inf',kind:'trades',harvest:false,why:'평단으로 매도 시점을 정하는 전략',prices:{SOXL:5},expect:{SOXL:100},
+      trades:[{date:'2026-01-10',symbol:'SOXL',side:'buy',qty:100,price:20,fee:0}]};
+    const R=T.portfolio({sources:[P,V,I],fxSeries:FXC,year:'2026'}),S=R.suggestions;
+    t('A12 상계: 실현 300만(듀얼가드) + 10만(섀넌) = 310만 · 공제 한 번 → 초과 60만 · 세금 13.2만',R.mode==='offset'&&near(R.total.fifo,3100000)&&near(R.room.fifo,-600000)&&near(R.tax.fifo,132000),JSON.stringify({t:R.total,r:R.room,x:R.tax}));
+    t('A12b 제안: 섀넌 USD 5주(세금 −11,099) → 듀얼가드 TQQQ 55주(−120,901 · 순 116,501) · 무매 SOXL 은 손실이 더 커도 제안 없음(규칙이 바뀌는 전략)',
+      S.length===2&&S[0].key==='V'&&S[0].symbol==='USD'&&S[0].qty===5&&near(S[0].taxKrw,11099)&&S[1].key==='P'&&S[1].symbol==='TQQQ'&&S[1].qty===55&&near(S[1].taxKrw,120901)&&near(S[1].netKrw,116501)&&!S.some(x=>x.key==='I'),
+      JSON.stringify(S.map(x=>[x.key,x.symbol,x.qty,Math.round(x.taxKrw),Math.round(x.netKrw)])));
+    const pI=R.positions.find(p=>p.key==='I');
+    t('A12c 지금 팔면: 무매 SOXL −150만원 · 제안에서 뺌(이유 그대로)',pI&&pI.harvest===false&&pI.why.includes('평단')&&near(pI.unreal.fifo.krw,-1500000),JSON.stringify(pI)); }
+  // ── A13 포트폴리오 · 공제 채우기 — 다른 전략(무매)이 이미 쓴 공제를 빼고 남은 만큼만(듀얼가드 혼자 보면 75주 · 전부 보면 15주)
+  { const I={key:'I',label:'무한매수법',tab:'inf',kind:'trades',harvest:false,why:'평단',prices:{},expect:{},
+      trades:[{date:'2026-01-10',symbol:'SOXL',side:'buy',qty:100,price:10,fee:0},{date:'2026-03-02',symbol:'SOXL',side:'sell',qty:100,price:30,fee:0}]};
+    const P={key:'P',label:'듀얼가드',tab:'plan',kind:'plan',harvest:true,prices:{TECL:80},ledger:{base:{date:'2026-01-02',tecl:1000,avgTecl:50},events:[]}};
+    const R=T.portfolio({sources:[I,P],fxSeries:FXC,year:'2026'}),s0=R.suggestions[0];
+    t('A13 채우기: 무매 실현 200만 → 남은 공제 50만 · 90% 45만 안 → TECL 15주(확정 448,800원 · 세금 −98,736)',R.mode==='fill'&&near(R.room.fifo,500000)&&R.suggestions.length===1&&s0.key==='P'&&s0.qty===15&&near(s0.realized.fifo.krw,448800)&&near(s0.taxKrw,98736),
+      JSON.stringify({room:R.room,s:R.suggestions.map(x=>[x.key,x.qty,x.realized.fifo.krw])})); }
+  // ── A14 체결로 다시 센 보유가 그 전략 계산과 다르면 → 추정(실현 = estKrw · 보유 = estPositions · 제안 없음)
+  { const base={key:'X',label:'밸류리밸런싱',tab:'vr',kind:'trades',harvest:true,prices:{TQQQ:60},trades:[{date:'2026-01-05',symbol:'TQQQ',side:'buy',qty:10,price:50,fee:0}],
+      estKrw:123456,estN:2,estPositions:[{symbol:'TQQQ',qty:12,price:60,costUsd:600}]};
+    const R=T.portfolio({sources:[{...base,expect:{TQQQ:12}}],fxSeries:FXC,year:'2026'}),S=R.sources[0],p=R.positions[0];
+    const ok=T.portfolio({sources:[{...base,expect:{TQQQ:10}}],fxSeries:FXC,year:'2026'});
+    t('A14 보유가 다름(체결 10주 · 전략 12주) → 추정: 실현 123,456원 · 지금 팔면 ≈ (720−600)×1,000 · 제안 없음 · 같으면 체결 그대로',
+      S.est&&S.kind==='est'&&near(S.realized.fifo,123456)&&S.realized.n===2&&p&&p.est&&p.harvest===false&&p.qty===12&&near(p.unreal.fifo.krw,120000)&&/다시 센 보유/.test(p.estWhy)&&R.suggestions.length===0
+      &&ok.sources[0].kind==='trades'&&!ok.sources[0].est&&ok.positions[0].qty===10,JSON.stringify({S,p,ok:ok.sources[0].kind})); }
+  // ── A15 선입선출 함정 — 오래된 lot 이 싸서 한 주는 이익인데 다 팔면 두 방식 모두 손실 → 후보에서 빼면 안 된다(실제 화면 VR 134주)
+  { const E={key:'E',label:'다른 전략',tab:'ivs',kind:'est',estKrw:3000000,estN:1,harvest:false};
+    const B={key:'B',label:'밸류리밸런싱',tab:'vr',kind:'trades',harvest:true,prices:{TQQQ:70},expect:{TQQQ:20},
+      trades:[{date:'2026-01-05',symbol:'TQQQ',side:'buy',qty:10,price:50,fee:0},{date:'2026-02-02',symbol:'TQQQ',side:'buy',qty:10,price:100,fee:0}]};
+    const R=T.portfolio({sources:[E,B],fxSeries:FXC,year:'2026'}),s0=R.suggestions[0];
+    t('A15 선입선출 함정: 초과 50만 · 한 주는 선입선출 이익(+19,930) · 20주 다 팔면 두 방식 −101,400 → TQQQ 20주 제안(세금 −22,308 · 순 19,508)',
+      R.mode==='offset'&&near(R.room.fifo,-500000)&&R.suggestions.length===1&&s0.key==='B'&&s0.qty===20&&near(s0.realized.fifo.krw,-101400)&&near(s0.taxKrw,22308)&&near(s0.netKrw,19508),
+      JSON.stringify(R.suggestions.map(x=>[x.key,x.qty,x.realized.fifo.krw,x.taxKrw,x.netKrw]))); }
+  // ── B. 듀얼가드 화면에서 빠짐(사람당 한 번인 공제를 장부 하나로 판단하지 않는다) · 포트폴리오가 그린다
+  const al=fnOf(S.plan,'function renderAlphaLedger(');
+  t('B1 듀얼가드: 세금 점검 칸 · 다른 해외주식 입력 · 계산 · 모듈 스크립트 없음(설정 저장 목록에서도 뺌)',!/id="alphaTaxSection"/.test(S.plan)&&!/id="taxBody"/.test(S.plan)&&!/taxOtherKrw/.test(S.plan)
+    &&!/function renderTaxCheck/.test(S.plan)&&!/<script src="\/plan-tax-check\.js/.test(S.plan)&&!/renderTaxCheck/.test(al)&&!/alphaTaxSection/.test(S.plan));
+  t('B2 듀얼가드 현재 계좌 카드에 포트폴리오로 가는 안내(창 밖으로 열림)',/id="alphaTaxMoved"[^>]*>🧾 연말 세금 점검\(해외주식 양도세\)은 <a href="\/portfolio" target="_top">💰 포트폴리오<\/a>/.test(S.plan)
+    &&S.plan.indexOf('id="alphaTaxMoved"')>S.plan.indexOf('id="alphaAccountSection"')&&S.plan.indexOf('id="alphaTaxMoved"')<S.plan.indexOf('id="alphaEvidenceSection"'));
+  t('B3 포트폴리오가 새 모듈(v=2)을 불러 portfolio() 로 센다',S.idx.includes('<script src="/plan-tax-check.js?v=2"></script>')&&/T\.portfolio\(\{sources, fxSeries:fxDays, year\}\)/.test(fnOf(S.idx,'function pfTaxCheck('))
+    &&/pfTaxHtml\(PF\.tax,T\)/.test(fnOf(S.idx,'function pfRender()')));
   return bad;
 }
 
 const bad=check(SRC);
 if(bad.length){console.error('FAIL\n  '+bad.join('\n  '));process.exit(1);}
-console.log('PASS 연말 세금 점검: 결제일 T+1/T+2 · 마지막 체결일 · 환율 찾기 · 선입선출/이동평균 원화 실현손익(312,116 / 269,398.5) · 12-31 매도 다음 해 · 수량 = 화면 장부 · 공제 채우기 n 최대 · 손실 상계 298,188 · 환율 함정 · 평단 미등록 · 화면 연결');
+console.log('PASS 포트폴리오 연말 세금 점검(A11~A14 · B) · 결제일 T+1/T+2 · 마지막 체결일 · 환율 찾기 · 선입선출/이동평균 원화 실현손익(312,116 / 269,398.5) · 12-31 매도 다음 해 · 수량 = 화면 장부 · 공제 채우기 n 최대 · 손실 상계 298,188 · 환율 함정 · 평단 미등록 · 화면 연결');
 const MUT=[
   ['시작잔고 원가를 지금 환율로(환차손익 무시)','mod',s=>s.replace("const cu=avg!=null?q*avg:0,r=fx(settleDate(d)||d);","const cu=avg!=null?q*avg:0,r=fx('9999-12-31');")],
   ['결제일 = 체결일(T+1 무시)','mod',s=>s.replace("let n=String(trade)>='2024-05-28'?1:2;","let n=0;")],
   ['선입선출 대신 이동평균 원가','mod',s=>s.replace("fifo:{usd:pu-fu,krw:pk-fk}","fifo:{usd:pu-au,krw:pk-ak}")],
   ['공제 채우기 여유 없앰(100% 까지)','mod',s=>s.replace("margin=o.margin??0.9","margin=o.margin??1")],
-  ['세금 표: 지금 팔면을 따로 표로(옛 코드 · 칸 줄 어긋남)','plan',s=>s.replace("h+='<tbody><tr class=\"tax-sub\"><th>지금 팔면 (평가손익 · 원화)</th><th>선입선출</th><th>이동평균</th></tr>'","h+='</table><table class=\"tax-table\"><thead><tr><th>지금 팔면 (평가손익 · 원화)</th><th>선입선출</th><th>이동평균</th></tr></thead><tbody>'")],
+  ['체결 목록: 소수 주 버림(적립)','mod',s=>s.replace("const s=String(e.symbol||'').toUpperCase(),q=+e.qty||0,p=+e.price||0","const s=String(e.symbol||'').toUpperCase(),q=Math.floor(+e.qty||0),p=+e.price||0")],
+  ['체결 목록: 보유가 달라도 믿음','mod',s=>s.replace("if(s.expect&&!sameQty(B.pos,s.expect))","if(false&&s.expect)")],
+  ['팔고 되사기: 제외한 전략(무매)도 후보','mod',s=>s.replace("positions.filter(p=>p.harvest&&!p.est&&!p.unknown&&p.price>0)","positions.filter(p=>!p.est&&!p.unknown&&p.price>0)")],
+  ['공제 판단: 마지막 세션 실현손익만 셈(다른 전략 빠짐)','mod',s=>s.replace("const rf=sources.reduce((a,x)=>a+x.realized.fifo,0),ra=sources.reduce((a,x)=>a+x.realized.avg,0);","const rf=sources.length?sources[sources.length-1].realized.fifo:0,ra=sources.length?sources[sources.length-1].realized.avg:0;")],
+  ['팔고 되사기: 한 주 손익으로 후보를 거름(옛 코드 · 오래된 lot 이 이익이면 통째로 빠짐)','mod',s=>s.replace("      .sort((a,b)=>b.per-a.per);","      .filter(c=>c.per>0).sort((a,b)=>b.per-a.per);")],
+  ['듀얼가드 현재 탭에 세금 점검 칸이 남음(옛 코드)','plan',s=>s.replace('      <div class="card" id="alphaHistorySection"','      <div class="card" id="alphaTaxSection" data-asset-view="current"><div id="taxBody"></div></div>\n      <div class="card" id="alphaHistorySection"')],
 ];
 for(const [name,key,mut] of MUT){
   const m=mut(SRC[key]);assert(m!==SRC[key],'변이 대상 없음: '+name);
@@ -92,3 +139,4 @@ for(const [name,key,mut] of MUT){
   if(!failed){console.error('FAIL 변이가 통과함: '+name);process.exit(1);}
   console.log('PASS 변이 빨간불: '+name);
 }
+console.log('ALL PASS plan tax · 변이 '+MUT.length+'/'+MUT.length+' red');
