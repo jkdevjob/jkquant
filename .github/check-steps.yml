@@ -63,7 +63,19 @@
     node scripts/check-plan-record-sheet.cjs
     node scripts/check-trade-chart.cjs
     node scripts/check-realized-break.cjs
+    node scripts/check-paper-tools.cjs
     node scripts/check-plan-panic.cjs
+
+- name: 포트폴리오 오늘 칸 = 포트폴리오 세션 판단(듀얼가드 주문 계산 옛 함수 = 새 함수 400장면 · 공포 모드 지수 받기 끝없는 다시 그리기 없음) 값·변이 검사
+  minutes: 3
+  run: node scripts/check-plan-bg-strip.cjs
+
+- name: 듀얼가드 모의 세션 재생 저장본(DB) — 묶기=풀기 200장면 · 언제 다시 세나 · 듀얼가드 화면·모의 목록 같은 문서 값·변이 검사
+  minutes: 1
+  run: node scripts/check-plan-paper-store.cjs
+
+- name: 운영 › 듀얼가드 창 높이 = 내용 높이(바깥 한 번 스크롤 · 붙는 자리 · 시트 · 설정 창 · 잠금) 값·변이 검사
+  run: node scripts/check-dg-autoheight.cjs
 
 - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
   run: node scripts/check-sticky-layout.cjs

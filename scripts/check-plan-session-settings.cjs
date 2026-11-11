@@ -44,7 +44,7 @@ async function fixture(cancel,creating=false){
   const c=vm.createContext({console,window:{JKPlanSessionSettings:E},$:id=>els[id],ensureLiveBoxes(){},assetPlanBox:()=>box,
     confirm:()=>true,alert:m=>{throw Error(m);},assetFxAt:()=>fx,todayISO:()=>opt.today,assetSessionSettingsFromView:()=>live.settings,
     saveOperatingState:async()=>saves++,renderAssetSessions(){},loadActiveAssetSessionView:async()=>loads++,planSid:()=> 'new'});
-  vm.runInContext("let assetSessionSaving=false,assetModalRevision=1,assetModalHorizon=10,activeHorizon=10,assetEditingId='keep',assetViewRevision=0;const assetPaperCache={keep:'old'};"+fn('function assetModalPaper()')+fn('function closeAssetSessionModal()')+fn('async function createAssetSession()'),c);
+  vm.runInContext("function dgVpLock(){}let assetSessionSaving=false,assetModalRevision=1,assetModalHorizon=10,activeHorizon=10,assetEditingId='keep',assetViewRevision=0;const assetPaperCache={keep:'old'};"+fn('function assetModalPaper()')+fn('function closeAssetSessionModal()')+fn('async function createAssetSession()'),c);
   if(creating)vm.runInContext('assetEditingId=null',c);
   const pending=c.createAssetSession();await c.createAssetSession();
   if(cancel==='close')c.closeAssetSessionModal();

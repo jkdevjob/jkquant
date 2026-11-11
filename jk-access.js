@@ -81,6 +81,47 @@
     var items={}; MENU_ITEMS.forEach(function(x){items[x.path]={mode:x.mode,order:x.order};});
     return {items:items,subs:subDefaults(),updatedAt:0,updatedBy:''};
   }
+  /* 메뉴 이름 (2026-11-11 사용자: "관리자 메뉴관리에서 메뉴 이름도 변경 가능하게 하자").
+     관리자가 바꾼 이름은 settings/siteMenu 의 items[경로].label — 없으면 기본 이름(MENU_ITEMS). 글자만 받는다:
+     제어 문자 지움 · 빈칸 하나로 · 앞뒤 빈칸 정리 · 20자까지. 화면엔 textContent 로만 넣는다(마크업으로 해석하지 않는다). */
+  function cleanMenuLabel(v){
+    var s=String(v==null?'':v).replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2064\ufeff]/g,'').replace(/\s+/g,' ').trim();
+    var a=Array.from(s); return a.length>20?a.slice(0,20).join('').trim():s;
+  }
+  /* 메뉴에 보일 이름 — 관리자가 바꾼 이름, 없으면 기본 이름 */
+  function menuLabel(cfg,path){
+    path=menuPath(path); var d=MENU_ITEMS.find(function(x){return x.path===path;});
+    var v=cfg&&cfg.items&&cfg.items[path], c=v?cleanMenuLabel(v.label):'';
+    return c||(d&&d.label)||'';
+  }
+  /* 링크 글자만 바꾼다 — 아이콘(.mi)은 그대로. 처음 바꿀 때 페이지 HTML 의 기본 글자를 기억해 두고, 이름을 지우면 그 글자로 되돌린다.
+     바꾼 이름이 없고 아직 손댄 적이 없는 링크는 그대로 둔다(기본 화면의 DOM 은 예전과 같다). */
+  function setMenuLinkLabel(a,custom){
+    if(!a||!a.childNodes||!a.querySelector||!document.createElement) return;
+    var lab=a.querySelector('.jk-menu-label');
+    if(!lab){
+      if(!custom) return;
+      var keep=[],def='';
+      Array.prototype.forEach.call(a.childNodes,function(n){
+        if(n.nodeType===1&&n.classList&&n.classList.contains('mi')) return;
+        keep.push(n); def+=n.textContent||'';
+      });
+      lab=document.createElement('span'); lab.className='jk-menu-label'; lab.setAttribute('data-default',def.replace(/\s+/g,' ').trim());
+      keep.forEach(function(n){ a.removeChild(n); });
+      a.appendChild(lab);
+    }
+    var want=custom||lab.getAttribute('data-default')||'';
+    if(lab.textContent!==want) lab.textContent=want;
+  }
+  /* 모든 전체메뉴 링크에 이름을 붙인다 — 메뉴 적용(applyMenuDom)과 관리자 화면 미리보기가 같이 쓴다 */
+  function applyMenuLabels(cfg){
+    Array.prototype.forEach.call(document.querySelectorAll('.jkmenu-pop'),function(pop){
+      Array.prototype.forEach.call(pop.querySelectorAll('a[href]'),function(a){
+        var p=menuPath(a.getAttribute('href')), v=cfg&&cfg.items&&cfg.items[p];
+        setMenuLinkLabel(a, v?cleanMenuLabel(v.label):'');
+      });
+    });
+  }
   function normalizeMenuConfig(data){
     var d=menuDefaults(),src=data&&data.items&&typeof data.items==='object'?data.items:{};
     MENU_ITEMS.forEach(function(x){
@@ -90,6 +131,8 @@
          관리자가 순서를 바꿔 저장해 둔 경우에도 '모의 밑에 텐배거'가 지켜진다(저장 순서는 10 단위라 +5 가 사이에 들어간다). */
       if(x.after&&!src[x.path]&&src[x.after]&&Number.isFinite(+src[x.after].order)) order=+src[x.after].order+5;
       d.items[x.path]={mode:mode,order:order};
+      var label=cleanMenuLabel(v.label);
+      if(label&&label!==x.label) d.items[x.path].label=label;   // 바꾼 이름만 남긴다 — 비었거나 기본 이름과 같으면 없음(기본 이름)
     });
     /* 하위 탭 — 모르는 키는 버리고, 없는 키는 기본값. 저장된 순서가 있는 페이지에 새로 생긴 탭은 맨 뒤(1000+)로 */
     var ss=data&&data.subs&&typeof data.subs==='object'?data.subs:{};
@@ -186,6 +229,7 @@
         }
       }
     });
+    try{ applyMenuLabels(cfg); }catch(e){ console.warn('menu labels',e); }
     try{ applySubTabs(user,cfg); }catch(e){ console.warn('sub tabs',e); }
     menuWaitEnd();
   }
@@ -519,6 +563,7 @@
                    bindAdminApprovalPush:bindAdminApprovalPush,
                    cacheOk:cacheOk, cacheSet:cacheSet, setAdmin:setAdmin, show:show, hide:hide, showing:showing, guard:guard,
                    menuPath:menuPath, menuDefaults:menuDefaults, normalizeMenuConfig:normalizeMenuConfig, loadMenuConfig:loadMenuConfig,
+                   cleanMenuLabel:cleanMenuLabel, menuLabel:menuLabel, applyMenuLabels:applyMenuLabels,
                    applyMenuConfig:applyMenuConfig, menuAccess:menuAccess, SUB_TABS:SUB_TABS, subPage:subPage, subTabState:subTabState, applySubTabs:applySubTabs,
                    inAppName:inAppName, loginErrorText:loginErrorText};
 })();

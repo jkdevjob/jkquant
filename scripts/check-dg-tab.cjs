@@ -114,7 +114,7 @@ async function check(S){
     const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:true,planCurName:'토스 듀얼',planCurRules:'base'};
     vm.createContext(r);vm.runInContext(fnOf(S.plan,'function readForm()'),r);const o=r.readForm();
     const a={$:()=>null,todayISO:()=>'2026-11-09',plusYears:s=>s,planSid:()=>'x',bindSleeveLedger(){},alphaSyncInputs(){},alphaFee:()=>0,ALPHA_FEE_RATE:0.001,planLinks:null,sleeveSessions:null,alphaLedger:null,planPortfolio:true,planCurName:''};
-    vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function apply(o)'),a);
+    vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function planLedgerFrom(o,all)')+fnOf(S.plan,'function apply(o)'),a);
     a.apply({sessionName:' 토스 듀얼 '});const n1=a.planCurName;a.apply({});const n2=a.planCurName;
     t('H4 이름은 원장(fiveYearPlanV2.sessionName)에 적고 읽는다 — 없으면 빈칸(기본 "현재 투자중")',o.sessionName==='토스 듀얼'&&n1==='토스 듀얼'&&n2==='',JSON.stringify([o.sessionName,n1,n2]));
     const pc={planLiveDoc:{sessionName:'토스 듀얼',startCapital:1,alphaLedger:{base:{cash:1},events:[{id:'e'}]}},PF:{over:{}},S:{plan:{sessions:[{id:'s1',name:'옛 이름',horizon:5,paper:false,settings:{},ledger:{base:{cash:1},events:[{id:'f'}]}}]}},planPaperRetired:()=>false};
@@ -194,7 +194,7 @@ async function check(S){
        그때 잰 높이 0 이 남으면 상태줄 · 상세 탭이 맨 위(세션 줄 밑)에 겹쳐 가려졌다. 실제 함수 두 개를 그대로 돌린다. */
     const V={assetSessionChips:{offsetHeight:56},assetStatusline:{offsetHeight:55}},vars={},seen=[];let roCb=null;
     const c={$:id=>V[id],document:{documentElement:{style:{setProperty:(k,v)=>{vars[k]=v;}}}},ResizeObserver:class{constructor(cb){roCb=cb;}observe(el){seen.push(el);}}};
-    vm.createContext(c);vm.runInContext('let dgStickyRO=null;\n'+fnOf(P,'function dgStickyOffsets()')+'\n'+fnOf(P,'function dgStickyWatch()'),c);
+    vm.createContext(c);vm.runInContext('let dgStickyRO=null;var dgStickyH={h1:0,h2:0};function dgVpPaint(){}\n'+fnOf(P,'function dgStickyOffsets()')+'\n'+fnOf(P,'function dgStickyWatch()'),c);
     c.dgStickyOffsets();const vis=vars['--dg-h2'];
     V.assetSessionChips.offsetHeight=0;V.assetStatusline.offsetHeight=0;c.dgStickyOffsets();const hid=vars['--dg-h2'];   // 숨은 창 — 그대로 둔다
     c.dgStickyWatch();V.assetSessionChips.offsetHeight=56;V.assetStatusline.offsetHeight=85;if(roCb)roCb([]);const grown=vars['--dg-h2'];   // 다시 보임 · 상태줄 두 줄

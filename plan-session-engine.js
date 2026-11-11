@@ -1,4 +1,4 @@
-(function(g){
+(function jkPlanSessionEngine(g){   // 이름 — 아래 ENGINE_FP(엔진 코드 지문)가 이 함수 글자 전체를 읽는다
 'use strict';
 
 const DEFAULTS={
@@ -303,5 +303,110 @@ function replay(opt){
   return out;
 }
 
-g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,strategyLabel,panicStep,panicState,retiredReason,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,ledgerEvents,ledgerCalc,replay,stats};
+/* ── 모의 세션 재생 저장본 (2026-11-11 · 사용자: "듀얼가드 DB에 저장하게 바꾸고" · "운영 모든 전략 모든 세션을 DB에 저장하라는거야" ·
+      "이렇게 열 때마다 그때그때 계산하지 말고") ──
+   다른 전략의 모의 세션처럼 듀얼가드 모의 세션도 재생 결과(거래이력 · 날마다 평가액 · 성과 · 공포 모드 상태)를 DB 문서 하나
+   users/{uid}/planPaper/{세션 id} 에 두고, 열 때는 그것을 읽는다. 다시 세는 때는 둘뿐이다.
+   ① 재생 조건이 바뀜 — sig(규칙 · 시작일 · 원금 · 월 적립 · 저장 판 · 엔진 코드 지문)가 다르면 저장본을 쓰지 않는다.
+   ② 새 확정 일봉이 생겼을 수 있음 — 저장본 끝(upto)이 확정 상한(cut)의 직전 평일보다 앞이면 시세를 받아 보고, 끝이 늘었을 때만 다시 센다.
+   듀얼가드 화면(plan.html)과 모의 목록(index.html)이 이 함수들을 같이 쓴다 — 같은 문서 · 같은 규칙(같은 걸 두 군데서 세지 않는다).
+   묶기 = 풀기: 풀어 낸 결과는 재생이 돌려준 결과와 JSON 글자까지 같다. 저장할 때마다 확인하고, 다르면 저장하지 않는다(저장 전 장부 == 저장 후 장부).
+   시험: scripts/check-plan-paper-store.cjs */
+const PAPER_RUN_VER=1,PAPER_RUN_MAX=900000;   // 문서 한도 1MiB — 묶은 글자가 이보다 길면 저장하지 않는다(그때만 예전처럼 메모리)
+/* 엔진 코드 지문 — 이 파일의 코드가 바뀌면(매매 규칙 · 체결 · 장부) 판 번호를 올리지 않아도 저장본을 다시 센다. 같은 파일을 읽는 두 화면은 같은 값. */
+const ENGINE_FP=(()=>{const s=String(jkPlanSessionEngine);let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,0x01000193);}return (h>>>0).toString(36)+'.'+s.length.toString(36);})();
+const runMemo=new Map();   // 이 창에서 읽었거나 센 저장본 — 키(uid/세션 id) → {sig,upto,R}. sig 가 다르면 쓰지 않는다
+/* 재생 조건 — 두 화면이 같은 세션에서 같은 값을 얻는다. 공포 모드는 모의 세션에서만(운영 세션은 base) · 폐지된 규칙 글자(exp1·exp2)는 그대로 넘겨 replay 가 '폐지'로 돌려준다. */
+function paperRunOpts(sess){
+  const st=(sess&&sess.settings)||{},r=String(st.alphaRules||'');
+  return {horizon:+(sess&&sess.horizon)||+st.horizon||5,rules:r==='panic'?((sess&&sess.paper)?'panic':'base'):(r||'base'),
+    startDate:String((sess&&sess.simStart)||''),principal:+st.startCapital||+st.principal||0,monthlyAdd:+st.monthlyAdd||0};
+}
+function paperRunSig(o){return ['r'+PAPER_RUN_VER,ENGINE_FP,o.horizon,o.rules,o.startDate,o.principal,o.monthlyAdd].join('|');}
+function weekdayOnOrBefore(d){const t=new Date(String(d||'')+'T00:00:00Z');if(isNaN(t))return '';while(t.getUTCDay()===0||t.getUTCDay()===6)t.setUTCDate(t.getUTCDate()-1);return t.toISOString().slice(0,10);}
+/* 오늘 것인가 — 확정 상한(그날 포함)의 직전 평일 봉까지 들어 있으면 새 확정 봉이 있을 수 없다(주말엔 금요일 봉이면 됨 · 휴장일엔 시세를 받아 보고 그대로 둔다) */
+function paperRunFresh(upto,cut){const w=weekdayOnOrBefore(cut);return !!(upto&&w&&String(upto)>=w);}
+/* 재생 끝 날 — 세 종목(TECL·TQQQ·SGOV) 각각 확정 상한 이하 마지막 봉 중 가장 이른 날(듀얼가드 화면 settled 와 같은 규칙) */
+function paperRunEnd(series,cut){
+  let end='';
+  for(const rows of series||[]){let d='';for(const r of rows||[]){const x=String((r&&r.date)||'');if(x&&(!cut||x<=cut)&&x>d)d=x;}if(!d)return '';if(!end||d<end)end=d;}
+  return end;
+}
+const DAY_MS=864e5,dayNum=s=>Math.round(Date.parse(String(s)+'T00:00:00Z')/DAY_MS),dayStr=n=>new Date(n*DAY_MS).toISOString().slice(0,10);
+function packRuns(arr,f){const out=[];let k=null;for(let i=0;i<arr.length;i++){const v=f(arr[i]),s=JSON.stringify(v);if(s!==k){out.push([i].concat(v));k=s;}}return out;}   // 바뀐 날만 [i, 값…]
+function unpackRuns(rs,n){const out=new Array(n);let j=0,cur=null;for(let i=0;i<n;i++){while(j<rs.length&&rs[j][0]<=i)cur=rs[j++].slice(1);out[i]=cur;}return out;}
+/* 묶기 — 날마다 바뀌는 칸(날짜 · 총액 · 시세)은 줄로, 가끔 바뀌는 칸(원금 · 현금 · 보유 수량)은 바뀐 날만, 체결은 칸 이름 없이. 글자 수 약 1/4~1/5. */
+function packRun(R){
+  const nav=R.nav||[];let p=null;
+  const N={d:nav.map(x=>{const n=dayNum(x.date),o=p==null?n:n-p;p=n;return o;}),t:nav.map(x=>x.total),
+    f:packRuns(nav,x=>[x.inflow]),c:packRuns(nav,x=>[x.cash]),q:packRuns(nav,x=>[x.tecl,x.tqqq,x.sgov]),
+    px:[nav.map(x=>x.teclPx),nav.map(x=>x.tqqqPx),nav.map(x=>x.sgovPx)]};
+  const L=R.ledger||{},ev=(L.events||[]).map(e=>{const id=String(e.id),n=+id.slice(id.lastIndexOf('_')+1);
+    return e.type==='trade'?['t',n,e.date,e.side,e.symbol,e.qty,e.price,e.fee,e.signalDate]:['c',n,e.date,e.kind,e.amount];});
+  const o={top:[R.horizon,R.rules,R.orderSizingVersion,R.error],base:L.base,fm:L.feeModel,ev,nav:N,stats:R.stats,dec:R.lastDecision};
+  if('panic' in R)o.panic=R.panic;
+  return o;
+}
+/* 풀기 — replay 가 만드는 것과 같은 칸 · 같은 순서(addTrade · addCash · nav.push · out) */
+function unpackRun(o){
+  const N=o.nav,n=N.d.length,F=unpackRuns(N.f,n),C=unpackRuns(N.c,n),Q=unpackRuns(N.q,n),nav=new Array(n);let day=0;
+  for(let i=0;i<n;i++){day=i?day+N.d[i]:N.d[0];
+    nav[i]={date:dayStr(day),total:N.t[i],inflow:F[i][0],cash:C[i][0],tecl:Q[i][0],tqqq:Q[i][1],sgov:Q[i][2],teclPx:N.px[0][i],tqqqPx:N.px[1][i],sgovPx:N.px[2][i]};}
+  const events=o.ev.map(e=>e[0]==='t'
+    ?{id:evtId(e[2],e[1]),date:e[2],type:'trade',side:e[3],symbol:e[4],qty:e[5],price:e[6],fee:e[7],feeRate:FEE_RATE,signalDate:e[8],sim:true}
+    :{id:evtId(e[2],e[1]),date:e[2],type:'cash',kind:e[3],amount:e[4]});
+  const R={horizon:o.top[0],rules:o.top[1],orderSizingVersion:o.top[2],ledger:{base:o.base,events,feeModel:o.fm},nav,stats:o.stats,lastDecision:o.dec,last:nav[n-1]||null,error:o.top[3]};
+  if('panic' in o)R.panic=o.panic;
+  return R;
+}
+/* DB 문서 하나 — {v, sig, upto(마지막 날), n(날 수), at, run(묶은 JSON 글자)}. 묶고 다시 풀어 원래 결과와 글자까지 같을 때만 돌려준다(아니면 null = 저장 안 함). */
+function paperRunPack(R,sig){
+  if(!R||R.error||!R.last||!Array.isArray(R.nav)||!R.nav.length)return null;
+  let run;try{run=JSON.stringify(packRun(R));}catch(e){return null;}
+  if(run.length>PAPER_RUN_MAX)return null;
+  try{if(JSON.stringify(unpackRun(JSON.parse(run)))!==JSON.stringify(R))return null;}catch(e){return null;}
+  return {v:PAPER_RUN_VER,sig:String(sig),upto:R.last.date,n:R.nav.length,at:Date.now(),run};
+}
+function paperRunUnpack(d,sig){
+  if(!d||d.v!==PAPER_RUN_VER||d.sig!==sig||typeof d.run!=='string')return null;
+  try{const R=unpackRun(JSON.parse(d.run));return (R.last&&R.last.date===d.upto&&R.nav.length===d.n)?R:null;}catch(e){return null;}
+}
+/* 저장본 찾기(이 창 메모리 → DB). 조건(sig)이 맞는 것만 {sig,upto,R} — 없으면 null. io.read 는 그 세션 문서(없으면 null). */
+async function paperRunStored(sess,io){
+  io=io||{};const sig=paperRunSig(paperRunOpts(sess)),key=String(io.key||(sess&&sess.id)||'');
+  const m=key?runMemo.get(key):null;if(m&&m.sig===sig)return m;
+  if(typeof io.read!=='function')return null;
+  let d=null;try{d=await io.read();}catch(e){return null;}
+  const R=paperRunUnpack(d,sig);if(!R)return null;
+  const ent={sig,upto:String(d.upto),R};if(key)runMemo.set(key,ent);return ent;
+}
+/* 모의 세션 결과 얻기 — 저장본이 오늘 것이면 그대로(시세도 안 받는다). 아니면 시세(io.quotes)를 받아 새 확정 봉이 있을 때만 다시 재생하고 저장(io.write).
+   io.show(R) — 저장본을 찾으면 시세를 기다리지 않고 먼저 그리게 부른다. 시세·재생이 실패해도 저장본이 있으면 그것을 돌려준다(warn).
+   돌려줌 {R, sig, upto, src:'stored'|'replay'|'error', saved, warn, error} */
+async function paperRunGet(sess,io){
+  io=io||{};
+  const opts=paperRunOpts(sess),sig=paperRunSig(opts),key=String(io.key||(sess&&sess.id)||''),cut=String(io.cut||'');
+  const have=await paperRunStored(sess,io);
+  const keep=warn=>({R:have.R,sig,upto:have.upto,src:'stored',saved:false,warn:warn||'',error:''});
+  if(have){if(typeof io.show==='function')io.show(have.R);if(paperRunFresh(have.upto,cut))return keep();}
+  let q;
+  try{q=await io.quotes(opts.rules==='panic');}catch(e){if(have)return keep(String((e&&e.message)||e));throw e;}
+  const end=paperRunEnd([q&&q.tecl,q&&q.tqqq,q&&q.sgov],cut);
+  if(have&&end&&end<=have.upto)return keep();   // 새 확정 봉 없음(휴장일 · 자료가 아직 안 옴) — 저장본 그대로
+  if(!end){if(have)return keep('확정 일봉 없음');return {R:null,sig,upto:'',src:'error',saved:false,warn:'',error:'확정 일봉 없음'};}
+  const R=replay(Object.assign({},opts,{endDate:end,vix:q.vix||null,vxn:q.vxn||null,tecl:q.tecl,tqqq:q.tqqq,sgov:q.sgov,teclDiv:q.teclDiv,tqqqDiv:q.tqqqDiv,sgovDiv:q.sgovDiv}));
+  if(!R||R.error){const er=(R&&R.error)||'재생 실패';if(have)return keep(er);return {R,sig,upto:'',src:'error',saved:false,warn:'',error:er};}
+  const ent={sig,upto:R.last?R.last.date:'',R};if(key)runMemo.set(key,ent);
+  let saved=false,warn='';
+  if(typeof io.write==='function'){
+    const d=paperRunPack(R,sig);
+    if(!d)warn='저장 안 함(크기 한도 또는 묶기 확인 실패) — 이번 결과는 메모리에만';
+    else{try{await io.write(d);saved=true;}catch(e){warn='저장 실패 · '+String((e&&e.message)||e);}}
+  }
+  return {R,sig,upto:ent.upto,src:'replay',saved,warn,error:''};
+}
+function paperRunForget(key){runMemo.delete(String(key||''));}
+
+g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,strategyLabel,panicStep,panicState,retiredReason,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,ledgerEvents,ledgerCalc,replay,stats,
+  PAPER_RUN_VER,PAPER_RUN_MAX,ENGINE_FP,paperRunOpts,paperRunSig,paperRunFresh,paperRunEnd,paperRunPack,paperRunUnpack,paperRunStored,paperRunGet,paperRunForget};
 })(typeof window!=='undefined'?window:globalThis);
