@@ -133,9 +133,9 @@ function check(S){
     const c={window:{JKPlanSessionEngine:E},usd2:x=>'$'+(+x).toFixed(2),assetPaperCache:{},_act:null,activeAssetSession(){return c._act;},$,
       liveQuotes:{},planIndexCache:{},_fetched:[],fetchPlanIndex(sym){c._fetched.push(sym);return Promise.reject(Error('끊김'));},_redraw:0,refreshAlphaFromCache(){c._redraw++;},
       waitHtml:(a,b)=>'<wait>'+a+'|'+(b||'')+'</wait>',pendingAlphaOrders:[{x:1}],dgStickyOffsets(){},usd2:x=>'$'+x,_posted:0,planEmbedPost(){c._posted++;}};vm.createContext(c);
-    vm.runInContext("let planCurRules='base',planIndexError='',planIndexLoading=null;const planLivePanicMemo=new Map();",c);
+    vm.runInContext("let planCurRules='base',planIndexError='',planIndexLoading=null;const planLivePanicMemo=new Map();function planBgPanicWanted(){return false;}",c);   // 포트폴리오 뒤 계산 대상 판정은 check-plan-bg-strip E
     for(const m of ['function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function renderPlanVersion()','function planStrategyLabelOf(x)','function assetPanicHtml(R,o)','function assetPaperStatsHtml(x,R)','function alphaPanicNext(signalDate,posOn)',
-      'function planPanicIndexLoad()','function planLivePanic(x,signalDate,posOn,startOverride)','function alphaPanicApply(PX,sigma,decGuard)','function renderLivePanic(PX)','function alphaPanicBlocked(why)','function renderDualGuardStrip(o)'])vm.runInContext(fnOf(P,m),c);
+      'function planPanicIndexLoad(force)','function planLivePanic(x,signalDate,posOn,startOverride)','function alphaPanicApply(PX,sigma,decGuard)','function renderLivePanic(PX)','function alphaPanicBlocked(why)','function renderDualGuardStrip(o)'])vm.runInContext(fnOf(P,m),c);
     vm.runInContext(constOf(P,'const PANIC_EV='),c);
     const run=s=>vm.runInContext(s,c);
     c.sp={id:'p1',paper:true,name:'공포',settings:{alphaRules:'panic'}};c.sb={id:'b1',paper:true,name:'기본',settings:{alphaRules:'base'}};c.sl={id:'l1',paper:false,settings:{alphaRules:'panic'}};
@@ -310,7 +310,7 @@ const M=[
   ['운영: 판정일이 달라도 next','plan',s=>s.replace("const out=(R&&!R.error&&P&&P.next&&P.signalDate===signalDate)","const out=(R&&!R.error&&P&&P.next)")],
   ['운영: 기본 규칙으로 재생','plan',s=>s.replace("E.replay({horizon:5,rules:'panic',startDate:start","E.replay({horizon:5,rules:'base',startDate:start")],
   ['운영: 지수 없이도 계산','plan',s=>s.replace("  if(!(vix&&vix.length)||!(vxn&&vxn.length)){","  if(false){")],
-  ['운영: 받기 실패 뒤에도 그릴 때마다 다시 받음','plan',s=>s.replace("if(!planIndexError&&!planIndexLoading)planPanicIndexLoad()","if(!planIndexLoading)planPanicIndexLoad()")],
+  ['운영: 받기 실패 뒤에도 그릴 때마다 다시 받음','plan',s=>s.replace("if(!planIndexError&&!planIndexLoading)planPanicIndexLoad(true)","if(!planIndexLoading)planPanicIndexLoad(true)")],
   ['운영: 상태 카드 안 그림','plan',s=>s.replace("  if(V)renderLivePanic(PX);\n","").replace("  el.hidden=false;\n  el.innerHTML=(PX&&!PX.error)?","  el.hidden=true;\n  el.innerHTML=(PX&&!PX.error)?")],
   ['운영: 모의 세션에도 운영 카드','plan',s=>s.replace("on=(!x||!x.paper)&&assetRulesOf(x)==='panic';","on=assetRulesOf(x)==='panic';")],
   ['운영: 보류인데 주문이 남음','plan',s=>s.replace("  pendingAlphaOrders=[];alphaOrderHold=why;\n  if($('alphaRecordFill')){$('alphaRecordFill').disabled=true;","  alphaOrderHold=why;\n  if($('alphaRecordFill')){$('alphaRecordFill').disabled=true;")],   // 기록 창(2026-11-11)은 보류 이유도 적는다
