@@ -105,7 +105,7 @@ async function check(S){
       &&/id="alphaRecordFill"/.test(sheet)&&/id="alphaFillPanel"/.test(sheet)&&/id="alphaCashRec"/.test(sheet)&&/id="alphaCashAdd"/.test(sheet));
     t('F2 거래이력 아래 시작자금 · 초기화 칸 없음(시작자산은 ⚙️ 설정) · 남은 코드도 없음',!/id="alphaResetSection"|id="alphaCapitalInput"|id="alphaReset"/.test(P)&&!/function alphaResetLedger|alphaCapitalInput/.test(P)
       &&/id="assetSessionCapital"/.test(P)&&/aria-controls="alphaHistorySection">거래이력<\/button>/.test(P));
-    t('F3 세션을 바꾸면 기록 창도 닫힌다',/alphaCloseFillEditor\(\);alphaCloseEdit\(\);dgSheetClose\(\);setAssetDetail\('current'\);/.test(fnOf(P,'async function loadActiveAssetSessionView(refresh=true)'))); }
+    t('F3 세션을 바꾸면 기록 창도 닫힌다',/alphaCloseFillEditor\(\);alphaCloseEdit\(\);dgSheetClose\(\);setAssetDetail\('current'\);/.test(fnOf(P,'async function loadActiveAssetSessionView(refresh=true,early=false)'))); }
   return bad;
 }
 

@@ -97,7 +97,7 @@ function check(S){
       /function alphaEventList\(ledger=alphaLedger\)\{return JKPlanSessionEngine\.ledgerEvents\(ledger\);\}/.test(S.plan)
       &&/function alphaLedgerCalc\(ledger=alphaLedger\)\{return JKPlanSessionEngine\.ledgerCalc\(ledger\);\}/.test(S.plan)
       &&!/S\.tradePnl\[e\._i\]=/.test(S.plan));
-    t('A4 엔진 캐시 판 8 — 플랜·운영 둘 다(새 함수를 옛 캐시 엔진으로 부르지 않게)',/plan-session-engine\.js\?v=8"/.test(S.plan)&&/plan-session-engine\.js\?v=8"/.test(S.idx)); }
+    t('A4 엔진 캐시 판 9(모의 재생 저장본 함수) — 플랜·운영 둘 다(새 함수를 옛 캐시 엔진으로 부르지 않게)',/plan-session-engine\.js\?v=9"/.test(S.plan)&&/plan-session-engine\.js\?v=9"/.test(S.idx)); }
 
   // ── B. 합계
   { const c={};vm.createContext(c);vm.runInContext(fnOf(S.idx,'function pfOutAmt(r)')+fnOf(S.idx,'function pfSummary(rows, fx)'),c);
@@ -163,7 +163,7 @@ function check(S){
         fetchDaily:async s=>{(log.fd=log.fd||[]).push(s);return {};},fetchDailyDiv:async()=>({}),
         divCashOn:()=>false,warmDiv:async()=>{},ivsX1Of:x=>x,paperAuto:()=>{log.auto++;},vrSimForward:()=>{log.vr++;},infSimForward:()=>{log.inf++;},paperStart:()=>'2025-01-02',
         paperStat:(tab,x)=>{ (log.stat=log.stat||[]).push(tab+':'+x.id); return {tab,id:x.id,price:tab==='dca'?0:10}; },stratStatusHtml:(tab,x)=>'ST:'+tab+':'+x.id,
-        planPaperRetired:()=>false,planPaperPanic:()=>false,loadPlanPaperData:async()=>({}),replayPlanPaper:()=>({}),paperStatPlan:x=>({tab:'plan',id:x.id}),
+        planPaperRetired:()=>false,planPaperNeedQuotes:async l=>{(log.need=log.need||[]).push(l.map(x=>x.id).join());return true;},planPaperRun:async()=>({}),paperStatPlan:x=>({tab:'plan',id:x.id}),
         console:{error(){},warn(){}},Map,Promise,Set};
       vm.createContext(ctx);vm.runInContext(fnOf(S.idx,'function pfWanted(x)')+fnOf(S.idx,'async function paperBreathe()')+fnOf(S.idx,'async function paperPrefetchQuotes(opt)')+fnOf(S.idx,'async function paperFillAll(opt)'),ctx);
       return {ctx,log};};
