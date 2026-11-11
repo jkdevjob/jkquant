@@ -81,6 +81,11 @@ PY = [
     ("drift too early", "claude_lab.py", "if n < 20 or not exp", "if n < 1 or not exp"),
     ("gpt same window", "claude_lab.py", "window = [d for d in cal if start and d >= start]", "window = list(cal)"),
     ("arena promote after 6 days", "claude_lab.py", "if days >= PROMOTE_DAYS and gate_ok(top) and main_row:", "if days >= PROMOTE_DAYS - 1 and gate_ok(top) and main_row:"),
+    ("pin ignored", "claude_lab.py", "        pin = USER_PINS.get(tab)\n        if pin:\n            s0 = days = None", "        pin = USER_PINS.get(tab)\n        if False:\n            s0 = days = None"),
+    ("pin revert skipped", "claude_lab.py", 'if cur["version"] == pin["version"]:', "if True:"),
+    ("pin retire unprotected", "claude_lab.py", ' | ({pin["version"]} if pin else set())', ""),
+    ("pin by auto label", "claude_lab.py", 'by="user:pin",', 'by="auto:arena-7d-top1",'),
+    ("pin params from default only", "claude_lab.py", "    for e in reversed(MAIN_EVENTS):\n        if e[\"tab\"] == tab and e[\"version\"] == v:", "    for e in ():\n        if e[\"tab\"] == tab and e[\"version\"] == v:"),
     ("arena promote same day", "claude_lab.py", "    eff = (date.fromisoformat(today) + timedelta(days=1)).isoformat()", "    eff = today"),
     ("arena admits gate fail", "claude_lab.py", 'why = (m or {}).get("error") or gate_reason(m or {}) if m else "변수 오류"', 'why = ""'),
     ("arena bottom streak ignored", "claude_lab.py", "            if n and _span_days(s0, today) >= PROMOTE_DAYS - 1:", "            if False:"),
@@ -194,6 +199,8 @@ JS = [
     ("main soxl no-condition allowed", "_claude_main.js", "if (o.rsiMax >= 100 && o.ibsMax >= 1 && !o.downDays) throw", "if (false) throw"),
     ("soxl live same-session", "claude-live.js", "const started=!!(sess&&sess.date>nx.basedOn&&sess.open>0);", "const started=!!(sess&&sess.open>0);"),
     ("telegram no-trade hidden", "claude-telegram.js", 'else L.push(dec.reason==="krx_holiday"?"🔒 국내 휴장일 — ①② 시세 조회·주문 없음":"① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");', ''),
+    ("telegram pin called auto", "claude-telegram.js", 'const byUser=/^user:/.test(String(ev.by||""));', "const byUser=false;"),
+    ("screen pin shown as countdown", "claude.html", 'if(/^pin/.test(st.code||""))return', 'if(false)return'),
     ("telegram weekly stale shown", "claude-telegram.js", "||(extra.weekStart&&w.weekStart!==extra.weekStart)", ""),
     ("telegram weekly keep as candidate", "claude-telegram.js", 'if(x.promotion&&x.promotion.code==="candidate")cand.push', 'if(x.promotion)cand.push'),
     ("today tab return is sum", "claude-live.js", "tabPct=uv.length?us/uv.length:0;", "tabPct=us;"),
@@ -458,6 +465,7 @@ def mutate_js(case):
         folder = Path(tmp)
         for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js", "_paper-trading.js", "_opening-execution.js", "_research-broker.js", "_research-orders.js", "_market-day-cache.js", "_closing30.js", "_closing30-storage.js", "_closing30-outcomes.js"):
             shutil.copy(API / name, folder / name)
+        shutil.copy(ROOT.parent / "claude.html", folder / "claude.html")   # 화면 함수(arenaStatus) 시험이 사본 폴더의 claude.html 을 먼저 읽는다
         worker_src = folder / "worker_index.js"                  # 'worker' = worker/opening-scheduler/src/index.js 사본(시험이 JKQ_WORKER_SRC 로 읽는다)
         shutil.copy(ROOT.parent / "worker" / "opening-scheduler" / "src" / "index.js", worker_src)
         if case is None:                                             # 대조군: 변이 없는 사본

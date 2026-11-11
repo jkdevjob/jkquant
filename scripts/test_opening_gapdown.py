@@ -1015,6 +1015,80 @@ class ArenaTest(unittest.TestCase):
         self.assertEqual(lab.main_for("opening")["version"], "g_open_q12_k3")    # 같은 계산 안에서도 다음 메인으로 보인다
         self.assertEqual(lab.main_for("opening", "2026-10-11")["version"], lab.MAIN_DEFAULT["opening"]["version"])
 
+    def _pinned(self, pin):
+        old = dict(lab.USER_PINS)
+        lab.USER_PINS.clear()
+        lab.USER_PINS.update(pin)
+        self.addCleanup(lambda: (lab.USER_PINS.clear(), lab.USER_PINS.update(old)))
+
+    def test_user_pin_blocks_auto_promotion(self):
+        # 사용자 고정(2026-11-12 "2 유지"): 7일 연속 1위여도 자동 교체하지 않는다 — 순위 · 1위 일수는 그대로 세어 보여 준다
+        main_v = lab.MAIN_DEFAULT["opening"]["version"]
+        self._pinned({"opening": dict(version=main_v, since="2026-11-12", reason="시험 고정")})
+        days = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-11"]
+        outs, _ = self.run_days(days, key="k", state=self.fixed())
+        z = outs[-1]
+        self.assertEqual(z["top"], "g_open_q12_k3")
+        self.assertEqual(z["status"]["code"], "pinned")
+        self.assertEqual(z["status"]["days"], 7)                              # 10/5~10/11 — 고정 중에도 센다
+        self.assertIn("사용자 고정(2026-11-12) — 자동 교체 안 함", z["status"]["text"])
+        self.assertIn("g_open_q12_k3 7일째(참고)", z["status"]["text"])
+        self.assertEqual(self.posts, [])                                      # 승격 기록을 쌓지 않는다
+        self.assertEqual(lab.main_for("opening")["version"], main_v)
+        self.assertFalse(any(r.get("promotion", {}).get("code") == "candidate" for r in z["rows"]))   # 교체 후보 표시도 없음
+
+    def test_user_pin_reverts_main_once(self):
+        # 지금 메인이 고정 전략과 다르면 승격 기록(by=user:pin)을 한 번 쌓아 다음 날부터 되돌린다 — 다음 날은 다시 쌓지 않는다
+        main_v = lab.MAIN_DEFAULT["opening"]["version"]
+        lab.MAIN_EVENTS[:] = [dict(tab="opening", version="g_open_q12_k3", name="q12", rule="", effectiveFrom="2026-10-01", promotedAt="t0",
+                                   params=lab._valid_params("opening", dict(minQ=12, topK=3, gapMax=None)))]
+        self._pinned({"opening": dict(version=main_v, since="2026-11-12", reason="시험 되돌림")})
+        outs, st = self.run_days(["2026-11-12"], key="k", state=self.fixed())
+        z = outs[0]
+        cfg = [b for u, b in self.posts if u.endswith("/claude-config")]
+        self.assertEqual(len(cfg), 1)
+        ev = cfg[0]
+        self.assertEqual((ev["version"], ev["effectiveFrom"], ev["by"], ev["prevVersion"]), (main_v, "2026-11-13", "user:pin", "g_open_q12_k3"))
+        self.assertEqual(ev["params"], lab.MAIN_DEFAULT["opening"]["params"])
+        self.assertIn("사용자 고정(2026-11-12) — 시험 되돌림", ev["basis"]["promotion"])
+        self.assertEqual(z["status"]["code"], "pinned")
+        self.assertIn("2026-11-13 부터 " + main_v + " 로 되돌림", z["status"]["text"])
+        self.assertEqual(lab.main_for("opening")["version"], main_v)          # 같은 계산 안에서도 다음 메인
+        self.assertEqual(lab.main_for("opening", "2026-11-12")["version"], "g_open_q12_k3")   # 오늘까지는 그때 메인
+        self.assertTrue(any(x["kind"] == "promote" and "사용자 고정 →" in x["reason"] for x in st["log"]))
+        self.posts.clear()
+        outs, _ = self.run_days(["2026-11-13"], key="k", state=st)
+        self.assertEqual([u for u, _ in self.posts if u.endswith("/claude-config")], [])   # 이미 되돌렸으면 다시 쌓지 않는다
+        self.assertEqual(outs[0]["status"]["code"], "pinned")
+
+    def test_user_pin_params_from_past_promotion(self):
+        # 운영과 같은 모양: 고정 전략(옛 메인)이 기본 메인도 경쟁군도 아니고 지난 승격 기록에만 있다(③ g_coin_ma15_s99_hi7_eth = 10/14 승격)
+        p10 = lab._valid_params("opening", dict(minQ=10, topK=2, gapMax=None))
+        lab.MAIN_EVENTS[:] = [dict(tab="opening", version="g_open_old", name="옛 메인", rule="옛 규칙", effectiveFrom="2026-10-14", promotedAt="t0", params=p10),
+                              dict(tab="opening", version="g_open_q12_k3", name="q12", rule="", effectiveFrom="2026-11-12", promotedAt="t1",
+                                   params=lab._valid_params("opening", dict(minQ=12, topK=3, gapMax=None)))]
+        self._pinned({"opening": dict(version="g_open_old", since="2026-11-12", reason="옛 메인으로")})
+        outs, _ = self.run_days(["2026-11-12"], key="k", state=self.fixed())
+        cfg = [b for u, b in self.posts if u.endswith("/claude-config")]
+        self.assertEqual(len(cfg), 1)
+        self.assertEqual((cfg[0]["version"], cfg[0]["params"], cfg[0]["name"], cfg[0]["effectiveFrom"]), ("g_open_old", p10, "옛 메인", "2026-11-13"))
+        self.assertEqual(outs[0]["status"]["code"], "pinned")
+        self.assertEqual(lab.main_for("opening")["version"], "g_open_old")
+
+    def test_user_pin_without_key_only_due_and_kept(self):
+        # 감시키가 없으면(로컬) 기록하지 않고 'pin_due' — 고정 전략이 기준 미달이어도 퇴출하지 않는다
+        st = self.fixed()
+        p2 = lab._canon("opening", dict(minQ=2, topK=3))
+        st["tabs"]["opening"]["pool"].append(dict(version=lab.gen_version("opening", p2), name="q2", rule="", params=p2, source="seed", addedAt="2026-10-01"))
+        self._pinned({"opening": dict(version="g_open_q2_k3", since="2026-11-12", reason="시험 미달 고정")})
+        outs, st2 = self.run_days(["2026-11-12"], state=st)
+        z = outs[0]
+        self.assertEqual(z["status"]["code"], "pin_due")
+        self.assertEqual(self.posts, [])
+        self.assertIn("g_open_q2_k3", {x["version"] for x in st2["tabs"]["opening"]["pool"]})
+        self.assertNotIn("g_open_q2_k3", {x["version"] for x in st2["tabs"]["opening"]["retired"]})
+        self.assertEqual(lab.pinned_entry("opening", st2["tabs"]["opening"]["pool"])["params"], p2)
+
     def test_six_days_not_enough_and_no_key_only_due(self):
         outs, _ = self.run_days(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-10"], key="k", state=self.fixed())
         self.assertEqual(outs[-1]["status"]["code"], "streak")
