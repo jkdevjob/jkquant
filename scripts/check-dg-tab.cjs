@@ -114,7 +114,7 @@ async function check(S){
     const r={$:()=>({type:'text',value:''}),planLinks:{},sleeveSessions:[],sleeveLedger:{},alphaLedger:{base:{},events:[]},planPortfolio:true,planCurName:'토스 듀얼',planCurRules:'base'};
     vm.createContext(r);vm.runInContext(fnOf(S.plan,'function readForm()'),r);const o=r.readForm();
     const a={$:()=>null,todayISO:()=>'2026-11-09',plusYears:s=>s,planSid:()=>'x',bindSleeveLedger(){},alphaSyncInputs(){},alphaFee:()=>0,ALPHA_FEE_RATE:0.001,planLinks:null,sleeveSessions:null,alphaLedger:null,planPortfolio:true,planCurName:''};
-    vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function apply(o)'),a);
+    vm.createContext(a);vm.runInContext(fnOf(S.plan,'function defaults()')+fnOf(S.plan,'function planLedgerFrom(o,all)')+fnOf(S.plan,'function apply(o)'),a);
     a.apply({sessionName:' 토스 듀얼 '});const n1=a.planCurName;a.apply({});const n2=a.planCurName;
     t('H4 이름은 원장(fiveYearPlanV2.sessionName)에 적고 읽는다 — 없으면 빈칸(기본 "현재 투자중")',o.sessionName==='토스 듀얼'&&n1==='토스 듀얼'&&n2==='',JSON.stringify([o.sessionName,n1,n2]));
     const pc={planLiveDoc:{sessionName:'토스 듀얼',startCapital:1,alphaLedger:{base:{cash:1},events:[{id:'e'}]}},PF:{over:{}},S:{plan:{sessions:[{id:'s1',name:'옛 이름',horizon:5,paper:false,settings:{},ledger:{base:{cash:1},events:[{id:'f'}]}}]}},planPaperRetired:()=>false};

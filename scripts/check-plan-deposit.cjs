@@ -37,7 +37,7 @@ function liveContext(S,E){
   vm.runInContext(constOf(S.plan,'const PATH_DEFAULTS={')+constOf(S.plan,'const ALPHA_FEE_RATE='),c);
   vm.runInContext('this.PATH_DEFAULTS=PATH_DEFAULTS;this.ALPHA_FEE_RATE=ALPHA_FEE_RATE;var alphaLedger={base:{},events:[]};var assetPaperCache={};var planCurRules="base";function renderLivePanic(){}function activeAssetSession(){return null;}',c);
   for(const m of ['function alphaFee(q,p)','function indicatorSeries(a,n)','function realizedVol(rows,n)','function alphaEventList(ledger=alphaLedger)','function alphaDepositPending(ledger=alphaLedger)',
-    'function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function planStrategyLabelOf(x)','function alphaPanicNext(signalDate,posOn)','function alphaPanicApply(PX,sigma,decGuard)','function alphaRuleSet()','function alphaExplainBounds(target,current,band)','function renderDualGuardStrip(o)','function renderAlphaPlan(qTecl,qTqqq,qSgov)'])vm.runInContext(fnOf(S.plan,m),c);
+    'function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function planStrategyLabelOf(x)','function alphaPanicNext(signalDate,posOn)','function alphaPanicApply(PX,sigma,decGuard)','function alphaRuleSet()','function alphaExplainBounds(target,current,band)','function renderDualGuardStrip(o)','function renderAlphaPlan(qTecl,qTqqq,qSgov,bg)'])vm.runInContext(fnOf(S.plan,m),c);
   return {c,el};
 }
 
@@ -109,9 +109,9 @@ const bad=check(SRC);
 if(bad.length){console.error('FAIL plan deposit:\n  '+bad.join('\n  '));process.exit(1);}
 console.log('PASS 자산플랜 입금 맞춤: 판정 8 · 화면 값(밴드 안 300$ → SGOV −1 · TECL +4) · 모의 엔진과 입금일 주문 전부 같음');
 const MUT=[
-  ['입금 맞춤 없음(옛 화면)',s=>s.replace("const needRebalance=teclHit||guardFlip||tqReb||force||horizonRebalancePending","const needRebalance=teclHit||guardFlip||tqReb||horizonRebalancePending")],
-  ['입금 때 TECL 은 안 맞춤',s=>s.replace("const targetTq=(teclHit||force||horizonRebalancePending)","const targetTq=(teclHit||horizonRebalancePending)")],
-  ['입금 때 TQQQ 는 안 맞춤',s=>s.replace("const targetQq=(guardFlip||tqReb||force||horizonRebalancePending)","const targetQq=(guardFlip||tqReb||horizonRebalancePending)")],
+  ['입금 맞춤 없음(옛 화면)',s=>s.replace("const needRebalance=teclHit||guardFlip||tqReb||force||hz","const needRebalance=teclHit||guardFlip||tqReb||hz")],
+  ['입금 때 TECL 은 안 맞춤',s=>s.replace("const targetTq=(teclHit||force||hz)","const targetTq=(teclHit||hz)")],
+  ['입금 때 TQQQ 는 안 맞춤',s=>s.replace("const targetQq=(guardFlip||tqReb||force||hz)","const targetQq=(guardFlip||tqReb||hz)")],
   ['체결을 적어도 맞춤이 안 끝남',s=>s.replace("    else if(e.type==='trade')dep=null;\n","")],
   ['배당도 입금처럼 맞춤',s=>s.replace("if(e.type==='cash'&&e.kind==='dep'&&+e.amount>0)","if(e.type==='cash'&&e.kind!=='wd'&&+e.amount>0)")],
   ['입금 합 대신 마지막 입금만',s=>s.replace("amount:(dep?dep.amount:0)+(+e.amount)}","amount:+e.amount}")],

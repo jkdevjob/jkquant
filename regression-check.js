@@ -1336,7 +1336,7 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
     const adminDecl=(acc.match(/var ADMIN_EMAILS=\[[^\n]+\];/)||[''])[0];
     const fn=n=>optFn(acc,'function '+n+'(');
     try{
-      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+subDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('subDefaults')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
+      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+subDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('subDefaults')+'\n'+fn('menuDefaults')+'\n'+fn('cleanMenuLabel')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
         +'\nthis.out={d:menuDefaults(),n:normalizeMenuConfig({items:{"/job":{mode:"hidden",order:5},"/plan":{mode:"admin",order:6}}}),a:menuAccess({email:"user@example.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job"),b:menuAccess({email:"jk82investing@gmail.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job")};',box);
       ok('메뉴 정책 값 시험 — 기본/숨김/관리자 우회',
          box.out.d.items['/plan'].mode==='public' && box.out.d.items['/scalping'].mode==='admin'
@@ -8379,14 +8379,14 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('PATH A 판단 UI는 그래프 전 · 안내는 처음엔 숨기고 5년 판정이 끝나면 연다 (10·15·20년 화면 폐지)',
      pl.indexOf('id="alphaDecision"')<pl.indexOf('class="alpha-charts"')
      && /id="alphaGuide" hidden/.test(pl)
-     && /guide\.hidden=false/.test(extractFn(pl,'function renderAlphaPlan(qTecl,qTqqq,qSgov)'))
+     && /guide\.hidden=false/.test(extractFn(pl,'function renderAlphaPlan(qTecl,qTqqq,qSgov,bg)'))
      && !/function renderAlternativePlan/.test(pl));
   ok('PATH A SMA225 범례와 주문0건 안내',
      /<span>— SMA225<\/span>/.test(pl)&&!/— SMA200<\/span>/.test(pl)
      && /조건 충족 · 정수주수·현금 등을 반영한 실제 주문 0건/.test(pl));
   ok('초기자금(시작자산)은 ⚙️ 설정 한 곳 — 거래이력의 시작자금 칸 · 초기화 단추는 없다(2026-11-11 사용자 "초기자금은 이미 설정에 있으니 삭제해")',
-     /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
-     && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
+     /const startCap=B\?B\.startCap:Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)   // B = 포트폴리오 세션 뒤 계산(2026-11-11 · 화면 칸 대신 그 세션 시작자산)
+     && /signalTotal=startCap;if\(V\)\$\('aCash'\)\.value=startCap/.test(pl)
      && /bInf=Math\.round\(cap\*PATH_DEFAULTS\.classic\.infWeight\),bVr=Math\.max\(0,cap-bInf\)/.test(pl)
      && !/alphaCapitalInput/.test(pl) && !/function alphaResetLedger/.test(pl) && !/id="alphaReset"/.test(pl)
      && /<label>시작자산 \(\$\)<\/label><input id="assetSessionCapital"/.test(pl));
@@ -9465,8 +9465,9 @@ console.log('\n[124] 5년 플랜 v1.26.4 — 현재계좌 실시간 평가·초�
      && /id="alphaCashWarn"/.test(pl)
      && /기록된 매수금액\+수수료가 시작 현금을 초과했습니다/.test(pl));
   ok('기존 0.25% A장부는 v1.26 로딩 때 토스 0.1% 수수료로 1회 마이그레이션',
-     /if\(alphaLedger\.feeModel!=="toss-us-0\.1-v1"\)/.test(pl)
-     && /alphaLedger\.events=alphaLedger\.events\.map\(e=>e&&e\.type==='trade'\?\{\.\.\.e,fee:alphaFee\(e\.qty,e\.price\),feeRate:ALPHA_FEE_RATE\}:e\)/.test(pl));
+     /if\(L\.feeModel!=="toss-us-0\.1-v1"\)/.test(extractFn(pl,'function planLedgerFrom(o,all)'))   // 장부 정리는 planLedgerFrom 한 곳(apply · 포트폴리오 뒤 계산 · 2026-11-11)
+     && /L\.events=L\.events\.map\(e=>e&&e\.type==='trade'\?\{\.\.\.e,fee:alphaFee\(e\.qty,e\.price\),feeRate:ALPHA_FEE_RATE\}:e\)/.test(extractFn(pl,'function planLedgerFrom(o,all)'))
+     && /alphaLedger=planLedgerFrom\(o,all\);/.test(extractFn(pl,'function apply(o)')));
 }
 
 /* ════ 125. 제12차 감사 대응 ════
@@ -12724,7 +12725,7 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 91/91 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 94/94 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   /* 2026-11-09 — 섀넌 기록 시트: 탭마다 제 양식 · 저장은 주문대로 체결 기록과 같은 길(_ivsPush) · FAB 규칙 */
   const pis=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ivs-sheet.cjs')],{encoding:'utf8'});
   ok('섀넌 기록 시트: 양식(5종 · 1배수 짝 선택) · 저장(매수·매도 수수료 자동 · 입금·출금·배당 · 날짜 정렬) · 검증 · 라우팅 · FAB 규칙 · 변이 6종',
@@ -12737,6 +12738,10 @@ Promise.all(PENDING).then(()=>{
   const pst=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-subtabs.cjs')],{encoding:'utf8'});
   ok('하위 탭 숨김·순서: 설정 정리(ASAP 기본 숨김·새 탭 맨 뒤) · 공개범위 · 적용(모의 주소·열린 탭) · 목록 = 페이지 7곳 실제 탭 · 관리자 화면 · 변이 13종',
      pst.status===0&&(pst.stdout||'').includes('ALL PASS sub tabs · 변이 14/14 red'),(pst.stdout||'').slice(-600)+(pst.stderr||''));
+  /* 2026-11-11 — 관리자 › 메뉴 관리: 메뉴 이름 바꾸기 (settings/siteMenu items[경로].label · jk-access.js 정리·적용 · admin v0.14.0) */
+  const pml=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-menu-labels.cjs')],{encoding:'utf8'});
+  ok('메뉴 이름 바꾸기: 정리(빈칸·제어·보이지 않는 문자·20자) · 바꾼 이름만 저장 · 아이콘 그대로 글자만 · 지우면 기본 · 마크업은 글자 · 관리자 이름 칸·되돌리기 · 변이 12종',
+     pml.status===0&&(pml.stdout||'').includes('ALL PASS menu labels · 변이 12/12 red'),(pml.stdout||'').slice(-600)+(pml.stderr||''));
   /* 2026-11-09 — 검사 단계 목록 한 곳(.github/check-steps.yml) · check-before-push 병렬/조각/offline · GitHub 검증 조각 4개 + check */
   const pcs=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ci-steps.cjs')],{encoding:'utf8'});
   ok('검사 단계 한 곳: 목록 파서 · LPT 조각 배정(합 = 전부 · 빈 조각 없음) · 실행기(하나씩·병렬·끊기·조각·--only·offline·pip 한 번) · check.yml 조각 N 일치',

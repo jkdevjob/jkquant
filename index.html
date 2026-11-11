@@ -717,7 +717,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.132.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.133.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1845,7 +1845,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.132.0</b> · 2026-11-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.133.1</b> · 2026-11-11</div>
   </footer>
 </div>
 
@@ -9764,12 +9764,9 @@ function pfTaxHtml(R, T){
 /* 듀얼가드 오늘 판단 — 플랜 화면(renderDualGuardStrip)이 센 값 그대로(판정을 여기서 다시 세지 않는다) */
 function pfDgText(r){
   const m=PF.dg[r.key], o=m&&m.strip;
-  if(!o){
-    const v=PF.dgSeen;   // 듀얼가드 탭이 지금 다른 장부(모의 세션 등)를 보고 있으면 '계산 중'에 멈춰 보이지 않게 이유를 적는다
-    return '<span class="badge set">'+(!dgFrameEl?'듀얼가드 탭을 열면 오늘 판단이 여기 보입니다'
-      :(v&&v.key!==r.key)?('듀얼가드 탭이 '+(v.paper?'모의 세션':'다른 장부')+' 보는 중 — 그 탭에서 「'+pfEsc(r.name||'')+'」 선택 시 표시')
-      :'듀얼가드 화면에서 오늘 판단을 계산하는 중…')+'</span>';
-  }
+  /* 듀얼가드 창은 탭이 어느 세션을 보든 포트폴리오 세션마다 오늘 판단을 보낸다(d.bg · 2026-11-11) — 아직 안 왔으면 계산 중 */
+  if(!o) return '<span class="badge set">'+(!dgFrameEl?'듀얼가드 탭을 열면 오늘 판단이 여기 보입니다':'듀얼가드 화면에서 오늘 판단을 계산하는 중…')+'</span>';
+  if(o.hold) return '<span class="badge warn">주문 보류</span> '+pfEsc(o.hold);   // 공포 모드 판정 불가(VIX·VXN 등) — 기본 규칙 주문을 대신 보이지 않는다
   const act=o.orders?pfEsc(o.orderText||''):(o.need?'조건은 충족 · 정수 주수·현금 때문에 실제 주문 0건':'주문 없음');
   return '<span class="badge '+(o.orders?'warn':'ok')+'">'+(o.orders?'주문 '+(+o.orders)+'건':'유지')+'</span> '
     +pfEsc(o.date||'')+' 신호 · '+act+' · TQQQ Guard '+pfEsc(o.guard||'')+(o.guardFlip?' 전환':'');
@@ -9908,7 +9905,10 @@ window.addEventListener('message',e=>{
   if(e.origin!==location.origin||!dgFrameEl||e.source!==dgFrameEl.contentWindow) return;
   const d=e.data; if(!d||d.type!=='jk-dg'||!curUid||d.uid!==curUid) return;
   const key=String(d.key||''); if(!key) return;
-  PF.dgSeen={key, paper:!!d.paper};                 // 듀얼가드 탭이 지금 보고 있는 장부 — '오늘' 칸 안내용
+  /* d.bg — 듀얼가드 창이 보고 있는 세션이 아니라 포트폴리오 실계좌 세션의 오늘 판단을 뒤에서 센 것(2026-11-11 사용자 "운영에서 포트폴리오로 선택한 세션이 보여야지?").
+     탭이 모의 세션을 보고 있어도 '토스' 같은 포트폴리오 세션 값이 온다. 장부는 같이 오지 않는다(이 화면이 읽은 DB 원장 그대로). */
+  if(d.bg){ if(d.paper) return; PF.dg[key]={strip:d.strip||null, at:Date.now()}; if(isPfPage()) pfRender(); return; }
+  PF.dgSeen={key, paper:!!d.paper};                 // 듀얼가드 탭이 지금 보고 있는 장부
   if(d.paper){ if(isPfPage()) pfRender(); return; } // 모의 세션 값은 받지 않는다(실투자 합계에 안 섞는다)
   PF.dg[key]={strip:d.strip||null, at:Date.now()};
   if(d.ledger&&typeof d.ledger==='object') PF.over[key]={ledger:d.ledger, startCapital:d.startCapital, startDate:d.startDate,
