@@ -56,7 +56,7 @@ function check(src){
   const hn=c.alphaPerfHtml(N);assert.ok(hn.includes('id="alphaPerfPnl" style="color:var(--red)">시세 대기')||hn.includes('">시세 대기</span>'));assert.ok(!/NaN|undefined/.test(hn));
   const hu=c.alphaPerfHtml(U);assert.ok(hu.includes('평단이 없던 매도 1건')&&hu.includes('└ 그 밖')&&hu.includes('평단 미등록'));
   // 연결
-  assert.ok(src.includes('<div class="todaybox" id="alphaPerfSection" data-asset-view="analysis" hidden>')&&src.indexOf('id="alphaPerfSection"')<src.indexOf('id="alphaEvidenceSection"'),'분석 탭 · 판단 근거 앞');
+  assert.ok(src.includes('<div class="todaybox" id="alphaPerfSection" data-asset-view="analysis" hidden>')&&src.indexOf('id="alphaPerfSection"')<src.indexOf('id="alphaMonthSection"'),'분석 탭 맨 위 · 월별 실현손익 앞');   // 판단 근거는 현재 탭으로 옮김(2026-11-11)
   assert.ok(src.includes("if(typeof renderAlphaPerf==='function')renderAlphaPerf();"),'계좌 카드와 같이 다시 그린다');
   assert.ok(src.includes("el.innerHTML=alphaPerfHtml(alphaPerfCalc(alphaLedger,num('startCapital'),prices));"));
   assert.ok(src.includes('<div class="k">평가손익 (보유분 · 확정 손익은 분석 탭)</div>'),'현재 탭 평가손익은 보유분만이라고 적는다');

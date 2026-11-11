@@ -69,6 +69,9 @@ function check(S){
   vm.runInContext('const planFx={series:'+JSON.stringify(FXF)+',loading:null,error:""};'+lineOf(S.plan,'const taxKrw=')+'\n'+fnOf(S.plan,'function taxRoomText(')+fnOf(S.plan,'function renderTaxCheck()'),c2);
   c2.renderTaxCheck();
   const html=el('taxBody').innerHTML;
+  /* B4 (2026-11-11 사용자 "이렇게 보이는 것들 줄좀 맞추자") — 올해 실현 · 공제 · 세금과 '지금 팔면'이 한 표 — 따로 두 표면 칸 폭이 표마다 달라 선입선출 · 이동평균 줄이 어긋난다 */
+  t('B4 세금 표 하나 — 지금 팔면은 같은 표의 둘째 묶음 머리(선입선출 · 이동평균 칸 줄 같음)',(html.match(/<table class="tax-table">/g)||[]).length===1&&(html.match(/<\/table>/g)||[]).length===1
+    &&/<tbody><tr class="tax-sub"><th>지금 팔면 \(평가손익 · 원화\)<\/th><th>선입선출<\/th><th>이동평균<\/th><\/tr><tr><td>TECL 10주/.test(html),html.slice(0,200));
   t('B3 화면: 공제 채우기 가능 · TECL 10주 팔고 되사기 · 마감 2026-12-30 · 선입선출/이동평균',el('taxStatus').textContent==='공제 채우기 가능'&&html.includes('TECL 10주 팔고 같은 날 10주 되사기')&&html.includes('2026-12-30')&&html.includes('선입선출')&&html.includes('이동평균'),el('taxStatus').textContent+' · '+html.slice(0,160));
   return bad;
 }
@@ -81,6 +84,7 @@ const MUT=[
   ['결제일 = 체결일(T+1 무시)','mod',s=>s.replace("let n=String(trade)>='2024-05-28'?1:2;","let n=0;")],
   ['선입선출 대신 이동평균 원가','mod',s=>s.replace("fifo:{usd:pu-fu,krw:pk-fk}","fifo:{usd:pu-au,krw:pk-ak}")],
   ['공제 채우기 여유 없앰(100% 까지)','mod',s=>s.replace("margin=o.margin??0.9","margin=o.margin??1")],
+  ['세금 표: 지금 팔면을 따로 표로(옛 코드 · 칸 줄 어긋남)','plan',s=>s.replace("h+='<tbody><tr class=\"tax-sub\"><th>지금 팔면 (평가손익 · 원화)</th><th>선입선출</th><th>이동평균</th></tr>'","h+='</table><table class=\"tax-table\"><thead><tr><th>지금 팔면 (평가손익 · 원화)</th><th>선입선출</th><th>이동평균</th></tr></thead><tbody>'")],
 ];
 for(const [name,key,mut] of MUT){
   const m=mut(SRC[key]);assert(m!==SRC[key],'변이 대상 없음: '+name);

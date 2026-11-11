@@ -8,6 +8,7 @@
 <script src="/plan-session-engine.js?v=8"></script>
 <script src="/plan-tax-check.js?v=1"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
+<script src="/jk-trade-chart.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
 <script src="/jk-ui.js?v=1.1.1" defer></script>
 <style>
@@ -709,7 +710,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.129.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.131.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -902,6 +903,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
     </div>
     <div class="block" id="inf-rec">
       <div class="syncbar"><span class="dotled ok"></span><span class="st">구글 계정에 자동 저장됩니다 ☁</span></div>
+      <div class="card tc-card" style="margin-bottom:13px"><h3><span class="dot"></span>📈 주가와 내 매매</h3><div id="inf_tc"></div></div>
       <div class="card"><h3><span class="dot"></span>거래 이력 <span id="inf_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="inf_table"></table></div>
         <button class="ghostbtn" onclick="clearHist('inf')">이력 전체 삭제</button></div>
@@ -1102,6 +1104,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
 
     <div class="block" id="vr-rec">
       <div class="syncbar"><span class="dotled ok"></span><span class="st">구글 계정에 자동 저장됩니다 ☁</span></div>
+      <div class="card tc-card" style="margin-bottom:13px"><h3><span class="dot"></span>📈 주가와 내 매매</h3><div id="vr_tc"></div></div>
       <div class="card"><h3><span class="dot"></span>거래 이력 <span id="vr_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="vr_table"></table></div>
         <button class="ghostbtn" onclick="clearHist('vr')">이력 전체 삭제</button></div>
@@ -1197,6 +1200,12 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
         <svg class="minichart" id="vcc_trade" style="height:82px" viewBox="0 0 320 82" preserveAspectRatio="none"></svg>
         <p class="note" id="vcc_note" style="margin-top:8px">진입할 때마다 사이클 데이터가 쌓여 그래프가 그려집니다.</p></div>
 
+      <div class="card"><h3><span class="dot"></span>월별 실현손익</h3>
+        <div class="htable-wrap"><table class="htable narrow" id="vr_bymonth"></table></div>
+        <p class="note">매도로 <b>확정된</b> 손익만 셉니다(이동평균 원가 · 수수료 제외 — 계좌 수익금의 실현손익과 같은 값). 손익률은 넣은 돈 대비 — 줄을 더하면 그 기간 손익률이 됩니다.</p></div>
+      <div class="card"><h3><span class="dot"></span>사이클별 실현손익</h3>
+        <div class="htable-wrap"><table class="htable narrow" id="vr_bycycle"></table></div>
+        <p class="note">사이클(2주) 안에서 판 것만 셉니다. 진행 중인 사이클은 끝 날짜 없이 '진행중'으로 보입니다.</p></div>
       <!-- 사이클 히스토리 -->
       <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>사이클 히스토리</span><span class="lh-stage" id="cyc_count">최근 0개</span></h3>
         <div class="cyc-scroll"><table class="cyctbl" id="cyc_tbl"></table></div>
@@ -1329,6 +1338,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
 
     <!-- ── 신호이력 ── -->
     <div class="block" id="ma-hist">
+      <div class="card tc-card" style="margin-bottom:13px"><h3><span class="dot"></span>📈 주가와 내 매매</h3><div id="ma_tc"></div></div>
       <div class="card"><h3><span class="dot"></span>내 진입·청산 기록 <span id="ma_rec_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="ma_rec_tbl"></table></div>
         <button class="ghostbtn" style="width:100%;margin-top:8px" onclick="maDivRecord()">＋ 배당 기록 (세후)</button>
@@ -1370,6 +1380,9 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="ana_qty">0주</span></div>
         <div class="rowline" id="ana_extra_row"><span class="k" id="ana_extra_k">—</span><span class="val mono" id="ana_extra">—</span></div></div>
       <div class="card" id="ana_cfcard" style="display:none"></div>
+      <div class="card"><h3><span class="dot"></span>월별 실현손익</h3>
+        <div class="htable-wrap"><table class="htable narrow" id="ma_bymonth"></table></div>
+        <p class="note">청산으로 <b>확정된</b> 손익만 셉니다(수수료 포함 원가 — 위 총 실현손익과 같은 값). 손익률은 원금 대비 — 줄을 더하면 그 기간 손익률이 됩니다.</p></div>
     </div>
 
     <!-- ── 설명 ── -->
@@ -1475,6 +1488,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
 
     <!-- ── 기록 ── -->
     <div class="block" id="ivs-hist">
+      <div class="card tc-card" style="margin-bottom:13px"><h3><span class="dot"></span>📈 주가와 내 매매</h3><div id="ivs_tc"></div></div>
       <div class="card"><h3><span class="dot"></span>리밸런싱 기록 <span id="ivs_rec_count" class="cnt"></span></h3>
         <p class="note" id="ivs_hist_warn" style="display:none;background:rgba(242,75,95,.12);border-radius:7px;padding:8px 10px;margin-bottom:8px"></p>
         <div class="htable-wrap"><table class="htable" id="ivs_rec_tbl"></table></div>
@@ -1528,6 +1542,9 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
         <div class="rowline"><span class="k">└ 그중 수수료 <span class="sub">0.25% · 평단에 이미 포함</span></span><span class="val mono" id="anaI_fee">—</span></div>
         <div class="rowline" id="anaI_extra_row"><span class="k" id="anaI_extra_k">—</span><span class="val mono" id="anaI_extra">—</span></div></div>
       <div class="card" id="anaI_cfcard" style="display:none"></div>
+      <div class="card"><h3><span class="dot"></span>월별 실현손익</h3>
+        <div class="htable-wrap"><table class="htable narrow" id="ivs_bymonth"></table></div>
+        <p class="note">매도로 <b>확정된</b> 손익만 셉니다(거래이력 실현손익과 같은 값 · 수수료 포함 원가). 손익률은 원금 ± 추가입금·출금 대비 — 줄을 더하면 그 기간 손익률이 됩니다.</p></div>
     </div>
 
     <div class="block" id="ivs-guide">
@@ -1639,6 +1656,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
 
     <!-- ── 적립이력 ── -->
     <div class="block" id="dca-hist">
+      <div class="card tc-card" style="margin-bottom:13px"><h3><span class="dot"></span>📈 주가와 내 매매</h3><div id="dca_tc"></div></div>
       <div class="card"><h3><span class="dot"></span>내 적립 기록 <span id="dca_rec_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="dca_rec_tbl"></table></div>
         <button class="ghostbtn" onclick="clearHist('dca')">기록 전체 삭제</button></div>
@@ -1828,7 +1846,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.129.1</b> · 2026-11-10</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.131.0</b> · 2026-11-11</div>
   </footer>
 </div>
 
@@ -4042,6 +4060,31 @@ function renderInfAnal(){
   $('a_qty').textContent=c.qty+'주';
 }
 
+/* 월별 · 사이클별 실현손익 표 — 무매(renderInfBreak)와 같은 모양(구분 · 매도 · 손익금 · 손익률 · 합계 · 최근이 위로).
+   2026-11-11 사용자: "적립 거치 제외하고 매수매도가 있는 운영메뉴에 있는 전략들의 세션 분석 탭에 월별 실현손익 목록 추가하고
+   싸이클이 있는 전략은 싸이클별 실현손익도 추가해" — 밸류리밸런싱(월별 · 사이클별) · 로테이션 · 섀넌(월별)이 쓴다.
+   sells: [{date, pnl, cyc?}] — 손익은 각 탭 계산 값 그대로(VR computeVr 행 · 로테 maLedger · 섀넌 ivsPos). cap = 그 탭 손익률 분모.
+   o.cycle: {label(seq,span,open)} 이면 사이클별 표도 — span = 그 사이클 첫 · 끝 기록 날짜 · open = 아직 안 닫힌 사이클 */
+function realizedBreakHtml(sells, cap, o={}){
+  const col=v=>v>=0?'var(--buy)':'var(--sell)';
+  const pct=v=>cap>0?`<span style="color:${col(v)}">${v>=0?'+':''}${(v/cap*100).toFixed(2)}%</span>`:'—';
+  const amt=v=>`<span style="color:${col(v)}">${v>=0?'+':''}${wn(v)}</span>`;
+  const head=lbl=>`<tr><th>${lbl}</th><th>매도</th><th>손익금</th><th>손익률</th></tr>`;
+  const table=(lbl,list,empty)=>{
+    if(!list.length) return head(lbl)+`<tr><td class="empty" colspan="4">${empty}</td></tr>`;
+    let tot=0,n=0; const rows=list.map(x=>{ tot+=x.p; n+=x.n; return `<tr><td>${x.label}</td><td>${x.n}</td><td>${amt(x.p)}</td><td>${pct(x.p)}</td></tr>`; }).join('');
+    return head(lbl)+rows+`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td><td>${amt(tot)}</td><td>${pct(tot)}</td></tr>`;
+  };
+  const S=(sells||[]).filter(x=>x&&x.date&&Number.isFinite(+x.pnl));
+  const M=new Map(); for(const x of S){ const k=String(x.date).slice(0,7); if(k.length!==7) continue; const m=M.get(k)||{label:k.replace('-','년 ')+'월',p:0,n:0}; m.p+=+x.pnl; m.n++; M.set(k,m); }
+  const out={month:table('월',[...M.entries()].sort((a,b)=>b[0]<a[0]?-1:1).map(x=>x[1]),'매도 기록이 없습니다')};
+  if(o.cycle){
+    const C=new Map(); for(const x of S){ if(x.cyc==null) continue; const m=C.get(x.cyc)||{seq:x.cyc,p:0,n:0}; m.p+=+x.pnl; m.n++; C.set(x.cyc,m); }
+    out.cycle=table('사이클',[...C.values()].sort((a,b)=>b.seq-a.seq).map(m=>Object.assign(m,{label:o.cycle.label(m.seq)})),'아직 매도가 없습니다');
+  }
+  return out;
+}
+
 /* ── 무한매수법 이력 ── */
 /* 월별·사이클별 실현손익.
    매도로 확정된 것만 센다 — 평가손익을 섞으면 '언제 얼마를 벌었나'가 흐려진다.
@@ -4153,6 +4196,7 @@ function renderInfHist(){
     rows=`<tr class="${cls}"${rowStyle}><td>${dshort(h.date)}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${(cx||sell)?pnlPct(h.profit):'-'}</td><td>${profitCell}</td><td>${wn(h.balAfter)}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td style="white-space:nowrap"><span class="edit" onclick="editInf(${i})">✎</span> <span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
   });
   $('inf_table').innerHTML=`<tr><th>날짜</th><th>구분</th><th>체결가</th><th>수량</th><th>손익률</th><th>손익</th><th>잔금</th><th>T</th><th>별%</th><th>별지점</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="11">아직 기록이 없습니다</td></tr>`);
+  tcRender('inf');   // 거래이력 그림(보일 때만)
 }
 /* 날짜 → 입력순(ts) 정렬: 같은 날짜는 입력한 순서 유지 */
 function sortHist(arr){arr.sort((a,b)=>{const d=(a.date||'').localeCompare(b.date||'');return d!==0?d:((a.ts||0)-(b.ts||0))})}
@@ -4483,7 +4527,9 @@ function computeVr(){
   let curCyc=0, cycStartPool=pool, cycTrade=0, cycDiv=0, cycBuySpent=0, cycHasTrade=false;
   // 예약 사다리는 사이클 시작 보유수량으로 고정한다. 이미 체결된 차수도 이력에서 복원한다.
   let cycBaseQty=0, cycSellFilled=0, cycBuyFilled=0;
+  const rows=[];   // 기록마다 그 뒤 보유 · 실효평단 · 매도 손익 — 거래이력 그림(jk-trade-chart)이 그대로 쓴다(여기서 센 값)
   hist.forEach(h=>{
+    let _pnl=null;
     const hc=(h.cyc!=null?h.cyc:0);
     if(hc!==curCyc){
       curCyc=hc; cycStartPool=pool; cycTrade=0; cycDiv=0; cycBuySpent=0; cycHasTrade=false;
@@ -4505,6 +4551,7 @@ function computeVr(){
     }
     else if(h.type==='sell'){
       const q=+h.qty||0, amt=(+h.price||0)*q, fee=+h.fee||0, av=qty>0?cost/qty:0;
+      _pnl=amt-av*q-fee;   // 이 매도의 실현손익(아래 realized 와 같은 식 · 거래이력 그림이 쓴다)
       realized+=amt-av*q-fee; cost-=av*q; qty-=q; if(qty<1e-9){qty=0;cost=0;}
       totsell+=amt; fees+=fee; pool+=amt-fee; cycTrade+=amt-fee; cycHasTrade=true;
       cycSellFilled+=Math.max(0,Math.round(q));
@@ -4518,6 +4565,8 @@ function computeVr(){
       if(h.auto && !cycHasTrade) cycStartPool=pool;
     }
     else if(h.type==='div'){pool+=+h.amt||0;totdiv+=+h.amt||0;cycDiv+=+h.amt||0;}
+    const eff=totbuy-totsell-totdiv;
+    rows.push({h,held:qty,avgEff:qty>0&&eff>0?eff/qty:null,pnl:_pnl});
   });
   const lastCyc = hist.length ? (hist[hist.length-1].cyc!=null?hist[hist.length-1].cyc:0) : (st.startCyc||0);
   const targetCyc=Math.max(lastCyc, st.startCyc||0);
@@ -4534,7 +4583,7 @@ function computeVr(){
   const grossIn=totadd + (st.startpool||0) + initBuy;
   return {st,qty,totbuy,totsell,totdiv,totadd,totwd,buyShares,pool,V,avgNom,avgEff,up,lo,initBuy,
           netInvested,grossIn,realized,cost,fees,flows,recov,curCyc,cycStartPool,cycBuySpent,cycTrade,cycTradeNet,cycDiv,hist,
-          cycBaseQty,cycSellFilled,cycBuyFilled};
+          cycBaseQty,cycSellFilled,cycBuyFilled,rows};
 }
 const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일). 백테 VR_CYC_DAYS 와 같은 값이어야 한다 —
                      // 거래일 10일로 세면 휴장이 낄 때마다 어긋나 6년에 150회 vs 156회가 된다.
@@ -4970,8 +5019,24 @@ function enterNextCycle(){
 }
 
 /* ════════ 분석 탭 ════════ */
+/* 밸류리밸런싱 월별 · 사이클별 실현손익 — 매도 손익 = computeVr 행(실현손익과 같은 식) · 사이클 = 기록의 주차(cyc) ·
+   손익률 분모 = 넣은 돈(netInvested · 위 계좌 수익금과 같은 분모) · 지금 사이클(curCyc)은 진행중 */
+function renderVrBreak(c){
+  const mt=$('vr_bymonth'), ct=$('vr_bycycle'); if(!mt&&!ct) return;
+  const cy=h=>h.cyc!=null?h.cyc:0, span=new Map();
+  (c.rows||[]).forEach(r=>{ const h=r.h||{}; if(!h.date||!(h.type==='buy'||h.type==='sell')) return;
+    const k=cy(h), x=span.get(k)||{from:h.date,to:h.date}; if(h.date<x.from)x.from=h.date; if(h.date>x.to)x.to=h.date; span.set(k,x); });
+  const sells=(c.rows||[]).filter(r=>r.h&&r.h.type==='sell').map(r=>({date:r.h.date,pnl:r.pnl,cyc:cy(r.h)}));
+  const R=realizedBreakHtml(sells,c.netInvested,{cycle:{label:seq=>{ const x=span.get(seq)||{}, open=seq===c.curCyc;
+    const when=!x.from?'':(open?dshort(x.from)+'~':(x.to&&x.to!==x.from?dshort(x.from)+'~'+dshort(x.to):dshort(x.from)));   // 하루뿐이면 날짜 하나
+    return `${seq}주차 <span class="sub">${when}</span>`+(open?' <span style="color:var(--gold);font-size:10px">진행중</span>':''); }}});
+  if(mt) mt.innerHTML=R.month; if(ct) ct.innerHTML=R.cycle;
+}
+/* 섀넌 매도마다 {date, pnl} — ivsPos 가 센 실현손익 그대로(거래이력 표 · 분석 탭 총 실현손익과 같은 값) */
+function ivsSellsOf(c){ return (c&&c.posRows||[]).filter(r=>r.h&&r.h.type==='sell'&&r.held!=null).map(r=>({date:r.h.date,pnl:r.pnl})); }
 function renderVrAnal(){
   const c=computeVr(), st=c.st, sym=isKrwSt(st)?'₩':'$';
+  renderVrBreak(c);   // 월별 · 사이클별 실현손익(2026-11-11)
   const price=vrLastPrice(c);
   const evalNow=price*c.qty;
   const total=c.pool + evalNow;
@@ -5149,6 +5214,7 @@ function renderVrHist(){
     rows=`<tr class="${CLS[h.type]}"><td>${dshort(h.date)} ${cyc}</td><td>${LBL[h.type]}${h.auto?' <span style="color:var(--faint);font-size:9px">자동</span>':''}</td><td>${detail}</td><td>${wn(amt)}</td><td style="white-space:nowrap"><span class="edit" onclick="editVr(${i})">✎</span> <span class="del" onclick="delVr(${i})">✕</span></td></tr>`+rows;
   });
   $('vr_table').innerHTML=`<tr><th>날짜</th><th>유형</th><th>단가×수량</th><th>금액</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="5">아직 기록이 없습니다</td></tr>`);
+  tcRender('vr');   // 거래이력 그림(보일 때만)
 }
 
 /* ══════════ 200일선 로테이션 (LRS) 운영 ══════════ */
@@ -5389,6 +5455,7 @@ function renderMaHist(){
     rows=`<tr class="${CLS[h.type]||''}"><td>${dshort(h.date)}</td><td>${LBL[h.type]||h.type}</td><td>${detail}</td><td style="white-space:nowrap"><span class="edit" onclick="editMa(${i})">✎</span> <span class="del" onclick="delMa(${i})">✕</span></td></tr>`+rows;
   });
   $('ma_rec_tbl').innerHTML=`<tr><th>날짜</th><th>유형</th><th>단가</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="4">아직 기록이 없습니다</td></tr>`);
+  tcRender('ma');   // 거래이력 그림(보일 때만)
 }
 
 // ── 모의투자: 로테이션 과거 재생 ──
@@ -5492,6 +5559,7 @@ function renderMaAnal(){
   const price=c.ready?(c.price||c.lastClose):(inputNum('ma_price')||0);
   const principal=+st.principal||0;
   const L=maLedger(h, price, principal);
+  { const mt=$('ma_bymonth'); if(mt) mt.innerHTML=realizedBreakHtml((L.outs||[]).map(o=>({date:o.date,pnl:o.pnl})),principal).month; }   // 월별 실현손익(2026-11-11) — 청산마다 maLedger 값
   const {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,total}=L;
   const ratio=total>0?invested/total*100:0;
   $('ana_cnt').textContent=`${nOut} 청산${nOut?` · 승 ${nWin}`:''}`;
@@ -5533,6 +5601,7 @@ function renderIvsAnal(){
     const amt=(x.amt!=null?+x.amt:q*pr);
     if(x.type==='buy'){ totbuy+=amt; nT++; } else if(x.type==='sell'){ totsell+=amt; nT++; } });
   const principal=(+st.principal||0)+(c.added||0)-(c.withdrawn||0);
+  { const mt=$('ivs_bymonth'); if(mt) mt.innerHTML=realizedBreakHtml(ivsSellsOf(c),principal).month; }   // 월별 실현손익(2026-11-11) — ivsPos 매도 손익
   let invested=price>0?price*c.qty:0;
   if(c.X1){ const p1=(ivsQuote1&&(ivsQuote1.price>0?ivsQuote1.price:(ivsQuote1.last&&ivsQuote1.last.close)))||c.avg1||0;
     invested+=p1*(c.qty1||0); }
@@ -5623,10 +5692,11 @@ function computeDca(){
   const mul=lump?1:(+st.dipMul||1), amt=+st.amount||0;
   // 내 적립 현황 (기록 합계)
   let inv=0, shares=0, nBuy=0, nDip=0;
+  const rows=[];   // 기록마다 그 뒤 보유 · 평단 — 거래이력 그림이 그대로 쓴다
   hist.forEach(h=>{ const a=+h.amt||0, p=+h.price||0;
-    if(p>0&&a>0){ inv+=a; shares+=a/p; nBuy++; if((+h.mul||1)>1) nDip++; } });
+    if(p>0&&a>0){ inv+=a; shares+=a/p; nBuy++; if((+h.mul||1)>1) nDip++; rows.push({h,held:shares,avg:inv/shares}); } });
   const avg = shares>0 ? inv/shares : 0;
-  const pos={inv,shares,avg,nBuy,nDip};
+  const pos={inv,shares,avg,nBuy,nDip,rows};
 
   /* ── 분배금 ─────────────────────────────────────────────────
      배당락일마다 '그 시점까지 보유한 주식수 × 주당 분배금'을 더한다.
@@ -5766,11 +5836,12 @@ function ivsPos(principal,hist){
       else  { qty =Math.max(0,qty -q); if(qty <=0) avg =0; }
       cash+=amt-fee;
     }
+    if(h.type==='buy'||h.type==='sell'){ r.leg=x1?'x1':'lev'; r.held=x1?qty1:qty; r.avg=x1?avg1:avg; }   // 거래이력 그림 — 이 기록 뒤 그 다리 보유 · 평단
     rows.push(r);
   }
   const pnlByIdx={}, badByIdx={}; let nbad=0;
   rows.forEach(r=>{ pnlByIdx[r.idx]=r.pnl; if(r.bad){ badByIdx[r.idx]=r.bad; nbad++; } });
-  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,divs,flows,fees,pnlByIdx,badByIdx,nbad};
+  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,divs,flows,fees,pnlByIdx,badByIdx,nbad,rows};
 }
 function computeIvs(){
   const st=curStrat().settings, hist=curStrat().hist||[];
@@ -5787,7 +5858,7 @@ function computeIvs(){
   const out={st,FIX,X1,s0,N,band,sym,sym1,qty,cash,avg,qty1,avg1,ready:false,
              monthly:Math.max(0,st.monthly||0), principal:Math.max(0,st.principal||0),
              added:P.added, realized:P.realized, divs:P.divs||0};
-  out.fees=P.fees; out.pnlYear=P.pnlYear; out.year=new Date().getFullYear(); out.pnlByIdx=P.pnlByIdx; out.withdrawn=P.withdrawn; out.flows=P.flows; out.badByIdx=P.badByIdx; out.nbad=P.nbad;
+  out.fees=P.fees; out.pnlYear=P.pnlYear; out.year=new Date().getFullYear(); out.pnlByIdx=P.pnlByIdx; out.posRows=P.rows; out.withdrawn=P.withdrawn; out.flows=P.flows; out.badByIdx=P.badByIdx; out.nbad=P.nbad;
   // 고정 5:5는 변동성을 안 쓰므로 룩백만큼의 이력이 필요 없다
   if(!days || days.length<(FIX?2:N+1)) return out;
   const closes=days.map(d=>d.close), n=closes.length;
@@ -5987,6 +6058,7 @@ function renderIvsHist(){
     if(w){ if(c.nbad>0){ w.style.display='';
         w.innerHTML=`⚠ <b>앞뒤가 안 맞는 기록이 ${c.nbad}건</b> 있습니다 — 그 시점 보유보다 많이 판 것으로 되어 있어 평단·실현손익이 틀어집니다. 대개 <b>날짜 순서</b> 문제입니다(시작 보유를 매도보다 뒤 날짜로 넣은 경우). 붉은 줄의 ✎로 날짜를 고치세요.`; }
       else w.style.display='none'; } }
+  tcRender('ivs');   // 거래이력 그림(보일 때만)
 }
 // 기록 편집 — 포지션이 기록에서 파생되므로 여기서 고치면 계좌가 즉시 따라온다
 let editIvsIdx=-1;
@@ -6397,6 +6469,7 @@ function renderDcaHist(){
     rows=`<tr class="buy"><td>${dshort(h.date)}</td><td>${px(h.amt)}${m>1?` <span style="color:var(--buy)">×${m}</span>`:''}</td><td>${px(h.price)} · ${nfix(q,3)}주</td><td style="white-space:nowrap"><span class="edit" onclick="editDca(${i})">✎</span> <span class="del" onclick="delDca(${i})">✕</span></td></tr>`+rows;
   });
   $('dca_rec_tbl').innerHTML=`<tr><th>날짜</th><th>금액</th><th>단가·수량</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="4">아직 기록이 없습니다</td></tr>`);
+  tcRender('dca');   // 거래이력 그림(보일 때만)
 }
 
 function dcaRecord(){
@@ -7624,11 +7697,14 @@ function maLedger(hist, price, principal){
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
   let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0, fees=0, divs=0;
   let cash=+principal||0;
-  (hist||[]).forEach(x=>{
+  const outs=[];   // 청산마다 {i, date, qty, pnl} — 분석 탭 월별 실현손익 · 거래이력 그림이 이 값을 그대로 쓴다
+  (hist||[]).forEach((x,i)=>{
     // 배당 (7차 D8) — 보유 중 받은 세후 배당은 현금으로 들어온다. 매매가 아니라 평단·보유는 그대로.
     if(x.type==='div'){ const a=+x.amt||0; if(a>0){ cash+=a; divs+=a; } return; }
     const q=+x.qty||0, pr=+x.price||0;
-    if(!(q>0)||!(pr>0)) return;
+    /* 청산(out)은 수량을 안 적어도 된다 — 손으로 적는 청산(maRecord)은 수량 없이 저장된다 = 들고 있던 전부.
+       예전엔 수량 없는 기록을 통째로 건너뛰어, 손으로 적은 청산이 실현손익에 안 들어가고 보유가 그대로 남아 보였다(2026-11-11 확인). */
+    if(!(pr>0)||(x.type==='in'&&!(q>0))) return;
     if(x.type==='in'){
       const gross=pr*q, fee=(x.fee!=null?+x.fee:gross*FEE);
       /* 매수 수수료는 현금에서 나가는데 평단에는 안 들어가고 있었다 —
@@ -7638,17 +7714,19 @@ function maLedger(hist, price, principal){
       const nq=qty+q; avg=nq>0?(avg*qty+pr*q+fee)/nq:(q>0?(pr*q+fee)/q:pr); qty=nq;
       totbuy+=gross; cash-=gross+fee; fees+=fee;
     }else if(x.type==='out'){
-      const sq=q>0?Math.min(q,qty):qty; const gross=pr*sq;
+      const sq=q>0?Math.min(q,qty):qty; if(!(sq>0)) return;   // 들고 있는 게 없으면 청산할 것도 없다
+      const gross=pr*sq;
       const fee=(x.fee!=null?+x.fee:gross*FEE);
       const pnl=(pr-avg)*sq-fee;                 // 실현손익도 수수료 차감 후 (백테와 동일)
       realized+=pnl; totsell+=gross; cash+=gross-fee; fees+=fee;
+      outs.push({i,date:x.date,qty:sq,pnl});
       qty-=sq; nOut++; if(pnl>0)nWin++;
       if(qty<=1e-9){qty=0;avg=0;}
     }
   });
   cash=Math.max(0,cash);
   const invested=price>0?price*qty:0;
-  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,divs,total:invested+cash};
+  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,divs,total:invested+cash,outs};
 }
 /* 계좌 밖으로 오간 돈을 월 단위로 읽어 준다.
    무매 단리(사이클 초과익)와 적립(현금 수령 분배금)이 같은 함수를 쓴다 —
@@ -10398,6 +10476,105 @@ function delVrFromEdit(){ if(editVrIdx<0){closeEditVr();return;} const i=editVrI
 function delVr(i){if(!confirm('이 거래를 삭제할까요?'))return;curStrat().hist.splice(i,1);save();refreshVr()}
 
 
+/* ════════ 거래이력 그림 — 주가 + 내 매수 ▲ · 매도 ▼ (jk-trade-chart.js · v3.130.0 · 2026-11-11) ════════
+   사용자: "운영에서 각전략 세션 거래이력에 투자종목 그래프 그리고 그 그래프에 매수와 매도한걸 표현해 줄수 있나?" → 시안 → "어 좋아 그렇게 해".
+   탭마다 기록을 매매 목록으로 옮기기만 한다 — 보유 · 평단 · 손익은 그 탭 계산이 센 행 값 그대로(무매 computeInf.rows ·
+   VR computeVr.rows(실효평단 — VR 그림과 같은 값) · 섀넌 ivsPos.rows · 적립 computeDca.pos.rows · 로테이션은 기록의 진입가).
+   ASAP 는 숨긴 탭이라 넣지 않았다. 시세는 체결가 일봉(fetchDaily) — 종목마다 10분 동안 이 화면 메모리에만 둔다(브라우저 저장소 안 씀). */
+function tcBlockOf(tab){ return {inf:'inf-rec',vr:'vr-rec',ma:'ma-hist',ivs:'ivs-hist',dca:'dca-hist'}[tab]||''; }   // 함수로 둔다 — 첫 실행 중 표가 먼저 그려져도 값이 있다
+var _tcDaily=null;   // 종목 → {at, p} (tcDaily 가 처음 부를 때 만든다)
+function tcDaily(sym){
+  if(!_tcDaily) _tcDaily=new Map();
+  const SYM=String(sym||'').toUpperCase(), o=_tcDaily.get(SYM);
+  if(o&&Date.now()-o.at<10*60*1000) return o.p;
+  const p=Promise.resolve().then(()=>fetchDaily(SYM)).then(q=>(q&&Array.isArray(q.days))?q.days:[]).catch(()=>[]);
+  const rec={at:Date.now(),p}; _tcDaily.set(SYM,rec);
+  p.then(d=>{ if(!d.length&&_tcDaily.get(SYM)===rec) _tcDaily.delete(SYM); });   // 실패는 붙잡아 두지 않는다 — 다음에 다시 받는다
+  return p;
+}
+/* 무한매수법 — 매수 · 매도 · 복합(같은 날 지정가매도 + 매수 · 손익은 매도 몫) · 출금 · 배당 · 리버스복귀(매매 아님) */
+function tcFromInf(c){
+  const sym=String((c&&c.st&&c.st.ticker)||'SOXL').toUpperCase(), trades=[], steps=[];
+  for(const h of ((c&&c.rows)||[])){
+    const k=String(h.kind||'');
+    if(isCx(k)){
+      const sl={date:h.date,side:'sell',qty:+h.sellQty,price:+h.sellPrice,pnl:h.profit,label:'지정가매도'};
+      const by={date:h.date,side:'buy',qty:+h.buyQty,price:+h.buyPrice,label:k.includes('절반매수')?'절반매수':'1회매수'};
+      trades.push(...(k.startsWith('지정가매도')?[sl,by]:[by,sl]));
+    }else if(isAmtKind(k)||k==='리버스복귀') continue;
+    else if(isSell(k)) trades.push({date:h.date,side:'sell',qty:+h.qty,price:+h.price,pnl:h.profit,label:k});
+    else if(isBuy(k)) trades.push({date:h.date,side:'buy',qty:+h.qty,price:+h.price,label:k});
+    else continue;
+    steps.push({date:h.date,held:+h.qtyAfter||0,avg:(+h.qtyAfter>0&&+h.avgAfter>0)?+h.avgAfter:null});
+  }
+  return {sym,trades,steps,avgLabel:'평단'};
+}
+/* 밸류리밸런싱 — 평단 선은 실효평단(현재 탭 · VR 그림의 '실효평단'과 같은 값) · 매도 손익은 실현손익(이동평균 원가 − 수수료) 그대로 */
+function tcFromVr(c){
+  const sym=String((c&&c.st&&c.st.ticker)||'TQQQ').toUpperCase(), trades=[], steps=[];
+  for(const r of ((c&&c.rows)||[])){
+    const h=r.h||{};
+    if(h.type==='buy'||h.type==='sell') trades.push({date:h.date,side:h.type,qty:+h.qty,price:+h.price,pnl:h.type==='sell'?r.pnl:null,label:h.type==='buy'?'매수':'매도'});
+    if(h.date) steps.push({date:h.date,held:r.held,avg:r.avgEff});
+  }
+  return {sym,trades,steps,avgLabel:'실효평단'};
+}
+/* 로테이션 — 진입(매수) · 청산(매도). 평단 대신 진입가 · 수량을 안 적은 진입은 '보유 중'(표시 크기는 가운데) · 손익은 이 탭이 세지 않아 안 적는다 */
+function tcFromMa(st,hist){
+  const sym=String((st&&st.ticker)||'SOXL').toUpperCase(), trades=[], steps=[]; let held=0;
+  const outs=new Map(((typeof maLedger==='function'?maLedger(hist,0,+(st&&st.principal)||0).outs:null)||[]).map(o=>[o.i,o]));   // 청산 수량 · 손익 = 분석 탭과 같은 장부(maLedger)
+  (hist||[]).forEach((h,i)=>{
+    if(h.type==='in'){ const q=+h.qty>0?+h.qty:null; held=q||true; trades.push({date:h.date,side:'buy',qty:q,price:+h.price,label:'진입'}); steps.push({date:h.date,held,avg:+h.price||null}); }
+    else if(h.type==='out'){ const o=outs.get(i); trades.push({date:h.date,side:'sell',qty:o?o.qty:(held===true?null:(+held||null)),price:+h.price,pnl:o?o.pnl:null,label:'청산'}); held=0; steps.push({date:h.date,held:0,avg:null}); }
+  });
+  return {sym,trades,steps,avgLabel:'진입가'};
+}
+/* 섀넌 — 종목(레버리지 · 1배 짝)마다 따로. 손익 = 표의 실현손익(ivsPos) · 보유 · 평단 = 그 다리 값 */
+function tcFromIvs(c){
+  const out={};
+  for(const r of ((c&&c.posRows)||[])){
+    const h=r.h||{}; if(!(h.type==='buy'||h.type==='sell')||r.held==null) continue;
+    const sym=String(h.sym||(r.leg==='x1'?c.sym1:c.sym)||'').toUpperCase(); if(!sym) continue;
+    const o=out[sym]||(out[sym]={sym,trades:[],steps:[],avgLabel:'평단'});
+    o.trades.push({date:h.date,side:h.type,qty:+h.qty,price:+h.price,pnl:h.type==='sell'?r.pnl:null,label:(h.type==='buy'?'매수':'매도')+(h.seed?'(시작)':'')});
+    o.steps.push({date:h.date,held:r.held,avg:r.held>0&&r.avg>0?r.avg:null});
+  }
+  return out;
+}
+/* 적립·거치 — 적립(매수)만. 평단 = 표의 평단(넣은 돈 ÷ 산 주수) */
+function tcFromDca(c){
+  const sym=String((c&&c.sym)||'').toUpperCase(), trades=[], steps=[];
+  for(const r of ((c&&c.pos&&c.pos.rows)||[])){
+    const h=r.h||{}, p=+h.price||0, a=+h.amt||0, m=+h.mul||1;
+    trades.push({date:h.date,side:'buy',qty:a/p,price:p,label:m>1?'배수 적립 ×'+m:'적립'});
+    steps.push({date:h.date,held:r.held,avg:r.avg});
+  }
+  return {sym,trades,steps,avgLabel:'평단'};
+}
+function tcData(tab){
+  if(tab==='inf') return [tcFromInf(computeInf())];
+  if(tab==='vr') return [tcFromVr(computeVr())];
+  if(tab==='ma') return [tcFromMa(curStrat().settings||{},curStrat().hist||[])];
+  if(tab==='ivs') return Object.values(tcFromIvs(computeIvs()));
+  if(tab==='dca') return [tcFromDca(computeDca())];
+  return [];
+}
+/* 보이는 거래이력에만 그린다(숨은 칸은 폭이 0) — 거래이력 표를 다시 그릴 때 · 거래이력 칸을 열 때 · 화면 폭이 바뀔 때 */
+function tcRender(tab){
+  const el=$(tab+'_tc'), blk=$(tcBlockOf(tab));
+  if(!el||!blk||!window.JKTradeChart||S.activeTab!==tab||!blk.classList.contains('on')) return;
+  if((typeof isDgView==='function'&&isDgView())||(typeof isPaperPage==='function'&&isPaperPage())||(typeof isPfPage==='function'&&isPfPage())) return;
+  let data; try{ data=tcData(tab); }catch(e){ console.error('trade chart',e); return; }
+  const bySym={}; for(const d of data) if(d&&d.sym&&d.trades.length) bySym[d.sym]=d;
+  const syms=Object.keys(bySym), lastOf=k=>bySym[k].trades.reduce((a,t)=>t.date>a?t.date:a,'');
+  const latest=syms.slice().sort((a,b)=>lastOf(b).localeCompare(lastOf(a)))[0];   // 처음엔 가장 최근에 사고판 종목
+  const cur=curCurrency()==='krw'?'krw':'usd', box=tabBox()||{};
+  window.JKTradeChart.mount(el,{key:tab+':'+String(box.active||''),symbols:syms,symbol:latest,
+    load:sym=>tcDaily(sym).then(days=>Object.assign({days,cur},bySym[sym]))});
+}
+var _tcRz=null;
+window.addEventListener('resize',()=>{ clearTimeout(_tcRz); _tcRz=setTimeout(()=>{ try{ if(tcBlockOf(S.activeTab)) tcRender(S.activeTab); }catch(e){} },250); });
+
 /* ════════ 하단 거래기록 바텀시트 ════════ */
 function fmtDateK(d){const dt=d?new Date(d+'T00:00:00'):new Date();const wd=['일','월','화','수','목','금','토'][dt.getDay()];return `${dt.getMonth()+1}월 ${dt.getDate()}일 (${wd})`}
 function openSheet(){
@@ -11658,6 +11835,7 @@ function setupTabs(){
       if(c.dataset.b==='vr-next'){ try{renderVrNext()}catch(e){console.error(e)} }
       // 무한매수법 현재 진입 시 시세·캔들·차트·지수 로드
       if(c.dataset.b==='inf-now'){ try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} }
+      { const tb=['inf','vr','ma','ivs','dca'].find(k=>tcBlockOf(k)===c.dataset.b); if(tb) setTimeout(()=>{ try{ tcRender(tb); }catch(e){console.error(e)} },0); }   // 거래이력 그림 — 칸이 보인 뒤 폭을 재고 그린다
       cancelHold(); window.scrollTo({top:0,behavior:'smooth'});
     };
   });

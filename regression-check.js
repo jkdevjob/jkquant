@@ -8334,8 +8334,8 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /<a href="\/portfolio"><span class="mi">💰<\/span>포트폴리오<\/a>/.test(pl) && !/href="\/plan"/.test(pl));
   ok('PATH A 균형성장 — 개선 70/30 · TECL 70% N20 s0 55 밴드10 + TQQQ 30% SMA225 ±1.0',
      /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:20,ivsS0:\.55,ivsBand:\.10,guardMA:225,guardBand:\.01\}/.test(pl));
-  ok('PATH A 첫날 실행 UI — 초기자금 입력 · 127개 롤링 검증 · 자체 잔고 진행률',
-     /id="alphaCapitalInput"/.test(pl)
+  ok('PATH A 첫날 실행 UI — 초기자금 입력(⚙️ 설정 시작자산 · 2026-11-11 거래이력 칸 삭제) · 127개 롤링 검증 · 자체 잔고 진행률',
+     /id="assetSessionCapital"/.test(pl) && !/id="alphaCapitalInput"/.test(pl)
      && /137개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
@@ -8384,14 +8384,12 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('PATH A SMA225 범례와 주문0건 안내',
      /<span>— SMA225<\/span>/.test(pl)&&!/— SMA200<\/span>/.test(pl)
      && /조건 충족 · 정수주수·현금 등을 반영한 실제 주문 0건/.test(pl));
-  ok('초기자금은 입력만으로 장부를 바꾸지 않고 초기화 때 확정',
+  ok('초기자금(시작자산)은 ⚙️ 설정 한 곳 — 거래이력의 시작자금 칸 · 초기화 단추는 없다(2026-11-11 사용자 "초기자금은 이미 설정에 있으니 삭제해")',
      /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
      && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
      && /bInf=Math\.round\(cap\*PATH_DEFAULTS\.classic\.infWeight\),bVr=Math\.max\(0,cap-bInf\)/.test(pl)
-     && /\$\("alphaCapitalInput"\)\.addEventListener\("input",\(\)=>\{\s*\$\("alphaCapitalInput"\)\.dataset\.dirty='1';\s*\}\)/.test(pl)
-     && !/\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
-     && /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
-     && /\$\('startCapital'\)\.value=cap/.test(pl));
+     && !/alphaCapitalInput/.test(pl) && !/function alphaResetLedger/.test(pl) && !/id="alphaReset"/.test(pl)
+     && /<label>시작자산 \(\$\)<\/label><input id="assetSessionCapital"/.test(pl));
   ok('장부 복구 보호모드 없이 현재 Firebase 원장을 직접 사용',
      /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
      && !/planManualBackup|planManualBackupMemory|planRecovery|복구 보호모드/.test(pl));
@@ -9324,9 +9322,10 @@ console.log('\n[122] 5년 플랜 v1.26.0 — 이력 수정·평단 계산');
 console.log('\n[123] 5년 플랜 v1.26.0 — 실전 표출순서');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
-  const ids=['alphaOrderSection','alphaAccountSection','alphaHistorySection','alphaEvidenceSection','alphaStrategySection'];
+  /* 2026-11-11 사용자 "듀얼가드 분석에 리밸런싱 판단근거가 현재탭에 들어가야 할거 같은데" — 판단근거는 현재 탭 3번(현재 계좌 다음). */
+  const ids=['alphaOrderSection','alphaAccountSection','alphaEvidenceSection','alphaHistorySection','alphaStrategySection'];
   const pos=ids.map(id=>pl.indexOf('id="'+id+'"'));
-  ok('A안 표출 순서 = 오늘주문 → 현재계좌 → 거래이력 → 판단근거 → 전략설명',
+  ok('A안 표출 순서 = 오늘주문 → 현재계좌 → 판단근거(현재 탭) → 거래이력 → 전략설명',
      pos.every(x=>x>=0) && pos.every((x,i)=>i===0||x>pos[i-1]), JSON.stringify(pos));
   ok('현재계좌는 TECL/TQQQ/SGOV 수량·평단가 + 현금 카드로 표시',
      /id="alphaAcctTeclQty"/.test(pl) && /id="alphaAcctTeclAvg"/.test(pl)
@@ -9339,17 +9338,15 @@ console.log('\n[123] 5년 플랜 v1.26.0 — 실전 표출순서');
      && /<input type="hidden" id="aTqqqQty">/.test(pl)
      && /<input type="hidden" id="aSgovQty">/.test(pl)
      && /<input type="hidden" id="aCash">/.test(pl));
-  const pHist=pl.indexOf('id="alphaHistorySection"'),pEvidence=pl.indexOf('id="alphaEvidenceSection"'),pStrategy=pl.indexOf('id="alphaStrategySection"'),pReset=pl.indexOf('id="alphaResetSection"'),pClassic=pl.indexOf('data-ppanel="classic"');
-  ok('플랜 시작자금·초기화 컨트롤은 A안 화면 맨 아래',
-     pHist>=0 && pEvidence>pHist && pStrategy>pEvidence && pReset>pStrategy && pClassic>pReset
-     && /id="alphaReset"[^>]*>초기화<\/button>/.test(pl)
-     && /금액을 입력하고 초기화를 누르면/.test(pl), JSON.stringify([pHist,pEvidence,pStrategy,pReset,pClassic]));
-  ok('초기화는 입력금액으로 최초 상태 복원 — 현금만 남기고 수량·평단·이력 제거',
-     /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
-     && /\$\('startCapital'\)\.value=cap/.test(pl)
-     && /\$\('startDate'\)\.value=todayISO\(\)/.test(pl)
-     && /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null\},events:\[\],feeModel:"toss-us-0\.1-v1"\}/.test(pl)
-     && /pendingAlphaOrders=\[\]/.test(pl)
+  const pHist=pl.indexOf('id="alphaHistorySection"'),pEvidence=pl.indexOf('id="alphaEvidenceSection"'),pStrategy=pl.indexOf('id="alphaStrategySection"'),pClassic=pl.indexOf('data-ppanel="classic"');
+  /* 2026-11-11 사용자 "듀얼가드 거래이력에 초기자금은 이미 설정에 있으니 삭제해" — 맨 아래 '시작자금 · 초기화' 칸을 뺐다(다른 운영 탭처럼 거래이력에 초기화 없음).
+     시작자산은 ⚙️ 설정, 시작잔고는 거래이력 표의 '시작잔고 수정'. */
+  ok('A안 화면 차례 판단근거 → 거래이력 → 전략설명 · 시작자금·초기화 칸은 없다(⚙️ 설정 시작자산 · 시작잔고 수정)',
+     pEvidence>=0 && pHist>pEvidence && pStrategy>pHist && pClassic>pStrategy
+     && !/id="alphaResetSection"/.test(pl) && !/id="alphaReset"/.test(pl) && !/금액을 입력하고 초기화를 누르면/.test(pl)
+     && /data-abase="1">수정<\/button>/.test(pl) && /시작자산과 시작일은 거래이력의 시작잔고 수정에서 변경하세요/.test(pl), JSON.stringify([pHist,pEvidence,pStrategy,pClassic]));
+  ok('초기화 함수도 없다 — 장부를 통째로 지우는 길은 화면에 남기지 않는다',
+     !/function alphaResetLedger/.test(pl) && !/alphaCapitalInput/.test(pl)
      && !/새 투자 시작 · 현금/.test(pl));
 }
 
@@ -10103,7 +10100,7 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
   ok('③ 계좌 합계 — 손익률 칸은 평가손익률(보유분) · 정규장일 때만 실시간 · 현금 기록 칸과 버튼 연결',
      /<div class="k">평가손익률 \(보유분\)<\/div><div class="v" id="alphaReturnTotal">/.test(pl) && !/<div class="k">전체 손익률<\/div>/.test(pl)
      && /L\.marketState==='REGULAR'\?'실시간 ':'최근가 '/.test(extractFn(pl,'function renderAlphaLedger()'))
-     && /id="alphaCashRec"/.test(pl) && /\$\("alphaCashAdd"\)\.addEventListener\("click",alphaAddCashEvent\)/.test(pl)
+     && /id="alphaCashRec"/.test(pl) && /\$\("alphaCashAdd"\)\.addEventListener\("click",e=>dgSheetSave\(e\.currentTarget,alphaAddCashEvent\)\)/.test(pl)   // 2026-11-11 기록 창(현재 탭 '＋ 오늘 기록하기') 안
      && /if\(e\.type==='cash'\)\{const amt=/.test(extractFn(pl,'function renderAlphaLedger()')));
   ok('③ 화면 검증 문구 — 5년 듀얼가드는 앱 엔진과 같은 체결로 다시 잰 값(세후 연 30.9% · MDD 40.6%)과 롤링 재검증 대기를 함께 적는다 (10·15·20년 문구 폐지)',
      /앱 엔진과 같은 체결로 다시 잰 값/.test(pl) && /연 30\.9% · MDD 40\.6%/.test(pl) && /137개 시작구간/.test(pl) && !/MDD 최악 −98\.7%/.test(pl));
@@ -10703,7 +10700,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
 
 {
   const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-views.cjs')],{encoding:'utf8'});
-  ok('자산플랜 세션 상세탭 · 비동기 모의재생 격리 · 삭제 선택 유지',r.status===0,(r.stdout||'')+(r.stderr||''));
+  ok('자산플랜 세션 상세탭(판단 근거 = 현재 탭 · 변이 4종) · 비동기 모의재생 격리 · 삭제 선택 유지',r.status===0&&(r.stdout||'').includes('변이 4/4 red'),(r.stdout||'')+(r.stderr||''));
 }
 {
   const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-settings.cjs')],{encoding:'utf8'});
@@ -12737,8 +12734,8 @@ Promise.all(PENDING).then(()=>{
      pcs.status===0&&(pcs.stdout||'').includes('ALL PASS ci steps'),(pcs.stdout||'').slice(-600)+(pcs.stderr||''));
   /* 2026-11-09 — 운영 › 듀얼가드 탭을 다른 운영 탭처럼(세션 줄 맨 위 · 보고 있는 칩/두 번 누르면 세션 설정 · 끌어서 순서 · ⚙️ 설정 따로 · 창 안 다시 로그인 없음) */
   const pdg=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-dg-tab.cjs')],{encoding:'utf8'});
-  ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 변이 24종',
-     pdg.status===0&&(pdg.stdout||'').includes('ALL PASS dg tab · 변이 24/24 red'),(pdg.stdout||'').slice(-600)+(pdg.stderr||''));
+  ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 붙박이 세 줄(숨은 창 높이 0 버림 · 크기 바뀌면 다시 잼) · 변이 27종',
+     pdg.status===0&&(pdg.stdout||'').includes('ALL PASS dg tab · 변이 27/27 red'),(pdg.stdout||'').slice(-600)+(pdg.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
   ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));

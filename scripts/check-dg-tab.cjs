@@ -190,6 +190,17 @@ async function check(S){
   { const P=S.plan;
     t('G5 붙박이 세 줄 — 세션 줄(맨 위) · 상태줄(--dg-h1) · 상세 탭(--dg-h2) · 높이는 dgStickyOffsets 가 잰다',/\.dg-sessbar\{position:sticky;top:0;/.test(P)&&/\.dg-statusline\{position:sticky;top:var\(--dg-h1,49px\);/.test(P)
       &&/\.asset-detail-tabs\{position:sticky;top:var\(--dg-h2,88px\);/.test(P)&&/setProperty\('--dg-h1',h1\+'px'\);r\.setProperty\('--dg-h2',h2\+'px'\)/.test(fnOf(P,'function dgStickyOffsets()')));
+    /* G8 (2026-11-11 사용자 "현재 분석 거래이력탭이 스크롤시 고정이 안되고 가려짐") — 운영 › 듀얼가드 창은 다른 탭을 보는 동안 숨어 있고,
+       그때 잰 높이 0 이 남으면 상태줄 · 상세 탭이 맨 위(세션 줄 밑)에 겹쳐 가려졌다. 실제 함수 두 개를 그대로 돌린다. */
+    const V={assetSessionChips:{offsetHeight:56},assetStatusline:{offsetHeight:55}},vars={},seen=[];let roCb=null;
+    const c={$:id=>V[id],document:{documentElement:{style:{setProperty:(k,v)=>{vars[k]=v;}}}},ResizeObserver:class{constructor(cb){roCb=cb;}observe(el){seen.push(el);}}};
+    vm.createContext(c);vm.runInContext('let dgStickyRO=null;\n'+fnOf(P,'function dgStickyOffsets()')+'\n'+fnOf(P,'function dgStickyWatch()'),c);
+    c.dgStickyOffsets();const vis=vars['--dg-h2'];
+    V.assetSessionChips.offsetHeight=0;V.assetStatusline.offsetHeight=0;c.dgStickyOffsets();const hid=vars['--dg-h2'];   // 숨은 창 — 그대로 둔다
+    c.dgStickyWatch();V.assetSessionChips.offsetHeight=56;V.assetStatusline.offsetHeight=85;if(roCb)roCb([]);const grown=vars['--dg-h2'];   // 다시 보임 · 상태줄 두 줄
+    t('G8 숨은 창에서 잰 높이 0 은 버리고 · 두 줄 크기가 바뀌면 ResizeObserver 로 다시 잰다(상태줄 · 상세 탭이 맨 위에 겹쳐 가려지지 않게)',
+      vis==='111px'&&hid==='111px'&&grown==='141px'&&vars['--dg-h1']==='56px'&&seen.length===2&&seen.includes(V.assetSessionChips)&&seen.includes(V.assetStatusline)
+      &&/try\{dgStickyWatch\(\);\}catch\(e\)\{\}/.test(P),JSON.stringify({vis,hid,grown,seen:seen.length}));
     t('G6 끌기 — 손가락은 길게(350ms) · 집힌 뒤에만 스크롤 막음(touchmove passive:false) · 마우스는 창 전체 · 끈 직후 누름은 전환 아님',/const DG_DRAG_HOLD=350,DG_DRAG_SLOP=8;/.test(P)
       &&/bar\.addEventListener\("touchmove",e=>\{[^\n]*\},\{passive:false\}\)/.test(P)&&/window\.addEventListener\("mousemove"/.test(P)&&/window\.addEventListener\("mouseup"/.test(P)&&/if\(Date\.now\(\)-dgDragEndAt<250\)return;/.test(P)); }
   return bad;
@@ -219,6 +230,9 @@ const MUT=[
   ['세션 줄: 첫 칩 이름 고정','plan',s=>s.replace("title=\"두 번 누르면 세션 설정\">'+q(planCurLabel())+(assetRulesOf(null)","title=\"두 번 누르면 세션 설정\">현재 투자중'+(assetRulesOf(null)")],
   ['포트폴리오: 현재 투자중 이름 무시','idx',s=>s.replace("name:String((o&&o.name)||(five&&five.sessionName)||'').trim()||'현재 투자중'","name:'현재 투자중'")],
   ['운영 세션 창: 막 연 창도 바깥 누름에 바로 닫힘(옛 코드)','idx',s=>s.replace("if(e.target===m && Date.now()-(m._openedAt||0)>450) m.classList.remove('on');","if(e.target===m) m.classList.remove('on');")],
+  ['붙박이: 숨은 창에서도 높이 0 을 적음(옛 코드)','plan',s=>s.replace("if(!s1||!s2)return;   // 숨은 창","   // 숨은 창")],
+  ['붙박이: 두 줄 크기가 바뀌어도 다시 안 잼','plan',s=>s.replace("dgStickyRO.observe(a);dgStickyRO.observe(b);","")],
+  ['붙박이: 크기 감시를 안 붙임','plan',s=>s.replace("try{dgStickyWatch();}catch(e){}   // 세션 줄","// 세션 줄")],
   ['듀얼가드 세션 창: 막 연 창도 바깥 누름에 바로 닫힘','plan',s=>s.replace("if(e.target===$(\"assetSessionModal\")&&Date.now()-assetModalOpenedAt>450)closeAssetSessionModal();","if(e.target===$(\"assetSessionModal\"))closeAssetSessionModal();")],
 ];
 (async()=>{
