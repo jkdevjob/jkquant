@@ -270,6 +270,7 @@ export class OpeningSignalStore extends DurableObject {
         schema:LEDGER_SCHEMA,date:String(b.date),mainVariant:String(b.mainVariant||"baseline"),createdAt:nowIso,updatedAt:nowIso,scans:[],events:[]
       };
       if(!ledger.mainVariant)ledger.mainVariant=String(b.mainVariant||"baseline");
+      if(b.closingResearch===true)ledger.closingResearch=true;
       if(b.paperKind&&['day','overnight'].includes(b.paperKind)){
         ledger.closingResearch=true;
         ledger.paperMainVariants=ledger.paperMainVariants||{};
@@ -334,7 +335,7 @@ async function mainVariantForDate(env,date){
 }
 async function appendLedger(env,payload,kind=""){
   const r=await store(env,payload.date,kind).fetch("https://opening-signal.internal/append",{
-    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(kind==='closing30'?{...payload,closingResearch:true}:payload)
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("signal store HTTP "+r.status));
