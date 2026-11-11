@@ -86,7 +86,8 @@ async function check(S){
       t('S4 '+p+' — 목록(키·이름·순서) = 페이지 탭',JSON.stringify(got)===JSON.stringify(want),JSON.stringify({got,want}));
     } }
   // ── S5 관리자 화면
-  { const fns=['function subDraftFrom(cfg)','function menuDraftConfig()','function subBlockHtml(path)','function subModeChange(path,key,mode)','function moveSub(path,key,dir)','function resetMenus()','function subToggle(d)'];
+  // menuNameClean — 저장 문서의 메뉴 이름(2026-11-11 · menuDraftConfig 가 쓴다)
+  { const fns=['function menuNameClean(v)','function subDraftFrom(cfg)','function menuDraftConfig()','function subBlockHtml(path)','function subModeChange(path,key,mode)','function moveSub(path,key,dir)','function resetMenus()','function subToggle(d)'];
     const lab=(S.admin.match(/const SUB_MODE_LABEL=\{[^}]*\};/)||[''])[0].replace('const ','var ');
     const c={window:{JKAccess:A},JKAccess:A,me:{email:'JK82investing@gmail.com'},normEmail:e=>String(e||'').trim().toLowerCase(),
       esc:t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'),

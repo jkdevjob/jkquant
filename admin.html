@@ -93,11 +93,15 @@ input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var
 .cfgstatus.ok{color:var(--buy)}.cfgstatus.err{color:var(--sell)}
 .menu-list{display:grid;gap:8px}
 .menu-row{display:grid;grid-template-columns:minmax(170px,1fr) 150px auto;gap:9px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
-.menu-name{font-weight:800;font-size:13px}.menu-name small{display:block;color:var(--faint);font-size:10.5px;font-weight:600;margin-top:2px}
+.menu-name{font-weight:800;font-size:13px;min-width:0}.menu-name small{display:block;color:var(--faint);font-size:10.5px;font-weight:600;margin-top:2px}
+.menu-label{display:flex;align-items:center;gap:6px;min-width:0}.menu-label .mi{flex:none;width:20px;text-align:center}
+.menu-label-in{flex:1;min-width:0;width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 9px;font:inherit;font-size:13px;font-weight:800}
+.menu-label-in::placeholder{color:var(--ink);opacity:.85}.menu-label-in:focus{outline:none;border-color:var(--vio)}
+.menu-label-reset{flex:none;width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--dim);cursor:pointer;font-weight:900}
 .menu-row select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 9px;font-family:inherit}
 .menu-move{display:flex;gap:5px}.menu-move button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--dim);cursor:pointer;font-weight:900}
 .menu-move button:disabled{opacity:.3;cursor:default}
-@media(max-width:620px){.cfggrid{grid-template-columns:1fr}.menu-row{grid-template-columns:1fr 1fr}.menu-move{justify-content:flex-end}}
+@media(max-width:620px){.cfggrid{grid-template-columns:1fr}.menu-row{grid-template-columns:1fr 1fr}.menu-row>.menu-name{grid-column:1/-1}.menu-move{justify-content:flex-end}}
 /* 하위 탭(2026-11-09) — 메뉴 줄 아래 접히는 칸 · 같은 공개범위 셋 · 위/아래 */
 .sub-list{grid-column:1/-1;margin-top:2px;border-top:1px dashed var(--line);padding-top:6px}
 .sub-list summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--dim);padding:4px 2px}
@@ -202,7 +206,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.13.0</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.14.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -727,10 +731,13 @@ function subDraftFrom(cfg){
   return out;
 }
 
+/* 메뉴 이름 정리 — jk-access.js 한 곳(페이지 적용과 같은 규칙: 제어 문자 지움 · 빈칸 하나로 · 20자) */
+function menuNameClean(v){ return (window.JKAccess&&JKAccess.cleanMenuLabel)?JKAccess.cleanMenuLabel(v):String(v==null?'':v).replace(/\s+/g,' ').trim().slice(0,20); }
 function menuDraftConfig(){
   menuDraft.sort((a,b)=>a.order-b.order);
   menuDraft.forEach((x,i)=>x.order=(i+1)*10);
-  const items={};menuDraft.forEach(x=>items[x.path]={mode:x.mode,order:x.order});
+  const items={};menuDraft.forEach(x=>{ items[x.path]={mode:x.mode,order:x.order};
+    const nm=menuNameClean(x.name); if(nm&&nm!==x.label) items[x.path].label=nm; });   // 바꾼 이름만 저장 — 비우면 기본 이름
   const subs={};
   Object.keys(subDraft).forEach(p=>{ subDraft[p].sort((a,b)=>a.order-b.order).forEach((x,i)=>{ x.order=(i+1)*10; (subs[p]=subs[p]||{})[x.key]={mode:x.mode,order:x.order}; }); });
   return {items,subs,updatedAt:Date.now(),updatedBy:normEmail(me&&me.email)};
@@ -746,6 +753,8 @@ function previewMenuDraft(){
     });
     links.forEach(a=>pop.appendChild(a));
   });
+  // 이름도 바로 미리 본다 — 저장 뒤 정책 적용(applyMenuConfig)이 같은 함수로 다시 붙인다
+  if(window.JKAccess&&JKAccess.applyMenuLabels) JKAccess.applyMenuLabels({items:Object.fromEntries(menuDraft.map(x=>[x.path,{label:x.name||''}]))});
 }
 function queueMenuSave(){
   previewMenuDraft();
@@ -767,12 +776,13 @@ function menuBase(){
 }
 function renderMenus(el){
   el.innerHTML='<div class="card"><h3><span class="dot"></span>공용 메뉴 관리</h3>'
-    +'<p class="lead">각 메뉴를 <b>전체 공개 / 관리자만 / 전체 숨김</b>으로 정하고 순서를 바꿉니다. 메뉴 아래 <b>하위 탭</b>을 펼치면 그 화면의 탭도 같은 방식으로 숨기거나 순서를 바꿉니다. 저장하면 모든 승인 사용자 화면에 같은 정책이 적용됩니다.</p>'
+    +'<p class="lead">각 메뉴의 <b>이름</b>을 바꾸고 <b>전체 공개 / 관리자만 / 전체 숨김</b>으로 정하고 순서를 바꿉니다. 메뉴 아래 <b>하위 탭</b>을 펼치면 그 화면의 탭도 같은 방식으로 숨기거나 순서를 바꿉니다. 저장하면 모든 승인 사용자 화면에 같은 정책이 적용됩니다.</p>'
     +'<div id="menuBody"><p class="lead">불러오는 중…</p></div>'
     +'<div class="row" style="margin-top:13px"><button class="prim" onclick="saveMenus()">💾 메뉴 설정 저장</button>'
     +'<button class="ghostbtn" onclick="resetMenus()">기본 순서로 되돌리기</button></div>'
     +'<div id="menuStatus" class="cfgstatus"></div>'
-    +'<p class="note"><b>전체 숨김</b>: 메뉴에서 누구에게도 보이지 않습니다. 관리자는 주소를 직접 입력하면 열 수 있지만 일반 사용자는 직접 URL도 차단됩니다.<br>'
+    +'<p class="note"><b>이름</b>: 칸에 새 이름을 적고 Enter 또는 다른 곳을 누르면 저장됩니다(20자까지). 칸을 비우거나 ↺ 를 누르면 기본 이름으로 돌아갑니다. 바꾼 이름은 모든 페이지의 ☰ 전체메뉴에 보이고, \'기본 순서로 되돌리기\'는 이름을 건드리지 않습니다.<br>'
+    +'<b>전체 숨김</b>: 메뉴에서 누구에게도 보이지 않습니다. 관리자는 주소를 직접 입력하면 열 수 있지만 일반 사용자는 직접 URL도 차단됩니다.<br>'
     +'<b>관리자만</b>: 관리자 메뉴에는 보이고 일반 사용자에게는 숨겨지며 직접 URL도 차단됩니다.<br>'
     +'연구(지피티)·연구(클로드)·관리자는 기존 소유자 보안이 있으므로 공개로 낮추지 않고 <b>관리자만/전체 숨김</b>만 선택합니다.<br>'
     +'<b>하위 탭</b>: 화면에서만 가립니다(데이터 권한은 그대로). 지금 열려 있는 탭은 다른 탭으로 옮길 때까지 보입니다. 관리자 화면의 탭은 스스로 잠그지 않게 목록에 없습니다.</p></div>';
@@ -786,15 +796,31 @@ function menuModeOptions(r){
 }
 function paintMenus(){
   const el=$('menuBody');if(!el)return;
+  /* 이름 칸에 쓰는 중이면 다시 그린 뒤에도 그 칸·글자·커서를 지킨다 — 앞 칸 저장이 끝나 다시 그릴 때 쓰던 글자가 날아가지 않게 */
+  const act=document.activeElement, keep=(act&&act.classList&&act.classList.contains('menu-label-in')&&el.contains(act))
+    ?{path:act.getAttribute('data-path'),value:act.value,s:act.selectionStart,e:act.selectionEnd}:null;
   menuDraft.sort((a,b)=>a.order-b.order);
   el.innerHTML='<div class="menu-list">'+menuDraft.map((r,idx)=>
-    '<div class="menu-row"><div class="menu-name">'+esc((MENU_ICONS[r.path]||'•')+' '+r.label)
-      +'<small>'+esc(r.path)+(MENU_HARD_ADMIN.has(r.path)?' · 기존 소유자 제한 유지':'')+'</small></div>'
+    '<div class="menu-row"><div class="menu-name"><div class="menu-label"><span class="mi">'+esc(MENU_ICONS[r.path]||'•')+'</span>'
+      +'<input class="menu-label-in" type="text" maxlength="20" data-path="'+esc(r.path)+'" value="'+esc(r.name||'')+'" placeholder="'+esc(r.label)+'"'
+      +' aria-label="'+esc(r.label)+' 메뉴 이름 — 비우면 기본 이름" onchange="menuLabelChange(\''+r.path+'\',this.value)">'
+      +(r.name?'<button class="menu-label-reset" title="기본 이름('+esc(r.label)+')으로" onclick="menuLabelChange(\''+r.path+'\',\'\')">↺</button>':'')+'</div>'
+      +'<small>'+esc(r.path)+(r.name?' · 기본 이름 '+esc(r.label):'')+(MENU_HARD_ADMIN.has(r.path)?' · 기존 소유자 제한 유지':'')+'</small></div>'
       +'<select onchange="menuModeChange(\''+r.path+'\',this.value)">'+menuModeOptions(r)+'</select>'
       +'<div class="menu-move"><button '+(idx===0?'disabled ':'')+'onclick="moveMenu(\''+r.path+'\',-1)" title="위로">↑</button>'
       +'<button '+(idx===menuDraft.length-1?'disabled ':'')+'onclick="moveMenu(\''+r.path+'\',1)" title="아래로">↓</button></div>'
       +subBlockHtml(r.path)+'</div>'
   ).join('')+'</div>';
+  if(keep){ const n=[...el.querySelectorAll('.menu-label-in')].find(x=>x.getAttribute('data-path')===keep.path);
+    if(n){ n.value=keep.value; n.focus(); try{ n.setSelectionRange(keep.s,keep.e); }catch(e){} } }
+}
+/* 이름 바꾸기 — 정리한 이름이 기본 이름과 다를 때만 바꾼 이름으로 둔다(비우면 기본) */
+function menuLabelChange(path,value){
+  const r=menuDraft.find(x=>x.path===path);if(!r)return;
+  const nm=menuNameClean(value);
+  r.name=(nm&&nm!==r.label)?nm:'';
+  paintMenus();
+  queueMenuSave();
 }
 function subBlockHtml(path){
   const L=(subDraft[path]||[]).sort((a,b)=>a.order-b.order); if(!L.length) return '';
@@ -829,7 +855,7 @@ async function loadMenus(){
   menuDraft=base.map(x=>{
     const v=cfg.items&&cfg.items[x.path]||{},hard=MENU_HARD_ADMIN.has(x.path);
     let mode=v.mode||x.mode;if(hard&&mode==='public')mode='admin';
-    return {...x,mode,order:Number.isFinite(+v.order)?+v.order:x.order};
+    return {...x,mode,order:Number.isFinite(+v.order)?+v.order:x.order,name:menuNameClean(v.label)};   // 바꾼 이름(없으면 '' = 기본)
   }).sort((a,b)=>a.order-b.order);
   menuDraft.forEach((x,i)=>x.order=(i+1)*10);
   subDraft=subDraftFrom(cfg);   // 하위 탭 — 저장된 정책(없으면 기본값 · ASAP 숨김)
@@ -849,7 +875,8 @@ function moveMenu(path,dir){
   queueMenuSave();
 }
 function resetMenus(){
-  menuDraft=menuBase().map(x=>({...x}));
+  const names=Object.fromEntries(menuDraft.map(x=>[x.path,x.name||'']));   // 이름은 그대로 — 순서·공개범위·하위 탭만 기본으로(이름은 칸을 비우거나 ↺)
+  menuDraft=menuBase().map(x=>({...x,name:names[x.path]||''}));
   subDraft=subDraftFrom(window.JKAccess?JKAccess.menuDefaults():{});   // 하위 탭도 기본(페이지 순서 · ASAP 숨김)
   paintMenus();
   queueMenuSave();

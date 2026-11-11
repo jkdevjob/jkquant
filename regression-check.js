@@ -1336,7 +1336,7 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
     const adminDecl=(acc.match(/var ADMIN_EMAILS=\[[^\n]+\];/)||[''])[0];
     const fn=n=>optFn(acc,'function '+n+'(');
     try{
-      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+subDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('subDefaults')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
+      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+subDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('subDefaults')+'\n'+fn('menuDefaults')+'\n'+fn('cleanMenuLabel')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
         +'\nthis.out={d:menuDefaults(),n:normalizeMenuConfig({items:{"/job":{mode:"hidden",order:5},"/plan":{mode:"admin",order:6}}}),a:menuAccess({email:"user@example.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job"),b:menuAccess({email:"jk82investing@gmail.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job")};',box);
       ok('메뉴 정책 값 시험 — 기본/숨김/관리자 우회',
          box.out.d.items['/plan'].mode==='public' && box.out.d.items['/scalping'].mode==='admin'
@@ -12736,6 +12736,10 @@ Promise.all(PENDING).then(()=>{
   const pst=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-subtabs.cjs')],{encoding:'utf8'});
   ok('하위 탭 숨김·순서: 설정 정리(ASAP 기본 숨김·새 탭 맨 뒤) · 공개범위 · 적용(모의 주소·열린 탭) · 목록 = 페이지 7곳 실제 탭 · 관리자 화면 · 변이 13종',
      pst.status===0&&(pst.stdout||'').includes('ALL PASS sub tabs · 변이 14/14 red'),(pst.stdout||'').slice(-600)+(pst.stderr||''));
+  /* 2026-11-11 — 관리자 › 메뉴 관리: 메뉴 이름 바꾸기 (settings/siteMenu items[경로].label · jk-access.js 정리·적용 · admin v0.14.0) */
+  const pml=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-menu-labels.cjs')],{encoding:'utf8'});
+  ok('메뉴 이름 바꾸기: 정리(빈칸·제어·보이지 않는 문자·20자) · 바꾼 이름만 저장 · 아이콘 그대로 글자만 · 지우면 기본 · 마크업은 글자 · 관리자 이름 칸·되돌리기 · 변이 12종',
+     pml.status===0&&(pml.stdout||'').includes('ALL PASS menu labels · 변이 12/12 red'),(pml.stdout||'').slice(-600)+(pml.stderr||''));
   /* 2026-11-09 — 검사 단계 목록 한 곳(.github/check-steps.yml) · check-before-push 병렬/조각/offline · GitHub 검증 조각 4개 + check */
   const pcs=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ci-steps.cjs')],{encoding:'utf8'});
   ok('검사 단계 한 곳: 목록 파서 · LPT 조각 배정(합 = 전부 · 빈 조각 없음) · 실행기(하나씩·병렬·끊기·조각·--only·offline·pip 한 번) · check.yml 조각 N 일치',
