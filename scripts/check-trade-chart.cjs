@@ -105,9 +105,9 @@ async function check(S){
       (I.match(/const IM_AUTOTP_MA150=\{[^\n]*\};/)||[''])[0],optFn(I,'function imAutoTPMA150(bars,date)'),optFn(I,'function imAutoTPByMode(bars,date,mode)'),
       (I.match(/const IM_AUTOTP_M1=\{[^\n]*\};/)||[''])[0],optFn(I,'function imAutoTPM1(bars,cycStart,date,base)'),
       (I.match(/const REV_DIVS=\[[^\]]*\];/)||[''])[0],fnOf(I,'function revSupported(div)'),fnOf(I,'function revEnabled(st)'),
-      fnOf(I,'function computeInf()'),fnOf(I,'function computeVr()'),fnOf(I,'function ivsPos(principal,hist)'),fnOf(I,'function computeDca()'),
+      fnOf(I,'function computeInf()'),fnOf(I,'function computeVr()'),fnOf(I,'function ivsPos(principal,hist)'),fnOf(I,'function computeDca()'),fnOf(I,'function maLedger(hist, price, principal)'),
       fnOf(I,'function tcFromInf(c)'),fnOf(I,'function tcFromVr(c)'),fnOf(I,'function tcFromMa(st,hist)'),fnOf(I,'function tcFromIvs(c)'),fnOf(I,'function tcFromDca(c)')];
-    const c={console,Math,Date,JSON,Map,Set,Number,String,Array,Object,isFinite,__strat:null,_infReplayAsOf:'',_infResume:null,imAutoBars:()=>null,dcaQuoteData:null,
+    const c={console,Math,Date,JSON,Map,Set,Number,String,Array,Object,isFinite,IVS_FEE:0.0025,__strat:null,_infReplayAsOf:'',_infResume:null,imAutoBars:()=>null,dcaQuoteData:null,
       _dcaRawMap:()=>new Map(),settledBars:x=>x,curOf:()=>'usd',nfix:(v,d)=>(+v).toFixed(d)};
     c.curStrat=()=>c.__strat; vm.createContext(c);
     vm.runInContext(parts.join('\n')+'\n;this.__fns={computeInf,computeVr,ivsPos,computeDca,tcFromInf,tcFromVr,tcFromMa,tcFromIvs,tcFromDca};',c);
@@ -138,8 +138,9 @@ async function check(S){
     const cd=F.computeDca(), td=F.tcFromDca(cd), ld=lastStep(td.steps);
     t('C4 적립 — 매수 3 · 보유 · 평단 = computeDca.pos(shares · avg) · 배수 적립 이름',td.trades.length===3&&near(ld.held,cd.pos.shares)&&near(ld.avg,cd.pos.avg)&&td.trades[1].label==='배수 적립 ×2'&&near(td.trades[1].qty,200/70),JSON.stringify({ld,pos:cd.pos}));
     // 로테이션 — 진입가 · 수량 모르는 진입
-    const tm=F.tcFromMa({ticker:'SOXL'},[{type:'in',date:'2026-01-05',price:30,qty:40},{type:'out',date:'2026-03-20',price:25},{type:'div',date:'2026-03-25',amt:3},{type:'in',date:'2026-04-21',price:20}]);
-    t('C5 로테이션 — 진입 = 매수(진입가 선) · 청산 = 매도(앞 진입 수량) · 배당 빠짐 · 수량 모르는 진입은 들고 있음(true)',tm.trades.length===3&&tm.trades[1].qty===40&&tm.avgLabel==='진입가'
+    const tm=F.tcFromMa({ticker:'SOXL',principal:10000},[{type:'in',date:'2026-01-05',price:30,qty:40},{type:'out',date:'2026-03-20',price:25},{type:'div',date:'2026-03-25',amt:3},{type:'in',date:'2026-04-21',price:20}]);
+    const want=(25-(30*40+30*40*0.0025)/40)*40-25*40*0.0025;   // 분석 탭 장부(maLedger) — 수수료 포함 원가 · 청산 수수료 차감
+    t('C5 로테이션 — 진입 = 매수(진입가 선) · 청산 = 매도(수량 · 손익 = 분석 탭 maLedger — 수량 안 적은 청산 = 들고 있던 40주) · 배당 빠짐 · 수량 모르는 진입은 들고 있음(true)',tm.trades.length===3&&tm.trades[1].qty===40&&near(tm.trades[1].pnl,want)&&tm.avgLabel==='진입가'
       &&tm.steps[1].held===0&&tm.steps[1].avg===null&&tm.steps[2].held===true&&tm.steps[2].avg===20&&tm.trades[2].qty===null,JSON.stringify(tm)); }
 
   // ── D 듀얼가드 → 매매 목록
@@ -189,7 +190,7 @@ const MUT=[
   ['VR: 매도 손익 안 넘김','idx',s=>s.replace("pnl:h.type==='sell'?r.pnl:null,label:h.type==='buy'?'매수':'매도'});","pnl:null,label:h.type==='buy'?'매수':'매도'});")],
   ['섀넌: 1배 짝도 레버리지 종목에','idx',s=>s.replace("const sym=String(h.sym||(r.leg==='x1'?c.sym1:c.sym)||'').toUpperCase(); if(!sym) continue;","const sym=String(c.sym||'').toUpperCase(); if(!sym) continue;")],
   ['적립: 평단을 마지막 값으로','idx',s=>s.replace("rows.push({h,held:shares,avg:inv/shares});","rows.push({h,held:shares,avg:p});")],
-  ['로테이션: 청산 수량 모름','idx',s=>s.replace("trades.push({date:h.date,side:'sell',qty:held===true?null:(+held||null),price:+h.price,label:'청산'});","trades.push({date:h.date,side:'sell',qty:null,price:+h.price,label:'청산'});")],
+  ['로테이션: 청산 손익을 분석 장부에서 안 받음','idx',s=>s.replace("price:+h.price,pnl:o?o.pnl:null,label:'청산'});","price:+h.price,pnl:null,label:'청산'});")],
   ['듀얼가드: 날짜 무시하고 마지막 장부로','plan',s=>s.replace("for(const d of dates)put(d,alphaLedgerCalc(Object.assign({},L,{events:(L.events||[]).filter(e=>String(e.date||'')<=d)})));","for(const d of dates)put(d,S);")],
   ['듀얼가드: 손익을 표와 다른 값으로','plan',s=>s.replace("pnl:e.side==='sell'&&pn&&Number.isFinite(pn.profit)?pn.profit:null});","pnl:e.side==='sell'?(+e.price||0)*Math.floor(+e.qty||0):null});")],
   ['연결: 무매 표 그릴 때 그림 안 함','idx',s=>s.replace("  tcRender('inf');   // 거래이력 그림(보일 때만)\n","")],

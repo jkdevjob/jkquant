@@ -14,7 +14,7 @@ async function main(){
   assert.deepEqual(tabs.map(x=>x.dataset.assetDetail),['current','analysis','history','explain']);
   const c=vm.createContext({document:{querySelectorAll:s=>s==='[data-asset-detail]'?tabs:panels}});
   vm.runInContext(fn('function setAssetDetail(name)'),c);
-  for(const [name,ids] of Object.entries({current:['dgHero','alphaOrderSection','alphaAccountSection','alphaTaxSection'],analysis:['assetPaperPanel','alphaPerfSection','alphaEvidenceSection'],history:['alphaHistorySection'],explain:['alphaStrategySection']})){
+  for(const [name,ids] of Object.entries({current:['dgHero','alphaOrderSection','alphaAccountSection','alphaTaxSection'],analysis:['assetPaperPanel','alphaPerfSection','alphaMonthSection','alphaEvidenceSection'],history:['alphaHistorySection'],explain:['alphaStrategySection']})){
     c.setAssetDetail(name);
     assert.deepEqual(panels.filter(p=>!p.hidden).map(p=>p.id),ids);
     assert.equal(tabs.filter(t=>t['aria-selected']==='true').length,1);

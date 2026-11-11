@@ -168,7 +168,8 @@ th:first-child,td:first-child{text-align:left}
 .path-summary b{color:var(--gold)}
 .alpha-account-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .tax-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;font-variant-numeric:tabular-nums}.tax-table th,.tax-table td{padding:5px 6px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}.tax-table th:first-child,.tax-table td:first-child{text-align:left;white-space:normal}.tax-table th{color:var(--dim);font-weight:800;font-size:11px;white-space:normal}
-.tax-table tr.tax-sub th{padding-top:16px;border-top:1px solid var(--border2)}   /* 한 표 안 둘째 묶음 머리 — 칸 줄은 위 묶음과 같다 */
+.tax-table tr.tax-sub th{padding-top:16px;border-top:1px solid var(--border2)}
+#alphaMonthBody .tax-table tr.tot td{border-top:2px solid var(--border2);font-weight:800}   /* 월별 실현손익 합계 줄 */   /* 한 표 안 둘째 묶음 머리 — 칸 줄은 위 묶음과 같다 */
 .tax-sug{margin-top:10px;padding:10px 11px;border-radius:10px;background:var(--surf2);border:1px solid var(--border);font-size:12.5px;line-height:1.65}.tax-sug ul{margin:6px 0 0 18px;padding:0}.tax-foot{font-size:11px;color:var(--dim);margin-top:8px;line-height:1.55}
 .alpha-account-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
 .alpha-account-card{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:11px}
@@ -416,7 +417,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.10.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.11.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -446,7 +447,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
   <div class="dg-statusline" id="assetStatusline"><span class="asset-session-state" id="assetSessionState">현재 투자중</span><span class="dg-badges" id="assetStatusBadges"></span><button type="button" class="setpill" id="assetSettingsBtn" title="설정 — 시작자산 · 월 추가 투자 · 목표자산 · 시작일">⚙️ 설정</button></div>
   <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
     <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaTaxSection">현재</button>
-    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaPerfSection alphaEvidenceSection assetPaperPanel">분석</button>
+    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaPerfSection alphaMonthSection alphaEvidenceSection assetPaperPanel">분석</button>
     <button class="asset-detail-tab" id="assetHistoryTab" data-asset-detail="history" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaHistorySection">거래이력</button>
     <button class="asset-detail-tab" id="assetExplainTab" data-asset-detail="explain" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaStrategySection">설명</button>
   </nav>
@@ -557,6 +558,11 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="todaybox" id="alphaPerfSection" data-asset-view="analysis" hidden>
         <h3>📊 투자 성과 <span style="color:var(--dim);font-weight:600">넣은 돈 대비 · 팔아서 확정된 손익 포함</span></h3>
         <div id="alphaPerfBody">거래이력을 계산하는 중…</div>
+      </div>
+
+      <div class="todaybox" id="alphaMonthSection" data-asset-view="analysis" hidden>
+        <h3>📅 월별 실현손익 <span style="color:var(--dim);font-weight:600">팔아서 확정된 손익 · 거래이력 손익과 같은 값</span></h3>
+        <div id="alphaMonthBody">거래이력을 계산하는 중…</div>
       </div>
 
       <div class="todaybox" id="alphaEvidenceSection" data-asset-view="analysis" hidden>
@@ -3120,6 +3126,7 @@ function renderAlphaLedger(){
   if($('alphaAssetTotal'))$('alphaAssetTotal').textContent=usd2(assetTotal);
   if($('alphaAcctCashState')){$('alphaAcctCashState').textContent=S.cash<0?'현금 부족 '+usd2(Math.abs(S.cash)):'사용가능 '+usd2(S.cash);$('alphaAcctCashState').className='pl '+(S.cash<0?'neg':'pos');}
   if(typeof renderAlphaPerf==='function')renderAlphaPerf();   // 📊 투자 성과(분석 탭) — 계좌 카드와 같은 시세·거래이력
+  if(typeof renderAlphaMonth==='function')renderAlphaMonth();   // 📅 월별 실현손익(분석 탭) — 거래이력 표와 같은 손익
   if(typeof renderTaxCheck==='function')renderTaxCheck();   // 🧾 연말 세금 점검 — 계좌 카드와 같은 시세·거래이력 (장부만 떼어 돌리는 시험 문맥에선 없다)
   if($('alphaCashWarn')){const bad=S.cash<-.005;$('alphaCashWarn').hidden=!bad;if(bad)$('alphaCashWarn').textContent='현금이 '+usd2(S.cash)+'입니다. 기록된 매수금액+수수료가 시작 현금을 초과했습니다. 거래이력 또는 시작잔고를 실제 토스 계좌와 맞게 수정하세요.';}
   if($('alphaLedgerBody')){
@@ -3164,6 +3171,30 @@ function alphaTradeChartData(ledger){
     out[sym].trades.push({date:String(e.date||''),side:e.side==='sell'?'sell':'buy',qty:Math.floor(+e.qty||0),price:+e.price||0,pnl:e.side==='sell'&&pn&&Number.isFinite(pn.profit)?pn.profit:null});
   }
   return out;
+}
+/* 📅 월별 실현손익(분석 탭 · 2026-11-11 사용자 "매수매도가 있는 운영메뉴에 있는 전략들의 세션 분석 탭에 월별 실현손익 목록 추가") —
+   운영 무한매수법 · 밸류리밸런싱 표와 같은 모양(월 · 매도 · 손익금 · 손익률 · 합계 · 최근이 위로). 손익 = 거래이력 표의 tradePnl(매도 당시 평단 · 수수료 제외) ·
+   손익률 분모 = 시작자금(거래이력 손익률과 같은 분모 — 줄을 더하면 그 기간 손익률). 듀얼가드는 사이클이 없어 월별만. */
+function alphaMonthRows(ledger){
+  const L=ledger||{base:{},events:[]},S=alphaLedgerCalc(L),M=new Map();let unknown=0;
+  for(const e of alphaEventList(L)){
+    if(e.type!=='trade'||e.side!=='sell')continue;
+    const pn=S.tradePnl[e._i];if(!pn||!Number.isFinite(pn.profit)){unknown++;continue;}
+    const k=String(e.date||'').slice(0,7);if(k.length!==7)continue;
+    const m=M.get(k)||{month:k,n:0,p:0};m.n++;m.p+=pn.profit;M.set(k,m);
+  }
+  return {rows:[...M.values()].sort((a,b)=>a.month<b.month?1:-1),unknown};
+}
+function renderAlphaMonth(){
+  const el=$('alphaMonthBody');if(!el)return;
+  const R=alphaMonthRows(alphaLedger),cap=Math.max(0,num('startCapital')),col=v=>v>=0?'var(--green)':'var(--red)';
+  const amt=v=>'<span style="color:'+col(v)+'">'+(v>=0?'+':'')+usd2(v)+'</span>',pct=v=>cap>0?'<span style="color:'+col(v)+'">'+(v>=0?'+':'')+(v/cap*100).toFixed(2)+'%</span>':'—';
+  let h='<table class="tax-table"><thead><tr><th>월</th><th>매도</th><th>손익금</th><th>손익률</th></tr></thead><tbody>';
+  if(!R.rows.length)h+='<tr><td colspan="4" style="text-align:center;color:var(--dim)">매도 기록이 없습니다</td></tr>';
+  else{let n=0,t=0;h+=R.rows.map(m=>{n+=m.n;t+=m.p;return '<tr><td>'+m.month.replace('-','년 ')+'월</td><td>'+m.n+'</td><td>'+amt(m.p)+'</td><td>'+pct(m.p)+'</td></tr>';}).join('')
+    +'<tr class="tot"><td><b>합계</b></td><td>'+n+'</td><td>'+amt(t)+'</td><td>'+pct(t)+'</td></tr>';}
+  h+='</tbody></table><div class="alpha-perf-note">손익률은 시작자금 '+usd2(cap)+' 대비 — 줄을 더하면 그 기간 손익률입니다.'+(R.unknown?' 평단을 모르는 매도 '+R.unknown+'건은 빠졌습니다(분석 탭 투자 성과의 그 밖).':'')+'</div>';
+  el.innerHTML=h;
 }
 function renderAlphaTradeChart(){
   const el=$('alphaTradeChart'),sec=$('alphaHistorySection');
