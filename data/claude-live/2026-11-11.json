@@ -1,0 +1,301 @@
+{
+  "ok": true,
+  "date": "2026-11-11",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-11-11",
+    "mainVariant": "baseline",
+    "createdAt": "2026-11-11T06:40:55.731Z",
+    "updatedAt": "2026-11-11T15:05:39.215Z",
+    "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1794409536406,
+        "capturedAt": "2026-11-11T15:05:39.173Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:close30",
+        "scheduledTime": 1794379236406,
+        "capturedAt": "2026-11-11T06:40:58.631Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1794379236406,
+        "capturedAt": "2026-11-11T06:40:57.776Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1794379236406,
+        "capturedAt": "2026-11-11T06:40:55.623Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-11-11",
+        "capturedAt": "2026-11-11T15:05:39.173Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타",
+          "date": "2026-11-11",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 2,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "close:close30",
+        "date": "2026-11-11",
+        "capturedAt": "2026-11-11T06:40:58.631Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "close30",
+          "name": "⑤ 종가 30분 · 코스닥150 레버리지 장 마감 30분 반등(실험)",
+          "date": "2026-11-11",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "close30_dip_v1",
+          "params": {
+            "code": "233740",
+            "th": 0
+          },
+          "note": "15:00 전일 대비 +13.02% (기준 0% 미만 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:daytrading",
+        "date": "2026-11-11",
+        "capturedAt": "2026-11-11T06:40:57.776Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-11-11",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_etf_th4.75",
+          "params": {
+            "code": "233740",
+            "th": -4.75,
+            "max24h": true
+          },
+          "note": "15:21 예상 전일 대비 +14.43% (기준 −4.75% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-11-11",
+        "capturedAt": "2026-11-11T06:40:55.623Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-11-11",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "measure": [
+            {
+              "name": "삼화콘덴서",
+              "code": "001820",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:08",
+                "expectedPrice": 80200,
+                "basePrice": 83000,
+                "expectedGapPct": -3.3734939759036187,
+                "rsi14Prev": 28.329,
+                "qualified": 5,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 82400,
+              "exitTime": "10:00 매도",
+              "exitPrice": 85000,
+              "notional": 0,
+              "pnlPct": 2.5612621359223398,
+              "pnlAmount": 0,
+              "reason": "10:00 청산",
+              "exitAt": "2026-11-11T01:00:42.923Z",
+              "exitSource": "exit10"
+            },
+            {
+              "name": "두산",
+              "code": "000150",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:08",
+                "expectedPrice": 615000,
+                "basePrice": 636000,
+                "expectedGapPct": -3.301886792452835,
+                "rsi14Prev": 28.135,
+                "qualified": 5,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 624000,
+              "exitTime": "10:00 매도",
+              "exitPrice": 641000,
+              "notional": 0,
+              "pnlPct": 2.013589743589734,
+              "pnlAmount": 0,
+              "reason": "10:00 청산",
+              "exitAt": "2026-11-11T01:00:47.834Z",
+              "exitSource": "exit10"
+            },
+            {
+              "name": "씨젠",
+              "code": "096530",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:08",
+                "expectedPrice": 24300,
+                "basePrice": 25000,
+                "expectedGapPct": -2.8000000000000025,
+                "rsi14Prev": 21.609,
+                "qualified": 5,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 25000,
+              "exitTime": "10:00 매도",
+              "exitPrice": 24950,
+              "notional": 0,
+              "pnlPct": -1.0300000000000002,
+              "pnlAmount": 0,
+              "reason": "10:00 청산",
+              "exitAt": "2026-11-11T01:00:52.507Z",
+              "exitSource": "exit10"
+            }
+          ],
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "watched": 32,
+          "candidates": 5,
+          "entries": 0,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "exitRule": "exit10",
+          "note": "메인 매매일 아님(통과 5<7) — 측정용 주문은 전략 손익에 안 셈"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
