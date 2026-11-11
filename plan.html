@@ -425,7 +425,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.14.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.14.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1495,9 +1495,9 @@ async function replayAssetPaperSession(x,applyView,storedOnly){   // storedOnly 
 /* 세션 줄 — 운영 탭 세션바와 같은 칩: 누르면 전환(보고 있는 칩을 누르면 세션 설정) · 두 번 누르면 세션 설정 · 길게 눌러 끌면 순서 ·
    ✕ 는 보고 있는 세션에만 · 맨 끝 '+ 세션'. '현재 투자중'(Firebase 원장 fiveYearPlanV2)은 늘 맨 앞이고 지우거나 옮기지 않는다. */
 function renderAssetSessions(){
-  const b=assetPlanBox(),box=$('assetSessionChips'),st=$('assetSessionState');if(!box)return;
+  const box=$('assetSessionChips'),st=$('assetSessionState');if(!box)return;
   if(dgDragEl)return;                                   // 끄는 중엔 다시 그리지 않는다(손가락 밑 칩이 사라지지 않게)
-  const list=assetSessionList(),active=activeAssetSession(),gone=b.sessions.filter(x=>x&&planRetired(x)).length;
+  const list=assetSessionList(),active=activeAssetSession();
   const q=v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
   let h='<div class="dg-sesschip'+(!active?' on':'')+'" data-asess="" role="tab" aria-selected="'+(!active)+'" title="두 번 누르면 세션 설정">'+q(planCurLabel())+(assetRulesOf(null)==='panic'?'<span class="paperbadge">공포</span>':'')+'</div>';
   for(const x of list){
@@ -1508,11 +1508,12 @@ function renderAssetSessions(){
   h+='<div class="dg-sesschip add" data-asess-add="1" role="button">+ 세션</div>';
   box.innerHTML=h;
   if(st){
-    /* 운영 탭 상태줄처럼 세션 이름은 빼고(세션 줄과 겹친다) 전략 요약만 — 모의면 시작일 · 숨긴 예전 세션 수 */
-    const name=planStrategyLabelOf(active),tail=gone?' · 숨긴 예전 세션 '+gone+'개':'';
-    st.title=gone?'폐지된 세션(10·15·20년 · 새 규칙 · 공격형) — 기록은 그대로 두고 목록에서만 숨겼습니다':'';
-    if(active&&active.paper){st.className='asset-session-state paper';st.textContent=name+' · 모의 '+active.simStart+'~'+tail;}
-    else{st.className='asset-session-state';st.textContent=name+tail;}
+    /* 운영 탭 상태줄처럼 세션 이름은 빼고(세션 줄과 겹친다) 전략 요약만 — 모의면 시작일.
+       폐지된 기간·규칙으로 만든 예전 세션(목록에서 숨김 · 기록은 DB 에 그대로)의 수는 적지 않는다
+       (2026-11-12 사용자: "숨긴예전세션은 뭐길래 저기에 저렇게 보여주는거지" → "상태줄 글자만 뺍니다 · 5개는 DB에 그대로") */
+    const name=planStrategyLabelOf(active);
+    if(active&&active.paper){st.className='asset-session-state paper';st.textContent=name+' · 모의 '+active.simStart+'~';}
+    else{st.className='asset-session-state';st.textContent=name;}
   }
   renderPlanVersion();
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(dgStickyOffsets);
