@@ -1,0 +1,1340 @@
+[
+  {
+    "name": "daily",
+    "url": "https://jkquant.pages.dev/api/scalping-daily-results?refresh=1",
+    "retrievedAt": "2026-11-11T23:06:38.153510+00:00",
+    "http": 200,
+    "sha256": "e85affac649aad2d12d6c2239ae7c8f2f7d95c870bb67b29447fa1e7e6a3dcee",
+    "ok": true,
+    "keys": [
+      "ok",
+      "generatedAt",
+      "kstDate",
+      "dateRule",
+      "returnRule",
+      "sourceRule",
+      "strategies"
+    ],
+    "strategies": [
+      {
+        "strategy": "opening",
+        "status": "ok",
+        "current": {
+          "date": "2026-11-12",
+          "marketDate": null,
+          "pending": true,
+          "pendingReason": "KST 장 마감 후 기준전략 결과 확정",
+          "finalized": false,
+          "source": "kst-calendar"
+        },
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": -0.6957515555730531,
+          "sumPnlPct": -2.7830062222922125,
+          "trades": 4,
+          "wins": 2,
+          "losses": 2,
+          "noTrade": false,
+          "incomplete": false,
+          "finalized": true,
+          "source": "opening-operational-history",
+          "mainVariant": "combo_pb05_e0920",
+          "generatedAt": "2026-11-11T16:04:46+09:00",
+          "marketDate": null,
+          "timeZone": "Asia/Seoul"
+        },
+        "sourceWarnings": []
+      },
+      {
+        "strategy": "daytrading",
+        "status": "ok",
+        "current": {
+          "date": "2026-11-12",
+          "marketDate": null,
+          "pending": true,
+          "pendingReason": "KST 장 마감 후 기준전략 결과 확정",
+          "finalized": false,
+          "source": "kst-calendar"
+        },
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": -1.2500000000000009,
+          "sumPnlPct": -3.7500000000000027,
+          "trades": 3,
+          "wins": 0,
+          "losses": 3,
+          "noTrade": false,
+          "finalized": true,
+          "incomplete": false,
+          "source": "daytrading-paper-live",
+          "generatedAt": "2026-11-11T06:35:05.383Z",
+          "mainVariant": "baseline",
+          "marketDate": null,
+          "timeZone": "Asia/Seoul"
+        },
+        "sourceWarnings": []
+      },
+      {
+        "strategy": "crypto",
+        "status": "ok",
+        "current": {
+          "date": "2026-11-12",
+          "marketDate": null,
+          "pending": true,
+          "pendingReason": "KST 00:00~24:00 세션 종료 후 결과 확정",
+          "finalized": false,
+          "source": "kst-calendar"
+        },
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": 0,
+          "sumPnlPct": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "noTrade": true,
+          "finalized": true,
+          "incomplete": false,
+          "source": "global-paper-live",
+          "generatedAt": "2026-11-11T14:59:33.346Z",
+          "strategyVersion": "btc_midnight_orb_v2@baseline",
+          "marketDate": null,
+          "timeZone": "Asia/Seoul"
+        },
+        "sourceWarnings": []
+      },
+      {
+        "strategy": "soxl",
+        "status": "ok",
+        "current": {
+          "date": "2026-11-12",
+          "returnPct": 2.200000000000002,
+          "sumPnlPct": 2.200000000000002,
+          "trades": 1,
+          "wins": 1,
+          "losses": 0,
+          "noTrade": false,
+          "finalized": true,
+          "incomplete": false,
+          "source": "global-paper-live",
+          "generatedAt": "2026-11-11T21:05:33.054Z",
+          "strategyVersion": "soxl_orb_v1@baseline",
+          "marketDate": "2026-11-11",
+          "timeZone": "Asia/Seoul"
+        },
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": 0,
+          "sumPnlPct": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "noTrade": true,
+          "finalized": true,
+          "incomplete": false,
+          "source": "global-paper-live",
+          "generatedAt": "2026-11-10T21:05:32.807Z",
+          "strategyVersion": "soxl_orb_v1@baseline",
+          "marketDate": "2026-11-10",
+          "timeZone": "Asia/Seoul"
+        },
+        "sourceWarnings": []
+      }
+    ]
+  },
+  {
+    "name": "ranking",
+    "url": "https://jkquant.pages.dev/api/scalping-shadow-ranking",
+    "retrievedAt": "2026-11-11T23:06:38.155576+00:00",
+    "http": 200,
+    "sha256": "bbe90410fdb6e97873c4a4db9737f3f2763af83a18abcfdbfda5d4535ae2b5f5",
+    "ok": true,
+    "keys": [
+      "ok",
+      "generatedAt",
+      "date",
+      "autoPromotion",
+      "rankings"
+    ],
+    "rankings": {
+      "opening": {
+        "from": "2026-09-22",
+        "to": "2026-11-11",
+        "count": 10,
+        "leader": {
+          "name": "combo_pb05_e0920",
+          "consecutiveResearchSessions": 7,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-03",
+            "2026-11-04",
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11"
+          ]
+        },
+        "top": [
+          {
+            "name": "combo_pb05_e0920",
+            "trades": 61,
+            "researchScore": 87.04,
+            "promotionEligible": true
+          }
+        ]
+      },
+      "daytrading": {
+        "from": "2026-09-23",
+        "to": "2026-11-11",
+        "count": 10,
+        "leader": {
+          "name": "session_min_2",
+          "consecutiveResearchSessions": 5,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-04",
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-10",
+            "2026-11-11"
+          ]
+        },
+        "top": [
+          {
+            "name": "session_min_2",
+            "trades": 85,
+            "researchScore": 100,
+            "promotionEligible": false
+          }
+        ]
+      },
+      "crypto": {
+        "from": "2025-09-30",
+        "to": "2026-11-10",
+        "count": 10,
+        "leader": {
+          "name": "hold_30m",
+          "consecutiveResearchSessions": 1,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-10"
+          ]
+        },
+        "top": [
+          {
+            "name": "hold_30m",
+            "trades": 208,
+            "researchScore": 76.12,
+            "promotionEligible": false
+          }
+        ]
+      },
+      "soxl": {
+        "from": "2026-09-25",
+        "to": "2026-11-10",
+        "count": 10,
+        "leader": {
+          "name": "stop_0.8_tp_1.6",
+          "consecutiveResearchSessions": 2,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-09",
+            "2026-11-10"
+          ]
+        },
+        "top": [
+          {
+            "name": "stop_0.8_tp_1.6",
+            "trades": 11,
+            "researchScore": 68.83,
+            "promotionEligible": false
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "tenbagger",
+    "url": "https://jkquant.pages.dev/api/tenbagger-research",
+    "retrievedAt": "2026-11-11T23:06:38.156573+00:00",
+    "http": 200,
+    "sha256": "57bdc354aa75efcdff2b7fefcf049fc8db6ad149e7c40dca8f1fdfda5ed129fc",
+    "ok": true,
+    "keys": [
+      "ok",
+      "schemaVersion",
+      "strategyVersion",
+      "status",
+      "generatedAt",
+      "asOf",
+      "registeredAt",
+      "rules",
+      "rulesSha256",
+      "source",
+      "coverage",
+      "candidates",
+      "records",
+      "patternStats",
+      "newRegistrations",
+      "entered"
+    ],
+    "summary": {
+      "status": "prospective_experiment",
+      "asOf": "2026-11-10",
+      "generatedAt": "2026-11-11T17:59:28.517146+00:00",
+      "summary": null,
+      "sourceWarnings": null
+    },
+    "reportKeys": []
+  },
+  {
+    "name": "duel",
+    "url": "https://jkquant.pages.dev/api/scalping-duel",
+    "retrievedAt": "2026-11-11T23:06:38.156573+00:00",
+    "http": 200,
+    "sha256": "b57e913e04f92f645493e8c5c9645c99dd19e9045d2c965c7d04d42ab145d46b",
+    "ok": true,
+    "keys": [
+      "ok",
+      "report"
+    ],
+    "error": null,
+    "summary": {
+      "from": null,
+      "to": null,
+      "generatedAt": null,
+      "status": null
+    }
+  },
+  {
+    "name": "opening",
+    "url": "https://jkquant.pages.dev/api/scalping-history?strategy=opening&from=2026-10-01&to=2026-11-11",
+    "retrievedAt": "2026-11-11T23:06:39.011277+00:00",
+    "http": 200,
+    "sha256": "b6ed383c2dab936807b808786eb7cc4ac037f96a6499c1991f62ec218f0ed2b3",
+    "ok": true,
+    "keys": [
+      "ok",
+      "strategy",
+      "variant",
+      "market",
+      "source",
+      "durableDbDays",
+      "status",
+      "sourceWarnings",
+      "total",
+      "filtered",
+      "page",
+      "pageSize",
+      "pages",
+      "trades",
+      "summary"
+    ],
+    "summary": {
+      "status": "ok",
+      "summary": {
+        "trades": 113,
+        "wins": 43,
+        "losses": 70,
+        "winRate": 38.05309734513274,
+        "avgPnl": -0.5242563830290967,
+        "avgWin": 0.792890740679248,
+        "avgLoss": -1.3333610447356512,
+        "from": "2026-10-02",
+        "to": "2026-11-11",
+        "currentDrawdownPct": -10.853041030752253,
+        "maxDrawdownPct": -10.96864567552297,
+        "lossStreakTradeDays": 0,
+        "weekStart": "2026-11-09",
+        "weeklyReturnPct": -1.0340525325032157,
+        "weeklyTargetPct": 5,
+        "weeklyTargetGapPct": 6.034052532503216,
+        "recentDaily": [
+          {
+            "date": "2026-11-11",
+            "returnPct": 0.12984711470230434,
+            "trades": 4
+          },
+          {
+            "date": "2026-11-10",
+            "returnPct": -1.162390316917421,
+            "trades": 20
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": -2.2015319141278735,
+            "trades": 2
+          },
+          {
+            "date": "2026-11-04",
+            "returnPct": -2.2239232814280263,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-03",
+            "returnPct": 0.9094693525346808,
+            "trades": 3
+          }
+        ],
+        "dailySeries": [
+          {
+            "date": "2026-10-02",
+            "returnPct": -1.2669821043386493,
+            "trades": 4
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.268025311637961,
+            "trades": 7
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -2.5497220257425637,
+            "trades": 2
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": 0.15894560970601854,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": 0.90765642775882,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.9496904557179733,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.5247980925841813,
+            "trades": 11
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": 0.04455041934266234,
+            "trades": 21
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": 0.6725270758122779,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": 0.39240663900414363,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -0.41872881200259804,
+            "trades": 24
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.8373469143844413,
+            "trades": 6
+          },
+          {
+            "date": "2026-11-02",
+            "returnPct": -1.159368029739777,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-03",
+            "returnPct": 0.9094693525346808,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-04",
+            "returnPct": -2.2239232814280263,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": -2.2015319141278735,
+            "trades": 2
+          },
+          {
+            "date": "2026-11-10",
+            "returnPct": -1.162390316917421,
+            "trades": 20
+          },
+          {
+            "date": "2026-11-11",
+            "returnPct": 0.12984711470230434,
+            "trades": 4
+          }
+        ]
+      },
+      "risk": null,
+      "days": null,
+      "statistics": null,
+      "warnings": null,
+      "sourceWarnings": [],
+      "generatedAt": null
+    },
+    "recent": [
+      {
+        "date": "2026-11-11",
+        "code": "437730",
+        "name": "삼현",
+        "strategyVersion": "opening_rebreak_v1",
+        "signalTime": "09:17",
+        "entryTime": "09:17",
+        "entryPrice": 42950,
+        "exitTime": "09:19",
+        "exitPrice": 43700,
+        "reason": "익절",
+        "pnl": 0.9341443538998894,
+        "rank": null,
+        "detail": {
+          "gap": null,
+          "pullbackPct": null,
+          "volRatio": null,
+          "amountRatio": null
+        }
+      },
+      {
+        "date": "2026-11-11",
+        "code": "0158S0",
+        "name": "엘리스",
+        "strategyVersion": "opening_rebreak_v1",
+        "signalTime": "09:13",
+        "entryTime": "09:13",
+        "entryPrice": 76300,
+        "exitTime": "09:17",
+        "exitPrice": 75500,
+        "reason": "손절",
+        "pnl": -1.9338007863695905,
+        "rank": null,
+        "detail": {
+          "gap": null,
+          "pullbackPct": null,
+          "volRatio": null,
+          "amountRatio": null
+        }
+      }
+    ]
+  },
+  {
+    "name": "daytrading",
+    "url": "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading&from=2026-10-01&to=2026-11-11",
+    "retrievedAt": "2026-11-11T23:06:39.156437+00:00",
+    "http": 200,
+    "sha256": "28407cb52335623acdccc79577229dfd81de9630c2d043b6fa2a4559f79f2aa4",
+    "ok": true,
+    "keys": [
+      "ok",
+      "strategy",
+      "variant",
+      "market",
+      "source",
+      "durableDbDays",
+      "status",
+      "sourceWarnings",
+      "total",
+      "filtered",
+      "page",
+      "pageSize",
+      "pages",
+      "trades",
+      "summary"
+    ],
+    "summary": {
+      "status": "ok",
+      "summary": {
+        "trades": 81,
+        "wins": 22,
+        "losses": 59,
+        "winRate": 27.160493827160494,
+        "avgPnl": -0.48346067776220814,
+        "avgWin": 1.531465872901147,
+        "avgLoss": -1.2347892220773575,
+        "from": "2026-10-01",
+        "to": "2026-11-11",
+        "currentDrawdownPct": -12.989641704102128,
+        "maxDrawdownPct": -12.989641704102128,
+        "lossStreakTradeDays": 3,
+        "weekStart": "2026-11-09",
+        "weeklyReturnPct": -2.7281640624999826,
+        "weeklyTargetPct": 5,
+        "weeklyTargetGapPct": 7.728164062499983,
+        "recentDaily": [
+          {
+            "date": "2026-11-11",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-10",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-09",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-06",
+            "returnPct": 1.7500000000000018,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": -0.7164117968323334,
+            "trades": 3
+          }
+        ],
+        "dailySeries": [
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.7500000000000046,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-05",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.5292211467708139,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": -0.41666666666666696,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": -1.2499999999999971,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0.7500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": -0.8333333333333339,
+            "trades": 2
+          },
+          {
+            "date": "2026-11-02",
+            "returnPct": 0.19219464402351547,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-03",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-04",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": -0.7164117968323334,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-06",
+            "returnPct": 1.7500000000000018,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-09",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-10",
+            "returnPct": -0.25,
+            "trades": 3
+          },
+          {
+            "date": "2026-11-11",
+            "returnPct": -1.2500000000000009,
+            "trades": 3
+          }
+        ]
+      },
+      "risk": null,
+      "days": null,
+      "statistics": null,
+      "warnings": null,
+      "sourceWarnings": [],
+      "generatedAt": null
+    },
+    "recent": [
+      {
+        "recordOrigin": "live-paper",
+        "capitalSlots": 3,
+        "date": "2026-11-11",
+        "code": "000660",
+        "name": "SK하이닉스",
+        "strategyVersion": "daytrading_vwap_breakout_v1@baseline",
+        "signalTime": "10:00",
+        "entryTime": "10:01",
+        "entryPrice": 1227000,
+        "exitTime": "10:09",
+        "exitPrice": 1214730,
+        "reason": "stop",
+        "pnl": -1.2500000000000009,
+        "rank": 2,
+        "detail": {
+          "source": "durable-paper-db",
+          "mainVariant": "baseline"
+        }
+      },
+      {
+        "recordOrigin": "live-paper",
+        "capitalSlots": 3,
+        "date": "2026-11-11",
+        "code": "395270",
+        "name": "HANARO Fn K-반도체",
+        "strategyVersion": "daytrading_vwap_breakout_v1@baseline",
+        "signalTime": "10:00",
+        "entryTime": "10:01",
+        "entryPrice": 40700,
+        "exitTime": "10:08",
+        "exitPrice": 40293,
+        "reason": "stop",
+        "pnl": -1.2500000000000009,
+        "rank": 78,
+        "detail": {
+          "source": "durable-paper-db",
+          "mainVariant": "baseline"
+        }
+      }
+    ]
+  },
+  {
+    "name": "crypto",
+    "url": "https://jkquant.pages.dev/api/scalping-history?strategy=crypto&from=2026-10-01&to=2026-11-11",
+    "retrievedAt": "2026-11-11T23:06:39.415974+00:00",
+    "http": 200,
+    "sha256": "64429c530514ce82d3e42b54c01214bdf123654cee6e20f481b75c7aa82d0a5d",
+    "ok": true,
+    "keys": [
+      "ok",
+      "strategy",
+      "variant",
+      "market",
+      "source",
+      "durableDbDays",
+      "status",
+      "sourceWarnings",
+      "total",
+      "filtered",
+      "page",
+      "pageSize",
+      "pages",
+      "trades",
+      "summary"
+    ],
+    "summary": {
+      "status": "degraded",
+      "summary": {
+        "trades": 23,
+        "wins": 6,
+        "losses": 17,
+        "winRate": 26.08695652173913,
+        "avgPnl": -0.2097655557727774,
+        "avgWin": 0.2660358273764238,
+        "avgLoss": -0.3776954557077897,
+        "from": "2026-10-04",
+        "to": "2026-11-10",
+        "currentDrawdownPct": -5.3909976517167895,
+        "maxDrawdownPct": -5.3909976517167895,
+        "lossStreakTradeDays": 7,
+        "weekStart": "2026-11-09",
+        "weeklyReturnPct": -0.487626834833188,
+        "weeklyTargetPct": 5,
+        "weeklyTargetGapPct": 5.487626834833188,
+        "recentDaily": [
+          {
+            "date": "2026-11-10",
+            "returnPct": -0.48762683483319236,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-08",
+            "returnPct": -0.17378769741668731,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": -0.2297558086813244,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-04",
+            "returnPct": -0.332350019617793,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-03",
+            "returnPct": -0.6400000000000005,
+            "trades": 1
+          }
+        ],
+        "dailySeries": [
+          {
+            "date": "2026-10-04",
+            "returnPct": -0.21715380480953772,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-05",
+            "returnPct": -0.3387075370632807,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": 0.3248860763968754,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-09",
+            "returnPct": 0.5057891012031203,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-11",
+            "returnPct": -0.14,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": 0.45468500278758717,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": 0.11332999140648126,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": -0.6400000000000005,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -0.5598092429949396,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": 0.12736523711785586,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-17",
+            "returnPct": -0.17167277498755673,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": -0.6400000000000005,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": -0.16070561122063942,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-24",
+            "returnPct": -0.48291357663432943,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": -0.2943783944646937,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": 0.07015955534662288,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-31",
+            "returnPct": -0.6400000000000005,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-02",
+            "returnPct": -0.27196144430844826,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-03",
+            "returnPct": -0.6400000000000005,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-04",
+            "returnPct": -0.332350019617793,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": -0.2297558086813244,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-08",
+            "returnPct": -0.17378769741668731,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-10",
+            "returnPct": -0.48762683483319236,
+            "trades": 1
+          }
+        ]
+      },
+      "risk": null,
+      "days": null,
+      "statistics": null,
+      "warnings": null,
+      "sourceWarnings": [
+        "장중 모의장부 조회 실패: The operation was aborted"
+      ],
+      "generatedAt": null
+    },
+    "recent": [
+      {
+        "date": "2026-11-10",
+        "code": "KRW-BTC",
+        "name": "비트코인",
+        "strategyVersion": "btc_midnight_orb_v2",
+        "signalTime": "00:15",
+        "entryTime": "00:20",
+        "entryPrice": 102121000,
+        "exitTime": "01:15",
+        "exitPrice": 101766000,
+        "reason": "time_exit",
+        "pnl": -0.48762683483319236,
+        "rank": null,
+        "detail": {
+          "openingHigh": 101782000,
+          "signalVwap": 101801698.66824311,
+          "volRatio": 2.3482344559902955
+        }
+      },
+      {
+        "date": "2026-11-08",
+        "code": "KRW-BTC",
+        "name": "비트코인",
+        "strategyVersion": "btc_midnight_orb_v2",
+        "signalTime": "12:35",
+        "entryTime": "12:40",
+        "entryPrice": 103588000,
+        "exitTime": "13:35",
+        "exitPrice": 103553000,
+        "reason": "time_exit",
+        "pnl": -0.17378769741668731,
+        "rank": null,
+        "detail": {
+          "openingHigh": 103557000,
+          "signalVwap": 103452694.41554783,
+          "volRatio": 10.458642746188943
+        }
+      }
+    ]
+  },
+  {
+    "name": "soxl",
+    "url": "https://jkquant.pages.dev/api/scalping-history?strategy=soxl&from=2026-10-01&to=2026-11-11",
+    "retrievedAt": "2026-11-11T23:06:40.127096+00:00",
+    "http": 200,
+    "sha256": "25502fa9ecbfd8785f494901c6cf88f6f8c4404a3176ec00809ae10b7b3340af",
+    "ok": true,
+    "keys": [
+      "ok",
+      "strategy",
+      "variant",
+      "market",
+      "source",
+      "durableDbDays",
+      "status",
+      "sourceWarnings",
+      "total",
+      "filtered",
+      "page",
+      "pageSize",
+      "pages",
+      "trades",
+      "summary"
+    ],
+    "summary": {
+      "status": "ok",
+      "summary": {
+        "trades": 13,
+        "wins": 4,
+        "losses": 9,
+        "winRate": 30.76923076923077,
+        "avgPnl": -0.29230769230769243,
+        "avgWin": 2.200000000000002,
+        "avgLoss": -1.4000000000000008,
+        "from": "2026-10-02",
+        "to": "2026-11-11",
+        "currentDrawdownPct": -3.9061004532418564,
+        "maxDrawdownPct": -9.397870668170306,
+        "lossStreakTradeDays": 0,
+        "weekStart": "2026-11-09",
+        "weeklyReturnPct": 2.200000000000002,
+        "weeklyTargetPct": 5,
+        "weeklyTargetGapPct": 2.799999999999998,
+        "recentDaily": [
+          {
+            "date": "2026-11-11",
+            "returnPct": 2.200000000000002,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-10",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-11-09",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-11-06",
+            "returnPct": -1.400000000000001,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": 0,
+            "trades": 0
+          }
+        ],
+        "dailySeries": [
+          {
+            "date": "2026-10-01",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -1.400000000000001,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-05",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-06",
+            "returnPct": -1.400000000000001,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -1.400000000000001,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-08",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-09",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-12",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-13",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-14",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-15",
+            "returnPct": -1.400000000000001,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-16",
+            "returnPct": -1.400000000000001,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-19",
+            "returnPct": -1.4000000000000121,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-20",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-21",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-22",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-23",
+            "returnPct": -1.400000000000001,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-26",
+            "returnPct": 2.200000000000002,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-27",
+            "returnPct": 2.200000000000002,
+            "trades": 1
+          },
+          {
+            "date": "2026-10-28",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-29",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-10-30",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-11-02",
+            "returnPct": 2.200000000000002,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-03",
+            "returnPct": -1.39999999999999,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-04",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-11-05",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-11-06",
+            "returnPct": -1.400000000000001,
+            "trades": 1
+          },
+          {
+            "date": "2026-11-09",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-11-10",
+            "returnPct": 0,
+            "trades": 0
+          },
+          {
+            "date": "2026-11-11",
+            "returnPct": 2.200000000000002,
+            "trades": 1
+          }
+        ]
+      },
+      "risk": null,
+      "days": null,
+      "statistics": null,
+      "warnings": null,
+      "sourceWarnings": [],
+      "generatedAt": null
+    },
+    "recent": [
+      {
+        "recordOrigin": "live-paper",
+        "capitalSlots": 1,
+        "date": "2026-11-11",
+        "code": "SOXL",
+        "name": "SOXL",
+        "strategyVersion": "soxl_orb_v1@baseline",
+        "signalTime": "10:25",
+        "entryTime": "10:30",
+        "entryPrice": 64.9800033569336,
+        "exitTime": "10:50",
+        "exitPrice": 66.5395234375,
+        "reason": "take_profit",
+        "pnl": 2.200000000000002,
+        "rank": null,
+        "detail": {
+          "source": "durable-paper-db",
+          "mainVariant": "baseline"
+        }
+      },
+      {
+        "recordOrigin": "live-paper",
+        "capitalSlots": 1,
+        "date": "2026-11-06",
+        "code": "SOXL",
+        "name": "SOXL",
+        "strategyVersion": "soxl_orb_v1@baseline",
+        "signalTime": "09:45",
+        "entryTime": "09:50",
+        "entryPrice": 49.2599983215332,
+        "exitTime": "09:50",
+        "exitPrice": 48.668878341674805,
+        "reason": "stop",
+        "pnl": -1.400000000000001,
+        "rank": null,
+        "detail": {
+          "source": "durable-paper-db",
+          "mainVariant": "baseline"
+        }
+      }
+    ]
+  },
+  {
+    "name": "closing30",
+    "url": "https://jkquant.pages.dev/api/scalping-history?strategy=closing30&from=2026-10-01&to=2026-11-11",
+    "retrievedAt": "2026-11-11T23:06:46.884148+00:00",
+    "http": 400,
+    "sha256": "ead9e65160705c7936934b3cf8cdf715738f1944e6b747609579e6e9c4f6a0a9",
+    "ok": false,
+    "keys": [
+      "ok",
+      "error"
+    ],
+    "error": "strategy must be opening|daytrading|crypto|soxl",
+    "summary": {
+      "from": null,
+      "to": null,
+      "generatedAt": null,
+      "status": null
+    }
+  },
+  {
+    "name": "closing_bet",
+    "url": "https://jkquant.pages.dev/api/scalping-history?strategy=closing_bet&from=2026-10-01&to=2026-11-11",
+    "retrievedAt": "2026-11-11T23:06:47.016006+00:00",
+    "http": 400,
+    "sha256": "ead9e65160705c7936934b3cf8cdf715738f1944e6b747609579e6e9c4f6a0a9",
+    "ok": false,
+    "keys": [
+      "ok",
+      "error"
+    ],
+    "error": "strategy must be opening|daytrading|crypto|soxl",
+    "summary": {
+      "from": null,
+      "to": null,
+      "generatedAt": null,
+      "status": null
+    }
+  }
+]

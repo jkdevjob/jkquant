@@ -1,0 +1,1004 @@
+{
+  "research": "G6",
+  "preregistration": "3a43ec2e374d5e09356e5bef22f10f78d988175e",
+  "sourceSha": "31c81e56c577f19db5d12164cb68ec542a014a01",
+  "generatedAt": "2026-11-11T23:08:03.097865+00:00",
+  "lastSignalDate": "2026-11-11",
+  "feesPct": 0.23,
+  "stressAdditionalPct": 0.1,
+  "fixedSlots": 3,
+  "sourceLedgers": 15,
+  "sourceRows": 811,
+  "strategies": {
+    "closing30": {
+      "kind": "day",
+      "commonDates": [
+        "2026-11-02",
+        "2026-11-05",
+        "2026-11-06",
+        "2026-11-09",
+        "2026-11-10"
+      ],
+      "metrics": {
+        "baseline": {
+          "net": {
+            "trades": 15,
+            "observedDays": 5,
+            "tradingDays": 5,
+            "winRate": 20.0,
+            "avgPnl": -0.27735204807786734,
+            "expectancyPct": -0.27735204807786734,
+            "avgWin": 0.5197259611315791,
+            "avgLoss": -0.47662155038022896,
+            "profitFactor": 0.2726093484007192,
+            "mddPct": -1.6247615133831772,
+            "worst": -0.7335493367488505,
+            "dailyAvgPct": -0.2773520480778674,
+            "totalReturnPct": -1.3838642799882561,
+            "goalDays": 0,
+            "unsettled": 0,
+            "currentDrawdownPct": -1.6247615133831772,
+            "lossStreakTradeDays": 3,
+            "weekStart": "2026-11-09",
+            "weeklyReturnPct": -1.004415790444646,
+            "weeklyTargetGapPct": 6.0044157904446465,
+            "daily": [
+              {
+                "date": "2026-11-02",
+                "returnPct": -0.2734289971589415,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-05",
+                "returnPct": 0.5197259611315791,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": -0.6266397919581607,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-09",
+                "returnPct": -0.7335493367488505,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": -0.27286807565496335,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              }
+            ],
+            "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+          },
+          "extraCost010pp": {
+            "trades": 15,
+            "observedDays": 5,
+            "tradingDays": 5,
+            "winRate": 20.0,
+            "avgPnl": -0.3773520480778674,
+            "expectancyPct": -0.3773520480778674,
+            "avgWin": 0.4197259611315792,
+            "avgLoss": -0.576621550380229,
+            "profitFactor": 0.18197635904121534,
+            "mddPct": -1.9212054402655943,
+            "worst": -0.8335493367488505,
+            "dailyAvgPct": -0.3773520480778674,
+            "totalReturnPct": -1.8773352019709422,
+            "goalDays": 0,
+            "unsettled": 0,
+            "currentDrawdownPct": -1.9212054402655943,
+            "lossStreakTradeDays": 3,
+            "weekStart": "2026-11-09",
+            "weeklyReturnPct": -1.2033093730322464,
+            "weeklyTargetGapPct": 6.203309373032246,
+            "daily": [
+              {
+                "date": "2026-11-02",
+                "returnPct": -0.2734289971589415,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-05",
+                "returnPct": 0.5197259611315791,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": -0.6266397919581607,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-09",
+                "returnPct": -0.7335493367488505,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": -0.27286807565496335,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              }
+            ],
+            "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+          },
+          "timeBlocks": [
+            {
+              "from": "2026-11-02",
+              "to": "2026-11-02",
+              "accountSumPct": -0.2734289971589415,
+              "days": 1
+            },
+            {
+              "from": "2026-11-05",
+              "to": "2026-11-06",
+              "accountSumPct": -0.10691383082658157,
+              "days": 2
+            },
+            {
+              "from": "2026-11-09",
+              "to": "2026-11-10",
+              "accountSumPct": -1.0064174124038139,
+              "days": 2
+            }
+          ],
+          "positiveBlockFraction": 0.0
+        },
+        "dip_1": {
+          "net": {
+            "trades": 15,
+            "observedDays": 5,
+            "tradingDays": 5,
+            "winRate": 20.0,
+            "avgPnl": -0.329891764145504,
+            "expectancyPct": -0.329891764145504,
+            "avgWin": 0.5197259611315791,
+            "avgLoss": -0.5422961954647748,
+            "profitFactor": 0.2395950614618217,
+            "mddPct": -1.6436377645428046,
+            "worst": -0.7335493367488505,
+            "dailyAvgPct": -0.32989176414550403,
+            "totalReturnPct": -1.6436377645428046,
+            "goalDays": 0,
+            "unsettled": 0,
+            "currentDrawdownPct": -1.6436377645428046,
+            "lossStreakTradeDays": 3,
+            "weekStart": "2026-11-09",
+            "weeklyReturnPct": -1.004415790444646,
+            "weeklyTargetGapPct": 6.0044157904446465,
+            "daily": [
+              {
+                "date": "2026-11-02",
+                "returnPct": -0.5361275774971247,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-05",
+                "returnPct": 0.5197259611315791,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": -0.6266397919581607,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-09",
+                "returnPct": -0.7335493367488505,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": -0.27286807565496335,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              }
+            ],
+            "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+          },
+          "extraCost010pp": {
+            "trades": 15,
+            "observedDays": 5,
+            "tradingDays": 5,
+            "winRate": 20.0,
+            "avgPnl": -0.429891764145504,
+            "expectancyPct": -0.429891764145504,
+            "avgWin": 0.4197259611315792,
+            "avgLoss": -0.6422961954647748,
+            "profitFactor": 0.16336931624974807,
+            "mddPct": -2.1360682335505143,
+            "worst": -0.8335493367488505,
+            "dailyAvgPct": -0.429891764145504,
+            "totalReturnPct": -2.1360682335505143,
+            "goalDays": 0,
+            "unsettled": 0,
+            "currentDrawdownPct": -2.1360682335505143,
+            "lossStreakTradeDays": 3,
+            "weekStart": "2026-11-09",
+            "weeklyReturnPct": -1.2033093730322464,
+            "weeklyTargetGapPct": 6.203309373032246,
+            "daily": [
+              {
+                "date": "2026-11-02",
+                "returnPct": -0.5361275774971247,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-05",
+                "returnPct": 0.5197259611315791,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": -0.6266397919581607,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-09",
+                "returnPct": -0.7335493367488505,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": -0.27286807565496335,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              }
+            ],
+            "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+          },
+          "timeBlocks": [
+            {
+              "from": "2026-11-02",
+              "to": "2026-11-02",
+              "accountSumPct": -0.5361275774971247,
+              "days": 1
+            },
+            {
+              "from": "2026-11-05",
+              "to": "2026-11-06",
+              "accountSumPct": -0.10691383082658157,
+              "days": 2
+            },
+            {
+              "from": "2026-11-09",
+              "to": "2026-11-10",
+              "accountSumPct": -1.0064174124038139,
+              "days": 2
+            }
+          ],
+          "positiveBlockFraction": 0.0
+        }
+      },
+      "walkForward": {
+        "folds": [],
+        "evaluationDays": 0,
+        "dailyAvgPct": null,
+        "baselineDailyAvgPct": null,
+        "candidateSelections": 0,
+        "passed": false,
+        "rule": "expanding first20 complete common sessions -> next5; train-only choice; no partial last fold"
+      },
+      "coverage": {
+        "baseline": {
+          "recordedSignals": 42,
+          "closed": 28,
+          "unsettled": 14,
+          "completeAccountDays": 5,
+          "completeButNotCommonDates": [],
+          "missingVersion": 0
+        },
+        "dip_1": {
+          "recordedSignals": 42,
+          "closed": 29,
+          "unsettled": 13,
+          "completeAccountDays": 6,
+          "completeButNotCommonDates": [
+            "2026-10-27"
+          ],
+          "missingVersion": 0
+        }
+      },
+      "checks": {
+        "commonTotalTrades30": false,
+        "positiveExpectancy": false,
+        "profitFactor110": false,
+        "mddMinus15": true,
+        "worstMinus8": true,
+        "positiveBlocks60pct": false,
+        "sameDatesDailyEdge": false,
+        "walkForward": false,
+        "costStress": false,
+        "postRegistration20TradeDays20Trades": false,
+        "sevenDistinctLeadersAndScore60": false
+      },
+      "blockedReasons": [
+        "commonTotalTrades30",
+        "positiveExpectancy",
+        "profitFactor110",
+        "positiveBlocks60pct",
+        "sameDatesDailyEdge",
+        "walkForward",
+        "costStress",
+        "postRegistration20TradeDays20Trades",
+        "sevenDistinctLeadersAndScore60"
+      ],
+      "verdict": "retain_current_main",
+      "newForwardDays": 0,
+      "newForwardTrades": 0
+    },
+    "closing_bet": {
+      "kind": "overnight",
+      "commonDates": [
+        "2026-10-23",
+        "2026-10-26",
+        "2026-10-27",
+        "2026-10-28",
+        "2026-10-29",
+        "2026-10-30",
+        "2026-11-02",
+        "2026-11-03",
+        "2026-11-05",
+        "2026-11-06",
+        "2026-11-09",
+        "2026-11-10"
+      ],
+      "metrics": {
+        "baseline": {
+          "net": {
+            "trades": 36,
+            "observedDays": 12,
+            "tradingDays": 12,
+            "winRate": 36.111111111111114,
+            "avgPnl": -0.9982508699878017,
+            "expectancyPct": -0.9982508699878017,
+            "avgWin": 3.1560114931160914,
+            "avgLoss": -3.3463122056552193,
+            "profitFactor": 0.5330741644640824,
+            "mddPct": -18.388383699642198,
+            "worst": -13.304809939442386,
+            "dailyAvgPct": -0.9982508699878015,
+            "totalReturnPct": -12.523813324642463,
+            "goalDays": 3,
+            "unsettled": 0,
+            "currentDrawdownPct": -14.07937245207702,
+            "lossStreakTradeDays": 0,
+            "weekStart": "2026-11-09",
+            "weeklyReturnPct": 5.279899410038125,
+            "weeklyTargetGapPct": 0,
+            "daily": [
+              {
+                "date": "2026-10-23",
+                "returnPct": -1.9443712805708369,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-26",
+                "returnPct": 3.4386720671736577,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-27",
+                "returnPct": 0.3776299451525806,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-28",
+                "returnPct": -1.4652432547650764,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-29",
+                "returnPct": -4.594344162939959,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-30",
+                "returnPct": -2.3311258863714834,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-02",
+                "returnPct": 0.40111209912741036,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-03",
+                "returnPct": 3.60396352458892,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-05",
+                "returnPct": -13.304809939442386,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": -1.4350897219225551,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-09",
+                "returnPct": 5.17205984846908,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": 0.10253632164702935,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              }
+            ],
+            "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+          },
+          "extraCost010pp": {
+            "trades": 36,
+            "observedDays": 12,
+            "tradingDays": 12,
+            "winRate": 36.111111111111114,
+            "avgPnl": -1.0982508699878015,
+            "expectancyPct": -1.0982508699878015,
+            "avgWin": 3.0560114931160913,
+            "avgLoss": -3.4463122056552193,
+            "profitFactor": 0.501205561440648,
+            "mddPct": -18.975487161677528,
+            "worst": -13.404809939442385,
+            "dailyAvgPct": -1.0982508699878015,
+            "totalReturnPct": -13.580644409259591,
+            "goalDays": 3,
+            "unsettled": 0,
+            "currentDrawdownPct": -14.863716103355507,
+            "lossStreakTradeDays": 0,
+            "weekStart": "2026-11-09",
+            "weeklyReturnPct": 5.0747248138680146,
+            "weeklyTargetGapPct": 0,
+            "daily": [
+              {
+                "date": "2026-10-23",
+                "returnPct": -1.9443712805708369,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-26",
+                "returnPct": 3.4386720671736577,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-27",
+                "returnPct": 0.3776299451525806,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-28",
+                "returnPct": -1.4652432547650764,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-29",
+                "returnPct": -4.594344162939959,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-30",
+                "returnPct": -2.3311258863714834,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-02",
+                "returnPct": 0.40111209912741036,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-03",
+                "returnPct": 3.60396352458892,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-05",
+                "returnPct": -13.304809939442386,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": -1.4350897219225551,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-09",
+                "returnPct": 5.17205984846908,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": 0.10253632164702935,
+                "trades": 3,
+                "mainVariant": "baseline",
+                "source": "closing30-paper-live",
+                "finalized": true
+              }
+            ],
+            "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+          },
+          "timeBlocks": [
+            {
+              "from": "2026-10-23",
+              "to": "2026-10-28",
+              "accountSumPct": 0.406687476990325,
+              "days": 4
+            },
+            {
+              "from": "2026-10-29",
+              "to": "2026-11-03",
+              "accountSumPct": -2.920394425595112,
+              "days": 4
+            },
+            {
+              "from": "2026-11-05",
+              "to": "2026-11-10",
+              "accountSumPct": -9.465303491248832,
+              "days": 4
+            }
+          ],
+          "positiveBlockFraction": 0.3333333333333333
+        },
+        "dip_1": {
+          "net": {
+            "trades": 36,
+            "observedDays": 12,
+            "tradingDays": 12,
+            "winRate": 38.888888888888886,
+            "avgPnl": -0.9578666533676171,
+            "expectancyPct": -0.9578666533676171,
+            "avgWin": 3.083316977725045,
+            "avgLoss": -3.5295289640629472,
+            "profitFactor": 0.555912934554361,
+            "mddPct": -17.990511199865733,
+            "worst": -13.304809939442386,
+            "dailyAvgPct": -0.957866653367617,
+            "totalReturnPct": -12.096387352874682,
+            "goalDays": 4,
+            "unsettled": 0,
+            "currentDrawdownPct": -13.660492684532155,
+            "lossStreakTradeDays": 0,
+            "weekStart": "2026-11-09",
+            "weeklyReturnPct": 5.279899410038125,
+            "weeklyTargetGapPct": 0,
+            "daily": [
+              {
+                "date": "2026-10-23",
+                "returnPct": -1.9443712805708369,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-26",
+                "returnPct": 2.8091159620541433,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-27",
+                "returnPct": 0.9934026247469498,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-28",
+                "returnPct": -1.791791763949975,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-29",
+                "returnPct": -4.594344162939959,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-30",
+                "returnPct": -2.3311258863714834,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-02",
+                "returnPct": 1.2260546332796687,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-03",
+                "returnPct": 3.60396352458892,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-05",
+                "returnPct": -13.304809939442386,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": -1.4350897219225551,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-09",
+                "returnPct": 5.17205984846908,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": 0.10253632164702935,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              }
+            ],
+            "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+          },
+          "extraCost010pp": {
+            "trades": 36,
+            "observedDays": 12,
+            "tradingDays": 12,
+            "winRate": 38.888888888888886,
+            "avgPnl": -1.057866653367617,
+            "expectancyPct": -1.057866653367617,
+            "avgWin": 2.983316977725045,
+            "avgLoss": -3.6295289640629473,
+            "profitFactor": 0.523063587360191,
+            "mddPct": -18.580090400558014,
+            "worst": -13.404809939442385,
+            "dailyAvgPct": -1.0578666533676169,
+            "totalReturnPct": -13.157956659160053,
+            "goalDays": 4,
+            "unsettled": 0,
+            "currentDrawdownPct": -14.448254044686237,
+            "lossStreakTradeDays": 0,
+            "weekStart": "2026-11-09",
+            "weeklyReturnPct": 5.0747248138680146,
+            "weeklyTargetGapPct": 0,
+            "daily": [
+              {
+                "date": "2026-10-23",
+                "returnPct": -1.9443712805708369,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-26",
+                "returnPct": 2.8091159620541433,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-27",
+                "returnPct": 0.9934026247469498,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-28",
+                "returnPct": -1.791791763949975,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-29",
+                "returnPct": -4.594344162939959,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-10-30",
+                "returnPct": -2.3311258863714834,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-02",
+                "returnPct": 1.2260546332796687,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-03",
+                "returnPct": 3.60396352458892,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-05",
+                "returnPct": -13.304809939442386,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": -1.4350897219225551,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-09",
+                "returnPct": 5.17205984846908,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": 0.10253632164702935,
+                "trades": 3,
+                "mainVariant": "dip_1",
+                "source": "closing30-paper-live",
+                "finalized": true
+              }
+            ],
+            "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+          },
+          "timeBlocks": [
+            {
+              "from": "2026-10-23",
+              "to": "2026-10-28",
+              "accountSumPct": 0.06635554228028129,
+              "days": 4
+            },
+            {
+              "from": "2026-10-29",
+              "to": "2026-11-03",
+              "accountSumPct": -2.0954518914428535,
+              "days": 4
+            },
+            {
+              "from": "2026-11-05",
+              "to": "2026-11-10",
+              "accountSumPct": -9.465303491248832,
+              "days": 4
+            }
+          ],
+          "positiveBlockFraction": 0.3333333333333333
+        }
+      },
+      "walkForward": {
+        "folds": [],
+        "evaluationDays": 0,
+        "dailyAvgPct": null,
+        "baselineDailyAvgPct": null,
+        "candidateSelections": 0,
+        "passed": false,
+        "rule": "expanding first20 complete common sessions -> next5; train-only choice; no partial last fold"
+      },
+      "coverage": {
+        "baseline": {
+          "recordedSignals": 45,
+          "closed": 36,
+          "unsettled": 9,
+          "completeAccountDays": 12,
+          "completeButNotCommonDates": [],
+          "missingVersion": 0
+        },
+        "dip_1": {
+          "recordedSignals": 45,
+          "closed": 36,
+          "unsettled": 9,
+          "completeAccountDays": 12,
+          "completeButNotCommonDates": [],
+          "missingVersion": 0
+        }
+      },
+      "checks": {
+        "commonTotalTrades30": true,
+        "positiveExpectancy": false,
+        "profitFactor110": false,
+        "mddMinus15": false,
+        "worstMinus8": false,
+        "positiveBlocks60pct": false,
+        "sameDatesDailyEdge": true,
+        "walkForward": false,
+        "costStress": false,
+        "postRegistration20TradeDays20Trades": false,
+        "sevenDistinctLeadersAndScore60": false
+      },
+      "blockedReasons": [
+        "positiveExpectancy",
+        "profitFactor110",
+        "mddMinus15",
+        "worstMinus8",
+        "positiveBlocks60pct",
+        "walkForward",
+        "costStress",
+        "postRegistration20TradeDays20Trades",
+        "sevenDistinctLeadersAndScore60"
+      ],
+      "verdict": "retain_current_main",
+      "newForwardDays": 0,
+      "newForwardTrades": 0
+    }
+  },
+  "validation": {
+    "sourceEngineParity": true,
+    "feeDifferences": 0,
+    "feeDifferenceExamples": [],
+    "originalHashChanges": 0,
+    "mutations": {
+      "remove023Cost": 618,
+      "divideByFilledSlots": 0,
+      "unsettledAsZero": 15
+    },
+    "passed": false
+  },
+  "limitation": "Historical original-paper evidence; not independent post-registration performance. No synthesis of unobserved candidates or missing outcomes. Fewer than 25 complete common sessions cannot produce one 20/5 walk-forward fold. Retain both current mains."
+}
