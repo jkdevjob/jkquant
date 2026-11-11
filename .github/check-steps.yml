@@ -66,6 +66,9 @@
     node scripts/check-paper-tools.cjs
     node scripts/check-plan-panic.cjs
 
+- name: 포트폴리오 오늘 칸 = 포트폴리오 세션 판단(듀얼가드 주문 계산 옛 함수 = 새 함수 400장면) 값·변이 검사
+  run: node scripts/check-plan-bg-strip.cjs
+
 - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
   run: node scripts/check-sticky-layout.cjs
 

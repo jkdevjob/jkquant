@@ -414,7 +414,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.12.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.12.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1357,28 +1357,28 @@ function alphaPanicNext(signalDate,posOn){
    상태(무장 · 빠른 모드 · 재가속)는 시세(VIX·VXN·TQQQ·TECL)만으로 정해져 계좌 보유와 무관하다 — 그래서 원금은 아무 값(100만$)이나 같다.
    다음 판정의 보유 여부만 실제 계좌 값(nextPosOn)을 넘긴다. 세션 시작 전의 VIX 는 보지 않는다(모의 세션과 같은 약속). */
 let planIndexError='',planIndexLoading=null;
-const planLivePanicMemo={key:'',out:null};
+const planLivePanicMemo=new Map();   // 보고 있는 세션 + 포트폴리오 세션(뒤에서 셈) 몇 개 — 번갈아 세도 매번 다시 재생하지 않게
 function planPanicIndexLoad(){
   if(assetRulesOf(activeAssetSession())!=='panic')return Promise.resolve();
   if(planIndexLoading)return planIndexLoading;
   return planIndexLoading=Promise.all([fetchPlanIndex('^VIX'),fetchPlanIndex('^VXN')]).then(()=>{planIndexError='';},e=>{planIndexError=String(e&&e.message||e);}).then(()=>{planIndexLoading=null;});
 }
-function planLivePanic(x,signalDate,posOn){
+function planLivePanic(x,signalDate,posOn,startOverride){   // startOverride — 화면 밖 '현재 투자중'(포트폴리오 뒤 계산)은 DB 원장의 시작일
   const E=window.JKPlanSessionEngine,T=liveQuotes.TECL,Q=liveQuotes.TQQQ,G=liveQuotes.SGOV,vix=(planIndexCache['^VIX']||{}).rows,vxn=(planIndexCache['^VXN']||{}).rows;
   if(!E||!E.replay||!T||!Q||!G)return {error:'시세를 불러오는 중입니다'};
   if(!(vix&&vix.length)||!(vxn&&vxn.length)){
     if(!planIndexError&&!planIndexLoading)planPanicIndexLoad().then(()=>{if(!planIndexError)refreshAlphaFromCache();});   // 아직 안 받았으면 받고 한 번 다시 그린다
     return {error:planIndexError?'VIX·VXN 시세를 받지 못했습니다('+planIndexError+')':'VIX·VXN 시세를 불러오는 중입니다'};
   }
-  const s0=String(x?((x.settings&&x.settings.startDate)||''):(($('startDate')||{}).value||'')),start=(s0&&s0<signalDate)?s0:signalDate;
+  const s0=String(startOverride!=null?startOverride:(x?((x.settings&&x.settings.startDate)||''):(($('startDate')||{}).value||''))),start=(s0&&s0<signalDate)?s0:signalDate;
   const key=[x?x.id:'cur',start,signalDate,posOn?1:0,vix.length,vxn.length,T.rows.length,Q.rows.length].join('|');
-  if(planLivePanicMemo.key===key)return planLivePanicMemo.out;
+  if(planLivePanicMemo.has(key))return planLivePanicMemo.get(key);
   const R=E.replay({horizon:5,rules:'panic',startDate:start,endDate:signalDate,principal:1e6,monthlyAdd:0,vix,vxn,nextPosOn:!!posOn,tecl:T.rows,tqqq:Q.rows,sgov:G.rows});
   const P=R&&R.panic;
   const out=(R&&!R.error&&P&&P.next&&P.signalDate===signalDate)
     ?Object.assign({live:true,from:start,state:P.state,params:P.params,log:P.log,signalDate:P.signalDate,vix:P.vix,vxn:P.vxn},P.next)
     :{error:(R&&R.error)||'판정일 '+signalDate+' 의 공포 모드 상태를 계산하지 못했습니다'};
-  planLivePanicMemo.key=key;planLivePanicMemo.out=out;return out;
+  if(planLivePanicMemo.size>=8)planLivePanicMemo.clear();planLivePanicMemo.set(key,out);return out;
 }
 /* 운영 세션에서 공포 모드가 판정을 바꾸는 건 상태가 켜져 있을 때뿐이다 — 그 밖에는 기본 규칙 판정(실제 보유 기준)을 한 글자도 바꾸지 않는다.
    Guard: 빠른 모드(state.pf)일 때만 엔진 판정 · σ: 재가속(state.ps)일 때만 엔진 σ(기본 σ 보다 클 수 없다). 모의 세션은 재생 판정 그대로. */
@@ -2547,57 +2547,62 @@ function alphaPanicBlocked(why){
   if($('alphaGuide'))$('alphaGuide').hidden=true;
   renderDualGuardStrip({hold:msg});
 }
-function renderAlphaPlan(qTecl,qTqqq,qSgov){
+/* bg(2026-11-11) — 화면을 건드리지 않고 다른 세션의 오늘 판단만 센다(포트폴리오 '오늘' 칸 · planPortfolioStrips).
+   bg={tq,qq,sq,cash,startCap,dep,panic(signalDate,posOn)} — 보유 · 시작자산 · 입금 맞춤 · 공포 모드 문맥을 화면 대신 받는다.
+   계산 줄은 화면 모드와 한 글자도 다르지 않다(같은 걸 두 군데서 세지 않는다) — 화면에 쓰는 줄만 V 로 막는다. 돌려주는 값 = 한눈에 띠(strip). */
+function renderAlphaPlan(qTecl,qTqqq,qSgov,bg){
   if(!qTecl||!qTqqq||!qSgov||!qTecl.settled||!qTqqq.settled||!qSgov.settled)return;
+  const B=bg||null,V=!B;
+  if(V&&typeof planPortfolioStrips==='function')planPortfolioStrips(qTecl,qTqqq,qSgov);   // 포트폴리오 세션 오늘 판단 — 이 창이 어느 세션을 보든(2026-11-11)
   const D=PATH_DEFAULTS.alpha,tr=qTecl.rows.filter(x=>x.date<=qTecl.settled.date),qr=qTqqq.rows.filter(x=>x.date<=qTqqq.settled.date);
   const sigma=realizedVol(tr,D.ivsLook),ma=indicatorSeries(qr.map(x=>x.close),D.guardMA),sma=ma[ma.length-1];
   // 신호·밴드 판정은 마지막 확정 종가만 사용한다. 오늘 장중 가격을 신호에 섞지 않는다.
   const ts=+qTecl.settled.close,qs=+qTqqq.settled.close,ss=+qSgov.settled.close;
   // 주문 수량만 현재가(없으면 확정종가)로 추정한다. 다음 체결가가 달라지면 수량도 다시 계산한다.
   const tp=(+qTecl.price>0?+qTecl.price:ts),qp=(+qTqqq.price>0?+qTqqq.price:qs),sp=(+qSgov.price>0?+qSgov.price:ss);
-  if(!(sigma>0)||!(sma>0)||!(ts>0)||!(qs>0)||!(ss>0)||!(tp>0)||!(qp>0)||!(sp>0)){if($('alphaMeta'))$('alphaMeta').textContent='지표 계산에 필요한 이력이 부족합니다.';return;}
-  const tq=Math.max(0,Math.floor(num('aTeclQty'))),qq=Math.max(0,Math.floor(num('aTqqqQty'))),sq=Math.max(0,Math.floor(num('aSgovQty'))),cash=num('aCash');
-  const startCap=Math.max(1,num('startCapital',20000));
-  if($('alphaStartState'))$('alphaStartState').textContent=(tq===0&&qq===0&&sq===0&&Math.abs(cash-startCap)<1?'신규 시작 상태 · 현금 '+usd(startCap)+'에서 오늘 주문을 계산합니다.':'운용 중 · 현재 보유수량/현금을 기준으로 필요한 주문만 표시합니다.');
-  let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=startCap;$('aCash').value=startCap;}
-  const PX=alphaPanicNext(qTecl.settled.date,qq>0);   // 공포 모드 세션(모의 · 운영)만 — 그 밖에는 null
-  renderLivePanic(PX);
-  if(PX&&PX.error){alphaPanicBlocked(PX.error);return;}   // 운영 공포 모드인데 판정 불가 — 기본 규칙 주문을 대신 보이지 않는다
+  if(!(sigma>0)||!(sma>0)||!(ts>0)||!(qs>0)||!(ss>0)||!(tp>0)||!(qp>0)||!(sp>0)){if(V&&$('alphaMeta'))$('alphaMeta').textContent='지표 계산에 필요한 이력이 부족합니다.';return;}
+  const tq=B?B.tq:Math.max(0,Math.floor(num('aTeclQty'))),qq=B?B.qq:Math.max(0,Math.floor(num('aTqqqQty'))),sq=B?B.sq:Math.max(0,Math.floor(num('aSgovQty'))),cash=B?B.cash:num('aCash');
+  const startCap=B?B.startCap:Math.max(1,num('startCapital',20000));
+  if(V&&$('alphaStartState'))$('alphaStartState').textContent=(tq===0&&qq===0&&sq===0&&Math.abs(cash-startCap)<1?'신규 시작 상태 · 현금 '+usd(startCap)+'에서 오늘 주문을 계산합니다.':'운용 중 · 현재 보유수량/현금을 기준으로 필요한 주문만 표시합니다.');
+  let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=startCap;if(V)$('aCash').value=startCap;}
+  const PX=B?B.panic(qTecl.settled.date,qq>0):alphaPanicNext(qTecl.settled.date,qq>0);   // 공포 모드 세션(모의 · 운영)만 — 그 밖에는 null
+  if(V)renderLivePanic(PX);
+  if(PX&&PX.error){if(V)alphaPanicBlocked(PX.error);return B?{hold:PX.error}:undefined;}   // 운영 공포 모드인데 판정 불가 — 기본 규칙 주문을 대신 보이지 않는다
   const sigW=alphaPanicApply(PX,sigma,'').sigma;   // TECL 목표의 σ — 공포 모드 재가속 중이면 엔진 σ
   const AR=alphaRuleSet(),E=window.JKPlanSessionEngine,S0=D.ivsS0,w=Math.min(1,(S0*S0)/(sigW*sigW)),curTeclW=(tq*ts)/signalTotal,sleeveNow=curTeclW/Math.max(D.teclWeight,1e-9);
   // 판정은 모의 엔진과 같은 alphaDecide (규칙은 기본 하나 — 새 규칙·공격형 2026-11-08 폐지).
-  if(!E||!E.alphaDecide){if($('alphaMeta'))$('alphaMeta').textContent='듀얼가드 엔진(plan-session-engine.js)을 불러오지 못했습니다 — 새로고침하세요.';return;}
+  if(!E||!E.alphaDecide){if(V&&$('alphaMeta'))$('alphaMeta').textContent='듀얼가드 엔진(plan-session-engine.js)을 불러오지 못했습니다 — 새로고침하세요.';return;}
   const yearStart=!!(E.yearDoneAt&&E.yearDoneAt(qTqqq.settled.date));
   const dec=E.alphaDecide({rules:AR,w,sleeveNow,teclQty:tq,tqqqQty:qq,tqqqClose:qs,sma,tqqqWeight:(qq*qs)/signalTotal,guardWeight:D.guardWeight,yearStart});
   const PA=alphaPanicApply(PX,sigma,dec.guard),guard=PA.guard,teclHit=dec.teclHit,upper=dec.upper,lower=dec.lower,tqReb=dec.tqReb,guardFlip=PA.own?(guard==='ON')!==(qq>0):dec.guardFlip;
   const panicNote=PX?(PA.fast?' · 공포 모드 빠른 Guard(SMA'+PX.params.ma+' ±'+(PX.params.band*100).toFixed(0)+'%)':'')+(PA.sleeve?' · 공포 모드 TECL 재가속(σ '+(sigma*100).toFixed(0)+'% → '+(sigW*100).toFixed(0)+'%)':''):'';
-  const dep=alphaDepositPending(),force=!!dep;   // 입금 맞춤 — 모의 엔진의 force(입금일 전체 맞춤)와 같은 규칙
-  const needRebalance=teclHit||guardFlip||tqReb||force||horizonRebalancePending||(!tq&&!qq&&!sq);
+  const dep=B?B.dep:alphaDepositPending(),force=!!dep,hz=B?false:horizonRebalancePending;   // 입금 맞춤 — 모의 엔진의 force(입금일 전체 맞춤)와 같은 규칙 · hz = 기간 바꿈 직후 맞춤(보고 있는 세션 것)
+  const needRebalance=teclHit||guardFlip||tqReb||force||hz||(!tq&&!qq&&!sq);
 
   // 사용자가 주문 판단 근거를 직접 검증할 수 있도록 계산값과 그래프를 함께 노출한다.
   const gap=Math.abs(w-sleeveNow),bandLo=Math.max(0,w-D.ivsBand),bandHi=Math.min(1,w+D.ivsBand);
   const bLo=Math.max(0,w-AR.bandUp),bHi=Math.min(1,w+AR.bandDn),teclBandNow=sleeveNow>w?AR.bandDn:AR.bandUp;   // 유지 구간: 목표보다 bandUp 아래 ~ bandDn 위 (기본 규칙은 ±10%p 로 bandLo·bandHi 와 같다)
-  if($('alphaSigma'))$('alphaSigma').textContent=(sigma*100).toFixed(1)+'%';
-  if($('alphaTargetW'))$('alphaTargetW').textContent=(w*100).toFixed(1)+'%';
-  if($('alphaCurrentW'))$('alphaCurrentW').textContent=(sleeveNow*100).toFixed(1)+'%';
-  if($('alphaWeightGap'))$('alphaWeightGap').textContent='전체 자산의 '+(curTeclW*100).toFixed(1)+'% · 목표와 '+(gap*100).toFixed(1)+'%p 차이 · '+((D.ivsBand*100).toFixed(1)+'%p 초과 시 조정');
-  if($('alphaGuardState'))$('alphaGuardState').textContent=guard;
+  if(V&&$('alphaSigma'))$('alphaSigma').textContent=(sigma*100).toFixed(1)+'%';
+  if(V&&$('alphaTargetW'))$('alphaTargetW').textContent=(w*100).toFixed(1)+'%';
+  if(V&&$('alphaCurrentW'))$('alphaCurrentW').textContent=(sleeveNow*100).toFixed(1)+'%';
+  if(V&&$('alphaWeightGap'))$('alphaWeightGap').textContent='전체 자산의 '+(curTeclW*100).toFixed(1)+'% · 목표와 '+(gap*100).toFixed(1)+'%p 차이 · '+((D.ivsBand*100).toFixed(1)+'%p 초과 시 조정');
+  if(V&&$('alphaGuardState'))$('alphaGuardState').textContent=guard;
   const guardDist=(qs/sma-1)*100;
-  if($('alphaGuardGap'))$('alphaGuardGap').textContent='종가 '+usd(qs)+' · SMA'+D.guardMA+' 대비 '+(guardDist>=0?'+':'')+guardDist.toFixed(2)+'%';
-  if($('alphaTeclBandText'))$('alphaTeclBandText').textContent='목표 '+(w*100).toFixed(1)+'% · 실제 판정경계 '+((w-AR.bandUp)*100).toFixed(1)+'~'+((w+AR.bandDn)*100).toFixed(1)+'% · 현재 '+(sleeveNow*100).toFixed(1)+'%'+(w+AR.bandDn>1?' (막대는 100%까지 표시)':'');
-  const band=$('alphaTeclBand'),tm=$('alphaTeclTargetMark'),cm=$('alphaTeclCurrentMark');
+  if(V&&$('alphaGuardGap'))$('alphaGuardGap').textContent='종가 '+usd(qs)+' · SMA'+D.guardMA+' 대비 '+(guardDist>=0?'+':'')+guardDist.toFixed(2)+'%';
+  if(V&&$('alphaTeclBandText'))$('alphaTeclBandText').textContent='목표 '+(w*100).toFixed(1)+'% · 실제 판정경계 '+((w-AR.bandUp)*100).toFixed(1)+'~'+((w+AR.bandDn)*100).toFixed(1)+'% · 현재 '+(sleeveNow*100).toFixed(1)+'%'+(w+AR.bandDn>1?' (막대는 100%까지 표시)':'');
+  const band=V&&$('alphaTeclBand'),tm=V&&$('alphaTeclTargetMark'),cm=V&&$('alphaTeclCurrentMark');
   if(band){band.style.left=(bLo*100)+'%';band.style.width=((bHi-bLo)*100)+'%';}
   if(tm)tm.style.left=(Math.max(0,Math.min(1,w))*100)+'%';
   if(cm)cm.style.left=(Math.max(0,Math.min(1,sleeveNow))*100)+'%';
-  const wh=alphaWeightHistory(tr,D,60,S0);
-  if($('alphaWeightChart'))$('alphaWeightChart').innerHTML=alphaSvg([{values:wh,color:'#8b8cf0',width:2.2}],{label:'최근 TECL 역분산 목표비중'});
+  const wh=V?alphaWeightHistory(tr,D,60,S0):null;
+  if(V&&$('alphaWeightChart'))$('alphaWeightChart').innerHTML=alphaSvg([{values:wh,color:'#8b8cf0',width:2.2}],{label:'최근 TECL 역분산 목표비중'});
   const tailStart=Math.max(0,qr.length-120),guardClose=[],guardMa=[],guardUp=[],guardDn=[];
   for(let i=tailStart;i<qr.length;i++){const mv=ma[i];if(!(mv>0))continue;guardClose.push(+qr[i].close);guardMa.push(mv);guardUp.push(mv*(1+AR.guardOn));guardDn.push(mv*(1-AR.guardOff));}
-  if($('alphaGuardChart'))$('alphaGuardChart').innerHTML=alphaSvg([
+  if(V&&$('alphaGuardChart'))$('alphaGuardChart').innerHTML=alphaSvg([
     {values:guardClose,color:'#8b8cf0',width:2.2},{values:guardMa,color:'#f5c451',width:1.8},
     {values:guardUp,color:'#36d399',width:1.1,kind:'dash'},{values:guardDn,color:'#f87b8c',width:1.1,kind:'dash'}
   ],{label:'TQQQ 종가와 SMA'+D.guardMA+' Guard 경계'});
-  if($('alphaGuardLevels'))$('alphaGuardLevels').textContent='종가 '+usd(qs)+' · SMA'+D.guardMA+' '+usd(sma)+' · ON '+usd(upper)+' 초과 · OFF '+usd(lower)+' 미만';
+  if(V&&$('alphaGuardLevels'))$('alphaGuardLevels').textContent='종가 '+usd(qs)+' · SMA'+D.guardMA+' '+usd(sma)+' · ON '+usd(upper)+' 초과 · OFF '+usd(lower)+' 미만';
   const teclReason=tq===0
     ? 'TECL 첫 진입이라 목표비중으로 맞춥니다.'
     : teclHit
@@ -2609,14 +2614,14 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
         : 'TQQQ 종가 '+usd(qs)+'가 OFF 경계 '+usd(lower)+' 아래라 Guard OFF로 대피합니다.')
     : 'TQQQ Guard '+guard+' 유지 · 종가 '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+(force?' · 입금 맞춤으로 '+(guard==='ON'?(D.guardWeight*100).toFixed(0)+'%':'0%')+' 목표에 맞춥니다':'')+'.';
   const depReason=force?'입금('+dep.date+') '+usd2(dep.amount)+' 뒤 체결 기록이 없어 전체를 목표 비중으로 맞춥니다 — 모의 계산과 같은 규칙.':'';
-  if($('alphaDecision')){
+  if(V&&$('alphaDecision')){
     $('alphaDecision').className='alpha-decision'+(needRebalance?' go':'');
     $('alphaDecision').innerHTML='<b>오늘 판단: '+(needRebalance?'리밸런싱/상태조정':'유지')+'</b><br>'+teclReason+'<br>'+guardReason+(force?'<br>'+depReason:'')+'<br><span class="sub">판정일 '+qTecl.settled.date+' 확정종가 기준 · 장중가격은 신호가 아니라 주문수량 추정에만 사용'+panicNote+'</span>';
   }
 
   // 확정종가로 목표 주수를 미리 계산한다. 다음 거래일 체결가는 주문 시점에는 알 수 없다.
-  const targetTq=(teclHit||force||horizonRebalancePending)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/ts)):tq;
-  const targetQq=(guardFlip||tqReb||force||horizonRebalancePending)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qs)):0):qq;
+  const targetTq=(teclHit||force||hz)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/ts)):tq;
+  const targetQq=(guardFlip||tqReb||force||hz)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qs)):0):qq;
   const targetSq=needRebalance?Math.max(0,Math.floor(Math.max(0,signalTotal-targetTq*ts-targetQq*qs)/ss)):sq;
 
   // 수수료까지 예약해 '화면 수량 그대로' 넣었을 때 현금 부족 주문이 되지 않게 매도→위험자산 매수→SGOV 순서로 제한한다.
@@ -2628,25 +2633,25 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   for(const sym of ['TECL','TQQQ','SGOV']){
     const dq=targets[sym]-pos[sym];if(dq>0){const p=pxs[sym],q=Math.min(dq,Math.floor(avail/(p*(1+F))));if(q>0){avail-=q*p+alphaFee(q,p);orders.push({side:'buy',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}}
   }
-  $('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정종가 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% ('+(D.teclWeight*100).toFixed(0)+'% 슬리브 내) · TQQQ '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard+' · '+planStrategyLabelOf(activeAssetSession());
-  if($('alphaRefreshTime'))$('alphaRefreshTime').textContent='시세 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  pendingAlphaOrders=orders.map(o=>({...o}));alphaOrderHold='';
-  if($('alphaRecordFill')){$('alphaRecordFill').disabled=!orders.length;$('alphaRecordFill').textContent='이대로 기록';}   // 기록 창(📌 오늘의 추천)의 단추
-  if(!orders.length)alphaCloseFillEditor();
-  $('alphaActions').innerHTML=orders.length?orders.map(x=>alphaOrderHtml(x.side,x.sym,x.qty,x.price,x.note)).join(''):waitHtml('오늘 주문 없음','TECL 밴드와 TQQQ Guard 모두 유지 구간입니다.');
+  if(V)$('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정종가 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% ('+(D.teclWeight*100).toFixed(0)+'% 슬리브 내) · TQQQ '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard+' · '+planStrategyLabelOf(activeAssetSession());
+  if(V&&$('alphaRefreshTime'))$('alphaRefreshTime').textContent='시세 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(V){pendingAlphaOrders=orders.map(o=>({...o}));alphaOrderHold='';}
+  if(V&&$('alphaRecordFill')){$('alphaRecordFill').disabled=!orders.length;$('alphaRecordFill').textContent='이대로 기록';}   // 기록 창(📌 오늘의 추천)의 단추
+  if(V&&!orders.length)alphaCloseFillEditor();
+  if(V)$('alphaActions').innerHTML=orders.length?orders.map(x=>alphaOrderHtml(x.side,x.sym,x.qty,x.price,x.note)).join(''):waitHtml('오늘 주문 없음','TECL 밴드와 TQQQ Guard 모두 유지 구간입니다.');
   const teclAmt=targetTq*tp,tqqqAmt=targetQq*qp,sgovAmt=targetSq*sp;
   const tw=teclAmt/signalTotal*100,qw=tqqqAmt/signalTotal*100,sw=Math.max(0,100-tw-qw);
   const buyMap={TECL:0,TQQQ:0,SGOV:0},buyFee={TECL:0,TQQQ:0,SGOV:0};
   for(const o of orders){if(o.side==='buy'){const g=o.qty*o.price;buyMap[o.sym]=(buyMap[o.sym]||0)+g;buyFee[o.sym]=(buyFee[o.sym]||0)+alphaFee(o.qty,o.price);}}
   const totalBuy=buyMap.TECL+buyMap.TQQQ+buyMap.SGOV,totalNeed=totalBuy+buyFee.TECL+buyFee.TQQQ+buyFee.SGOV;
-  $('alphaSummary').innerHTML=
+  if(V)$('alphaSummary').innerHTML=
     '<b>목표 보유금액:</b> TECL '+usd(teclAmt)+' · TQQQ '+usd(tqqqAmt)+' · SGOV '+usd(sgovAmt)+' · 잔여현금 약 '+usd(Math.max(0,signalTotal-teclAmt-tqqqAmt-sgovAmt))+
     '<br><b>목표비중:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 신호기준 평가액 '+usd(signalTotal)+
     '<br><b>오늘 매수금액:</b> TECL '+usd(buyMap.TECL)+' · TQQQ '+usd(buyMap.TQQQ)+' · SGOV '+usd(buyMap.SGOV)+' · 합계 '+usd(totalBuy)+' · <b>수수료 포함 필요현금 약 '+usd(totalNeed)+'</b>'+
     '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+(force?' · 입금 맞춤 '+usd2(dep.amount):'')+
     '<br><span class="sub">목표 주수는 전일 확정종가로 계산하며, 매수가능 주수와 거래금액은 현재가·수수료(0.1%)로 추정합니다. 실제 체결가가 달라지면 매수량이 감소할 수 있습니다.</span>';
   // 실제 매매결과를 바꾸지 않고, 확정 종가 기준 판단과 발주 가능 건수를 구분해 표시한다.
-  const guide=$('alphaGuide');
+  const guide=V&&$('alphaGuide');
   if(guide){
     const b=alphaExplainBounds(w,sleeveNow,D.ivsBand);
     const teclStatus=tq===0?'첫 진입 판정':teclHit?(sleeveNow<w?'비중 확대 조건 충족':'비중 축소 조건 충족'):'유지';
@@ -2672,9 +2677,11 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
       +'<div class="alpha-guide-foot"><b>실제 주문표:</b> '+orderText+'<br>'
       +'신호는 확정 종가, 주문 수량·금액은 현재가 추정입니다. SGOV는 남는 투자금을 보유하며 정수 주수·수수료에 따라 실제 주문이 달라집니다.</div>';
   }
-  renderDualGuardStrip({orders:orders.length,orderText:orders.map(o=>o.sym+' '+(o.side==='buy'?'매수 ':'매도 ')+o.qty+'주').join(' · '),need:needRebalance,
-    teclNow:curTeclW,teclTarget:D.teclWeight*w,teclHit,gap,band:D.ivsBand,guard,guardFlip,dist:guardDist,ma:D.guardMA,upper,lower,date:qTecl.settled.date,dep});
-  if(horizonRebalancePending)horizonRebalancePending=false;
+  const strip={orders:orders.length,orderText:orders.map(o=>o.sym+' '+(o.side==='buy'?'매수 ':'매도 ')+o.qty+'주').join(' · '),need:needRebalance,
+    teclNow:curTeclW,teclTarget:D.teclWeight*w,teclHit,gap,band:D.ivsBand,guard,guardFlip,dist:guardDist,ma:D.guardMA,upper,lower,date:qTecl.settled.date,dep};
+  if(V)renderDualGuardStrip(strip);
+  if(V&&horizonRebalancePending)horizonRebalancePending=false;
+  return B?strip:undefined;
 }
 /* 🤖 듀얼가드 한눈에 — 오늘 판단 · TECL(전체 자산 기준) · TQQQ Guard · 다음 Guard 경계.
    값은 renderAlphaPlan 이 이미 센 것을 그대로 받는다(같은 걸 두 군데서 세지 않는다). o 가 없으면 불러오는 중. */
@@ -2710,6 +2717,39 @@ function planEmbedPost(o){
       msg.portfolio=x?x.portfolio!==false:planPortfolio!==false;msg.name=x?String(x.name||''):planCurLabel();}   // 세션 설정의 '💰 포트폴리오에 넣기' — 포트폴리오가 바로 따른다
     window.parent.postMessage(msg,location.origin);
   }catch(e){}
+}
+/* 포트폴리오 '오늘' 칸 — 운영 › 듀얼가드 탭이 지금 어느 세션을 보든, 포트폴리오에 넣은 실계좌 세션마다 오늘 판단을 센다
+   (2026-11-11 사용자 "왜 운영에서 선택한 탭이 보이지? 운영에서 포트폴리오로 선택한 세션이 보여야지?" — 탭이 모의 세션을 보면 '토스'의 판단이 안 왔다).
+   셈은 보고 있는 세션과 같은 renderAlphaPlan(bg — 화면 · 주문표 · 기록 창은 안 건드린다). 보고 있는 세션은 화면이 이미 알리니 뺀다.
+   보유 · 현금 = 그 장부 엔진 ledgerCalc(화면 칸 alphaSyncInputs 와 같은 반올림) · 시작자산 = 그 세션 설정 · 공포 모드 = 그 세션 시작일부터. */
+function planBgTargets(){
+  const E=window.JKPlanSessionEngine,act=activeAssetSession(),out=[];
+  if(!E||!E.ledgerCalc)return out;
+  const put=(key,ledger,startCap,panicOn,panicX,start,name)=>{
+    const S=E.ledgerCalc(ledger);
+    out.push({key,name,bg:{tq:Math.max(0,Math.floor(+S.tecl||0)),qq:Math.max(0,Math.floor(+S.tqqq||0)),sq:Math.max(0,Math.floor(+S.sgov||0)),cash:Number((+S.cash||0).toFixed(2)),startCap,
+      dep:alphaDepositPending(ledger),panic:panicOn?((d,on)=>planLivePanic(panicX,d,on,start)):(()=>null)}});
+  };
+  if(act&&planDbState&&planDbState.portfolio!==false){   // '현재 투자중'(본 장부) — 다른 세션을 보고 있을 때만
+    const all={...defaults(),...planDbState},v=Number(all.startCapital);
+    put('cur',planLedgerFrom(planDbState,all),Math.max(1,Number.isFinite(v)?v:20000),all.alphaRules==='panic',null,String(all.startDate||''),String(all.sessionName||'').trim()||'현재 투자중');
+  }
+  for(const x of assetSessionList()){
+    if(!x||x.paper||x.portfolio===false||(act&&x.id===act.id))continue;
+    const st=x.settings||{};
+    put(String(x.id),x.ledger||assetLedgerSeed(st.startDate||todayISO(),+st.startCapital||20000),Math.max(1,+st.startCapital||20000),assetRulesOf(x)==='panic',x,String(st.startDate||''),String(x.name||''));
+  }
+  return out;
+}
+function planPortfolioStrips(qTecl,qTqqq,qSgov){
+  if(!document.documentElement.classList.contains('embed')||window.parent===window)return;
+  const u=auth&&auth.currentUser;if(!u)return;
+  let T=[];try{T=planBgTargets();}catch(e){console.warn('portfolio strips',e);return;}
+  for(const t of T){
+    let strip=null;try{strip=renderAlphaPlan(qTecl,qTqqq,qSgov,t.bg);}catch(e){console.warn('portfolio strip',t.key,e);}
+    if(!strip)continue;
+    try{window.parent.postMessage({type:'jk-dg',v:1,uid:u.uid,key:t.key,paper:false,bg:true,strip:{...strip},name:t.name},location.origin);}catch(e){}
+  }
 }
 function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV)renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);}
 function ledgerReady(){return sleeveLedger.startQLD>0||sleeveLedger.startSGOV>0||sleeveLedger.startCash!==0||(sleeveLedger.trades||[]).length>0;}
@@ -2915,6 +2955,19 @@ function readForm(){
   o.alphaRules=planCurRules==='panic'?'panic':'base';   // '현재 투자중' 규칙(세션 설정 · 공포 모드 v1.1)
   return o;
 }
+/* 저장된 듀얼가드 상태(o · 기본값 합친 all)의 장부를 화면이 쓰는 꼴로 정리한다 — apply() 와 포트폴리오 뒤 계산(planBgTargets)이 같은 함수를 쓴다 */
+function planLedgerFrom(o,all){
+  if(o&&o.alphaLedger&&typeof o.alphaLedger==='object'){
+    const al=o.alphaLedger,b=al.base||{};
+    const L={base:{date:String(b.date||todayISO()),tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),cash:Number.isFinite(+b.cash)?+b.cash:Math.max(1,+all.startCapital||20000),avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null},events:Array.isArray(al.events)?al.events:[],feeModel:String(al.feeModel||"")};
+    if(L.feeModel!=="toss-us-0.1-v1"){
+      L.events=L.events.map(e=>e&&e.type==='trade'?{...e,fee:alphaFee(e.qty,e.price),feeRate:ALPHA_FEE_RATE}:e);
+      L.feeModel="toss-us-0.1-v1";
+    }
+    return L;
+  }
+  return {base:{date:todayISO(),tecl:Math.max(0,Math.floor(+all.aTeclQty||0)),tqqq:Math.max(0,Math.floor(+all.aTqqqQty||0)),sgov:Math.max(0,Math.floor(+all.aSgovQty||0)),cash:Number.isFinite(+all.aCash)?+all.aCash:Math.max(1,+all.startCapital||20000),avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
+}
 function apply(o){
   const all={...defaults(),...o};
   planPortfolio=all.portfolio!==false;
@@ -2928,16 +2981,7 @@ function apply(o){
     if(hasOld){const id=planSid('psl');sleeveSessions=[{id,name:'기존 QLD·SGOV 장부',createdAt:Date.now(),ledger:old}];planLinks.sleeve=id;}
   }
   bindSleeveLedger();
-  if(o&&o.alphaLedger&&typeof o.alphaLedger==='object'){
-    const al=o.alphaLedger,b=al.base||{};
-    alphaLedger={base:{date:String(b.date||todayISO()),tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),cash:Number.isFinite(+b.cash)?+b.cash:Math.max(1,+all.startCapital||20000),avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null},events:Array.isArray(al.events)?al.events:[],feeModel:String(al.feeModel||"")};
-    if(alphaLedger.feeModel!=="toss-us-0.1-v1"){
-      alphaLedger.events=alphaLedger.events.map(e=>e&&e.type==='trade'?{...e,fee:alphaFee(e.qty,e.price),feeRate:ALPHA_FEE_RATE}:e);
-      alphaLedger.feeModel="toss-us-0.1-v1";
-    }
-  }else{
-    alphaLedger={base:{date:todayISO(),tecl:Math.max(0,Math.floor(+all.aTeclQty||0)),tqqq:Math.max(0,Math.floor(+all.aTqqqQty||0)),sgov:Math.max(0,Math.floor(+all.aSgovQty||0)),cash:Number.isFinite(+all.aCash)?+all.aCash:Math.max(1,+all.startCapital||20000),avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
-  }
+  alphaLedger=planLedgerFrom(o,all);
   Object.entries(all).forEach(([k,v])=>{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=(v===true||v==='true');else el.value=v;});
   alphaSyncInputs();
 }
