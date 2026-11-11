@@ -710,7 +710,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.130.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.131.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1200,6 +1200,12 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
         <svg class="minichart" id="vcc_trade" style="height:82px" viewBox="0 0 320 82" preserveAspectRatio="none"></svg>
         <p class="note" id="vcc_note" style="margin-top:8px">진입할 때마다 사이클 데이터가 쌓여 그래프가 그려집니다.</p></div>
 
+      <div class="card"><h3><span class="dot"></span>월별 실현손익</h3>
+        <div class="htable-wrap"><table class="htable narrow" id="vr_bymonth"></table></div>
+        <p class="note">매도로 <b>확정된</b> 손익만 셉니다(이동평균 원가 · 수수료 제외 — 계좌 수익금의 실현손익과 같은 값). 손익률은 넣은 돈 대비 — 줄을 더하면 그 기간 손익률이 됩니다.</p></div>
+      <div class="card"><h3><span class="dot"></span>사이클별 실현손익</h3>
+        <div class="htable-wrap"><table class="htable narrow" id="vr_bycycle"></table></div>
+        <p class="note">사이클(2주) 안에서 판 것만 셉니다. 진행 중인 사이클은 끝 날짜 없이 '진행중'으로 보입니다.</p></div>
       <!-- 사이클 히스토리 -->
       <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>사이클 히스토리</span><span class="lh-stage" id="cyc_count">최근 0개</span></h3>
         <div class="cyc-scroll"><table class="cyctbl" id="cyc_tbl"></table></div>
@@ -1374,6 +1380,9 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="ana_qty">0주</span></div>
         <div class="rowline" id="ana_extra_row"><span class="k" id="ana_extra_k">—</span><span class="val mono" id="ana_extra">—</span></div></div>
       <div class="card" id="ana_cfcard" style="display:none"></div>
+      <div class="card"><h3><span class="dot"></span>월별 실현손익</h3>
+        <div class="htable-wrap"><table class="htable narrow" id="ma_bymonth"></table></div>
+        <p class="note">청산으로 <b>확정된</b> 손익만 셉니다(수수료 포함 원가 — 위 총 실현손익과 같은 값). 손익률은 원금 대비 — 줄을 더하면 그 기간 손익률이 됩니다.</p></div>
     </div>
 
     <!-- ── 설명 ── -->
@@ -1533,6 +1542,9 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
         <div class="rowline"><span class="k">└ 그중 수수료 <span class="sub">0.25% · 평단에 이미 포함</span></span><span class="val mono" id="anaI_fee">—</span></div>
         <div class="rowline" id="anaI_extra_row"><span class="k" id="anaI_extra_k">—</span><span class="val mono" id="anaI_extra">—</span></div></div>
       <div class="card" id="anaI_cfcard" style="display:none"></div>
+      <div class="card"><h3><span class="dot"></span>월별 실현손익</h3>
+        <div class="htable-wrap"><table class="htable narrow" id="ivs_bymonth"></table></div>
+        <p class="note">매도로 <b>확정된</b> 손익만 셉니다(거래이력 실현손익과 같은 값 · 수수료 포함 원가). 손익률은 원금 ± 추가입금·출금 대비 — 줄을 더하면 그 기간 손익률이 됩니다.</p></div>
     </div>
 
     <div class="block" id="ivs-guide">
@@ -1834,7 +1846,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.130.0</b> · 2026-11-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.131.0</b> · 2026-11-11</div>
   </footer>
 </div>
 
@@ -4048,6 +4060,31 @@ function renderInfAnal(){
   $('a_qty').textContent=c.qty+'주';
 }
 
+/* 월별 · 사이클별 실현손익 표 — 무매(renderInfBreak)와 같은 모양(구분 · 매도 · 손익금 · 손익률 · 합계 · 최근이 위로).
+   2026-11-11 사용자: "적립 거치 제외하고 매수매도가 있는 운영메뉴에 있는 전략들의 세션 분석 탭에 월별 실현손익 목록 추가하고
+   싸이클이 있는 전략은 싸이클별 실현손익도 추가해" — 밸류리밸런싱(월별 · 사이클별) · 로테이션 · 섀넌(월별)이 쓴다.
+   sells: [{date, pnl, cyc?}] — 손익은 각 탭 계산 값 그대로(VR computeVr 행 · 로테 maLedger · 섀넌 ivsPos). cap = 그 탭 손익률 분모.
+   o.cycle: {label(seq,span,open)} 이면 사이클별 표도 — span = 그 사이클 첫 · 끝 기록 날짜 · open = 아직 안 닫힌 사이클 */
+function realizedBreakHtml(sells, cap, o={}){
+  const col=v=>v>=0?'var(--buy)':'var(--sell)';
+  const pct=v=>cap>0?`<span style="color:${col(v)}">${v>=0?'+':''}${(v/cap*100).toFixed(2)}%</span>`:'—';
+  const amt=v=>`<span style="color:${col(v)}">${v>=0?'+':''}${wn(v)}</span>`;
+  const head=lbl=>`<tr><th>${lbl}</th><th>매도</th><th>손익금</th><th>손익률</th></tr>`;
+  const table=(lbl,list,empty)=>{
+    if(!list.length) return head(lbl)+`<tr><td class="empty" colspan="4">${empty}</td></tr>`;
+    let tot=0,n=0; const rows=list.map(x=>{ tot+=x.p; n+=x.n; return `<tr><td>${x.label}</td><td>${x.n}</td><td>${amt(x.p)}</td><td>${pct(x.p)}</td></tr>`; }).join('');
+    return head(lbl)+rows+`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td><td>${amt(tot)}</td><td>${pct(tot)}</td></tr>`;
+  };
+  const S=(sells||[]).filter(x=>x&&x.date&&Number.isFinite(+x.pnl));
+  const M=new Map(); for(const x of S){ const k=String(x.date).slice(0,7); if(k.length!==7) continue; const m=M.get(k)||{label:k.replace('-','년 ')+'월',p:0,n:0}; m.p+=+x.pnl; m.n++; M.set(k,m); }
+  const out={month:table('월',[...M.entries()].sort((a,b)=>b[0]<a[0]?-1:1).map(x=>x[1]),'매도 기록이 없습니다')};
+  if(o.cycle){
+    const C=new Map(); for(const x of S){ if(x.cyc==null) continue; const m=C.get(x.cyc)||{seq:x.cyc,p:0,n:0}; m.p+=+x.pnl; m.n++; C.set(x.cyc,m); }
+    out.cycle=table('사이클',[...C.values()].sort((a,b)=>b.seq-a.seq).map(m=>Object.assign(m,{label:o.cycle.label(m.seq)})),'아직 매도가 없습니다');
+  }
+  return out;
+}
+
 /* ── 무한매수법 이력 ── */
 /* 월별·사이클별 실현손익.
    매도로 확정된 것만 센다 — 평가손익을 섞으면 '언제 얼마를 벌었나'가 흐려진다.
@@ -4982,8 +5019,24 @@ function enterNextCycle(){
 }
 
 /* ════════ 분석 탭 ════════ */
+/* 밸류리밸런싱 월별 · 사이클별 실현손익 — 매도 손익 = computeVr 행(실현손익과 같은 식) · 사이클 = 기록의 주차(cyc) ·
+   손익률 분모 = 넣은 돈(netInvested · 위 계좌 수익금과 같은 분모) · 지금 사이클(curCyc)은 진행중 */
+function renderVrBreak(c){
+  const mt=$('vr_bymonth'), ct=$('vr_bycycle'); if(!mt&&!ct) return;
+  const cy=h=>h.cyc!=null?h.cyc:0, span=new Map();
+  (c.rows||[]).forEach(r=>{ const h=r.h||{}; if(!h.date||!(h.type==='buy'||h.type==='sell')) return;
+    const k=cy(h), x=span.get(k)||{from:h.date,to:h.date}; if(h.date<x.from)x.from=h.date; if(h.date>x.to)x.to=h.date; span.set(k,x); });
+  const sells=(c.rows||[]).filter(r=>r.h&&r.h.type==='sell').map(r=>({date:r.h.date,pnl:r.pnl,cyc:cy(r.h)}));
+  const R=realizedBreakHtml(sells,c.netInvested,{cycle:{label:seq=>{ const x=span.get(seq)||{}, open=seq===c.curCyc;
+    const when=!x.from?'':(open?dshort(x.from)+'~':(x.to&&x.to!==x.from?dshort(x.from)+'~'+dshort(x.to):dshort(x.from)));   // 하루뿐이면 날짜 하나
+    return `${seq}주차 <span class="sub">${when}</span>`+(open?' <span style="color:var(--gold);font-size:10px">진행중</span>':''); }}});
+  if(mt) mt.innerHTML=R.month; if(ct) ct.innerHTML=R.cycle;
+}
+/* 섀넌 매도마다 {date, pnl} — ivsPos 가 센 실현손익 그대로(거래이력 표 · 분석 탭 총 실현손익과 같은 값) */
+function ivsSellsOf(c){ return (c&&c.posRows||[]).filter(r=>r.h&&r.h.type==='sell'&&r.held!=null).map(r=>({date:r.h.date,pnl:r.pnl})); }
 function renderVrAnal(){
   const c=computeVr(), st=c.st, sym=isKrwSt(st)?'₩':'$';
+  renderVrBreak(c);   // 월별 · 사이클별 실현손익(2026-11-11)
   const price=vrLastPrice(c);
   const evalNow=price*c.qty;
   const total=c.pool + evalNow;
@@ -5506,6 +5559,7 @@ function renderMaAnal(){
   const price=c.ready?(c.price||c.lastClose):(inputNum('ma_price')||0);
   const principal=+st.principal||0;
   const L=maLedger(h, price, principal);
+  { const mt=$('ma_bymonth'); if(mt) mt.innerHTML=realizedBreakHtml((L.outs||[]).map(o=>({date:o.date,pnl:o.pnl})),principal).month; }   // 월별 실현손익(2026-11-11) — 청산마다 maLedger 값
   const {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,total}=L;
   const ratio=total>0?invested/total*100:0;
   $('ana_cnt').textContent=`${nOut} 청산${nOut?` · 승 ${nWin}`:''}`;
@@ -5547,6 +5601,7 @@ function renderIvsAnal(){
     const amt=(x.amt!=null?+x.amt:q*pr);
     if(x.type==='buy'){ totbuy+=amt; nT++; } else if(x.type==='sell'){ totsell+=amt; nT++; } });
   const principal=(+st.principal||0)+(c.added||0)-(c.withdrawn||0);
+  { const mt=$('ivs_bymonth'); if(mt) mt.innerHTML=realizedBreakHtml(ivsSellsOf(c),principal).month; }   // 월별 실현손익(2026-11-11) — ivsPos 매도 손익
   let invested=price>0?price*c.qty:0;
   if(c.X1){ const p1=(ivsQuote1&&(ivsQuote1.price>0?ivsQuote1.price:(ivsQuote1.last&&ivsQuote1.last.close)))||c.avg1||0;
     invested+=p1*(c.qty1||0); }
@@ -7642,11 +7697,14 @@ function maLedger(hist, price, principal){
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
   let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0, fees=0, divs=0;
   let cash=+principal||0;
-  (hist||[]).forEach(x=>{
+  const outs=[];   // 청산마다 {i, date, qty, pnl} — 분석 탭 월별 실현손익 · 거래이력 그림이 이 값을 그대로 쓴다
+  (hist||[]).forEach((x,i)=>{
     // 배당 (7차 D8) — 보유 중 받은 세후 배당은 현금으로 들어온다. 매매가 아니라 평단·보유는 그대로.
     if(x.type==='div'){ const a=+x.amt||0; if(a>0){ cash+=a; divs+=a; } return; }
     const q=+x.qty||0, pr=+x.price||0;
-    if(!(q>0)||!(pr>0)) return;
+    /* 청산(out)은 수량을 안 적어도 된다 — 손으로 적는 청산(maRecord)은 수량 없이 저장된다 = 들고 있던 전부.
+       예전엔 수량 없는 기록을 통째로 건너뛰어, 손으로 적은 청산이 실현손익에 안 들어가고 보유가 그대로 남아 보였다(2026-11-11 확인). */
+    if(!(pr>0)||(x.type==='in'&&!(q>0))) return;
     if(x.type==='in'){
       const gross=pr*q, fee=(x.fee!=null?+x.fee:gross*FEE);
       /* 매수 수수료는 현금에서 나가는데 평단에는 안 들어가고 있었다 —
@@ -7656,17 +7714,19 @@ function maLedger(hist, price, principal){
       const nq=qty+q; avg=nq>0?(avg*qty+pr*q+fee)/nq:(q>0?(pr*q+fee)/q:pr); qty=nq;
       totbuy+=gross; cash-=gross+fee; fees+=fee;
     }else if(x.type==='out'){
-      const sq=q>0?Math.min(q,qty):qty; const gross=pr*sq;
+      const sq=q>0?Math.min(q,qty):qty; if(!(sq>0)) return;   // 들고 있는 게 없으면 청산할 것도 없다
+      const gross=pr*sq;
       const fee=(x.fee!=null?+x.fee:gross*FEE);
       const pnl=(pr-avg)*sq-fee;                 // 실현손익도 수수료 차감 후 (백테와 동일)
       realized+=pnl; totsell+=gross; cash+=gross-fee; fees+=fee;
+      outs.push({i,date:x.date,qty:sq,pnl});
       qty-=sq; nOut++; if(pnl>0)nWin++;
       if(qty<=1e-9){qty=0;avg=0;}
     }
   });
   cash=Math.max(0,cash);
   const invested=price>0?price*qty:0;
-  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,divs,total:invested+cash};
+  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,divs,total:invested+cash,outs};
 }
 /* 계좌 밖으로 오간 돈을 월 단위로 읽어 준다.
    무매 단리(사이클 초과익)와 적립(현금 수령 분배금)이 같은 함수를 쓴다 —
@@ -10462,10 +10522,11 @@ function tcFromVr(c){
 /* 로테이션 — 진입(매수) · 청산(매도). 평단 대신 진입가 · 수량을 안 적은 진입은 '보유 중'(표시 크기는 가운데) · 손익은 이 탭이 세지 않아 안 적는다 */
 function tcFromMa(st,hist){
   const sym=String((st&&st.ticker)||'SOXL').toUpperCase(), trades=[], steps=[]; let held=0;
-  for(const h of (hist||[])){
+  const outs=new Map(((typeof maLedger==='function'?maLedger(hist,0,+(st&&st.principal)||0).outs:null)||[]).map(o=>[o.i,o]));   // 청산 수량 · 손익 = 분석 탭과 같은 장부(maLedger)
+  (hist||[]).forEach((h,i)=>{
     if(h.type==='in'){ const q=+h.qty>0?+h.qty:null; held=q||true; trades.push({date:h.date,side:'buy',qty:q,price:+h.price,label:'진입'}); steps.push({date:h.date,held,avg:+h.price||null}); }
-    else if(h.type==='out'){ trades.push({date:h.date,side:'sell',qty:held===true?null:(+held||null),price:+h.price,label:'청산'}); held=0; steps.push({date:h.date,held:0,avg:null}); }
-  }
+    else if(h.type==='out'){ const o=outs.get(i); trades.push({date:h.date,side:'sell',qty:o?o.qty:(held===true?null:(+held||null)),price:+h.price,pnl:o?o.pnl:null,label:'청산'}); held=0; steps.push({date:h.date,held:0,avg:null}); }
+  });
   return {sym,trades,steps,avgLabel:'진입가'};
 }
 /* 섀넌 — 종목(레버리지 · 1배 짝)마다 따로. 손익 = 표의 실현손익(ivsPos) · 보유 · 평단 = 그 다리 값 */
