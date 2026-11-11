@@ -1,5 +1,15 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-12 · 연구(클로드) 사용자 고정 — ③ 옛 메인으로 되돌림 · ② −4.75% 유지 · claude v2.29.0
+
+- 이유: 사용자 11/12 "1번 예전메인으로 돌리고 매매 가산점을 점검해야겠네" · "2 유지". ③ 11/11 자동 승격은 빈도 보정이 뒤집은 순위였고(R6), ② 는 메인이 낙폭 기준을 1.4%p 넘어 −6.5% 가 1위였다(R36).
+- `scripts/claude_lab.py`: `USER_PINS`(③ g_coin_ma15_s99_hi7_eth · ② g_etf_th4.75) — 고정 탭은 자동 교체 안 함 · 메인이 다르면 `by=user:pin` 승격 기록을 한 번 쌓아 다음 날부터 되돌림 · 고정 전략은 퇴출 안 함. `pinned_entry`(지난 승격 기록 → 기본 메인 → 경쟁군).
+- `claude.html`: 고정 탭 상태 '📌 사용자 고정 — 자동 교체 안 함' + 사유. 버전 v2.29.0.
+- `functions/api/claude-telegram.js`: 승격 문구가 사용자 고정이면 '자동 교체'라고 쓰지 않음(승격 알림은 지금도 안 보냄).
+- 시험: `test_opening_gapdown.py` ArenaTest 4개 · `test_opening_gapdown.mjs` 2개 · 변이 7종(`mutation_test_opening_gapdown.py`).
+- 연구: R38 사전 등록(4cf3e5c2) · 스크립트 `scripts/research/r38_promo_rule.py`(be2b3c08).
+- 감사: `AUDIT-SELF-REVIEW.md` 2026-11-12 장.
+
 ## 2026-11-12 · 연구 R37 · 아침 루틴 확인 기록(문서 · 연구 스크립트)
 
 - `CLAUDE-SCALPING-RESEARCH.md` R37(사전 등록 89bfdcbc → 결과): ④ 자동 승격 전 점검 — 승격 문제 없음.

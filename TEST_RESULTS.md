@@ -1,5 +1,14 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-12 · 연구(클로드) 사용자 고정 · claude v2.29.0
+
+- `python -m unittest test_opening_gapdown.ArenaTest`: 15 tests OK(고정 4개 포함).
+- `node scripts/test_opening_gapdown.mjs`: 70 ALL PASS(텔레그램 고정 문구 · 화면 고정 상태 포함).
+- `JKQ_MUT_ONLY="pin" python scripts/mutation_test_opening_gapdown.py`: 대조군 2 초록 · 변이 7종 모두 잡힘.
+- 11/12 리포트: `claude-research-report.yml` 실행 43109855240 · subs 1 → [201] · 텔레그램 sent(08:00:03).
+- 정정: 승격 텔레그램은 10/13 부터 설계상 보내지 않는다(`promote` → `buy_sell_only`). 앞 기록의 '승격 알림 도착 미확인'은 틀린 표현이었다.
+- 미확인: 되돌림 기록(`by=user:pin`)이 운영 경쟁 계산에서 실제로 쌓였는지 — 병합 뒤 main-config.json 으로 확인한다.
+
 ## 2026-11-12 · 연구(클로드) 아침 루틴 — R37 · 11/11 리포트 발송
 
 - 11/11 리포트: `claude-research-report.yml` 실행 42913376631 · `{"ok":true,"id":"report:2026-11-11","subs":2,"sent":[201,410],"telegram":{"result":"sent","tries":1}}` · 08:00:02 KST. 기기 화면 표시는 미확인.
