@@ -1,5 +1,13 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-12 · 연구(클로드) 아침 루틴 — R37 · 11/11 리포트 발송
+
+- 11/11 리포트: `claude-research-report.yml` 실행 42913376631 · `{"ok":true,"id":"report:2026-11-11","subs":2,"sent":[201,410],"telegram":{"result":"sent","tries":1}}` · 08:00:02 KST. 기기 화면 표시는 미확인.
+- 11/11 장부(`data/claude-live/2026-11-11.json` · `opening-gapdown-live/2026-11-11.json`): 다섯 탭 매매 없음 · 세 단계 vtsSetting revision 3 · on false. ② etf_buy max24 {next 11/12, nextOpen true} · 그림자 신호 없음.
+- ③: `latest.json`(11/12 06:33) main.crypto.today = g_coin_ma5_s10_hi_both · effectiveFrom 2026-11-12.
+- R37: `python scripts/research/r37_soxl_promo.py latest.json` — 전체 기간 값이 경쟁 표와 같음(후보 +882.9% · −21.8% / 메인 +750.6% · −23.3%). 결과는 `CLAUDE-SCALPING-RESEARCH.md` R37.
+- 미확인: 11/12 리포트 수신(08:03 확인 예정) · ① 후보 분봉 11/11(아직 없음).
+
 ## 2026-11-11 · 운영 › 듀얼가드 안쪽 스크롤 없앰 — 창 높이 = 내용 높이 · 바깥 한 번 스크롤 · v3.135.0 (듀얼가드 v2.14.0)
 
 - `scripts/check-dg-autoheight.cjs` **ALL PASS · 변이 6/6** (P1~P10 바깥 · C1~C5 창 안).
