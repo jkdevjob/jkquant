@@ -12715,7 +12715,7 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 86/86 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 91/91 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   /* 2026-11-09 — 섀넌 기록 시트: 탭마다 제 양식 · 저장은 주문대로 체결 기록과 같은 길(_ivsPush) · FAB 규칙 */
   const pis=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ivs-sheet.cjs')],{encoding:'utf8'});
   ok('섀넌 기록 시트: 양식(5종 · 1배수 짝 선택) · 저장(매수·매도 수수료 자동 · 입금·출금·배당 · 날짜 정렬) · 검증 · 라우팅 · FAB 규칙 · 변이 6종',
@@ -12737,7 +12737,9 @@ Promise.all(PENDING).then(()=>{
   ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 붙박이 세 줄(숨은 창 높이 0 버림 · 크기 바뀌면 다시 잼) · 변이 27종',
      pdg.status===0&&(pdg.stdout||'').includes('ALL PASS dg tab · 변이 27/27 red'),(pdg.stdout||'').slice(-600)+(pdg.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
-  ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
+  /* 2026-11-11 — 연말 세금 점검을 듀얼가드 화면에서 💰 포트폴리오로(사용자 "포트폴리오에 속한 전략 전부로 판단해야지") · 셈 portfolio() */
+  ok('연말 세금 점검(포트폴리오 전략 전부): 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계 · 체결 목록(소수 주) · 공제 한 번 · 팔고 되사기 후보 · 추정 낮춤 · 선입선출 함정 · 듀얼가드 화면에서 빠짐 · 변이 10종',
+     ptx.status===0&&(ptx.stdout||'').includes('ALL PASS plan tax · 변이 10/10 red'),(ptx.stdout||'')+(ptx.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));

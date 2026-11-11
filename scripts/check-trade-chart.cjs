@@ -190,7 +190,7 @@ const MUT=[
   ['VR: 매도 손익 안 넘김','idx',s=>s.replace("pnl:h.type==='sell'?r.pnl:null,label:h.type==='buy'?'매수':'매도'});","pnl:null,label:h.type==='buy'?'매수':'매도'});")],
   ['섀넌: 1배 짝도 레버리지 종목에','idx',s=>s.replace("const sym=String(h.sym||(r.leg==='x1'?c.sym1:c.sym)||'').toUpperCase(); if(!sym) continue;","const sym=String(c.sym||'').toUpperCase(); if(!sym) continue;")],
   ['적립: 평단을 마지막 값으로','idx',s=>s.replace("rows.push({h,held:shares,avg:inv/shares});","rows.push({h,held:shares,avg:p});")],
-  ['로테이션: 청산 손익을 분석 장부에서 안 받음','idx',s=>s.replace("price:+h.price,pnl:o?o.pnl:null,label:'청산'});","price:+h.price,pnl:null,label:'청산'});")],
+  ['로테이션: 청산 손익을 분석 장부에서 안 받음','idx',s=>s.replace("fee:q?feeOf(h,q):0,pnl:o?o.pnl:null,label:'청산'});","fee:q?feeOf(h,q):0,pnl:null,label:'청산'});")],
   ['듀얼가드: 날짜 무시하고 마지막 장부로','plan',s=>s.replace("for(const d of dates)put(d,alphaLedgerCalc(Object.assign({},L,{events:(L.events||[]).filter(e=>String(e.date||'')<=d)})));","for(const d of dates)put(d,S);")],
   ['듀얼가드: 손익을 표와 다른 값으로','plan',s=>s.replace("pnl:e.side==='sell'&&pn&&Number.isFinite(pn.profit)?pn.profit:null});","pnl:e.side==='sell'?(+e.price||0)*Math.floor(+e.qty||0):null});")],
   ['연결: 무매 표 그릴 때 그림 안 함','idx',s=>s.replace("  tcRender('inf');   // 거래이력 그림(보일 때만)\n","")],

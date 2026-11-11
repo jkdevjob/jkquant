@@ -10,8 +10,8 @@ function fnOf(src,marker){
 const fn=marker=>fnOf(html,marker);
 function element(dataset={}){return {dataset,hidden:false,classList:{toggle(){}},setAttribute(k,v){this[k]=v;}};}
 /* 탭마다 보이는 칸(화면 차례대로). 2026-11-11 사용자 "듀얼가드 분석에 리밸런싱 판단근거가 현재탭에 들어가야 할거 같은데"
-   — 판단 근거(alphaEvidenceSection)는 현재 탭 3번(현재 계좌 다음 · 세금 점검 앞). */
-const VIEWS={current:['dgHero','alphaOrderSection','alphaAccountSection','alphaEvidenceSection','alphaTaxSection'],analysis:['assetPaperPanel','alphaPerfSection','alphaMonthSection'],history:['alphaHistorySection'],explain:['alphaStrategySection']};
+   — 판단 근거(alphaEvidenceSection)는 현재 탭 3번(현재 계좌 다음). 연말 세금 점검 칸(alphaTaxSection)은 💰 포트폴리오로 옮겨 없다(2026-11-11). */
+const VIEWS={current:['dgHero','alphaOrderSection','alphaAccountSection','alphaEvidenceSection'],analysis:['assetPaperPanel','alphaPerfSection','alphaMonthSection'],history:['alphaHistorySection'],explain:['alphaStrategySection']};
 function viewCheck(src){
   const tabs=[...src.matchAll(/<button[^>]*data-asset-detail="([^"]+)"[^>]*>/g)].map(m=>Object.assign(element({assetDetail:m[1]}),{controls:((m[0].match(/aria-controls="([^"]*)"/)||[])[1]||'').split(/\s+/).filter(Boolean)}));
   const panels=[...src.matchAll(/<div[^>]*id="([^"]+)"[^>]*data-asset-view="([^"]+)"[^>]*>/g)].map(m=>Object.assign(element({assetView:m[2]}),{id:m[1],startHidden:/\shidden(?=[\s>])/.test(m[0])}));
@@ -36,17 +36,17 @@ function divBlock(src,marker){   // marker 로 시작하는 <div …>…</div> �
   while((m=re.exec(src))){d+=m[0]==='<div'?1:-1;if(!d)return [a,re.lastIndex];}
   throw Error(marker);
 }
-function mutMoveAfterTax(src){   // 판단 근거를 세금 점검 뒤로(차례만 틀림)
+function mutMoveBeforeAccount(src){   // 판단 근거를 현재 계좌 앞으로(차례만 틀림)
   const [a,b]=divBlock(src,'<div class="todaybox" id="alphaEvidenceSection"'),blk=src.slice(a,b),rest=src.slice(0,a)+src.slice(b);
-  const at=rest.indexOf('<div class="card" id="alphaHistorySection"');assert(at>0);return rest.slice(0,at)+blk+'\n'+rest.slice(at);
+  const at=rest.indexOf('<div class="card" id="alphaAccountSection"');assert(at>0);return rest.slice(0,at)+blk+'\n'+rest.slice(at);
 }
 async function main(){
   viewCheck(html);
   const MUT=[
     ['판단 근거가 분석 탭에 남음(옛 코드)',s=>s.replace('id="alphaEvidenceSection" data-asset-view="current">','id="alphaEvidenceSection" data-asset-view="analysis" hidden>')],
     ['판단 근거를 현재 탭으로 옮기며 hidden 을 남김',s=>s.replace('id="alphaEvidenceSection" data-asset-view="current">','id="alphaEvidenceSection" data-asset-view="current" hidden>')],
-    ['판단 근거가 세금 점검 뒤(차례)',mutMoveAfterTax],
-    ['현재 탭 aria-controls 옛 값',s=>s.replace('aria-controls="alphaOrderSection alphaAccountSection alphaEvidenceSection alphaTaxSection">현재','aria-controls="alphaOrderSection alphaAccountSection alphaTaxSection">현재')],
+    ['판단 근거가 현재 계좌 앞(차례)',mutMoveBeforeAccount],
+    ['현재 탭 aria-controls 옛 값(판단 근거 빠짐)',s=>s.replace('aria-controls="alphaOrderSection alphaAccountSection alphaEvidenceSection">현재','aria-controls="alphaOrderSection alphaAccountSection">현재')],
   ];
   let red=0;
   for(const [name,f] of MUT){const m=f(html);assert.notEqual(m,html,'변이 대상 없음: '+name);let caught=false;try{viewCheck(m);}catch(e){caught=true;}assert(caught,'변이가 안 잡힘: '+name);red++;}
