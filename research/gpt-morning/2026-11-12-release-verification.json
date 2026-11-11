@@ -1,0 +1,281 @@
+{
+  "schema": 1,
+  "verifiedAt": "2026-11-11T23:31:02.052008+00:00",
+  "requestDate": "2026-11-11",
+  "reportDate": "2026-11-12",
+  "pullRequest": {
+    "url": "https://github.com/jkdevjob/jkquant/pull/661",
+    "merged": true,
+    "mergedAt": "2026-11-11T23:24:05Z",
+    "mergeSha": "8f8a5c71915a7a50e9ebbefb9133953a6644ba67"
+  },
+  "preregistration": {
+    "G5": "65f8013eac3819c5e1d969b352bde093abdabe28",
+    "G6": "3a43ec2e374d5e09356e5bef22f10f78d988175e",
+    "preservedHistoryBranch": "research/gpt-20261112-g6"
+  },
+  "preMergeCI": {
+    "run": 43118654616,
+    "head": "feb4e21991600849d629224255e2baa9aa62dc70",
+    "manifestSteps": 62,
+    "jobs": [
+      {
+        "id": 130853307871,
+        "name": "검사 조각 3/4",
+        "conclusion": "success"
+      },
+      {
+        "id": 130853308249,
+        "name": "검사 조각 2/4",
+        "conclusion": "success"
+      },
+      {
+        "id": 130853308322,
+        "name": "검사 조각 1/4",
+        "conclusion": "success"
+      },
+      {
+        "id": 130853308335,
+        "name": "검사 조각 4/4",
+        "conclusion": "success"
+      },
+      {
+        "id": 130855719927,
+        "name": "check",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "mergedMainCI": {
+    "run": 43119534745,
+    "head": "8f8a5c71915a7a50e9ebbefb9133953a6644ba67",
+    "manifestSteps": 62,
+    "jobs": [
+      {
+        "id": 130856147766,
+        "name": "검사 조각 2/4",
+        "conclusion": "success"
+      },
+      {
+        "id": 130856148049,
+        "name": "검사 조각 3/4",
+        "conclusion": "success"
+      },
+      {
+        "id": 130856148082,
+        "name": "검사 조각 1/4",
+        "conclusion": "success"
+      },
+      {
+        "id": 130856148084,
+        "name": "검사 조각 4/4",
+        "conclusion": "success"
+      },
+      {
+        "id": 130858049866,
+        "name": "check",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "regressions": {
+    "passed": 2825,
+    "failed": 0,
+    "relatedLocalNode": {
+      "passed": 105,
+      "failed": 0
+    },
+    "originalLedgerParity": {
+      "ledgers": 15,
+      "rows": 811,
+      "recordDifferences": 0,
+      "dailyDifferences": 0,
+      "originalHashChanges": 0
+    }
+  },
+  "deployment": {
+    "pages": {
+      "checkId": 130856333598,
+      "conclusion": "success",
+      "completedAt": "2026-11-11T23:24:33Z"
+    },
+    "worker": {
+      "run": 43119534740,
+      "job": 130856147385,
+      "conclusion": "success",
+      "completedAt": "2026-11-11T23:24:29Z",
+      "uploadedCodeVersionId": "85a3357e-b684-49ba-aa07-0d4952c5bf19"
+    },
+    "withinBefore0830KstWindow": true
+  },
+  "nightly": {
+    "initialRun": 43119534602,
+    "afterPagesRun": 43119841160,
+    "afterPagesJob": 130857205289,
+    "afterPagesConclusions": "success",
+    "promotion": {
+      "ok": true,
+      "requiredLeaderResearchSessions": 7,
+      "effective": "next-new-session",
+      "results": {
+        "opening": {
+          "status": "already-selected",
+          "variant": "combo_pb05_e0920",
+          "effectiveFrom": "2026-11-05"
+        },
+        "daytrading": {
+          "status": "skipped",
+          "reason": "1위 유지 5/7 연구세션"
+        },
+        "crypto": {
+          "status": "skipped",
+          "reason": "1위 유지 1/7 연구세션"
+        },
+        "soxl": {
+          "status": "skipped",
+          "reason": "1위 유지 2/7 연구세션"
+        },
+        "closing30": {
+          "status": "skipped",
+          "reason": "1위 유지 1/7 연구세션"
+        },
+        "closing_bet": {
+          "status": "skipped",
+          "reason": "1위 유지 1/7 연구세션"
+        }
+      }
+    },
+    "rerunDidNotInflateLeaderStreak": true,
+    "rule": "Same evidence date is counted once; closing leaders remain one distinct evidence session after both executions.",
+    "sourceSha": "e34ec97e62673b69467b5406c21a5d952325ae94",
+    "schema": 2,
+    "sourceErrors": [],
+    "eligibleCandidateCount": 0
+  },
+  "report": {
+    "commit": "d9d579d4fa29d37aaa0768f0cc8eb3dc5a202e46",
+    "preparedAt": "2026-11-11T23:11:25.871339+00:00",
+    "late": true,
+    "preparationRun": 43117889181,
+    "conclusion": "success",
+    "receipt": {
+      "ok": true,
+      "queued": null,
+      "duplicate": true,
+      "dueAt": null,
+      "delivery": {
+        "push": {
+          "sent": 1,
+          "eligible": 1,
+          "failed": 0
+        },
+        "telegram": {
+          "result": "sent",
+          "tries": 1
+        }
+      }
+    },
+    "deliveryMeaning": "The already-delivered 08:00 not-ready fallback is confirmed by server receipt. The late research report was not re-sent. Actual device display was not observed.",
+    "datedReportUnchanged": true,
+    "datedReportSha256": "d1ac04d33f544e34d6f5870c7e7694c200ade9bfbd661b2b1001578e06cdfe84"
+  },
+  "strategyDecision": {
+    "study": "G6",
+    "candidate": "dip_1",
+    "closing30": "retain_current_main",
+    "closing_bet": "retain_current_main",
+    "reason": "Negative post-cost expectancy, insufficient PF/risk and walk-forward/post-registration evidence; no new alpha adoption."
+  },
+  "boundaries": {
+    "manualScalpingDataPush": false,
+    "orderSettingsChanged": false,
+    "liveOrdersAdded": false,
+    "historicalOriginalsRewritten": false
+  },
+  "limitations": [
+    "Owner-authenticated production screen was not opened; public production HTML and live APIs were verified.",
+    "First new market-session cutoff observations and outcome fields are pending the next actual session. Historical missing fields are not backfilled.",
+    "11/11 day signals include two without entry/exit, and 11/11 overnight signals are awaiting the next session's exit. They remain unfinalized."
+  ],
+  "nextReview": {
+    "date": "2026-11-13",
+    "items": [
+      "First new closing day/overnight observations, selected/unselected inputs, versions and outcome labels",
+      "Ten active candidates each, leader streaks, retirement/replacement and prospective generation",
+      "G6 separate post-registration accumulation before 20 trading days / 20 trades",
+      "08:00 preparation and delivery receipts; never infer actual device receipt"
+    ]
+  },
+  "production": {
+    "page": {
+      "url": "https://jkquant.pages.dev/scalping",
+      "http": 200,
+      "version": "v1.49.0",
+      "sha256": "7707f5a195246da24205dbf3ddaee13d225dae27adfbef7c6b1eec5a1b08cf9a",
+      "retrievedAt": "2026-11-11T23:25:08.475874+00:00"
+    },
+    "dailyStrategies": [
+      "opening",
+      "daytrading",
+      "crypto",
+      "soxl",
+      "closing30",
+      "closing_bet"
+    ],
+    "closingPrevious": {
+      "closing30": {
+        "date": "2026-11-11",
+        "returnPct": null,
+        "trades": 3,
+        "closed": 1,
+        "open": 0,
+        "pendingTrades": 2,
+        "finalized": false,
+        "incomplete": true
+      },
+      "closing_bet": {
+        "date": "2026-11-11",
+        "returnPct": null,
+        "trades": 3,
+        "closed": 0,
+        "open": 3,
+        "pendingTrades": 0,
+        "finalized": false,
+        "incomplete": true
+      }
+    },
+    "closingRankings": {
+      "closing30": {
+        "to": "2026-11-10",
+        "rows": 10,
+        "activeCount": 10,
+        "leader": {
+          "name": "flat",
+          "consecutiveResearchSessions": 1,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-10"
+          ]
+        }
+      },
+      "closing_bet": {
+        "to": "2026-11-10",
+        "rows": 10,
+        "activeCount": 10,
+        "leader": {
+          "name": "up_1",
+          "consecutiveResearchSessions": 1,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-10"
+          ]
+        }
+      }
+    },
+    "authGuard": {
+      "closingHistory": 401,
+      "workerClosingConfig": 401
+    },
+    "ownerScreenObserved": false
+  }
+}

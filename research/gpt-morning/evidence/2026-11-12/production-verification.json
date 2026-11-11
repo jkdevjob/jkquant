@@ -1,0 +1,596 @@
+{
+  "page": {
+    "url": "https://jkquant.pages.dev/scalping",
+    "retrievedAt": "2026-11-11T23:25:08.475874+00:00",
+    "http": 200,
+    "sha256": "7707f5a195246da24205dbf3ddaee13d225dae27adfbef7c6b1eec5a1b08cf9a",
+    "version": "v1.49.0",
+    "closing30Present": true,
+    "closingBetPresent": true,
+    "sixRegistryPresent": true
+  },
+  "daily": {
+    "url": "https://jkquant.pages.dev/api/scalping-daily-results?refresh=1",
+    "retrievedAt": "2026-11-11T23:25:08.475874+00:00",
+    "http": 200,
+    "sha256": "f072f4894de2e70ca8289ea2ebda062c0f3ac5fcd22abcb81f4af515e4a61f3a",
+    "ok": true,
+    "error": null,
+    "strategies": [
+      {
+        "strategy": "opening",
+        "status": "ok",
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": -0.6957515555730531,
+          "sumPnlPct": -2.7830062222922125,
+          "trades": 4,
+          "wins": 2,
+          "losses": 2,
+          "noTrade": false,
+          "incomplete": false,
+          "finalized": true,
+          "source": "opening-operational-history",
+          "mainVariant": "combo_pb05_e0920",
+          "generatedAt": "2026-11-11T16:04:46+09:00",
+          "marketDate": null,
+          "timeZone": "Asia/Seoul"
+        },
+        "current": {
+          "date": "2026-11-12",
+          "marketDate": null,
+          "pending": true,
+          "pendingReason": "KST 장 마감 후 기준전략 결과 확정",
+          "finalized": false,
+          "source": "kst-calendar"
+        },
+        "sourceWarnings": []
+      },
+      {
+        "strategy": "daytrading",
+        "status": "ok",
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": -1.2500000000000009,
+          "sumPnlPct": -3.7500000000000027,
+          "trades": 3,
+          "wins": 0,
+          "losses": 3,
+          "noTrade": false,
+          "finalized": true,
+          "incomplete": false,
+          "source": "daytrading-paper-live",
+          "generatedAt": "2026-11-11T06:35:05.383Z",
+          "mainVariant": "baseline",
+          "marketDate": null,
+          "timeZone": "Asia/Seoul"
+        },
+        "current": {
+          "date": "2026-11-12",
+          "marketDate": null,
+          "pending": true,
+          "pendingReason": "KST 장 마감 후 기준전략 결과 확정",
+          "finalized": false,
+          "source": "kst-calendar"
+        },
+        "sourceWarnings": []
+      },
+      {
+        "strategy": "crypto",
+        "status": "ok",
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": 0,
+          "sumPnlPct": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "noTrade": true,
+          "finalized": true,
+          "incomplete": false,
+          "source": "global-paper-live",
+          "generatedAt": "2026-11-11T14:59:33.346Z",
+          "strategyVersion": "btc_midnight_orb_v2@baseline",
+          "marketDate": null,
+          "timeZone": "Asia/Seoul"
+        },
+        "current": {
+          "date": "2026-11-12",
+          "marketDate": null,
+          "pending": true,
+          "pendingReason": "KST 00:00~24:00 세션 종료 후 결과 확정",
+          "finalized": false,
+          "source": "kst-calendar"
+        },
+        "sourceWarnings": []
+      },
+      {
+        "strategy": "soxl",
+        "status": "ok",
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": 0,
+          "sumPnlPct": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "noTrade": true,
+          "finalized": true,
+          "incomplete": false,
+          "source": "global-paper-live",
+          "generatedAt": "2026-11-10T21:05:32.807Z",
+          "strategyVersion": "soxl_orb_v1@baseline",
+          "marketDate": "2026-11-10",
+          "timeZone": "Asia/Seoul"
+        },
+        "current": {
+          "date": "2026-11-12",
+          "returnPct": 2.200000000000002,
+          "sumPnlPct": 2.200000000000002,
+          "trades": 1,
+          "wins": 1,
+          "losses": 0,
+          "noTrade": false,
+          "finalized": true,
+          "incomplete": false,
+          "source": "global-paper-live",
+          "generatedAt": "2026-11-11T21:05:33.054Z",
+          "strategyVersion": "soxl_orb_v1@baseline",
+          "marketDate": "2026-11-11",
+          "timeZone": "Asia/Seoul"
+        },
+        "sourceWarnings": []
+      },
+      {
+        "strategy": "closing30",
+        "status": "degraded",
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": null,
+          "sumPnlPct": 0.8436196319018454,
+          "realizedReturnPct": 0.2812065439672818,
+          "slots": 3,
+          "trades": 3,
+          "closed": 1,
+          "open": 0,
+          "pendingTrades": 2,
+          "unverified": 0,
+          "wins": 1,
+          "losses": 0,
+          "noTrade": false,
+          "finalized": false,
+          "incomplete": true,
+          "source": "closing30-paper-live",
+          "pnlBasis": "strategy-paper",
+          "mainVariant": "baseline",
+          "strategyVersion": "close30-paper-v1",
+          "generatedAt": "2026-11-11T06:41:03.357Z",
+          "updatedAt": "2026-11-11T06:41:03.357Z",
+          "scanCoverage": {
+            "signalRecorded": true,
+            "signalComplete": true,
+            "settlementRecorded": true,
+            "complete": true
+          },
+          "positions": [
+            {
+              "id": "2026-11-11:day:baseline:000810",
+              "date": "2026-11-11",
+              "kind": "day",
+              "variant": "baseline",
+              "code": "000810",
+              "name": "삼성화재",
+              "signalTime": "2026-11-11 15:04",
+              "entryTime": null,
+              "exitTime": null,
+              "entryPrice": null,
+              "exitPrice": null,
+              "pnl": null,
+              "status": "signal",
+              "source": "closing30-paper-live",
+              "strategyVersion": "closing30_v1",
+              "strategyParams": {
+                "id": "baseline",
+                "label": "기준 · 장마감 반등",
+                "side": "dip",
+                "threshold": 0,
+                "volume": 0,
+                "maxTrades": 3,
+                "frictionPct": 0.23,
+                "signalCutoff": 1504,
+                "entry": "next_completed_minute_proxy",
+                "exit": "official_close"
+              },
+              "main": true,
+              "signal": {
+                "signalHm": 1504,
+                "signalPrice": 567000,
+                "intradayPct": -5.657237936772042,
+                "volumeRatio": 1.2029471666466993,
+                "liquidity": 1898312000,
+                "signalTime": "2026-11-11 15:04",
+                "source": "KIS 1분봉 · 완성된 분봉만"
+              }
+            },
+            {
+              "id": "2026-11-11:day:baseline:003490",
+              "date": "2026-11-11",
+              "kind": "day",
+              "variant": "baseline",
+              "code": "003490",
+              "name": "대한항공",
+              "signalTime": "2026-11-11 15:04",
+              "entryTime": null,
+              "exitTime": null,
+              "entryPrice": null,
+              "exitPrice": null,
+              "pnl": null,
+              "status": "signal",
+              "source": "closing30-paper-live",
+              "strategyVersion": "closing30_v1",
+              "strategyParams": {
+                "id": "baseline",
+                "label": "기준 · 장마감 반등",
+                "side": "dip",
+                "threshold": 0,
+                "volume": 0,
+                "maxTrades": 3,
+                "frictionPct": 0.23,
+                "signalCutoff": 1504,
+                "entry": "next_completed_minute_proxy",
+                "exit": "official_close"
+              },
+              "main": true,
+              "signal": {
+                "signalHm": 1504,
+                "signalPrice": 31550,
+                "intradayPct": -3.220858895705525,
+                "volumeRatio": 1.4366685388750702,
+                "liquidity": 1880985800,
+                "signalTime": "2026-11-11 15:04",
+                "source": "KIS 1분봉 · 완성된 분봉만"
+              }
+            },
+            {
+              "id": "2026-11-11:day:baseline:012450",
+              "date": "2026-11-11",
+              "kind": "day",
+              "variant": "baseline",
+              "code": "012450",
+              "name": "한화에어로스페이스",
+              "signalTime": "2026-11-11 15:04",
+              "entryTime": "2026-11-11T15:06:00+09:00",
+              "exitTime": "2026-11-11T15:30:00+09:00",
+              "entryPrice": 652000,
+              "exitPrice": 659000,
+              "pnl": 0.8436196319018454,
+              "status": "closed",
+              "source": "closing30-paper-live",
+              "strategyVersion": "closing30_v1",
+              "strategyParams": {
+                "id": "baseline",
+                "label": "기준 · 장마감 반등",
+                "side": "dip",
+                "threshold": 0,
+                "volume": 0,
+                "maxTrades": 3,
+                "frictionPct": 0.23,
+                "signalCutoff": 1504,
+                "entry": "next_completed_minute_proxy",
+                "exit": "official_close"
+              },
+              "main": true,
+              "signal": {
+                "signalHm": 1504,
+                "signalPrice": 652000,
+                "intradayPct": -0.6097560975609762,
+                "volumeRatio": 1.416987125898679,
+                "liquidity": 1848601000,
+                "signalTime": "2026-11-11 15:04",
+                "source": "KIS 1분봉 · 완성된 분봉만"
+              },
+              "outcomes": null
+            }
+          ],
+          "reason": "전날 마감 손익 미확정 · 원본 체결/세션 결과 대조 필요",
+          "marketDate": null,
+          "timeZone": "Asia/Seoul",
+          "pending": false,
+          "unavailable": true,
+          "missingClose": true
+        },
+        "current": {
+          "date": "2026-11-12",
+          "marketDate": null,
+          "pending": true,
+          "pendingReason": "KST 장 마감 후 기준전략 결과 확정",
+          "finalized": false,
+          "source": "kst-calendar"
+        },
+        "sourceWarnings": []
+      },
+      {
+        "strategy": "closing_bet",
+        "status": "degraded",
+        "previous": {
+          "date": "2026-11-11",
+          "returnPct": null,
+          "sumPnlPct": null,
+          "realizedReturnPct": 0,
+          "slots": 3,
+          "trades": 3,
+          "closed": 0,
+          "open": 3,
+          "pendingTrades": 0,
+          "unverified": 0,
+          "wins": 0,
+          "losses": 0,
+          "noTrade": false,
+          "finalized": false,
+          "incomplete": true,
+          "source": "closing30-paper-live",
+          "pnlBasis": "strategy-paper",
+          "mainVariant": "baseline",
+          "strategyVersion": "close30-paper-v1",
+          "generatedAt": "2026-11-11T06:41:03.357Z",
+          "updatedAt": "2026-11-11T06:41:03.357Z",
+          "scanCoverage": {
+            "signalRecorded": true,
+            "signalComplete": true,
+            "settlementRecorded": true,
+            "complete": true
+          },
+          "positions": [
+            {
+              "id": "2026-11-11:overnight:baseline:000810",
+              "date": "2026-11-11",
+              "kind": "overnight",
+              "variant": "baseline",
+              "code": "000810",
+              "name": "삼성화재",
+              "signalTime": "2026-11-11 15:19",
+              "entryTime": "2026-11-11T15:30:00+09:00",
+              "exitTime": null,
+              "entryPrice": 566000,
+              "exitPrice": null,
+              "pnl": null,
+              "status": "open",
+              "source": "closing30-paper-live",
+              "strategyVersion": "closing30_v1",
+              "strategyParams": {
+                "id": "baseline",
+                "label": "기준 · 장마감 반등",
+                "side": "dip",
+                "threshold": 0,
+                "volume": 0,
+                "maxTrades": 3,
+                "frictionPct": 0.23,
+                "signalCutoff": 1520,
+                "entry": "official_close",
+                "exit": "next_session_open"
+              },
+              "main": true,
+              "signal": {
+                "signalHm": 1519,
+                "signalPrice": 564000,
+                "intradayPct": -6.1564059900166335,
+                "volumeRatio": 1.5784070493626488,
+                "liquidity": 3471825000,
+                "signalTime": "2026-11-11 15:19",
+                "source": "KIS 1분봉 · 완성된 분봉만"
+              },
+              "outcomes": null
+            },
+            {
+              "id": "2026-11-11:overnight:baseline:180640",
+              "date": "2026-11-11",
+              "kind": "overnight",
+              "variant": "baseline",
+              "code": "180640",
+              "name": "한진칼",
+              "signalTime": "2026-11-11 15:19",
+              "entryTime": "2026-11-11T15:30:00+09:00",
+              "exitTime": null,
+              "entryPrice": 204000,
+              "exitPrice": null,
+              "pnl": null,
+              "status": "open",
+              "source": "closing30-paper-live",
+              "strategyVersion": "closing30_v1",
+              "strategyParams": {
+                "id": "baseline",
+                "label": "기준 · 장마감 반등",
+                "side": "dip",
+                "threshold": 0,
+                "volume": 0,
+                "maxTrades": 3,
+                "frictionPct": 0.23,
+                "signalCutoff": 1520,
+                "entry": "official_close",
+                "exit": "next_session_open"
+              },
+              "main": true,
+              "signal": {
+                "signalHm": 1519,
+                "signalPrice": 204000,
+                "intradayPct": -13.742071881606766,
+                "volumeRatio": 2.369024358473362,
+                "liquidity": 3704706500,
+                "signalTime": "2026-11-11 15:19",
+                "source": "KIS 1분봉 · 완성된 분봉만"
+              },
+              "outcomes": null
+            },
+            {
+              "id": "2026-11-11:overnight:baseline:329180",
+              "date": "2026-11-11",
+              "kind": "overnight",
+              "variant": "baseline",
+              "code": "329180",
+              "name": "HD현대중공업",
+              "signalTime": "2026-11-11 15:19",
+              "entryTime": "2026-11-11T15:30:00+09:00",
+              "exitTime": null,
+              "entryPrice": 262500,
+              "exitPrice": null,
+              "pnl": null,
+              "status": "open",
+              "source": "closing30-paper-live",
+              "strategyVersion": "closing30_v1",
+              "strategyParams": {
+                "id": "baseline",
+                "label": "기준 · 장마감 반등",
+                "side": "dip",
+                "threshold": 0,
+                "volume": 0,
+                "maxTrades": 3,
+                "frictionPct": 0.23,
+                "signalCutoff": 1520,
+                "entry": "official_close",
+                "exit": "next_session_open"
+              },
+              "main": true,
+              "signal": {
+                "signalHm": 1519,
+                "signalPrice": 260000,
+                "intradayPct": -1.7013232514177745,
+                "volumeRatio": 1.66272123276199,
+                "liquidity": 2581993500,
+                "signalTime": "2026-11-11 15:19",
+                "source": "KIS 1분봉 · 완성된 분봉만"
+              },
+              "outcomes": null
+            }
+          ],
+          "reason": "체결·청산 원본 확정 대기",
+          "marketDate": null,
+          "timeZone": "Asia/Seoul"
+        },
+        "current": {
+          "date": "2026-11-12",
+          "marketDate": null,
+          "pending": true,
+          "pendingReason": "KST 장 마감 후 기준전략 결과 확정",
+          "finalized": false,
+          "source": "kst-calendar"
+        },
+        "sourceWarnings": []
+      }
+    ]
+  },
+  "ranking": {
+    "url": "https://jkquant.pages.dev/api/scalping-shadow-ranking",
+    "retrievedAt": "2026-11-11T23:25:08.476836+00:00",
+    "http": 200,
+    "sha256": "df94e21a256734b465358a19604eeb7a484dfd1c5c6e608ab768198b8b02be14",
+    "ok": true,
+    "error": null,
+    "rankings": {
+      "opening": {
+        "to": "2026-11-11",
+        "rows": 10,
+        "activeCount": 10,
+        "leader": {
+          "name": "combo_pb05_e0920",
+          "consecutiveResearchSessions": 7,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-03",
+            "2026-11-04",
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-09",
+            "2026-11-10",
+            "2026-11-11"
+          ]
+        }
+      },
+      "daytrading": {
+        "to": "2026-11-11",
+        "rows": 10,
+        "activeCount": 10,
+        "leader": {
+          "name": "session_min_2",
+          "consecutiveResearchSessions": 5,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-04",
+            "2026-11-05",
+            "2026-11-06",
+            "2026-11-10",
+            "2026-11-11"
+          ]
+        }
+      },
+      "crypto": {
+        "to": "2026-11-10",
+        "rows": 10,
+        "activeCount": 10,
+        "leader": {
+          "name": "hold_30m",
+          "consecutiveResearchSessions": 1,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-10"
+          ]
+        }
+      },
+      "soxl": {
+        "to": "2026-11-10",
+        "rows": 10,
+        "activeCount": 10,
+        "leader": {
+          "name": "stop_0.8_tp_1.6",
+          "consecutiveResearchSessions": 2,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-09",
+            "2026-11-10"
+          ]
+        }
+      },
+      "closing30": {
+        "to": "2026-11-10",
+        "rows": 10,
+        "activeCount": 10,
+        "leader": {
+          "name": "flat",
+          "consecutiveResearchSessions": 1,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-10"
+          ]
+        }
+      },
+      "closing_bet": {
+        "to": "2026-11-10",
+        "rows": 10,
+        "activeCount": 10,
+        "leader": {
+          "name": "up_1",
+          "consecutiveResearchSessions": 1,
+          "requiredResearchSessions": 7,
+          "dates": [
+            "2026-11-10"
+          ]
+        }
+      }
+    }
+  },
+  "closingHistoryAuth": {
+    "url": "https://jkquant.pages.dev/api/closing30-history",
+    "retrievedAt": "2026-11-11T23:25:08.476836+00:00",
+    "http": 401,
+    "sha256": "e68751dab3b8f3d23102ee17146c3438164fc2821bfe882f1bcce7bd9635af1f",
+    "ok": false,
+    "error": "unauthorized"
+  },
+  "workerClosingConfigAuth": {
+    "url": "https://jkquant-opening-scheduler.mumae4.workers.dev/closing-config?strategy=closing30",
+    "retrievedAt": "2026-11-11T23:25:08.477815+00:00",
+    "http": 401,
+    "sha256": "e68751dab3b8f3d23102ee17146c3438164fc2821bfe882f1bcce7bd9635af1f",
+    "ok": false,
+    "error": "unauthorized"
+  }
+}
