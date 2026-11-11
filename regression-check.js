@@ -11603,7 +11603,7 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
   ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 기준전략 누적 상태(⑤ 포함 5전략): 표본·승률·거래당·필요승률·엣지·검증상태)',
      /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익<\/span>/.test(ch)
      &&/var pr=dayPair\(r,lt\.days,\(LIVE&&!LIVE\.error&&LIVE\.today\)\|\|""\);/.test(ch)
-     &&/resultCell\(pr\[0\]\.v,pr\[0\]\.date,"전일",cl,pr\[0\]\.lv,z\[4\]\)\+resultCell\(pr\[1\]\.v,pr\[1\]\.date,"당일",cl,pr\[1\]\.lv,z\[4\]\)/.test(ch)
+     &&/resultCell\(pr\[0\]\.v,pr\[0\]\.date,"전일",cl,pr\[0\]\.lv,z\[4\],z\[5\],z\[6\]\)\+resultCell\(pr\[1\]\.v,pr\[1\]\.date,"당일",cl,pr\[1\]\.lv,z\[4\],z\[5\],z\[6\]\)/.test(ch)
      &&/📊 기준전략 누적 상태/.test(ch)&&/\["close30","⑤ 종가 30분","종가 30분",/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
      &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
   // 값 시험 — 화면 함수를 그대로 떼어 실행
@@ -11620,25 +11620,33 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
      &&/매매없음/.test(clash)&&/기준전략 0건/.test(clash)&&!/1건/.test(clash)
      &&/daily-result-goal hit'>\+1% 달성/.test(f.dayCell(1.2,'2026-10-02','당일',null))&&f.scoreOf({tradeDays:0})===null,
      JSON.stringify(s1));
+  ok('오늘 탭 칸 기록 시점 — ①②⑤ "장부 15:40" · ③④ "밤 계산에 기록" · 끝 표현 ① 10:00 매도 끝 · ② 09:00 시가 매도 끝 · ③ 09:00 매도 끝 · ④ 미국장 마감 · ⑤ 15:30 종가 매도 끝 (2026-11-11)',
+     /\["opening",[^\]]*"10:00 에 팔면 확정","장부 15:40","10:00 매도 끝"\]/.test(ch)&&/\["daytrading",[^\]]*"09:00 시가에 팔면 확정","장부 15:40","09:00 시가 매도 끝"\]/.test(ch)
+     &&/\["crypto",[^\]]*"다음 날 09:00 확정","밤 계산에 기록","09:00 매도 끝"\]/.test(ch)&&/\["soxl",[^\]]*"미국장 마감 뒤 확정","밤 계산에 기록","미국장 마감"\]/.test(ch)
+     &&/\["close30",[^\]]*"15:30 종가에 팔면 확정","장부 15:40","15:30 종가 매도 끝"\]/.test(ch)&&!/밤 확정 전/.test(ch));
   { // 확정 전 실시간 칸(2026-10-14 사용자 요청 '실시간으로 반영해') — 확정 값이 먼저, 없을 때만 점선 칸에 출처·시각·'확정 전'
     const lvNow=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0},'15:30 종가에 팔면 확정');   // 2026-11-06 '왜 확정전이냐' — 들고 있는 동안은 보유 · 언제 확정
     const lvNoUntil=f.dayCell(null,'2026-10-14','당일',null,{v:10.75,final:false,src:'vts',trades:2,wins:2,losses:0});
     const lvSet=f.dayCell(null,'2026-11-06','당일',null,{v:5.25,final:true,settled:true,src:'rule',trades:3,wins:3,losses:0},'15:30 종가에 팔면 확정');   // 2026-11-06 '왜 얘들이 아직 확정이 아니냐고' — 15:40 장부가 닫혔으면 확정
     const lvSetNt=f.dayCell(null,'2026-11-06','당일',null,{v:'no_trade',final:true,settled:true,src:'rule',trades:0,note:'15:00 전일 대비 +2.55% (기준 0% 미만 아님) → 매수 없음'});
-    const lvNt=f.dayCell('pending','2026-10-14','당일',null,{v:'no_trade',final:true,src:'vts',trades:0,note:'전날 15:21 매수 신호 없음'});
+    const lvNt=f.dayCell('pending','2026-10-14','당일',null,{v:'no_trade',final:true,src:'vts',trades:0,note:'전날 15:21 매수 신호 없음'},'09:00 시가에 팔면 확정','장부 15:40','09:00 시가 매도 끝');
     const lvWait=f.dayCell(null,'2026-10-14','당일',null,{v:'no_trade',final:false,src:'rule',trades:0,note:'아직 매수 없음 — BTC·ETH 돌파 없음 · 10/15 09:00 전까지 돌파하면 매수'});
-    const lvDec=f.dayCell(null,'2026-10-14','전일',null,{v:'no_trade',final:true,decided:true,src:'rule',trades:0,note:'ETH 쉼(추세 평균 아래)'});   // 2026-10-15 08:33 '매매 전' 혼동 — 더 살 수 없는 날
-    const lvDone=f.dayCell('pending','2026-10-13','전일',null,{v:-5.953344947735195,final:true,src:'rule',trades:1,wins:0,losses:1,note:'모의투자 매수 안 됨 — 규칙대로 계산'});
+    const lvDec=f.dayCell(null,'2026-10-14','전일',null,{v:'no_trade',final:true,decided:true,src:'rule',trades:0,note:'ETH 쉼(추세 평균 아래)'},'다음 날 09:00 확정','밤 계산에 기록','09:00 매도 끝');   // 2026-10-15 08:33 '매매 전' 혼동 — 더 살 수 없는 날
+    const lvDone=f.dayCell('pending','2026-10-13','전일',null,{v:-5.953344947735195,final:true,src:'rule',trades:1,wins:0,losses:1,note:'모의투자 매수 안 됨 — 규칙대로 계산'},'10:00 에 팔면 확정','장부 15:40','10:00 매도 끝');
+    // 2026-11-11 사용자 "10시까지만 거래하는데 왜 아직 확정전이야" → "다른 전략도 똑같이": 결과가 더 안 바뀌면 '결과 확정 (기록 시점)' — ④ 들고 있는 날도 그날 미국장이 끝났으면 그날 값은 확정
+    const lvUs=f.dayCell(null,'2026-11-11','당일',null,{v:-1.2,final:true,src:'rule',trades:1,wins:0,losses:1},'미국장 마감 뒤 확정','밤 계산에 기록','미국장 마감');
+    const lvHol=f.dayCell(null,'2026-11-11','당일',null,{v:'holiday',final:true,src:'vts'},'10:00 에 팔면 확정','장부 15:40','10:00 매도 끝');
     const conf=f.dayCell(-5.95,'2026-10-13','전일',null,{v:-6,final:true,src:'rule',trades:1});
     const none=f.dayCell('pending','2026-10-13','전일',null,null);
     const pr=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:'pending',last:-1.2},{'2026-10-14':{v:1},'2026-10-15':{v:2}},'2026-10-15');
     const pr0=f.dayPair({prevDate:'2026-10-13',lastDate:'2026-10-14',prev:0.5,last:'pending'},null,'');
-    ok('오늘 탭 실시간 칸: 장중 +10.75%(보유 2건 · 오름 2 · 모의투자 체결 · ⏱ 09:41 지금 가격 · 15:30 종가에 팔면 확정 · 점선 · 언제 확정인지 없으면 \'확정 전\') / 15:40 장부가 닫혔으면(settled) 실선 · 장부 정산 · \'15:40 장부 확정\'(밤 확정 전 아님) / 신호 없음은 매매없음(마감 · 밤 확정 전) / 진행 중은 아직 매수 없음(언제까지) · 더 살 수 없으면 매매없음(매수 조건 안 됨) / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
+    ok('오늘 탭 실시간 칸: 장중 +10.75%(보유 2건 · 오름 2 · 모의투자 체결 · ⏱ 09:41 지금 가격 · 15:30 종가에 팔면 확정 · 점선 · 언제 확정인지 없으면 \'확정 전\') / 15:40 장부가 닫혔으면(settled) 실선 · 장부 정산 · \'15:40 장부 확정\'(밤 확정 전 아님) / 신호 없음 · 안 사기로 정한 날은 매매없음(매수 조건 안 됨 · 결과 확정 (기록 시점)) · 다 판 날은 「n시 매도 끝 · 결과 확정」 / 진행 중은 아직 매수 없음(언제까지) · 더 살 수 없으면 매매없음(매수 조건 안 됨) / ② 10/13 규칙 값 −5.95% / 확정 값이 있으면 실시간 값 대신 확정 값 / 날짜는 실시간 오늘 기준(밤 계산 오늘 → 다음 날 전일)',
        /class='daily-result-box live'/.test(lvNow)&&/\+10\.75%/.test(lvNow)&&/보유 2건 · 오름 2 · 내림 0 · 모의투자 체결/.test(lvNow)&&!/승 2/.test(lvNow)&&/\+1% 달성 · ⏱ 09:41 지금 가격 · 15:30 종가에 팔면 확정/.test(lvNow)&&/⏱ 09:41 지금 가격 · 확정 전/.test(lvNoUntil)
        &&/class='daily-result-box'>/.test(lvSet)&&!/live|확정 전|밤 확정/.test(lvSet)&&/\+5\.25%/.test(lvSet)&&/기준전략 3건 · 승 3 · 패 0 · 장부 정산/.test(lvSet)&&/\+1% 달성 · 15:40 장부 확정/.test(lvSet)
        &&/class='daily-result-box'>/.test(lvSetNt)&&/>매매없음</.test(lvSetNt)&&/매매없음 · 0\.00% 반영 · 15:40 장부 확정/.test(lvSetNt)&&!/밤 확정/.test(lvSetNt)
-       &&/>매매없음</.test(lvNt)&&/마감 · 밤 확정 전/.test(lvNt)&&/전날 15:21 매수 신호 없음/.test(lvNt)&&!/확정 대기/.test(lvNt)
-       &&/>아직 매수 없음</.test(lvWait)&&/09:00 전까지 돌파하면 매수/.test(lvWait)&&!/매매 전/.test(lvWait+lvDec)&&/>매매없음</.test(lvDec)&&/매수 조건 안 됨 · 밤 확정 전/.test(lvDec)&&!/⏱/.test(lvDec)&&/-5\.95%/.test(lvDone)&&/기준전략 1건 · 승 0 · 패 1 · 시세로 계산/.test(lvDone)&&/>기준전략 0건<br>전날 15:21 매수 신호 없음</.test(lvNt)&&/목표까지 6\.95%p · 마감 · 밤 확정 전/.test(lvDone)
+       &&/>매매없음</.test(lvNt)&&/매수 조건 안 됨 · 결과 확정 \(장부 15:40\)/.test(lvNt)&&/전날 15:21 매수 신호 없음/.test(lvNt)&&!/확정 대기|밤 확정/.test(lvNt)
+       &&/>아직 매수 없음</.test(lvWait)&&/09:00 전까지 돌파하면 매수/.test(lvWait)&&!/매매 전/.test(lvWait+lvDec)&&/>매매없음</.test(lvDec)&&/매수 조건 안 됨 · 결과 확정 \(밤 계산에 기록\)/.test(lvDec)&&!/⏱|밤 확정/.test(lvDec)&&/-5\.95%/.test(lvDone)&&/10:00 매도 끝 · 결과 확정 \(장부 15:40\)/.test(lvDone)&&!/밤 확정|⏱/.test(lvDone)
+       &&/미국장 마감 · 결과 확정 \(밤 계산에 기록\)/.test(lvUs)&&!/매도 끝|밤 확정/.test(lvUs)&&/>휴장</.test(lvHol)&&/휴장 · 매매 없음/.test(lvHol)&&!/결과 확정|매도 끝/.test(lvHol)&&/기준전략 1건 · 승 0 · 패 1 · 시세로 계산/.test(lvDone)&&/>기준전략 0건<br>전날 15:21 매수 신호 없음</.test(lvNt)&&/목표까지 6\.95%p · 10:00 매도 끝 · 결과 확정 \(장부 15:40\)/.test(lvDone)
        &&/-5\.95%/.test(conf)&&/모의 장부 확정/.test(conf)&&!/live|확정 전/.test(conf)&&/확정 대기/.test(none)&&!/live/.test(none)
        &&pr.length===2&&pr[0].date==='2026-10-14'&&pr[0].v===-1.2&&pr[0].lv.v===1&&pr[1].date==='2026-10-15'&&pr[1].v===null&&pr[1].lv.v===2
        &&pr0[0].date==='2026-10-13'&&pr0[0].v===0.5&&pr0[1].v==='pending'&&pr0[1].lv===null,
@@ -12716,7 +12724,7 @@ Promise.all(PENDING).then(()=>{
   /* 2026-11-09 — 💰 포트폴리오(/portfolio · 실투자 합산) · 운영 › 듀얼가드 탭(플랜 화면 창) · ASAP 숨김 · 장부 계산 엔진으로 이동 */
   const ppf=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-portfolio.cjs')],{encoding:'utf8'});
   ok('포트폴리오·듀얼가드 탭: 장부 이동 = 옛 코드 · 합계(환율·대기·나간 돈·비중) · 듀얼가드 줄 · 실전 채우기(모의 제외)·ASAP 모의 뺌(실계좌는 포트폴리오에) · 탭 순서·ASAP 숨김·메뉴 · 창 알림 · 합친 추이·세션별 선(합 = 합친 평가액)·시간가중 MDD · 올해 양도세(공제 한 번) · 목표 비중 · 변이 53종',
-     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 86/86 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
+     ppf.status===0&&(ppf.stdout||'').includes('ALL PASS portfolio · 변이 91/91 red'),(ppf.stdout||'').slice(-600)+(ppf.stderr||''));
   /* 2026-11-09 — 섀넌 기록 시트: 탭마다 제 양식 · 저장은 주문대로 체결 기록과 같은 길(_ivsPush) · FAB 규칙 */
   const pis=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ivs-sheet.cjs')],{encoding:'utf8'});
   ok('섀넌 기록 시트: 양식(5종 · 1배수 짝 선택) · 저장(매수·매도 수수료 자동 · 입금·출금·배당 · 날짜 정렬) · 검증 · 라우팅 · FAB 규칙 · 변이 6종',
@@ -12738,7 +12746,9 @@ Promise.all(PENDING).then(()=>{
   ok('듀얼가드 탭 = 운영 탭: 한 번에 하나씩 전환(장부 섞임 없음) · 끌어서 순서(숨긴 세션 제자리 · 실패 되돌림 · 합칠 때 순서) · 세션 줄 · 설정 두 갈래 · 창 안 로그인 이어받기 · 미리 열기 · 두 번 누름 창 유지 · 본 장부 이름 · 붙박이 세 줄(숨은 창 높이 0 버림 · 크기 바뀌면 다시 잼) · 변이 27종',
      pdg.status===0&&(pdg.stdout||'').includes('ALL PASS dg tab · 변이 27/27 red'),(pdg.stdout||'').slice(-600)+(pdg.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
-  ok('자산플랜 연말 세금 점검: 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계·화면 연결·변이 4종',ptx.status===0,(ptx.stdout||'')+(ptx.stderr||''));
+  /* 2026-11-11 — 연말 세금 점검을 듀얼가드 화면에서 💰 포트폴리오로(사용자 "포트폴리오에 속한 전략 전부로 판단해야지") · 셈 portfolio() */
+  ok('연말 세금 점검(포트폴리오 전략 전부): 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계 · 체결 목록(소수 주) · 공제 한 번 · 팔고 되사기 후보 · 추정 낮춤 · 선입선출 함정 · 듀얼가드 화면에서 빠짐 · 변이 10종',
+     ptx.status===0&&(ptx.stdout||'').includes('ALL PASS plan tax · 변이 10/10 red'),(ptx.stdout||'')+(ptx.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));

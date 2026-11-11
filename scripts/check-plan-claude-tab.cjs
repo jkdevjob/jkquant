@@ -148,7 +148,7 @@ async function check(S){
     ['설정: 새 세션 기본 이름 "5년 세션"(옛 코드)','set',s=>s.replace("||'듀얼가드 세션';","||x.horizon+'년 세션';")],
     ['듀얼가드 화면: "플랜" 글자 되살림','plan',s=>s.replace('<label>듀얼가드 시작일</label>','<label>플랜 시작일</label>')],
     ['듀얼가드 화면: 머리글 "5 YEAR" 되살림(옛 코드)','plan',s=>s.replace("$('alphaHorizonEyebrow').textContent='DUAL GUARD · '+v;","$('alphaHorizonEyebrow').textContent='5 YEAR · DUAL GUARD · '+v;")],
-    ['운영: "플랜" 글자 되살림','idx',s=>s.replace("'듀얼가드 세금 점검과 같은 계산(결제일 환율 · 선입선출)'","'플랜 세금 점검과 같은 계산(결제일 환율 · 선입선출)'")],
+    ['운영: "플랜" 글자 되살림','idx',s=>s.replace("듀얼가드 시작잔고에 평단을 넣으세요","플랜 시작잔고에 평단을 넣으세요")],   // 포트폴리오 연말 세금 점검 안내(2026-11-11 · 옛 대상 글자는 그 칸과 함께 바뀜)
     ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=8;','const PAPER_VIEW_CACHE_VER=6;')],
     ['엔진: 폐지 안내 "폐지된 플랜"(옛 글자)','eng',s=>s.replace("error:'폐지된 세션 — '+gone","error:'폐지된 플랜 — '+gone")],
   ];

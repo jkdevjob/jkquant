@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0f1320">
 <title>JK 투자 — 운영</title>
 <script src="/plan-session-engine.js?v=8"></script>
-<script src="/plan-tax-check.js?v=1"></script>
+<script src="/plan-tax-check.js?v=2"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-trade-chart.js?v=1.0.0"></script>
 <script src="/jk-access.js"></script>
@@ -360,12 +360,19 @@ body.portfoliopage #fab{display:none!important}
 .pf-trow b{color:var(--ink)}
 .pf-move{margin-top:8px;padding:8px 10px;border-radius:9px;background:var(--panel2);font-size:12.5px;color:var(--dim);line-height:1.55}
 .pf-move b{color:var(--ink)}
+body.realsess .paper-only{display:none!important}   /* 모의투자 도구 칸 — 실운영 세션에선 숨김(renderStatusline) */
 .pf-tax{width:100%;border-collapse:collapse;font-size:12.5px}
 .pf-tax td,.pf-tax th{padding:6px 4px;border-top:1px solid var(--line);text-align:left;vertical-align:top}
 .pf-tax th{color:var(--faint);font-weight:700;font-size:11.5px;border-top:0}
 .pf-tax .num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pf-tax tr.sum td{font-weight:800;color:var(--ink)}
 .pf-tax .sub{font-size:11px;color:var(--faint);margin-top:2px}
+.pf-tax th.num{text-align:right}
+.pf-tax tr.pf-tsub th{padding-top:14px;border-top:1px solid var(--line)}   /* 한 표 안 둘째 묶음(지금 팔면) — 칸 줄이 위 묶음과 같다 */
+.pf-tsug{margin-top:10px;padding:10px 11px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);font-size:12.5px;line-height:1.65;color:var(--dim)}
+.pf-tsug b{color:var(--ink)}.pf-tsug ul{margin:6px 0 0 18px;padding:0}.pf-tsug li{margin:3px 0}
+.pf-pill{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;font-weight:700;color:var(--dim);vertical-align:1px}
+.pf-pill.good{color:var(--buy);border-color:var(--buy-dim)}.pf-pill.warn{color:var(--gold);border-color:rgba(245,196,81,.45)}
 .pf-details{margin-top:8px}
 .pf-details summary{cursor:pointer;font-size:12px;color:var(--dim);font-weight:700}
 .pf-details .pf-tax{margin-top:6px}
@@ -710,7 +717,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.131.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.132.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -907,7 +914,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
       <div class="card"><h3><span class="dot"></span>거래 이력 <span id="inf_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="inf_table"></table></div>
         <button class="ghostbtn" onclick="clearHist('inf')">이력 전체 삭제</button></div>
-      <div class="card" style="margin-top:13px">
+      <div class="card paper-only" style="margin-top:13px">
         <h3><span class="dot"></span>모의투자 — 오늘까지 체결 확인</h3>
         <div style="display:flex;gap:8px;align-items:flex-end">
           <div class="field" style="flex:1;margin:0"><label>시작일 <span class="hint">기록이 없을 때만</span></label><input id="rp_inf_from" type="date"></div>
@@ -1108,7 +1115,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
       <div class="card"><h3><span class="dot"></span>거래 이력 <span id="vr_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="vr_table"></table></div>
         <button class="ghostbtn" onclick="clearHist('vr')">이력 전체 삭제</button></div>
-      <div class="card" style="margin-top:13px">
+      <div class="card paper-only" style="margin-top:13px">
         <h3><span class="dot"></span>모의투자 — 과거부터 자동 채우기</h3>
         <div style="display:flex;gap:8px;align-items:flex-end">
           <div class="field" style="flex:1;margin:0"><label>시작일</label><input id="rp_vr_from" type="date"></div>
@@ -1117,7 +1124,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
         <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 매매를 만들어 기록에 채웁니다(<b>달력 14일</b>마다 V 갱신 · 기준일이 주말이면 다음 영업일 → 사이클 첫날 걸어 둔 매수·매도표가 2주 내내 살아 있고 그날 고가·저가에 닿은 차수만 체결, 백테와 같은 규약).<br>
           <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 양도세는 넣지 않습니다.</p>
       </div>
-      <div class="card" style="margin-top:13px">
+      <div class="card paper-only" style="margin-top:13px">
         <h3><span class="dot"></span>모의투자 — 오늘까지 체결 확인</h3>
         <button class="fetchbtn" style="width:100%" onclick="vrSimNow()">▶ 지금까지 체결 판정</button>
         <p class="note" style="margin-top:8px">매수·매도표를 <b>지정가로 걸어둔 셈 치고</b>, 마지막 확인일 다음 날부터 오늘까지 하루하루 <b>고가·저가</b>로 닿았는지 판정해 체결된 차수만 기록합니다. 사이클 진입(V 갱신·적립)도 날짜에 맞춰 같이 처리합니다.<br>
@@ -1346,7 +1353,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
       <div class="card" style="margin-top:13px"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>신호 전환 이력</span><span class="lh-stage" id="ma_flip_count">—</span></h3>
         <div class="cyc-scroll"><table class="cyctbl" id="ma_flip_tbl"></table></div>
         <p class="note" style="margin-top:8px">합성 1배지수가 200일선을 위로/아래로 교차한 날들입니다. 실제 로테이션은 <b>전일 신호 → 당일 종가 체결</b>이 원칙.</p></div>
-      <div class="card" style="margin-top:13px">
+      <div class="card paper-only" style="margin-top:13px">
         <h3><span class="dot"></span>모의투자 — 과거부터 자동 채우기</h3>
         <div style="display:flex;gap:8px;align-items:flex-end">
           <div class="field" style="flex:1;margin:0"><label>시작일</label><input id="rp_ma_from" type="date"></div>
@@ -1465,15 +1472,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
         <div class="ar"><span class="ak">현재 비중 <span class="sub">주식 ÷ 총자산</span></span><span class="av" id="ivs_wnow">—</span></div>
       </div>
 
-      <!-- 세금 — 숨김. 운영은 실계좌를 따라가는 원장이고 세금은 연말에 실제로 낸 금액을 출금으로 남긴다.
-           DOM은 renderIvsNow가 참조하므로 지우지 않고 감춘다. -->
-      <div class="card acct" style="display:none">
-        <h3><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>올해 양도세</span></h3>
-        <div class="ar"><span class="ak">실현손익 <span class="sub" id="ivs_tax_year">—</span></span><span class="av" id="ivs_pnl">0$</span></div>
-        <div class="ar"><span class="ak">기본공제 잔여 <span class="sub">연 250만원</span></span><span class="av buy" id="ivs_ded">2,500,000₩</span></div>
-        <div class="ar"><span class="ak">예상 세금 <span class="sub">22%</span></span><span class="av" id="ivs_tax">0₩</span></div>
-        <p class="note" style="margin-top:8px" id="ivs_tax_note">공제 잔여가 남아 있으면 그만큼은 세금이 없습니다. 연말에 이익이 공제를 넘길 것 같으면 손실 종목 매도로 상계하는 것을 고려하세요.</p>
-      </div>
+      <!-- 올해 양도세 칸(숨겨 두던 것)은 2026-11-11 지웠다 — 공제는 사람당 한 번이라 💰 포트폴리오 '연말 세금 점검'이 전략 전부로 센다 -->
       <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
       <div class="card" style="margin-bottom:13px">
         <div class="field" style="margin:0"><label>현재가 ($) <span class="hint">주문은 당일 종가(MOC) 기준</span></label>
@@ -1498,7 +1497,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
           <button class="ghostbtn" style="flex:1" onclick="ivsCash('wd')">－ 출금</button>
         </div>
         <button class="ghostbtn" style="width:100%;margin-top:8px" onclick="ivsSeed()">➕ 시작 보유 등록</button>
-        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+        <div class="paper-only" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
           <div class="seclabel" style="margin-top:0">모의투자 — 과거부터 자동 채우기</div>
           <div style="display:flex;gap:8px;align-items:flex-end">
             <div class="field" style="flex:1;margin:0"><label>시작일</label><input id="rp_from" type="date"></div>
@@ -1846,7 +1845,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.131.0</b> · 2026-11-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.132.0</b> · 2026-11-11</div>
   </footer>
 </div>
 
@@ -5760,7 +5759,7 @@ function fetchDcaQuote(){ loadDcaData(true); }
      |w − 현재비중| > band 일 때만 리밸런싱
      판정은 '전일 종가까지', 체결은 그 다음 거래일 종가(MOC)
    운영에서 추가로 필요한 것: 정확한 주문 주식수 · 수수료 반영 · 트리거 가격 · 양도세 공제 잔여 */
-const IVS_FEE=0.0025, IVS_TAXRATE=0.22, IVS_DEDUCT=250e4, IVS_KRW=1350;
+const IVS_FEE=0.0025;   // 양도세(공제 잔여 · 예상 세금)는 💰 포트폴리오 연말 세금 점검 한 곳에서(2026-11-11)
 let ivsQuoteData=null, ivsQuote1=null;
 // 짝=1배수일 때 실제로 사는 1배 ETF (백테의 합성 1배지수에 대응하는 실물)
 const IVS_X1={TQQQ:'QQQ',QLD:'QQQ',SOXL:'SOXX',USD:'SMH',TECL:'XLK',UPRO:'SPY',SSO:'SPY',SPYU:'SPY',KORU:'EWY'};
@@ -5965,13 +5964,6 @@ function renderIvsNow(){
   { const r=(c.avg>0&&price>0&&c.qty>0)?((price/c.avg-1)*100):null;
     const el=$('ivs_ret'); el.textContent=r==null?'—':(r>=0?'+':'')+r.toFixed(1)+'%';
     el.className='bandpill '+(r==null?'in':(r>=0?'in':'under')); }
-  // 세금
-  const pnl=c.pnlYear||0, pnlKrw=pnl*IVS_KRW, ded=Math.max(0,IVS_DEDUCT-Math.max(0,pnlKrw));
-  $('ivs_tax_year').textContent=c.year+'년';
-  $('ivs_pnl').textContent=(pnl>=0?'+':'')+px(Math.abs(pnl));
-  $('ivs_pnl').className='av '+(pnl>=0?'buy':'sell');
-  $('ivs_ded').textContent=nfix(ded,0)+'₩';
-  $('ivs_tax').textContent=nfix(Math.max(0,pnlKrw-IVS_DEDUCT)*IVS_TAXRATE,0)+'₩';
   if(!c.ready){
     $('ivs_pill').className='bandpill wait'; $('ivs_pill').textContent='대기';
     $('ivs_w_txt').textContent='—'; $('ivs_sig_lbl').textContent='변동성 — · 목표 — · 현재 —';
@@ -8281,8 +8273,9 @@ function paperStat(tab, sess){
   const box=S[tab]; if(!box) return null;
   const prevTab=S.activeTab, prevAct=box.active;
   S.activeTab=tab; box.active=sess.id;
-  let R, mdd=null;
-  try{ R=paperRaw(tab, sess); mdd=paperMdd(tab, sess, R, h); }
+  let R, mdd=null, trades=null;
+  try{ R=paperRaw(tab, sess); mdd=paperMdd(tab, sess, R, h);
+    if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink) trades=pfTradesOf(tab); }   // 포트폴리오 세금 점검 — 그 탭 거래이력 그림과 같은 체결 목록(다시 세지 않는다)
   finally{ S.activeTab=prevTab; box.active=prevAct; }
   const {inflow, total, price, sym, out:_out}=R;
   const st=sess.settings||{};
@@ -8309,7 +8302,7 @@ function paperStat(tab, sess){
   /* 포트폴리오 채우기 동안만(그릇이 있을 때) 보유를 그 계산 그대로 넘긴다 — 수량·원가(paperRaw)·계좌 현금(= 나머지 − 나간 돈).
      모의 목록 줄(클라우드 캐시에 저장됨)에는 넣지 않는다 — 문서가 커지지 않게. 종목별 합 + 현금 = 지금 계좌(시험 P1). */
   if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink)
-    row.hold={sym, qty:+R.qty||0, cost:Math.max(0,(+R.cost||0)-(+R.cost1||0)), sym1:R.sym1||'', qty1:+R.qty1||0, price1:+R.price1||0, cost1:+R.cost1||0, cash:(+R.k||0)-outAmt};
+    { row.hold={sym, qty:+R.qty||0, cost:Math.max(0,(+R.cost||0)-(+R.cost1||0)), sym1:R.sym1||'', qty1:+R.qty1||0, price1:+R.price1||0, cost1:+R.cost1||0, cash:(+R.k||0)-outAmt}; row.trades=trades; }
   return row;
 }
 function paperSummary(){
@@ -9429,34 +9422,49 @@ function pfOpTaxKrw(series, T, fx, year){
     krw+=d*fx(sd); n++; }
   return {krw, n};
 }
-/* 줄마다 올해 실현손익(원). 듀얼가드 = 플랜 화면 세금 점검과 같은 계산(plan-tax-check check · 결제일 환율 · 선입선출 = 증권사 기본) ·
-   운영 세션 = pfOpTaxKrw 추정 · 원화(국내) 종목 세션은 해외주식 양도세 대상이 아니라 뺀다. */
-function pfApplyTax(rows, T, fxDays, year, E){
-  if(!T) return;
-  const fx=T.fxFn(fxDays||[]), ok=!!fx.last;
+/* 🧾 연말 세금 점검 — 포트폴리오 전략 전부로(2026-11-11 사용자 "듀얼가드 현재에 연말 세금 점검 양도세는 포트폴리오로 들어가서 포트폴리오에 속한 전략 전부로 판단해야지").
+   기본공제 250만원 · 22% 는 사람당 1년 합산이라 한 전략만 보고 판단하면 틀린다(다른 전략 이익이 공제를 먼저 쓴다). 그래서 듀얼가드 화면의 점검을 여기로 옮겼다.
+   셈은 plan-tax-check.js portfolio() 한 곳 — 듀얼가드 = 그 장부(build · 시작잔고·보정 포함) · 운영 = 그 탭 거래이력 그림과 같은 체결 목록(pfTradesOf → buildTrades · 산 날 환율로 원가).
+   체결로 다시 센 보유가 그 전략 계산(paperRaw 보유)과 다르면 그 세션은 추정(달러 실현손익 × 결제일 환율 · pfOpTaxKrw)으로 낮추고 제안에서 뺀다.
+   원화(국내) 종목 세션은 해외주식 양도세 대상이 아니라 뺀다. */
+const PF_TAX_KEEP={inf:'평단으로 매도 시점을 정하는 전략이라 팔고 되사면 평단이 바뀌어 규칙이 달라집니다',
+  ma:'진입·청산을 통째로 적는 전략이라 일부만 팔고 되사기를 기록할 수 없습니다',
+  dca:'적립·거치는 매도를 기록하지 않습니다', asap:'숨긴 전략입니다'};
+/* 지금 활성 세션(paperStat 이 잠깐 맞춘 탭·세션)의 체결 목록 — 거래이력 그림(tcData)과 같은 값. 수량·가격을 모르는 기록이 있으면 null(원가를 못 센다) */
+function pfTradesOf(tab){
+  let D; try{ D=tcData(tab); }catch(e){ console.warn('portfolio trades',tab,e); return null; }
+  const out=[];
+  for(const d of D||[]) for(const t of (d&&d.trades)||[]){
+    if(!(+t.qty>0)||!(+t.price>0)) return null;
+    out.push({date:String(t.date||''), symbol:String(d.sym||'').toUpperCase(), side:t.side, qty:+t.qty, price:+t.price, fee:+t.fee||0});
+  }
+  return out;
+}
+function pfTaxSources(rows, T, fx, year, E){
+  const sources=[], meta={domestic:0, skipped:0};
   for(const r of rows||[]){
     if(!r) continue;
-    if(r.cur==='krw'){ r.tax={domestic:true}; continue; }
-    if(!ok){ r.tax={noFx:true}; continue; }
+    if(r.cur==='krw'){ meta.domestic++; continue; }
+    const label=pfSessName(r), key=r.tab+':'+(r.key||r.id||label);
     if(r.tab==='plan'){
-      if(!r.ledgerRef){ r.tax={missing:true}; continue; }
-      const R=T.check({ledger:r.ledgerRef, prices:r.px||{}, fxSeries:fxDays, year, feeFn:E&&E.alphaFee});
-      r.tax=R.ok?{exact:true, krw:R.realized.fifo, avg:R.realized.avg, n:R.realized.n, unknown:!!R.realized.unknown}:{noFx:true};
-    }else r.tax=(r.series&&r.series.length)?Object.assign({est:true},pfOpTaxKrw(r.series,T,fx,year)):{missing:true};
+      if(!r.ledgerRef){ meta.skipped++; continue; }
+      sources.push({key, label, tab:'plan', kind:'plan', ledger:r.ledgerRef, prices:r.px||{}, feeFn:E&&E.alphaFee, harvest:true}); continue; }
+    const why=PF_TAX_KEEP[r.tab]||'', H=r.hold||{}, prices={}, expect={};
+    if(H.sym){ prices[H.sym]=+r.price||0; if(+H.qty>0) expect[H.sym]=+H.qty; }
+    if(H.sym1){ prices[H.sym1]=+H.price1||0; if(+H.qty1>0) expect[H.sym1]=(expect[H.sym1]||0)+(+H.qty1); }
+    const est=(r.series&&r.series.length)?pfOpTaxKrw(r.series,T,fx,year):null, P=pfPositions(r);
+    const estPositions=P?P.list.map(p=>({symbol:p.sym, qty:p.qty, price:p.price, costUsd:p.cost})):[];
+    if(Array.isArray(r.trades)) sources.push({key, label, tab:r.tab, kind:'trades', trades:r.trades, expect, prices, harvest:!why, why, estKrw:est?est.krw:0, estN:est?est.n:0, estPositions});
+    else if(est) sources.push({key, label, tab:r.tab, kind:'est', estKrw:est.krw, estN:est.n, estPositions, prices, harvest:false, why});
+    else meta.skipped++;
   }
+  return {sources, meta};
 }
-/* 올해 양도세 합계 — 기본공제 250만원은 사람당 한 번이라 전략을 다 합친 뒤 한 번만 뺀다(전략마다 빼면 세금이 0 으로 줄어 보인다 · 시험 J2).
-   other = 듀얼가드 밖 합계(플랜 화면 세금 점검의 '다른 해외주식' 칸에 넣을 값). */
-function pfTaxSummary(rows, T, year){
-  const ded=T&&T.DED_KRW||2500000, rate=T&&T.RATE||0.22, items=[];
-  let total=0, other=0, skipped=0;
-  for(const r of rows||[]){ const x=r&&r.tax; if(!x) continue;
-    if(x.domestic||x.missing||x.noFx){ if(!x.domestic) skipped++; continue; }
-    const v=+x.krw||0; total+=v; if(r.tab!=='plan') other+=v;
-    if(v||x.n) items.push({r, krw:v, exact:!!x.exact, n:x.n||0}); }   // 매도가 한 번도 없는 줄(적립 등)은 표에 안 적는다
-  const taxable=Math.max(0,total-ded);
-  return {year:String(year), items, total, ded, room:ded-total, taxable, tax:taxable*rate, rate, other, skipped,
-    domestic:(rows||[]).filter(r=>r&&r.tax&&r.tax.domestic).length};
+function pfTaxCheck(rows, T, fxDays, year, E){
+  if(!T||!T.portfolio) return null;
+  const fx=T.fxFn(fxDays||[]); if(!fx.last) return {ok:false, reason:'fx'};
+  const {sources, meta}=pfTaxSources(rows, T, fx, year, E), R=T.portfolio({sources, fxSeries:fxDays, year});
+  return R.ok?Object.assign(R,{meta}):R;
 }
 /* 목표 비중 — 2026-11-09 사용자: '듀얼가드 5/6 : 섀넌 1/6'(11-08 배분 권고 · 무매 사이클이 끝나면 섀넌 5천$ + 플랜 5천$).
    두 전략 합 기준으로 지금 비중과 모자람/넘침(달러), 무매가 끝나 그 돈까지 옮길 때의 몫(지금 값 기준). 그 밖 전략은 목표 밖으로 따로 적는다. */
@@ -9707,21 +9715,51 @@ function pfTargetHtml(V){
   if(V.other>0) h+='<div class="pf-note">목표 밖: '+Object.entries(V.otherBy).map(([k,v])=>pfEsc(k)+' '+pfUsdPlain(v)).join(' · ')+'</div>';
   return h+'</div>';
 }
-function pfTaxHtml(X, T){
-  if(!X||!T) return '';
-  const k=v=>(v<0?'−':'')+Math.round(Math.abs(+v||0)).toLocaleString('ko-KR')+'원';
-  if(!X.items.length&&!X.skipped&&!X.domestic) return '';
-  const rows=X.items.map(it=>'<tr><td><i class="sw" style="background:'+pfGroup(it.r.tab).color+'"></i>'+pfEsc(it.r.label)+(it.r.tab!=='plan'&&it.r.sym?' · '+pfEsc(it.r.sym):'')
-    +'<div class="sub">'+(it.exact?'듀얼가드 세금 점검과 같은 계산(결제일 환율 · 선입선출)':'추정 — 달러 실현손익 × 결제일 환율')+' · 매도 '+it.n+'번</div></td><td class="num">'+k(it.krw)+'</td></tr>').join('');
-  const notes=[];
-  if(X.skipped) notes.push('환율·일별 기록이 없어 '+X.skipped+'개 세션은 빠짐');
-  if(X.domestic) notes.push('국내(원화) 종목 세션 '+X.domestic+'개는 해외주식 양도세 대상이 아니라 뺌');
-  return '<div class="pf-sec"><h3>🧾 '+X.year+'년 해외주식 양도세 · 추정</h3><table class="pf-tax"><tbody>'+rows
-    +'<tr class="sum"><td>올해 실현손익 합계</td><td class="num">'+k(X.total)+'</td></tr>'
-    +'<tr><td>기본공제 — 사람당 한 번</td><td class="num">−'+k(X.ded)+'</td></tr>'
-    +'<tr class="sum"><td>예상 세금 '+Math.round(X.rate*100)+'%</td><td class="num">'+k(X.tax)+'</td></tr></tbody></table>'
-    +'<div class="pf-note">'+(X.room>=0?'남은 공제 <b>'+k(X.room)+'</b>':'공제를 <b>'+k(-X.room)+'</b> 넘음')+' · 올해 몫 마지막 체결일 '+T.lastTradeDate(X.year)+'(미국 날짜 · 결제일 T+1)'
-    +' · 듀얼가드 탭 세금 점검의 \'다른 해외주식 올해 실현손익\' 칸에 넣을 값: <b>'+k(X.other)+'</b>(듀얼가드 밖 합계)'+(notes.length?' · '+notes.join(' · '):'')+'</div></div>';
+function pfTaxHtml(R, T){
+  if(!R||!T) return '';
+  const head='<h3>🧾 연말 세금 점검 · 해외주식 양도세';
+  if(!R.ok) return '<div class="pf-sec">'+head+'</h3><div class="pf-note">USD/KRW 환율을 불러오지 못해 원화로 계산할 수 없습니다 — 🔄 다시 계산을 눌러 보세요.</div></div>';
+  const M=R.meta||{}, src=R.sources.filter(s=>s.realized.n||R.positions.some(p=>p.key===s.key));
+  if(!src.length&&!M.skipped&&!M.domestic) return '';
+  const k=v=>(v<0?'−':'')+Math.round(Math.abs(+v||0)).toLocaleString('ko-KR')+'원', u2=pfUsd2;
+  const sw=tab=>'<i class="sw" style="background:'+pfGroup(tab).color+'"></i>', both=(f,a,est)=>'<td class="num">'+(est?'≈ ':'')+k(f)+'</td><td class="num">'+(est?'≈ ':'')+k(a)+'</td>';
+  const room=v=>v>=0?'남음 '+k(v):'<span style="color:var(--sell)">초과 '+k(-v)+'</span>';
+  let t='<table class="pf-tax"><thead><tr><th>'+R.year+'년 실현손익 (결제일 기준)</th><th class="num">선입선출<div class="sub">증권사 기본</div></th><th class="num">이동평균</th></tr></thead><tbody>'
+    +src.map(s=>'<tr><td>'+sw(s.tab)+pfEsc(s.label)+'<div class="sub">'+(s.est?'추정 — 달러 실현손익 × 결제일 환율(산 날 환율 차이 빠짐)':'체결 기록 · 산 날 · 판 날 환율')+' · 매도 '+s.realized.n+'번</div></td>'+both(s.realized.fifo,s.realized.avg,s.est)+'</tr>').join('')
+    +'<tr class="sum"><td>합계</td>'+both(R.total.fifo,R.total.avg)+'</tr>'
+    +'<tr><td>기본공제 250만원까지<div class="sub">사람당 한 번 — 전략을 다 합친 뒤 뺀다</div></td><td class="num">'+room(R.room.fifo)+'</td><td class="num">'+room(R.room.avg)+'</td></tr>'
+    +'<tr class="sum"><td>예상 세금 '+Math.round(R.rate*100)+'%</td>'+both(R.tax.fifo,R.tax.avg)+'</tr></tbody>';
+  if(R.positions.length)
+    t+='<tbody><tr class="pf-tsub"><th>지금 팔면 (평가손익 · 원화)</th><th class="num">선입선출</th><th class="num">이동평균</th></tr>'
+      +R.positions.map(p=>'<tr><td>'+sw(p.tab)+pfEsc(p.label)+' · <b>'+pfEsc(p.symbol)+'</b> '+pfQty(p.qty)+'주'+(p.price>0?' · '+u2(p.price):'')
+        +(p.est||!p.harvest?'<div class="sub">제안에서 뺌 — '+pfEsc(p.est?p.estWhy:p.why)+'</div>':'')+'</td>'
+        +(p.unknown?'<td class="num" colspan="2">평단 미등록 — 계산 불가</td>':p.unreal?both(p.unreal.fifo.krw,p.unreal.avg.krw,p.est):'<td class="num" colspan="2">시세 대기</td>')+'</tr>').join('')+'</tbody>';
+  t+='</table>';
+  const dl=R.deadline, mon=+String(paperKstDate()).slice(5,7), S=R.suggestions, tot=S.reduce((a,x)=>a+x.taxKrw,0), fee=S.reduce((a,x)=>a+x.feeUsd,0);
+  const list=S.length?'<ul>'+S.map(x=>'<li>'+sw(x.tab)+pfEsc(x.label)+' — <b>'+pfEsc(x.symbol)+' '+pfQty(x.qty)+'주 팔고 같은 날 '+pfQty(x.qty)+'주 되사기</b> · 확정 '+k(x.realized.fifo.krw)+' (선입선출) · '+k(x.realized.avg.krw)+' (이동평균) · 수수료 약 '+u2(x.feeUsd)+'</li>').join('')+'</ul>':'';
+  let sug='', pill='', pc='';
+  if(R.mode==='fill'){
+    if(S.length){ sug='✅ 공제가 '+k(Math.min(R.room.fifo,R.room.avg))+' 남았습니다. <b>'+dl+'</b>(미국 날짜)까지 아래처럼 팔고 바로 되사면 이익이 공제 안에서 세금 없이 확정되고 원가가 올라가, 앞으로 낼 세금이 최대 <b>'+k(tot)+'</b> 줄어듭니다(내년 이후 실현이익이 공제를 넘을 때 · 수수료 약 '+u2(fee)+'). 환율 오차를 보아 남은 공제의 90%까지만 채웁니다.'+list; pill='공제 채우기 가능'; pc='good'; }
+    else { sug='공제가 '+k(Math.min(R.room.fifo,R.room.avg))+' 남았지만 팔고 되살 수 있는 종목 중 원화 기준 평가이익이 난 것이 없습니다 — 할 일 없음.'; pill='할 일 없음'; }
+  }else if(R.mode==='offset'){
+    if(S.length){ sug='⚠️ 공제를 '+k(Math.min(-R.room.fifo,-R.room.avg))+' 넘었습니다. <b>'+dl+'</b>(미국 날짜)까지 원화 기준 평가손실 종목을 팔고 바로 되사면 손실이 올해 이익과 상계되어 세금이 약 <b>'+k(tot)+'</b> 줄어듭니다(수수료 약 '+u2(fee)+').'+list; pill='손실 상계 가능'; pc='warn'; }
+    else { sug='공제를 넘었지만 팔고 되살 수 있는 종목 중 원화 기준 평가손실이 난 것이 없습니다 — 할 일 없음. 달러로는 손실이어도 그사이 환율이 올랐으면 원화로는 이익이라 팔면 세금이 늡니다.'; pill='할 일 없음'; }
+  }else { sug='선입선출과 이동평균의 결과가 공제 위·아래로 갈립니다 — 증권사 양도세 계산 방식을 확인한 뒤 판단하세요.'; pill='확인 필요'; pc='warn'; }
+  if(mon<12) sug+='<div class="pf-note">지금은 '+mon+'월 — 남은 매매로 실현손익이 바뀌니 12월 마지막 주('+dl+' 전)에 다시 보세요.</div>';
+  const warn=[], allNotes=R.sources.flatMap(s=>(s.notes||[]).map(n=>[s.label,String(n)]));
+  if(R.sources.some(s=>s.est&&(s.realized.n||R.positions.some(p=>p.key===s.key)))) warn.push('≈ 추정 세션은 산 날 환율 차이가 빠져 실제 세금과 다를 수 있습니다');
+  if(R.positions.some(p=>p.unknown&&!p.est)||R.realized.unknown) warn.push('평단 미등록 종목이 있어 그 종목은 원가를 모릅니다 — 듀얼가드 시작잔고에 평단을 넣으세요');
+  const over=[...new Set(allNotes.filter(x=>x[1].startsWith('oversell')).map(x=>x[0]))];
+  if(over.length) warn.push(over.map(pfEsc).join(', ')+' 거래이력에 보유보다 많은 매도가 있어 계산이 부정확합니다');
+  if(allNotes.some(x=>x[1]==='reconcile')) warn.push('듀얼가드 보정 기록 뒤는 보정 평단 한 덩어리로 계산합니다(선입선출 근사)');
+  if(M.domestic) warn.push('국내(원화) 종목 세션 '+M.domestic+'개는 해외주식 양도세 대상이 아니라 뺌');
+  if(M.skipped) warn.push('기록이 없어 '+M.skipped+'개 세션은 빠짐');
+  return '<div class="pf-sec">'+head+' <span class="pf-pill'+(pc?' '+pc:'')+'">'+pill+'</span></h3>'
+    +'<div class="pf-note" style="margin:0 0 6px">💰 포트폴리오에 넣은 실계좌 전략을 모두 합쳐 판단합니다 — 기본공제 250만원 · 세율 22%는 사람당 1년 합산이라 한 전략만 보면 틀립니다.</div>'
+    +t+'<div class="pf-tsug">'+sug+(warn.length?'<div class="pf-note" style="color:var(--gold)">'+warn.join(' · ')+'</div>':'')+'</div>'
+    +'<div class="pf-note">양도 시기는 결제일(미국 T+1) — 올해 세금에 넣으려면 '+dl+' 체결까지(증권사 연말 공지로 확인). 원화는 결제일 USD/KRW 종가로 근사(신고는 기준환율 · 지금 1달러 '+k(R.fxNow)+' · '+R.fxDate+') — 산 날 · 판 날 환율 차이(환차손익)는 들어갑니다. '
+    +'수수료는 취득가·양도가에 반영(기록에 수수료가 없는 무매·적립은 빼고) · 배당은 배당소득이라 제외. 포트폴리오에서 뺀 세션 · 다른 증권사 계좌의 해외주식 손익은 들어가지 않습니다 — 있으면 남은 공제가 그만큼 다릅니다. '
+    +'국내 양도세엔 미국식 워시세일 규정이 없어 같은 날 되사도 손익이 인정되는 것으로 알려져 있습니다(증권사·세무 확인). 추정치이며 신고는 증권사 양도세 계산이 기준입니다.</div></div>';
 }
 /* 듀얼가드 오늘 판단 — 플랜 화면(renderDualGuardStrip)이 센 값 그대로(판정을 여기서 다시 세지 않는다) */
 function pfDgText(r){
@@ -9773,7 +9811,7 @@ function pfRender(){
     box.innerHTML=h+'<div class="pf-today"><p class="lead" style="margin:0">포트폴리오에 넣은 실전 세션 중 체결 기록이 있는 것이 없습니다. 운영 탭의 실전 세션(모의 아님)에 체결을 기록하면 여기에 합쳐집니다.</p></div>'+pfOffHtml();
     return;
   }
-  const Z=pfSummary(rows,fx), C=pfCombine(rows,fx), V=pfTargetView(Z), T=window.JKPlanTaxCheck, X=T?pfTaxSummary(rows,T,PF.year||paperKstDate().slice(0,4)):null;
+  const Z=pfSummary(rows,fx), C=pfCombine(rows,fx), V=pfTargetView(Z), T=window.JKPlanTaxCheck;
   h+='<div class="pf-kpis">'
     +'<div class="pf-kpi"><div class="k">총자산</div><div class="v">'+pfMoney(Z.now)+'</div><div class="s">'+(Z.out>0?'계좌 밖으로 나간 돈 '+pfMoney(Z.out)+' 별도':'실전 '+Z.parts.length+'개 합계')+'</div></div>'
     +'<div class="pf-kpi"><div class="k">원금</div><div class="v">'+pfMoney(Z.inflow)+'</div><div class="s">입금·출금 반영</div></div>'
@@ -9794,7 +9832,7 @@ function pfRender(){
   h+=pfTargetHtml(V);
   h+='<div class="pf-today"><h3>📋 오늘</h3>'+rows.map(r=>'<div class="row"><div class="nm"><i class="sw" style="background:'+pfGroup(r.tab).color+'"></i>'+pfEsc(r.label)+'</div><div>'
     +(r.tab==='plan'?pfDgText(r):(r.status||'—'))+'</div></div>').join('')+'</div>';
-  h+=pfTaxHtml(X,T);
+  h+=pfTaxHtml(PF.tax,T);   // 🧾 연말 세금 점검 — 포트폴리오 전략 전부로(2026-11-11 · 듀얼가드 화면에서 옮김)
   h+='<div class="pf-cards">'+rows.map(r=>pfCard(r,Z)).join('')+'</div>';
   h+='<div class="pf-note">평가는 지금 시세(장중이면 장중가) 기준 · 원화 종목 세션은 지금 환율로 달러 환산해 더합니다(표시용). 세션별 숫자는 그 전략 화면·모의 목록과 같은 계산입니다 — 무매·VR·섀넌 등은 그 탭의 계산, 듀얼가드는 듀얼가드 화면 계좌 칸과 같은 장부 계산.'
     +(Z.missing?' · 시세·환율 대기 '+Z.missing+'개는 합계에서 뺐습니다.':'')+'</div>'+pfOffHtml();
@@ -9816,9 +9854,9 @@ async function pfRefresh(force){
     const plans=await pfPlanRows();
     PF.rows=[...plans,...ops]; PF.at=Date.now(); PF.year=paperKstDate().slice(0,4);
     try{ refreshAll(); }catch(e){}               // 모의 목록 채우기와 같이 — 시세 칸을 되돌린 뒤 운영 화면을 한 번 다시 그린다
-    /* 올해 양도세 — USD/KRW 일봉(플랜 화면 세금 점검과 같은 KRW=X)으로 줄마다 올해 실현손익(원)을 센다 */
+    /* 연말 세금 점검 — USD/KRW 일봉(KRW=X)으로 산 날 · 판 날 원화를 센다 */
     try{ const q=await fetchDaily('KRW=X'); PF.fx=(q&&Array.isArray(q.days)&&q.days.length)?q.days:null; }catch(e){ PF.fx=null; }
-    pfApplyTax(PF.rows, window.JKPlanTaxCheck, PF.fx, PF.year, window.JKPlanSessionEngine);
+    PF.tax=pfTaxCheck(PF.rows, window.JKPlanTaxCheck, PF.fx, PF.year, window.JKPlanSessionEngine);
   }catch(e){ console.error('portfolio',e); PF.err=String(e&&e.message||e); }
   finally{ PF.busy=false; }
   pfRender();
@@ -9826,8 +9864,9 @@ async function pfRefresh(force){
 }
 async function pfRecalcPlan(){
   if(!PF.rows||PF.busy){ pfRender(); return; }
-  try{ const plans=await pfPlanRows(); pfApplyTax(plans, window.JKPlanTaxCheck, PF.fx, PF.year||paperKstDate().slice(0,4), window.JKPlanSessionEngine);
-    PF.rows=[...plans,...PF.rows.filter(r=>r.tab!=='plan')]; }catch(e){ console.warn('portfolio plan',e); }
+  try{ const plans=await pfPlanRows();
+    PF.rows=[...plans,...PF.rows.filter(r=>r.tab!=='plan')];
+    PF.tax=pfTaxCheck(PF.rows, window.JKPlanTaxCheck, PF.fx, PF.year||paperKstDate().slice(0,4), window.JKPlanSessionEngine); }catch(e){ console.warn('portfolio plan',e); }
   pfRender();
 }
 function pfPageMode(on){
@@ -10514,7 +10553,7 @@ function tcFromVr(c){
   const sym=String((c&&c.st&&c.st.ticker)||'TQQQ').toUpperCase(), trades=[], steps=[];
   for(const r of ((c&&c.rows)||[])){
     const h=r.h||{};
-    if(h.type==='buy'||h.type==='sell') trades.push({date:h.date,side:h.type,qty:+h.qty,price:+h.price,pnl:h.type==='sell'?r.pnl:null,label:h.type==='buy'?'매수':'매도'});
+    if(h.type==='buy'||h.type==='sell') trades.push({date:h.date,side:h.type,qty:+h.qty,price:+h.price,fee:+h.fee||0,pnl:h.type==='sell'?r.pnl:null,label:h.type==='buy'?'매수':'매도'});
     if(h.date) steps.push({date:h.date,held:r.held,avg:r.avgEff});
   }
   return {sym,trades,steps,avgLabel:'실효평단'};
@@ -10523,9 +10562,10 @@ function tcFromVr(c){
 function tcFromMa(st,hist){
   const sym=String((st&&st.ticker)||'SOXL').toUpperCase(), trades=[], steps=[]; let held=0;
   const outs=new Map(((typeof maLedger==='function'?maLedger(hist,0,+(st&&st.principal)||0).outs:null)||[]).map(o=>[o.i,o]));   // 청산 수량 · 손익 = 분석 탭과 같은 장부(maLedger)
+  const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025, feeOf=(h,q)=>h.fee!=null?+h.fee:(+h.price||0)*(+q||0)*FEE;   // 수수료 = maLedger 와 같은 식(포트폴리오 세금 점검이 쓴다)
   (hist||[]).forEach((h,i)=>{
-    if(h.type==='in'){ const q=+h.qty>0?+h.qty:null; held=q||true; trades.push({date:h.date,side:'buy',qty:q,price:+h.price,label:'진입'}); steps.push({date:h.date,held,avg:+h.price||null}); }
-    else if(h.type==='out'){ const o=outs.get(i); trades.push({date:h.date,side:'sell',qty:o?o.qty:(held===true?null:(+held||null)),price:+h.price,pnl:o?o.pnl:null,label:'청산'}); held=0; steps.push({date:h.date,held:0,avg:null}); }
+    if(h.type==='in'){ const q=+h.qty>0?+h.qty:null; held=q||true; trades.push({date:h.date,side:'buy',qty:q,price:+h.price,fee:q?feeOf(h,q):0,label:'진입'}); steps.push({date:h.date,held,avg:+h.price||null}); }
+    else if(h.type==='out'){ const o=outs.get(i), q=o?o.qty:(held===true?null:(+held||null)); trades.push({date:h.date,side:'sell',qty:q,price:+h.price,fee:q?feeOf(h,q):0,pnl:o?o.pnl:null,label:'청산'}); held=0; steps.push({date:h.date,held:0,avg:null}); }
   });
   return {sym,trades,steps,avgLabel:'진입가'};
 }
@@ -10536,7 +10576,7 @@ function tcFromIvs(c){
     const h=r.h||{}; if(!(h.type==='buy'||h.type==='sell')||r.held==null) continue;
     const sym=String(h.sym||(r.leg==='x1'?c.sym1:c.sym)||'').toUpperCase(); if(!sym) continue;
     const o=out[sym]||(out[sym]={sym,trades:[],steps:[],avgLabel:'평단'});
-    o.trades.push({date:h.date,side:h.type,qty:+h.qty,price:+h.price,pnl:h.type==='sell'?r.pnl:null,label:(h.type==='buy'?'매수':'매도')+(h.seed?'(시작)':'')});
+    o.trades.push({date:h.date,side:h.type,qty:+h.qty,price:+h.price,fee:+h.fee||0,pnl:h.type==='sell'?r.pnl:null,label:(h.type==='buy'?'매수':'매도')+(h.seed?'(시작)':'')});
     o.steps.push({date:h.date,held:r.held,avg:r.held>0&&r.avg>0?r.avg:null});
   }
   return out;
@@ -11463,6 +11503,9 @@ function renderStatusline(){
   // 모의 성과 백그라운드 재생 중에는 운영 상태줄을 임시 세션으로 바꾸지 않는다.
   if(_paperFilling)return;
   const s=sess(), strat=S.activeTab;
+  /* 모의투자 도구 칸(과거부터 자동 채우기 · 오늘까지 체결 확인 · .paper-only)은 모의 세션에서만 — 실운영 세션에선 숨긴다
+     (2026-11-11 사용자 "모의투자 세션엔 전부 표시하고 실운영 세션에선 삭제" · 자동 채우기는 기존 기록을 지운다) */
+  document.body.classList.toggle('realsess', !!(s&&!s.paper));
   let html=stratStatusHtml(strat,s);   // 세션명(키움 USD)은 세션바와 중복이라 제거 — 전략 요약만 표시
   // 설정은 '지금 보고 있는 전략·세션'의 설정이라 상단 헤더보다 상태줄이 맞다
   html+=`<button class="setpill" onclick="openSettings()" title="설정">⚙️ 설정</button>`;
