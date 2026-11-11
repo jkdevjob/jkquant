@@ -7,7 +7,7 @@
 - `claude.html`: 고정 탭 상태 '📌 사용자 고정 — 자동 교체 안 함' + 사유. 버전 v2.29.0.
 - `functions/api/claude-telegram.js`: 승격 문구가 사용자 고정이면 '자동 교체'라고 쓰지 않음(승격 알림은 지금도 안 보냄).
 - 시험: `test_opening_gapdown.py` ArenaTest 4개 · `test_opening_gapdown.mjs` 2개 · 변이 7종(`mutation_test_opening_gapdown.py`).
-- 연구: R38 사전 등록(4cf3e5c2) · 스크립트 `scripts/research/r38_promo_rule.py`(be2b3c08).
+- 연구: R38 사전 등록(4cf3e5c2) · 스크립트 `scripts/research/r38_promo_rule.py`(be2b3c08) · 결과 — 통과한 변형 없음 → 자동 승격 규칙은 그대로(`CLAUDE-SCALPING-RESEARCH.md` R38).
 - 감사: `AUDIT-SELF-REVIEW.md` 2026-11-12 장.
 
 ## 2026-11-12 · 연구 R37 · 아침 루틴 확인 기록(문서 · 연구 스크립트)
