@@ -96,7 +96,7 @@ async function check(S){
     t('C5 칩에 폐지 세션 이름 없음 · 상태 줄에 "듀얼가드 v1.0" · 숨긴 수 5개 안내(운영 탭처럼 세션 이름 없이 전략 요약)',!/새 규칙 모의|공격형 모의|10년 세션|15년 세션|20년 세션/.test(r1.chips)&&/기본 운영/.test(r1.chips)&&/기본 모의/.test(r1.chips)
       &&r1.state==='듀얼가드 v1.0 · 숨긴 예전 세션 5개'&&r2.state==='듀얼가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 5개',r1.state+' | '+r2.state);
   }
-  t('C6 딥링크 — 5년 · 폐지 안 된 세션만 연다',/if\(q&&\+q\.horizon===5&&!planRetired\(q\)\)\{/.test(fnOf(P,'async function finishPlanOpen(user)')));
+  t('C6 딥링크 — 5년 · 폐지 안 된 세션만 연다(운영 원장을 읽은 뒤 planApplySessionLink)',/if\(q&&\+q\.horizon===5&&!planRetired\(q\)\)\{/.test(fnOf(P,'function planApplySessionLink()'))&&/planApplySessionLink\(\);/.test(fnOf(P,'async function finishPlanOpen(user)')));
   t('C7 머리 카드 — 이름·판은 엔진 STRATEGY',/\$\("stageTitle"\)\.textContent=P\.name;renderPlanVersion\(\);/.test(fnOf(P,'function render()'))&&/if\(\$\('dgVer'\)\)\$\('dgVer'\)\.textContent=v;/.test(fnOf(P,'function renderPlanVersion()'))&&/id="stageTitle">듀얼가드<\/span><span class="dg-ver" id="dgVer">v1\.0<\/span>/.test(P));
 
   // ── D. index.html (모의 목록)
@@ -115,8 +115,8 @@ async function check(S){
   { const ctx=vm.createContext({window:{JKPlanSessionEngine:E}});vm.runInContext(fnOf(X,'function planPaperRetired(sess)'),ctx);
     const r=[{horizon:10},{horizon:5,settings:{alphaRules:'exp1'}},{horizon:5,settings:{alphaRules:'exp2'}},{horizon:5,settings:{alphaRules:'base'}},{horizon:5,settings:{}}].map(s=>ctx.planPaperRetired(s));
     t('D2 모의 목록 폐지 판정 = 엔진 retiredReason',JSON.stringify(r)==='[true,true,true,false,false]',JSON.stringify(r)); }
-  { const fill=fnOf(X,'async function paperFillAll(opt)'),pre=fnOf(X,'async function paperPrefetchQuotes(opt)'),i=fill.indexOf("if(tab==='plan'){"),j=fill.indexOf('if(planPaperRetired(sess)){ _tick(); continue; }'),k=fill.indexOf('replayPlanPaper(sess)');
-    t('D3 모의 목록 채우기 — 폐지 세션은 재생 전에 건너뜀 · 미리 받기도 남은 세션만',i>=0&&j>i&&k>j&&/if\(tab==='plan'\)\{ if\(!planPaperRetired\(sess\)\) \['TECL','TQQQ','SGOV'\]/.test(pre),[i,j,k].join()); }
+  { const fill=fnOf(X,'async function paperFillAll(opt)'),pre=fnOf(X,'async function paperPrefetchQuotes(opt)'),i=fill.indexOf("if(tab==='plan'){"),j=fill.indexOf('if(planPaperRetired(sess)){ _tick(); continue; }'),k=fill.indexOf('await planPaperRun(sess);');
+    t('D3 모의 목록 채우기 — 폐지 세션은 재생 전에 건너뜀 · 미리 받기도 남은 세션만',i>=0&&j>i&&k>j&&/if\(tab==='plan'\)\{ if\(!planPaperRetired\(sess\)\) plans\.push\(sess\); continue; \}/.test(pre)&&/if\(plans\.length && await planPaperNeedQuotes\(plans\)\) \['TECL','TQQQ','SGOV'\]/.test(pre),[i,j,k].join()); }
   { const v=+((X.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1]),pv=(P.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1],iv=(X.match(/plan-session-engine\.js\?v=(\d+)/)||[])[1];
     t('D4 지난 순위 캐시 판 ≥7 (폐지 세션 줄 · 옛 이름 글자 · ASAP 모의 줄 다시 셈) · 두 화면 엔진 판 같음(≥5)',v>=7&&pv===iv&&+pv>=5,JSON.stringify({v,pv,iv})); }
 

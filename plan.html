@@ -10,9 +10,10 @@
    여기선 숨기고, 링크는 바깥 창에서 연다. 계산·장부·저장은 그대로 이 페이지가 한다(화면 한 벌). 창 안이 아니면(주소로 바로 열면) 평소 화면. */
 (function(){ try{ if(!/[?&]embed=1(&|$)/.test(location.search)||window.parent===window) return; }catch(e){ return; }
   document.documentElement.classList.add('embed');
+  if(/[?&]autoh=1(&|$)/.test(location.search)) document.documentElement.classList.add('autoh');   // 바깥이 창 높이를 내용에 맞춘다(아래 html.autoh)
   var b=document.createElement('base'); b.target='_top'; document.head.appendChild(b); })();
 </script>
-<script src="/plan-session-engine.js?v=8"></script>
+<script src="/plan-session-engine.js?v=9"></script>
 <script src="/plan-session-settings.js?v=5"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-trade-chart.js?v=1.0.0"></script>
@@ -354,6 +355,16 @@ html.embed #authgate .bootwait .bw-logo,html.embed #authgate .bootwait .bw-help{
 html.embed:not(.embed-dberr) #authgate .gbox{display:none}
 html.embed:not(.embed-dberr) #authgate .bootwait{display:block}
 html.embed.plan-hydrating body::after{content:'듀얼가드 불러오는 중…'}
+/* 운영 › 듀얼가드 창 높이 = 내용 높이(html.autoh · 2026-11-11 사용자: "듀얼가드는 왜 안에 상하 스크롤이 왜 생기는거지" → 1번: 다른 탭처럼 바깥 한 번 스크롤).
+   창 문서는 스크롤하지 않는다. 화면에 붙는 것은 바깥이 알려 주는 '보이는 칸'(dgApplyViewport)에 맞춘다 —
+   세션 줄 · 상태줄 · 상세 탭은 그 칸 위(바깥 탭 줄 바로 밑)에 붙고, 기록 단추 · 시트 · 세션 설정 창 · 로그인 상자는 그 칸 크기의 층(#dgVp · transform 이라 안의 fixed 가 이 층 기준) 안에 있다. */
+html.autoh{overflow:hidden}
+html.autoh #dgVp{position:absolute;left:0;right:0;top:0;height:100vh;transform:translateZ(0);pointer-events:none;z-index:1400}
+html.autoh #dgVp>#dgFab,html.autoh #dgVp>#dgSheet,html.autoh #dgVp>.asset-session-modal,html.autoh #dgVp>#authgate{pointer-events:auto}
+html.autoh #dgFab{bottom:calc(20px + var(--vp-sab,0px))}
+html.autoh #dgSheet{max-height:90%;padding-bottom:calc(24px + var(--vp-sab,0px))}
+html.autoh #dgSheet,html.autoh .asset-session-modal{overscroll-behavior:contain}   /* 시트 · 설정 창 끝에서 바깥 페이지로 스크롤이 넘어가지 않게 */
+html.autoh .asset-session-modal{overflow-y:auto;align-items:flex-start}html.autoh .asset-session-modal .box{margin:auto}   /* 보이는 칸보다 길면 창 안에서 스크롤(위아래가 잘리지 않게) */
 #authgate .glogo{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
 #authgate .glogo .v{color:var(--gold)}
 #authgate .gsub{color:var(--dim);font-size:13px;margin-bottom:32px;line-height:1.6}
@@ -414,7 +425,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.12.1</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.14.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -959,7 +970,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updateCurrentUser } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { initializeFirestore, doc, getDoc as nativeGetDoc, setDoc, runTransaction as nativeRunTransaction, deleteField } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { initializeFirestore, doc, getDoc as nativeGetDoc, setDoc, deleteDoc, runTransaction as nativeRunTransaction, deleteField } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { createPaperStore } from '/jk-paper-store.mjs?v=1.0.2';
 const {getDoc,runTransaction}=createPaperStore({doc,getDoc:nativeGetDoc,setDoc,runTransaction:nativeRunTransaction,deleteField});
 
@@ -1123,6 +1134,49 @@ function dgStickyOffsets(){
   const s1=a.offsetHeight||0,s2=b.offsetHeight||0;if(!s1||!s2)return;   // 숨은 창 — 0 을 적어 두면 다시 보일 때 두 줄이 맨 위에 겹친다
   const h1=s1,h2=h1+s2,r=document.documentElement.style;
   r.setProperty('--dg-h1',h1+'px');r.setProperty('--dg-h2',h2+'px');
+  dgStickyH.h1=h1;dgStickyH.h2=h2;dgVpPaint();   // 창 높이 = 내용 높이(autoh)면 붙는 위치를 다시 맞춘다
+}
+/* ── 창 높이 = 내용 높이(html.autoh) — 바깥(운영 index.html dgVp)이 스크롤 · 크기가 바뀔 때마다 '보이는 칸'을 알려 준다 ──
+   t = 이 창 문서에서 보이는 칸의 맨 위(바깥 탭 줄 바로 밑) · h = 보이는 높이 · sab = 바깥 화면 아래 안전 여백(홈 막대).
+   세션 줄 · 상태줄 · 상세 탭은 sticky 의 top 을 t(+ 위 줄 높이)로 — 창 문서가 스크롤하지 않아도 그 자리에 붙는다.
+   기록 시트 · 세션 설정 창이 열려 있는 동안은 층을 움직이지 않는다(바깥 스크롤도 잠근다 · 아이폰 키보드가 문서를 밀어도 입력 칸이 따라간다). */
+const dgStickyH={h1:49,h2:88};
+let dgVpLayer=null,dgVpState=null,dgVpLocked=false;
+function dgVpSetup(){
+  if(dgVpLayer||!document.documentElement.classList.contains('autoh'))return;
+  dgVpLayer=document.createElement('div');dgVpLayer.id='dgVp';document.body.appendChild(dgVpLayer);
+  for(const id of ['authgate','dgFab','dgSheetBg','dgSheet','assetSessionModal']){const el=$(id);if(el)dgVpLayer.appendChild(el);}
+  const bg=$('dgSheetBg');if(bg)bg.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});   // 시트 뒤 어두운 바탕을 끌어도 바깥 페이지가 밀리지 않게(아이폰)
+  if(typeof ResizeObserver==='function')new ResizeObserver(()=>dgPostHeight()).observe(document.body);
+  dgPostHeight();
+}
+function dgVpOpen(){return document.body.classList.contains('dg-sheet-open')||!(($('assetSessionModal')||{}).hidden!==false);}
+function dgVpPaint(){
+  if(!dgVpLayer||!dgVpState||dgVpOpen())return;
+  const {t,h,sab}=dgVpState;
+  dgVpLayer.style.top=t+'px';dgVpLayer.style.height=h+'px';dgVpLayer.style.setProperty('--vp-sab',sab+'px');
+  const a=$('assetSessionChips'),b=$('assetStatusline'),c=$('assetDetailTabs');
+  if(a)a.style.top=t+'px';if(b)b.style.top=(t+dgStickyH.h1)+'px';if(c)c.style.top=(t+dgStickyH.h2)+'px';
+}
+window.dgApplyViewport=function(t,h,sab){
+  if(!dgVpLayer)return;
+  dgVpState={t:Math.max(0,Math.round(+t||0)),h:Math.max(0,Math.round(+h||0)),sab:Math.max(0,Math.round(+sab||0))};
+  dgVpPaint();
+};
+/* 시트 · 세션 설정 창을 열고 닫을 때 — 바깥에 스크롤 잠금을 알리고, 닫히면 그동안 온 '보이는 칸'으로 다시 맞춘다 */
+function dgVpLock(){
+  if(!dgVpLayer)return;
+  const on=dgVpOpen();
+  if(on!==dgVpLocked){dgVpLocked=on;try{window.parent.postMessage({type:'jk-dg-lock',on},location.origin);}catch(e){}}
+  if(!on)dgVpPaint();
+}
+/* 내용 높이를 바깥에 알린다 — 불러오는 중 · 숨은 창(다른 탭을 볼 때 폭 0)에서는 알리지 않는다(그때 높이는 엉뚱하다) */
+let dgPostedH=0;
+function dgPostHeight(){
+  if(!dgVpLayer||document.documentElement.classList.contains('plan-hydrating')||!(window.innerWidth>0))return;
+  const cs=getComputedStyle(document.body),h=Math.ceil(document.body.getBoundingClientRect().height+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0));
+  if(!(h>0)||h===dgPostedH)return;dgPostedH=h;
+  try{window.parent.postMessage({type:'jk-dg-h',h},location.origin);}catch(e){}
 }
 let dgStickyRO=null;
 function dgStickyWatch(){
@@ -1358,16 +1412,22 @@ function alphaPanicNext(signalDate,posOn){
    다음 판정의 보유 여부만 실제 계좌 값(nextPosOn)을 넘긴다. 세션 시작 전의 VIX 는 보지 않는다(모의 세션과 같은 약속). */
 let planIndexError='',planIndexLoading=null;
 const planLivePanicMemo=new Map();   // 보고 있는 세션 + 포트폴리오 세션(뒤에서 셈) 몇 개 — 번갈아 세도 매번 다시 재생하지 않게
-function planPanicIndexLoad(){
-  if(assetRulesOf(activeAssetSession())!=='panic')return Promise.resolve();
+/* VIX·VXN 받기 — 보는 세션이 공포 모드이거나, 포트폴리오 뒤 계산(창 안) 대상에 공포 모드 세션이 있을 때(force = planLivePanic 이 실제로 필요할 때).
+   2026-11-11 고침(v2.13.1): 예전엔 보는 세션만 봤다 — 포트폴리오의 '현재 투자중'이 공포 모드인데 모의(기본) 세션을 보고 있으면 받지 않고 바로 끝났고,
+   planLivePanic 이 그 뒤 다시 그리기 → 또 부탁 → 다시 그리기를 끝없이 되풀이해 창(아이폰은 운영 화면까지)이 '듀얼가드 불러오는 중…'에서 멈췄다.
+   받고 나서도 비어 있으면 오류로 둔다 — 같은 부탁이 다시 그리기를 부르는 고리가 생기지 않게. */
+function planPanicIndexLoad(force){
+  if(!force&&assetRulesOf(activeAssetSession())!=='panic'&&!planBgPanicWanted())return Promise.resolve();
   if(planIndexLoading)return planIndexLoading;
-  return planIndexLoading=Promise.all([fetchPlanIndex('^VIX'),fetchPlanIndex('^VXN')]).then(()=>{planIndexError='';},e=>{planIndexError=String(e&&e.message||e);}).then(()=>{planIndexLoading=null;});
+  return planIndexLoading=Promise.all([fetchPlanIndex('^VIX'),fetchPlanIndex('^VXN')])
+    .then(()=>{const v=(planIndexCache['^VIX']||{}).rows,n=(planIndexCache['^VXN']||{}).rows;planIndexError=(v&&v.length&&n&&n.length)?'':'VIX·VXN 시세가 비어 있습니다';},e=>{planIndexError=String(e&&e.message||e);})
+    .then(()=>{planIndexLoading=null;});
 }
 function planLivePanic(x,signalDate,posOn,startOverride){   // startOverride — 화면 밖 '현재 투자중'(포트폴리오 뒤 계산)은 DB 원장의 시작일
   const E=window.JKPlanSessionEngine,T=liveQuotes.TECL,Q=liveQuotes.TQQQ,G=liveQuotes.SGOV,vix=(planIndexCache['^VIX']||{}).rows,vxn=(planIndexCache['^VXN']||{}).rows;
   if(!E||!E.replay||!T||!Q||!G)return {error:'시세를 불러오는 중입니다'};
   if(!(vix&&vix.length)||!(vxn&&vxn.length)){
-    if(!planIndexError&&!planIndexLoading)planPanicIndexLoad().then(()=>{if(!planIndexError)refreshAlphaFromCache();});   // 아직 안 받았으면 받고 한 번 다시 그린다
+    if(!planIndexError&&!planIndexLoading)planPanicIndexLoad(true).then(()=>{if(!planIndexError)refreshAlphaFromCache();});   // 아직 안 받았으면 실제로 받고(force) 한 번 다시 그린다 — 받는 중·실패면 다시 부탁하지 않는다
     return {error:planIndexError?'VIX·VXN 시세를 받지 못했습니다('+planIndexError+')':'VIX·VXN 시세를 불러오는 중입니다'};
   }
   const s0=String(startOverride!=null?startOverride:(x?((x.settings&&x.settings.startDate)||''):(($('startDate')||{}).value||''))),start=(s0&&s0<signalDate)?s0:signalDate;
@@ -1388,19 +1448,20 @@ function alphaPanicApply(PX,sigma,decGuard){
   const sl=!!PX.state.ps&&PX.sigma>0&&PX.sigma<sigma;
   return {sigma:sl?PX.sigma:sigma,guard:PX.state.pf?PX.guard:decGuard,own:!!PX.state.pf,fast:!!PX.state.pf,sleeve:sl};   // own — Guard 를 엔진이 정했는가(아니면 기본 판정의 guardFlip 그대로)
 }
-async function replayAssetPaperSession(x,applyView){
+/* 모의 세션 재생 저장본 — DB 문서 users/{uid}/planPaper/{세션 id}(2026-11-11 사용자: "듀얼가드 DB에 저장하게 바꾸고 … 이렇게 열 때마다 그때그때 계산하지 말고").
+   묶기·풀기·'언제 다시 세나'는 엔진 한 곳(paperRunGet) — 모의 목록(index.html)이 같은 문서를 같은 함수로 읽고 쓴다. */
+function planPaperRef(id){const u=auth&&auth.currentUser;return (u&&id)?doc(db,'users',u.uid,'planPaper',String(id)):null;}
+async function planPaperDocRead(id){const r=planPaperRef(id);if(!r)return null;const s=await nativeGetDoc(r);return s.exists()?s.data():null;}
+async function planPaperDocWrite(id,d){const r=planPaperRef(id);if(r)await setDoc(r,d);}
+async function planPaperDocDelete(id){const r=planPaperRef(id);if(r)await deleteDoc(r);}
+function planPaperKey(id){const u=auth&&auth.currentUser;return (u?u.uid:'')+'/'+id;}
+/* 모의 세션 열기 — 저장본이 있으면 시세를 기다리지 않고 바로 그린다(show). 오늘 것이면 그대로 끝 · 새 확정 일봉이 생겼을 수 있으면
+   시세를 받아 보고, 끝이 늘었을 때만 다시 재생해 저장하고 다시 그린다. 저장본이 없으면 예전처럼 재생 → 저장. */
+async function replayAssetPaperSession(x,applyView,storedOnly){   // storedOnly — 저장본만 그린다(시세·재생 없음 · 첫 화면)
   if(!x||!x.paper||!window.JKPlanSessionEngine)return null;
-  const revision=assetViewRevision;
+  const E=window.JKPlanSessionEngine,revision=assetViewRevision;
   const isCurrent=()=>revision===assetViewRevision&&activeAssetSession()?.id===x.id;
-  try{
-    liveQuotes={};
-    const a=await Promise.all([fetchPlanQuote('TECL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('SGOV')]),t=a[0],q=a[1],g=a[2];
-    const end=[t.settled.date,q.settled.date,g.settled.date].sort()[0];
-    const rules=assetRulesOf(x),ix=rules==='panic'?await Promise.all([fetchPlanIndex('^VIX'),fetchPlanIndex('^VXN')]):[null,null];   // 공포 모드만 VIX·VXN 을 받는다
-    const R=window.JKPlanSessionEngine.replay({horizon:+x.horizon,rules,startDate:x.simStart,endDate:end,
-      principal:+x.settings.startCapital||0,monthlyAdd:+x.settings.monthlyAdd||0,vix:ix[0],vxn:ix[1],
-      tecl:t.rows,tqqq:q.rows,sgov:g.rows,teclDiv:t.dividends,tqqqDiv:q.dividends,sgovDiv:g.dividends});
-    if(R&&R.error)throw new Error(R.error);
+  const show=R=>{
     assetPaperCache[x.id]=R;
     if(applyView&&isCurrent()){
       applyAssetSettings(x);
@@ -1409,7 +1470,22 @@ async function replayAssetPaperSession(x,applyView){
       const pr=$('assetPaperResult');if(pr){pr.hidden=false;pr.innerHTML=assetPaperStatsHtml(x,R);}
       renderAlphaLedger();render();refreshAlphaFromCache();
     }
-    return R;
+  };
+  try{
+    const io={key:planPaperKey(x.id),cut:simCutoff('usd'),show,
+      read:()=>planPaperDocRead(x.id),write:d=>planPaperDocWrite(x.id,d),
+      quotes:async panic=>{
+        liveQuotes={};
+        const a=await Promise.all([fetchPlanQuote('TECL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('SGOV')]),t=a[0],q=a[1],g=a[2];
+        const ix=panic?await Promise.all([fetchPlanIndex('^VIX'),fetchPlanIndex('^VXN')]):[null,null];   // 공포 모드만 VIX·VXN 을 받는다
+        return {tecl:t.rows,tqqq:q.rows,sgov:g.rows,teclDiv:t.dividends,tqqqDiv:q.dividends,sgovDiv:g.dividends,vix:ix[0],vxn:ix[1]};
+      }};
+    if(storedOnly){const st=await E.paperRunStored(x,io);if(st)show(st.R);return st?st.R:null;}
+    const got=await E.paperRunGet(x,io);
+    if(got.error)throw new Error(got.error);
+    if(got.warn)console.warn('asset paper store',got.warn);
+    if(assetPaperCache[x.id]!==got.R)show(got.R);   // 저장본이 없었거나 새 확정 봉으로 다시 셌으면 그린다(저장본 그대로면 이미 그렸다)
+    return got.R;
   }catch(e){
     console.error('asset paper replay',e);
     const pr=$('assetPaperResult');if(applyView&&isCurrent()&&pr){pr.hidden=false;pr.innerHTML='<div class="sub" style="color:var(--gold)">모의 재생 실패 · '+String(e&&e.message||e).replace(/</g,'&lt;')+'</div>';}
@@ -1441,10 +1517,11 @@ function renderAssetSessions(){
   renderPlanVersion();
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(dgStickyOffsets);
 }
-async function loadActiveAssetSessionView(refresh=true){
+async function loadActiveAssetSessionView(refresh=true,early=false){   // early — 첫 화면: 모의 세션 저장본만 먼저(시세가 오기 전 · finishPlanOpen)
   const revision=++assetViewRevision;
   alphaCloseFillEditor();alphaCloseEdit();dgSheetClose();setAssetDetail('current');
   const x=activeAssetSession();
+  if(early&&!(x&&x.paper))return;
   $('assetHistoryNote').textContent=x&&x.paper?'모의 시작일부터 확정 일봉까지 자동 재생한 거래이력입니다. 모의 기록은 직접 수정하지 않습니다.':'잘못 기록한 체결이나 시작잔고는 여기서 수정합니다. 수정 후 현재 수량·평단·현금을 전체 이력 기준으로 다시 계산합니다.';
   if(!x){
     restoreCurrentPlanView();renderAssetSessions();render();if(refresh)await refreshLive();return;
@@ -1454,7 +1531,7 @@ async function loadActiveAssetSessionView(refresh=true){
     document.body.classList.add('asset-paper-mode');
     alphaLedger=assetLedgerSeed(x.simStart,+x.settings.startCapital||0);alphaSyncInputs();renderAlphaLedger();
     const pr=$('assetPaperResult');pr.hidden=false;pr.textContent='모의 거래이력과 성과를 계산하는 중…';
-    renderAssetSessions();await replayAssetPaperSession(x,true);if(refresh&&revision===assetViewRevision)await refreshLive();return;
+    renderAssetSessions();await replayAssetPaperSession(x,true,early);if(!early&&refresh&&revision===assetViewRevision)await refreshLive();return;
   }
   alphaLedger=cloneObj(x.ledger||assetLedgerSeed((x.settings&&x.settings.startDate)||todayISO(),+(x.settings&&x.settings.startCapital)||20000));
   alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
@@ -1500,7 +1577,7 @@ function openAssetSessionModal(){
   $('assetSessionModalTitle').textContent='세션 추가';$('assetSessionCreate').textContent='만들기';
   syncAssetSessionModal();
   $('assetSessionModalStrategy').textContent='🤖 '+planStrategyLabel()+' — 시작자산 · 월 추가 투자 · 목표는 지금 화면 값으로 만들고, 만든 뒤 ⚙️ 설정에서 바꿉니다.';
-  $('assetSessionModal').hidden=false;
+  $('assetSessionModal').hidden=false;dgVpLock();
 }
 /* 보고 있는 세션의 설정 창 — mode 'session': 이름 · 모의투자 · 포트폴리오(세션 줄을 두 번 누름 · 보고 있는 칩을 누름) / 'settings': 금액 · 시작일(상태줄 ⚙️ 설정).
    앞 세션 전환이 끝난 뒤에 연다 — 화면 장부가 그 세션 것이 된 다음에 화면 값을 세션에 거둔다(syncActiveAssetSessionFromView). */
@@ -1535,7 +1612,7 @@ function syncAssetSessionModal(){
   $('assetSessionStartLabel').textContent=paper?'모의 시작일':'시작일';
   $('assetSessionPaperNote').textContent=paper?'과거 시세로 거래와 성과를 다시 계산합니다. 모의투자 성과 목록에서도 비교할 수 있습니다. 실제 거래이력은 보존됩니다.':locked?'기존 거래이력을 유지합니다. 시작자산과 시작일은 거래이력의 시작잔고 수정에서 변경하세요.':'운영 세션은 실제 체결을 직접 기록합니다. 모의에서 운영으로 바꾸면 모의 거래는 가져오지 않습니다.';
 }
-function closeAssetSessionModal(){$('assetSessionModal').hidden=true;assetModalRevision++;assetEditingId=null;}
+function closeAssetSessionModal(){$('assetSessionModal').hidden=true;assetModalRevision++;assetEditingId=null;dgVpLock();}
 async function assetFxAt(date){
   try{const r=await fetch('/api/fx?date='+encodeURIComponent(date),{headers:{Accept:'application/json'}});if(r.ok){const j=await r.json();if(j&&+j.rate>0)return +j.rate;}}catch(e){}
   return 0;
@@ -1584,6 +1661,7 @@ async function deleteAssetSession(id){
   delete assetPaperCache[id];writeAssetSessionLocal();
   const ok=await saveOperatingState();
   if(!ok){liveState=before;if(beforePaper)assetPaperCache[id]=beforePaper;alert('세션 삭제가 DB에 저장되지 않아 원래 상태로 되돌렸습니다.');}
+  else if(x.paper){window.JKPlanSessionEngine&&window.JKPlanSessionEngine.paperRunForget&&window.JKPlanSessionEngine.paperRunForget(planPaperKey(id));planPaperDocDelete(id).catch(e=>console.warn('asset paper store delete',e));}   // 모의 재생 저장본도 지운다(세션이 지워진 뒤에만)
   await loadActiveAssetSessionView(true);
 }
 function guardAssetPaperEdit(){
@@ -2722,12 +2800,16 @@ function planEmbedPost(o){
    (2026-11-11 사용자 "왜 운영에서 선택한 탭이 보이지? 운영에서 포트폴리오로 선택한 세션이 보여야지?" — 탭이 모의 세션을 보면 '토스'의 판단이 안 왔다).
    셈은 보고 있는 세션과 같은 renderAlphaPlan(bg — 화면 · 주문표 · 기록 창은 안 건드린다). 보고 있는 세션은 화면이 이미 알리니 뺀다.
    보유 · 현금 = 그 장부 엔진 ledgerCalc(화면 칸 alphaSyncInputs 와 같은 반올림) · 시작자산 = 그 세션 설정 · 공포 모드 = 그 세션 시작일부터. */
+function planBgPanicWanted(){   // 포트폴리오 뒤 계산(운영 창 안 · 로그인) 대상에 공포 모드 세션이 있는가 — 있으면 보는 세션이 기본이어도 VIX·VXN 을 받는다
+  if(!document.documentElement.classList.contains('embed')||window.parent===window||!(auth&&auth.currentUser))return false;
+  try{return planBgTargets().some(t=>t.panicOn);}catch(e){return false;}
+}
 function planBgTargets(){
   const E=window.JKPlanSessionEngine,act=activeAssetSession(),out=[];
   if(!E||!E.ledgerCalc)return out;
   const put=(key,ledger,startCap,panicOn,panicX,start,name)=>{
     const S=E.ledgerCalc(ledger);
-    out.push({key,name,bg:{tq:Math.max(0,Math.floor(+S.tecl||0)),qq:Math.max(0,Math.floor(+S.tqqq||0)),sq:Math.max(0,Math.floor(+S.sgov||0)),cash:Number((+S.cash||0).toFixed(2)),startCap,
+    out.push({key,name,panicOn:!!panicOn,bg:{tq:Math.max(0,Math.floor(+S.tecl||0)),qq:Math.max(0,Math.floor(+S.tqqq||0)),sq:Math.max(0,Math.floor(+S.sgov||0)),cash:Number((+S.cash||0).toFixed(2)),startCap,
       dep:alphaDepositPending(ledger),panic:panicOn?((d,on)=>planLivePanic(panicX,d,on,start)):(()=>null)}});
   };
   if(act&&planDbState&&planDbState.portfolio!==false){   // '현재 투자중'(본 장부) — 다른 세션을 보고 있을 때만
@@ -2855,7 +2937,7 @@ async function loadOperatingState(user){
     ensureLiveBoxes();renderSessionSelectors();renderAssetSessions();throw e;
   }
 }
-async function refreshLive(){
+async function refreshLive(opt){
   if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
   try{
     /* 시세는 원장과 상관없다 — 원장을 읽는 동안 같이 받는다(예전엔 원장 읽기가 끝나야 시세를 받기 시작했다) */
@@ -2868,6 +2950,7 @@ async function refreshLive(){
     Promise.all([pV,pT,pG,pX]).then(([v,t,g])=>{ if(liveBusy){ renderAlphaPlan(v,t,g); renderAlphaLedger(); } }).catch(()=>{});
     await loadOperatingState(auth.currentUser);
     renderSessionSelectors();
+    if(opt&&typeof opt.onState==='function')try{opt.onState();}catch(e){console.warn('refreshLive onState',e);}   // 운영 원장(세션 목록)을 읽은 바로 뒤 — 시세를 기다리기 전
     const inf=liveState?linkedOpSession(liveState.inf,'SOXL',planLinks.inf):null,vr=liveState?linkedOpSession(liveState.vr,'TECL',planLinks.vr):null;
     const [qs,qv,qt,qqq,qld,sgov]=await Promise.all([pS,pV,pT,pQ,pL,pG]);
     const asof=[qs.settled.date,qv.settled.date,qt.settled.date,qqq.settled.date,sgov.settled.date].filter(Boolean).sort()[0];$('liveSync').textContent=liveStateSource+' · 확정 일봉 '+asof+' 기준';
@@ -3293,11 +3376,11 @@ function dgSheetRender(){
 function dgSheetOpen(){
   if(assetPaperMode()){guardAssetPaperEdit();return;}
   dgSheetRender();dgSheetForms(null);
-  const sh=$('dgSheet');$('dgSheetBg').classList.add('on');sh.classList.add('on');sh.setAttribute('aria-hidden','false');sh.scrollTop=0;document.body.classList.add('dg-sheet-open');
+  const sh=$('dgSheet');$('dgSheetBg').classList.add('on');sh.classList.add('on');sh.setAttribute('aria-hidden','false');sh.scrollTop=0;document.body.classList.add('dg-sheet-open');dgVpLock();
 }
 function dgSheetClose(){
   const sh=$('dgSheet');if(!sh)return;
-  dgSheetForms(null);sh.classList.remove('on');sh.setAttribute('aria-hidden','true');$('dgSheetBg').classList.remove('on');document.body.classList.remove('dg-sheet-open');
+  dgSheetForms(null);sh.classList.remove('on');sh.setAttribute('aria-hidden','true');$('dgSheetBg').classList.remove('on');document.body.classList.remove('dg-sheet-open');dgVpLock();
 }
 function dgSheetPick(kind){
   if(kind==='fill'){ if(!pendingAlphaOrders.length){dgSheetRender();return;} dgSheetForms('fill');alphaOpenFillEditor(); }
@@ -3581,6 +3664,7 @@ $("assetSettingsBtn").addEventListener("click",()=>editAssetSession('settings'))
 window.addEventListener("resize",()=>{try{dgStickyOffsets();}catch(e){}});
 let alphaTcRz=null;window.addEventListener("resize",()=>{clearTimeout(alphaTcRz);alphaTcRz=setTimeout(()=>{try{renderAlphaTradeChart();}catch(e){}},250);});   // 거래이력 그림 폭
 try{dgStickyWatch();}catch(e){}   // 세션 줄 · 상태줄 크기가 바뀌면(숨었다 다시 보일 때 포함) 상세 탭 붙는 자리를 다시 잰다
+try{dgVpSetup();}catch(e){console.warn('dg autoh',e);}   // 운영 › 듀얼가드 창 높이 = 내용 높이(바깥이 ?autoh=1 로 열 때만)
 $("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});
 $("assetDetailTabs").addEventListener("keydown",e=>{
   const tabs=Array.from(document.querySelectorAll('[data-asset-detail]')),i=tabs.indexOf(e.target);
@@ -3671,7 +3755,7 @@ renderHorizonCopy();renderDualGuardStrip(null);
    이용 승인(관리자 승인 · 차단)은 jk-access.js 한 곳이 판정한다 — 운영·백테·공모주·JOB 과 같은 글자. */
 function planGate(on){
   const h=document.documentElement;
-  h.classList.remove('plan-hydrating');
+  h.classList.remove('plan-hydrating');dgPostHeight();   // 창 높이 = 내용 높이(autoh) — 불러오는 중이 끝나면 처음 알린다
   if(on){h.classList.add('authed');h.classList.remove('had-user');h.classList.remove('embed-dberr');return;}
   h.classList.remove('authed');h.classList.remove('had-user');
 }
@@ -3696,18 +3780,24 @@ async function finishPlanOpen(user){
   try{ await cloudLoad(user); }finally{ clearTimeout(slow); }
   planBootHydrating=false;
   planGate(true);
-  await refreshLive();
-  if(requestedAssetSessionId){
-    const q=assetPlanBox().sessions.find(x=>x.id===requestedAssetSessionId);
-    if(q&&+q.horizon===5&&!planRetired(q)){
-      activeHorizon=+q.horizon;assetPlanBox().activeByHorizon[activeHorizon]=q.id;
-      writeAssetSessionLocal();renderHorizonCopy();
-    }
-    // 딥링크는 최초 진입용이다. 이후 DB 재연결/인증 재실행에서 재선택되지 않게 소비한다.
-    clearRequestedAssetSessionLink();
-  }
+  /* 모의 세션이면 운영 원장(세션 목록)을 읽자마자 DB 저장본부터 그린다 — 시세 여섯 종목(약 6MB)을 다 받을 때까지 기다리지 않는다(2026-11-11 사용자: "어쩐지 듀얼가드 열때 오래걸리더라").
+     시세가 온 뒤 아래 본 흐름이 한 번 더 탄다(저장본이 오늘 것이면 메모리 그대로 · 새 확정 봉이면 다시 재생 · 저장). */
+  let early=null;
+  await refreshLive({onState:()=>{planApplySessionLink();const a=activeAssetSession();if(a&&a.paper){renderAssetSessions();early=loadActiveAssetSessionView(false,true);}}});
+  if(early)await early.catch(e=>console.warn('early paper view',e));
+  planApplySessionLink();
   renderAssetSessions();
   await loadActiveAssetSessionView(false);
+}
+function planApplySessionLink(){   // ?session= 딥링크 — 운영 원장(세션 목록)을 읽은 뒤에 한 번만
+  if(!requestedAssetSessionId)return;
+  const q=assetPlanBox().sessions.find(x=>x.id===requestedAssetSessionId);
+  if(q&&+q.horizon===5&&!planRetired(q)){
+    activeHorizon=+q.horizon;assetPlanBox().activeByHorizon[activeHorizon]=q.id;
+    writeAssetSessionLocal();renderHorizonCopy();
+  }
+  // 딥링크는 최초 진입용이다. 이후 DB 재연결/인증 재실행에서 재선택되지 않게 소비한다.
+  clearRequestedAssetSessionLink();
 }
 /* 로그인 상자 글자 — DB 오류 때 '로그인해야 볼 수 있습니다'가 남아 로그인 화면처럼 보이지 않게 바꾸고, 로그아웃 때 되돌린다 */
 const PLAN_GSUB_HTML=(document.querySelector('#authgate .gsub')||{}).innerHTML||'';
