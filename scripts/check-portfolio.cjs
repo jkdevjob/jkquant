@@ -661,7 +661,7 @@ const MUT=[
   ['합계: 나간 돈을 지금 계좌로 셈','idx',s=>s.replace("now+=t-o; out+=o;","now+=t; out+=o;")],
   ['듀얼가드 줄: 투입에 입출금 빠짐','idx',s=>s.replace("inflow=Math.max(0,(+L.start||0)+(+c.netFlow||0))","inflow=Math.max(0,(+L.start||0))")],
   ['듀얼가드 목록: 모의 세션도 넣음','idx',s=>s.replace("if(!x||x.paper||planPaperRetired(x)) continue;","if(!x||planPaperRetired(x)) continue;")],
-  ['실전 채우기: 모의 세션도 넣음','idx',s=>s.replace("pick=x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)","pick=x=>!!x&&(live?((x.hist||[]).length>0):!!x.paper)")],
+  ['실전 채우기: 모의 세션도 넣음','idx',s=>s.replace("pick=t=>x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)","pick=t=>x=>!!x&&(live?((x.hist||[]).length>0):!!x.paper)")],
   ['실전 채우기: 모의 체결을 굴림','idx',s=>s.replace("if(!live){                          // 실전 세션엔 모의 체결을 만들지 않는다","if(true){")],
   ['듀얼가드 탭이 무매 오른쪽','idx',s=>s.replace('    <button class="tab" data-t="dg">듀얼가드</button>\n    <button class="tab on" data-t="inf">무한매수법</button>','    <button class="tab on" data-t="inf">무한매수법</button>\n    <button class="tab" data-t="dg">듀얼가드</button>')],
   ['듀얼가드가 S.activeTab 에 들어감','idx',s=>s.replace("  if(S.opView!=='dg'){ S.opView='dg'; save(); }","  S.activeTab='dg'; if(S.opView!=='dg'){ S.opView='dg'; save(); }")],
@@ -700,7 +700,7 @@ const MUT=[
   ['합친 선 색: 예전 파랑(듀얼가드 보라와 색약에서 못 가름)','idx',s=>s.replace("#pfPage{--pf-val:#e8ecf7;","#pfPage{--pf-val:#3987e5;")],
   // 💰 포트폴리오에 넣기 (2026-11-09)
   ['넣을지 판단: 끈 세션도 넣음','idx',s=>s.replace("function pfWanted(x){ return !!x && !x.paper && x.portfolio!==false; }","function pfWanted(x){ return !!x && !x.paper; }")],
-  ['실전 채우기: 포트폴리오 선택 무시','idx',s=>s.replace("pick=x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)","pick=x=>!!x&&(live?(!x.paper&&(x.hist||[]).length>0):!!x.paper)")],
+  ['실전 채우기: 포트폴리오 선택 무시','idx',s=>s.replace("pick=t=>x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)","pick=t=>x=>!!x&&(live?(!x.paper&&(x.hist||[]).length>0):!!x.paper)")],
   ['시세 선취: 끈 세션 종목도 받음','idx',s=>s.replace("if(!sess||(live?(!pfWanted(sess)||!(sess.hist||[]).length):!sess.paper))continue;","if(!sess||(live?(sess.paper||!(sess.hist||[]).length):!sess.paper))continue;")],
   ['듀얼가드 목록: 현재 투자중 선택 무시','idx',s=>s.replace("if(curL&&pfLedgerUsed(curL)){ const on=pfPlanWanted(five,o);","if(curL&&pfLedgerUsed(curL)){ const on=true;")],
   ['듀얼가드 목록: 세션 선택 무시','idx',s=>s.replace("const on=pfPlanWanted(x,ov); if(!on&&!withOff) continue;","const on=true; if(!on&&!withOff) continue;")],

@@ -2203,10 +2203,12 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /await openPaper\(true\)/.test(ap)
      && /onclick="refreshPaperViewButton\(\)"/.test(idx)
      && /const repaired=await paperRepairCommonStarts\(\)/.test(rvFast));
-  ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
-     +((idx.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1])>=5   // 판은 계산이 바뀔 때마다 오른다(5: 폐지된 자산플랜 세션 줄 빼기 · 2026-11-08)
-     && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
-     && /x\.day===paperKstDate\(\)/.test(extractFn(idx,'function paperViewCacheFresh(x)'))
+  // 2026-11-12 세션마다 저장 — 날짜(자정)가 아니라 줄마다 표지(서명 · 기준 종가일)로 다시 쓸지 정한다. 값 시험은 scripts/check-paper-row-cache.cjs
+  ok('모의 성과 계산 결과는 stateV2 캐시에 세션마다 표지와 함께 저장하고 표지가 그대로인 세션은 재계산하지 않는다',
+     +((idx.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1])>=9   // 판은 계산이 바뀔 때마다 오른다(9: 세션마다 저장 · 2026-11-12)
+     && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows,keys)'))
+     && /keys:keys\|\|\{\}/.test(extractFn(idx,'function paperViewCacheWrite(rows,keys)'))
+     && /const p=paperViewPlan\(false\);\s*if\(p\.only\.size\)return null;/.test(extractFn(idx,'function paperViewCacheRead()'))
      && /if\(!force&&paperViewCacheFresh\(current\)\)return/.test(rvFast));
 }
 
@@ -10537,7 +10539,7 @@ console.log('\n[134] 모의 시작일 — 설정 변경으로 오늘 리셋 금�
      && op.indexOf('await paperRepairCommonStarts()')>op.indexOf('await paperRepairLegacyStarts()')
      && op.indexOf('await paperRepairCommonStarts()')<op.indexOf('syncPaperStart()')
      && /forceRecalc\|\|repairedStarts>0/.test(op)
-     && /const rows=await paperFillAll\(\)/.test(rv));
+     && /const plan=paperViewPlan\(force\);\s*const got=plan\.only\.size\?await paperFillAll\(\{only:plan\.only\}\):\[\];/.test(rv));
 
   const pst=extractFn(idx,'function paperStart(sess)');
   const eff=new Function('S','paperPreferredSimStart',pst+'\nreturn paperStart;')(
