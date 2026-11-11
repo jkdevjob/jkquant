@@ -12,7 +12,7 @@
   document.documentElement.classList.add('embed');
   var b=document.createElement('base'); b.target='_top'; document.head.appendChild(b); })();
 </script>
-<script src="/plan-session-engine.js?v=8"></script>
+<script src="/plan-session-engine.js?v=9"></script>
 <script src="/plan-session-settings.js?v=5"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-trade-chart.js?v=1.0.0"></script>
@@ -414,7 +414,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.12.1</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.13.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -959,7 +959,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, updateCurrentUser } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { initializeFirestore, doc, getDoc as nativeGetDoc, setDoc, runTransaction as nativeRunTransaction, deleteField } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { initializeFirestore, doc, getDoc as nativeGetDoc, setDoc, deleteDoc, runTransaction as nativeRunTransaction, deleteField } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { createPaperStore } from '/jk-paper-store.mjs?v=1.0.2';
 const {getDoc,runTransaction}=createPaperStore({doc,getDoc:nativeGetDoc,setDoc,runTransaction:nativeRunTransaction,deleteField});
 
@@ -1388,19 +1388,20 @@ function alphaPanicApply(PX,sigma,decGuard){
   const sl=!!PX.state.ps&&PX.sigma>0&&PX.sigma<sigma;
   return {sigma:sl?PX.sigma:sigma,guard:PX.state.pf?PX.guard:decGuard,own:!!PX.state.pf,fast:!!PX.state.pf,sleeve:sl};   // own — Guard 를 엔진이 정했는가(아니면 기본 판정의 guardFlip 그대로)
 }
-async function replayAssetPaperSession(x,applyView){
+/* 모의 세션 재생 저장본 — DB 문서 users/{uid}/planPaper/{세션 id}(2026-11-11 사용자: "듀얼가드 DB에 저장하게 바꾸고 … 이렇게 열 때마다 그때그때 계산하지 말고").
+   묶기·풀기·'언제 다시 세나'는 엔진 한 곳(paperRunGet) — 모의 목록(index.html)이 같은 문서를 같은 함수로 읽고 쓴다. */
+function planPaperRef(id){const u=auth&&auth.currentUser;return (u&&id)?doc(db,'users',u.uid,'planPaper',String(id)):null;}
+async function planPaperDocRead(id){const r=planPaperRef(id);if(!r)return null;const s=await nativeGetDoc(r);return s.exists()?s.data():null;}
+async function planPaperDocWrite(id,d){const r=planPaperRef(id);if(r)await setDoc(r,d);}
+async function planPaperDocDelete(id){const r=planPaperRef(id);if(r)await deleteDoc(r);}
+function planPaperKey(id){const u=auth&&auth.currentUser;return (u?u.uid:'')+'/'+id;}
+/* 모의 세션 열기 — 저장본이 있으면 시세를 기다리지 않고 바로 그린다(show). 오늘 것이면 그대로 끝 · 새 확정 일봉이 생겼을 수 있으면
+   시세를 받아 보고, 끝이 늘었을 때만 다시 재생해 저장하고 다시 그린다. 저장본이 없으면 예전처럼 재생 → 저장. */
+async function replayAssetPaperSession(x,applyView,storedOnly){   // storedOnly — 저장본만 그린다(시세·재생 없음 · 첫 화면)
   if(!x||!x.paper||!window.JKPlanSessionEngine)return null;
-  const revision=assetViewRevision;
+  const E=window.JKPlanSessionEngine,revision=assetViewRevision;
   const isCurrent=()=>revision===assetViewRevision&&activeAssetSession()?.id===x.id;
-  try{
-    liveQuotes={};
-    const a=await Promise.all([fetchPlanQuote('TECL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('SGOV')]),t=a[0],q=a[1],g=a[2];
-    const end=[t.settled.date,q.settled.date,g.settled.date].sort()[0];
-    const rules=assetRulesOf(x),ix=rules==='panic'?await Promise.all([fetchPlanIndex('^VIX'),fetchPlanIndex('^VXN')]):[null,null];   // 공포 모드만 VIX·VXN 을 받는다
-    const R=window.JKPlanSessionEngine.replay({horizon:+x.horizon,rules,startDate:x.simStart,endDate:end,
-      principal:+x.settings.startCapital||0,monthlyAdd:+x.settings.monthlyAdd||0,vix:ix[0],vxn:ix[1],
-      tecl:t.rows,tqqq:q.rows,sgov:g.rows,teclDiv:t.dividends,tqqqDiv:q.dividends,sgovDiv:g.dividends});
-    if(R&&R.error)throw new Error(R.error);
+  const show=R=>{
     assetPaperCache[x.id]=R;
     if(applyView&&isCurrent()){
       applyAssetSettings(x);
@@ -1409,7 +1410,22 @@ async function replayAssetPaperSession(x,applyView){
       const pr=$('assetPaperResult');if(pr){pr.hidden=false;pr.innerHTML=assetPaperStatsHtml(x,R);}
       renderAlphaLedger();render();refreshAlphaFromCache();
     }
-    return R;
+  };
+  try{
+    const io={key:planPaperKey(x.id),cut:simCutoff('usd'),show,
+      read:()=>planPaperDocRead(x.id),write:d=>planPaperDocWrite(x.id,d),
+      quotes:async panic=>{
+        liveQuotes={};
+        const a=await Promise.all([fetchPlanQuote('TECL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('SGOV')]),t=a[0],q=a[1],g=a[2];
+        const ix=panic?await Promise.all([fetchPlanIndex('^VIX'),fetchPlanIndex('^VXN')]):[null,null];   // 공포 모드만 VIX·VXN 을 받는다
+        return {tecl:t.rows,tqqq:q.rows,sgov:g.rows,teclDiv:t.dividends,tqqqDiv:q.dividends,sgovDiv:g.dividends,vix:ix[0],vxn:ix[1]};
+      }};
+    if(storedOnly){const st=await E.paperRunStored(x,io);if(st)show(st.R);return st?st.R:null;}
+    const got=await E.paperRunGet(x,io);
+    if(got.error)throw new Error(got.error);
+    if(got.warn)console.warn('asset paper store',got.warn);
+    if(assetPaperCache[x.id]!==got.R)show(got.R);   // 저장본이 없었거나 새 확정 봉으로 다시 셌으면 그린다(저장본 그대로면 이미 그렸다)
+    return got.R;
   }catch(e){
     console.error('asset paper replay',e);
     const pr=$('assetPaperResult');if(applyView&&isCurrent()&&pr){pr.hidden=false;pr.innerHTML='<div class="sub" style="color:var(--gold)">모의 재생 실패 · '+String(e&&e.message||e).replace(/</g,'&lt;')+'</div>';}
@@ -1441,10 +1457,11 @@ function renderAssetSessions(){
   renderPlanVersion();
   if(typeof requestAnimationFrame==='function')requestAnimationFrame(dgStickyOffsets);
 }
-async function loadActiveAssetSessionView(refresh=true){
+async function loadActiveAssetSessionView(refresh=true,early=false){   // early — 첫 화면: 모의 세션 저장본만 먼저(시세가 오기 전 · finishPlanOpen)
   const revision=++assetViewRevision;
   alphaCloseFillEditor();alphaCloseEdit();dgSheetClose();setAssetDetail('current');
   const x=activeAssetSession();
+  if(early&&!(x&&x.paper))return;
   $('assetHistoryNote').textContent=x&&x.paper?'모의 시작일부터 확정 일봉까지 자동 재생한 거래이력입니다. 모의 기록은 직접 수정하지 않습니다.':'잘못 기록한 체결이나 시작잔고는 여기서 수정합니다. 수정 후 현재 수량·평단·현금을 전체 이력 기준으로 다시 계산합니다.';
   if(!x){
     restoreCurrentPlanView();renderAssetSessions();render();if(refresh)await refreshLive();return;
@@ -1454,7 +1471,7 @@ async function loadActiveAssetSessionView(refresh=true){
     document.body.classList.add('asset-paper-mode');
     alphaLedger=assetLedgerSeed(x.simStart,+x.settings.startCapital||0);alphaSyncInputs();renderAlphaLedger();
     const pr=$('assetPaperResult');pr.hidden=false;pr.textContent='모의 거래이력과 성과를 계산하는 중…';
-    renderAssetSessions();await replayAssetPaperSession(x,true);if(refresh&&revision===assetViewRevision)await refreshLive();return;
+    renderAssetSessions();await replayAssetPaperSession(x,true,early);if(!early&&refresh&&revision===assetViewRevision)await refreshLive();return;
   }
   alphaLedger=cloneObj(x.ledger||assetLedgerSeed((x.settings&&x.settings.startDate)||todayISO(),+(x.settings&&x.settings.startCapital)||20000));
   alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
@@ -1584,6 +1601,7 @@ async function deleteAssetSession(id){
   delete assetPaperCache[id];writeAssetSessionLocal();
   const ok=await saveOperatingState();
   if(!ok){liveState=before;if(beforePaper)assetPaperCache[id]=beforePaper;alert('세션 삭제가 DB에 저장되지 않아 원래 상태로 되돌렸습니다.');}
+  else if(x.paper){window.JKPlanSessionEngine&&window.JKPlanSessionEngine.paperRunForget&&window.JKPlanSessionEngine.paperRunForget(planPaperKey(id));planPaperDocDelete(id).catch(e=>console.warn('asset paper store delete',e));}   // 모의 재생 저장본도 지운다(세션이 지워진 뒤에만)
   await loadActiveAssetSessionView(true);
 }
 function guardAssetPaperEdit(){
@@ -2855,7 +2873,7 @@ async function loadOperatingState(user){
     ensureLiveBoxes();renderSessionSelectors();renderAssetSessions();throw e;
   }
 }
-async function refreshLive(){
+async function refreshLive(opt){
   if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
   try{
     /* 시세는 원장과 상관없다 — 원장을 읽는 동안 같이 받는다(예전엔 원장 읽기가 끝나야 시세를 받기 시작했다) */
@@ -2868,6 +2886,7 @@ async function refreshLive(){
     Promise.all([pV,pT,pG,pX]).then(([v,t,g])=>{ if(liveBusy){ renderAlphaPlan(v,t,g); renderAlphaLedger(); } }).catch(()=>{});
     await loadOperatingState(auth.currentUser);
     renderSessionSelectors();
+    if(opt&&typeof opt.onState==='function')try{opt.onState();}catch(e){console.warn('refreshLive onState',e);}   // 운영 원장(세션 목록)을 읽은 바로 뒤 — 시세를 기다리기 전
     const inf=liveState?linkedOpSession(liveState.inf,'SOXL',planLinks.inf):null,vr=liveState?linkedOpSession(liveState.vr,'TECL',planLinks.vr):null;
     const [qs,qv,qt,qqq,qld,sgov]=await Promise.all([pS,pV,pT,pQ,pL,pG]);
     const asof=[qs.settled.date,qv.settled.date,qt.settled.date,qqq.settled.date,sgov.settled.date].filter(Boolean).sort()[0];$('liveSync').textContent=liveStateSource+' · 확정 일봉 '+asof+' 기준';
@@ -3696,18 +3715,24 @@ async function finishPlanOpen(user){
   try{ await cloudLoad(user); }finally{ clearTimeout(slow); }
   planBootHydrating=false;
   planGate(true);
-  await refreshLive();
-  if(requestedAssetSessionId){
-    const q=assetPlanBox().sessions.find(x=>x.id===requestedAssetSessionId);
-    if(q&&+q.horizon===5&&!planRetired(q)){
-      activeHorizon=+q.horizon;assetPlanBox().activeByHorizon[activeHorizon]=q.id;
-      writeAssetSessionLocal();renderHorizonCopy();
-    }
-    // 딥링크는 최초 진입용이다. 이후 DB 재연결/인증 재실행에서 재선택되지 않게 소비한다.
-    clearRequestedAssetSessionLink();
-  }
+  /* 모의 세션이면 운영 원장(세션 목록)을 읽자마자 DB 저장본부터 그린다 — 시세 여섯 종목(약 6MB)을 다 받을 때까지 기다리지 않는다(2026-11-11 사용자: "어쩐지 듀얼가드 열때 오래걸리더라").
+     시세가 온 뒤 아래 본 흐름이 한 번 더 탄다(저장본이 오늘 것이면 메모리 그대로 · 새 확정 봉이면 다시 재생 · 저장). */
+  let early=null;
+  await refreshLive({onState:()=>{planApplySessionLink();const a=activeAssetSession();if(a&&a.paper){renderAssetSessions();early=loadActiveAssetSessionView(false,true);}}});
+  if(early)await early.catch(e=>console.warn('early paper view',e));
+  planApplySessionLink();
   renderAssetSessions();
   await loadActiveAssetSessionView(false);
+}
+function planApplySessionLink(){   // ?session= 딥링크 — 운영 원장(세션 목록)을 읽은 뒤에 한 번만
+  if(!requestedAssetSessionId)return;
+  const q=assetPlanBox().sessions.find(x=>x.id===requestedAssetSessionId);
+  if(q&&+q.horizon===5&&!planRetired(q)){
+    activeHorizon=+q.horizon;assetPlanBox().activeByHorizon[activeHorizon]=q.id;
+    writeAssetSessionLocal();renderHorizonCopy();
+  }
+  // 딥링크는 최초 진입용이다. 이후 DB 재연결/인증 재실행에서 재선택되지 않게 소비한다.
+  clearRequestedAssetSessionLink();
 }
 /* 로그인 상자 글자 — DB 오류 때 '로그인해야 볼 수 있습니다'가 남아 로그인 화면처럼 보이지 않게 바꾸고, 로그아웃 때 되돌린다 */
 const PLAN_GSUB_HTML=(document.querySelector('#authgate .gsub')||{}).innerHTML||'';

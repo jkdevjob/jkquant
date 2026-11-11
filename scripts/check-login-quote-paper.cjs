@@ -574,9 +574,9 @@ await t('P13 원장이 12초 넘게 걸려도 실패로 돌리지 않는다 — 
   const src=fnOf(plan,'async function finishPlanOpen(user){');
   assert(!/planWithTimeout\(cloudLoad/.test(src),'12초에 끊던 옛 방식 없음');
   const mk=loadMs=>{ const log=[]; let rej=null;
-    const f=new Function('startPlanQuotePrefetch','planBootNote','cloudLoad','PLAN_DB_SLOW_MS','planGate','refreshLive','requestedAssetSessionId','renderAssetSessions','loadActiveAssetSessionView','setTimeout','clearTimeout','planBootHydrating',src+'\nreturn finishPlanOpen;')(
+    const f=new Function('startPlanQuotePrefetch','planBootNote','cloudLoad','PLAN_DB_SLOW_MS','planGate','refreshLive','requestedAssetSessionId','renderAssetSessions','loadActiveAssetSessionView','setTimeout','clearTimeout','planBootHydrating','planApplySessionLink','activeAssetSession',src+'\nreturn finishPlanOpen;')(
       ()=>log.push('prefetch'),(x,n)=>log.push('note:'+(n||x)),()=>{ log.push('cloudLoad'); return new Promise((res,rj)=>{ rej=rj; setTimeout(()=>{ log.push('loaded'); res(); },loadMs); }); },
-      20,on=>log.push('gate:'+on),async()=>log.push('refreshLive'),null,()=>log.push('sessions'),async()=>log.push('view'),setTimeout,clearTimeout,true);
+      20,on=>log.push('gate:'+on),async()=>log.push('refreshLive'),null,()=>log.push('sessions'),async()=>log.push('view'),setTimeout,clearTimeout,true,()=>{},()=>null);
     return {f,log,fail:e=>rej(e)}; };
   const A=mk(60); await A.f({uid:'u'});
   assert.deepEqual(A.log.filter(x=>!/^note:/.test(x)),['prefetch','cloudLoad','loaded','gate:true','refreshLive','sessions','view'],'미리 받기 → 원장 → 열기 → 시세');
@@ -610,7 +610,7 @@ await t('P14 같은 원장을 두 번 읽지 않는다 — 방금(20초 안) 쓰
   const O=mk(D); await O.C.cloudLoad(U); await O.C.loadOperatingState({uid:'other'}); assert.equal(O.reads(),2,'다른 계정이면 다시 읽는다');
 });
 await t('P15 자산플랜 시세 — 원장 읽기와 같이 받기 시작 · TECL·TQQQ·SGOV 가 오면 "오늘 주문"을 먼저 그린다(SOXL·QQQ·QLD 를 안 기다린다)',async()=>{
-  const rl=fnOf(plan,'async function refreshLive(){'), cutAt='const [qs,qv,qt,qqq,qld,sgov]=await Promise.all([pS,pV,pT,pQ,pL,pG]);', cut=rl.indexOf(cutAt); assert(cut>0,'시세 묶음');
+  const rl=fnOf(plan,'async function refreshLive(opt){'), cutAt='const [qs,qv,qt,qqq,qld,sgov]=await Promise.all([pS,pV,pT,pQ,pL,pG]);', cut=rl.indexOf(cutAt); assert(cut>0,'시세 묶음');
   const head=rl.slice(0,cut)+cutAt+'\n    return {qs,qv,qt,qqq,qld,sgov};\n  }finally{liveBusy=false;}\n}';
   const log=[], gate={}, Q={}; for(const s of ['SOXL','TECL','TQQQ','QQQ','QLD','SGOV']) Q[s]=new Promise(r=>gate[s]=()=>r({symbol:s}));
   let opDone; const op=new Promise(r=>opDone=r);

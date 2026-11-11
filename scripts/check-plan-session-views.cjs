@@ -60,10 +60,11 @@ async function main(){
     $:id=>els[id],activeAssetSession:()=>selected,setAssetDetail:()=>{},alphaCloseFillEditor:()=>closed++,alphaCloseEdit:()=>closed++,dgSheetClose:()=>closed++,
     applyAssetSettings:()=>{},alphaSyncInputs:()=>{},renderAlphaLedger:()=>{},renderAssetSessions:()=>{},render:()=>{},refreshAlphaFromCache:()=>{},
     refreshLive:async()=>{},cloneObj:x=>JSON.parse(JSON.stringify(x)),assetPaperStatsHtml:()=>'',assetRulesOf:()=>'base',planPanicIndexLoad:async()=>[null,null],   // 공포 모드 도우미(v3.129.0) — 없으면 재생이 ReferenceError 로 끝나 '늦게 끝난 재생' 경로를 못 본다
-    fetchPlanQuote:()=>quote,
-    window:{JKPlanSessionEngine:{replay:()=>({ledger:{base:{cash:12000},events:[]}})}},todayISO:()=> '2025-01-02'});
+    fetchPlanQuote:()=>quote,planPaperKey:id=>'u/'+id,simCutoff:()=>'2025-01-03',
+    /* 엔진 저장본 흐름(v2.13.0) 대역 — 저장본 없음 → 시세(늦게 옴) → 재생. 늦게 끝난 재생이 그사이 고른 실계좌 세션 화면을 덮지 않는지 본다 */
+    window:{JKPlanSessionEngine:{paperRunStored:async()=>null,paperRunGet:async(x,io)=>{await io.quotes(false);return {R:{ledger:{base:{cash:12000},events:[]}},sig:'s',upto:'2025-01-03',src:'replay',error:''};}}},todayISO:()=> '2025-01-02'});
   vm.runInContext('let assetViewRevision=0,alphaLedger={base:{cash:999},events:[]},liveQuotes={};const assetPaperCache={};'+
-    fn('function assetLedgerSeed(date,cap)')+fn('async function replayAssetPaperSession(x,applyView)')+fn('async function loadActiveAssetSessionView(refresh=true)'),p);
+    fn('function assetLedgerSeed(date,cap)')+fn('async function replayAssetPaperSession(x,applyView,storedOnly)')+fn('async function loadActiveAssetSessionView(refresh=true,early=false)'),p);
   const pending=p.loadActiveAssetSessionView(false);
   assert.equal(closed,3);   // 체결 칸 · 이력 수정 · 기록 창(2026-11-11)assert(classes.has('asset-paper-mode'));
   assert.equal(vm.runInContext('alphaLedger.base.cash',p),10000);

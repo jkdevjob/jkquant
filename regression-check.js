@@ -10607,9 +10607,9 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
      && /id="alphaStrategySection"/.test(pl)
      && pl.indexOf('id="assetSessionChips"')<pl.indexOf('id="alphaOrderSection"'));
 
-  ok('D 모의 세션은 실제 장부와 분리해 자동재생하고 직접수정 UI를 막는다',
+  ok('D 모의 세션은 실제 장부와 분리해 자동재생(엔진 저장본 paperRunGet — 저장본 · 새 확정 봉이면 다시 재생)하고 직접수정 UI를 막는다',
      /JKPlanSessionSettings\.update/.test(extractFn(pl,'async function createAssetSession()'))
-     && /JKPlanSessionEngine\.replay/.test(extractFn(pl,'async function replayAssetPaperSession(x,applyView)'))
+     && /const E=window\.JKPlanSessionEngine,revision=assetViewRevision;[\s\S]*const got=await E\.paperRunGet\(x,io\);/.test(extractFn(pl,'async function replayAssetPaperSession(x,applyView,storedOnly)'))
      && /asset-paper-mode/.test(pl)
      && /guardAssetPaperEdit\(\)/.test(pl));
 
@@ -10637,7 +10637,8 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
        && /searchParams\.delete\('session'\)/.test(clear)
        && /history\.replaceState/.test(clear)
        && sel.indexOf('clearRequestedAssetSessionLink()')>=0
-       && finish.indexOf('clearRequestedAssetSessionLink()')>=0);
+       && finish.indexOf('planApplySessionLink()')>=0
+       && extractFn(pl,'function planApplySessionLink()').indexOf('clearRequestedAssetSessionLink()')>=0);
   }
 
   {
@@ -11930,7 +11931,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        && hs.indexOf('finishPlanOpen(user)')>hs.indexOf('JKAccess.admit(user,planFb')
        && open.indexOf('cloudLoad(user)')>=0
        && open.indexOf('planGate(true)')>open.indexOf('cloudLoad(user)')
-       && open.indexOf('refreshLive()')>open.indexOf('planGate(true)'));
+       && open.indexOf('refreshLive(')>open.indexOf('planGate(true)'));
     ok('자산플랜: DB 읽기 실패 시 본문을 열지 않는다',
        /catch\(e\)\{console\.error\('plan cloud open',e\);showPlanDbRetry\(e\);\}/.test(hs)
        && /planGate\(false\)/.test(fail)

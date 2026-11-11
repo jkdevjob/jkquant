@@ -169,9 +169,10 @@ function check(S){
     assert.match(rp,/w=Math\.min\(1,\(S0\*S0\)\/\(sigW\*sigW\)\)/,'D5 목표 w');
     assert.match(rp,/const PA=alphaPanicApply\(PX,sigma,dec\.guard\),guard=PA\.guard,/,'D5 Guard');assert.match(rp,/guardFlip=PA\.own\?\(guard==='ON'\)!==\(qq>0\):dec\.guardFlip;/,'D5 전환');
     assert.match(rp,/' · Guard '\+guard\+' · '\+planStrategyLabelOf\(activeAssetSession\(\)\);/,'D5 요약 줄 이름');
-    const rs=fnOf(P,'async function replayAssetPaperSession(x,applyView)');
-    assert.match(rs,/const rules=assetRulesOf\(x\),ix=rules==='panic'\?await Promise\.all\(\[fetchPlanIndex\('\^VIX'\),fetchPlanIndex\('\^VXN'\)\]\):\[null,null\];/,'D6 지수 시세');
-    assert.match(rs,/replay\(\{horizon:\+x\.horizon,rules,startDate/,'D6 규칙');assert.match(rs,/vix:ix\[0\],vxn:ix\[1\]/);assert.match(rs,/if\(R&&R\.error\)throw new Error\(R\.error\);/,'D6 오류 표시');
+    const rs=fnOf(P,'async function replayAssetPaperSession(x,applyView,storedOnly)');
+    assert.match(rs,/const ix=panic\?await Promise\.all\(\[fetchPlanIndex\('\^VIX'\),fetchPlanIndex\('\^VXN'\)\]\):\[null,null\];/,'D6 지수 시세(공포 모드만)');
+    assert.match(rs,/const got=await E\.paperRunGet\(x,io\);/,'D6 규칙 = 엔진 paperRunOpts(모의 목록과 같은 함수 · 값 시험은 check-plan-paper-store)');assert.match(rs,/vix:ix\[0\],vxn:ix\[1\]/);assert.match(rs,/if\(got\.error\)throw new Error\(got\.error\);/,'D6 오류 표시');
+    assert.deepEqual(['panic','base','base'].join(),[E.paperRunOpts({paper:true,settings:{alphaRules:'panic'}}).rules,E.paperRunOpts({paper:true,settings:{alphaRules:'base'}}).rules,E.paperRunOpts({paper:false,settings:{alphaRules:'panic'}}).rules].join(),'D6 공포 모드는 모의 세션에서만 재생');
     assert.match(fnOf(P,'async function fetchPlanIndex(sym)'),/quoteToDaily\(sym,j\)\.days/,'D6 모의 목록과 같은 변환');
     assert.match(fnOf(P,'function renderAssetSessions()'),/assetRulesOf\(x\)==='panic'\?'<span class="paperbadge">공포<\/span>':''/,'D7 칩 표시');
     assert.match(fnOf(P,'function renderAssetSessions()'),/q\(planCurLabel\(\)\)\+\(assetRulesOf\(null\)==='panic'\?'<span class="paperbadge">공포<\/span>':''\)/,'D7 본 장부 칩 표시');
@@ -236,23 +237,29 @@ function check(S){
         assert.match(fnOf(P,'function assetSessionSettingsFromView(capOverride)'),/engine:'asset-plan-v2',alphaRules:assetRulesOf\(activeAssetSession\(\)\)\}/,'E8 화면 값 거두기');
         assert.match(fnOf(P,'function readForm()'),/o\.alphaRules=planCurRules==='panic'\?'panic':'base';/,'E8 본 장부 저장');
         assert.match(fnOf(P,'function apply(o)'),/planCurRules=all\.alphaRules==='panic'\?'panic':'base';/,'E8 본 장부 읽기');
-        const rl=fnOf(P,'async function refreshLive()');assert.match(rl,/const pX=planPanicIndexLoad\(\);/,'E8 새로고침이 지수를 받는다');assert.match(rl,/await pX;renderAlphaPlan\(qv,qt,sgov\);/,'E8 받은 뒤에 그린다');
+        const rl=fnOf(P,'async function refreshLive(opt)');assert.match(rl,/const pX=planPanicIndexLoad\(\);/,'E8 새로고침이 지수를 받는다');assert.match(rl,/await pX;renderAlphaPlan\(qv,qt,sgov\);/,'E8 받은 뒤에 그린다');
         assert.match(P,/<div id="assetLivePanic" hidden><\/div>/,'E8 카드 자리');
         return checkIdx();
       });
     }
-    function checkIdx(){
-    // 모의 목록
-    const ci={window:{JKPlanSessionEngine:E},PLAN_PAPER_QUOTES:{TECL:{days:TE,dividends:[]},TQQQ:{days:TQ,dividends:[]},SGOV:{days:SG,dividends:[]}},PLAN_PAPER_CACHE:{},simCutoff:()=>D[699]};vm.createContext(ci);
-    vm.runInContext(fnOf(X,'function planPaperPanic(sess)')+fnOf(X,'function replayPlanPaper(sess)'),ci);
+    async function checkIdx(){
+    // 모의 목록 — planPaperRun(DB 저장본 → 없으면 시세 → 재생). 여기선 로그인 없음(DB 없음)이라 늘 재생 길을 탄다(저장본 길은 check-plan-paper-store).
+    const FX={TECL:{days:TE,dividends:[]},TQQQ:{days:TQ,dividends:[]},SGOV:{days:SG,dividends:[]}};
+    const ci={window:{JKPlanSessionEngine:E},PLAN_PAPER_QUOTES:{},PLAN_PAPER_CACHE:{},curUid:null,simCutoff:()=>D[699],console:{warn(){},log(){},error(){}},
+      fetchDaily:async sym=>{if(!FX[sym])throw Error('없음 '+sym);return FX[sym];}};vm.createContext(ci);
+    vm.runInContext(fnOf(X,'async function loadPlanPaperData(force,panic)')+fnOf(X,'function planPaperRef(id)')+fnOf(X,'async function planPaperDocRead(id)')+fnOf(X,'async function planPaperDocWrite(id,d)')
+      +fnOf(X,'function planPaperIO(sess)')+fnOf(X,'async function planPaperRun(sess)'),ci);
     ci.sp={id:'p',paper:true,simStart:D[260],settings:{alphaRules:'panic',startCapital:20000}};ci.sb={id:'b',paper:true,simStart:D[260],settings:{alphaRules:'base',startCapital:20000}};ci.sl={id:'l',paper:false,simStart:D[260],settings:{alphaRules:'panic',startCapital:20000}};
-    assert.equal(vm.runInContext('replayPlanPaper(sp)',ci),null,'D8 VIX 없으면 줄 비움(기본으로 계산 안 함)');
-    assert.equal(JSON.stringify(vm.runInContext('replayPlanPaper(sb)',ci).ledger),JSON.stringify(base.ledger),'D8 기본 세션');
-    ci.PLAN_PAPER_QUOTES['^VIX']={days:VIX};ci.PLAN_PAPER_QUOTES['^VXN']={days:VXN};
-    assert.equal(JSON.stringify(vm.runInContext('replayPlanPaper(sp)',ci).ledger),JSON.stringify(pan.ledger),'D8 공포 세션 = 엔진 공포 장부');
-    assert.equal(JSON.stringify(vm.runInContext('replayPlanPaper(sl)',ci).ledger),JSON.stringify(base.ledger),'D8 운영 세션은 base');
+    const go=e=>vm.runInContext(e,ci);
+    ci.PLAN_PAPER_CACHE.p={stale:true};
+    assert.equal(await go('planPaperRun(sp)'),null,'D8 VIX 없으면 줄 비움(기본으로 계산 안 함)');assert.equal(ci.PLAN_PAPER_CACHE.p,undefined,'D8 지난 결과도 남기지 않는다');
+    assert.equal(JSON.stringify((await go('planPaperRun(sb)')).ledger),JSON.stringify(base.ledger),'D8 기본 세션');
+    FX['^VIX']={days:VIX};FX['^VXN']={days:VXN};
+    assert.equal(JSON.stringify((await go('planPaperRun(sp)')).ledger),JSON.stringify(pan.ledger),'D8 공포 세션 = 엔진 공포 장부');
+    assert.equal(JSON.stringify(ci.PLAN_PAPER_CACHE.p.ledger),JSON.stringify(pan.ledger),'D8 목록 줄(paperStatPlan)이 읽는 칸');
+    assert.equal(JSON.stringify((await go('planPaperRun(sl)')).ledger),JSON.stringify(base.ledger),'D8 운영 세션은 base');
     assert.match(fnOf(X,'async function loadPlanPaperData(force,panic)'),/\.concat\(panic\?\['\^VIX','\^VXN'\]:\[\]\)/,'D8 지수는 공포 세션이 있을 때만');
-    assert.match(X,/await loadPlanPaperData\(false,planPaperPanic\(sess\)\);replayPlanPaper\(sess\);/,'D8 목록 재계산');
+    assert.match(X,/await planPaperRun\(sess\);   \/\/ DB 저장본/,'D8 목록 재계산');
     assert.match(X,/PE\.strategyLabel\(S0\.alphaRules==='panic'\?'panic':'base'\)/,'D8 목록 이름');
     }
   }
@@ -328,12 +335,12 @@ const M=[
   ['화면: 상태 카드 없음','plan',s=>s.replace("+assetPanicHtml(R);\n}","+'';\n}")],
   ['화면: 경계 경고 없음','plan',s=>s.replace("(near?'<div style=\"color:var(--gold);margin-top:4px\">⚠","(false?'<div style=\"color:var(--gold);margin-top:4px\">⚠")],
   ['화면: 위험 문구 없음','plan',s=>s.replace("2011 처럼 공포가 두 번 오면 휩쏘로 잃습니다.","")],
-  ['화면: 오류를 삼킴','plan',s=>s.replace("    if(R&&R.error)throw new Error(R.error);\n","")],
-  ['화면: 재생에 지수 시세 안 넘김','plan',s=>s.replace("vix:ix[0],vxn:ix[1],","")],
-  ['목록: VIX 없으면 기본으로 계산','idx',s=>s.replace("  if(panic&&!(VI&&VI.days&&VI.days.length))return null;","").replace("rules:panic?'panic':(sess.settings.alphaRules==='panic'?'base':(sess.settings.alphaRules||'base'))","rules:(panic&&VI)?'panic':'base'").replace("vix:panic?VI.days:null","vix:(panic&&VI)?VI.days:null")],
-  ['목록: 운영 세션에 적힌 panic 을 그대로 넘김','idx',s=>s.replace("(sess.settings.alphaRules==='panic'?'base':(sess.settings.alphaRules||'base'))","(sess.settings.alphaRules||'base')")],
-  ['목록: 운영 세션도 공포','idx',s=>s.replace("return !!(sess&&sess.paper&&sess.settings&&sess.settings.alphaRules==='panic');}","return !!(sess&&sess.settings&&sess.settings.alphaRules==='panic');}")],
-  ['목록: 공포 세션을 base 로 재생','idx',s=>s.replace("rules:panic?'panic':(sess.settings.alphaRules==='panic'?'base':(sess.settings.alphaRules||'base'))","rules:'base'")],
+  ['화면: 오류를 삼킴','plan',s=>s.replace("    if(got.error)throw new Error(got.error);\n","")],
+  ['화면: 재생에 지수 시세 안 넘김','plan',s=>s.replace(",vix:ix[0],vxn:ix[1]};","};")],
+  ['목록: VIX 없으면 기본으로 계산','eng',s=>s.replace("const R=replay(Object.assign({},opts,{endDate:end,","const R=replay(Object.assign({},opts,(opts.rules==='panic'&&!q.vix)?{rules:'base'}:{},{endDate:end,")],
+  ['목록: 운영 세션도 공포(모의 여부 안 봄)','eng',s=>s.replace("rules:r==='panic'?((sess&&sess.paper)?'panic':'base'):(r||'base')","rules:r==='panic'?'panic':(r||'base')")],
+  ['목록: 공포 세션을 base 로 재생','eng',s=>s.replace("rules:r==='panic'?((sess&&sess.paper)?'panic':'base'):(r||'base')","rules:r==='panic'?'base':(r||'base')")],
+  ['목록: VIX 없어 못 셌는데 지난 결과를 남김','idx',s=>s.replace("    if(!got.R||got.error){ delete PLAN_PAPER_CACHE[sess.id]; return null; }","    if(!got.R||got.error){ return null; }")],
   ['목록: 이름이 늘 v1.0','idx',s=>s.replace("PE.strategyLabel(S0.alphaRules==='panic'?'panic':'base')","PE.strategyLabel('base')")],
 ];
 (async()=>{
