@@ -9322,9 +9322,10 @@ console.log('\n[122] 5년 플랜 v1.26.0 — 이력 수정·평단 계산');
 console.log('\n[123] 5년 플랜 v1.26.0 — 실전 표출순서');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
-  const ids=['alphaOrderSection','alphaAccountSection','alphaHistorySection','alphaEvidenceSection','alphaStrategySection'];
+  /* 2026-11-11 사용자 "듀얼가드 분석에 리밸런싱 판단근거가 현재탭에 들어가야 할거 같은데" — 판단근거는 현재 탭 3번(현재 계좌 다음). */
+  const ids=['alphaOrderSection','alphaAccountSection','alphaEvidenceSection','alphaHistorySection','alphaStrategySection'];
   const pos=ids.map(id=>pl.indexOf('id="'+id+'"'));
-  ok('A안 표출 순서 = 오늘주문 → 현재계좌 → 거래이력 → 판단근거 → 전략설명',
+  ok('A안 표출 순서 = 오늘주문 → 현재계좌 → 판단근거(현재 탭) → 거래이력 → 전략설명',
      pos.every(x=>x>=0) && pos.every((x,i)=>i===0||x>pos[i-1]), JSON.stringify(pos));
   ok('현재계좌는 TECL/TQQQ/SGOV 수량·평단가 + 현금 카드로 표시',
      /id="alphaAcctTeclQty"/.test(pl) && /id="alphaAcctTeclAvg"/.test(pl)
@@ -9340,8 +9341,8 @@ console.log('\n[123] 5년 플랜 v1.26.0 — 실전 표출순서');
   const pHist=pl.indexOf('id="alphaHistorySection"'),pEvidence=pl.indexOf('id="alphaEvidenceSection"'),pStrategy=pl.indexOf('id="alphaStrategySection"'),pClassic=pl.indexOf('data-ppanel="classic"');
   /* 2026-11-11 사용자 "듀얼가드 거래이력에 초기자금은 이미 설정에 있으니 삭제해" — 맨 아래 '시작자금 · 초기화' 칸을 뺐다(다른 운영 탭처럼 거래이력에 초기화 없음).
      시작자산은 ⚙️ 설정, 시작잔고는 거래이력 표의 '시작잔고 수정'. */
-  ok('A안 화면 차례 거래이력 → 판단근거 → 전략설명 · 시작자금·초기화 칸은 없다(⚙️ 설정 시작자산 · 시작잔고 수정)',
-     pHist>=0 && pEvidence>pHist && pStrategy>pEvidence && pClassic>pStrategy
+  ok('A안 화면 차례 판단근거 → 거래이력 → 전략설명 · 시작자금·초기화 칸은 없다(⚙️ 설정 시작자산 · 시작잔고 수정)',
+     pEvidence>=0 && pHist>pEvidence && pStrategy>pHist && pClassic>pStrategy
      && !/id="alphaResetSection"/.test(pl) && !/id="alphaReset"/.test(pl) && !/금액을 입력하고 초기화를 누르면/.test(pl)
      && /data-abase="1">수정<\/button>/.test(pl) && /시작자산과 시작일은 거래이력의 시작잔고 수정에서 변경하세요/.test(pl), JSON.stringify([pHist,pEvidence,pStrategy,pClassic]));
   ok('초기화 함수도 없다 — 장부를 통째로 지우는 길은 화면에 남기지 않는다',
@@ -10699,7 +10700,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
 
 {
   const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-views.cjs')],{encoding:'utf8'});
-  ok('자산플랜 세션 상세탭 · 비동기 모의재생 격리 · 삭제 선택 유지',r.status===0,(r.stdout||'')+(r.stderr||''));
+  ok('자산플랜 세션 상세탭(판단 근거 = 현재 탭 · 변이 4종) · 비동기 모의재생 격리 · 삭제 선택 유지',r.status===0&&(r.stdout||'').includes('변이 4/4 red'),(r.stdout||'')+(r.stderr||''));
 }
 {
   const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-settings.cjs')],{encoding:'utf8'});

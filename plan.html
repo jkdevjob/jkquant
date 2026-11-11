@@ -417,7 +417,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.11.0</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.11.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -446,8 +446,8 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
   <div class="dg-sessbar" id="assetSessionChips" role="tablist" aria-label="듀얼가드 세션 — 누르면 전환 · 두 번 누르면 세션 설정 · 길게 눌러 끌면 순서"></div>
   <div class="dg-statusline" id="assetStatusline"><span class="asset-session-state" id="assetSessionState">현재 투자중</span><span class="dg-badges" id="assetStatusBadges"></span><button type="button" class="setpill" id="assetSettingsBtn" title="설정 — 시작자산 · 월 추가 투자 · 목표자산 · 시작일">⚙️ 설정</button></div>
   <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
-    <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaTaxSection">현재</button>
-    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaPerfSection alphaMonthSection alphaEvidenceSection assetPaperPanel">분석</button>
+    <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaEvidenceSection alphaTaxSection">현재</button>
+    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaPerfSection alphaMonthSection assetPaperPanel">분석</button>
     <button class="asset-detail-tab" id="assetHistoryTab" data-asset-detail="history" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaHistorySection">거래이력</button>
     <button class="asset-detail-tab" id="assetExplainTab" data-asset-detail="explain" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaStrategySection">설명</button>
   </nav>
@@ -508,6 +508,34 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
         <input type="hidden" id="aTeclQty"><input type="hidden" id="aTqqqQty"><input type="hidden" id="aSgovQty"><input type="hidden" id="aCash">
       </div>
 
+      <div class="todaybox" id="alphaEvidenceSection" data-asset-view="current">
+        <!-- 2026-11-11 사용자 "듀얼가드 분석에 리밸런싱 판단근거가 현재탭에 들어가야 할거 같은데" — 분석 탭에서 현재 탭 3번(현재 계좌 다음 · 세금 점검 앞)으로 -->
+        <h3>3. 🔎 리밸런싱 판단 근거</h3>
+        <div class="alpha-evidence-grid">
+          <div class="alpha-ev"><div class="k" id="alphaEv1Label">TECL σ20</div><div class="v" id="alphaSigma">—</div><div class="s" id="alphaEv1Sub">최근20거래일 수익률의 연환산 실현변동성</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv2Label">TECL 몫 안의 목표 비율</div><div class="v" id="alphaTargetW">—</div><div class="s" id="alphaEv2Sub">w=(55%/σ20)², 최대100% · 전체 자산의 최대70%</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv3Label">TECL 몫 안의 현재 비율</div><div class="v" id="alphaCurrentW">—</div><div class="s" id="alphaWeightGap">목표와 차이 계산 중</div></div>
+          <div class="alpha-ev"><div class="k" id="alphaEv4Label">TQQQ Guard</div><div class="v" id="alphaGuardState">—</div><div class="s" id="alphaGuardGap">SMA225 판단 중</div></div>
+        </div>
+        <div class="alpha-decision" id="alphaDecision" role="status" aria-live="polite"><b>오늘 판단:</b> 지표를 불러오는 중입니다.</div>
+        <div class="alpha-guide" id="alphaGuide" hidden aria-label="자산별 다음 행동 기준"></div>
+        <div class="alpha-charts">
+          <div class="alpha-chart">
+            <h4 id="alphaChart1Title">TECL 슬리브 리밸런싱 밴드</h4>
+            <div class="chart-sub" id="alphaTeclBandText">목표·현재비중 계산 중…</div>
+            <div class="alpha-gauge" id="alphaTeclGauge"><span class="band" id="alphaTeclBand"></span><span class="target" id="alphaTeclTargetMark"></span><span class="current" id="alphaTeclCurrentMark"></span></div>
+            <div class="alpha-gauge-labels"><span>0%</span><span>슬리브 내 TECL 비중</span><span>100%</span></div>
+            <div id="alphaWeightChart" style="margin-top:8px"></div>
+          </div>
+          <div class="alpha-chart">
+            <h4 id="alphaChart2Title">TQQQ Guard · 최근 120거래일</h4>
+            <div class="chart-sub" id="alphaGuardLevels">확정 종가 · SMA225 · Guard 경계 계산 중…</div>
+            <div id="alphaGuardChart"></div>
+            <div class="legend"><span>● TQQQ 종가</span><span>— SMA225</span><span>⋯ Guard 상·하단(켜기·끄기 경계)</span></div>
+          </div>
+        </div>
+      </div>
+
       <div class="card" id="alphaTaxSection" data-asset-view="current" style="margin-top:10px;margin-bottom:0">
         <div class="alpha-account-head">
           <div><h3 style="margin-bottom:2px">🧾 연말 세금 점검 · 해외주식 양도세</h3><div class="alpha-ledger-note">이 계좌 거래이력으로 올해 실현손익을 추정하고, 연말에 '팔고 바로 되사기'로 250만원 공제를 채우거나 공제를 넘은 이익을 평가손실로 상계할 주수를 알려 줍니다. 주문은 내지 않습니다.</div></div>
@@ -563,33 +591,6 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       <div class="todaybox" id="alphaMonthSection" data-asset-view="analysis" hidden>
         <h3>📅 월별 실현손익 <span style="color:var(--dim);font-weight:600">팔아서 확정된 손익 · 거래이력 손익과 같은 값</span></h3>
         <div id="alphaMonthBody">거래이력을 계산하는 중…</div>
-      </div>
-
-      <div class="todaybox" id="alphaEvidenceSection" data-asset-view="analysis" hidden>
-        <h3>3. 🔎 리밸런싱 판단 근거</h3>
-        <div class="alpha-evidence-grid">
-          <div class="alpha-ev"><div class="k" id="alphaEv1Label">TECL σ20</div><div class="v" id="alphaSigma">—</div><div class="s" id="alphaEv1Sub">최근20거래일 수익률의 연환산 실현변동성</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv2Label">TECL 몫 안의 목표 비율</div><div class="v" id="alphaTargetW">—</div><div class="s" id="alphaEv2Sub">w=(55%/σ20)², 최대100% · 전체 자산의 최대70%</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv3Label">TECL 몫 안의 현재 비율</div><div class="v" id="alphaCurrentW">—</div><div class="s" id="alphaWeightGap">목표와 차이 계산 중</div></div>
-          <div class="alpha-ev"><div class="k" id="alphaEv4Label">TQQQ Guard</div><div class="v" id="alphaGuardState">—</div><div class="s" id="alphaGuardGap">SMA225 판단 중</div></div>
-        </div>
-        <div class="alpha-decision" id="alphaDecision" role="status" aria-live="polite"><b>오늘 판단:</b> 지표를 불러오는 중입니다.</div>
-        <div class="alpha-guide" id="alphaGuide" hidden aria-label="자산별 다음 행동 기준"></div>
-        <div class="alpha-charts">
-          <div class="alpha-chart">
-            <h4 id="alphaChart1Title">TECL 슬리브 리밸런싱 밴드</h4>
-            <div class="chart-sub" id="alphaTeclBandText">목표·현재비중 계산 중…</div>
-            <div class="alpha-gauge" id="alphaTeclGauge"><span class="band" id="alphaTeclBand"></span><span class="target" id="alphaTeclTargetMark"></span><span class="current" id="alphaTeclCurrentMark"></span></div>
-            <div class="alpha-gauge-labels"><span>0%</span><span>슬리브 내 TECL 비중</span><span>100%</span></div>
-            <div id="alphaWeightChart" style="margin-top:8px"></div>
-          </div>
-          <div class="alpha-chart">
-            <h4 id="alphaChart2Title">TQQQ Guard · 최근 120거래일</h4>
-            <div class="chart-sub" id="alphaGuardLevels">확정 종가 · SMA225 · Guard 경계 계산 중…</div>
-            <div id="alphaGuardChart"></div>
-            <div class="legend"><span>● TQQQ 종가</span><span>— SMA225</span><span>⋯ Guard 상·하단(켜기·끄기 경계)</span></div>
-          </div>
-        </div>
       </div>
 
       <div class="card" id="alphaStrategySection" data-asset-view="explain" hidden style="margin-top:10px;margin-bottom:0">
