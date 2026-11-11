@@ -3,10 +3,11 @@
 import {ownerAuthorized} from './global-paper.js';
 import {tzParts,shiftIso,isNyseSessionDate} from './scalping-daily-results.js';
 import {krxDay} from './_krx_calendar.js';
+import {CLOSING_KINDS,closingDaySummary,readClosingLedger,flattenClosingLedger} from './_closing30-ledger.js';
 
 const HEADERS={'content-type':'application/json; charset=utf-8','cache-control':'no-store'};
 const WORKERS={opening:'https://jkquant-opening-scheduler.mumae4.workers.dev',daytrading:'https://jkquant-daytrading-scheduler.mumae4.workers.dev',crypto:'https://jkquant-global-intraday-scheduler.mumae4.workers.dev',soxl:'https://jkquant-global-intraday-scheduler.mumae4.workers.dev'};
-const LABELS={opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL'};
+const LABELS={opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL',closing30:'종가 30분',closing_bet:'개별 종목 종가 베팅'};
 const numeric=v=>v==null||v===''||!Number.isFinite(Number(v))?null:Number(v);
 const json=(v,status=200)=>new Response(JSON.stringify(v),{status,headers:HEADERS});
 
@@ -16,8 +17,8 @@ function sessionClock(strategy,now=Date.now()){
   const marketDate=strategy==='soxl'?(activeUS?n.date:shiftIso(k.date,-1)):k.date;
   const date=strategy==='soxl'?shiftIso(marketDate,1):k.date;
   const hm=strategy==='soxl'?n.hm:k.hm;
-  const start=strategy==='opening'?905:strategy==='daytrading'?1000:strategy==='crypto'?5:930;
-  const end=strategy==='opening'?931:strategy==='daytrading'?1511:strategy==='crypto'?2400:1605;
+  const start=strategy==='closing30'?1506:strategy==='closing_bet'?1522:strategy==='opening'?905:strategy==='daytrading'?1000:strategy==='crypto'?5:930;
+  const end=CLOSING_KINDS[strategy]?1540:strategy==='opening'?931:strategy==='daytrading'?1511:strategy==='crypto'?2400:1605;
   const marketClosed=strategy==='soxl'?!isNyseSessionDate(marketDate):strategy==='crypto'?false:krxDay(marketDate).closed;
   return {strategy,date,marketDate:strategy==='soxl'?marketDate:null,ledgerDate:marketDate,now,hm,start,end,activeUS,
     before:strategy==='soxl'?activeUS?false:marketDate===n.date&&hm<start:hm<start,
@@ -31,7 +32,7 @@ function baseRow(clock){
 function missingRow(clock,error=''){
   const row=baseRow(clock);
   if(clock.marketClosed)return {...row,state:'market_closed',marketClosed:true,reason:'해당 시장 비개장일'};
-  if(clock.before&&!error)return {...row,state:'scheduled',reason:(clock.strategy==='crypto'?'00:05':clock.strategy==='opening'?'09:05':clock.strategy==='daytrading'?'10:00':'09:30 ET')+'부터 서버 감시 · 시작 전'};
+  if(clock.before&&!error)return {...row,state:'scheduled',reason:(clock.strategy==='closing30'?'15:06':clock.strategy==='closing_bet'?'15:22':clock.strategy==='crypto'?'00:05':clock.strategy==='opening'?'09:05':clock.strategy==='daytrading'?'10:00':'09:30 ET')+'부터 서버 감시 · 시작 전'};
   return {...row,state:'unavailable',reason:error||'오늘 서버 장부 미확인 · 실행/원천 확인 필요'};
 }
 function freshness(row,clock){
@@ -149,7 +150,15 @@ function summarizeOpeningLedger(ledger,now=Date.now()){
   return freshness(row,clock);
 }
 async function readLedger(strategy,env,now){
-  const clock=sessionClock(strategy,now);if(clock.marketClosed||clock.before)return null;
+  const clock=sessionClock(strategy,now);
+  if(strategy==='closing_bet'&&(clock.marketClosed||clock.before)){
+    let prior=shiftIso(clock.date,-1);
+    for(let i=0;i<10&&krxDay(prior).closed;i++)prior=shiftIso(prior,-1);
+    const carry=await readClosingLedger(env,prior);
+    if(flattenClosingLedger(carry).some(x=>x.kind==='overnight'&&x.main&&x.status!=='closed'))return carry;
+  }
+  if(clock.marketClosed||clock.before)return null;
+  if(CLOSING_KINDS[strategy])return readClosingLedger(env,clock.ledgerDate);
   const key=String(strategy==='opening'?(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||''):(env.DAYTRADING_MONITOR_KEY||env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||'')).trim();
   if(!key)throw new Error('서버 장부 조회 키 미설정');
   const envName=strategy==='opening'?'OPENING_WORKER_URL':strategy==='daytrading'?'DAYTRADING_WORKER_URL':'GLOBAL_INTRADAY_WORKER_URL';
@@ -166,10 +175,33 @@ export async function onRequestGet({request,env}){
   const now=Date.now(),kstDate=tzParts('Asia/Seoul',now).date;
   const strategies=await Promise.all(Object.keys(LABELS).map(async strategy=>{
     try{
-      const l=await readLedger(strategy,env,now),current=strategy==='opening'?summarizeOpeningLedger(l,now):summarizePaperLedger(strategy,l,now);
+      const l=await readLedger(strategy,env,now),current=CLOSING_KINDS[strategy]?summarizeClosingLedger(strategy,l,now):strategy==='opening'?summarizeOpeningLedger(l,now):summarizePaperLedger(strategy,l,now);
       return {strategy,label:LABELS[strategy],current};
     }catch(e){return {strategy,label:LABELS[strategy],current:missingRow(sessionClock(strategy,now),'원본 조회 실패 · '+String(e.message||e))};}
   }));
   return json({ok:true,kstDate,generatedAt:new Date(now).toISOString(),strategies});
 }
-export {sessionClock,summarizePaperLedger,summarizeOpeningLedger};
+export {sessionClock,summarizePaperLedger,summarizeOpeningLedger,summarizeClosingLedger};
+
+function summarizeClosingLedger(strategy,ledger,now=Date.now()){
+  const clock=sessionClock(strategy,now);
+  if(strategy==='closing_bet'&&ledger&&ledger.date<clock.date){
+    const z=closingDaySummary(ledger,strategy),pending=z.open||z.pendingTrades||z.unverified;
+    if(pending){
+      const overdue=!clock.marketClosed&&clock.hm>=906;
+      return {...baseRow(clock),...z,date:clock.date,originDate:ledger.date,live:true,finalized:false,returnPct:null,realizedReturnPct:null,
+        noTrade:false,state:overdue?'unavailable':z.open?'holding':'entry_pending',stale:false,
+        reason:ledger.date+' 진입분 · '+(overdue?'익일 시가 체결/청산 원본 확인 필요':'다음 개장일 시가 청산 대기')};
+    }
+  }
+  if(clock.marketClosed||clock.before||!ledger)return missingRow(clock);
+  if(ledger.date!==clock.ledgerDate)return missingRow(clock,'종가 원본 날짜 불일치');
+  const z=closingDaySummary(ledger,strategy,{settled:clock.ended});
+  const row={...baseRow(clock),...z,live:true,finalized:clock.ended&&z.finalized,
+    state:z.unverified?'unavailable':z.open?'holding':z.pendingTrades?'entry_pending':z.closed?'closed':z.scanCoverage.complete?'no_signal':'unavailable'};
+  if(!z.scanCoverage.complete){row.state='unavailable';row.sourceIncomplete=true;row.returnPct=null;row.noTrade=false;}
+  if(!clock.ended){row.finalized=false;if(!z.trades)row.noTrade=false;}
+  // Closing-bet holdings remain valid until the next market session opens.
+  if(strategy==='closing_bet'&&z.open){row.returnPct=null;row.reason='익일 시가 청산 대기 · 미확정 손익은 0% 처리하지 않음';}
+  return freshness(row,clock);
+}

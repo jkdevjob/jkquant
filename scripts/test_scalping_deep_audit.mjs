@@ -88,7 +88,7 @@ await check('pending result remains pending in both card and cockpit; null perce
   const el={innerHTML:''};
   const render=uiFn('function renderStrategyCockpit(','function setupUnifiedStrategyFlow(',{
     $:()=>el,STRATEGY_UI_META:{},DAILY_RESULT_CACHE:{crypto:{current:{date,pending:true}}},
-    HISTORY_RISK_CACHE:{},SCORE_CACHE:{},DAILY1_CACHE:null,dailyResultState:state,cockpitPct:pct,esc:String,
+    HISTORY_RISK_CACHE:{},SCORE_CACHE:{},CLOSING_RESEARCH_STATE:{},DAILY1_CACHE:null,dailyResultState:state,cockpitPct:pct,esc:String,
     renderStrategyStatus(){},renderPlan(){}
   });
   render('crypto');assert.match(el.innerHTML,/cockpit-value">대기</);assert.ok(!el.innerHTML.includes('거래 없음'));assert.ok(!el.innerHTML.includes('+0.00%'));
