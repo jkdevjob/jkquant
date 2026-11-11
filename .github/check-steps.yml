@@ -77,6 +77,9 @@
 - name: 운영 › 듀얼가드 창 높이 = 내용 높이(바깥 한 번 스크롤 · 붙는 자리 · 시트 · 설정 창 · 잠금) 값·변이 검사
   run: node scripts/check-dg-autoheight.cjs
 
+- name: 모의 목록 표 세션마다 저장(새·바뀐 세션만 계산 · 새 종가면 전부 · 주말 안 셈) 값·변이 검사
+  run: node scripts/check-paper-row-cache.cjs
+
 - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
   run: node scripts/check-sticky-layout.cjs
 

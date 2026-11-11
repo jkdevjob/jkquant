@@ -189,21 +189,21 @@ await t('P1 원화 환율: 실시간 환율이 아직 없으면 하드코딩 상
   assert.equal(mk(null,{})({cur:'usd'}),0,'실제 환율이 없으면 고정값 대신 환산 대기');
   assert.equal(mk(null,{}, {rate:1399})({cur:'usd'}),1399,'공용 포맷터가 받은 실제 환율 사용');
   assert.equal(mk(null,{paperViewCache:{fx:1343.5}})({cur:'krw'}),1);
-  const S={}; const w=new Function('S','liveFX','PAPER_VIEW_CACHE_VER','paperKstDate','paperViewSig',fn('function paperViewCacheWrite(rows)')+'\nreturn paperViewCacheWrite;')(S,1343.5,1,()=>'2026-10-06',()=>'sig');
+  const S={}; const w=new Function('S','liveFX','PAPER_VIEW_CACHE_VER','paperKstDate','paperViewSig',fn('function paperViewCacheWrite(rows,keys)')+'\nreturn paperViewCacheWrite;')(S,1343.5,1,()=>'2026-10-06',()=>'sig');
   w([{price:1}]); assert.equal(S.paperViewCache.fx,1343.5);
   const op=fn('async function openPaper()');
   assert(op.indexOf('await Promise.race([loadFX()')>0 && op.indexOf('await Promise.race([loadFX()')<op.indexOf('r.wonRate=paperWonRate(r)'),'표를 그리기 전에 환율을 (짧게) 기다린다');
 });
-await t('P4 시세 못 받은 줄이 섞인 결과는 오늘 것으로 굳히지 않는다(새로고침하면 다시 받는다)',async()=>{
-  const f=new Function('paperKstDate',fn('function paperViewCacheFresh(x)')+'\nreturn paperViewCacheFresh;')(()=>'2026-10-06');
+await t('P4 시세 못 받은 줄이 섞인 결과는 굳히지 않는다(새로고침하면 다시 받는다) · 날짜는 여기서 안 보고 줄마다 기준 종가일로(paperViewCacheRead — check-paper-row-cache)',async()=>{
+  const f=new Function(fn('function paperViewCacheFresh(x)')+'\nreturn paperViewCacheFresh;')();
   assert.equal(f({day:'2026-10-06',rows:[{price:12},{price:1}]}),true);
   assert.equal(f({day:'2026-10-06',rows:[{price:12},{price:0}]}),false);
-  assert.equal(f({day:'2026-10-05',rows:[{price:12}]}),false);
   assert.equal(f(null),false);
 });
 await t('P3 강제 갱신(전체 적용·오늘 갱신)은 이미 도는 갱신 결과를 재사용하지 않고, 끝나기를 기다렸다 지금 원장으로 다시 계산한다',async()=>{
   let fills=0; const ctx={_paperViewRefreshPromise:null,$:()=>null,
     paperRepairCommonStarts:async()=>0,paperViewCacheRead:()=>null,paperViewCacheFresh:()=>false,loadFX:async()=>{},
+    paperViewPlan:()=>({keep:[],only:new Set(['inf:a']),cuts:{},sigs:{}}),paperViewKeys:()=>({}),
     paperFillAll:async()=>{ const n=++fills; await tick(30); return [{n}]; },paperViewCacheWrite:()=>{},pushRemoteNow:async()=>true,refreshAll:()=>{}};
   vm.createContext(ctx); vm.runInContext(fn('async function refreshPaperView(force=false, onRows=null)'),ctx);
   const p1=ctx.refreshPaperView(false); await tick(5); const p2=ctx.refreshPaperView(true);
@@ -443,6 +443,7 @@ await t('P8 모의 표는 계산이 끝나면 바로 다시 그린다 — 클라
   // 저장이 끝나지 않는(느린 iOS long-polling 흉내) 상황에서도 onRows 는 계산 결과로 바로 불린다
   let saveDone=false, got=null, order=[];
   const ctx={_paperViewRefreshPromise:null,$:()=>null,paperRepairCommonStarts:async()=>0,paperViewCacheRead:()=>null,paperViewCacheFresh:()=>false,
+    paperViewPlan:()=>({keep:[],only:new Set(['inf:a']),cuts:{},sigs:{}}),paperViewKeys:()=>({}),
     loadFX:async()=>{},paperFillAll:async()=>[{id:'a'}],paperViewCacheWrite:()=>order.push('cache'),
     pushRemoteNow:()=>new Promise(r=>setTimeout(()=>{ saveDone=true; order.push('saved'); r(true); },400)),refreshAll:()=>{}};
   vm.createContext(ctx); vm.runInContext(fn('async function refreshPaperView(force=false, onRows=null)'),ctx);

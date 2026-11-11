@@ -93,7 +93,7 @@ async function check(S){
     const first0=(h.match(/^<div[^>]*data-asess=""[^>]*>([^<]*)<\/div>/)||['',''])[1];c.planCurName='토스 <듀얼>';c.renderAssetSessions();
     const first1=(V.assetSessionChips.innerHTML.match(/^<div[^>]*data-asess=""[^>]*>([^<]*)<\/div>/)||['',''])[1];
     t('H2 세션 줄 첫 칩 = 본 장부 이름(바꾸기 전 "현재 투자중" · 바꾼 뒤 그 이름 · 글자로 이스케이프)',first0==='현재 투자중'&&first1==='토스 &lt;듀얼>',JSON.stringify([first0,first1]));
-    t('D3 상태줄 글자 — 운영 탭처럼 세션 이름 없이 전략 요약 · 모의 시작일 · 숨긴 세션 수',V.assetSessionState.textContent==='듀얼가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 1개'&&V.assetSessionState.className==='asset-session-state paper',V.assetSessionState.textContent);
+    t('D3 상태줄 글자 — 운영 탭처럼 세션 이름 없이 전략 요약 · 모의 시작일(숨긴 예전 세션 수는 안 적음 · 2026-11-12)',V.assetSessionState.textContent==='듀얼가드 v1.0 · 모의 2025-01-02~'&&V.assetSessionState.className==='asset-session-state paper',V.assetSessionState.textContent);
     dgActivate:{ const L=[];const cc={activeAssetSession:()=>({id:'P'}),editAssetSession:m=>L.push('edit:'+m),selectAssetSession:id=>L.push('sel:'+id),$:()=>({hidden:true})};
       vm.createContext(cc);vm.runInContext(fnOf(S.plan,'function dgChipActivate(id)'),cc);cc.dgChipActivate('P');cc.dgChipActivate('A');cc.dgChipActivate('');
       t('D4 보고 있는 칩(P)을 누르면 세션 설정 · 다른 칩은 전환',L.join()==='edit:session,sel:A,sel:',L.join()); } }
