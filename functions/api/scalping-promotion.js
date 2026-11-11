@@ -12,7 +12,9 @@ const WORKERS={
   opening:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"},
   daytrading:{env:"DAYTRADING_WORKER_URL",fallback:"https://jkquant-daytrading-scheduler.mumae4.workers.dev"},
   crypto:{env:"GLOBAL_INTRADAY_WORKER_URL",fallback:"https://jkquant-global-intraday-scheduler.mumae4.workers.dev"},
-  soxl:{env:"GLOBAL_INTRADAY_WORKER_URL",fallback:"https://jkquant-global-intraday-scheduler.mumae4.workers.dev"}
+  soxl:{env:"GLOBAL_INTRADAY_WORKER_URL",fallback:"https://jkquant-global-intraday-scheduler.mumae4.workers.dev"},
+  closing30:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"},
+  closing_bet:{env:"OPENING_WORKER_URL",fallback:"https://jkquant-opening-scheduler.mumae4.workers.dev"}
 };
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
 function owners(env){
@@ -39,7 +41,7 @@ function workerUrl(env,strategy){
 }
 function configUrl(env,strategy){
   const base=workerUrl(env,strategy);
-  return (strategy==="crypto"||strategy==="soxl")?base+"/config?strategy="+encodeURIComponent(strategy):base+"/config";
+  return (strategy==="crypto"||strategy==="soxl")?base+"/config?strategy="+encodeURIComponent(strategy):base+(["closing30","closing_bet"].includes(strategy)?"/closing-config?strategy="+strategy:"/config");
 }
 async function workerConfig(env,strategy,method="GET",body=null){
   const key=monitorKey(env);if(!key)throw new Error("monitor key missing");
@@ -70,7 +72,7 @@ export function effectiveFrom(strategy,now=Date.now()){
     const p=dateParts(now,"Asia/Seoul");
     return shiftDate(p.date,1);
   }
-  if(strategy==="opening"||strategy==="daytrading"){
+  if(["opening","daytrading","closing30","closing_bet"].includes(strategy)){
     const p=dateParts(now,"Asia/Seoul"),wd=!["Sat","Sun"].includes(p.weekday);
     return nextWeekday(p.date,wd&&p.hm<900);
   }
@@ -135,7 +137,7 @@ export async function onRequestPost({request,env}){
     const from=effectiveFrom(strategy),previousVariant=activeVariant(before,strategy);
     const row=decision.row||null;
     const config=decorateConfig(await workerConfig(env,strategy,"POST",{
-      variant,effectiveFrom:from,previousVariant,
+      variant,effectiveFrom:from,previousVariant,params:row?.params,
       updatedBy:who.email,source:variant==="baseline"?"owner-baseline-revert":"owner-promotion-button",
       researchScore:row?row.researchScore:null,rank:row?row.rank:null
     }),strategy);

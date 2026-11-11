@@ -10,6 +10,7 @@ for(const [kind,dir] of [['opening','data/opening-history'],['closing30','data/c
     const ledger=kind==='opening'?source.liveSignalLedger:source;
     if(!ledger?.date||!Array.isArray(ledger.events))continue;
     ledgers.push({date:ledger.date,mainVariant:ledger.mainVariant||'baseline',updatedAt:ledger.updatedAt,
+      ...(kind==='closing30'?{paperMainVariants:ledger.paperMainVariants||{day:'baseline',overnight:'baseline'}}:{}),
       events:ledger.events.filter(e=>['signal','buy','sell'].includes(e?.stage))});
   }
   fs.writeFileSync(path.join(out,kind+'.json'),JSON.stringify({schema:1,generatedAt:new Date().toISOString(),source:'archived-original-signal-ledgers',ledgers}));

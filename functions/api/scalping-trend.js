@@ -2,6 +2,7 @@
 // Tiny precomputed payload for the Today cumulative-return chart.
 // Read-only. Research CSVs are precomputed; eight recent completed live ledgers override them.
 import {historyFetch,durableLedgers,durableTradeRows,dailyRisk} from "./scalping-history.js";
+import {closingSessions,tzParts} from './scalping-daily-results.js';
 
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/scalping-trend/latest.json";
 const H={
@@ -37,6 +38,27 @@ export async function onRequestGet({env={}}={}){
       if(r.status==="fulfilled")j.strategies[name]=mergeTrendLedger(name,j.strategies[name]||{daily:[]},r.value);
       else j.sourceWarnings.push(name+" 최신 모의장부 조회 실패: "+String(r.reason?.message||r.reason));
     });
+    // Closing research is built from signal-time ledgers, never a post-hoc reconstruction.
+    const closing=await closingSessions(env);
+    let report=null;
+    try{
+      const r=await historyFetch('https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/closing30.json');
+      if(!r.ok)throw Error('HTTP '+r.status);report=await r.json();
+    }catch(e){j.sourceWarnings.push('종가 누적 연구 조회 실패: '+String(e.message||e));}
+    for(const name of ['closing30','closing_bet']){
+      const clock=tzParts('Asia/Seoul');
+      const by=new Map((report?.strategies?.[name]?.daily||[]).filter(x=>x.finalized===true&&x.returnPct!==null&&Number.isFinite(+x.returnPct)
+        &&(x.date<clock.date||x.date===clock.date&&clock.hm>=1540)).map(x=>[x.date,x]));
+      for(const x of closing[name].sessions){
+        // A new incomplete authoritative ledger removes an earlier stale completed value.
+        if(x.finalized&&x.returnPct!==null)by.set(x.date,x);else by.delete(x.date);
+      }
+      let eq=1;
+      j.strategies[name]={source:'closing30-paper-live',daily:[...by.values()].sort((a,b)=>a.date.localeCompare(b.date)).map(x=>{
+        eq*=1+x.returnPct/100;return {...x,cumulativePct:(eq-1)*100};
+      })};
+      j.sourceWarnings.push(...closing[name].sourceWarnings);
+    }
     if(j.strategies.soxl)j.strategies.soxl.daily=(j.strategies.soxl.daily||[]).map(x=>{
       const marketDate=x.marketDate||x.date;
       return {...x,marketDate,date:new Date(Date.parse(marketDate+"T00:00:00Z")+86400000).toISOString().slice(0,10)};
@@ -44,7 +66,8 @@ export async function onRequestGet({env={}}={}){
     j.dateRule="Asia/Seoul · SOXL dates use the Korean date containing the U.S. session close";
     j.latestCompletedDate=Object.values(j.strategies).flatMap(x=>x.daily||[]).map(x=>x.date).sort().at(-1)||null;
     j.generatedAt=new Date().toISOString();
-    j.sourceRule="원래 기준전략 연구 재구성 + 최근 8개 완료 DB 세션(운영 모의장부 또는 과거 연구 이관) 혼합입니다. 전체 운영 메인 성과가 아니며 진행 중 세션은 제외합니다.";
+    j.sourceRule="기존 4종은 기준전략 재구성 + 최근 완료 DB 세션 혼합이며 전체 운영 메인 성과가 아닙니다. 종가 2종은 당시 연구 메인의 원본 장부·3슬롯 계좌 손익입니다. 진행 중·누락 세션은 제외합니다.";
+    j.sourceWarnings=[...new Set(j.sourceWarnings)];
     return new Response(JSON.stringify(j),{headers:j.sourceWarnings.length?{...H,"Cache-Control":"no-store"}:H});
   }catch(e){
     return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{

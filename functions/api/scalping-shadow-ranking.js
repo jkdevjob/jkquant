@@ -10,7 +10,9 @@ const CATALOG={
   crypto:["no_vwap","vol_1.0","vol_1.5","range_15m","range_30m","stop_0.3_tp_0.6","stop_0.7_tp_1.4","hold_30m","hold_120m","entry_by_1800","range_10m","vol_1.3","stop_0.4_tp_0.8","hold_90m","entry_by_2000","combo_range10_vol13","combo_novwap_vol15","stop_0.6_tp_1.2","hold_45m","entry_by_2100"],
   soxl:["range_5m","range_30m","vol_0.8","vol_1.2","no_vwap","stop_0.8_tp_1.6","stop_1.5_tp_3.0","hold_45m","hold_120m","entry_by_1030","range_10m","vol_1.5","stop_1.0_tp_2.0","hold_60m","entry_by_1100","combo_range10_vol12","combo_novwap_vol12","stop_0.9_tp_1.8","hold_75m","entry_by_1045"]
 };
-const MIN_TRADES={opening:30,daytrading:30,crypto:50,soxl:30};
+const CLOSING_CATALOG=['dip_1','dip_2','dip_3','dip_volume','dip_vol2','momentum','up_1','up_volume','flat','all','dip_05','dip_15','dip_25','dip_vol12','dip_vol18','dip1_vol15','dip2_vol15','up_05','up1_vol15','flat_05'];
+CATALOG.closing30=CLOSING_CATALOG;CATALOG.closing_bet=CLOSING_CATALOG;
+const MIN_TRADES={opening:30,daytrading:30,crypto:50,soxl:30,closing30:30,closing_bet:30};
 const PROMOTION_MIN_SCORE=60;
 const NON_PROMOTABLE=new Set(["opening:hold_to_next_open"]);
 function isGeneratedVariant(name){return /^cf_g\d{4,}$/.test(String(name||""));}
@@ -61,6 +63,7 @@ function normalize(kind,report){
       review:x.status==="review",
       liveCompatible:!NON_PROMOTABLE.has(kind+":"+name)&&((CATALOG[kind]||[]).includes(name)||isGeneratedVariant(name)),
       params:x.params||meta.params||null,
+      blockedReasons:x.blockedReasons||[],
       active:activeSet.has(name),
       lifecycleStatus:retiredSet.has(name)?"retired":(activeSet.has(name)?"active":"reserve")
     };

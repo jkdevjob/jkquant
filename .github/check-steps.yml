@@ -14,7 +14,11 @@
 - name: 종가 당일/익일 시가 · 모든 그림자 이력 · 시간적 오염방지 검사
   run: |
     node --test tests/closing30-research.test.mjs tests/closing30-budget.test.mjs tests/trade-history.test.mjs tests/paper-trading-settings.test.mjs tests/research-broker.test.mjs
+    node --test tests/closing30-parity.test.mjs tests/closing30-worker-parity.test.mjs
     python scripts/test_closing_history.py
+    python scripts/test_closing30_parity.py
+    python -m py_compile scripts/closing30_metrics.py scripts/gpt_research/g05_closing_parity.py
+    node --check scripts/gpt_research/g05_closing_parity.mjs
     python -m py_compile scripts/nightly_closing30_research.py scripts/nightly_scalping_research.py scripts/backtest_crypto_orb.py scripts/backtest_daytrading.py scripts/backtest_soxl_intraday.py
 
 - name: 승인 이메일·개인별 웹푸시 보안 및 중복방지 검사

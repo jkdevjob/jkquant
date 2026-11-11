@@ -67,6 +67,10 @@ CANDIDATE_POOLS={
             "range_10m","vol_1.5","stop_1.0_tp_2.0","hold_60m","entry_by_1100",
             "combo_range10_vol12","combo_novwap_vol12","stop_0.9_tp_1.8","hold_75m","entry_by_1045"],
 }
+CLOSING_SHADOW_NAMES=['dip_1','dip_2','dip_3','dip_volume','dip_vol2','momentum','up_1','up_volume','flat','all',
+    'dip_05','dip_15','dip_25','dip_vol12','dip_vol18','dip1_vol15','dip2_vol15','up_05','up1_vol15','flat_05']
+for _closing_kind in ('closing30','closing_bet'):
+    CANDIDATE_POOLS[_closing_kind]=CLOSING_SHADOW_NAMES
 ACTIVE_SHADOW_COUNT=10
 RETIRE_STREAK_REQUIRED=3
 AUTO_PROMOTION_LEADER_SESSIONS=7
@@ -100,6 +104,9 @@ FACTORY_AXES={
         "entry_cutoff_hm":[1030,1045,1100,1115,1130],
     },
 }
+for _closing_kind in ('closing30','closing_bet'):
+    FACTORY_AXES[_closing_kind]={'side':['dip','up','flat'],'threshold':[-.5,-1,-1.5,-2,0,.5,1],
+        'volume':[0,1.2,1.5,1.8,2]}
 
 def factory_params(kind,generation):
     axes=FACTORY_AXES[kind]
@@ -108,6 +115,9 @@ def factory_params(kind,generation):
     for key,vals in axes.items():
         out[key]=vals[g%len(vals)]
         g//=len(vals)
+    if kind in ('closing30','closing_bet'):
+        threshold=abs(out['threshold'])
+        out['threshold']=-threshold if out['side']=='dip' else max(.5,threshold) if out['side']=='flat' else threshold
     return out
 
 def _days_between(a,b):
