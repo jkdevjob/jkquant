@@ -8,7 +8,7 @@ const P=[
   ["function alphaRules(key){const k=String(key&&key.key||key||'');return k==='panic'?ALPHA_RULES.panic:ALPHA_RULES.base;}",
    "function alphaRules(key){const k=String(key&&key.key||key||'');if(__V[k])return Object.assign({key:k,name:k,tqReb:0,exp:true},__V[k]);return k==='panic'?ALPHA_RULES.panic:ALPHA_RULES.base;}"],
   ["const D=DEFAULTS[5],sigma=realizedVol(S.tecl,p,D.ivsLook),mv=tma225[p];",
-   "const D=DEFAULTS[5],sigma=realizedVol(S.tecl,p,RULES.look??D.ivsLook),mv=tma225[p];"],   // look(11-11): TECL σ 창(거래일) — 안 주면 20
+   "const D=(RULES.tw!=null||RULES.gw!=null)?Object.assign({},DEFAULTS[5],RULES.tw!=null?{teclWeight:RULES.tw}:{},RULES.gw!=null?{guardWeight:RULES.gw}:{}):DEFAULTS[5],sigma=realizedVol(S.tecl,p,RULES.look??D.ivsLook),mv=tma225[p];"],   // look(11-11): TECL σ 창(거래일) — 안 주면 20 · tw/gw(11-12): TECL 몫 · TQQQ Guard 몫(안 주면 70/30)
   ["const s0=D.ivsS0,sigUse=pm?pm.sigma:sigma,",
    "const s0=RULES.s0??D.ivsS0,sigUse=pm?pm.sigma:sigma,"],
   // opt.depEvery(11-10): 월 입금 간격(달) — 2·3·6·12 면 달마다 monthlyAdd 를 쌓아 두었다가 (월−1)%depEvery===0 인 달 첫 거래일에 한꺼번에 넣는다(그날만 전체 맞춤). 안 주면 앱 그대로(매달).

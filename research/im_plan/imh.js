@@ -42,6 +42,8 @@ const SETUP=`(()=>{
   inj('if(_fillHit>=tgt&&q3>0){','if(__H.floor&&q3>0&&avg>0){ const _bt=avg*(1+curTP/100); if(__flrS&&prevC<_bt){ _sell(o,q3,SLIP); tpHit=true; __flrS=false; __H.flrN=(__H.flrN||0)+1; } else if(tgt>_bt&&hi>=_bt) __flrS=true; }\\n      if(!tpHit&&_fillHit>=tgt&&q3>0){');   // 11-09: 익절을 올려 둔 사이 원래 익절선(평단×(1+익절%))을 고가로 넘었다가 종가가 다시 그 아래면 다음 날 시가에 익절분(3/4)을 판다
   inj('if(imCycleEnds(soldToday, shares)){cash+=__res;','if(imCycleEnds(soldToday, shares)){__flrS=false;cash+=__res;');
   inj('if(tpHit) T*=0.25;','if(tpHit){ T*=0.25; __flrS=false; }');   // 익절·바닥선으로 3/4 를 팔면 그 회는 끝 — 다시 익절을 올리고 넘으면 새로 센다
+  // 11-12: 익절을 지정가 대신 LOC 로(o.tpLoc · 종가 ≥ 익절선이면 종가에 · 슬리피지 없음) · 지정가를 익절선 × (1+x) 로 올리고 못 닿으면 종가 ≥ 익절선일 때 LOC 로 받침(o.tpHyb=x). 안 주면 원래와 같다.
+  inj('if(!tpHit&&_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}','if(!tpHit&&q3>0&&(__H.tpLoc||__H.tpHyb)){ const _t2=__H.tpHyb?tgt*(1+__H.tpHyb):Infinity; if(_fillHit>=_t2){ _sell(o>_t2?o:_t2,q3,SLIP); tpHit=true; } else if(c>=tgt){ _sell(c,q3,0); tpHit=true; } }\\n      if(!tpHit&&!__H.tpLoc&&!__H.tpHyb&&_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}');
   // 11-11: 연말 세금 정리(o.ye) — 그해 마지막 거래일 종가(prevC = 새해 첫날 아침에 아는 직전 종가)에 세무 원가(LOT)·그해 실현손익만 바꾼다(평단·T·주수 그대로).
   //   ① 손실 확정: 실현이익 > 공제이고 세무 원가 > 종가×(1−수수료)면 넘는 만큼만 팔고 되산다 ② 공제 채우기: 실현이익 < 공제이고 이익이면 공제까지 팔고 되사 원가를 올린다.
   //   수수료 양쪽(슬리피지 없음) · 주당 세금 이득(22% × 손익)이 왕복 수수료보다 클 때만 · 현금이 수수료보다 적으면 그만큼만. o.ye={loss?:false, gain?:false, minLoss?:0.1(평가손이 원가의 이만큼 넘을 때만)}. 안 주면 원래와 같다.
@@ -59,7 +61,7 @@ const SETUP=`(()=>{
     const IRX=window.__IRX||{}; const irxDates=Object.keys(IRX).sort();
     let lastIrx=0, li=0; const irxAt=d=>{ while(li<irxDates.length&&irxDates[li]<=d){ lastIrx=IRX[irxDates[li]]; li++; } return lastIrx; };
     let prevD=null;
-    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.floor=!!o.floor; __H.ye=o.ye||null; if(o.yp) __H.yp=[];
+    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.floor=!!o.floor; __H.ye=o.ye||null; __H.tpLoc=!!o.tpLoc; __H.tpHyb=o.tpHyb||0; if(o.yp) __H.yp=[];
     if(o.xfer){ const X=o.xfer; let F=1, yr=null, pend=false; __H.xlog=[];   // 조합 입출금(11-06): X={mode:'year'|'oneway'|'band'|'oneband', w, b, pl:{날짜:플랜값}, fee} — 플랜 쪽은 비례 배율 F 로(플랜은 사이클이 없어 비례 근사가 맞다)
       __H.xfer=(d,cash)=>{ const P0=X.pl[d]; if(!(P0>0)) return 0; const P=P0*F, y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ yr=y; if(X.mode==='year'||X.mode==='oneway') pend=true; }
         const t=cash+P, wa=cash/t; let x=cash-t*X.w;   // x>0: 무매 → 플랜
