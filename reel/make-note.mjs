@@ -64,10 +64,15 @@ async function makeVoice(v){
   }
   const trim = "silenceremove=start_periods=1:start_threshold=-45dB";
   const toRaw = (l) => runFF(["-y", "-i", l.mp3, "-af", `${trim},areverse,${trim},areverse`, "-ar", "44100", "-ac", "1", "-f", "s16le", l.raw]);
-  // 합성이 중간에 끊겨 너무 짧은 음성(글자당 0.05초 미만)은 지우고 한 번 더 만든다
-  const bad = lines.filter(l => fs.existsSync(l.raw) && fs.statSync(l.raw).size / 88200 < l.text.length * 0.05);
-  if (bad.length){
-    for (const l of bad){ console.warn(`  ⚠ 잘린 음성 다시 만듦: ${l.id}`); fs.rmSync(l.mp3, { force:true }); fs.rmSync(l.raw, { force:true }); }
+  // 합성이 중간에 끊겨 너무 짧은 음성(글자당 0.08초 미만 — 보통은 0.12~0.14초)은 지우고 다시 만든다.
+  // 2026-11-12: 새로 만든 음성은 raw 가 아직 없어서 검사를 건너뛰던 문제 → raw 로 먼저 바꾼 뒤 검사한다.
+  const tooShort = (l) => fs.statSync(l.raw).size / 88200 < l.text.length * 0.08;
+  for (let round = 0; round < 3; round++){
+    for (const l of lines) if (!fs.existsSync(l.raw)) await toRaw(l);
+    const bad = lines.filter(tooShort);
+    if (!bad.length) break;
+    if (round === 2){ for (const l of bad) console.warn(`  ⚠ 음성 '${l.id}' 가 여전히 짧다 (${(fs.statSync(l.raw).size / 88200).toFixed(2)}초) — 확인 필요`); break; }
+    for (const l of bad){ console.warn(`  ⚠ 잘린 음성 다시 만듦: ${l.id} (${(fs.statSync(l.raw).size / 88200).toFixed(2)}초 / ${l.text.length}자)`); fs.rmSync(l.mp3, { force:true }); fs.rmSync(l.raw, { force:true }); }
     await synth(bad, name);
   }
   let prevEnd = null;

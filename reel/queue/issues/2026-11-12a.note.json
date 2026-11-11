@@ -1,0 +1,352 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #11",
+  "color": "yellow"
+ },
+ "out": "queue/issues/2026-11-12_eunma-reconstruction-levy.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "재건축하면 한 사람당 사억 육천만 원을 내라고요? 은마아파트 얘기예요."
+   },
+   {
+    "id": "fact",
+    "text": "강남구가 통지한 재건축부담금 예정액이 총 이조 원, 한 사람당 평균 사억 육천만 원대예요.",
+    "gap": 0.35
+   },
+   {
+    "id": "why",
+    "text": "다만 이천삼십오 년 준공을 가정한 예정액이라, 집값과 공사비에 따라 바뀌어요."
+   },
+   {
+    "id": "cut",
+    "text": "그리고 한 채를 오래 가진 분은 깎아 줘요. 육 년이면 십 퍼센트, 십 년 오십, 이십 년이면 칠십 퍼센트까지요.",
+    "gap": 0.35
+   },
+   {
+    "id": "fight",
+    "text": "서초구와 안철수 의원은 폐지를 주장하는데, 폐지나 완화는 법을 바꿔야 해요."
+   },
+   {
+    "id": "cta",
+    "text": "팔로우해 두시면, 국회 논의 이어서 알려 드릴게요.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "재건축하면",
+     "x": 120,
+     "y": 450,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "1인당",
+     "x": 120,
+     "y": 640,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "4억 6천?",
+     "x": 120,
+     "y": 850,
+     "size": 170,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "circle",
+     "target": "cv3",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 10,
+     "width": 8
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "은마 부담금 예정액",
+     "x": 130,
+     "y": 1100,
+     "size": 70,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.4,
+     "dur": 0.6
+    }
+   ],
+   "start": 0
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "은마 재건축부담금, 얼마?",
+     "x": 128,
+     "y": 196,
+     "size": 78,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(강남구 10/30 통지 · 매경·헤럴드경제·한경 보도)",
+     "x": 140,
+     "y": 310,
+     "size": 36,
+     "font": "pen",
+     "color": "gray",
+     "at": 0.4,
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "r1",
+     "text": "총 2조 44억 원 · 4,326명",
+     "x": 150,
+     "y": 400,
+     "size": 50,
+     "font": "bold",
+     "color": "ink",
+     "at": "@fact+0.8",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "r2",
+     "text": "1인당 평균",
+     "x": 150,
+     "y": 490,
+     "size": 44,
+     "font": "bold",
+     "color": "ink",
+     "at": "@fact+2.6",
+     "dur": 0.5
+    },
+    {
+     "type": "text",
+     "id": "r3",
+     "text": "4억 6,334만 원",
+     "x": 150,
+     "y": 565,
+     "size": 70,
+     "font": "bold",
+     "color": "red",
+     "at": "@fact+3.4",
+     "dur": 0.7
+    },
+    {
+     "type": "circle",
+     "target": "r3",
+     "at": "@fact.end-0.4",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "r4",
+     "text": "(2035년 10월 준공 가정 예정액 · 장기보유 감경 전)",
+     "x": 150,
+     "y": 668,
+     "size": 32,
+     "font": "pen",
+     "color": "gray",
+     "at": "@why+0.3",
+     "dur": 0.7
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 745,
+     "w": 760,
+     "h": 400,
+     "rot": -2,
+     "at": "@cut-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "1세대 1주택 장기보유 감경",
+       "x": 46,
+       "y": 30,
+       "size": 50,
+       "font": "bold",
+       "color": "red",
+       "at": "@cut",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "6년 이상 → 10%",
+       "x": 46,
+       "y": 125,
+       "size": 48,
+       "font": "bold",
+       "color": "ink",
+       "at": "@cut+2.4",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "10년 이상 → 50%",
+       "x": 46,
+       "y": 195,
+       "size": 48,
+       "font": "bold",
+       "color": "ink",
+       "at": "@cut+3.6",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m4",
+       "text": "15년 이상 → 60%",
+       "x": 46,
+       "y": 265,
+       "size": 48,
+       "font": "bold",
+       "color": "ink",
+       "at": "@cut+4.4",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m5",
+       "text": "20년 이상 → 70%",
+       "x": 46,
+       "y": 335,
+       "size": 48,
+       "font": "bold",
+       "color": "blue",
+       "at": "@cut.end-1.4",
+       "dur": 0.5
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "폐지 요구: 서초구·안철수 의원",
+     "x": 150,
+     "y": 1205,
+     "size": 42,
+     "font": "bold",
+     "color": "ink",
+     "at": "@fight+0.2",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "n10",
+     "text": "폐지·완화는 법 개정이 필요",
+     "x": 150,
+     "y": 1275,
+     "size": 40,
+     "font": "bold",
+     "color": "blue",
+     "at": "@fight.end-1.6",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "n11",
+     "text": "(머니투데이·문화일보 11/11 · 반포현대 1인당 약 2억 2천 예정)",
+     "x": 150,
+     "y": 1345,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@fight.end",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1440,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1530,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
