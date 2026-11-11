@@ -81,7 +81,7 @@ async function check(S){
   t('C2 클로드/지피티 탭 없음 — 탭·지피티 칸·plan-gpt.js·지피티 저장 창구 모두 없고 듀얼가드 화면 하나(세션 줄 → 상태줄 → 상세 탭 → 머리 카드 → 주문표 순 · 운영 탭과 같은 차례)',
     !/id="aiTabs"|class="ai-tab|data-ai=|id="pane-gpt"|id="pane-claude"|planGptRoot|plan-gpt\.js|PLANGPT_ACCOUNT|planGptAccount|function planAiTab|location\.hash==='#gpt'/.test(P)&&S.gptFiles.length===0
     &&at('id="assetSessionChips"')>0&&at('id="assetSessionChips"')<at('id="assetStatusline"')&&at('id="assetStatusline"')<at('id="assetDetailTabs"')&&at('id="assetDetailTabs"')<at('id="dgStrip"')
-    &&at('id="dgStrip"')<at('id="alphaOrderSection"')&&at('id="alphaOrderSection"')<at('id="alphaResetSection"')&&!/id="assetSessionCard"/.test(P),S.gptFiles.join());
+    &&at('id="dgStrip"')<at('id="alphaOrderSection"')&&at('id="alphaOrderSection"')<at('id="alphaStrategySection"')&&!/id="assetSessionCard"/.test(P),S.gptFiles.join());
   { // 폐지 세션 숨김 — 실제 assetSessionList · activeAssetSession · renderAssetSessions
     const L=[{id:'a',name:'기본 운영',horizon:5,paper:false,settings:{alphaRules:'base'}},{id:'b',name:'기본 모의',horizon:5,paper:true,simStart:'2025-01-02',settings:{}},
       {id:'h10',name:'10년 세션',horizon:10,paper:true,settings:{}},{id:'h15',name:'15년 세션',horizon:15,paper:false,settings:{}},{id:'h20',name:'20년 세션',horizon:20,paper:true,settings:{}},

@@ -306,7 +306,7 @@ const M=[
   ['운영: 받기 실패 뒤에도 그릴 때마다 다시 받음','plan',s=>s.replace("if(!planIndexError&&!planIndexLoading)planPanicIndexLoad()","if(!planIndexLoading)planPanicIndexLoad()")],
   ['운영: 상태 카드 안 그림','plan',s=>s.replace("  renderLivePanic(PX);\n","").replace("  el.hidden=false;\n  el.innerHTML=(PX&&!PX.error)?","  el.hidden=true;\n  el.innerHTML=(PX&&!PX.error)?")],
   ['운영: 모의 세션에도 운영 카드','plan',s=>s.replace("on=(!x||!x.paper)&&assetRulesOf(x)==='panic';","on=assetRulesOf(x)==='panic';")],
-  ['운영: 보류인데 주문이 남음','plan',s=>s.replace("  pendingAlphaOrders=[];\n  if($('alphaRecordFill')){$('alphaRecordFill').disabled=true;","  if($('alphaRecordFill')){$('alphaRecordFill').disabled=true;")],
+  ['운영: 보류인데 주문이 남음','plan',s=>s.replace("  pendingAlphaOrders=[];alphaOrderHold=why;\n  if($('alphaRecordFill')){$('alphaRecordFill').disabled=true;","  alphaOrderHold=why;\n  if($('alphaRecordFill')){$('alphaRecordFill').disabled=true;")],   // 기록 창(2026-11-11)은 보류 이유도 적는다
   ['운영: 보류인데 위 띠는 불러오는 중','plan',s=>s.replace("  renderDualGuardStrip({hold:msg});\n","")],
   ['운영: 보류를 바깥 화면에 알림','plan',s=>s.replace("chip('다음 Guard 경계','—','확정 종가 기준');return;}\n  if(sb)sb.innerHTML=o?","chip('다음 Guard 경계','—','확정 종가 기준');planEmbedPost(o);return;}\n  if(sb)sb.innerHTML=o?")],
   ['운영: 켤 때 안 물음','plan',s=>s.replace("  if(livePanicOn&&!confirm(","  if(false&&!confirm(")],
