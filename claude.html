@@ -85,7 +85,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.28.1</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.29.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -352,6 +352,7 @@ function arenaOf(tab){return (((J.lab||{}).arena)||{})[tab]||null}
 function arenaStatus(z){
   if(!z)return "전략 경쟁 계산 전";
   var st=z.status||{},top=(z.rows||[]).filter(function(r){return r.version===z.top})[0]||(z.rows||[])[0]||{};
+  if(/^pin/.test(st.code||""))return "📌 "+esc(st.text||"사용자 고정 — 자동 교체 안 함")+(st.reason?"<div class='sub'>"+esc(st.reason)+"</div>":"");   // 사용자 고정(USER_PINS) — 자동 교체 안 함
   return (st.newTop?"🆕 오늘 들어온 "+esc(st.newTop)+" 가 표 1위 (1위 일수는 내일부터) · ":"")+(st.code==="main_top"?"🥇 지금 메인이 1위":st.code==="promoted"?"🏆 "+esc(st.text):
     "🥇 1위 "+esc(top.name||z.top||"")+" · "+(st.days||0)+"/7일"+(st.code==="streak"?" (7일이면 다음 날부터 자동 메인)":st.code==="due"?" · 승격 조건 충족":st.code==="failed"?" · ⚠ "+esc(st.text):""));
 }

@@ -49,7 +49,8 @@ export function compose(kind,date,live,extra={}){
     else L.push("② 매매 없음 — "+((buy&&buy.note)||"15:21 예상이 기준 "+th+"% 이하 아님"));
   }else if(kind==="promote"){
     const ev=extra.event||{};
-    L.push("🔁 [클로드 단타] "+(TABN[ev.tab]||"")+" 메인 전략 자동 교체 ("+date+")");
+    const byUser=/^user:/.test(String(ev.by||""));                 // 사용자 고정(USER_PINS)으로 되돌린 기록 — '자동 교체'라고 쓰지 않는다
+    L.push("🔁 [클로드 단타] "+(TABN[ev.tab]||"")+(byUser?" 메인 전략 사용자 고정 (":" 메인 전략 자동 교체 (")+date+")");
     L.push((ev.prevVersion||"?")+" → "+(ev.name||ev.version||"?"));
     L.push("근거: "+((ev.basis||{}).promotion||"7일 연속 1위"));
     L.push(ev.effectiveFrom+" 부터 주문·장부·텔레그램 모두 새 메인 규칙");
