@@ -9,6 +9,8 @@
 - 시험: `test_opening_gapdown.py` ArenaTest 4개 · `test_opening_gapdown.mjs` 2개 · 변이 7종(`mutation_test_opening_gapdown.py`).
 - 연구: R38 사전 등록(4cf3e5c2) · 스크립트 `scripts/research/r38_promo_rule.py`(be2b3c08) · 결과 — 통과한 변형 없음 → 자동 승격 규칙은 그대로(`CLAUDE-SCALPING-RESEARCH.md` R38).
 - 감사: `AUDIT-SELF-REVIEW.md` 2026-11-12 장.
+- 연구: R39 ④ SOXL 투자 판정(사전 등록 03acb0d6 · 스크립트 `scripts/research/r39_soxl_invest.py` 5dded441) — 보류 5/7. `CLAUDE-SCALPING-RESEARCH.md` 맨 위에 '투자 후보' 표 신설.
+- 매일 루틴 지시문(예약 작업): 연구 목표를 '투자할 전략 찾기'로 — 투자 판정표 7항목 · 11/19 첫 투자안(사용자 11/12).
 
 ## 2026-11-12 · 모의 목록 표를 세션마다 저장 — 새로 만들었거나 바뀐 세션만 계산 · 듀얼가드 상태줄 '숨긴 예전 세션' 글자 뺌 · v3.136.0 (듀얼가드 v2.14.1)
 
