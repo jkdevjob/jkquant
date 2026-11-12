@@ -313,6 +313,31 @@ t("telegram: each kind says what happened, no-trade is explicit", () => {
   const none = TG.compose("preopen", "2026-10-02", { tabs: { opening: { rows: [], decision: { reason: "no_expected_gap_down" } } } });
   assert.ok(none.includes("매매 없음 (no_expected_gap_down)"));
 });
+t("telegram promote: user pin is not called an automatic switch", () => {
+  // 사용자 고정(by=user:pin, 2026-11-12) 되돌림 기록은 '사용자 고정' — 7일 1위 자동 승격만 '자동 교체'라고 쓴다(승격 알림은 지금 보내지 않지만 문구는 같은 함수)
+  const ev = { tab: "crypto", version: "g_coin_ma15_s99_hi7_eth", name: "옛 메인", prevVersion: "g_coin_ma5_s10_hi_both", effectiveFrom: "2026-11-13",
+               by: "user:pin", basis: { promotion: "사용자 고정(2026-11-12) — 되돌림" } };
+  const u = TG.compose("promote", "2026-11-12", null, { event: ev });
+  assert.ok(u.includes("메인 전략 사용자 고정 (2026-11-12)") && !u.includes("자동 교체"), u);
+  assert.ok(u.includes("g_coin_ma5_s10_hi_both → 옛 메인") && u.includes("근거: 사용자 고정(2026-11-12) — 되돌림") && u.includes("2026-11-13 부터"));
+  const a = TG.compose("promote", "2026-11-12", null, { event: { ...ev, by: "auto:arena-7d-top1", basis: {} } });
+  assert.ok(a.includes("메인 전략 자동 교체 (2026-11-12)") && a.includes("근거: 7일 연속 1위") && !a.includes("사용자 고정"), a);
+});
+t("claude.html arena status: user pin shows pinned, not a 7-day countdown", () => {
+  // 화면도 고정 탭은 '📌 사용자 고정 · 자동 교체 안 함' + 사유 — '1위 n/7일 (7일이면 다음 날부터 자동 메인)'으로 보이면 안 된다(2026-11-12 사용자 고정)
+  const own = path.join(dir, "claude.html");
+  const html = fs.readFileSync(fs.existsSync(own) ? own : path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "claude.html"), "utf8");
+  const grab = name => { const i = html.indexOf("function " + name + "("); assert.ok(i >= 0, name); let k = html.indexOf("{", i), depth = 0;
+    for (let j = k; j < html.length; j++) { if (html[j] === "{") depth++; else if (html[j] === "}" && --depth === 0) return html.slice(i, j + 1); } };
+  const ctx = {}; vm.runInNewContext(grab("esc") + "\n" + grab("arenaStatus") + "\nthis.arenaStatus=arenaStatus;", ctx);
+  const z = { top: "g_coin_ma5_s10_hi_both", rows: [{ version: "g_coin_ma5_s10_hi_both", name: "신 메인" }],
+              status: { code: "pinned", days: 3, text: "사용자 고정(2026-11-12) — 자동 교체 안 함 · 경쟁 1위 g_coin_ma5_s10_hi_both 3일째(참고)", reason: "사용자 11/12 <되돌림>" } };
+  const h = ctx.arenaStatus(z);
+  assert.ok(h.startsWith("📌 사용자 고정(2026-11-12) — 자동 교체 안 함") && h.includes("3일째(참고)") && h.includes("사용자 11/12 &lt;되돌림&gt;"), h);
+  assert.ok(!h.includes("/7일") && !h.includes("자동 메인"), h);
+  assert.ok(ctx.arenaStatus({ ...z, status: { code: "pin_due", text: "사용자 고정 · 되돌림 조건 충족" } }).startsWith("📌 사용자 고정 · 되돌림 조건 충족"));
+  assert.ok(ctx.arenaStatus({ ...z, status: { code: "streak", days: 3 } }).includes("3/7일 (7일이면 다음 날부터 자동 메인)"));   // 고정 아닌 탭은 그대로
+});
 t("telegram weekly: account week, +5% check, contributions, shadow candidates, stale guard", () => {
   assert.equal(TG.mondayOf("2026-10-10"), "2026-10-05"); assert.equal(TG.mondayOf("2026-10-05"), "2026-10-05"); assert.equal(TG.mondayOf("2026-10-11"), "2026-10-05");
   const lab = { week: { weekStart: "2026-10-05", asOf: "2026-10-09", account: { weekPct: 5.06, hit5: true, plus1Days: 2, days: 5 },

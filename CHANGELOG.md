@@ -1,5 +1,18 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-12 · 연구(클로드) 사용자 고정 — ③ 옛 메인으로 되돌림 · ② −4.75% 유지 · claude v2.29.0
+
+- 이유: 사용자 11/12 "1번 예전메인으로 돌리고 매매 가산점을 점검해야겠네" · "2 유지". ③ 11/11 자동 승격은 빈도 보정이 뒤집은 순위였고(R6), ② 는 메인이 낙폭 기준을 1.4%p 넘어 −6.5% 가 1위였다(R36).
+- `scripts/claude_lab.py`: `USER_PINS`(③ g_coin_ma15_s99_hi7_eth · ② g_etf_th4.75) — 고정 탭은 자동 교체 안 함 · 메인이 다르면 `by=user:pin` 승격 기록을 한 번 쌓아 다음 날부터 되돌림 · 고정 전략은 퇴출 안 함. `pinned_entry`(지난 승격 기록 → 기본 메인 → 경쟁군).
+- `claude.html`: 고정 탭 상태 '📌 사용자 고정 — 자동 교체 안 함' + 사유. 버전 v2.29.0.
+- `functions/api/claude-telegram.js`: 승격 문구가 사용자 고정이면 '자동 교체'라고 쓰지 않음(승격 알림은 지금도 안 보냄).
+- 시험: `test_opening_gapdown.py` ArenaTest 4개 · `test_opening_gapdown.mjs` 2개 · 변이 7종(`mutation_test_opening_gapdown.py`).
+- 연구: R38 사전 등록(4cf3e5c2) · 스크립트 `scripts/research/r38_promo_rule.py`(be2b3c08) · 결과 — 통과한 변형 없음 → 자동 승격 규칙은 그대로(`CLAUDE-SCALPING-RESEARCH.md` R38).
+- 감사: `AUDIT-SELF-REVIEW.md` 2026-11-12 장.
+- 연구: R39 ④ SOXL 투자 판정(사전 등록 03acb0d6 · 스크립트 `scripts/research/r39_soxl_invest.py` 5dded441) — 보류 5/7. `CLAUDE-SCALPING-RESEARCH.md` 맨 위에 '투자 후보' 표 신설.
+- 매일 루틴 지시문(예약 작업): 연구 목표를 '투자할 전략 찾기'로 — 투자 판정표 7항목 · 11/19 첫 투자안(사용자 11/12).
+- 연구: R40 ③ 코인 투자 판정(사전 등록 9733f28b · `scripts/research/r40_coin_invest.py`) — 보류 6/7. R41 ③ + ④ 계좌 비중(사전 등록 cc8f99d6 · `scripts/research/r41_portfolio.py`) — ③ 60% + ④ 40% 기준 통과 → '투자안 초안'(사용자 결정 대기).
+
 ## 2026-11-12 · 모의 목록 표를 세션마다 저장 — 새로 만들었거나 바뀐 세션만 계산 · 듀얼가드 상태줄 '숨긴 예전 세션' 글자 뺌 · v3.136.0 (듀얼가드 v2.14.1)
 
 사용자(11/11): "신규 모의세션을 생성하고 모의 메뉴에 들어가면 어떻게 되는거지?" → 설명(목록 표가 한 덩어리라 세션 하나만 바뀌어도 전부 다시 계산) 뒤 (11/12) "표를 세션마다 따로 저장 … 이렇게 바꿀까요? 어 해".

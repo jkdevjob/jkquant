@@ -1368,6 +1368,15 @@ def soxl_piecewise(srows):
 ARENA_PATH = OUT / "arena.json"
 ARENA_SCHEMA = 2
 POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, EVAL_BUDGET = 12, 10, 7, 3, 48
+# 사용자 고정 — 이 탭은 자동 승격하지 않고 메인을 이 전략으로 둔다(2026-11-12 사용자 "1번 예전메인으로 돌리고 매매 가산점을 점검해야겠네" · "2 유지").
+# 순위 계산 · 1위 기록 · 퇴출 · 신규 투입은 그대로 하고 화면에도 보인다 — 자동 교체만 하지 않는다. 1위 연속 일수도 그대로 센다(풀면 그날부터 자동 규칙).
+# 지금 메인(main_for)이 고정 전략과 다르면 승격 기록(by="user:pin")을 한 번 쌓아 다음 날부터 되돌린다(같은 Worker 메인 기록 · 지난 장부는 그대로).
+USER_PINS = {
+    "crypto": dict(version="g_coin_ma15_s99_hi7_eth", since="2026-11-12",
+                   reason="사용자 11/12 '1번 예전메인으로 돌리고 매매 가산점을 점검해야겠네' — 11/11 자동 승격은 매매 횟수 가산점으로 뒤집힌 순위(R6)"),
+    "daytrading": dict(version="g_etf_th4.75", since="2026-11-12",
+                       reason="사용자 11/12 '2 유지' — −4.75% 가 낙폭 기준(−25%)을 1.4%p 넘어 −6.5% 가 1위였다(R36)"),
+}
 SHRINK_K, MIN_TRADE_DAYS, YEAR_POS_MIN, DUP_CORR = 40, 60, 0.6, 0.97
 FREQ_BETA = 0.25                                                 # 빈도 보정 세기 — 매매 2배 ↔ 점수 ×1.19 (근거: AUDIT-SELF-REVIEW 시간순 검증)
 MAIN_MARGIN, REPLACE_MARGIN, MAX_REPLACE = 0.02, 0.02, 3
@@ -1668,13 +1677,15 @@ def post_json(url, body, key, timeout=30):
         return json.loads(r.read().decode("utf-8") or "{}")
 
 
-def auto_promote(tab, row, main_row, today, state):
-    """7일 1위 → Worker 메인 기록에 쌓는다(다음 날부터). 감시키가 없으면(로컬) 'due'만 남긴다."""
+def auto_promote(tab, row, main_row, today, state, by="auto:arena-7d-top1", promotion=None):
+    """7일 1위 → Worker 메인 기록에 쌓는다(다음 날부터). 감시키가 없으면(로컬) 'due'만 남긴다.
+    사용자 고정(USER_PINS)으로 되돌리는 기록도 같은 길로 쌓는다(by="user:pin" · promotion=사유)."""
     eff = (date.fromisoformat(today) + timedelta(days=1)).isoformat()
     ev = dict(tab=tab, version=row["version"], name=row["name"], rule=row["rule"], params=row["params"], effectiveFrom=eff,
-              promotedAt=datetime.now(timezone.utc).isoformat(), prevVersion=main_row["version"], by="auto:arena-7d-top1",
-              basis=dict(labGeneratedAt=datetime.now(KST).isoformat(), rank=1,
-                         promotion=f"7일 연속 1위 · 순위 점수 {row['score']:+.3f} vs 메인 {main_row['score'] or 0:+.3f}"))
+              promotedAt=datetime.now(timezone.utc).isoformat(), prevVersion=main_row["version"], by=by,
+              basis=dict(labGeneratedAt=datetime.now(KST).isoformat(), rank=1 if promotion is None else None,
+                         promotion=promotion if promotion is not None else
+                         f"7일 연속 1위 · 순위 점수 {row['score']:+.3f} vs 메인 {main_row['score'] or 0:+.3f}"))
     key = os.environ.get("JKQ_MONITOR_KEY", "").strip()
     if not key:
         return dict(ok=False, due=True, event=ev, error="감시키 없음(로컬 계산) — 기록하지 않음")
@@ -1692,6 +1703,24 @@ def auto_promote(tab, row, main_row, today, state):
     MAIN_EVENTS.append(dict(ev, params=_valid_params(tab, ev["params"])))
     MAIN_EVENTS.sort(key=lambda e: (e["effectiveFrom"], e["promotedAt"]))
     return dict(ok=True, event=ev)
+
+
+def pinned_entry(tab, pool=()):
+    """사용자 고정 전략의 이름 · 규칙 · 변수 — 지난 승격 기록 → 기본 메인 → 경쟁군 순으로 찾는다. 없으면 None."""
+    pin = USER_PINS.get(tab)
+    if not pin:
+        return None
+    v = pin["version"]
+    for e in reversed(MAIN_EVENTS):
+        if e["tab"] == tab and e["version"] == v:
+            return dict(tab=tab, version=v, name=e.get("name") or v, rule=e.get("rule") or "", params=dict(e["params"]))
+    m = MAIN_DEFAULT[tab]
+    if m["version"] == v:
+        return dict(tab=tab, version=v, name=m["name"], rule=m["rule"], params=dict(m["params"]))
+    for x in pool or ():
+        if x.get("version") == v and x.get("params"):
+            return dict(tab=tab, version=v, name=x.get("name") or v, rule=x.get("rule") or "", params=dict(x["params"]))
+    return None
 
 
 class _Evaluator:
@@ -1832,9 +1861,37 @@ def arena(ctx, today=None, state=None, tabs=TABS_ALL):
         snaps[:] = [x for x in snaps if x["date"] != today] + [snap]
         snaps.sort(key=lambda x: x["date"])
         del snaps[:-120]
-        # 2) 7일 1위 → 자동 승격(다음 날부터)
+        # 2) 7일 1위 → 자동 승격(다음 날부터) — 사용자 고정 탭(USER_PINS)은 자동 교체하지 않는다
         promo = dict(code="none", text="")
-        if top and top["version"] != cur["version"]:
+        pin = USER_PINS.get(tab)
+        if pin:
+            s0 = days = None
+            if top and top["version"] != pin["version"]:
+                s0, _, _n = streak(snaps, top["version"], lambda sn: sn.get("top") == top["version"])
+                days = _span_days(s0, today) + 1 if s0 else 0
+            ref = (f" · 경쟁 1위 {top['version']} {days}일째(참고)" if days else " · 고정 전략이 경쟁 1위") if top else ""
+            base = f"사용자 고정({pin['since']}) — 자동 교체 안 함"
+            if cur["version"] == pin["version"]:
+                promo = dict(code="pinned", text=base + ref, pinned=pin["version"], reason=pin["reason"], days=days, since=s0)
+            else:
+                pe = pinned_entry(tab, pool)
+                if pe is None:
+                    promo = dict(code="pin_failed", text=base + f" · 고정 전략 {pin['version']} 의 변수를 찾지 못함", pinned=pin["version"], reason=pin["reason"])
+                    note(tab, "promote_failed", dict(version=pin["version"], name=pin["version"]), "사용자 고정 — 고정 전략 변수를 찾지 못함")
+                else:
+                    r = auto_promote(tab, pe, main_row or dict(cur, score=None), today, state, by="user:pin",
+                                     promotion=f"사용자 고정({pin['since']}) — {pin['reason']}")
+                    if r.get("ok"):
+                        eff = r["event"]["effectiveFrom"]
+                        note(tab, "promote", pe, f"사용자 고정 → {eff} 부터 메인 (이전 메인 {cur['version']}) — {pin['reason']}")
+                        promo = dict(code="pinned", text=base + f" · {eff} 부터 {pe['version']} 로 되돌림" + ref, pinned=pin["version"],
+                                     reason=pin["reason"], event=r["event"], days=days, since=s0)
+                    else:
+                        promo = dict(code="pin_due" if r.get("due") else "pin_failed", pinned=pin["version"], reason=pin["reason"],
+                                     text=base + (" · 되돌림 조건 충족(감시키 없음 — 기록 안 함)" if r.get("due") else " · 되돌림 기록 실패 — 다음 계산에서 다시: " + r.get("error", "")))
+                        if not r.get("due"):
+                            note(tab, "promote_failed", pe, "사용자 고정 되돌림 — " + r.get("error", ""))
+        elif top and top["version"] != cur["version"]:
             s0, _, n = streak(snaps, top["version"], lambda sn: sn.get("top") == top["version"])
             days = _span_days(s0, today) + 1 if s0 else 0
             if days >= PROMOTE_DAYS and gate_ok(top) and main_row:
@@ -1851,8 +1908,8 @@ def arena(ctx, today=None, state=None, tabs=TABS_ALL):
                 promo = dict(code="streak", text=f"1위 {days}일째 (첫 1위 {s0}) — {PROMOTE_DAYS}일이면 다음 날부터 자동 승격", days=days, since=s0)
         elif top:
             promo = dict(code="main_top", text="지금 메인이 1위 — 바꿀 전략 없음")
-        promoted_v = promo.get("event", {}).get("version") if promo["code"] == "promoted" else None
-        keep = {cur["version"], promoted_v}
+        promoted_v = promo.get("event", {}).get("version") if promo["code"] in ("promoted", "pinned") else None
+        keep = {cur["version"], promoted_v} | ({pin["version"]} if pin else set())   # 메인 · 방금 승격 · 사용자 고정 전략은 퇴출하지 않는다
         # 3) 퇴출 후보: 기준 미달 · 7일 연속 하위 3위 · 복제(사실상 같은 매매 — 순위 낮은 쪽) (메인 · 방금 승격한 전략은 제외)
         bad, bad_v = [], set()
 
