@@ -6,7 +6,7 @@ const OUT=process.argv[2]||'pop_out.json', DS=(process.env.DS||'real,syn').split
 const KEYS=(process.env.KEYS||Object.keys(S).join(',')).split(',').filter(k=>S[k]);
 const CFG={'2.5만':[25000,210],'1억':[69244,69.24],'1만':[10000,0],'10만':[100000,0]};
 const SYNMAP={HFEA:{UPRO:'SYNUPRO',TMF:'SYNTMF'},LRS_N3:{QQQ:'SYNQQQ',TQQQ:'SYNTQQQ',BIL:'SYNBIL'},LRS_S3:{SPY:'SYNSPY',UPRO:'SYNUPRO',BIL:'SYNBIL'},LRS_S2:{SPY:'SYNSPY',SSO:'SYNSSO',BIL:'SYNBIL'},
-  LRS_N2:{QQQ:'SYNQQQ',QLD:'SYNQLD',BIL:'SYNBIL'},BH_TQQQ:{TQQQ:'SYNTQQQ'},BH_QQQ:{QQQ:'SYNQQQ'},BH_SPY:{SPY:'SYNSPY'},BH_UPRO:{UPRO:'SYNUPRO'},NINESIG:{TQQQ:'SYNTQQQ',AGG:'SYNAGG',SPY:'SYNSPY',QQQ:'SYNQQQ'}};
+  LRS_N2:{QQQ:'SYNQQQ',QLD:'SYNQLD',BIL:'SYNBIL'},LRS_N3p:{QQQ:'SYNQQQ',TQQQ:'SYNTQQQ',BIL:'SYNBIL'},LRS_N3c:{QQQ:'SYNQQQ',TQQQ:'SYNTQQQ',BIL:'SYNBIL'},LRS_N3b:{SPY:'SYNSPY',TQQQ:'SYNTQQQ',BIL:'SYNBIL'},BH_TQQQ:{TQQQ:'SYNTQQQ'},BH_QQQ:{QQQ:'SYNQQQ'},BH_SPY:{SPY:'SYNSPY'},BH_UPRO:{UPRO:'SYNUPRO'},NINESIG:{TQQQ:'SYNTQQQ',AGG:'SYNAGG',SPY:'SYNSPY',QQQ:'SYNQQQ'}};
 for(const k of Object.keys(S)) if(S[k].syn) SYNMAP[k]=S[k].syn;
 const REF={real:process.env.REF_REAL?JSON.parse(fs.readFileSync(process.env.REF_REAL)).real:null, syn:process.env.REF_SYN?JSON.parse(fs.readFileSync(process.env.REF_SYN)).syn:null};
 const addM=(d,m)=>{ const y=+d.slice(0,4), mo=+d.slice(5,7)-1+m; return `${y+Math.floor(mo/12)}-${String(mo%12+1).padStart(2,'0')}-01`; };

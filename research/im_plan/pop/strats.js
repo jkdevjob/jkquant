@@ -11,22 +11,30 @@ const S={};
 for(const t of ['QQQ','TQQQ','SPY','UPRO']) S['BH_'+t]={name:t+' 그냥 보유',syms:[t],decide:c=>(c.first||c.newQuarter)?{[t]:1}:null};
 // ── HFEA(Bogleheads 'Hedgefundie' 2019): UPRO 55 · TMF 45 · 분기 맞춤
 S.HFEA={name:'HFEA UPRO55·TMF45 분기',syms:['UPRO','TMF'],decide:c=>(c.first||c.newQuarter)?{UPRO:.55,TMF:.45}:null};
+S.HFEA_TQ={name:'HFEA TQQQ55·TMF45 분기',syms:['TQQQ','TMF'],syn:{TQQQ:'SYNTQQQ',TMF:'SYNTMF'},decide:c=>(c.first||c.newQuarter)?{TQQQ:.55,TMF:.45}:null};   // 커뮤니티 변형(공식 비율 없음)
 // ── 레버리지 회전(Gayed·Bilello 2016 'Leverage for the Long Run'): 지수 > 200일선이면 레버리지, 아니면 T-bill · 일간
-const lrs=(sig,lev,cash='BIL',n=200,band=0)=>({name:`${sig} ${n}일선 → ${lev}`+(band?` ±${band*100}%`:''),syms:[sig,lev,cash].filter((x,i,a)=>a.indexOf(x)===i),
-  decide:c=>{ const m=H.sma(c,sig,n), x=H.px(c,sig); if(m==null) return null; let on=c.st.on; if(c.first) on=x>m; else if(!on&&x>m*(1+band)) on=true; else if(on&&x<m*(1-band)) on=false;
+// 11-12 2차: 신호 = 총수익(배당 조정) 지수의 200일 단순 이평(논문 각주 15) · up/dn = 켜는/끄는 밴드 · conf = 연속 며칠 확인 · tr=false 면 1차(가격) 판
+const lrs=(sig,lev,cash='BIL',n=200,{up=0,dn=0,conf=1,tr=true}={})=>({name:`${sig} ${n}일선 → ${lev}`+(up||dn?` +${up*100}/−${dn*100}%`:'')+(conf>1?` ${conf}일 확인`:'')+(tr?'':' (가격)'),syms:[sig,lev,cash].filter((x,i,a)=>a.indexOf(x)===i),
+  decide:c=>{ const m=H.sma(c,sig,n,tr), x=H.px(c,sig,tr); if(m==null) return null; c.st.hu=x>m*(1+up)?(c.st.hu||0)+1:0; c.st.hd=x<m*(1-dn)?(c.st.hd||0)+1:0;
+    let on=c.st.on; if(c.first) on=x>m; else if(!on&&c.st.hu>=conf) on=true; else if(on&&c.st.hd>=conf) on=false;
     return once(c,'on',on,on?{[lev]:1}:{[cash]:1}); }});
 S.LRS_N3=lrs('QQQ','TQQQ'); S.LRS_S3=lrs('SPY','UPRO'); S.LRS_S2=lrs('SPY','SSO'); S.LRS_N2=lrs('QQQ','QLD');
+S.LRS_N3p=lrs('QQQ','TQQQ','BIL',200,{tr:false});                       // 1차 판(가격 이평) — 비교용
+S.LRS_N3b=lrs('SPY','TQQQ','BIL',200,{up:.04,dn:.03});                  // TradingView 'SPY 200SMA +4% Entry −3% Exit (QQQ/TQQQ)' 핵심만(QQQ 분할 매수·과열 디레버리지 생략)
+S.LRS_N3c=lrs('QQQ','TQQQ','BIL',200,{conf:2});                          // 커뮤니티 '이틀 확인' 변형
 // ── 듀얼 모멘텀 GEM(Antonacci 2014): 미국 12개월 총수익 > T-bill 이면 미국·미국 밖 중 12개월 높은 쪽, 아니면 미국 채권 · 월간
-S.GEM={name:'듀얼 모멘텀 GEM',syms:['SPY','EFA','AGG','BIL'],decide:c=>{ if(!c.newMonth) return null; const u=H.ret(c,'SPY',12), x=H.ret(c,'EFA',12), b=H.ret(c,'BIL',12); if(u==null||x==null||b==null) return null;
-  return u>b?(u>=x?{SPY:1}:{EFA:1}):{AGG:1}; }};
+// 11-12 2차: Antonacci FAQ 의 ETF(IVV ≈ SPY · 미국 밖 = VEU(ACWI ex-US) · 채권 = BND · T-bill = BIL) — 1차는 EFA·AGG 였다
+S.GEM={name:'듀얼 모멘텀 GEM',syms:['SPY','VEU','BND','BIL'],decide:c=>{ if(!c.newMonth) return null; const u=H.ret(c,'SPY',12), x=H.ret(c,'VEU',12), b=H.ret(c,'BIL',12); if(u==null||x==null||b==null) return null;
+  return u>b?(u>=x?{SPY:1}:{VEU:1}):{BND:1}; }};
 // ── VAA-G4(Keller·Keuning 2017): 13612W · 공격 SPY EFA EEM AGG 모두 > 0 이면 가장 높은 공격 1개, 아니면 방어 LQD IEF SHY 중 가장 높은 1개 · 월간
 S.VAA={name:'VAA 공격형(G4)',syms:['SPY','EFA','EEM','AGG','LQD','IEF','SHY'],decide:c=>{ if(!c.newMonth) return null; const O=['SPY','EFA','EEM','AGG'], Dd=['LQD','IEF','SHY'];
   const om=O.map(s=>m13612(c,s)); if(om.some(x=>x==null)) return null; const pick=om.every(x=>x>0)?best(c,O,m13612)[0][0]:best(c,Dd,m13612)[0][0]; return {[pick]:1}; }};
 // ── BAA-G4 공격형(Keller 2022): 카나리아 SPY EEM EFA AGG(13612W) 하나라도 < 0 이면 방어 — TIP DBC BIL IEF TLT LQD AGG 중 SMA(12) 상대 모멘텀 상위 3(BIL 보다 낮으면 BIL) 1/3씩 · 아니면 QQQ EEM EFA AGG 중 상위 1 · 월간
-S.BAA={name:'BAA 공격형(G4)',syms:['SPY','QQQ','EEM','EFA','AGG','TIP','DBC','BIL','IEF','TLT','LQD'],decide:c=>{ if(!c.newMonth) return null;
-  const can=['SPY','EEM','EFA','AGG'].map(s=>m13612(c,s)); if(can.some(x=>x==null)) return null;
-  if(can.every(x=>x>=0)){ const b=best(c,['QQQ','EEM','EFA','AGG'],smaRel); return b.length?{[b[0][0]]:1}:null; }
-  const bil=smaRel(c,'BIL'), top=best(c,['TIP','DBC','BIL','IEF','TLT','LQD','AGG'],smaRel).slice(0,3); const W={}; for(const [s,m] of top){ const k=(m<bil)?'BIL':s; W[k]=(W[k]||0)+1/3; } return W; }};
+// 11-12 2차: 논문(SSRN 4166845 v0.98) 종목으로 — 1차는 EEM·EFA·AGG 대용이었다
+S.BAA={name:'BAA 공격형(G4)',syms:['SPY','QQQ','VWO','VEA','BND','TIP','DBC','BIL','IEF','TLT','LQD'],decide:c=>{ if(!c.newMonth) return null;
+  const can=['SPY','VWO','VEA','BND'].map(s=>m13612(c,s)); if(can.some(x=>x==null)) return null;
+  if(can.every(x=>x>=0)){ const b=best(c,['QQQ','VWO','VEA','BND'],smaRel); return b.length?{[b[0][0]]:1}:null; }
+  const bil=smaRel(c,'BIL'), top=best(c,['TIP','DBC','BIL','IEF','TLT','LQD','BND'],smaRel).slice(0,3); const W={}; for(const [s,m] of top){ const k=(m<bil)?'BIL':s; W[k]=(W[k]||0)+1/3; } return W; }};
 // ── HAA(Keller 2023): 카나리아 TIP(1·3·6·12개월 평균) > 0 이면 SPY IWM VEA VWO VNQ DBC IEF TLT 중 상위 4 · 1/4씩(음수면 현금 자산) · 아니면 현금 자산 100% · 현금 자산 = BIL·IEF 중 높은 쪽 · 월간
 S.HAA={name:'HAA 균형형(G8)',syms:['TIP','SPY','IWM','VEA','VWO','VNQ','DBC','IEF','TLT','BIL'],decide:c=>{ if(!c.newMonth) return null; const t=avg4(c,'TIP'); if(t==null) return null;
   const cashA=(avg4(c,'BIL')??-1)>=(avg4(c,'IEF')??-1)?'BIL':'IEF'; if(t<=0) return {[cashA]:1};
@@ -39,4 +47,68 @@ S.LAA={name:'LAA 게으른 자산배분',syms:['IWD','GLD','IEF','QQQ','SHY','SP
   const risk=!(x<m&&u), yr=c.first||c.date.slice(5,7)==='01'; const k=risk?'QQQ':'SHY';
   if(yr) return {IWD:.25,GLD:.25,IEF:.25,[k]:.25};
   if(c.st.risk!==risk){ c.st.risk=risk; const cur=s=>c.pos[s]*H.px(c,s)/c.total; const W={IWD:cur('IWD'),GLD:cur('GLD'),IEF:cur('IEF')}; W[k]=1-W.IWD-W.GLD-W.IEF; return W; } return null; }};
+
+// ── 9-Sig(Jason Kelly · 'The 3% Signal' 2015 의 TQQQ 판): 기본 TQQQ 60 · 채권 40 · 분기(달력 분기 끝 종가 → 다음 날 종가 체결)
+//    신호선 = 지난 분기 끝 주식 잔고(그때 신호 가격 기준) × 1.09 + 그 분기 새 돈의 50% · 위면 넘친 만큼 채권으로 · 아래면 모자란 만큼 채권에서(채권이 모자라면 있는 만큼)
+//    새 돈(월 입금)·배당은 모두 채권으로 · '30 down, stick around': 기준 종목 분기 종가가 앞 8분기 종가 최고의 70% 이하면 다음 매도 신호 n 번 건너뜀(n 번 또는 8분기 뒤 끝 · 끝난 뒤엔 조건이 한 번 풀려야 다시 켬)
+//    출처가 갈림: 책(3Sig) SPY · 4번 | Kelly 2020-04 '9Sig 는 1번' | 뒤 제3자 '2번 · TQQQ 기준' — 셋 다 돈다. sub = 구독자 규칙이라는 것(미확인): 분기 TQQQ +100% 뒤 60/40 · 매수는 채권의 90% 까지 · 건너뛰기 끝나면 60/40
+const nineSig=({trig='SPY',skips=1,bond='AGG',sub=false,name})=>({name,syms:['TQQQ',bond,trig].filter((x,i,a)=>a.indexOf(x)===i),
+  syn:{TQQQ:'SYNTQQQ',AGG:'SYNAGG',BIL:'SYNBIL',SPY:'SYNSPY'},
+  deposit:c=>{ c.st.nc=(c.st.nc||0)+c.depAmt; return {[bond]:1}; },
+  decide:c=>{ const pT=H.px(c,'TQQQ'), tp=H.px(c,trig);
+    if(c.first){ c.st.nc=0; c.st.hist=[]; c.st.left=0; c.st.ql=0; c.st.armOK=true; c.st.base=.6*c.total; c.st.lastT=pT; return {TQQQ:.6,[bond]:.4}; }
+    if(!c.newQuarter) return null;
+    const stock=c.pos.TQQQ*pT, total=c.total; let tgt=c.st.base*1.09+.5*c.st.nc; c.st.nc=0;
+    const mx=c.st.hist.length?Math.max(...c.st.hist.slice(-8)):null, down=mx!=null&&tp<=.7*mx; c.st.hist.push(tp);
+    if(!down) c.st.armOK=true;
+    if(c.st.left<=0&&down&&c.st.armOK){ c.st.left=skips; c.st.ql=8; c.st.armOK=false; }
+    const qRet=c.st.lastT?pT/c.st.lastT-1:0; c.st.lastT=pT;
+    if(sub&&c.st.left<=0&&qRet>=1){ c.st.base=.6*total; return {TQQQ:.6,[bond]:.4}; }
+    let newStock;
+    if(stock>tgt){ if(c.st.left>0){ c.st.left--; newStock=stock; if(sub&&c.st.left===0){ c.st.ql=0; c.st.base=.6*total; return {TQQQ:.6,[bond]:.4}; } } else newStock=tgt; }
+    else { const avail=Math.max(0,total-stock)*(sub?.9:1); newStock=stock+Math.min(tgt-stock,avail); }
+    if(c.st.ql>0){ c.st.ql--; if(c.st.ql===0) c.st.left=0; }
+    c.st.base=newStock; const w=Math.max(0,Math.min(1,newStock/total)); return {TQQQ:w,[bond]:1-w}; }});
+S.NS1=nineSig({name:'9-Sig(SPY · 1번 건너뜀 · AGG)'}); S.NS4=nineSig({skips:4,name:'9-Sig(책 · SPY · 4번)'}); S.NS2T=nineSig({trig:'TQQQ',skips:2,name:'9-Sig(TQQQ 기준 · 2번)'});
+S.NS1B=nineSig({bond:'BIL',name:'9-Sig(SPY · 1번 · 단기국채)'}); S.NS1X=nineSig({sub:true,name:'9-Sig(+구독자 규칙 · 미확인)'});
+// ── 아기티큐 200일선(FMKorea · TQQQ 자기 200일선) — 2024-09-28 판: 위로 뚫으면 TQQQ 100% · 아래로 뚫으면 BIL 100% · 선보다 10% 이상 비싸면 'TQQQ 10% · BIL 90% 매수' · 10% 안으로 오면 BIL → TQQQ
+//    '과열'이 보유분에도 걸리는지 글에 없다 → b = 새로 사는 돈(진입·입금)에만(2025 판과 같은 뜻) · a = 글자 그대로 보유분도 10/90
+const agi24=lit=>({name:'아기티큐 2024'+(lit?' (과열=보유분도)':' (과열=새 돈만)'),syms:['TQQQ','BIL'],syn:{TQQQ:'SYNTQQQ',BIL:'SYNBIL'},
+  deposit:c=>{ const m=H.sma(c,'TQQQ',200), x=H.px(c,'TQQQ'); if(m==null||x<m) return {BIL:1}; return x>m*1.1?{TQQQ:.1,BIL:.9}:{TQQQ:1}; },
+  decide:c=>{ const m=H.sma(c,'TQQQ',200), x=H.px(c,'TQQQ'); if(m==null) return null; const above=x>=m, hot=x>m*1.1;
+    if(!above) return once(c,'z','off',{BIL:1});
+    if(lit) return once(c,'z',hot?'hot':'on',hot?{TQQQ:.1,BIL:.9}:{TQQQ:1});
+    if(c.st.z==='off'||c.st.z==null){ c.st.z=hot?'part':'on'; return hot?{TQQQ:.1,BIL:.9}:{TQQQ:1}; }
+    if(c.st.z==='part'&&!hot){ c.st.z='on'; const t=c.pos.TQQQ*x/c.total; return {TQQQ:1}; }
+    if(!hot&&c.pos.BIL>0&&c.st.z==='on'){ return {TQQQ:1}; }   // 입금으로 생긴 BIL 을 10% 안으로 오면 TQQQ 로
+    return null; }});
+S.AGI24=agi24(false); S.AGI24a=agi24(true);
+// 2025-10-02 '[Official]' 판: 200일선 아래 = 전부 팔고 SGOV(대용 BIL) 100% · 선 ~ +5% = SGOV → TQQQ · 새 돈 TQQQ · SPLG(대용 SPY) 는 그대로 · +5% 위 = TQQQ 그대로 · 새 돈 SPLG
+//    진입은 이틀 연속 선 위(해석 B: 구간과 무관 — +5% 구간은 새 돈의 행선지) · core = 익절·손절 없음('최소 원칙') · full = 단계 익절(평단 +10% · +25% · +50% 에 각 보유 10% · 평단의 2·3·4…배마다 남은 것 50% → SPLG) + 평단 −5% 손절(미리 걸어 둔 매도 → 당일 저가로 체결 · SPLG 도 팔고 SGOV · 다시 들어가려면 선 아래로 한 번 내려갔다 이틀 위 — 해석)
+const agi25=full=>({name:'아기티큐 2025'+(full?' (익절·손절)':' (구간만)'),syms:['TQQQ','SPY','BIL'],syn:{TQQQ:'SYNTQQQ',SPY:'SYNSPY',BIL:'SYNBIL'},
+  intraday:full?(d=>{ const q=d.pos.TQQQ; if(!(q>0)) return []; const a=d.avg('TQQQ'), b=d.bar('TQQQ'), st=d.st, out=[];
+      const stop=a*.95; if(b.l<=stop){ st.stopped=true; st.needCross=true; return [{s:'TQQQ',q:-q,px:Math.min(b.o,stop)}]; }
+      let left=q; const lv=[[1.10,'t10'],[1.25,'t25'],[1.50,'t50']];
+      for(const [k,f] of lv){ if(!st[f]&&b.h>=a*k){ st[f]=true; const n=Math.floor(q*.1); if(n>0){ out.push({s:'TQQQ',q:-n,px:Math.max(b.o,a*k)}); left-=n; } } }
+      let mul=st.mul||2; while(b.h>=a*mul&&left>1){ const n=Math.floor(left*.5); out.push({s:'TQQQ',q:-n,px:Math.max(b.o,a*mul)}); left-=n; mul++; } st.mul=mul;
+      return out; }):null,
+  deposit:c=>{ const m=H.sma(c,'TQQQ',200), x=H.px(c,'TQQQ'); if(m==null||x<m||!(c.pos.TQQQ>0)) return {BIL:1}; return x>m*1.05?{SPY:1}:{TQQQ:1}; },
+  decide:c=>{ const m=H.sma(c,'TQQQ',200), x=H.px(c,'TQQQ'); if(m==null) return null; const st=c.st;
+    st.ab2=x>=m?(st.ab1?true:false):false; st.ab1=x>=m;
+    const val=s=>c.pos[s]*H.px(c,s), tot=c.total;
+    if(x<m){ st.needCross=false; for(const f of ['t10','t25','t50','mul']) delete st[f]; if(c.pos.TQQQ>0||c.pos.SPY>0||st.stopped){ st.stopped=false; return {BIL:1}; } return c.first?{BIL:1}:null; }
+    if(st.stopped){ st.stopped=false; return {BIL:1}; }                                   // 손절 날 SPLG 도 정리
+    if(full&&c.cash>1&&c.pos.TQQQ>0&&!st.needCross){ const w={TQQQ:val('TQQQ')/tot,SPY:(val('SPY')+c.cash)/tot,BIL:val('BIL')/tot}; return w; }   // 익절 현금 → SPLG
+    if(st.needCross) return null;
+    // 진입 = 이틀 연속 선 위(구간과 무관 · 해석 B) — 글자 그대로 '선 ~ +5% 에서만 SGOV → TQQQ' 로 읽으면 2020-03 매도 뒤 2023-02 에야 다시 사 원문의 연 25% 주장과 맞지 않는다(11-12 확인)
+    if(!(c.pos.TQQQ>0)){ if(st.ab2){ for(const f of ['t10','t25','t50','mul']) delete st[f]; return {TQQQ:(tot-val('SPY'))/tot,SPY:val('SPY')/tot}; } return c.first?{BIL:1}:null; }
+    if(x<=m*1.05&&c.pos.BIL>0) return {TQQQ:(val('TQQQ')+val('BIL')+c.cash)/tot,SPY:val('SPY')/tot};   // 구간 안: SGOV → TQQQ
+    return null; }});
+S.AGI25c=agi25(false); S.AGI25=agi25(true);
+// ── 가속 듀얼 모멘텀(Engineered Portfolio 2018 · 국내 '가속 듀얼모멘텀'): 1+3+6개월 수익 합이 SPY·SCZ 중 높은 쪽이 > 0 이면 그것 · 아니면 TLT · 월간
+S.ADM={name:'가속 듀얼 모멘텀',syms:['SPY','SCZ','TLT'],decide:c=>{ if(!c.newMonth) return null; const sc=s=>{ const r=[1,3,6].map(m=>H.ret(c,s,m)); return r.some(x=>x==null)?null:r[0]+r[1]+r[2]; };
+  const a=sc('SPY'), b=sc('SCZ'); if(a==null||b==null) return null; const [k,v]=a>=b?['SPY',a]:['SCZ',b]; return v>0?{[k]:1}:{TLT:1}; }};
+// ── Faber GTAA5(2007 · 2013 개정): SPY EFA IEF VNQ DBC 20% 씩 — 달 끝 값이 10개월 평균 위일 때만 · 아래면 그 몫 T-bill(BIL) · 월간
+S.GTAA={name:'Faber GTAA 5',syms:['SPY','EFA','IEF','VNQ','DBC','BIL'],decide:c=>{ if(!c.newMonth) return null; const W={BIL:0};
+  for(const s of ['SPY','EFA','IEF','VNQ','DBC']){ const e=H.monthEnds(c,s,10); if(!e) return null; const on=e[0]>e.reduce((a,b)=>a+b,0)/10; if(on) W[s]=.2; else W.BIL+=.2; } return W; }};
 module.exports={S,m13612,smaRel,avg4};

@@ -9,11 +9,11 @@ const DD=path.join(__dirname,'..','data'); const FEE_RATE=.001;
 const fee=(q,p)=>{ const g=Math.max(0,q*p); return g<=10?0:Math.floor(g*FEE_RATE*100)/100; };
 const CACHE={};
 function load(sym){ if(CACHE[sym]) return CACHE[sym]; const j=JSON.parse(fs.readFileSync(path.join(DD,sym+'.json'),'utf8'));
-  const raw={}, adj={}, div={}; (j.ohlcTrade||j.ohlc||j.series).forEach(x=>{ if(+x.close>0) raw[x.date]=+x.close; }); (j.series||[]).forEach(x=>{ if(+x.close>0) adj[x.date]=+x.close; });
+  const raw={}, adj={}, div={}, op={}, hi={}, lo={}; (j.ohlcTrade||j.ohlc||j.series).forEach(x=>{ if(+x.close>0){ raw[x.date]=+x.close; op[x.date]=+x.open>0?+x.open:+x.close; hi[x.date]=+x.high>0?+x.high:+x.close; lo[x.date]=+x.low>0?+x.low:+x.close; } }); (j.series||[]).forEach(x=>{ if(+x.close>0) adj[x.date]=+x.close; });
   (j.dividends||[]).forEach(x=>{ if(+x.amount>0) div[x.date]=(div[x.date]||0)+(+x.amount); });
   for(const d in raw) if(!(d in adj)) adj[d]=raw[d];
   const dates=Object.keys(raw).sort(), idx={}; dates.forEach((d,k)=>idx[d]=k);
-  return CACHE[sym]={raw,adj,div,dates,idx}; }
+  return CACHE[sym]={raw,adj,div,dates,idx,op,hi,lo}; }
 // 공통 달력: 모든 종목에 체결가가 있는 날(교집합)
 function calendar(syms){ let ds=null; for(const s of syms){ const k=new Set(Object.keys(load(s).raw)); ds=ds?ds.filter(d=>k.has(d)):[...k]; } return ds.sort(); }
 // opt.rescale: 창마다 종목 가격을 시작일 100 으로 곱해 맞춘다(합성 자료의 정수 주 왜곡 줄이기 · 비율 신호는 그대로) · opt.map: 전략 종목 이름 → 자료 이름(합성 대체)
@@ -21,7 +21,7 @@ function run(strat,{start,end,principal,monthly=0,rescale=false,map=null}){
   const syms=strat.syms, src=s=>(map&&map[s])||s, cal=calendar(syms.map(src)); const i0=cal.findIndex(d=>d>=start); if(i0<0) return null;
   const iEnd=(()=>{ let k=cal.length-1; while(k>=0&&cal[k]>end) k--; return k; })(); if(iEnd<=i0) return null;
   const D={}; for(const s of syms){ const X=load(src(s)); const f=rescale?100/X.raw[cal[i0]]:1;
-    if(f===1) D[s]=X; else { const raw={},adj={},div={}; for(const d in X.raw) raw[d]=X.raw[d]*f; for(const d in X.adj) adj[d]=X.adj[d]*f; for(const d in X.div) div[d]=X.div[d]*f; D[s]={raw,adj,div,dates:X.dates,idx:X.idx}; } }
+    if(f===1) D[s]=X; else { const sc=m=>{ const o={}; for(const d in m) o[d]=m[d]*f; return o; }; D[s]={raw:sc(X.raw),adj:sc(X.adj),div:sc(X.div),op:sc(X.op),hi:sc(X.hi),lo:sc(X.lo),dates:X.dates,idx:X.idx}; } }
   const C=s=>D[s].raw, A=s=>D[s].adj;
   MAP=map; const pos={}; syms.forEach(s=>pos[s]=0); let cash=principal, inflow=principal, nTr=0, lastW=null; const st={}; const nav=[]; const A_=acc();
   const book={}; syms.forEach(s=>book[s]={q:0,c:0}); let realized=0; let lastMonth=cal[i0].slice(0,7);
@@ -30,8 +30,12 @@ function run(strat,{start,end,principal,monthly=0,rescale=false,map=null}){
     if(month!==lastMonth){ if(monthly>0){ cash+=monthly; inflow+=monthly; dep=true; } lastMonth=month; }
     for(const s of syms){ const dv=D[s].div[date]; if(dv&&pos[s]>0) cash+=pos[s]*dv; }
     const p=i-1, sig=cal[p];
+    // 예약 주문(손절·익절 지정가 · 전일까지 정한 값 · 당일 고가·저가로 체결 — 앱 원칙 '예약주문은 당일 고가·저가 체결이 정상') — 종가 판단보다 먼저
+    if(strat.intraday&&i>i0){ const od=strat.intraday({i,p,date,sig,pos,st,avg:s=>book[s].q>0?book[s].c/book[s].q:null,bar:s=>({o:D[s].op[date],h:D[s].hi[date],l:D[s].lo[date],c:C(s)[date]})})||[];
+      for(const o of od){ const s=o.s, px=o.px; if(!(px>0)) continue; if(o.q<0){ const q=Math.min(-o.q,pos[s]); if(q<=0) continue; const f=fee(q,px); cash+=q*px-f; const b=book[s], avg=b.c/b.q; realized+=q*px-f-avg*q; b.q-=q; b.c-=avg*q; if(b.q<=0){b.q=0;b.c=0;} pos[s]-=q; nTr++; trades.push([date,s,-q,px,'예약']); }
+        else if(o.q>0){ const mx=Math.floor(cash/(px*(1+FEE_RATE))), q=Math.min(o.q,mx); if(q>0){ const f=fee(q,px); cash-=q*px+f; book[s].q+=q; book[s].c+=q*px+f; pos[s]+=q; nTr++; trades.push([date,s,q,px,'예약']); } } } }
     const totalP=syms.reduce((t,s)=>t+pos[s]*C(s)[sig],0)+cash;
-    const ctx={i,p,date,sig,cal,c:(s,k)=>C(s)[cal[k]],a:(s,k)=>A(s)[cal[k]],pos,cash,total:totalP,first:i===i0,dep,
+    const ctx={i,p,date,sig,cal,c:(s,k)=>C(s)[cal[k]],a:(s,k)=>A(s)[cal[k]],pos,cash,total:totalP,first:i===i0,dep,depAmt:dep?monthly:0,avg:s=>book[s].q>0?book[s].c/book[s].q:null,
       newMonth:i===i0||cal[p].slice(0,7)!==month, newQuarter:i===i0||(cal[p].slice(0,7)!==month&&['01','04','07','10'].includes(month.slice(5,7))), st};
     let W=strat.decide(ctx); let buyOnly=false;
     if(!W&&dep){ W=strat.deposit?strat.deposit(ctx):lastW; buyOnly=true; }
