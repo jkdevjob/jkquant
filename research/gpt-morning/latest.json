@@ -1,62 +1,59 @@
 {
   "schema": 1,
-  "date": "2026-11-12",
-  "preparedAt": "2026-11-11T23:11:25.871339+00:00",
-  "mainSha": "c14edab5a1a04239e6852c4bcad8cf543612e655",
-  "summary": "지연 연구: G6 종가 낙폭−1% 후보는 당일·익일 모두 양의 기대값/PF·시간순·전향 관문을 통과하지 못해 현 메인 유지. 원본15장부/811건 정합성 차이0. 오늘·매일 개선의 종가 동등화 PR661은 최종 보완·최신 main 검사 뒤 반영한다.",
+  "date": "2026-11-13",
+  "preparedAt": "2026-11-12T23:00:13.355573+00:00",
+  "mainSha": "1ab0fe92a2c2b243f32939d050fda8a4d885199d",
+  "summary": "투자 후보 선별 G7을 결과 전 등록하고 고정 엔진·비용·시간순 검증 진행. 어제 데이−1.25%, BTC+0.56377%, SOXL 한국오늘+2.20%; 종가 당일1건 체결 누락으로 전체 미확정. 8칸 보고 먼저 지연 제출, G7 결과·원본 누락·발송 영수증은 별도 불변 증거로 추가한다.",
   "sections": [
     {
       "tab": "today",
       "status": "collecting",
-      "findings": "11/12 실제 작성의 지연 제출이며 07:50 시한 미준수. 11/11 확정: 시초가4건 −0.6958%, 데이3건 −1.25%, BTC 무매매0%. SOXL은 미국11/11=한국11/12 1건 +2.20% 확정. 종가 당일은 신호3개 중 진입·청산1개만 저장되어 일손익 미확정, 익일은 11/12 개장 전 미청산3개. 밤 연구43079461826 성공·원본사본15일, PR661 미병합으로 운영 오늘 카드는 아직4종이다. 어제 보고42970460389 성공: ok:true·duplicate:true·queued/dueAt:null, 이미 보낸 준비 미완료 보고의 push1/1·Telegram sent 영수증만 확인했고 실제 기기 수신은 미확인.",
-      "nextTest": "보고 제출 뒤 PR661의 최신 main 전체 검사와 허용 시간대 배포를 마친다. 11/13 아침 새 원본 관측·오늘6종·야간 종가 두 유형의 통합 순위와 실제 08:00 영수증을 확인한다.",
+      "findings": "07:53 KST 호출로 07:50 시한 이후 실제 시각에 제출. 오늘 카드6종 확인. 11/12 시초가 무매매0%, 데이3건 −1.25%, BTC1건 +0.56377% 확정. SOXL 미국11/12=한국11/13 +2.20%. 종가 당일3신호 중2청산·1진입 누락으로 미확정, 익일3개 개장 대기. 장부 조회 시간초과와 종가 이력 API400을 누락으로 기록했다. 어제 제출43117889181은 ok:true·duplicate:true·queued/dueAt:null, push1/1·telegram sent 영수증만 확인. G7은 사전등록60b9cd34 후 계산 중이며 결과는 별도 불변 파일로 제출한다.",
+      "nextTest": "오늘 G7의 비용 후 기대값·시간순·추가비용과 채택/탈락을 결과 파일로 확정한다. 제출 워크플로·08:00 발송은 실제 로그 확인 후 별도 증거로 기록한다.",
       "evidence": [
         "https://jkquant.pages.dev/api/scalping-daily-results",
-        "https://github.com/jkdevjob/jkquant/actions/runs/43079461826",
-        "https://github.com/jkdevjob/jkquant/actions/runs/42970460389",
-        "https://github.com/jkdevjob/jkquant/pull/661"
+        "https://github.com/jkdevjob/jkquant/commit/60b9cd34",
+        "https://github.com/jkdevjob/jkquant/actions/runs/43117889181"
       ]
     },
     {
       "tab": "opening",
-      "status": "blocked",
-      "findings": "11/11 운영 메인 combo_pb05_e0920 4건·2승2패, 순손익 합 −2.7830% /4 = −0.6958% 확정. 기본 이력113건·평균 −0.5243%·MDD −10.9686%는 기준전략 모집단. 1위61건·87.04점·7증거일은 이미 적용된 메인이다. 활성10/퇴출누적3, 마지막 생성11/9이며 오늘 새 수동승격 없음. 수집43045076937 실패는 11/12 00:11 KST에 아직 열리지 않은 당일 분봉100종목이 모두0이라 보존 후 종료2; 11/11 운영 장부 소실로 해석하지 않았다. G2 원본 signalId 대조는 미완료.",
-      "nextTest": "11/12 마감 뒤 당일 수집을 확인한다. 개장 전 재실행은 유효 분봉이 없어 하지 않으며 장중 백필을 피한다. G2에서 동일 버전·종목·날짜의 운영/기준/대결 모집단을 고정한다.",
+      "status": "collecting",
+      "findings": "11/12 운영 메인 combo_pb05_e0920은 무매매0% 확정. 그림자61건·87.04점·7세션1위인 현 메인 유지. 활성10개, entry_by_0915가 점수36.8·검증우위−0.084% 반복 부진으로 퇴출되고 combo_pb07_amt15 보충, 퇴출누적4개. 새 생성은11/9 기존 기록이며 임의 신규후보/수동승격 없음. G2 원본 signalId·모집단 대조는 미완료.",
+      "nextTest": "11/13 원본 감시·실시간/기준 모집단과 strategyVersion을 보존하고 G2의11/5 신호ID 불일치를 고정 원본으로 대조한다.",
       "evidence": [
         "https://jkquant.pages.dev/api/scalping-daily-results",
-        "https://jkquant.pages.dev/api/scalping-history?strategy=opening",
         "https://jkquant.pages.dev/api/scalping-shadow-ranking",
-        "https://github.com/jkdevjob/jkquant/actions/runs/43045076937"
+        "https://jkquant.pages.dev/api/scalping-history?strategy=opening"
       ]
     },
     {
       "tab": "daytrading",
-      "status": "no_change",
-      "findings": "11/11 기준전략3건·0승3패, 비용 후 합 −3.75% / 고정3슬롯 = −1.25% 확정. 누적81건·평균 −0.4835%·MDD −12.9896%. session_min_2는85건·100점이지만 검토/승격 불가, 서로 다른 증거일5/7. 활성10·퇴출누적1·11/10 전향 생성 후보는 기존 기록으로 보존했다. 점수만으로 규칙을 바꾸지 않았다.",
-      "nextTest": "G3 최소상승2%의 등록 후 독립 전향 구간과 PF1.10·양의 기대값·위험·추가비용·7세션 관문을 대조한다. 실패·미선정 후보와 당시 조건/버전을 그대로 누적한다.",
+      "status": "collecting",
+      "findings": "11/12 baseline3건 0승3패, 비용 후 합−3.75%/고정3슬롯=−1.25% 확정. 공개 조회에 장부 시간초과 경고가 있어 완전성은 별도 확인한다. 오늘 순위1위는 vwap_slope_0.2(82건·100점·1/7)로 바뀌었고 활성10·퇴출누적1개다. G7: 기존 session_min_2를 baseline과 같은 엔진·0.25%비용·3슬롯·20/5시간순으로 비교하도록 결과 전 커밋/푸시했다. 계산 미완료이므로 수익성/채택을 주장하지 않는다.",
+      "nextTest": "G7 결과를 별도 파일에 확정하고 양의 기대값·PF1.10·추가0.10%p·평가60%양수·등록후20일20건 관문을 확인한다. 실패면 메인을 유지한다.",
       "evidence": [
         "https://jkquant.pages.dev/api/scalping-daily-results",
-        "https://jkquant.pages.dev/api/scalping-history?strategy=daytrading",
-        "https://jkquant.pages.dev/api/scalping-shadow-ranking"
+        "https://jkquant.pages.dev/api/scalping-shadow-ranking",
+        "https://github.com/jkdevjob/jkquant/blob/60b9cd34/docs/research/G7-20261113-preregistration.md"
       ]
     },
     {
       "tab": "crypto",
-      "status": "blocked",
-      "findings": "11/11 실시간 원본은 btc_midnight_orb_v2@baseline 무매매0% 확정. 누적 이력은 Durable DB 조회 중단으로 degraded이며 대체자료는11/10까지23건·평균 −0.2098%·MDD −5.3910%; 이를11/11 누적 확정으로 부르지 않았다. 밤 순위도11/10까지 hold_30m 208건·76.12점·1/7, 활성10·퇴출누적2·마지막 생성11/7. G1 부분 스냅샷 반영 뒤 연구 종결일은11/8에서11/10으로 진전했지만 오늘 최신 세션 반영은 별도다. 거래량1.5배 기각 유지.",
-      "nextTest": "11/11 완료 KST 세션의 UTC 경계 원본·수집 시각을 확인하고 실제 무매매 장부와 대조한다. DB 시간초과와 연구 갱신 지연을 나눠 기록하고, 미확인 날짜를0%로 메우지 않는다.",
+      "status": "collecting",
+      "findings": "11/12 운영1건 비용 후+0.56377% 확정. 이력 DB 시간초과로 조회는11/10까지, 그림자 순위는11/11까지라 운영 최신 성과와 분리한다. hold_30m 208건·76.12점·2/7세션, 활성10·퇴출2개. G1 거래량1.5는 음의 기대값으로 기각한 결론 유지.",
+      "nextTest": "수집/밤 연구 실행을 확인하고 최신 완료일과 원본288봉·시간대 누락 원인을 순서대로 대조한다. 불완전 날짜를0%로 만들지 않는다.",
       "evidence": [
         "https://jkquant.pages.dev/api/scalping-daily-results",
         "https://jkquant.pages.dev/api/scalping-history?strategy=crypto",
-        "https://jkquant.pages.dev/api/scalping-shadow-ranking",
-        "https://github.com/jkdevjob/jkquant/actions/runs/42973126608"
+        "https://jkquant.pages.dev/api/scalping-shadow-ranking"
       ]
     },
     {
       "tab": "soxl",
       "status": "collecting",
-      "findings": "미국11/11 세션=한국11/12 1건 +2.20% 확정, 전날 한국11/11(미국11/10)은 무매매0%. 이력13건·승률30.77%·평균 −0.2923%·MDD −9.3979%의 날짜는 미국 거래일이다. 그림자 순위는 아직미국11/10까지 stop_0.8_tp_1.6 11건·68.83점·2/7, 활성10·퇴출0·마지막 생성11/9. 이력의 최신1건을 이전 밤 순위에 중복해서 더하지 않았다. G4 40완료 세션의 시간순 연구는 아직 대기다.",
-      "nextTest": "미국11/11 장부가 다음 밤 순위에 들어오는지 확인한다. G4는40완료 세션 확보 후 첫30/다음10을 고정하고 1만$/10만$·추가비용을 함께 비교한다.",
+      "findings": "미국11/12(한국11/13) baseline1건+2.20% 확정. 이력 누적14건·거래평균−0.11429%·최대낙폭−9.39787%는 실제 조회 범위다. 순위는 미국11/11까지, entry_by_1030 4건·55.26점·1/7이며 활성10·퇴출0개. 단일 익절로 투자 가능 판정을 내리지 않았다. G4의40완료일·30/10검증은 미완료다.",
+      "nextTest": "G4는 공통 완료40일을 확보한 뒤 학습30/평가10으로 고정 비교한다. 미국/한국 날짜를 분리하고 원금1만/10만 달러 및 추가비용을 병기한다.",
       "evidence": [
         "https://jkquant.pages.dev/api/scalping-daily-results",
         "https://jkquant.pages.dev/api/scalping-history?strategy=soxl",
@@ -66,33 +63,30 @@
     {
       "tab": "closing30",
       "status": "blocked",
-      "findings": "G6를3a43ec2e에 결과 전 등록, 최신 봇31c81e56의15장부/811건을 같은 엔진으로 대조해 차이0·원본 변화0. 낙폭−1% 후보의 공통 완전 날짜: 당일5일/15건 일평균 −0.3299%(기준 −0.2774%), PF0.240; 익일12일/36건 −0.9579%(−0.9983%), PF0.556·MDD −17.99%·최악일 −13.30%. 추가비용도 음수, 20학습+5평가 구간0·등록 후 전향0이라 양쪽 메인 유지. 11/11 당일 신호3중 체결1만 저장·2누락, 익일3건 개장 전 미정산. 감시1506/1522/1540와 Worker·밤 사본은 존재, 미체결2건의 시세 원인은 미확인. 운영 공통 순위/후보퇴출·보충·새생성은 PR661 미반영으로 아직 미연결이며, 예전 schema1 순위를 새 관문 통과로 세지 않았다.",
-      "nextTest": "PR661 반영 뒤 day/overnight 활성10·퇴출/보충·새후보·7증거세션·3슬롯·사후5/10/20/30분·버전 보존을 매일 확인한다. 미정산을0으로 만들지 않고 G6 독립 전향20매매일/20건 이전에는 채택하지 않는다.",
+      "findings": "오늘 카드·야간 순위 모두 종가 당일/익일2종 표시 확인. 11/12 당일3신호·2청산·진입누락1개, 확정 부분합1.14945%/3=0.38315%이며 전체 수익률은null이다. 익일3개는11/13 개장 전 미청산. 당일 flat 30건·86.75점·1/7, 익일 up_1 39건·100점·2/7, 각각활성10·퇴출0. sourceComplete/전향 등 관문 미달로 현 메인 유지. 원본50관측·고정조건·사후경로를 다음 단계에서 대조한다. 이력 API는두종류 모두400으로 별도 경로 확인 필요.",
+      "nextTest": "11/13 원본에서 cutoff50관측·전체 변형/당시조건·신호/체결/정산·5/10/20/30분·MFE/MAE와 누락을 점검한다. 새 원본을 덮어쓰지 않고 G6는20일/20건 전향을 계속 쌓는다.",
       "evidence": [
-        "https://github.com/jkdevjob/jkquant/commit/3a43ec2e374d5e09356e5bef22f10f78d988175e",
-        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-11-12-research.json",
-        "https://github.com/jkdevjob/jkquant/tree/31c81e56c577f19db5d12164cb68ec542a014a01/data/closing30",
-        "https://github.com/jkdevjob/jkquant/pull/661"
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-shadow-ranking",
+        "https://github.com/jkdevjob/jkquant/blob/cebd1b97ba65932934702738848d9e053956e739/data/closing30/2026-11-12.json"
       ]
     },
     {
       "tab": "tenbagger",
       "status": "collecting",
-      "findings": "API 갱신11/12 02:59 KST, 기준일은11/10이다. 전향 실험 v1.0.0·등록246·진입216·새등록15·청산군119. 조사2286종목 중 최신 세션 누락183·미거래29를0수익으로 바꾸지 않았다. 가격 조건 세 가설과 두 청산군을 그대로 유지했다. 실제 체결·포트폴리오 수익률이 아니며1260거래일 목표는 미성숙이다.",
-      "nextTest": "11/11 종가의 수집 시차·누락183종목과20/60/120/252/756/1260일별 성숙/보류 수를 확인한다. 성공·실패·청산군과 미선정 원본을 모두 보존한다.",
+      "findings": "온라인 API 기준일2026-11-11·규칙1.0.0의 등록후 관찰 실험. 최신 생성은11/13 아침이나 기준가격은11/11로 시차가 있다. 가격 조건 가설이며20/60/120/252/756/1260일 결과, 실체결·배당·재무 공시시점·시장충격은 미검증이다. 누락/정지/폐지는 보류로 유지하고 단타 3슬롯 성과와 합치지 않는다.",
+      "nextTest": "다음 원천 갱신에서 기준일·후보/미선정·조건해시·관찰 만기/보류를 확인하고11/13 첫 금요일 기록을 실제 원천으로 대조한다.",
       "evidence": [
-        "https://jkquant.pages.dev/api/tenbagger-research",
-        "https://github.com/jkdevjob/jkquant/actions/runs/43073345019"
+        "https://jkquant.pages.dev/api/tenbagger-research"
       ]
     },
     {
       "tab": "duel",
-      "status": "blocked",
-      "findings": "어제502였던 공개 대결 API는 오늘200으로 조회됐다. 하지만11/11 시초가 GPT 대결 +0.7354%는 운영 메인 −0.6958%와 모집단/메인 차이를 먼저 풀어야 한다. 데이11/11 −1.25%는 일일 결과와 일치. BTC11/11·SOXL미국11/11는 GPT 자료누락으로 대결 확정 대기이며 실제 일일0%/+2.20%를 임의로 넣지 않았다. 데이 비용은 GPT0.25%·클로드0.15%여서 동일 비용 순위로 부르지 않는다. 클로드 자료는 읽기만 했다.",
-      "nextTest": "G2에서 시초가 원본 버전·signalId와 대결 기준을 먼저 맞춘다. 같은 날짜·자금·비용·동일 모집단을 확보하기 전 종합 우열을 단정하지 않는다.",
+      "status": "collecting",
+      "findings": "공개 대결 API HTTP200·ok:true 확인. 지피티·클로드 실시간 모집단/버전·비용·슬롯과 확정 대기를 대조하기 전 우열을 확정하지 않았다. 클로드 원본과 전략 파일은 읽기 전용으로 유지했다.",
+      "nextTest": "오늘 대결의 어제 날짜별 확정/미확정과 원본 분모를 대조하고 G2 신호ID 대조와 연결한다. 수익률 정의가 다르면 합산하지 않는다.",
       "evidence": [
-        "https://jkquant.pages.dev/api/scalping-duel",
-        "https://jkquant.pages.dev/api/scalping-daily-results"
+        "https://jkquant.pages.dev/api/scalping-duel"
       ]
     }
   ]
