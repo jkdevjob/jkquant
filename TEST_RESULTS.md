@@ -1,5 +1,14 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-13 · 연구(클로드) 아침 루틴 — R44 · 사용자 고정 적용 확인
+
+- 11/12 결과(`latest.json` 06:37 · `review/2026-11-12.json` · `claude-live/2026-11-12.json`): ① 매매 없음(no_expected_gap_down) · ② 매매 없음(15:21 −2.70%) · ⑤ 15:00 4,200 → 종가 4,300 +2.29%(worker 확정 · VTS 꺼짐) · ④ 매매 없음 · ③ BTC · ETH 쉼(업비트 하루 11/13 09:00 확정).
+- 사용자 고정 적용: `main-config.json` 사본에 crypto g_coin_ma15_s99_hi7_eth · 2026-11-13 · by=user:pin 이 한 번 쌓임 · latest main.crypto.today = g_coin_ma15_s99_hi7_eth · ③ · ② status pinned.
+- ④ 자동 승격: g_soxl_norsi_ibs0.6_dn1_ma50_d3 · 2026-11-14 부터(7일 연속 1위 · R37 점검 통과).
+- R44: `r44_public_invest.py` — Double 7s QQQ 2010~ 182번 · 평균 +0.53% · t 2.8 · 연 +5.5% · MDD −14.8% · 비용 +0.2% 평균 +0.13% · 부트스트랩 −20% 확률 0.2% · 정수주 −2.4%p → 판정표 통과. SPY · SOXL · RSI2 TQQQ 보류. 백테스트 수치이며 실거래 확인 아님.
+- ① 후보 분봉 11/11: `data/minute-opening/2026-11-11.json` 생김(예약 지연 뒤 수집됨).
+- 11/13 리포트: `claude-research-report.yml` 실행 43317345316 — 08:00 발송 결과는 다음 기록에서 확인.
+
 ## 2026-11-12 · 연구(클로드) 사용자 고정 · claude v2.29.0
 
 - `python -m unittest test_opening_gapdown.ArenaTest`: 15 tests OK(고정 4개 포함).
