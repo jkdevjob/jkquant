@@ -57,6 +57,33 @@
       }
     },
     {
+      "tab": "crypto",
+      "version": "g_coin_ma15_s99_hi7_eth",
+      "name": "평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만",
+      "rule": "어제 종가 > 15일 평균인 날, 최근 7일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · ETH 만 · 탭 자금 80%",
+      "params": {
+        "ma": 15,
+        "stopPct": 99,
+        "level": "prevhigh",
+        "k": 0.5,
+        "hiN": 7,
+        "lastEntryHour": null,
+        "tabSize": 0.8,
+        "markets": [
+          "KRW-ETH"
+        ]
+      },
+      "effectiveFrom": "2026-11-13",
+      "promotedAt": "2026-11-12T07:05:46.686643+00:00",
+      "prevVersion": "g_coin_ma5_s10_hi_both",
+      "by": "user:pin",
+      "basis": {
+        "labGeneratedAt": "2026-11-12T16:05:46.686651+09:00",
+        "rank": null,
+        "promotion": "사용자 고정(2026-11-12) — 사용자 11/12 '1번 예전메인으로 돌리고 매매 가산점을 점검해야겠네' — 11/11 자동 승격은 매매 횟수 가산점으로 뒤집힌 순위(R6)"
+      }
+    },
+    {
       "tab": "daytrading",
       "version": "g_etf_th4.75",
       "name": "−4.75% 이하 마감",
