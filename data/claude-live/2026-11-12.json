@@ -1,0 +1,200 @@
+{
+  "ok": true,
+  "date": "2026-11-12",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-11-12",
+    "mainVariant": "baseline",
+    "createdAt": "2026-11-12T06:40:40.778Z",
+    "updatedAt": "2026-11-12T06:40:43.452Z",
+    "scans": [
+      {
+        "id": "close:close30",
+        "scheduledTime": 1794465636406,
+        "capturedAt": "2026-11-12T06:40:43.339Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1794465636406,
+        "capturedAt": "2026-11-12T06:40:42.555Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1794465636406,
+        "capturedAt": "2026-11-12T06:40:40.665Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      }
+    ],
+    "events": [
+      {
+        "id": "close:close30",
+        "date": "2026-11-12",
+        "capturedAt": "2026-11-12T06:40:43.339Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "close30",
+          "name": "⑤ 종가 30분 · 코스닥150 레버리지 장 마감 30분 반등(실험)",
+          "date": "2026-11-12",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "15:00",
+              "entryPrice": 4200,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 4300,
+              "qty": 0,
+              "notional": 0,
+              "pnlPct": 2.291428571428563,
+              "pnlAmount": 0,
+              "reason": "종가 청산",
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "15:00:39",
+                "price": 4200,
+                "sofarPct": -5.41,
+                "th": 0,
+                "version": "close30_dip_v1",
+                "reason": "price_vs_prev_close<0%"
+              }
+            }
+          ],
+          "open": [],
+          "watched": 1,
+          "exits": 1,
+          "wins": 1,
+          "losses": 0,
+          "winRate": 100,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": 2.291428571428563,
+          "candidates": 1,
+          "entries": 1,
+          "strategyVersion": "close30_dip_v1",
+          "params": {
+            "code": "233740",
+            "th": 0
+          },
+          "note": "15:00 전일 대비 -5.41% → 매수"
+        }
+      },
+      {
+        "id": "close:daytrading",
+        "date": "2026-11-12",
+        "capturedAt": "2026-11-12T06:40:42.555Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-11-12",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_etf_th4.75",
+          "params": {
+            "code": "233740",
+            "th": -4.75,
+            "max24h": true
+          },
+          "note": "15:21 예상 전일 대비 -2.70% (기준 −4.75% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-11-12",
+        "capturedAt": "2026-11-12T06:40:40.665Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-11-12",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "measure": [],
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "watched": 19,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "exitRule": "exit10",
+          "note": "매매 없음 — no_expected_gap_down"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
