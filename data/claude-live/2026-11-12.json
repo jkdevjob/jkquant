@@ -6,13 +6,28 @@
     "date": "2026-11-12",
     "mainVariant": "baseline",
     "createdAt": "2026-11-12T06:40:40.778Z",
-    "updatedAt": "2026-11-12T15:05:39.201Z",
+    "updatedAt": "2026-11-12T21:05:40.549Z",
     "scans": [
       {
         "id": "close:crypto",
         "scheduledTime": 1794495936406,
         "capturedAt": "2026-11-12T15:05:39.093Z",
         "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
+      {
+        "id": "close:soxl",
+        "scheduledTime": 1794517536406,
+        "capturedAt": "2026-11-12T21:05:40.451Z",
+        "targetHm": 605,
         "lagMs": 0,
         "partial": false,
         "okShards": 1,
@@ -96,6 +111,35 @@
           "status": "closed",
           "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
           "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "close:soxl",
+        "date": "2026-11-12",
+        "capturedAt": "2026-11-12T21:05:40.451Z",
+        "targetHm": 605,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "soxl",
+          "name": "④ SOXL · 단기 과매도 반등(최대 5일)",
+          "date": "2026-11-12",
+          "currency": "USD",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "strategyVersion": "g_soxl_r2lt30_ibs0.6_ma100_d5",
+          "note": "신호 없음(RSI(2) 99 ≥ 30 · 100일 평균 아래) — 쉼",
+          "capitalNote": "모의 자금 $10,000"
         }
       },
       {
