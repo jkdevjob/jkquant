@@ -11,6 +11,7 @@
 - 감사: `AUDIT-SELF-REVIEW.md` 2026-11-12 장.
 - 연구: R39 ④ SOXL 투자 판정(사전 등록 03acb0d6 · 스크립트 `scripts/research/r39_soxl_invest.py` 5dded441) — 보류 5/7. `CLAUDE-SCALPING-RESEARCH.md` 맨 위에 '투자 후보' 표 신설.
 - 매일 루틴 지시문(예약 작업): 연구 목표를 '투자할 전략 찾기'로 — 투자 판정표 7항목 · 11/19 첫 투자안(사용자 11/12).
+- 연구: R40 ③ 코인 투자 판정(사전 등록 9733f28b · `scripts/research/r40_coin_invest.py`) — 보류 6/7. R41 ③ + ④ 계좌 비중(사전 등록 cc8f99d6 · `scripts/research/r41_portfolio.py`) — ③ 60% + ④ 40% 기준 통과 → '투자안 초안'(사용자 결정 대기).
 
 ## 2026-11-12 · 모의 목록 표를 세션마다 저장 — 새로 만들었거나 바뀐 세션만 계산 · 듀얼가드 상태줄 '숨긴 예전 세션' 글자 뺌 · v3.136.0 (듀얼가드 v2.14.1)
 
