@@ -1,7 +1,7 @@
 // GET /api/closing30-monitor?op=scan&kind=day|overnight, or ?op=prices&stage=...
 // Internal scheduled paper-only signal/pricing. No broker orders and no post-cutoff input in signal selection.
 import {minuteVolume} from "./_opening.js";
-import {closeHm,snapAt,closeFeature,chooseClosingSignals} from "./_closing30.js";
+import {closeHm,snapAt,closeFeature,chooseClosingSignals,closingResearchVariants} from "./_closing30.js";
 const JSON_H={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const respond=(obj,status=200)=>new Response(JSON.stringify(obj),{status,headers:JSON_H});
 function permitted(req,env){const key=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"");return !!key&&req.headers.get("x-monitor-key")===key;}
@@ -81,16 +81,31 @@ export async function onRequestGet({request,env}){
   if(!symbols.length)return respond({ok:false,error:"universe empty"},503);
   const {output,errors}=op==="scan"?await distributed(request,symbols,"feature-batch",{kind,date}):await batch(symbols,async stock=>{
    const q=await quote(origin,stock.code),day=sessionDaily(q.daily,date);
-   if(!day)return null;
+   if(!day)return {...stock,feature:null,reason:'session daily reference missing'};
    const prior=q.minutes.filter(x=>String(x.t).startsWith(date));
    const f=closeFeature(prior,day.prevClose,cutoff);
-   return f?{code:stock.code,name:stock.name||stock.code,feature:f}:null;
+   return {code:stock.code,name:stock.name||stock.code,feature:f?{...f,gapPct:(day.open/day.prevClose-1)*100}:null,
+     reason:f?'completed cutoff snapshot':'insufficient completed minute observations'};
   },2);
   if(op==="feature-batch")return respond({ok:true,features:output,errors});
   // Universe source unavailable/partial: record degraded and never imply no-trade.
-  const partial=errors.length>0||output.length===0;
-  return respond({ok:true,date,kind,partial,errors,scanned:symbols.length,valid:output.length,
-   signals:chooseClosingSignals(output,kind,3),cutoff,source:"minute snapshot; no post-cutoff data"});
+  const partial=errors.length>0||output.length!==symbols.length||output.some(x=>!x.feature);
+  let lifecycle={},researchWarning=null;
+  try{
+   const j=await getJson('https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json');
+   lifecycle=j[kind==='day'?'closing30':'closing_bet']?.lifecycle||{};
+  }catch(e){researchWarning='candidate lifecycle unavailable: '+String(e.message||e);}
+  const mainVariant=u.searchParams.get('mainVariant')||'baseline';
+  let mainParams={};try{mainParams=JSON.parse(u.searchParams.get('mainParams')||'{}');}catch{}
+  const pool=closingResearchVariants(lifecycle,date);
+  if(!pool.some(x=>x.id===mainVariant)&&/^cf_g\d{4,}$/.test(mainVariant)){
+   pool.push(...closingResearchVariants({generatedPool:[{name:mainVariant,params:mainParams,createdAfter:'2000-01-01'}]},date).filter(x=>x.id===mainVariant));
+  }
+  const active=new Set(['baseline',mainVariant,...(lifecycle.activeCandidates||pool.filter(x=>x.id!=='baseline').slice(0,10).map(x=>x.id))]);
+  const variants=pool.filter(x=>active.has(x.id));
+  if(!variants.some(x=>x.id===mainVariant))return respond({ok:false,error:'locked paper main parameters unavailable'},503);
+  return respond({ok:true,date,kind,partial,errors,researchWarning,scanned:symbols.length,valid:output.filter(x=>x.feature).length,
+   signals:chooseClosingSignals(output,kind,3,variants),observations:output,variants,cutoff,source:"minute snapshot; no post-cutoff data"});
  }
  if(op==="prices"||op==="price-batch"){
   const stage=u.searchParams.get("stage");
@@ -115,7 +130,8 @@ export async function onRequestGet({request,env}){
     price=day.close;source="15:30 종가 단일가 (15:40 이후)";
    }
    const priceHm=stage==="day_entry"?"15:06":stage==="overnight_exit"?"09:00":"15:30";
-   return price>0?{code,price,source,priceAt:date+"T"+priceHm+":00+09:00"}:null;
+   return price>0?{code,price,source,priceAt:date+"T"+priceHm+":00+09:00",
+     outcomeBars:['day_exit','overnight_entry'].includes(stage)?q.minutes.filter(x=>String(x.t).startsWith(date)&&closeHm(x.t)>(stage==='day_exit'?1504:1520)&&closeHm(x.t)<=1530):[]}:null;
   },2);
   return respond({ok:true,date,stage,prices:output,errors,missing:codes.length-output.length});
  }

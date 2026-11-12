@@ -1,6 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import { krxDay } from "../../../functions/api/_krx_calendar.js";   // KRX 휴장일 — 주문 경로(Pages)와 같은 목록
 import {marketDayCache} from "../../../functions/api/_market-day-cache.js";
+import {closingResearchVariants} from "../../../functions/api/_closing30.js";
+import {readSignalLedger,writeSignalLedger} from "../../../functions/api/_closing30-storage.js";
+import {closingOutcomes} from "../../../functions/api/_closing30-outcomes.js";
 import {defaultPaperSettings,changePaperSettings} from "../../../functions/api/_paper-trading.js";
 import {openingOrderRefs,openingExecutionResult} from "../../../functions/api/_opening-execution.js";
 import {researchBroker} from "../../../functions/api/_research-broker.js";
@@ -195,6 +198,20 @@ export class OpeningSignalStore extends DurableObject {
       const config=(await this.ctx.storage.get("strategyConfig"))||{schema:1,strategy:"opening",selectedVariant:"baseline",updatedAt:null,updatedBy:null};
       return json({ok:true,config});
     }
+    if(u.pathname==='/closing-config'){
+      const strategy=u.searchParams.get('strategy');
+      if(!['closing30','closing_bet'].includes(strategy))return json({ok:false,error:'invalid closing strategy'},400);
+      const key='paperConfig:'+strategy,prior=await this.ctx.storage.get(key)||{strategy,selectedVariant:'baseline',history:[],paperOnly:true};
+      if(request.method==='GET')return json({ok:true,config:prior});
+      if(request.method!=='POST')return json({ok:false,error:'method not allowed'},405);
+      const b=await request.json(),variant=String(b.variant||''),from=String(b.effectiveFrom||'');
+      const generated={generatedPool:[{name:variant,params:b.params,createdAfter:'2000-01-01'}]};
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!closingResearchVariants(generated,'2099-01-01').some(x=>x.id===variant))return json({ok:false,error:'invalid closing paper config'},400);
+      const config={strategy,selectedVariant:variant,params:b.params||null,previousVariant:String(b.previousVariant||prior.selectedVariant||'baseline'),
+        previousParams:(b.previousVariant===prior.previousVariant?prior.previousParams:prior.params)||null,effectiveFrom:from,updatedAt:new Date().toISOString(),source:b.source||'owner-baseline-revert',paperOnly:true,
+        history:[...prior.history,{variant,effectiveFrom:from,at:new Date().toISOString(),source:b.source}].slice(-50)};
+      await this.ctx.storage.put(key,config);return json({ok:true,config});
+    }
     if(request.method==="POST"&&u.pathname==="/config"){
       const b=await request.json();
       const variant=String(b&&b.variant||"");
@@ -221,7 +238,7 @@ export class OpeningSignalStore extends DurableObject {
       return json({ok:true,dates});
     }
     if(request.method==="GET"&&u.pathname==="/ledger"){
-      const ledger=await this.ctx.storage.get("ledger");
+      const ledger=await readSignalLedger(this.ctx.storage);
       return json({ok:true,ledger:ledger||null});
     }
     if(request.method==='POST'&&u.pathname==='/execution'){
@@ -249,10 +266,16 @@ export class OpeningSignalStore extends DurableObject {
         return json({ok:false,error:"invalid ledger append"},400);
       }
       const nowIso=new Date().toISOString();
-      const ledger=(await this.ctx.storage.get("ledger"))||{
+      const ledger=(await readSignalLedger(this.ctx.storage))||{
         schema:LEDGER_SCHEMA,date:String(b.date),mainVariant:String(b.mainVariant||"baseline"),createdAt:nowIso,updatedAt:nowIso,scans:[],events:[]
       };
       if(!ledger.mainVariant)ledger.mainVariant=String(b.mainVariant||"baseline");
+      if(b.closingResearch===true)ledger.closingResearch=true;
+      if(b.paperKind&&['day','overnight'].includes(b.paperKind)){
+        ledger.closingResearch=true;
+        ledger.paperMainVariants=ledger.paperMainVariants||{};
+        if(!ledger.paperMainVariants[b.paperKind])ledger.paperMainVariants[b.paperKind]=String(b.paperMainVariant||'baseline');
+      }
       if(String(ledger.date)!==String(b.date))return json({ok:false,error:"ledger date mismatch"},409);
 
       const scanId=String(b.scanId||[b.scheduledTime,b.targetHm,b.partial?"partial":"full"].join(":"));
@@ -268,6 +291,7 @@ export class OpeningSignalStore extends DurableObject {
           failed:Array.isArray(b.failed)?b.failed:[],
           quoteErrors:+b.quoteErrors||0,
           eventCount:b.events.length
+          ,kind:b.paperKind||null,observations:b.observations||null,variants:b.variants||null
         });
       }
 
@@ -280,7 +304,7 @@ export class OpeningSignalStore extends DurableObject {
       ledger.events.sort((a,b)=>(+a.targetHm||0)-(+b.targetHm||0)||String(a.id).localeCompare(String(b.id)));
       ledger.scans.sort((a,b)=>(+a.targetHm||0)-(+b.targetHm||0)||String(a.id).localeCompare(String(b.id)));
       ledger.updatedAt=nowIso;
-      await this.ctx.storage.put("ledger",ledger);
+      await writeSignalLedger(this.ctx.storage,ledger);
       return json({ok:true,added,total:ledger.events.length,scans:ledger.scans.length});
     }
     return json({ok:false,error:"not found"},404);
@@ -311,7 +335,7 @@ async function mainVariantForDate(env,date){
 }
 async function appendLedger(env,payload,kind=""){
   const r=await store(env,payload.date,kind).fetch("https://opening-signal.internal/append",{
-    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(kind==='closing30'?{...payload,closingResearch:true}:payload)
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("signal store HTTP "+r.status));
@@ -673,12 +697,26 @@ export function kisTokenRecord(b,now=Date.now()){
 const CLOSING_STAGE_MAP={closing_day_signal:1506,closing_day_entry:1507,
   closing_overnight_signal:1522,closing_settle:1540,closing_overnight_exit:906};
 const closingKey=(kind,variant,code,stage)=>[kind,variant,code,stage].join(":");
+async function closingPaperConfig(env,strategy,method='GET',body=null){
+  const r=await store(env,'__closing_paper_config__').fetch('https://opening-signal.internal/closing-config?strategy='+strategy,
+    {method,headers:{'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+  const j=await r.json();if(!r.ok||!j.ok)throw Error(j.error||'closing paper config unavailable');return j.config;
+}
+async function closingPaperMain(env,date,kind){
+  const ledger=await readLedger(env,date,'closing30'),target=kind==='day'?1506:1522;
+  if((ledger?.scans||[]).some(x=>+x.targetHm===target))return {variant:ledger.paperMainVariants?.[kind]||'baseline',
+    params:(ledger.scans.find(x=>+x.targetHm===target)?.variants||[]).find(x=>x.id===ledger.paperMainVariants?.[kind])||null};
+  const cfg=await closingPaperConfig(env,kind==='day'?'closing30':'closing_bet');
+  const pending=cfg.effectiveFrom&&date<cfg.effectiveFrom;
+  return {variant:pending?cfg.previousVariant||'baseline':cfg.selectedVariant||'baseline',params:pending?cfg.previousParams:cfg.params};
+}
 function closingEvent(date,kind,variant,code,stage,price=null,meta={}){
   return {id:[date,kind,variant,code,stage].join(":"),date,kind,variant,code,
     name:meta.name||code,stage,targetHm:meta.targetHm||null,
     createdAt:new Date().toISOString(),price:price??null,
     source:meta.source||"paper-only",pnl:meta.pnl??null,
     signal:meta.signal||null,strategyParams:meta.strategyParams||null,priceAt:meta.priceAt||null,decisionVersion:"closing30_v1",
+    strategyVersion:meta.strategyVersion||'close30-paper-v1',paperMainVariant:meta.paperMainVariant||'baseline',outcomes:meta.outcomes||null,
     orderStatus:"paper_only_no_broker_order",state:stage==="signal"?"candidate":"paper_filled"};
 }
 async function closingApi(env,params){
@@ -690,7 +728,7 @@ async function closingApi(env,params){
   return j;
 }
 async function closingAlert(env,date,e,stage){
-  if(e.variant!=="baseline")return;
+  if(e.variant!==(e.paperMainVariant||"baseline"))return;
   const lines=[
     e.name+" ("+e.code+") · "+(e.kind==="day"?"종가 30분 당일청산":"종가 베팅 · 익일 시가청산"),
     "모의체결 "+Number(e.price).toLocaleString("ko-KR")+"원 · "+e.source,
@@ -721,12 +759,15 @@ async function runClosing30(route,controller,env){
   const today=kstParts(scheduled).date,hm=kstHm(scheduled);
   if(route==="closing_day_signal"||route==="closing_overnight_signal"){
     const kind=route==="closing_day_signal"?"day":"overnight";
-    const j=await closingApi(env,{op:"scan",kind,date:today});
+    const locked=await closingPaperMain(env,today,kind);
+    const j=await closingApi(env,{op:"scan",kind,date:today,mainVariant:locked.variant,mainParams:JSON.stringify(locked.params||{})});
     const events=(j.signals||[]).map(x=>closingEvent(today,kind,x.variant,x.code,"signal",null,{
-      name:x.name,source:"15시 완성봉 관측",targetHm:hm,signal:x.signal,strategyParams:x.strategyParams}));
+      name:x.name,source:"15시 완성봉 관측",targetHm:hm,signal:x.signal,strategyParams:x.strategyParams,
+      strategyVersion:x.strategyVersion,paperMainVariant:locked.variant}));
     const receipt=await appendLedger(env,{date:today,mainVariant:"baseline",scanId:"closing:"+today+":"+route,
       scheduledTime:scheduled,capturedAt:new Date(now).toISOString(),targetHm:hm,
-      partial:!!j.partial,failed:j.errors||[],okShards:1,quoteErrors:j.errors?.length||0,events},"closing30");
+      partial:!!j.partial,failed:j.errors||[],okShards:1,quoteErrors:j.errors?.length||0,events,
+      paperKind:kind,paperMainVariant:locked.variant,observations:j.observations,variants:j.variants},"closing30");
     console.log(JSON.stringify({type:route,date:today,signals:events.length,recorded:receipt.added,partial:j.partial}));
     return;
   }
@@ -748,14 +789,23 @@ async function runClosing30(route,controller,env){
     const events=fresh.flatMap(x=>{
       const q=prices.get(x.code);
       if(!q||!(q.price>0))return [];
-      let pnl=null;
+      let pnl=null,outcomes=null;
       if(destStage==="sell"){
         const bought=closingEntries(ledger,kind,"buy").find(y=>y.variant===x.variant&&y.code===x.code);
         if(!bought||!(bought.price>0))return [];
         pnl=(q.price/bought.price-1)*100-.23; // 보수적인 왕복 비용 0.23% 연구가정
+        outcomes=closingOutcomes(bought.price,bought.priceAt||bought.createdAt,q.price,q.priceAt,q.outcomeBars||[]);
+        if(bought.outcomes?.signal)outcomes.signal={...bought.outcomes.signal,finalNetPnlPct:pnl};
+      }
+      if(x.signal?.signalPrice>0&&q.outcomeBars?.length){
+        const signal=closingOutcomes(x.signal.signalPrice,x.signal.signalTime,q.price,q.priceAt,q.outcomeBars);
+        signal.finalNetPnlPct=pnl;signal.basis='signal-time price';
+        if(!outcomes)outcomes={signal,finalNetPnlPct:null,basis:'signal-only labels; holding unsettled'};
+        else outcomes.signal=signal;
       }
       return [closingEvent(prior,kind,x.variant,x.code,destStage,q.price,{
-        name:x.name,source:q.source,targetHm:hm,pnl,signal:x.signal||null,strategyParams:x.strategyParams,priceAt:q.priceAt})];
+        name:x.name,source:q.source,targetHm:hm,pnl,signal:x.signal||null,strategyParams:x.strategyParams,priceAt:q.priceAt,
+        strategyVersion:x.strategyVersion,paperMainVariant:ledger.paperMainVariants?.[kind]||'baseline',outcomes})];
     });
     if(!events.length){console.warn(JSON.stringify({type:"closing30_fill_unavailable",route,kind,date:prior,missing:quotes.missing}));continue;}
     // 09:06 경과 후 이전 거래일 장부에 다음날 시가 청산 결과를 소급 첨부하되 주문은 소급하지 않는다.
@@ -764,7 +814,7 @@ async function runClosing30(route,controller,env){
       capturedAt:new Date(now).toISOString(),targetHm:hm,
       partial:false,okShards:1,quoteErrors:quotes.errors?.length||0,events},"closing30");
     // 이미 처리된 id는 저장소에서 중복 배제. 재호출 시 동일 event를 다시 알리지 않는다.
-    if(saved.added>0)for(const e of events.filter(e=>e.variant==="baseline"))await closingAlert(env,prior,e,destStage);
+    if(saved.added>0)for(const e of events)await closingAlert(env,prior,e,destStage);
     if(route==='closing_day_entry')await runClosingBroker(env,'day','buy',today);
     console.log(JSON.stringify({type:route,kind,date:prior,events:events.length,stored:saved.added,priceErrors:quotes.errors?.length||0}));
   }
@@ -1239,6 +1289,13 @@ export default {
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const date=u.searchParams.get("date")||kstParts().date;
       try{return json({ok:true,date,ledger:await readLedger(env,date)});}
+      catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
+    if(u.pathname==='/closing-config'){
+      if(!authorized(request,env))return json({ok:false,error:'unauthorized'},401);
+      const strategy=u.searchParams.get('strategy');
+      if(!['closing30','closing_bet'].includes(strategy))return json({ok:false,error:'invalid closing strategy'},400);
+      try{return json({ok:true,config:await closingPaperConfig(env,strategy,request.method,request.method==='POST'?await request.json():null)});}
       catch(e){return json({ok:false,error:String(e.message||e)},500);}
     }
     if(u.pathname==="/config"){

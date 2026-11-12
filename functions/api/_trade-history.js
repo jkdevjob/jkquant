@@ -1,6 +1,7 @@
 // Shared read models for original paper evidence and separately labelled research.
 // Never infer a fill, a zero return or a parameter snapshot from a later strategy.
 import {openingBroker,openingOrderRefs,mergeOpeningBroker} from './_opening-execution.js';
+import {flattenClosingLedger,closingMain} from './_closing30-ledger.js';
 export const TRADE_STRATEGIES={opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL',closing30:'종가 30분',closing_bet:'개별 종목 종가 베팅',tenbagger:'텐배거 연구'};
 export const variantValid=v=>/^[a-zA-Z0-9_.-]{1,80}$/.test(String(v||''));
 export const number=v=>v==null||v===''||!Number.isFinite(+v)?null:+v;
@@ -74,19 +75,13 @@ export function openingRecords(ledger){
 }
 export function closingRecords(ledger){
   if(!ledger?.date)return [];
-  const by=new Map();
-  for(const e of (ledger.events||[]).slice().sort((a,b)=>String(a.createdAt||'').localeCompare(String(b.createdAt||'')))){
-    if(!['day','overnight'].includes(e.kind)||!e.variant||!e.code)continue;
-    const strategy=e.kind==='day'?'closing30':'closing_bet',key=[strategy,ledger.date,e.variant,e.code].join(':');
-    let r=by.get(key);
-    if(!r){r=record(strategy,{id:key,date:ledger.date,code:e.code,name:e.name,strategyVersion:e.decisionVersion,
-      strategyParams:e.strategyParams||e.signal?.strategyParams,capturedAt:e.createdAt,entryTime:null,status:'signal'},e.variant,'server-paper','baseline');by.set(key,r);}
-    r.events.push({id:e.id,stage:e.stage,at:e.createdAt,source:e.source,price:number(e.price)});
-    if(e.stage==='signal'){r.signalTime=e.signal?.cutoffTime||e.createdAt;r.evidence=e.signal||null;}
-    if(e.stage==='buy'){r.entryTime=e.priceAt||e.createdAt;r.entryPrice=number(e.price);r.status=r.entryPrice>0?'open':'unverified';}
-    if(e.stage==='sell'){r.exitTime=e.priceAt||e.createdAt;r.exitPrice=number(e.price);r.pnl=number(e.pnl);r.reason=e.kind==='day'?'closing_price':'next_session_open';r.status=r.entryPrice>0&&r.exitPrice>0&&r.pnl!==null?'closed':'unverified';}
-  }
-  return [...by.values()];
+  return flattenClosingLedger(ledger).map(x=>{
+    const strategy=x.kind==='day'?'closing30':'closing_bet',events=(ledger.events||[]).filter(e=>e.kind===x.kind&&e.variant===x.variant&&e.code===x.code);
+    return record(strategy,{...x,id:[strategy,ledger.date,x.variant,x.code].join(':'),
+      capturedAt:events[0]?.createdAt||ledger.updatedAt,evidence:{...(x.signal||{}),outcomes:x.outcomes},
+      reason:x.kind==='day'?'closing_price':'next_session_open',
+      events:events.map(e=>({id:e.id,stage:e.stage,at:e.createdAt,source:e.source,price:number(e.price)}))},x.variant,'server-paper',closingMain(ledger,x.kind));
+  });
 }
 export function tenbaggerRecords(data){
   return (data?.records||[]).flatMap(x=>Object.entries(x.arms||{}).map(([arm,a])=>record('tenbagger',{

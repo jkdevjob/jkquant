@@ -721,7 +721,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.135.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.136.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1849,7 +1849,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.135.0</b> · 2026-11-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.136.0</b> · 2026-11-12</div>
   </footer>
 </div>
 
@@ -8368,12 +8368,13 @@ async function paperBreathe(){
    필요한 종목을 먼저 병렬로 받아 _memoQuote 캐시에 채우면 10개 세션이어도 네트워크 대기는
    '종목 수의 합'이 아니라 '가장 늦은 한 종목' 수준으로 줄어든다. */
 async function paperPrefetchQuotes(opt){
-  const px=new Set(), dv=new Set(), live=!!(opt&&opt.live), plans=[];   // live: 포트폴리오 — 포트폴리오에 넣는 실전 세션(기록 있는 것)만
+  const px=new Set(), dv=new Set(), live=!!(opt&&opt.live), only=(opt&&opt.only)||null, plans=[];   // live: 포트폴리오 — 포트폴리오에 넣는 실전 세션(기록 있는 것)만
   for(const [tab] of PAPER_TABS){
     if(!live&&tab==='asap') continue;   // ASAP 모의 뺌(PAPER_TABS 주석)
     const box=S&&S[tab], ss=(box&&box.sessions)||[];
     for(const sess of ss){
       if(!sess||(live?(!pfWanted(sess)||!(sess.hist||[]).length):!sess.paper))continue;
+      if(only&&!only.has(paperRowKey(tab,sess)))continue;   // 모의 목록 — 이번에 다시 셀 세션 것만 받는다(세션마다 저장 · paperViewPlan)
       if(live&&tab==='plan')continue;   // 듀얼가드 실전 장부는 포트폴리오가 따로(pfPlanRows · 엔진 ledgerCalc)
       if(tab==='plan'){ if(!planPaperRetired(sess)) plans.push(sess); continue; }   // 듀얼가드 — 저장본이 오늘 것이 아닌 세션이 있을 때만 시세(아래)
       const st=sess.settings||{}, sym=String(st.ticker||'').toUpperCase();
@@ -8396,11 +8397,12 @@ async function paperPrefetchQuotes(opt){
    지금 기록 그대로 같은 계산(paperStat)으로 평가만 한다. 시세 칸 되돌리기·저장 막기는 모의와 똑같이 탄다. */
 async function paperFillAll(opt){
   if(_paperFilling) return null;
-  const live=!!(opt&&opt.live), pick=x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper);
+  /* opt.only(모의 목록 · 2026-11-12): 'tab:id' 모음 — 그 세션만 다시 센다(나머지 줄은 지난 결과를 그대로 쓴다 · paperViewPlan). 안 주면 전부 */
+  const live=!!(opt&&opt.live), only=(opt&&opt.only)||null, pick=t=>x=>!!x&&(live?(pfWanted(x)&&(x.hist||[]).length>0):!!x.paper)&&(!only||only.has(paperRowKey(t,x)));
   _paperFilling=true;
   _paperSliceAt=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
   const prevTab=S.activeTab; const rows=[];
-  const _total=PAPER_TABS.reduce((a,[t])=>a+((live&&t==='plan')||(!live&&t==='asap')?0:((S[t]&&S[t].sessions)||[]).filter(pick).length),0); let _done=0;
+  const _total=PAPER_TABS.reduce((a,[t])=>a+((live&&t==='plan')||(!live&&t==='asap')?0:((S[t]&&S[t].sessions)||[]).filter(pick(t)).length),0); let _done=0;
   const _tick=()=>{ _done++; if(typeof paperLoadingProgress==='function') paperLoadingProgress(_done,_total); };
   /* 시세도 원래대로 돌려놔야 한다. lastQuote 는 전략마다 한 칸뿐인데 아래에서
      세션마다 갈아끼우므로, 다 돌고 나면 마지막 세션 종목이 남는다.
@@ -8420,7 +8422,7 @@ async function paperFillAll(opt){
       if(live&&tab==='plan') continue;          // 듀얼가드 실전 장부는 포트폴리오가 따로 센다(pfPlanRows)
       if(!live&&tab==='asap') continue;         // ASAP 모의 뺌(PAPER_TABS 주석)
       const box=S[tab]; if(!box||!box.sessions) continue;
-      const targets=box.sessions.filter(pick);
+      const targets=box.sessions.filter(pick(tab));
       if(!targets.length) continue;
       const prevAct=box.active;
       for(const sess of targets){
@@ -8540,32 +8542,71 @@ function paperFxFallback(){
 /* 모의 성과 빠른 보기 캐시
    - 거래 장부/설정은 Firebase stateV2가 정본이고, 이 캐시는 그 정본에서 계산한 '표 결과'만 저장한다.
    - 평소 모의 페이지를 열 때는 저장된 표를 즉시 보여 주고 전 전략 재생을 다시 하지 않는다.
-   - 하루가 바뀌었거나 원장이 바뀌면 백그라운드에서 한 번만 증분 갱신한다.
-   - 전체 적용/오늘 갱신은 force=true로 명시적으로 다시 계산한다. */
-const PAPER_VIEW_CACHE_VER=8;   // 8: 밸류리밸런싱 모의 첫 매수 누락(듀얼가드 화면 합치기) 복구 — 지난 목록 값을 다시 센다 (2026-11-10) · 7: ASAP 모의 줄 빼기 — ASAP 줄이 든 지난 목록을 재계산 실패 대체 화면에도 안 씀 (2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?") · 6: 줄 설명·이름에 남은 옛 글자(띄어 쓴 이름 · '5년'이 붙은 설명)를 다시 셈 (2026-11-09 사용자: 이름은 '듀얼가드' · '5년' 지움) · 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
+   - 세션마다 따로 판단한다(2026-11-12 사용자: "표를 세션마다 따로 저장하면 새로 만든 세션 하나만 계산" → "어 해").
+     줄마다 그 세션의 서명(paperRowSig — 설정·기록·시작일·이름·원화 원금 기준)과 기준 종가일(paperRowCut)을 keys 에 남긴다.
+     둘 다 그대로이고 시세가 있던 줄은 다시 쓰고, 새로 만들었거나 바뀐 세션 · 새 종가가 확정된 세션 · 시세 못 받은 줄만 다시 센다.
+     하루가 바뀌는 때 = 자정이 아니라 그 통화 거래소의 종가 확정(장 마감 + 20분 · 미국 종목은 한국 시각 아침 5:20/6:20 · 국내 오후 3:50).
+     주말엔 새 봉이 없어 다시 세지 않는다.
+   - 전체 적용/오늘 갱신은 force=true로 전부 다시 계산한다. */
+const PAPER_VIEW_CACHE_VER=9;   // 9: 세션마다 저장(keys) — 한 덩어리 서명이던 옛 판은 한 번 전부 다시 센다 (2026-11-12) · 8: 밸류리밸런싱 모의 첫 매수 누락(듀얼가드 화면 합치기) 복구 — 지난 목록 값을 다시 센다 (2026-11-10) · 7: ASAP 모의 줄 빼기 — ASAP 줄이 든 지난 목록을 재계산 실패 대체 화면에도 안 씀 (2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?") · 6: 줄 설명·이름에 남은 옛 글자(띄어 쓴 이름 · '5년'이 붙은 설명)를 다시 셈 (2026-11-09 사용자: 이름은 '듀얼가드' · '5년' 지움) · 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
 let _paperViewRefreshPromise=null;
 function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
-function paperViewSig(){
-  const src=paperSessions().map(([tab,x])=>[tab,x&&x.id,x&&x.simStart,x&&x.paperFxRate,x&&x.settings,x&&x.hist]);
-  const s=JSON.stringify(src); let h=2166136261;
-  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
-  return (h>>>0).toString(16);
+function paperRowKey(tab,x){ return String(tab)+':'+String((x&&x.id)||''); }
+/* 줄 서명 — 그 세션 줄을 만든 재료. 원화 투입(paperInflowWon)이 공통 원금·시작일을 보고, 듀얼가드 줄은 엔진 판(ENGINE_FP)을 따른다 */
+function paperRowSig(tab,x){
+  const pc=(S&&S.paperCommon)||{}, E=(typeof window!=='undefined'&&window.JKPlanSessionEngine)||null;
+  const s=JSON.stringify([tab,x&&x.id,x&&x.name,x&&x.simStart,x&&x.simStartMode,x&&x.paperFxRate,x&&x.settings,x&&x.hist,pc.simStart,pc.capitalWon,pc.addWon,
+    tab==='plan'?((E&&E.ENGINE_FP)||''):'']);
+  let h=2166136261; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0).toString(16)+'.'+s.length.toString(16);
 }
+/* 기준 종가일 — 그 세션 통화의 확정 상한(simCutoff)을 주말이면 금요일로 당긴다(듀얼가드 엔진 paperRunFresh 와 같은 생각 · 엔진 파일을 고치면 ENGINE_FP 가 바뀌어 저장본을 전부 다시 재생하므로 여기 따로 둔다).
+   공휴일은 모른다 — 그날은 한 번 더 셀 뿐이다. */
+function paperRowCut(tab,x){
+  const t=new Date(simCutoff(tab==='plan'?'usd':curOf(x&&x.settings))+'T00:00:00Z');
+  while(t.getUTCDay()===0||t.getUTCDay()===6) t.setUTCDate(t.getUTCDate()-1);
+  return t.toISOString().slice(0,10);
+}
+/* 다시 셀 세션 고르기 — 지난 결과에 그 세션 표지(서명 · 기준 종가일)가 그대로 있고 줄의 시세가 있으면 그 줄을 다시 쓴다(keep).
+   줄이 없던 세션(기록 0건 등)도 표지가 같으면 다시 세지 않는다(예전 한 덩어리 캐시와 같다). 지운 세션의 줄은 버린다. force 면 전부 센다. */
+function paperViewPlan(force){
+  const x=S&&S.paperViewCache, keep=[], only=new Set(), cuts={}, sigs={};
+  const ok=!force&&!!x&&+x.ver===PAPER_VIEW_CACHE_VER&&Array.isArray(x.rows)&&!!x.keys&&typeof x.keys==='object';
+  const byKey=new Map(); if(ok) x.rows.forEach(r=>{ if(r) byKey.set(paperRowKey(r.tab,r),r); });
+  for(const [tab,s] of paperSessions()){
+    const key=paperRowKey(tab,s), cut=paperRowCut(tab,s), sig=paperRowSig(tab,s), k=ok?x.keys[key]:null, r=byKey.get(key);
+    cuts[key]=cut; sigs[key]=sig;
+    if(k&&k.s===sig&&k.c===cut&&(!r||+r.price>0)){ if(r) keep.push(r); }
+    else only.add(key);
+  }
+  return {keep,only,cuts,sigs};
+}
+/* 계산을 마친 뒤 줄 표지 — 다시 센 세션은 지금 서명(재생이 모의 기록을 늘렸을 수 있다) · 다시 쓴 세션은 고를 때 서명.
+   기준 종가일은 고를 때 것(도는 사이 종가가 확정되면 다음에 다시 센다). 고른 뒤에 생긴 세션은 표지를 안 남긴다(다음에 센다). */
+function paperViewKeys(plan){
+  const k={};
+  for(const [tab,s] of paperSessions()){ const key=paperRowKey(tab,s); if(!plan||!plan.cuts||!(key in plan.cuts)) continue;
+    k[key]={s:plan.only.has(key)?paperRowSig(tab,s):plan.sigs[key], c:plan.cuts[key]}; }
+  return k;
+}
+/* 지금 그대로 보여도 되는 결과 — 다시 셀 세션이 하나라도 있으면 null(아래 갱신이 그 세션만 센다). 지운 세션 줄은 뺀다 */
 function paperViewCacheRead(){
   const x=S&&S.paperViewCache;
   if(!x||+x.ver!==PAPER_VIEW_CACHE_VER||!Array.isArray(x.rows))return null;
-  if(x.sig!==paperViewSig())return null;
-  return x;
+  const p=paperViewPlan(false);
+  if(p.only.size)return null;
+  return p.keep.length===x.rows.length?x:{...x,rows:p.keep};
 }
-function paperViewCacheWrite(rows){
+function paperViewCacheWrite(rows,keys){
   if(!S)return null;
-  const x={ver:PAPER_VIEW_CACHE_VER,day:paperKstDate(),at:Date.now(),sig:paperViewSig(),rows:JSON.parse(JSON.stringify(rows||[])),
+  const x={ver:PAPER_VIEW_CACHE_VER,day:paperKstDate(),at:Date.now(),keys:keys||{},rows:JSON.parse(JSON.stringify(rows||[])),
            fx:(typeof liveFX!=='undefined'&&+liveFX>0)?+liveFX:((S.paperViewCache&&+S.paperViewCache.fx>0)?+S.paperViewCache.fx:null)};
   S.paperViewCache=x; return x;
 }
-/* 시세를 못 받은 줄(price 0)이 섞인 결과는 '오늘 것'으로 굳히지 않는다. 예전엔 아침 한 번 실패하면
+/* 시세를 못 받은 줄(price 0)이 섞인 결과는 '오늘 것'으로 굳히지 않는다(그 줄은 paperViewPlan 이 다시 센다).
+   날짜는 여기서 보지 않는다 — 줄마다 기준 종가일(paperRowCut)을 paperViewCacheRead 가 본다(2026-11-12 세션마다 저장). 예전엔 아침 한 번 실패하면
    그 '시세 대기' 줄이 하루 종일 캐시에서 나왔다 — 화면은 '새로고침하면 재시도합니다'라고 했지만 재시도하지 않았다. */
-function paperViewCacheFresh(x){ return !!x&&x.day===paperKstDate()&&!(x.rows||[]).some(r=>!(+r.price>0)); }
+function paperViewCacheFresh(x){ return !!x&&!(x.rows||[]).some(r=>!(+r.price>0)); }
 /* 서명이 안 맞아도(원장이 그 뒤 바뀌었어도) 마지막 계산 결과 — 다시 계산하는 동안 첫 화면에만 쓴다 */
 function paperViewCacheLast(){
   const x=S&&S.paperViewCache;
@@ -8590,9 +8631,12 @@ async function refreshPaperView(force=false, onRows=null){
     if(force&&body)body.insertAdjacentHTML('afterbegin','<p class="note" id="paper_refresh_note" style="color:var(--vio)">🔄 오늘 기준으로 모의 결과를 갱신하고 있습니다…</p>');
     try{
       await loadFX();
-      const rows=await paperFillAll();
+      /* 세션마다 — 표지가 그대로인 줄은 다시 쓰고 나머지 세션만 센다(새로 만든 세션 하나면 그 하나만 · force 면 전부) */
+      const plan=paperViewPlan(force);
+      const got=plan.only.size?await paperFillAll({only:plan.only}):[];
+      const rows=got?plan.keep.concat(got):null;
       if(rows){
-        paperViewCacheWrite(rows);
+        paperViewCacheWrite(rows,paperViewKeys(plan));
         /* 표는 계산이 끝나면 바로 그린다. 클라우드 저장은 원장 문서 전체를 읽고 다시 쓰는 일이라
            느린 폰·망(iOS 는 long-polling)에선 수 초가 더 걸린다 — 예전엔 그걸 다 기다린 뒤에야
            '지난번 계산 결과 · 다시 계산하는 중' 을 걷었다. 저장은 아래에서 그대로 기다린다. */
@@ -8643,7 +8687,7 @@ let paperStaleNote=false;
 /* 첫 진입 '조회 중' 화면 — 목록 자리를 비우고 몇 번째 세션을 계산하는지 보인다 */
 function paperLoadingHtml(){
   return '<div id="paper_loading"><p class="lead">🔄 모의 결과를 조회 중입니다… <b id="paper_loading_n" style="color:var(--vio)"></b></p>'
-    +'<p class="note" style="color:var(--faint)">오늘 기준으로 모의 세션을 모두 다시 계산합니다 — 끝나면 목록이 바로 나옵니다.</p></div>';
+    +'<p class="note" style="color:var(--faint)">새로 만들었거나 바뀐 세션, 새 종가가 확정된 세션만 다시 계산합니다 — 끝나면 목록이 바로 나옵니다.</p></div>';
 }
 function paperLoadingProgress(done,total){ const n=$('paper_loading_n'); if(n) n.textContent=done+' / '+total+' 세션'; }
 /* 백그라운드 재계산이 실패했을 때 — '다시 계산하는 중' 이 영영 남지 않게 실패라고 바꿔 적는다 */

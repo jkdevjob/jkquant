@@ -93,8 +93,9 @@ async function check(S){
     const r1=run('x1'),r2=run('b'),r3=run('h10');
     t('C4 세션 목록 — 5년 기본만(a·b) · 폐지 5개는 숨김(지우지 않음)',r1.list==='a,b',r1.list);
     t('C4 폐지 세션이 선택돼 있었으면 현재 투자중으로(x1·h10 → 없음) · 기본 모의는 그대로(b)',r1.active===''&&r3.active===''&&r2.active==='b',JSON.stringify([r1.active,r2.active,r3.active]));
-    t('C5 칩에 폐지 세션 이름 없음 · 상태 줄에 "듀얼가드 v1.0" · 숨긴 수 5개 안내(운영 탭처럼 세션 이름 없이 전략 요약)',!/새 규칙 모의|공격형 모의|10년 세션|15년 세션|20년 세션/.test(r1.chips)&&/기본 운영/.test(r1.chips)&&/기본 모의/.test(r1.chips)
-      &&r1.state==='듀얼가드 v1.0 · 숨긴 예전 세션 5개'&&r2.state==='듀얼가드 v1.0 · 모의 2025-01-02~ · 숨긴 예전 세션 5개',r1.state+' | '+r2.state);
+    // 2026-11-12 사용자: "숨긴예전세션은 뭐길래 저기에 저렇게 보여주는거지" → "상태줄 글자만 뺍니다 · 5개는 DB에 그대로" — 숨긴 수는 적지 않는다(세션은 C4 처럼 숨김만)
+    t('C5 칩에 폐지 세션 이름 없음 · 상태 줄 = "듀얼가드 v1.0"(모의면 시작일) — 숨긴 세션 수는 안 적음(운영 탭처럼 세션 이름 없이 전략 요약)',!/새 규칙 모의|공격형 모의|10년 세션|15년 세션|20년 세션/.test(r1.chips)&&/기본 운영/.test(r1.chips)&&/기본 모의/.test(r1.chips)
+      &&r1.state==='듀얼가드 v1.0'&&r2.state==='듀얼가드 v1.0 · 모의 2025-01-02~'&&!/숨긴/.test(r1.state+r2.state),r1.state+' | '+r2.state);
   }
   t('C6 딥링크 — 5년 · 폐지 안 된 세션만 연다(운영 원장을 읽은 뒤 planApplySessionLink)',/if\(q&&\+q\.horizon===5&&!planRetired\(q\)\)\{/.test(fnOf(P,'function planApplySessionLink()'))&&/planApplySessionLink\(\);/.test(fnOf(P,'async function finishPlanOpen(user)')));
   t('C7 머리 카드 — 이름·판은 엔진 STRATEGY',/\$\("stageTitle"\)\.textContent=P\.name;renderPlanVersion\(\);/.test(fnOf(P,'function render()'))&&/if\(\$\('dgVer'\)\)\$\('dgVer'\)\.textContent=v;/.test(fnOf(P,'function renderPlanVersion()'))&&/id="stageTitle">듀얼가드<\/span><span class="dg-ver" id="dgVer">v1\.0<\/span>/.test(P));
@@ -138,7 +139,7 @@ async function check(S){
     ['플랜: 10년 탭 되살림','plan',s=>s.replace('  <div class="hero" id="dgHero"','  <button class="horizon-tab" data-horizon="10">10년</button>\n  <div class="hero" id="dgHero"')],
     ['플랜: 클로드/지피티 탭 되살림','plan',s=>s.replace('  <div class="hero" id="dgHero"','  <nav class="plan-tabs" id="aiTabs"><button class="ai-tab on" data-ai="claude">🤖 클로드</button><button class="ai-tab" data-ai="gpt">⚡ 지피티</button></nav>\n  <div class="hero" id="dgHero"')],
     ['플랜: 지피티 저장 창구 되살림','plan',s=>s.replace('onAuthStateChanged(auth,async user=>{','function setPlanGptAccount(user){window.PLANGPT_ACCOUNT=null;}\nonAuthStateChanged(auth,async user=>{')],
-    ['플랜: 숨긴 세션 수 안내 없음','plan',s=>s.replace("tail=gone?' · 숨긴 예전 세션 '+gone+'개':''","tail=''")],
+    ['플랜: 숨긴 세션 수 안내 되살림(옛 코드)','plan',s=>s.replace("const name=planStrategyLabelOf(active);","const name=planStrategyLabelOf(active)+' · 숨긴 예전 세션 '+assetPlanBox().sessions.filter(x=>x&&planRetired(x)).length+'개';")],
     ['모의 목록: 폐지 세션도 재생','idx',s=>s.replace("if(planPaperRetired(sess)){ _tick(); continue; }","")],
     ['모의 목록: 폐지 판정이 늘 아님','idx',s=>s.replace("function planPaperRetired(sess){const E=window.JKPlanSessionEngine;return !!(E&&E.retiredReason&&E.retiredReason(sess));}","function planPaperRetired(sess){return false;}")],
     ['모의 목록: 옛 이름(역분산+Guard)','idx',s=>s.replace("bits.push((PE&&PE.strategyLabel)?PE.strategyLabel(S0.alphaRules==='panic'?'panic':'base'):`${P.name} v${P.version}`);","bits.push('역분산+Guard');")],
@@ -149,7 +150,7 @@ async function check(S){
     ['듀얼가드 화면: "플랜" 글자 되살림','plan',s=>s.replace('<label>듀얼가드 시작일</label>','<label>플랜 시작일</label>')],
     ['듀얼가드 화면: 머리글 "5 YEAR" 되살림(옛 코드)','plan',s=>s.replace("$('alphaHorizonEyebrow').textContent='DUAL GUARD · '+v;","$('alphaHorizonEyebrow').textContent='5 YEAR · DUAL GUARD · '+v;")],
     ['운영: "플랜" 글자 되살림','idx',s=>s.replace("듀얼가드 시작잔고에 평단을 넣으세요","플랜 시작잔고에 평단을 넣으세요")],   // 포트폴리오 연말 세금 점검 안내(2026-11-11 · 옛 대상 글자는 그 칸과 함께 바뀜)
-    ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace('const PAPER_VIEW_CACHE_VER=8;','const PAPER_VIEW_CACHE_VER=6;')],
+    ['모의 목록 캐시 판: 옛 판(ASAP 줄 · 옛 이름 글자 그대로)','idx',s=>s.replace(/const PAPER_VIEW_CACHE_VER=\d+;/,'const PAPER_VIEW_CACHE_VER=6;')],
     ['엔진: 폐지 안내 "폐지된 플랜"(옛 글자)','eng',s=>s.replace("error:'폐지된 세션 — '+gone","error:'폐지된 플랜 — '+gone")],
   ];
   let red=0;

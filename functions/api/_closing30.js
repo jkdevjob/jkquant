@@ -14,6 +14,24 @@ export const CLOSE_VARIANTS=Object.freeze([
   {id:"all",label:"모든 종목 (대조군)",side:"all",threshold:0,volume:0},
 ]);
 export const CLOSE_FEES_PCT=.23;
+export const CLOSE_RESERVE_VARIANTS=Object.freeze([
+  {id:'dip_05',side:'dip',threshold:-.5,volume:0},
+  {id:'dip_15',side:'dip',threshold:-1.5,volume:0},
+  {id:'dip_25',side:'dip',threshold:-2.5,volume:0},
+  {id:'dip_vol12',side:'dip',threshold:0,volume:1.2},
+  {id:'dip_vol18',side:'dip',threshold:0,volume:1.8},
+  {id:'dip1_vol15',side:'dip',threshold:-1,volume:1.5},
+  {id:'dip2_vol15',side:'dip',threshold:-2,volume:1.5},
+  {id:'up_05',side:'up',threshold:.5,volume:0},
+  {id:'up1_vol15',side:'up',threshold:1,volume:1.5},
+  {id:'flat_05',side:'flat',threshold:.5,volume:0}
+]);
+export function closingResearchVariants(lifecycle={},date=''){
+  return [...CLOSE_VARIANTS,...CLOSE_RESERVE_VARIANTS,
+    ...(lifecycle.generatedPool||[]).filter(x=>/^cf_g\d{4,}$/.test(x.name||'')&&date>String(x.createdAfter||date))
+      .filter(x=>['dip','up','flat','all'].includes(x.params?.side)&&Number.isFinite(+x.params.threshold)&&+x.params.threshold>=-5&&+x.params.threshold<=5&&+x.params.volume>=0&&+x.params.volume<=3)
+      .map(x=>({id:x.name,label:x.name,side:x.params.side,threshold:+x.params.threshold,volume:+x.params.volume}))];
+}
 export const closeHm=t=>Number(String(t||"").slice(11,13))*100+Number(String(t||"").slice(14,16));
 export function snapAt(raw,cutoff){
   return (raw||[]).filter(x=>closeHm(x.t)>=900&&closeHm(x.t)<=cutoff&&+x.close>0)
@@ -28,6 +46,8 @@ export function closeFeature(rows,prevClose,cutoff){
     Math.max(1,older.reduce((s,x)=>s+(+x.vol||0),0)/older.length):0;
   const liquidity=recent.reduce((s,x)=>s+(+x.vol||0)*(+x.close||0),0);
   return {signalHm:closeHm(last.t),signalPrice:+last.close,intradayPct,volumeRatio,liquidity,
+    gapPct:+bars[0].open>0?(+bars[0].open/prevClose-1)*100:null,
+    volume:bars.reduce((s,x)=>s+(+x.vol||0),0),turnover:bars.reduce((s,x)=>s+(+x.vol||0)*(+x.close||0),0),
     signalTime:String(last.t),source:"KIS 1분봉 · 완성된 분봉만"};
 }
 export function qualifying(f,v){
@@ -38,14 +58,16 @@ export function qualifying(f,v){
   if(v.side==="flat")return Math.abs(f.intradayPct)<v.threshold;
   return true;
 }
-export function chooseClosingSignals(stockFeatures,model,limit=3){
+export function chooseClosingSignals(stockFeatures,model,limit=3,variants=CLOSE_VARIANTS){
   const all=[];
-  for(const v of CLOSE_VARIANTS){
+  for(const v of variants){
     const matches=stockFeatures.filter(s=>qualifying(s.feature,v))
       .sort((a,b)=>b.feature.liquidity-a.feature.liquidity||String(a.code).localeCompare(String(b.code)))
       .slice(0,limit);
     for(const x of matches)all.push({kind:model,variant:v.id,variantLabel:v.label,code:x.code,name:x.name,
-      strategyParams:{...v,maxTrades:limit,frictionPct:CLOSE_FEES_PCT,signalCutoff:model==="day"?1504:1520,entry:model==="day"?"next_completed_minute_proxy":"official_close",exit:model==="day"?"official_close":"next_session_open"},signal:x.feature,signalHm:x.feature.signalHm,fillStatus:"signal_only",strategyVersion:"close30-paper-v1"});
+      strategyParams:{...v,maxTrades:limit,frictionPct:CLOSE_FEES_PCT,signalCutoff:model==="day"?1504:1520,entry:model==="day"?"next_completed_minute_proxy":"official_close",exit:model==="day"?"official_close":"next_session_open"},
+      signal:{...x.feature,reason:`${v.id}: side=${v.side}, threshold=${v.threshold}, volume>=${v.volume}; cutoff ${x.feature.signalHm}; liquidity top ${limit}`},
+      signalHm:x.feature.signalHm,fillStatus:"signal_only",strategyVersion:"close30-paper-v1"});
   }
   return all;
 }

@@ -16,6 +16,7 @@ on:
       - "functions/api/nightly-research-summary.js"
       - "scripts/backtest_soxl_intraday.py"
       - "scripts/nightly_closing30_research.py"
+      - "scripts/closing30_metrics.py"
       - "scripts/archive-trade-evidence.mjs"
       - "functions/api/closing30-monitor.js"
 
@@ -48,7 +49,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 시초가 + 데이트레이딩 + 비트코인 + SOXL + VTS 통합 연구
+      - name: 시초가 + 데이트레이딩 + 비트코인 + SOXL + 종가 30분·종가 베팅 + VTS 통합 연구
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           BASE: https://jkquant.pages.dev

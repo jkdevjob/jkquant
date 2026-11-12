@@ -2203,10 +2203,12 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /await openPaper\(true\)/.test(ap)
      && /onclick="refreshPaperViewButton\(\)"/.test(idx)
      && /const repaired=await paperRepairCommonStarts\(\)/.test(rvFast));
-  ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
-     +((idx.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1])>=5   // 판은 계산이 바뀔 때마다 오른다(5: 폐지된 자산플랜 세션 줄 빼기 · 2026-11-08)
-     && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
-     && /x\.day===paperKstDate\(\)/.test(extractFn(idx,'function paperViewCacheFresh(x)'))
+  // 2026-11-12 세션마다 저장 — 날짜(자정)가 아니라 줄마다 표지(서명 · 기준 종가일)로 다시 쓸지 정한다. 값 시험은 scripts/check-paper-row-cache.cjs
+  ok('모의 성과 계산 결과는 stateV2 캐시에 세션마다 표지와 함께 저장하고 표지가 그대로인 세션은 재계산하지 않는다',
+     +((idx.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1])>=9   // 판은 계산이 바뀔 때마다 오른다(9: 세션마다 저장 · 2026-11-12)
+     && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows,keys)'))
+     && /keys:keys\|\|\{\}/.test(extractFn(idx,'function paperViewCacheWrite(rows,keys)'))
+     && /const p=paperViewPlan\(false\);\s*if\(p\.only\.size\)return null;/.test(extractFn(idx,'function paperViewCacheRead()'))
      && /if\(!force&&paperViewCacheFresh\(current\)\)return/.test(rvFast));
 }
 
@@ -10537,7 +10539,7 @@ console.log('\n[134] 모의 시작일 — 설정 변경으로 오늘 리셋 금�
      && op.indexOf('await paperRepairCommonStarts()')>op.indexOf('await paperRepairLegacyStarts()')
      && op.indexOf('await paperRepairCommonStarts()')<op.indexOf('syncPaperStart()')
      && /forceRecalc\|\|repairedStarts>0/.test(op)
-     && /const rows=await paperFillAll\(\)/.test(rv));
+     && /const plan=paperViewPlan\(force\);\s*const got=plan\.only\.size\?await paperFillAll\(\{only:plan\.only\}\):\[\];/.test(rv));
 
   const pst=extractFn(idx,'function paperStart(sess)');
   const eff=new Function('S','paperPreferredSimStart',pst+'\nreturn paperStart;')(
@@ -11154,8 +11156,9 @@ console.log('[SCALPING IMPROVEMENTS V2] 경로·엔진·비용·그림자·UI');
      !/data-strategy="reference"/.test(sc) && !/id="strategy_reference"/.test(sc)
      && /data-strategy="daily"/.test(sc) && /strategy-scoreline/.test(sc)
      && /기준전략 누적/.test(sc) && /필요승률/.test(sc) && /엣지/.test(sc));
-  ok('B-3 4전략 누적 비교 + B-4 구버전 접기 + B-5 폐기페이지 비노출',
-     /4전략 누적 상태/.test(sc) && /구버전·아카이브/.test(sc)
+  ok('B-3 종가 포함 6전략 누적 비교 + B-4 구버전 접기 + B-5 폐기페이지 비노출',
+     /6전략 누적 상태/.test(sc) && /구버전·아카이브/.test(sc)
+     && /closing30:'🌇 종가 30분'/.test(sc) && /closing_bet:'🌙 개별 종목 종가 베팅'/.test(sc)
      && !/폐기된 과매도 반등 연구/.test(sc)
      && !/운영전략이 아니며 실제 매매 근거/.test(sc));
   ok('A-5 연구 문서 27~35 및 개선/연구파일 복원',
