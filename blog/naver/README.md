@@ -53,7 +53,8 @@
 스크린샷 같은 산출물은 실행한 폴더에 생기며, 저장소에 넣지 않는다.
 
 1. 브라우저 띄우기(백그라운드)
-   `chrome --headless=new --no-sandbox --remote-debugging-port=9222 --user-data-dir=<임시폴더> --proxy-server=$HTTPS_PROXY about:blank`
+   `TZ=Asia/Seoul chrome --headless=new --no-sandbox --remote-debugging-port=9222 --user-data-dir=<임시폴더> --proxy-server=$HTTPS_PROXY about:blank`
+   `TZ=Asia/Seoul` 을 꼭 붙인다(2026-11-13 확인: 서버 브라우저가 UTC 면 예약 발행 달력·시각이 9시간 어긋난다. `publish_post.js --at` 은 시간대가 다르면 CDP 로 바꾸고, 그래도 다르면 멈춘다).
    스크립트는 모두 `connectOverCDP` 로 붙는다. 브라우저를 끄면 세션 쿠키가 사라진다.
 2. 로그인(사용자 입력이 필요하다)
    - QR(기본): `qr_open.js` 가 출력한 숫자(예: 'QR Code | 29')를 확인하고 `python3 -I qr_link.py` 로 주소와 `qr_crop.png` 를 만들어 사용자에게 보낸다. 유효 시간은 약 3분이다.
@@ -65,6 +66,9 @@
    빠진 묶음은 `insert_section.js <post.json> <컴포넌트번호> <시작블록> <끝블록>` 으로 넣는다.
 5. `verify_fill.js <post.json>` 결과가 `mismatch 0`, 캡션은 모두 true, 이미지 수가 맞아야 다음 단계로 간다.
 6. `publish_post.js <post.json>` 로 설정을 확인하고 발행 전에 멈춘다. 이어서 `--go` 로 발행한다.
+   예약 발행(실험 E1): `publish_post.js <post.json> --at 12:00 [--date YYYY-MM-DD]` 로 '예약' → 날짜 · 시 · 분(10분 단위)을 고르고
+   화면에서 다시 읽어 `schedule {...} match` 와 `settings ok (예약 …)` 가 찍힐 때만 `--at 12:00 --go` 로 예약한다. 15분 안쪽 시각은 거절한다.
+   예약 뒤에는 글 목록에 바로 안 보이므로 원고 json 에 `scheduled` 를 적고, 예약 시각 뒤에 7번으로 확인한 다음 `published` 를 적는다.
    설정은 카테고리 '경제'(10/31부터 블로그 카테고리가 '경제' 하나로 정리됨; '핫이슈 분석'이 생기면 그것), 비즈니스·경제, 전체공개, 댓글·공감·검색 허용, 공지 OFF, 기본값 유지 OFF다.
 7. `verify_post.js <logNo>` 와 `verify_imgs.js <logNo>` 로 로그인하지 않은 화면에서 확인한다.
 8. 브라우저를 끄고 임시 프로필 폴더를 지운다(`pkill` 패턴이 자기 셸과 겹치지 않게 PID로 끈다).
