@@ -32,10 +32,11 @@ if(process.env.LS){ const keep=process.env.LS.split(','); for(const k of Object.
 const LNAME={L0:'지금: 무매 1만 + 플랜(기본) 2만',L7:'무매 1/3 + 플랜(새 규칙) 2/3',L1:'플랜(새 규칙) 100%',L2:'플랜(새) 5/6 + 섀넌 USD 1/6',L3:'플랜(새) 2/3 + 섀넌 USD 1/3',
   L4:'플랜(공격형) 5/6 + 섀넌 USD 1/6',L5:'무매 1/6 + 플랜(공격형) 5/6',L6:'플랜(새) 5/6 + 금 1/6',L8:'플랜(새) 2/3 + 섀넌 USD 1/6 + 금 1/6',L9:'플랜(기본) 5/6 + 섀넌 USD 1/6',L10:'플랜(기본) 100%',L11:'플랜(기본) 2/3 + 섀넌 USD 1/3',L12:'플랜(공격형) 100%',L13:'플랜(기본) 3/4 + 섀넌 USD 1/4',L14:'플랜(기본) 1/2 + 섀넌 USD 1/2'};
 const DCAS={ BASKET:{USD:2,ROM:2,QLD:2,GOLD:1,TSLA:1}, LEV3:{USD:1,ROM:1,QLD:1}, USD:{USD:1}, ROM:{ROM:1}, QLD:{QLD:1}, TQQQ:{TQQQ:1}, QQQ:{QQQ:1}, SPY:{SPY:1}, GOLD:{GOLD:1}, TSLA:{TSLA:1},
-  QLD_G2:{QLD:8,GOLD:2}, QLD_G3:{QLD:7,GOLD:3}, USD_G3:{USD:7,GOLD:3}, QQQ_G3:{QQQ:7,GOLD:3}, SPY_G3:{SPY:7,GOLD:3}, LEV_G2:{USD:8/3,ROM:8/3,QLD:8/3,GOLD:2}, CASH:{CASH:1}, PLAN:'plan', PROP:'prop' };
+  QLD_G2:{QLD:8,GOLD:2}, QLD_G3:{QLD:7,GOLD:3}, USD_G3:{USD:7,GOLD:3}, QQQ_G3:{QQQ:7,GOLD:3}, SPY_G3:{SPY:7,GOLD:3}, LEV_G2:{USD:8/3,ROM:8/3,QLD:8/3,GOLD:2}, CASH:{CASH:1}, PLAN:'plan', PROP:'prop',
+  PLAN_Y:{reb:'Y',tax:'C'}, PLAN_Y0:{reb:'Y',tax:'0'}, PLAN_Yb3:{reb:'Yb3',tax:'C'}, PLAN_B5:{reb:'B5',tax:'C'}, PLAN_B50:{reb:'B5',tax:'0'}, PLAN_N:{reb:'N',tax:'C'} };   // PLAN_N = 맞춤 없음(검산 — PLAN 과 같아야 함)   // 11-12 ⑤: 플랜에 매달 + 다리 사이 맞춤(Y 해마다 · Yb3 해마다 ±3%p 벗어날 때만 · B5 날마다 ±5%p) · tax C=넣은 돈 기준 이익×22% · 0=세금 없음
 if(process.env.DSUB){ const keep=process.env.DSUB.split(','); for(const k of Object.keys(DCAS)) if(!keep.includes(k)) delete DCAS[k]; }
 const DNAME={BASKET:'지금 바구니',LEV3:'USD·ROM·QLD 같은 비율',USD:'USD',ROM:'ROM',QLD:'QLD',TQQQ:'TQQQ',QQQ:'QQQ',SPY:'SPY',GOLD:'금(GLDM)',TSLA:'TSLA',QLD_G2:'QLD 8 + 금 2',QLD_G3:'QLD 7 + 금 3',USD_G3:'USD 7 + 금 3',
-  QQQ_G3:'QQQ 7 + 금 3',SPY_G3:'SPY 7 + 금 3',LEV_G2:'USD·ROM·QLD 8 + 금 2',CASH:'적립 안 함(단기국채에 쌓음)',PLAN:'플랜에 매달 넣기',PROP:'일시금 전략에 비례로 넣기'};
+  QQQ_G3:'QQQ 7 + 금 3',SPY_G3:'SPY 7 + 금 3',LEV_G2:'USD·ROM·QLD 8 + 금 2',CASH:'적립 안 함(단기국채에 쌓음)',PLAN:'플랜에 매달 넣기',PROP:'일시금 전략에 비례로 넣기',PLAN_Y:'플랜에 매달 + 해마다 맞춤(세금 C)',PLAN_Y0:'플랜에 매달 + 해마다 맞춤(세금 0)',PLAN_Yb3:'플랜에 매달 + 해마다 ±3%p 벗어날 때만(세금 C)',PLAN_B5:'플랜에 매달 + ±5%p 밴드(세금 C)',PLAN_B50:'플랜에 매달 + ±5%p 밴드(세금 0)',PLAN_N:'검산: 맞춤 없음(= 플랜에 매달)'};
 const SETS={real:{from:'2011-03-01',E:'TECL',T:'TQQQ',sym:{USD:'USD',ROM:'ROM',QLD:'QLD',TQQQ:'TQQQ',QQQ:'QQQ',SPY:'SPY',GOLD:'GOLDX',TSLA:'TSLA'},
                   cr:[['2018-10-01','2018-12-24','2018Q4'],['2020-02-19','2020-03-23','코로나'],['2021-11-19','2022-12-28','2022'],['2024-07-10','2025-04-08','2024~25']]},
             syn:{from:'2000-04-03',E:'SYNTECL',T:'SYNTQQQ',sym:{USD:'SYNUSD',ROM:'SYNROM',QLD:'SYNQLD',TQQQ:'SYNTQQQ',QQQ:'QQQ',SPY:'SPY',GOLD:'GOLDX',TSLA:null},
@@ -50,6 +51,21 @@ function evalPath(ds,V,F,crs){ const n=ds.length, nav=new Float64Array(n); nav[0
   const yrs=(Date.parse(ds[n-1])-Date.parse(ds[0]))/(365.25*864e5); const cr={};
   for(const [s,e,lab] of crs){ if(!(ds[0]<=(+s.slice(0,4)-1)+s.slice(4)&&ds[n-1]>=e)) continue; let x=0; for(let t=0;t<n;t++){ if(ds[t]<s||ds[t]>e) continue; x=Math.max(x,(pkArr[t]-nav[t])/pkArr[t]); } cr[lab]=x*100; }   // 위기 시작 1년 전부터 창 안에 있을 때만
   return {c:(Math.pow(nav[n-1],1/yrs)-1)*100,d:mdd*100,fv:V[n-1],cr}; }
+// 11-12 ⑤ 다리 사이 맞춤(근사): 다리 곡선의 하루 단위 수익(입금 뺀)으로 두 몫을 굴리고 맞춤 날에 옮긴다. 금액은 전날 값으로 정하고 그날 종가에 옮김(룩어헤드 없음).
+//   목표 = 다리를 시작한 비중(L9 = 5/6 · 1/6). 수수료 = 플랜 0.1% + 섀넌 0.25%(옮기는 금액에). 세금 C = 판 쪽의 (값 − 넣은 돈 원가) 비례 이익 × 22%(즉시 · 공제 없음 — 보수적) · 0 = 없음.
+function rebEval(ds,dc,R,crs){ const n=ds.length, ix={}; ds.forEach((d,t)=>ix[d]=t); const F=new Float64Array(n);
+  for(const [d,a] of dc.flows){ const t=ix[d]; if(t!=null) F[t]+=a; else { const tt=ds.findIndex(x=>x>d); if(tt>=0) F[tt]+=a; } }
+  const Lp=dc.legs.find(l=>l.plan), Lq=dc.legs.find(l=>!l.plan); const P=ds.map(d=>Lp.m[d]), Q=ds.map(d=>Lq.m[d]); const wq=Lq.w/(Lp.w+Lq.w);
+  let x=P[0], y=Q[0], bx=x, by=y; const V=new Float64Array(n); V[0]=x+y; let pend=0, nReb=0, taxSum=0;
+  for(let t=1;t<n;t++){ x=x*(P[t]-F[t])/P[t-1]+F[t]; bx+=F[t]; y=y*Q[t]/Q[t-1];
+    if(pend){ const m=pend; pend=0; const fee=Math.abs(m)*(0.001+0.0025);
+      if(m>0){ const g=R.tax==='C'?Math.max(0,1-bx/x)*m*0.22:0; bx-=m*bx/x; x-=m; y+=m-fee-g; by+=m-fee-g; taxSum+=g; }
+      else { const a=-m, g=R.tax==='C'?Math.max(0,1-by/y)*a*0.22:0; by-=a*by/y; y-=a; x+=a-fee-g; bx+=a-fee-g; taxSum+=g; } nReb++; }
+    // 오늘 값으로 내일 옮길 금액을 정한다(Y·Yb3 = 해의 마지막 거래일 · B5 = 날마다)
+    const last=t+1<n&&ds[t+1].slice(0,4)!==ds[t].slice(0,4), tot=x+y, dev=y/tot-wq;
+    if(R.reb==='Y'&&last) pend=x-(1-wq)*tot; else if(R.reb==='Yb3'&&last&&Math.abs(dev)>0.03) pend=x-(1-wq)*tot; else if(R.reb==='B5'&&Math.abs(dev)>0.05) pend=x-(1-wq)*tot;
+    V[t]=x+y; }
+  const z=evalPath(ds,V,F,crs); z.nReb=nReb; z.taxReb=taxSum; return z; }
 (async()=>{
   const pages={ real:await open([{sym:'SOXL'},{sym:'USD'}]) }; if(!SMOKE) pages.syn=await open([{sym:'SOXL',file:'SYNSOXL_S'},{sym:'USD',file:'SYNUSD_S'}]);
   for(const k of Object.keys(pages)){ const pg=pages[k].pg; await pg.evaluate(x=>{window.__IRX=x;},irx); await pg.evaluate(HOOK); }
@@ -61,20 +77,21 @@ function evalPath(ds,V,F,crs){ const n=ds.length, nav=new Float64Array(n); nav[0
   for(const set of Object.keys(pages)){ const C=SETS[set], pg=pages[set].pg; res[set]={};
     const windows=[]; for(let y=+C.from.slice(0,4);y<=2021;y++) for(const mo of ['01','04','07','10']){ const s=`${y}-${mo}-01`, e=`${y+5}-${mo}-01`; if(s<C.from||e>END) continue; windows.push([s,e]); }
     const WIN=SMOKE?windows.slice(0,2):windows;
-    const DC={}; for(const [k,v] of Object.entries(DCAS)){ if(typeof v==='string'){ DC[k]=v; continue; } const ok=Object.fromEntries(Object.entries(v).filter(([t])=>t==='CASH'||C.sym[t]));   // 지금 바구니: 시세 없는 종목(합성 TSLA)은 빼고 나머지 비율로
+    const DC={}; for(const [k,v] of Object.entries(DCAS)){ if(typeof v==='string'||(v&&v.reb)){ DC[k]=v; continue; } const ok=Object.fromEntries(Object.entries(v).filter(([t])=>t==='CASH'||C.sym[t]));   // 지금 바구니: 시세 없는 종목(합성 TSLA)은 빼고 나머지 비율로
       if(Object.keys(ok).length===Object.keys(v).length||k==='BASKET') DC[k]=ok; }
     const dcaKeys=Object.keys(DC);
     for(const cap of (SMOKE?[30000]:[10000,30000,100000])){ const t0=Date.now(); const R={windows:WIN.map(w=>w[0]),dca:dcaKeys,dcaW:DC,win:{}};
       for(const [s,e] of WIN){ const LC={}; const get=async(k,w,dep)=>{ const key=k+'@'+w.toFixed(4)+(dep?'d':''); if(!LC[key]){ const L=LEGS[k]; LC[key]=L.app?await appRun(pg,L,cap*w,s,e,w):pxRun(L.px(C),cap*w,s,e,w,dep?PERDAY:0); } return LC[key]; };
         const curves={}, depCurves={};
         for(const [nm,legs] of Object.entries(LUMPS)){ let m=null; for(const [k,w] of legs){ const x=await get(k,w); m=m?mixNone(m,x):x; } curves[nm]=m;
-          const pl=legs.find(([k])=>LEGS[k].plan); if(pl){ let md=null, fl=null; for(const [k,w] of legs){ const x=(k===pl[0])?await get(k,w,true):{m:await get(k,w)}; if(k===pl[0]) fl=x.flows; md=md?mixNone(md,x.m):x.m; } depCurves[nm]={m:md,flows:fl}; } }
+          const pl=legs.find(([k])=>LEGS[k].plan); if(pl){ let md=null, fl=null; const lc=[]; for(const [k,w] of legs){ const x=(k===pl[0])?await get(k,w,true):{m:await get(k,w)}; if(k===pl[0]) fl=x.flows; lc.push({k,w,m:x.m,plan:k===pl[0]}); md=md?mixNone(md,x.m):x.m; } depCurves[nm]={m:md,flows:fl,legs:lc}; } }
         const ds=Object.keys(curves[Object.keys(curves)[0]]).filter(d=>Object.values(curves).every(m=>m[d]!=null)&&Object.values(depCurves).every(x=>x.m[d]!=null)).sort(); const n=ds.length;
-        const U={}; for(const t of new Set(dcaKeys.flatMap(k=>typeof DC[k]==='string'?[]:Object.keys(DC[k])))) U[t]=unitDca(ds,t==='CASH'?'CASH':C.sym[t]);
+        const U={}; for(const t of new Set(dcaKeys.flatMap(k=>(typeof DC[k]==='string'||DC[k].reb)?[]:Object.keys(DC[k])))) U[t]=unitDca(ds,t==='CASH'?'CASH':C.sym[t]);
         const Fd=new Float64Array(n); for(let t=1;t<n;t++) Fd[t]=PERDAY;
         for(const nm of Object.keys(LUMPS)){ const L=Float64Array.from(ds.map(d=>curves[nm][d])); R.win[nm]=R.win[nm]||{};
           for(const dk of dcaKeys){ let o;
             if(DC[dk]==='prop'){ let units=0; for(let t=1;t<n;t++) units+=PERDAY/L[t]; const z=evalPath(ds,L,new Float64Array(n),C.cr); o={c:z.c,d:z.d,fv:L[n-1]*(1+units),cr:z.cr}; }
+            else if(DC[dk].reb){ const dc=depCurves[nm]; o=dc&&dc.legs.length===2?rebEval(ds,dc,DC[dk],C.cr):null; }
             else if(DC[dk]==='plan'){ const dc=depCurves[nm]; if(!dc){ o=null; } else { const V=Float64Array.from(ds.map(d=>dc.m[d])); const F=new Float64Array(n); const ix={}; ds.forEach((d,t)=>ix[d]=t);
                 for(const [d,a] of dc.flows){ const t=ix[d]; if(t!=null) F[t]+=a; else { const tt=ds.findIndex(x=>x>d); if(tt>=0) F[tt]+=a; } } o=evalPath(ds,V,F,C.cr); } }
             else { const W=DC[dk], tot=Object.values(W).reduce((a,b)=>a+b,0); const V=L.map((v,t)=>v+Object.entries(W).reduce((a,[k,w])=>a+U[k][t]*PERDAY*w/tot,0)); o=evalPath(ds,V,Fd,C.cr); }
