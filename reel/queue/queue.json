@@ -768,7 +768,12 @@
         "at": "2026-11-12T18:00+09:00"
       },
       "note": "2026-11-12 영상 전략 v2 첫 시험 — 예비에서 당겨 18:00 '검증된 틀(내 칸 표)' 편으로 게시. 캡션 끝에 계산기 줄 추가.",
-      "slot": "18:00"
+      "slot": "18:00",
+      "publish_failed": {
+        "status": "ERROR",
+        "reason": "You have reached your Metricool account limit. (무료 플랜 월 20건 — 11/3~11/11에 20건 게시 완료)",
+        "checked": "2026-11-13T06:25+09:00"
+      }
     },
     {
       "id": "i20261107",
@@ -1453,6 +1458,11 @@
           "instagram"
         ],
         "at": "2026-11-12T09:00+09:00"
+      },
+      "publish_failed": {
+        "status": "ERROR",
+        "reason": "You have reached your Metricool account limit. (무료 플랜 월 20건 — 11/3~11/11에 20건 게시 완료)",
+        "checked": "2026-11-13T06:25+09:00"
       }
     },
     {
@@ -1502,6 +1512,11 @@
           "instagram"
         ],
         "at": "2026-11-12T12:00+09:00"
+      },
+      "publish_failed": {
+        "status": "ERROR",
+        "reason": "You have reached your Metricool account limit. (무료 플랜 월 20건 — 11/3~11/11에 20건 게시 완료)",
+        "checked": "2026-11-13T06:25+09:00"
       }
     },
     {
@@ -1606,6 +1621,59 @@
         "at": "2026-11-13T12:00+09:00"
       },
       "commit": "5cc27f0"
+    },
+    {
+      "id": "i20261113c",
+      "kind": "frame",
+      "date": "2026-11-13",
+      "slot": "18:00",
+      "file": "queue/issues/2026-11-13_basic-pension-home-limit.mp4",
+      "yt_title": "17억 아파트 노부부도 기초연금? 집 공시가격 얼마까지 받나 (혼자·부부·지역별)",
+      "title_candidates": [
+        "17억 아파트 노부부도 기초연금? 집 공시가격 얼마까지 받나 (혼자·부부·지역별)",
+        "기초연금, 집 공시가 8.7억까지? 혼자·부부·지역별 한도 표",
+        "부부는 집 13.2억까지… 기초연금 집값 기준 한 장 정리"
+      ],
+      "cover_text": "17억 집 / 노부부도 / 기초연금? / 공시가 12억 · 소득 없으면",
+      "format": "내 칸 표 #1 (검증된 틀: 기초연금 — 사는 곳 × 혼자/부부 → 기준 안 집 공시가격)",
+      "tags": [
+        "기초연금",
+        "기초연금자격",
+        "공시가격",
+        "노후준비",
+        "부모님",
+        "은퇴노트"
+      ],
+      "hot": "연합뉴스·한국경제·한국경제TV·아시아경제(10/31) '기초연금 상위 1%' — 공시가 12억 아파트 소득 없는 노부부도 수급 계산. 유튜브 동향 기초연금 강세",
+      "sources": [
+        "https://n.news.naver.com/mnews/article/001/0016413034",
+        "https://n.news.naver.com/mnews/article/015/0005348723",
+        "https://n.news.naver.com/mnews/article/277/0005836108",
+        "https://n.news.naver.com/mnews/article/009/0005650243",
+        "https://n.news.naver.com/mnews/article/016/0002714114",
+        "https://n.news.naver.com/mnews/article/001/0016399440"
+      ],
+      "calc": "한도 = 기본재산공제 + 선정기준액 × 300 (연 4% 환산의 역). 단독 247만 → 7.41억, 부부 395.2만 → 11.856억. 대도시 1.35억/중소도시 0.85억/농어촌 0.725억 → 8.76·8.26·8.135억 / 13.206·12.706·12.581억 (0.1억 아래 버림)",
+      "not_used": "국민연금이 소득인정액에 전액 들어간다는 문장은 두 곳에서 확인 못 해 '국민연금 100만 → 한도 3억↓' 숫자는 넣지 않음. 기사 속 '월 55만원가량' 금액은 감액 계산과 안 맞아 빼고 '받을 수 있다는 계산'만 씀",
+      "voice": "edge:ko-KR-HyunsuMultilingualNeural",
+      "cover": "videoCoverMilliseconds 2000",
+      "techniques": [
+        "영상 전략 v2 18:00 검증된 틀",
+        "표지 3안 비교(cover-lab)",
+        "표지 첫 줄 '집'+숫자",
+        "뉴스 훅 + 내 칸 표",
+        "예) 줄로 훅에 답"
+      ],
+      "metricool": {
+        "id": "426243568",
+        "uuid": "2747698860021730575",
+        "networks": [
+          "youtube",
+          "instagram"
+        ],
+        "at": "2026-11-13T18:00+09:00"
+      },
+      "commit": "b316356"
     }
   ]
 }
