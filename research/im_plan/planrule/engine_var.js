@@ -37,7 +37,13 @@ const P=[
   ["else guard=(fm>0&&c>fm*(1+b))?'ON':(fm>0&&c<fm*(1-b))?'OFF':(a.posOn?'ON':'OFF');",
    "else{guard=(fm>0&&c>fm*(1+b))?'ON':(fm>0&&c<fm*(1-(P.bOff??b)))?'OFF':(a.posOn?'ON':'OFF');if(P.cool&&guard==='ON'&&!a.posOn&&st.t<(st.cu||0))guard='OFF';if(guard==='OFF'&&a.posOn){if(P.cool)st.cu=st.t+P.cool;if(P.oneShot){st.pf=false;st.armed=false;st.pk=0;}}}"],
   ["const panicAt=(st,p,posOn,sigma,mv)=>panicStep(st,{rules:RULES,vix:vixA[p],vxn:vxnA[p],tqqqClose:S.tqqq[p],sma:mv,fast:fastMA[p],sigma,posOn});",
-   "const panicAt=(st,p,posOn,sigma,mv)=>panicStep(st,{rules:RULES,vix:vixA[p],vxn:vxnA[p],tqqqClose:S.tqqq[p],sma:mv,fast:fastMA[p],sigma,posOn,ts:RULES.tsAt?RULES.tsAt(S.dates[p]):null});"]];
+   "const panicAt=(st,p,posOn,sigma,mv)=>panicStep(st,{rules:RULES,vix:vixA[p],vxn:vxnA[p],tqqqClose:S.tqqq[p],sma:mv,fast:fastMA[p],sigma,posOn,ts:RULES.tsAt?RULES.tsAt(S.dates[p]):null});"],
+  // 11-13 고리: depBuy(입금 날 신호가 없으면 TECL·TQQQ 를 목표까지 사기만 — 넘친 쪽은 안 팖) · tqVol{s0,look,band}(Guard ON 동안 TQQQ 목표 = 30% × min(1,(s0/σ)²) · 슬리브 밴드 넘으면 맞춤). 안 주면 앱 그대로.
+  ["Math.max(RULES.holdT?pos.TECL:0,", "Math.max((RULES.holdT||(RULES.depBuy&&force&&!teclHit&&!first))?pos.TECL:0,"],
+  ["need=teclHit||guardFlip||tqReb||force||first||sgNew;",
+   "const __wq=(RULES.tqVol&&guard==='ON')?Math.min(1,Math.pow(RULES.tqVol.s0/Math.max(1e-9,realizedVol(S.tqqq,p,RULES.tqVol.look||20)||RULES.tqVol.s0),2)):1,__qHit=!!(RULES.tqVol&&guard==='ON'&&!guardFlip&&pos.TQQQ>0&&Math.abs(((pos.TQQQ*sp.TQQQ)/Math.max(total,1))/D.guardWeight-__wq)>(RULES.tqVol.band??.10));need=teclHit||guardFlip||tqReb||force||first||sgNew||__qHit;"],
+  ["const tq=(guardFlip||tqReb||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/sp.TQQQ)):0):pos.TQQQ;",
+   "const tq=(guardFlip||tqReb||force||first||__qHit)?(guard==='ON'?Math.max((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq/sp.TQQQ)):0):pos.TQQQ;"]];
 function load(V){
   let src=fs.readFileSync(path.join(__dirname,'..','..','..','plan-session-engine.js'),'utf8');
   for(const [a,b] of P){ const n=src.split(a).length-1; if(n!==1) throw new Error(`앱 엔진 모양이 바뀌었다(${n}곳) — engine_var.js 의 바꿔 넣을 줄을 고칠 것: ${a.slice(0,50)}`); src=src.replace(a,()=>b); }
