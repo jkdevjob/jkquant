@@ -11,6 +11,11 @@ const P=[
    "const D=(RULES.tw!=null||RULES.gw!=null)?Object.assign({},DEFAULTS[5],RULES.tw!=null?{teclWeight:RULES.tw}:{},RULES.gw!=null?{guardWeight:RULES.gw}:{}):DEFAULTS[5],sigma=realizedVol(S.tecl,p,RULES.look??D.ivsLook),mv=tma225[p];"],   // look(11-11): TECL σ 창(거래일) — 안 주면 20 · tw/gw(11-12): TECL 몫 · TQQQ Guard 몫(안 주면 70/30)
   ["const s0=D.ivsS0,sigUse=pm?pm.sigma:sigma,",
    "const s0=RULES.s0??D.ivsS0,sigUse=pm?pm.sigma:sigma,"],
+  // gOvl·wMul(11-12 · 새 정보원 시험): 전일(S.dates[p]) 확정 바깥 신호 — gOvl(날짜, 기본 판정) 이 'ON'/'OFF' 를 내면 Guard 를 덮어쓰고, wMul(날짜) 은 TECL 목표 비중에 곱한다. 안 주면 앱 그대로.
+  ["w=Math.min(1,(s0*s0)/(sigUse*sigUse));",
+   "w=Math.min(1,(s0*s0)/(sigUse*sigUse))*(RULES.wMul?RULES.wMul(S.dates[p]):1);"],
+  ["if(pm){guard=pm.guard;guardFlip=(guard==='ON')!==(pos.TQQQ>0);}",
+   "if(pm){guard=pm.guard;guardFlip=(guard==='ON')!==(pos.TQQQ>0);} if(RULES.gOvl){const __g=RULES.gOvl(S.dates[p],guard);if(__g&&__g!==guard){guard=__g;guardFlip=(guard==='ON')!==(pos.TQQQ>0);}}"],
   // opt.depEvery(11-10): 월 입금 간격(달) — 2·3·6·12 면 달마다 monthlyAdd 를 쌓아 두었다가 (월−1)%depEvery===0 인 달 첫 거래일에 한꺼번에 넣는다(그날만 전체 맞춤). 안 주면 앱 그대로(매달).
   ["let cash=principal,inflow=principal,", "let __pend=0,cash=principal,inflow=principal,"],
   ["      cash+=monthlyAdd;inflow+=monthlyAdd;addCash(ledger,date,'dep',monthlyAdd,seq++);lastMonth=month;force=true;",
