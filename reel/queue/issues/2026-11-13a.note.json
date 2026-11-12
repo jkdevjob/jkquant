@@ -1,0 +1,456 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #13",
+  "color": "yellow"
+ },
+ "out": "queue/issues/2026-11-13_rate-hike-loan-table.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "이달 이십육 일 한국은행이 금리를 또 올리면, 내 대출 이자는 한 달에 얼마 늘까요?"
+   },
+   {
+    "id": "news",
+    "text": "칠월 팔월 연속으로 올린 기준금리는 지금 삼 퍼센트, 미국 빅스텝 얘기까지 나오면서 삼 점 이오 퍼센트로 올릴 거란 전망이 많아요.",
+    "gap": 0.35
+   },
+   {
+    "id": "table",
+    "text": "삼십 년 나눠 갚는 대출 삼억이면, 금리 영 점 이오 퍼센트포인트에 월 사만 육천 원, 일 퍼센트포인트면 월 십팔만 팔천 원 더 내요."
+   },
+   {
+    "id": "check",
+    "text": "내 대출이 변동인지 고정인지, 다음에 금리가 바뀌는 날이 언제인지부터 확인해 보세요.",
+    "gap": 0.35
+   },
+   {
+    "id": "cta",
+    "text": "팔로우해 두시면, 이십육 일 결과 나오면 바로 다시 계산해 드릴게요.",
+    "gap": 0.4
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.16,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "cv1",
+     "text": "대출 3억",
+     "x": 120,
+     "y": 450,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -1
+    },
+    {
+     "type": "text",
+     "id": "cv2",
+     "text": "금리 1%p면",
+     "x": 120,
+     "y": 640,
+     "size": 150,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": 0.5
+    },
+    {
+     "type": "text",
+     "id": "cv3",
+     "text": "월 +19만",
+     "x": 120,
+     "y": 850,
+     "size": 170,
+     "font": "bold",
+     "color": "red",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.6
+    },
+    {
+     "type": "circle",
+     "target": "cv3",
+     "at": 0.25,
+     "dur": 0.7,
+     "color": "red",
+     "pad": 10,
+     "width": 8
+    },
+    {
+     "type": "text",
+     "id": "cv4",
+     "text": "내 대출은 몇 줄? (30년 상환)",
+     "x": 130,
+     "y": 1100,
+     "size": 70,
+     "font": "pen",
+     "color": "ink",
+     "at": 0.4,
+     "dur": 0.6
+    }
+   ],
+   "start": 0
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "금리 또 오르면, 내 이자는?",
+     "x": 128,
+     "y": 196,
+     "size": 78,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(기준금리 3.00% · 11/26 금통위 3.25% 예상 · 美 빅스텝 거론)",
+     "x": 140,
+     "y": 310,
+     "size": 32,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "th",
+     "text": "30년 원리금균등 · 연 5% 기준 · 월 상환액 증가",
+     "x": 150,
+     "y": 410,
+     "size": 36,
+     "font": "pen",
+     "color": "ink",
+     "at": "@table-0.2",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "대출",
+     "x": 150,
+     "y": 490,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "+0.25%p",
+     "x": 430,
+     "y": 490,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "+1%p",
+     "x": 720,
+     "y": 490,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "1억",
+     "x": 150,
+     "y": 565,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "+1.5만",
+     "x": 430,
+     "y": 565,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "+6.3만",
+     "x": 720,
+     "y": 565,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "2억",
+     "x": 150,
+     "y": 645,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "+3.1만",
+     "x": 430,
+     "y": 645,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "+12.5만",
+     "x": 720,
+     "y": 645,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "3억",
+     "x": 150,
+     "y": 725,
+     "size": 54,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+2.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "+4.6만",
+     "x": 430,
+     "y": 725,
+     "size": 54,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+2.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "+18.8만",
+     "x": 720,
+     "y": 725,
+     "size": 54,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+3.2",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r3c",
+     "at": "@table.end-1.0",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "5억",
+     "x": 150,
+     "y": 805,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+3.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "+7.7만",
+     "x": 430,
+     "y": 805,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+3.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "+31.4만",
+     "x": 720,
+     "y": 805,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+4.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(단순 계산 · 금리가 반영되는 시기·가산금리는 대출마다 달라요)",
+     "x": 150,
+     "y": 900,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table.end",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 975,
+     "w": 760,
+     "h": 270,
+     "rot": -2,
+     "at": "@check-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "지금 확인할 것",
+       "x": 46,
+       "y": 30,
+       "size": 52,
+       "font": "bold",
+       "color": "red",
+       "at": "@check",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "① 변동? 고정?",
+       "x": 46,
+       "y": 120,
+       "size": 48,
+       "font": "bold",
+       "color": "ink",
+       "at": "@check+1.0",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "② 다음에 금리 바뀌는 날",
+       "x": 46,
+       "y": 195,
+       "size": 48,
+       "font": "bold",
+       "color": "blue",
+       "at": "@check.end-1.6",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "(머니투데이·중앙일보·한국일보·SBS Biz 11/11 · 직접 계산)",
+     "x": 150,
+     "y": 1305,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1440,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1530,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
