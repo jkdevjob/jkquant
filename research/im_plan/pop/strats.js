@@ -111,4 +111,18 @@ S.ADM={name:'가속 듀얼 모멘텀',syms:['SPY','SCZ','TLT'],decide:c=>{ if(!c
 // ── Faber GTAA5(2007 · 2013 개정): SPY EFA IEF VNQ DBC 20% 씩 — 달 끝 값이 10개월 평균 위일 때만 · 아래면 그 몫 T-bill(BIL) · 월간
 S.GTAA={name:'Faber GTAA 5',syms:['SPY','EFA','IEF','VNQ','DBC','BIL'],decide:c=>{ if(!c.newMonth) return null; const W={BIL:0};
   for(const s of ['SPY','EFA','IEF','VNQ','DBC']){ const e=H.monthEnds(c,s,10); if(!e) return null; const on=e[0]>e.reduce((a,b)=>a+b,0)/10; if(on) W[s]=.2; else W.BIL+=.2; } return W; }};
-module.exports={S,m13612,smaRel,avg4};
+// ── 11-13 3차용 틀(값은 출처 조사로 정해 S 에 등록) ──
+// 레버리지 모멘텀 교체: 달마다 후보 중 m개월 총수익(가중치 w 로 여러 기간 합 가능) 1등 · 1등 점수 ≤ 0(또는 cash 보다 낮으면) cash · trend=n 이면 그 종목 신호 지수가 n일선 아래면 제외
+const lmr=({name,cands,months=[3],w=null,cash='BIL',sig=null,trend=0,syn=null,absVsCash=false})=>({name,syn,syms:[...new Set([...cands,cash,...(sig?Object.values(sig):[])])],
+  decide:c=>{ if(!c.newMonth) return null; const sc=s=>{ let t=0; for(let i=0;i<months.length;i++){ const r=H.ret(c,s,months[i]); if(r==null) return null; t+=(w?w[i]:1)*r; } return t; };
+    let best=null; for(const s of cands){ const v=sc(s); if(v==null) return null; if(trend){ const k=(sig&&sig[s])||s, m=H.sma(c,k,trend,true), x=H.px(c,k,true); if(m==null||x<m) continue; } if(!best||v>best[1]) best=[s,v]; }
+    const cv=absVsCash?sc(cash):0; if(!best||best[1]<=Math.max(0,cv??0)) return {[cash]:1}; return {[best[0]]:1}; }});
+// 골든크로스: 신호 지수 SMA(fast) > SMA(slow) 이면 레버리지 · 아니면 cash · 일간(바뀔 때만)
+const gx=({name,sig,lev,fast=50,slow=200,cash='BIL',syn=null})=>({name,syn,syms:[...new Set([sig,lev,cash])],
+  decide:c=>{ const f=H.sma(c,sig,fast,true), sl=H.sma(c,sig,slow,true); if(f==null||sl==null) return null; return once(c,'on',f>sl,f>sl?{[lev]:1}:{[cash]:1}); }});
+// RSI 단기 되돌림(Connors 꼴): 추세 위(신호 지수 > SMA(trend))에서 RSI(n) < entry 면 레버리지 매수 · 나가는 건 exit='sma5'(종가 > SMA5) 또는 RSI > exitRsi · 그 밖은 cash
+const rsiMR=({name,sig,lev,n=2,entry=10,exit='sma5',exitRsi=70,trend=200,cash='BIL',syn=null,stopBelowTrend=false})=>({name,syn,syms:[...new Set([sig,lev,cash])],
+  decide:c=>{ const r=H.rsi(c,sig,n), x=H.px(c,sig), m=trend?H.sma(c,sig,trend):0; if(r==null||(trend&&m==null)) return null; let on=!!c.st.on;
+    if(!on){ if(r<entry&&(!trend||x>m)) on=true; } else { const out=exit==='sma5'?x>H.sma(c,sig,5):r>exitRsi; if(out||(stopBelowTrend&&trend&&x<m)) on=false; }
+    if(c.first) return (c.st.on=on, on?{[lev]:1}:{[cash]:1}); return once(c,'on',on,on?{[lev]:1}:{[cash]:1}); }});
+module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};

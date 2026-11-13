@@ -59,5 +59,12 @@ const H={
   monthEnds:(ctx,s,n)=>{ const X=L(s); let k=at(s,ctx.sig); if(k<0) return null; const out=[X.adj[X.dates[k]]]; let m=X.dates[k].slice(0,7);
     while(k>0&&out.length<n){ k--; const mk=X.dates[k].slice(0,7); if(mk!==m){ out.push(X.adj[X.dates[k]]); m=mk; } } return out.length===n?out:null; },
   ret:(ctx,s,months)=>{ const e=H.monthEnds(ctx,s,months+1); return e?e[0]/e[months]-1:null; },
+  // 11-13: Wilder RSI(n) — 신호일까지 · 앞 n*30 봉으로 데움(n=2 면 60봉 · 초기값 영향은 무시할 만큼 작다)
+  rsi:(ctx,s,n,adj=false)=>{ const X=L(s), k=at(s,ctx.sig); const st=Math.max(1,k-Math.max(60,n*30)); if(k-st<n+1) return null; const v=j=>(adj?X.adj:X.raw)[X.dates[j]];
+    let g=0,l=0; for(let j=st;j<st+n;j++){ const d=v(j)-v(j-1); if(d>0) g+=d; else l-=d; } g/=n; l/=n;
+    for(let j=st+n;j<=k;j++){ const d=v(j)-v(j-1); g=(g*(n-1)+Math.max(d,0))/n; l=(l*(n-1)+Math.max(-d,0))/n; } return l===0?100:100-100/(1+g/l); },
+  // 신호일 종가가 직전 n봉(신호일 포함) 최고/최저인가
+  hiN:(ctx,s,n)=>{ const X=L(s), k=at(s,ctx.sig); if(k-n+1<0) return null; let m=-Infinity; for(let j=k-n+1;j<=k;j++) m=Math.max(m,X.raw[X.dates[j]]); return m; },
+  loN:(ctx,s,n)=>{ const X=L(s), k=at(s,ctx.sig); if(k-n+1<0) return null; let m=Infinity; for(let j=k-n+1;j<=k;j++) m=Math.min(m,X.raw[X.dates[j]]); return m; },
 };
 module.exports={run,load,calendar,H,fee};
