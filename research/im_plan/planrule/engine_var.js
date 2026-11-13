@@ -10,7 +10,7 @@ const P=[
   ["const D=DEFAULTS[5],sigma=realizedVol(S.tecl,p,D.ivsLook),mv=tma225[p];",
    "const D=(RULES.tw!=null||RULES.gw!=null)?Object.assign({},DEFAULTS[5],RULES.tw!=null?{teclWeight:RULES.tw}:{},RULES.gw!=null?{guardWeight:RULES.gw}:{}):DEFAULTS[5],sigma=realizedVol(S.tecl,p,RULES.look??D.ivsLook),mv=tma225[p];"],   // look(11-11): TECL σ 창(거래일) — 안 주면 20 · tw/gw(11-12): TECL 몫 · TQQQ Guard 몫(안 주면 70/30)
   ["const s0=D.ivsS0,sigUse=pm?pm.sigma:sigma,",
-   "const s0=RULES.s0??D.ivsS0,sigUse=pm?pm.sigma:sigma,"],
+   "const s0=(typeof RULES.s0==='function'?RULES.s0(S.dates[p]):RULES.s0)??D.ivsS0,sigUse=pm?pm.sigma:sigma,"   /* 11-14: s0 를 날짜 함수로도(전일 확정 바깥 정보 · null 이면 앱 값) */],
   // gOvl·wMul(11-12 · 새 정보원 시험): 전일(S.dates[p]) 확정 바깥 신호 — gOvl(날짜, 기본 판정) 이 'ON'/'OFF' 를 내면 Guard 를 덮어쓰고, wMul(날짜) 은 TECL 목표 비중에 곱한다. 안 주면 앱 그대로.
   ["w=Math.min(1,(s0*s0)/(sigUse*sigUse));",
    "w=Math.min(1,(s0*s0)/(sigUse*sigUse))*(RULES.wMul?RULES.wMul(S.dates[p]):1);"],

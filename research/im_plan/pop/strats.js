@@ -157,4 +157,23 @@ S.RSI2b=Object.assign(rsiMR({name:'Connors RSI(2)≤10',sig:'QQQ',lev:'TQQQ',n:2
 S.D7={name:"Double 7's QQQ→TQQQ",syn:sQTQ,syms:['QQQ','TQQQ','BIL'],decide:c=>{ const x=H.px(c,'QQQ'), m=H.sma(c,'QQQ',200), lo=H.loN(c,'QQQ',7), hi=H.hiN(c,'QQQ',7); if(m==null||lo==null) return null; let on=!!c.st.on;
   if(!on){ if(x>m&&x<=lo) on=true; } else if(x>=hi) on=false; if(c.first) return (c.st.on=on,on?{TQQQ:1}:{BIL:1}); return once(c,'on',on,on?{TQQQ:1}:{BIL:1}); }};
 S.PS={name:'쌍 교체 SPY/TLT 3개월 → UPRO/TMF 분기',syn:{SPY:'SYNSPY',TLT:'SYNTLT',UPRO:'SYNUPRO',TMF:'SYNTMF'},syms:['SPY','TLT','UPRO','TMF'],decide:c=>{ if(!(c.first||c.newQuarter)) return null; const a=H.ret(c,'SPY',3), b=H.ret(c,'TLT',3); if(a==null||b==null) return null; return a>=b?{UPRO:1}:{TMF:1}; }};
+// 11-14 달력 규칙(원문 값) — 거래소 달력은 미리 알려져 있어 '오늘이 그달 마지막(앞) 거래일인가'는 룩어헤드가 아니다(체결 = 그날 종가).
+// Halloween(Bouman & Jacobsen 2002 · AER 92(5)) — 11~4월 보유 · 5~10월 단기국채: 10월 마지막 거래일 종가에 사고 4월 마지막 거래일 종가에 판다.
+const _lastTD=c=>{ const nx=c.cal[c.i+1]; return !nx||nx.slice(0,7)!==c.date.slice(0,7); };
+function hal(name,risk,safe,syn){ return {name,syn,syms:[risk,safe],decide:c=>{ const m=c.date.slice(5,7), L=_lastTD(c);
+  if(c.first){ const on=(['11','12','01','02','03'].includes(m))||(m==='04'&&!L)||(m==='10'&&L); c.st.on=on; return on?{[risk]:1}:{[safe]:1}; }
+  if(L&&m==='10'&&!c.st.on){ c.st.on=true; return {[risk]:1}; }
+  if(L&&m==='04'&&c.st.on){ c.st.on=false; return {[safe]:1}; }
+  return null; }}; }
+S.HAL_TQ=hal('Halloween 11~4월 TQQQ · 5~10월 BIL','TQQQ','BIL',{TQQQ:'SYNTQQQ',BIL:'SYNBIL'});
+S.HAL_Q=hal('Halloween 11~4월 QQQ · 5~10월 BIL','QQQ','BIL',{QQQ:'SYNQQQ',BIL:'SYNBIL'});
+// 월말·월초(McConnell & Xu 2008 · FAJ 64(2)) — 그달 마지막 거래일 ~ 다음 달 셋째 거래일(4일)만 보유: 마지막 앞 거래일 종가에 사고 셋째 거래일 종가에 판다.
+function tom(name,risk,safe,syn){ return {name,syn,syms:[risk,safe],decide:c=>{ const ym=c.date.slice(0,7), n1=c.cal[c.i+1], n2=c.cal[c.i+2];
+  const pre=!!n1&&n1.slice(0,7)===ym&&(!n2||n2.slice(0,7)!==ym);   // 내일이 그달 마지막 거래일
+  let k=0; for(let j=c.i;j>=0&&c.cal[j].slice(0,7)===ym;j--) k++;   // 오늘이 그달 몇째 거래일
+  if(c.first){ const on=pre||_lastTD(c)||k<3; c.st.on=on; return on?{[risk]:1}:{[safe]:1}; }
+  if(pre&&!c.st.on){ c.st.on=true; return {[risk]:1}; }
+  if(k===3&&c.st.on){ c.st.on=false; return {[safe]:1}; }
+  return null; }}; }
+S.TOM_TQ=tom('월말·월초 4일 TQQQ · 나머지 BIL','TQQQ','BIL',{TQQQ:'SYNTQQQ',BIL:'SYNBIL'});
 module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};

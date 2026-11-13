@@ -21,10 +21,14 @@ const DS=(process.env.DS||'real,syn').split(','), CAPS=(process.env.CAPS||'10000
 const W=+(process.env.W||4), OUT=process.argv[2]||'maxret_out.json';
 const SETS={ real:{tk:'SOXL',y0:2010,syms:[{sym:'SOXL'},{sym:'SOXX'},{sym:'QQQ'}]}, syn:{tk:'SYNSOXL_S',y0:1995,syms:[{sym:'SYNSOXL_S'},{sym:'SOX',file:'SOX'},{sym:'NDX',file:'NDX'}]},
   tq:{tk:'TQQQ',y0:2010,syms:[{sym:'TQQQ'},{sym:'QQQ'}]}, tqsyn:{tk:'SYNTQQQ_S',y0:1990,syms:[{sym:'SYNTQQQ_S'},{sym:'NDX',file:'NDX'}]} };   // tq·tqsyn: 다른 기초자산(나스닥 3배)으로 표본 밖 검사 — sleeve 는 real:'QQQ' 처럼 ds 이름으로
-const PAGE_RUN=()=>{ window.RUN2=function(o){
+const PAGE_RUN=()=>{ window.__mkBoost=function(b){ const V=window.__VIXM||{}, ks=Object.keys(V).sort(), act=new Array(ks.length).fill(false); let armed=false,lastHi=-1,until=-1;
+    for(let k=0;k<ks.length;k++){ const v=V[ks[k]]; if(v>=b.hi){ armed=true; lastHi=k; until=-1; } else if(armed&&k-lastHi>=b.look){ armed=false; } else if(armed&&v<b.lo){ armed=false; until=k+b.n-1; } act[k]=k<=until; }
+    return d=>{ let lo=0,hi=ks.length-1,a=-1; while(lo<=hi){ const m=(lo+hi)>>1; if(ks[m]<d){ a=m; lo=m+1; } else hi=m-1; } return a>=0&&act[a]; }; };   // 전일(d 보다 앞선 마지막 VIX 날) 상태
+  window.RUN2=function(o){
   const x=Object.assign({},o); delete x.tgtDyn; delete x.sleeve; delete x.dedW; delete x.capMul; if(o.capMul) x.cap=o.cap*o.capMul;   // capMul(11-12): 위약 — 원금만 조금 바꿔 경로 우연(사이클 시점 잡음)의 크기를 잰다
   if(o.dedW!=null){ if(!window.__dedP){ const s0=costOf.toString(); if(!s0.includes('deduct:COST_DEDUCT,')) throw new Error('costOf 모양이 바뀜'); (0,eval)('costOf='+s0.split('deduct:COST_DEDUCT,').join('deduct:COST_DEDUCT*(window.__DEDW??1),')); window.__dedP=true; } window.__DEDW=o.dedW; }   // dedW(11-11): 양도세 공제 배율(0 = 공제를 다른 계좌가 다 씀)
   if(o.sleeve){ const s=o.sleeve; x.sgov={sym:s[o.ds],k:s.k||10,mode:s.mode||'week',fee:s.fee!=null?s.fee:0.0026,tax:!!s.tax}; }
+  delete x.boost; if(o.boost) x.boostFn=window.__mkBoost(o.boost);   // 11-14 o.boost={hi,lo,look,n}: 공포 끝 추가 1회분 날(전일 VIX 상태)
   delete x.lad;   // 11-13 o.lad=n: 하방 LOC 줄 크기 축 — 줄당 수량 s = max(1, floor(본 주문 주수 ÷ n)) · 값 = 1회분 ÷ (본 주문 주수 + k×s) · s=1 이면 원래와 같은 식(1만$)
   if(o.lad){ if(!window.__ibo0) window.__ibo0=imBuyOrders; const N=o.lad; imBuyOrders=function(a){ const out=window.__ibo0(Object.assign({},a,{rows:0})); const f1=1+(+a.fee||0); let res=Math.max(0,+a.bal||0)-out.reduce((t,x)=>t+x.q*x.price*f1,0);
       let lo=Infinity; for(const v of (a.first?[vrTickDn(a.firstPrice,a.cur)]:a.half?[a.starPrice,a.avg]:[a.starPrice])) if(v>0&&v<lo) lo=v;   /* 원래 imBuyOrders 처럼 본 주문 값(0주여도) 중 가장 낮은 값 */ const Q=out.reduce((t,x)=>t+x.q,0), n=Math.max(0,Math.floor(+a.rows||0)), st=Math.max(1,Math.floor(Q/N));
@@ -35,9 +39,10 @@ const PAGE_RUN=()=>{ window.RUN2=function(o){
   let r; try{ r=RUN(x); } finally { window.__DEDW=1; if(o.tgtDyn){ imTgtDyn=false; _imMom=window.__mom0; _imTgtOf=window.__tgt0; } if(o.lad) imBuyOrders=window.__ibo0; }
   const yrs=(Date.parse(r.last)-Date.parse(r.first))/(365.25*864e5), cagr=(Math.pow(Math.max(r.final,1e-9)/x.cap,1/yrs)-1)*100;
   let pk=0,mdd=0,pd=null,mP=null,mT=null; for(const [d,e] of r.eqs){ if(e>pk){pk=e;pd=d;} else { const dd=(pk-e)/pk; if(dd>mdd){mdd=dd;mP=pd;mT=d;} } } if(r.final<pk&&(pk-r.final)/pk>mdd){ mdd=(pk-r.final)/pk; mP=pd; mT=r.last; }
-  return {cagr,mdd:mdd*100,final:r.final,cycles:r.cycles,sg:r.sg,mP,mT,flr:r.flrN}; }; };   // mP·mT: 최대 낙폭의 고점·바닥 날짜
+  return {cagr,mdd:mdd*100,final:r.final,cycles:r.cycles,sg:r.sg,mP,mT,flr:r.flrN,bN:__H.bN||0}; }; };   // mP·mT: 최대 낙폭의 고점·바닥 날짜
 (async()=>{ const out={VARS,DS,CAPS,JIT,sets:{}};
   for(const ds of DS){ const S=SETS[ds]; const pages=[]; for(let w=0;w<W;w++){ const p=await open(S.syms); await p.pg.evaluate(PAGE_RUN); pages.push(p); }
+    { const vm={}; JSON.parse(fs.readFileSync(require('path').join(__dirname,'data','VIX.json'),'utf8')).series.forEach(x=>{ if(+x.close>0) vm[x.date]=+x.close; }); for(const p of pages) await p.pg.evaluate(v=>{window.__VIXM=v;},vm); }
     const all=await pages[0].pg.evaluate(t=>Object.keys(M[t]).sort(),S.tk), F0=all[0];
     const starts=[]; for(let y=S.y0;y<=2021;y++) for(let m=1;m<=12;m++){ const s=`${y}-${String(m).padStart(2,'0')}-01`; if(s<all[20]) continue; const e=`${y+5}-${String(m).padStart(2,'0')}-01`; if(e>all[all.length-1]) continue; starts.push([s,e]); }
     const jobs=[]; for(const cap of CAPS) for(const v of Object.keys(VARS)) for(const j of JIT) jobs.push({cap,v,j});

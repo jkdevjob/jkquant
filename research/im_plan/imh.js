@@ -50,6 +50,9 @@ const SETUP=`(()=>{
   inj('const q1=isq(orig/4,orig);','const q1=(__H.qMode==="off"||(__H.qMode==="half1"&&T>=divs/2))?0:isq(orig/4,orig);');   // 11-13 o.qMode: 쿼터매도(별지점 LOC 1/4) — 'half1' 전반전(T<분할/2)에만 · 'off' 끄기 · 안 주면 원래
   inj('const LOT=taxLot();','const LOT=taxLot(); const __ye=(pc)=>{ const Y=__H.ye; if(!CO||!Y||!(shares>=1)||!(LOT.qty>0)||!(pc>0)) return; const DED=_C.deduct/_C.krw, tr=_C.taxRate||0.22, bp=LOT.basis/LOT.qty, net=pc*(1-FEE), f1=pc*FEE; let q=0, kind=""; if(Y.loss!==false&&yearPnl>DED&&net<bp*(1-(Y.minLoss||0))&&tr*(bp-net)>2*f1){ q=Math.ceil((yearPnl-DED)/(bp-net)); kind="L"; } else if(Y.gain!==false&&yearPnl<DED&&net>bp&&tr*(net-bp)>2*f1){ q=Math.floor((DED-yearPnl)/(net-bp)); kind="G"; } q=Math.min(q,Math.floor(shares),Math.floor(LOT.qty)); if(2*q*f1>cash) q=Math.floor(cash/(2*f1)); if(!(q>=1)) return; const fee=q*f1, pnl=lotSell(LOT,q,pc,fee); yearPnl+=pnl; lotBuy(LOT,q,pc,fee); cash-=2*fee; feesTotal+=2*fee; (__H.yeLog||(__H.yeLog=[])).push([curYear,kind,q,pnl,fee*2]); };');
   inj('else if(_y!==curYear){ _settleTax(c); curYear=_y; } }','else if(_y!==curYear){ if(__H.ye&&!__H.ye.t1) __ye(prevC); _settleTax(c); curYear=_y; } if(__H.ye&&__H.ye.t1&&i>0&&i+1<days.length&&days[i+1].slice(0,4)!==_y&&days[i-1].slice(0,4)===_y) __ye(prevC); }');   // t1: 결제일(T+1) 때문에 마지막 거래일 하루 전 종가에(그해 세금에 들어가는 마지막 체결)
+  inj('?0:isq(orig/4,orig);','?0:isq(__H.qMode==="round"?Math.round(orig/4):orig/4,orig);');   // 11-14 o.qMode 'round': 쿼터매도 1/4 반올림(무매 후보 6 ②)
+  inj('imRowsOf({rows:__H.rows})','imRowsOf({rows:(__H.rowsMin&&(cash/Math.max(1,divs-T))<__H.rowsMin*prevC)?0:__H.rows})');   // 11-14 o.rowsMin: 1회분(잔금÷(분할−T))이 전일 종가 × rowsMin 주 미만이면 그날 하방 줄 0(후보 6 ③)
+  inj('let soldToday=false;','if(__H.boost&&shares>0&&__H.boost(d)){ const _u2=cash/Math.max(1,divs-T), _q=Math.floor(_u2/prevC+1e-9); if(_q>0){ buys.push({lim:buyLimit,q:_q,dT:1,ladder:false}); __H.bN=(__H.bN||0)+1; } } let soldToday=false;');   // 11-14 o.boostFn(d): 공포 끝 추가 1회분(큰수 한도 LOC · 체결되면 T+1 · 전일 VIX 로 정함)
   window.__H={eqs:[]};
   (0,eval)(src);
   window.RUN=function(o){
@@ -62,7 +65,7 @@ const SETUP=`(()=>{
     const IRX=window.__IRX||{}; const irxDates=Object.keys(IRX).sort();
     let lastIrx=0, li=0; const irxAt=d=>{ while(li<irxDates.length&&irxDates[li]<=d){ lastIrx=IRX[irxDates[li]]; li++; } return lastIrx; };
     let prevD=null;
-    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.floor=!!o.floor; __H.ye=o.ye||null; __H.tpLoc=!!o.tpLoc; __H.tpHyb=o.tpHyb||0; __H.qMode=o.qMode||null; if(o.yp) __H.yp=[];
+    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.floor=!!o.floor; __H.ye=o.ye||null; __H.tpLoc=!!o.tpLoc; __H.tpHyb=o.tpHyb||0; __H.qMode=o.qMode||null; __H.rowsMin=o.rowsMin||0; __H.boost=o.boostFn||null; if(o.yp) __H.yp=[];
     if(o.xfer){ const X=o.xfer; let F=1, yr=null, pend=false; __H.xlog=[];   // 조합 입출금(11-06): X={mode:'year'|'oneway'|'band'|'oneband', w, b, pl:{날짜:플랜값}, fee} — 플랜 쪽은 비례 배율 F 로(플랜은 사이클이 없어 비례 근사가 맞다)
       __H.xfer=(d,cash)=>{ const P0=X.pl[d]; if(!(P0>0)) return 0; const P=P0*F, y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ yr=y; if(X.mode==='year'||X.mode==='oneway') pend=true; }
         const t=cash+P, wa=cash/t; let x=cash-t*X.w;   // x>0: 무매 → 플랜
