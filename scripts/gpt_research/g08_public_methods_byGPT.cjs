@@ -132,7 +132,7 @@ async function main(){
         let entry=null;const returns=[],hold=[];
         for(const x of r.trace||[]){
           if(x.side==='buy'){entry=x;continue;}
-          if(entry){returns.push((x.price*(1-x.fee/(x.qty*x.price))/(entry.price*(1+entry.fee/(entry.qty*entry.price)))-1)*100);
+          if(entry){returns.push((x.price*splitRatio(r.tkr,entry.date,x.date)*(1-x.fee/(x.qty*x.price))/(entry.price*(1+entry.fee/(entry.qty*entry.price)))-1)*100);
             hold.push((Date.parse(x.date)-Date.parse(entry.date))/86400000);entry=null;}
         }
         const gains=returns.filter(x=>x>0).reduce((a,b)=>a+b,0),losses=-returns.filter(x=>x<0).reduce((a,b)=>a+b,0);
@@ -144,11 +144,11 @@ async function main(){
           pfAfterFee:losses>0?gains/losses:null,yearly:yr,positiveYearFraction:yr.filter(x=>x.returnPct>0).length/yr.length,
           openPosition:r.endShares>0,meanHoldCalendarDays:hold.length?hold.reduce((a,b)=>a+b,0)/hold.length:0,
           maxHoldCalendarDays:hold.length?Math.max(...hold):0,
-          trace:r.trace||[],curve:r.curve||[],note:'Trade PF/expectancy include both fees; account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations.'};
+          trace:r.trace||[],curve:r.curve||[],note:'Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations.'};
       }
       function run(t,cap,start,end,q,stress=0){
         const days=range(t,start,end);current=q;window.__g8Mode=q?.mode||null;window.__g8Stress=stress;
-        const r=q?hook(days,t,cap,q.n||200,true,opt):native(days,t,cap,200,true,opt);
+        const r=hook(days,t,cap,q?.n||200,true,opt);
         return metrics(r,days,cap);
       }
       const variants=[{name:'Double7_nextOpen',mode:'double7',n:200,w:7},
