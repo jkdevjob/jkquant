@@ -1,0 +1,568 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #16",
+  "color": "yellow"
+ },
+ "band": {
+  "lines": [
+   "증여세 1.6조 뉴스, 우리 집은?",
+   "같은 [3억], 결혼하면 {세금 절반?}"
+  ]
+ },
+ "out": "queue/issues/2026-11-14_gift-tax-table.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "똑같이 삼억을 줘도, 결혼한 자녀는 증여세가 절반이라는데 진짜일까요?"
+   },
+   {
+    "id": "news",
+    "text": "어제 많이 본 뉴스 일 위, 주식 이조 육천억 원을 증여받은 삼성전자 회장, 세금만 일조 육천억 원 가까이래요.",
+    "gap": 0.3
+   },
+   {
+    "id": "table",
+    "text": "우리 집은요? 성인 자녀는 십 년에 오천만 원까지 세금이 없고, 삼억을 주면 삼천팔백팔십만 원이에요."
+   },
+   {
+    "id": "marry",
+    "text": "결혼 전후 이 년 안이면 일억을 더 빼 줘서, 같은 삼억에 천구백사십만 원, 딱 절반이에요.",
+    "gap": 0.3
+   },
+   {
+    "id": "check",
+    "text": "십 년 안에 준 돈은 합쳐서 계산하니, 예전에 준 돈부터 확인하세요.",
+    "gap": 0.3
+   },
+   {
+    "id": "cta",
+    "text": "여러분은 몇 번째 줄이세요? 팔로우하면 내 칸 표 계속 드려요.",
+    "gap": 0.35
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "start": 0,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.14,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "tag",
+     "text": "증여세 1.6조 뉴스 뒤 · 우리 집은?",
+     "x": 86,
+     "y": 250,
+     "size": 52,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": -2,
+     "box": "#d7261e"
+    },
+    {
+     "type": "text",
+     "id": "l1",
+     "text": "똑같이 3억",
+     "x": 80,
+     "y": 400,
+     "size": 170,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#ffe14d"
+    },
+    {
+     "type": "text",
+     "id": "l2",
+     "text": "결혼한 자녀는",
+     "x": 80,
+     "y": 640,
+     "size": 135,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l3",
+     "text": "세금 절반?",
+     "x": 80,
+     "y": 850,
+     "size": 190,
+     "font": "heavy",
+     "color": "#d7261e",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "circle",
+     "target": "l3",
+     "at": 0.15,
+     "dur": 0.5,
+     "color": "red",
+     "pad": 14,
+     "width": 9
+    },
+    {
+     "type": "text",
+     "id": "m1",
+     "text": "??만",
+     "x": 92,
+     "y": 1150,
+     "size": 96,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#16130f"
+    },
+    {
+     "type": "text",
+     "id": "m2",
+     "text": "→",
+     "x": 360,
+     "y": 1150,
+     "size": 96,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "m3",
+     "text": "??만",
+     "x": 480,
+     "y": 1150,
+     "size": 96,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#16130f"
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "자녀에게 주면, 증여세는?",
+     "x": 128,
+     "y": 196,
+     "size": 78,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(주식 2.6조 증여 · 증여세 1.6조 육박 · 한국일보·블로터 11/13)",
+     "x": 140,
+     "y": 300,
+     "size": 30,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "s2",
+     "text": "우리 집 기준: 성인 자녀 · 10년 합산 · 2026년",
+     "x": 140,
+     "y": 355,
+     "size": 40,
+     "font": "bold",
+     "color": "ink",
+     "at": "@news+4.0",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "th",
+     "text": "기한 안에 신고(3% 공제) 기준 · 직접 계산",
+     "x": 150,
+     "y": 440,
+     "size": 36,
+     "font": "pen",
+     "color": "ink",
+     "at": "@table-0.2",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "주는 돈",
+     "x": 150,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "증여세",
+     "x": 420,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "결혼 2년 안",
+     "x": 700,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@marry",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "1억",
+     "x": 150,
+     "y": 600,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "485만",
+     "x": 420,
+     "y": 600,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "2억",
+     "x": 150,
+     "y": 692,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "1,940만",
+     "x": 420,
+     "y": 692,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.1",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "3억",
+     "x": 150,
+     "y": 784,
+     "size": 62,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "3,880만",
+     "x": 420,
+     "y": 784,
+     "size": 62,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "5억",
+     "x": 150,
+     "y": 876,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "7,760만",
+     "x": 420,
+     "y": 876,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5a",
+     "text": "10억",
+     "x": 150,
+     "y": 968,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5b",
+     "text": "2.18억",
+     "x": 420,
+     "y": 968,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "0원",
+     "x": 700,
+     "y": 600,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@marry+0.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "485만",
+     "x": 700,
+     "y": 692,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@marry+0.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "1,940만",
+     "x": 700,
+     "y": 784,
+     "size": 62,
+     "font": "bold",
+     "color": "red",
+     "at": "@marry+0.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "5,820만",
+     "x": 700,
+     "y": 876,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@marry+1.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5c",
+     "text": "1.89억",
+     "x": 700,
+     "y": 968,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@marry+1.6",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r3b",
+     "at": "@table.end-1.0",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "circle",
+     "target": "r3c",
+     "at": "@marry.end-1.2",
+     "dur": 0.5,
+     "color": "blue",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(공제: 성인 자녀 10년 5천만 · 혼인·출산 합쳐 1억 추가 · 세율 10~50%)",
+     "x": 150,
+     "y": 1050,
+     "size": 26,
+     "font": "pen",
+     "color": "gray",
+     "at": "@marry.end",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 1095,
+     "w": 760,
+     "h": 215,
+     "rot": -2,
+     "at": "@check-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "지금 확인할 것",
+       "x": 46,
+       "y": 26,
+       "size": 50,
+       "font": "bold",
+       "color": "red",
+       "at": "@check",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "① 10년 안에 준 돈 합계",
+       "x": 46,
+       "y": 100,
+       "size": 46,
+       "font": "bold",
+       "color": "ink",
+       "at": "@check+0.8",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "② 혼인신고 날짜(전후 2년)",
+       "x": 46,
+       "y": 160,
+       "size": 46,
+       "font": "bold",
+       "color": "blue",
+       "at": "@check+2.0",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "(한국일보·블로터 11/13 · 한국경제 10/17·10/24 · 직접 계산)",
+     "x": 150,
+     "y": 1330,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1368,
+     "size": 56,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1438,
+     "size": 32,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
