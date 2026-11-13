@@ -23,6 +23,14 @@
 
 ---
 
+## 진행 기록
+
+- 2026-11-13 인스타: 시스템 사용자 키(만료 없음) 연결, 첫 자동 게시 성공(09:00·12:00 편).
+- 2026-11-13 유튜브: 프로젝트 retire-note-514604, 동의 화면 프로덕션, YT_CLIENT_ID·YT_CLIENT_SECRET·YT_REFRESH_TOKEN 저장(점검: 채널 '은퇴노트' 통함).
+  **YouTube API 감사 신청서 제출**(감사만, 할당량 기본 10,000 · videos.insert·channels.list·playlistItems.list).
+  제출 자료: 이용약관·개인정보처리방침 PDF, 증빙 PDF(업로드 스크립트 전체·OAuth 흐름), 개인정보처리방침·홈페이지 스크린샷.
+  통과 메일이 오면 → publish.config.json targets 에 "yt" 추가 + Metricool 유튜브 예약 중단(두 번 올라감 방지) → 한 편으로 시험 게시.
+
 ## 1. 인스타그램 (약 10분)
 
 > **2026-11 화면(통합 로그인)**: 앱 → 이용 사례 → *Instagram에서 메시지 및 콘텐츠 관리* → **API setup with Unified login** →
