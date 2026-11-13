@@ -338,6 +338,8 @@ async function publishInstagram(item) {
 
 // 장기 토큰(60일) 연장 — 7일에 한 번. 토큰 값은 어디에도 출력·저장하지 않는다.
 async function refreshIgToken() {
+  // 올릴 항목이 없던 실행은 키 종류를 아직 모른다 → 먼저 알아본다(시스템 사용자 키에 인스타 연장을 시도해 '연장 실패'가 뜨던 문제, 11/13 매니악)
+  if (!IG_HOST) await igReady().catch(() => {});
   if (IG_HOST === "facebook") return null; // 시스템 사용자 토큰은 만료되지 않아 연장하지 않는다
   const last = log.meta.ig_refreshed_at ? Date.parse(log.meta.ig_refreshed_at) : 0;
   if (Date.now() - last < 7 * 86400e3) return null;

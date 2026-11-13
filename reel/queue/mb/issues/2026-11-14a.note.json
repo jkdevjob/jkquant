@@ -1,0 +1,506 @@
+{
+ "skin": "brief",
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.6,
+ "tape": {
+  "text": "매니악 브리핑 #1",
+  "color": "yellow"
+ },
+ "band": {
+  "lines": [
+   "주민등록등본은 공짜인데",
+   "등기부는 [왜] 돈 낼까?"
+  ]
+ },
+ "out": "queue/mb/issues/2026-11-14_registry-fee.mp4",
+ "voice": {
+  "name": "ko-KR-SunHiNeural",
+  "rate": "+8%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "주민등록등본은 공짜인데, 등기부등본은 왜 돈을 낼까요?"
+   },
+   {
+    "id": "news",
+    "text": "이번 이십삼 일부터 등기부 인터넷 열람 수수료가 칠백 원에서 천백 원으로 오릅니다.",
+    "gap": 0.3
+   },
+   {
+    "id": "table",
+    "text": "인터넷 발급은 천사백 원, 등기소 방문은 천육백 원. 전세 계약하면서 세 번만 봐도 삼천삼백 원이에요."
+   },
+   {
+    "id": "fact",
+    "text": "법원은 등기특별회계 재정과 보안 투자 때문이라고 설명해요.",
+    "gap": 0.3
+   },
+   {
+    "id": "view",
+    "text": "다른 서류는 무료로 가는데 등기부만 오른다는 반발에 청원이 오만 명을 넘었어요.",
+    "gap": 0.25
+   },
+   {
+    "id": "cta",
+    "text": "내 돈에 닿는 숫자, 팔로우하고 매일 받아 보세요.",
+    "gap": 0.35
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "start": 0,
+   "items": [
+    {
+     "type": "text",
+     "id": "tag",
+     "text": "11/23부터 · 등기부 수수료",
+     "x": 86,
+     "y": 250,
+     "size": 52,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#5ec8ff"
+    },
+    {
+     "type": "text",
+     "id": "l1",
+     "text": "주민등록등본은",
+     "x": 80,
+     "y": 400,
+     "size": 128,
+     "font": "heavy",
+     "color": "#f4f7fb",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l2",
+     "text": "공짜인데",
+     "x": 80,
+     "y": 580,
+     "size": 190,
+     "font": "heavy",
+     "color": "#f4f7fb",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l3",
+     "text": "등기부는 왜?",
+     "x": 80,
+     "y": 830,
+     "size": 165,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#ffb340"
+    },
+    {
+     "type": "text",
+     "id": "m1",
+     "text": "열람",
+     "x": 92,
+     "y": 1110,
+     "size": 100,
+     "font": "heavy",
+     "color": "#f4f7fb",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "m2",
+     "text": "??원",
+     "x": 330,
+     "y": 1110,
+     "size": 100,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#5ec8ff"
+    },
+    {
+     "type": "text",
+     "id": "q",
+     "text": "?",
+     "x": 800,
+     "y": 1020,
+     "size": 260,
+     "font": "heavy",
+     "color": "#ffb340",
+     "at": 0,
+     "dur": 0,
+     "rot": 10
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "등기부 수수료, 11/23부터",
+     "x": 110,
+     "y": 200,
+     "size": 72,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(법원행정처 개정 규칙 · SBS·조선비즈·세계일보 11/13)",
+     "x": 112,
+     "y": 300,
+     "size": 30,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "s2",
+     "text": "주민등록등본 온라인 = 무료",
+     "x": 112,
+     "y": 355,
+     "size": 44,
+     "font": "bold",
+     "color": "ink",
+     "at": "@news+2.0",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "무엇",
+     "x": 120,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "지금",
+     "x": 520,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "11/23부터",
+     "x": 740,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "인터넷 열람",
+     "x": 120,
+     "y": 550,
+     "size": 58,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+0.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "인터넷 발급",
+     "x": 120,
+     "y": 645,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.1",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "등기소 방문",
+     "x": 120,
+     "y": 740,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "전세 3번 열람",
+     "x": 120,
+     "y": 835,
+     "size": 58,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+2.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "700원",
+     "x": 520,
+     "y": 550,
+     "size": 58,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+0.4",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "1,000원",
+     "x": 520,
+     "y": 645,
+     "size": 58,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+1.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "1,200원",
+     "x": 520,
+     "y": 740,
+     "size": 58,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+2.2",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "2,100원",
+     "x": 520,
+     "y": 835,
+     "size": 58,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+3.1",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "1,100원",
+     "x": 740,
+     "y": 550,
+     "size": 58,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+0.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "1,400원",
+     "x": 740,
+     "y": 645,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "1,600원",
+     "x": 740,
+     "y": 740,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "3,300원",
+     "x": 740,
+     "y": 835,
+     "size": 58,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+3.3",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r1c",
+     "at": "@news.end-0.8",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(+57% · +40% · +33% · 3번 열람은 직접 계산)",
+     "x": 120,
+     "y": 940,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table.end",
+     "dur": 0.5
+    },
+    {
+     "type": "sticky",
+     "x": 110,
+     "y": 1000,
+     "w": 840,
+     "h": 330,
+     "rot": 0,
+     "at": "@fact-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "f1",
+       "text": "사실",
+       "x": 40,
+       "y": 30,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@fact",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "f2",
+       "text": "등기특별회계 재정·보안 투자 (법원행정처)",
+       "x": 170,
+       "y": 36,
+       "size": 38,
+       "font": "bold",
+       "color": "ink",
+       "at": "@fact+0.3",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "v1",
+       "text": "해석",
+       "x": 40,
+       "y": 130,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@view",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "v2",
+       "text": "다른 서류는 무료 흐름 · 청원 5만 명+",
+       "x": 170,
+       "y": 136,
+       "size": 38,
+       "font": "bold",
+       "color": "ink",
+       "at": "@view+0.3",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "p1",
+       "text": "전망",
+       "x": 40,
+       "y": 230,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@view.end-1.4",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "p2",
+       "text": "23일 시행 예정 · 철회 요구 계속",
+       "x": 170,
+       "y": 236,
+       "size": 38,
+       "font": "bold",
+       "color": "blue",
+       "at": "@view.end-1.1",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "매니악 브리핑",
+     "x": 330,
+     "y": 1365,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@maniacbriefing",
+     "x": 360,
+     "y": 1440,
+     "size": 32,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.5",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
