@@ -1129,3 +1129,9 @@ node research/gpt/source-check-20261112.cjs
 
 - 워밍업 재확인: 첫 시험창 이전의 완성월 이력은 실제USD50개월, 합성USD73개월, TQQQ 대용56개월로 가장 긴11개월 신호보다 충분하다. 시험창 안 이력부족 현금구간은0이며 신규 배치의 워밍업을 무조건 보유로 채우지 않았다.
 - 저장 직전 `git pull --rebase=merges origin research/daily` 성공. 실제 `git push origin research/daily`는 Username 인증정보 부재로 exit128. 연결된 GitHub 저장소 권한은 push=true이므로 권한 없음이라고 오보고하지 않으며 PR도 만들지 않는다. 사전등록 때 이미 성공한 Git objects/ref 일반 fast-forward 방식으로 같은 research/daily에 결과 tree를 보존하고 fetch/SHA/내용까지 확인한다. 새 코드3개 문법검사·diff --check 통과, 원본 backtest.html/plan-session-engine.js는 최신 수신 main과 diff0, 클로드 로그·공유 재현표 변경0.
+
+### 2026-11-13 · 포트폴리오 원격 보존 실제 확인
+
+- 결과와 자체도구3개는 research/daily 커밋 `a984e28343c24eef5c8f188378bcb37063f21919`에 저장 완료(부모 e7aa08b · force=false · expected SHA 일치). 실제 git fetch에서 원격 SHA와 tree `6d1717af27293750a1e32f0c39061812143d9f48`을 수신했고, 로컬 결과 tree와 diff0·원격 로그 마지막 본문 일치를 확인했다. CLI 인증 문제를 권한 없음 또는 푸시 성공으로 바꿔 말하지 않았으며 연결된 GitHub의 정상 쓰기 경로로 보존했다.
+- 원격 변경 범위는 이 로그와 research/gpt 새 도구3파일뿐. 앱 엔진·클로드 로그·REPLICATION.md 수정0, main 쓰기·PR·배포·실주문0. 실제·합성/대용 배치, 독립 감사, 원문 pf_app 실행은 모두 exit0. 이번 회차의 후보 판정은 완료·탈락이며 무매 전환연도/세금 실제출금 통합의 미완료를 완료라고 쓰지 않았다. 이 확인 행도 같은 연구 브랜치 후속 기록으로 보존한다.
+- 종료 전 원격 main이 a0e721e로 갱신된 것을 확인해 명시적으로 다시 fetch하고 research/daily에 합쳤다. da2be1f 이후 변경은 온비드 자료1파일뿐이며 backtest.html·plan-session-engine.js·plan-tax-check.js 차0. 시험 엔진/성과를 다시 계산할 변화는 없었다. 이 마지막 main 병합의 온비드 blob은 원격 main 그대로 보존했고 내 연구가 클로드 자료를 편집한 것이 아니다.
