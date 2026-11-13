@@ -4,13 +4,8 @@ name: 인스타 참고 자료 모으기
 # reel/trends/ig_refs/<날짜>.json 으로 이 브랜치에 커밋한다. 설정(reel/trends/ig_refs.config.json)을 바꿔 푸시하면 돈다.
 # 비밀값: IG_ACCESS_TOKEN, IG_USER_ID (은퇴노트 키). 패턴 참고용 — 남의 문구·화면은 쓰지 않는다.
 
+# 11/13: 해시태그 검색·business_discovery 모두 메타 앱 심사 전이라 막혀서 자동 실행(push)을 껐다. 심사 통과 뒤 push 트리거를 되살린다.
 on:
-  push:
-    branches: [claude/instagram-reel-video-creation-wl16ee]
-    paths:
-      - "reel/trends/ig_refs.config.json"
-      - "reel/trends/ig-refs.mjs"
-      - ".github/workflows/ig-refs.yml"
   workflow_dispatch:
 
 permissions:

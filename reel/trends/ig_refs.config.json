@@ -1,20 +1,13 @@
 {
-  "note": "인스타 참고 자료 설정. 해시태그 인기 게시물(ig_hashtag_search)은 메타 앱 심사('Instagram Public Content Access')가 필요해 11/13 막힘 → hashtags 는 비워 둔다. accounts = 참고할 비즈니스·크리에이터 계정 아이디(@ 없이, business_discovery). 매일 루틴이 유튜브 동향·캡션에서 잘되는 계정을 찾으면 accounts 에 더한다. 바꿔서 푸시하면 ig-refs.yml 이 다시 모은다.",
-  "requested": "2026-11-13 2",
+  "note": "인스타 참고 자료 설정. 11/13 시험 결과 해시태그 인기 게시물(ig_hashtag_search = 'Instagram Public Content Access' 심사 필요)과 business_discovery(#10 권한 없음) 모두 메타 앱 심사 전이라 막힘 → ig-refs.yml 자동 실행은 꺼 둠. 심사 통과 뒤 hashtags·accounts 를 채우고 워크플로 push 트리거를 되살린다. 그때까지 참고 자료는 trends/REFERENCES.md 의 유튜브 쇼츠 분석으로.",
   "channels": {
     "rn": {
       "hashtags": [],
-      "accounts": [
-        "instagram",
-        "syukaworld",
-        "3protv"
-      ]
+      "accounts": []
     },
     "mb": {
       "hashtags": [],
-      "accounts": [
-        "syukaworld"
-      ]
+      "accounts": []
     }
   }
 }

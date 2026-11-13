@@ -20,7 +20,8 @@ const N = +opt("n", 6);
 // 광고(운용사·증권사 상품 홍보)는 기법 참고에서 뺀다
 const AD = /광고|협찬|Song\]|KODEX|KoAct|TIGER|ACE |SOL |RISE |ETF|증권|자산운용|이벤트|EVENT/i;
 
-const report = JSON.parse(fs.readFileSync(path.join(__dirname, `${date}.json`), "utf8"));
+const TAG = process.argv.includes("--tag") ? process.argv[process.argv.indexOf("--tag") + 1] : null; // --tag mb → YYYY-MM-DD-mb.json
+const report = JSON.parse(fs.readFileSync(path.join(__dirname, `${date}${TAG ? "-" + TAG : ""}.json`), "utf8"));
 const seenPath = path.join(__dirname, "seen.json");
 const seen = fs.existsSync(seenPath) ? JSON.parse(fs.readFileSync(seenPath, "utf8")) : {};
 const pool = [...report.topShortsWeek, ...report.topShortsMonth]
@@ -29,7 +30,7 @@ const pool = [...report.topShortsWeek, ...report.topShortsMonth]
 const pick = pool.slice(0, N);
 if (!pick.length){ console.log("새로 볼 인기 쇼츠가 없음"); process.exit(0); }
 
-const dir = path.join(__dirname, "frames", date);
+const dir = path.join(__dirname, "frames", date + (TAG ? "-" + TAG : ""));
 fs.mkdirSync(dir, { recursive: true });
 const get = async (url, file) => {
   const r = await fetch(url);

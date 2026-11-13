@@ -4,6 +4,7 @@
 //   node make-note.mjs --config ... --preview 2,6,10.7,16,23   (지정한 초의 장면 PNG만)
 //   node make-note.mjs --config ... --frames /tmp/noteframes_xxx (찍어 둔 프레임 재사용, 소리·인코딩만)
 // 스펙: { duration, fps?, flip?, out, pages:[{ start, stains?, items:[…] }] }
+//   skin?: "brief"(매니악 남색 보드) · band?: { lines:["첫 줄","[노랑] {빨강}"], from?, top?:250, size?:84, scale?:0.9 } — 표지 뒤 화면 위 고정 제목 띠
 //   items: text{id,text,x,y,size,font:bold|reg|pen|sans,color:ink|red|gray|blue,at,dur,after,gap,rot,fade}
 //          circle/underline/highlight{target,at,dur,color} · box{x,y,w,h,at,dur} · arrow{x1,y1,x2,y2,bend,at,dur}
 //          sticky{x,y,w,h,rot,at,items:[text|highlight|underline|circle]}

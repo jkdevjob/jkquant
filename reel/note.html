@@ -75,14 +75,26 @@
   .skin-brief .sticky::before { display:none; }
   .skin-brief .hl { background:rgba(255,179,64,.26); mix-blend-mode:normal; }
   .skin-brief #vignette { background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 60%, rgba(0,0,0,.45) 100%); }
+
+  /* ── 고정 제목 띠(band): 표지 다음부터 화면 위에 두 줄 제목을 계속 띄움(쇼츠 '뉴스 템플릿' 패턴) ── */
+  #stage { position:absolute; inset:0; transform-origin:50% 0; }
+  #band { position:absolute; left:0; right:0; top:0; background:#0c0c0c; visibility:hidden; z-index:50;
+          display:flex; flex-direction:column; justify-content:flex-end; align-items:center; padding:0 30px 26px; }
+  #band::after { content:""; position:absolute; left:0; right:0; bottom:0; height:8px; background:var(--band-line, #ffe14d); }
+  #band .bl { font-family:'Sans'; font-weight:800; letter-spacing:-0.03em; color:#fff; line-height:1.16; white-space:nowrap; }
+  #band .bl .k { color:var(--band-k, #ffe14d); } #band .bl .r { color:#ff4a3d; }
+  .skin-brief #band { background:#070c15; }
 </style></head>
 <body>
 <div id="desk"></div>
+<div id="stage">
 <div id="cam">
   <div id="pad"></div>
   <svg id="binding" viewBox="0 0 988 110"></svg>
 </div>
+</div>
 <div id="vignette"></div>
+<div id="band"></div>
 <script>
 (async function(){
   const D = window.__DATA__;
@@ -238,6 +250,32 @@
   await document.fonts.ready;
   await new Promise(r => setTimeout(r, 50));
 
+  // ── 고정 제목 띠 ──  band: { lines:["첫 줄","[노란 핵심어] {빨간 숫자}"], from:초(기본=둘째 장), top:250, size:84, scale:0.9 }
+  // 화면 0~(top+두 줄) 을 어두운 띠로 덮고, 노트(무대)는 그 아래로 내려 scale 배로 줄인다. 인스타 피드(4:5)에서도 보이게 글자는 y≈250 아래에.
+  const BAND = D.band && D.band.lines && D.band.lines.length ? D.band : null;
+  let bandFrom = 0, bandBottom = 0, bandS = 1, bandTy = 0;
+  if (BAND){
+    const bandEl = document.getElementById("band");
+    const size = BAND.size || 84;
+    BAND.lines.forEach(line => {
+      const d = document.createElement("div"); d.className = "bl"; d.style.fontSize = size + "px";
+      d.innerHTML = String(line).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+        .replace(/\[([^\]]+)\]/g, '<span class="k">$1</span>').replace(/\{([^}]+)\}/g, '<span class="r">$1</span>');
+      bandEl.appendChild(d);
+    });
+    if (BRIEF){ bandEl.style.setProperty("--band-k", "#ffb340"); bandEl.style.setProperty("--band-line", "#ffb340"); }
+    if (BAND.accent) bandEl.style.setProperty("--band-k", BAND.accent);
+    bandEl.style.visibility = "hidden"; bandEl.style.display = "flex";
+    // 넘치면 줄 단위로 줄임
+    bandEl.querySelectorAll(".bl").forEach(d => { const w = d.scrollWidth; if (w > 1000) d.style.fontSize = (size * 1000 / w).toFixed(1) + "px"; });
+    const top = BAND.top ?? 250;
+    bandBottom = top + bandEl.querySelectorAll(".bl").length * size * 1.16 + 34;
+    bandEl.style.height = bandBottom + "px";
+    bandS = BAND.scale || 0.9;
+    bandTy = bandBottom + 18 - 118 * bandS;   // 노트 윗변(118)이 띠 바로 아래에 오게
+    bandFrom = BAND.from ?? (D.pages[1] ? (D.pages[1].start || 0) : 0);
+  }
+
   // 1차: 텍스트 배치(after 처리)
   const byId = {};
   pages.forEach((P, pi) => {
@@ -333,6 +371,13 @@
     const dx = 2.4*Math.sin(t*0.71) + 1.6*Math.sin(t*1.37 + 1.3), dy = 2.2*Math.sin(t*0.93 + 2.1) + 1.2*Math.sin(t*1.9);
     const r = 0.18*Math.sin(t*0.47 + .4);
     cam.style.transform = `translate(${dx}px,${dy}px) rotate(${r}deg) scale(${s})`;
+    if (BAND){
+      const bp = bandFrom <= 0 ? 1 : ease((t - bandFrom) / 0.5);
+      const stage = document.getElementById("stage"), bandEl = document.getElementById("band");
+      stage.style.transform = bp > 0 ? `translateY(${(bandTy * bp).toFixed(1)}px) scale(${(1 - (1 - bandS) * bp).toFixed(4)})` : "none";
+      bandEl.style.visibility = bp > 0 ? "visible" : "hidden";
+      bandEl.style.transform = `translateY(${(-(1 - bp) * bandBottom).toFixed(1)}px)`;
+    }
 
     // 페이지 넘김: 아래쪽이 들리면서 위로 넘어감(넘긴 장은 display:none — 자식의 visibility 가 새어 나오지 않게)
     pages.forEach((P, pi) => {

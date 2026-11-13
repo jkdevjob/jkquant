@@ -16,8 +16,12 @@ const SP = { monthShorts: "EgQIBBAJ", weekShorts: "EgQIAxAJ", monthLongByViews: 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 
 const argv = process.argv.slice(2);
+// --tag mb → 매니악 브리핑(경제·산업·AI) 검색어, 결과 파일 YYYY-MM-DD-mb.json/md (은퇴노트 결과를 덮어쓰지 않게)
+const TAG = argv.includes("--tag") ? argv[argv.indexOf("--tag") + 1] : null;
+const KEYWORDS_BY_TAG = { mb: ["경제뉴스", "경제 쇼츠", "AI 뉴스", "반도체", "환율", "금리 인하", "카카오", "통신비", "전기요금", "물가"] };
 const kwArg = argv.includes("--keywords") ? argv[argv.indexOf("--keywords") + 1] : null;
-const keywords = kwArg ? kwArg.split(",").map(s => s.trim()).filter(Boolean) : KEYWORDS;
+const keywords = kwArg ? kwArg.split(",").map(s => s.trim()).filter(Boolean) : (KEYWORDS_BY_TAG[TAG] || KEYWORDS);
+const SUFFIX = TAG ? `-${TAG}` : "";
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 
@@ -127,11 +131,11 @@ async function main(){
     medianShortViews: shorts.length ? shorts[Math.floor(shorts.length / 2)].views : 0,
   };
   fs.mkdirSync(__dirname, { recursive: true });
-  fs.writeFileSync(path.join(__dirname, `${today}.json`), JSON.stringify(report, null, 2) + "\n");
+  fs.writeFileSync(path.join(__dirname, `${today}${SUFFIX}.json`), JSON.stringify(report, null, 2) + "\n");
 
   const fmt = (n) => n >= 1e4 ? `${(n / 1e4).toFixed(n >= 1e5 ? 0 : 1)}만` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}천` : String(n);
   const md = [];
-  md.push(`# 유튜브 은퇴·노후 분야 동향 — ${today}`, "");
+  md.push(`# 유튜브 ${TAG === "mb" ? "경제·산업·AI" : "은퇴·노후"} 분야 동향 — ${today}`, "");
   md.push(`키워드 ${keywords.length}개 · 이번 달 쇼츠 ${shorts.length}편(이번 주 ${week.length}) · 이번 달 일반 영상 ${longs.length}편 · 쇼츠 조회수 중앙값 ${fmt(report.medianShortViews)}`, "");
   md.push("## 이번 주 쇼츠 상위", "", "| 조회수 | 제목 | 키워드 |", "|---:|---|---|");
   week.slice(0, 15).forEach(v => md.push(`| ${fmt(v.views)} | [${v.title.replace(/\|/g, "/").slice(0, 70)}](${v.url}) | ${v.keywords.join(", ")} |`));
@@ -143,7 +147,7 @@ async function main(){
   Object.entries(report.patternsTopShorts).sort((a, b) => b[1].share - a[1].share)
     .forEach(([k, s]) => md.push(`| ${k} | ${Math.round(s.share * 100)}% | ${fmt(s.avgViews)} |`));
   if (errors.length) md.push("", "## 수집 오류", "", ...errors.map(e => `- ${e}`));
-  fs.writeFileSync(path.join(__dirname, `${today}.md`), md.join("\n") + "\n");
-  console.log(`✔ trends/${today}.md (쇼츠 ${shorts.length} · 이번 주 ${week.length} · 일반 ${longs.length}${errors.length ? ` · 오류 ${errors.length}` : ""})`);
+  fs.writeFileSync(path.join(__dirname, `${today}${SUFFIX}.md`), md.join("\n") + "\n");
+  console.log(`✔ trends/${today}${SUFFIX}.md (쇼츠 ${shorts.length} · 이번 주 ${week.length} · 일반 ${longs.length}${errors.length ? ` · 오류 ${errors.length}` : ""})`);
 }
 main().catch(e => { console.error(e); process.exit(1); });
