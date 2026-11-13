@@ -19,6 +19,7 @@ function calendar(syms){ let ds=null; for(const s of syms){ const k=new Set(Obje
 // opt.rescale: 창마다 종목 가격을 시작일 100 으로 곱해 맞춘다(합성 자료의 정수 주 왜곡 줄이기 · 비율 신호는 그대로) · opt.map: 전략 종목 이름 → 자료 이름(합성 대체)
 function run(strat,{start,end,principal,monthly=0,rescale=false,map=null}){
   const syms=strat.syms, src=s=>(map&&map[s])||s, cal=calendar(syms.map(src)); const i0=cal.findIndex(d=>d>=start); if(i0<0) return null;
+  if(Date.parse(cal[i0])-Date.parse(start)>10*864e5) return null;   // 11-13: 자료가 창 시작보다 늦게 시작하면 그 창은 뺀다(짝 창이 어긋나지 않게)
   const iEnd=(()=>{ let k=cal.length-1; while(k>=0&&cal[k]>end) k--; return k; })(); if(iEnd<=i0) return null;
   const D={}; for(const s of syms){ const X=load(src(s)); const f=rescale?100/X.raw[cal[i0]]:1;
     if(f===1) D[s]=X; else { const sc=m=>{ const o={}; for(const d in m) o[d]=m[d]*f; return o; }; D[s]={raw:sc(X.raw),adj:sc(X.adj),div:sc(X.div),op:sc(X.op),hi:sc(X.hi),lo:sc(X.lo),dates:X.dates,idx:X.idx}; } }
@@ -63,6 +64,8 @@ const H={
   rsi:(ctx,s,n,adj=false)=>{ const X=L(s), k=at(s,ctx.sig); const st=Math.max(1,k-Math.max(60,n*30)); if(k-st<n+1) return null; const v=j=>(adj?X.adj:X.raw)[X.dates[j]];
     let g=0,l=0; for(let j=st;j<st+n;j++){ const d=v(j)-v(j-1); if(d>0) g+=d; else l-=d; } g/=n; l/=n;
     for(let j=st+n;j<=k;j++){ const d=v(j)-v(j-1); g=(g*(n-1)+Math.max(d,0))/n; l=(l*(n-1)+Math.max(-d,0))/n; } return l===0?100:100-100/(1+g/l); },
+  // 실현변동성(연율 %) — 신호일까지 n일 로그 수익의 표준편차 × √252
+  rv:(ctx,s,n)=>{ const X=L(s), k=at(s,ctx.sig); if(k-n<0) return null; const r=[]; for(let j=k-n+1;j<=k;j++) r.push(Math.log(X.raw[X.dates[j]]/X.raw[X.dates[j-1]])); const m=r.reduce((a,b)=>a+b,0)/n; return Math.sqrt(r.reduce((a,b)=>a+(b-m)*(b-m),0)/(n-1)*252)*100; },
   // 신호일 종가가 직전 n봉(신호일 포함) 최고/최저인가
   hiN:(ctx,s,n)=>{ const X=L(s), k=at(s,ctx.sig); if(k-n+1<0) return null; let m=-Infinity; for(let j=k-n+1;j<=k;j++) m=Math.max(m,X.raw[X.dates[j]]); return m; },
   loN:(ctx,s,n)=>{ const X=L(s), k=at(s,ctx.sig); if(k-n+1<0) return null; let m=Infinity; for(let j=k-n+1;j<=k;j++) m=Math.min(m,X.raw[X.dates[j]]); return m; },

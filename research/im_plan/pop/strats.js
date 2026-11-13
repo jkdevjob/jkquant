@@ -125,4 +125,36 @@ const rsiMR=({name,sig,lev,n=2,entry=10,exit='sma5',exitRsi=70,trend=200,cash='B
   decide:c=>{ const r=H.rsi(c,sig,n), x=H.px(c,sig), m=trend?H.sma(c,sig,trend):0; if(r==null||(trend&&m==null)) return null; let on=!!c.st.on;
     if(!on){ if(r<entry&&(!trend||x>m)) on=true; } else { const out=exit==='sma5'?x>H.sma(c,sig,5):r>exitRsi; if(out||(stopBelowTrend&&trend&&x<m)) on=false; }
     if(c.first) return (c.st.on=on, on?{[lev]:1}:{[cash]:1}); return once(c,'on',on,on?{[lev]:1}:{[cash]:1}); }});
+// ════ 11-13 시중 매매법 3차(사전 등록 그대로) ════
+// EU 이평 교차: 신호 종목의 fast일 평균 > slow일 평균이면 lev · 아니면 cash(일간 · 바뀔 때만 · 전일 신호 → 당일 종가)
+const ma2=({name,sig,lev,fast,slow,cash='BIL',syn})=>({name,syn,syms:[...new Set([sig,lev,cash])],decide:c=>{ const f=H.sma(c,sig,fast), sl=H.sma(c,sig,slow); if(f==null||sl==null) return null; return once(c,'on',f>sl,f>sl?{[lev]:1}:{[cash]:1}); }});
+const sTQ={TQQQ:'SYNTQQQ',BIL:'SYNBIL'}, sQTQ={QQQ:'SYNQQQ',TQQQ:'SYNTQQQ',BIL:'SYNBIL'};
+S.EU219=ma2({name:'eulb 3/219 TQQQ',sig:'TQQQ',lev:'TQQQ',fast:3,slow:219,syn:sTQ}); S.EU220=ma2({name:'eulb 3/220',sig:'TQQQ',lev:'TQQQ',fast:3,slow:220,syn:sTQ});
+S.EU229=ma2({name:'eulb 3/229',sig:'TQQQ',lev:'TQQQ',fast:3,slow:229,syn:sTQ}); S.EUQ161=ma2({name:'eulb QQQ 3/161',sig:'QQQ',lev:'TQQQ',fast:3,slow:161,syn:sQTQ});
+for(const n of [160,180,200,240]) S['EU'+n]=ma2({name:'3/'+n+' TQQQ(고원)',sig:'TQQQ',lev:'TQQQ',fast:3,slow:n,syn:sTQ});
+// TQ50: 해마다 한 번(기본 12-27 이후 첫 거래일 · mo 를 주면 그달 첫 거래일) TQQQ w · BIL 1−w · 입금은 그 비중대로 사기만
+const tqx=({name,w,mo=null})=>({name,syn:sTQ,syms:['TQQQ','BIL'],decide:c=>{ const y=c.date.slice(0,4); const due=mo?(c.newMonth&&+c.date.slice(5,7)===mo):(c.date.slice(5)>='12-27'); if(c.first||(due&&c.st.y!==y)){ c.st.y=y; return {TQQQ:w,BIL:1-w}; } return null; }});
+S.TQ50=tqx({name:'TQQQ 50:50 연 1회(12-27)',w:.5}); S.TQ60=tqx({name:'TQQQ 60:40 연 1회',w:.6}); S.TQ70=tqx({name:'TQQQ 70:30 연 1회',w:.7});
+for(const m of [1,4,7]) S['TQ50m'+m]=tqx({name:'TQQQ 50:50 '+m+'월',w:.5,mo:m});
+// VG 변동성 관문: 전일 VIX(VXN) 60일 평균 > 지수 n일 실현변동성 이면 레버리지 · 아니면 BIL(매일)
+const vg=({name,vol='VIX',idx='SPY',lev='UPRO',n=10,trend=0,syn})=>({name,syn,syms:[...new Set([idx,lev,'BIL'])],decide:c=>{ const v=H.sma(c,vol,60), r=H.rv(c,idx,n); if(v==null||r==null) return null; let on=v>r; if(trend){ const m=H.sma(c,idx,trend,true); if(m==null) return null; on=on&&H.px(c,idx,true)>m; } return once(c,'on',on,on?{[lev]:1}:{BIL:1}); }});
+const sVG={SPY:'SYNSPY',UPRO:'SYNUPRO',BIL:'SYNBIL'};
+S.VG=vg({name:'변동성 관문 VIX60>SPY RV10 → UPRO',syn:sVG}); S.VG20=vg({name:'변동성 관문 RV20 → UPRO',n:20,syn:sVG});
+S.VGT=vg({name:'변동성 관문 VXN60>QQQ RV10 → TQQQ',vol:'VXN',idx:'QQQ',lev:'TQQQ'}); S.VGT2=vg({name:'관문 + QQQ 200일선 → TQQQ',vol:'VXN',idx:'QQQ',lev:'TQQQ',trend:200});
+// FTLT(Composer Reddit 판) — 매일 · 전일 신호 → 당일 종가 · alt=BIL 이면 UVXY 자리를 BIL 로
+const ftlt=({name,alt='UVXY'})=>({name,syms:[...new Set(['SPY','TQQQ','SPXL','TECL','UPRO','SQQQ','TLT','BIL',alt])],decide:c=>{
+  const r=(s)=>H.rsi(c,s,10), spy=H.px(c,'SPY'), m200=H.sma(c,'SPY',200), tq=H.px(c,'TQQQ'), m20=H.sma(c,'TQQQ',20); if(m200==null||m20==null) return null;
+  const R={TQQQ:r('TQQQ'),SPXL:r('SPXL'),SPY:r('SPY'),SQQQ:r('SQQQ'),TLT:r('TLT')}; if(Object.values(R).some(x=>x==null)) return null; let k;
+  if(spy>m200) k=R.TQQQ>79?alt:R.SPXL>80?alt:'TQQQ';
+  else k=R.TQQQ<31?'TECL':R.SPY<30?'UPRO':tq<m20?(R.SQQQ>=R.TLT?'SQQQ':'TLT'):R.SQQQ<31?'SQQQ':'TQQQ';
+  return once(c,'k',k,{[k]:1}); }});
+S.FTLT=ftlt({name:'FTLT(Composer)'}); S.FTLTb=ftlt({name:'FTLT UVXY→BIL',alt:'BIL'});
+// SPY +4/−3% → TQQQ · 꺼진 동안 QQQ(원문)
+S.LRS_N3q=Object.assign(lrs('SPY','TQQQ','QQQ',200,{up:.04,dn:.03}),{syn:{SPY:'SYNSPY',TQQQ:'SYNTQQQ',QQQ:'SYNQQQ'}}); S.LRS_N3q.name='SPY +4/−3% → TQQQ · 밖은 QQQ';
+// Connors RSI(2) · Double 7's · 쌍 교체
+S.RSI2=Object.assign(rsiMR({name:'Connors RSI(2)≤5 QQQ→TQQQ',sig:'QQQ',lev:'TQQQ',n:2,entry:5.0001,exit:'sma5',trend:200}),{syn:sQTQ});
+S.RSI2b=Object.assign(rsiMR({name:'Connors RSI(2)≤10',sig:'QQQ',lev:'TQQQ',n:2,entry:10.0001,exit:'sma5',trend:200}),{syn:sQTQ});
+S.D7={name:"Double 7's QQQ→TQQQ",syn:sQTQ,syms:['QQQ','TQQQ','BIL'],decide:c=>{ const x=H.px(c,'QQQ'), m=H.sma(c,'QQQ',200), lo=H.loN(c,'QQQ',7), hi=H.hiN(c,'QQQ',7); if(m==null||lo==null) return null; let on=!!c.st.on;
+  if(!on){ if(x>m&&x<=lo) on=true; } else if(x>=hi) on=false; if(c.first) return (c.st.on=on,on?{TQQQ:1}:{BIL:1}); return once(c,'on',on,on?{TQQQ:1}:{BIL:1}); }};
+S.PS={name:'쌍 교체 SPY/TLT 3개월 → UPRO/TMF 분기',syn:{SPY:'SYNSPY',TLT:'SYNTLT',UPRO:'SYNUPRO',TMF:'SYNTMF'},syms:['SPY','TLT','UPRO','TMF'],decide:c=>{ if(!(c.first||c.newQuarter)) return null; const a=H.ret(c,'SPY',3), b=H.ret(c,'TLT',3); if(a==null||b==null) return null; return a>=b?{UPRO:1}:{TMF:1}; }};
 module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};
