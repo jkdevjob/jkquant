@@ -352,6 +352,10 @@ async function errText(r) {
 }
 
 // ── 실행 ──
+if (!DRY && CFG.enabled === false) {
+  console.log(`[${TODAY} KST] 발행 꺼짐(queue/publish.config.json 의 enabled=false) — 아무것도 올리지 않음`);
+  process.exit(0);
+}
 const report = [];
 let keySkips = 0, failed = false;
 
