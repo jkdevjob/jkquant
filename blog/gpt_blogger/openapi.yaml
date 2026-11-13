@@ -1,0 +1,103 @@
+openapi: 3.1.0
+info:
+  title: Blogger - 매니악 브리핑 전용
+  description: 구글 블로거 '매니악 브리핑' 한 곳에만 글을 쓰고 읽는다. 삭제·수정 기능은 일부러 넣지 않았다.
+  version: 1.0.0
+servers:
+  - url: https://www.googleapis.com/blogger/v3
+paths:
+  /blogs/{blogId}/posts:
+    get:
+      operationId: listPosts
+      summary: 최근 글 목록(중복 주제 확인용)
+      parameters:
+        - $ref: '#/components/parameters/BlogId'
+        - name: maxResults
+          in: query
+          schema: { type: integer, default: 10, maximum: 20 }
+        - name: fetchBodies
+          in: query
+          schema: { type: boolean, default: false }
+        - name: status
+          in: query
+          schema: { type: string, enum: [live, scheduled, draft] }
+      responses:
+        '200':
+          description: 글 목록
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Post' }
+    post:
+      operationId: insertPost
+      summary: 새 글 게시(하루 1번만)
+      parameters:
+        - $ref: '#/components/parameters/BlogId'
+        - name: isDraft
+          in: query
+          description: true 면 초안으로만 저장(공개 안 됨)
+          schema: { type: boolean, default: false }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content]
+              properties:
+                title: { type: string, description: 글 제목(28~40자) }
+                content: { type: string, description: 본문 HTML }
+                labels:
+                  type: array
+                  items: { type: string }
+                  description: 라벨 3~5개
+                published:
+                  type: string
+                  format: date-time
+                  description: 미래 시각(예 2026-11-14T07:00:00+09:00)을 넣으면 그 시각에 예약 공개. 비우면 바로 공개.
+      responses:
+        '200':
+          description: 게시 결과
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+  /blogs/{blogId}/posts/{postId}:
+    get:
+      operationId: getPost
+      summary: 올린 글 확인(status·url)
+      parameters:
+        - $ref: '#/components/parameters/BlogId'
+        - name: postId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 글
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Post' }
+components:
+  parameters:
+    BlogId:
+      name: blogId
+      in: path
+      required: true
+      description: 매니악 브리핑 블로그 ID 하나만 허용
+      schema:
+        type: string
+        enum: ["여기에_매니악브리핑_블로그ID_숫자"]
+  schemas:
+    Post:
+      type: object
+      properties:
+        id: { type: string }
+        url: { type: string }
+        title: { type: string }
+        status: { type: string }
+        published: { type: string }
+        labels: { type: array, items: { type: string } }
