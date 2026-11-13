@@ -15,9 +15,11 @@
 |---|---|---|
 | `IG_ACCESS_TOKEN` | 메타 개발자 앱 → 인스타 장기 토큰 | 인스타 |
 | `IG_USER_ID` | 토큰 만들 때 계정 옆에 보이는 숫자 ID | 인스타(권장) |
-| `GOOGLE_CLIENT_ID` | 구글 클라우드 → OAuth 클라이언트 | 유튜브(감사 뒤) |
-| `GOOGLE_CLIENT_SECRET` | 위와 같은 곳 | 유튜브(감사 뒤) |
-| `YT_REFRESH_TOKEN` | OAuth Playground에서 발급 | 유튜브(감사 뒤) |
+| `YT_CLIENT_ID` | 구글 클라우드(프로젝트 retire-note-514604) → OAuth 클라이언트 | 유튜브(감사 뒤) |
+| `YT_CLIENT_SECRET` | 위와 같은 곳(`GOCSPX-` 로 시작) | 유튜브(감사 뒤) |
+| `YT_REFRESH_TOKEN` | OAuth Playground에서 발급(`1//` 로 시작) | 유튜브(감사 뒤) |
+
+**`GOOGLE_CLIENT_ID`·`GOOGLE_CLIENT_SECRET`·`GOOGLE_REFRESH_TOKEN` 은 블로그(블로거) 방의 키다 — 덮어쓰면 블로그 게시가 끊기니 유튜브용은 `YT_*` 이름으로 따로 넣는다.**
 
 ---
 
@@ -54,7 +56,7 @@
    - 검수 전 앱이라 로그인할 때 "확인되지 않은 앱" 경고가 뜬다. 내 앱이니 *고급 → 이동*으로 진행.
 4. **클라이언트 → OAuth 클라이언트 ID 만들기** → 웹 애플리케이션 →
    승인된 리디렉션 URI에 `https://developers.google.com/oauthplayground` 추가 →
-   만들어진 클라이언트 ID/보안 비밀을 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` 에.
+   만들어진 클라이언트 ID/보안 비밀을 `YT_CLIENT_ID` / `YT_CLIENT_SECRET` 에(GOOGLE_* 는 블로그용이라 건드리지 않는다).
    (블로그 방에서 만든 클라이언트가 있으면 같은 걸 써도 된다. 리디렉션 URI만 들어 있으면 됨.)
 5. **갱신 토큰 받기** — <https://developers.google.com/oauthplayground> →
    오른쪽 위 톱니바퀴 → *Use your own OAuth credentials* 체크 → 4번의 ID/비밀 입력 →

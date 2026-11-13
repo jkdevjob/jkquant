@@ -18,7 +18,8 @@
 //   예전의 '밀린 일반 영상을 하나씩' 규칙은 없앴다 — Metricool 로 이미 나간 영상을 다시 올릴 수 있어서.
 //
 // 환경변수
-//   유튜브:  GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, YT_REFRESH_TOKEN (범위 youtube.upload)
+//   유튜브:  YT_CLIENT_ID, YT_CLIENT_SECRET, YT_REFRESH_TOKEN (범위 youtube.upload + youtube.readonly)
+//            — GOOGLE_CLIENT_ID 등 GOOGLE_* 비밀값은 블로그(블로거) 키라 여기서 쓰지 않는다
 //   인스타:  IG_ACCESS_TOKEN (인스타그램 로그인 장기 토큰, instagram_business_content_publish)
 //            IG_USER_ID(선택, 없으면 me), IG_GRAPH_VERSION(선택, 기본 v23.0),
 //            MEDIA_BASE_URL(선택, 영상 공개 주소 앞부분 — 없으면 커밋 고정 jsDelivr 주소)
@@ -60,7 +61,7 @@ const saveLog = () => fs.writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n")
 
 // ── 플랫폼 ──
 const PLATFORMS = {
-  yt: { name: "유튜브", keys: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "YT_REFRESH_TOKEN"] },
+  yt: { name: "유튜브", keys: ["YT_CLIENT_ID", "YT_CLIENT_SECRET", "YT_REFRESH_TOKEN"] }, // GOOGLE_* 는 블로그(블로거) 키라 쓰지 않는다
   ig: { name: "인스타", keys: ["IG_ACCESS_TOKEN"] },
 };
 // 발행 설정(저장소 브랜치에 있어 main 을 건드리지 않고 바꿀 수 있다)
@@ -147,8 +148,8 @@ async function googleToken() {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      client_id: process.env.YT_CLIENT_ID,
+      client_secret: process.env.YT_CLIENT_SECRET,
       refresh_token: process.env.YT_REFRESH_TOKEN,
       grant_type: "refresh_token",
     }),
@@ -372,7 +373,12 @@ for (const p of targets) {
         report.push(`${P.name} 키: 통함 — 계정 @${me.username} (${IG_HOST === "facebook" ? "만료 없는 시스템 사용자 키" : "인스타 로그인 키, 60일·자동 연장"}${process.env.IG_USER_ID ? "" : `, 계정 ID ${igUid()} — IG_USER_ID 로 저장 권장`})`);
       } catch (e) { failed = true; report.push(`${P.name} 키: 안 통함 — ${e.message}`); }
     } else {
-      try { await googleToken(); report.push(`${P.name} 키: 통함`); }
+      try {
+        const tk = await googleToken();
+        const ch = await fetch("https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true", { headers: { Authorization: `Bearer ${tk}` } });
+        const title = ch.ok ? (await ch.json()).items?.[0]?.snippet?.title : null;
+        report.push(`${P.name} 키: 통함${title ? ` — 채널 '${title}'` : " (채널 이름 확인 못 함 — youtube.readonly 범위 확인)"}`);
+      }
       catch (e) { failed = true; report.push(`${P.name} 키: 안 통함 — ${e.message}`); }
     }
   }
