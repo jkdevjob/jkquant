@@ -1511,3 +1511,9 @@ node research/gpt/record-channel-20261113_byGPT.cjs
 - 실행명령: `DS=real node research/gpt/replicate-u3-20261114_byGPT.cjs /tmp/jkq-u3-real-20261114.json`; `DS=syn,oos,oos87 node research/gpt/replicate-u3-20261114_byGPT.cjs /tmp/jkq-u3-synthetic-final-20261114.json`; `PHASE=2 DS=real/syn,oos node research/im_plan/planrule/dg_d14.js <참조파일>`; `DS=real/syn,tq,tqsyn node research/gpt/im-late-ladder-20261114_byGPT.cjs <결과파일>`; `DS=real/syn node research/gpt/vr-growth-20261114_byGPT.cjs <결과파일>`; `DS=real/syn node research/gpt/run.cjs research/im_plan/vr_base.js <기준선파일>`; `node research/gpt/record-operating-20261114_byGPT.cjs`. slash로구분한DS는각배치를따로실행한표기이며셸그대로의한명령이아니다.
 
 - 다음: U3는위험비악화·252일이웃음수의반례를클로드와공유한보류상태로둔다. 현재배분유지. 다음차례ASAP는기준선반복대신미시험규칙부터사전등록하되새재현대기가생기면먼저처리한다. 포트폴리오의무매종료전환연도사람단위세금연결,원문공개전략전체규칙확보,브로커실행/다른달러공급자검증은별도미완료다. 앱/원본엔진/클로드로그/main수동수정·PR·배포·실주문·무매외부게시0.
+
+### 2026-11-14 · 운영 연구 원격 보존 실제 확인
+
+- 결과·자체도구4개·내 공유재현 결과는 research/daily 커밋 `8666ee59b6f2c52aa5cf381add089a723e333326`에 보존했다. CLI git push dry-run은 인증정보 부재(exit128)였으나 연결된 GitHub의 push/admin권한을 확인해 tree/commit/ref 일반 fast-forward(force=false, expected SHA 일치)로 실제 전송했다. 이후 실제 git fetch로 같은 SHA와 tree `a26f9405873a92d658cbc34351a457bea8690bd3`를 수신했고 로컬 결과 tree와 diff0, 앱 원본엔진은 최신main과 diff0임을 확인했다. 권한없음/PR우회가 아니다.
+- 실제/합성 무매·VR·원본VR기준선·U3독립 실제/합성/표본밖/1987확장 및 원도구 실제/합성/표본밖 대조 배치가 모두 exit0, 자체도구4개 문법검사와 diff검사 통과했다. U3중심/기준 4008계좌창의 원도구대조 최대연차2.85e-14%p·MDD차0·끝값2.33e-10$. 원요청 중심수익 숫자는 재현됐지만 공통개선 승격은 위험/이웃 기준미달로 보류, 무매L10·VRG12는탈락이다. 원문전략전체/브로커/전환연도통합세금의 별도미완료를 완료로세지않았다.
+- 공유표의 내 결과행 앞 불필요 빈줄을 제거해 표가 이어지도록 정리했다. 원요청/클로드행 내용수정0. main부모의 자동JOB자료는 main합치기에서 온것이며수동편집0. 앱변경·main쓰기·PR·배포·실주문0. 현재검증선택지유지·새실투자권유없음. 반복연구의 조건완료/종료로 처리하지않는다.
