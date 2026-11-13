@@ -26,6 +26,40 @@ export function reportMsg(b) {
   return { ok: true, id: "report:" + date, title, body, text, tag: "claude-report", url: "/claude" };
 }
 
+// ── ④ 실투자 사전 알림 재료 ──
+// 실투자 예산(사용자 2026-11-13 "100만원 소액으로 가자 4는 직접 3은 자동으로" — 100만 원 중 ④ 40만 원 ≈ $300, 11/13 환율 1,331원).
+// 매수 주문은 장개시지정가(LOO) — 지정가 = 전일 종가 × PILOT_CAP. 시가가 그보다 높으면 안 사진다(SOXL 하루 +10% 넘는 갭은 드묾).
+// 주수 = 예산 ÷ 지정가 내림 → 시가가 얼마든 예산을 넘지 않는다. 예산을 바꾸면(단계 확대) 여기 한 곳만 고친다.
+export const PILOT = { soxlUsd: 300, since: "2026-11-13" };
+export const PILOT_CAP = 1.10;
+export function soxlPlan(close) {
+  const limit = Math.round(close * PILOT_CAP * 100) / 100;
+  return { limit, shares: limit > 0 ? Math.floor(PILOT.soxlUsd / limit) : 0 };
+}
+// 뉴욕증권거래소 휴장일(정규 규칙) — 토요일 휴일은 전 금요일, 일요일은 다음 월요일. 단 1/1 이 토요일이면 전날(12/31)은 연다(NYSE 규칙).
+// 임시 휴장(국장 등)은 미리 알 수 없다 — 그날은 밤 계산 신호 날짜가 그대로라 다음 거래일에 같은 주문이 유효하다.
+const ymd = (y, m, d) => new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);
+const wdOf = d => new Date(d + "T12:00:00Z").getUTCDay();
+function nthWd(y, m, wd, n) { const f = new Date(Date.UTC(y, m - 1, 1)).getUTCDay(); return ymd(y, m, 1 + (wd - f + 7) % 7 + 7 * (n - 1)); }
+function lastWd(y, m, wd) { const e = new Date(Date.UTC(y, m, 0)); return ymd(y, m, e.getUTCDate() - (e.getUTCDay() - wd + 7) % 7); }
+function observed(y, m, d, satToFri = true) { const w = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); return w === 6 ? (satToFri ? ymd(y, m, d - 1) : null) : w === 0 ? ymd(y, m, d + 1) : ymd(y, m, d); }
+function easter(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  return ymd(y, Math.floor((h + l - 7 * m + 114) / 31), (h + l - 7 * m + 114) % 31 + 1);
+}
+export function nyseHolidays(y) {
+  const s = new Set([observed(y, 1, 1, false), nthWd(y, 1, 1, 3), nthWd(y, 2, 1, 3), addDays(easter(y), -2), lastWd(y, 5, 1), observed(y, 6, 19), observed(y, 7, 4),
+    nthWd(y, 9, 1, 1), nthWd(y, 11, 4, 4), observed(y, 12, 25)]);
+  s.delete(null);
+  return s;
+}
+export function isNyseSession(d) { const w = wdOf(d); return w !== 0 && w !== 6 && !nyseHolidays(+d.slice(0, 4)).has(d); }
+export function nextNyseSession(after) { let d = after; for (let i = 0; i < 10; i++) { d = addDays(d, 1); if (isNyseSession(d)) return d; } return d; }
+// 미국 정규장 개장 09:30(뉴욕) → 한국 시각. 서머타임(3월 둘째 일요일 ~ 11월 첫째 일요일 전) 22:30 · 아니면 23:30. 개장 날짜는 한국 날짜도 같다.
+export function usOpenKst(d) { const y = +d.slice(0, 4); return d >= nthWd(y, 3, 0, 2) && d < nthWd(y, 11, 0, 1) ? "22:30" : "23:30"; }
+const mdKo = d => +d.slice(5, 7) + "/" + +d.slice(8, 10) + "(" + "일월화수목금토"[wdOf(d)] + ")";
+
 // live: /api/claude-live 응답 · nowMs: 지금 · sent: 이미 보낸 알림 {id: {at, price}} (③ 다음 날 09:00 매도 알림에 쓴다)
 // 돌려주는 것: [{id, title, body, tag, url, price?}]
 export function pushEvents(live, nowMs, sent = {}) {
@@ -75,6 +109,22 @@ export function pushEvents(live, nowMs, sent = {}) {
   }
   // ④ SOXL — 미국장 시가 매수 · 매도(전날 밤 마감 종가로 판단)
   const s = ((T.soxl && T.soxl.rows) || [])[0];
+  // ④ 사전 알림 — 사용자 2026-11-13 "100만원 소액으로 가자 4는 직접": ④ 는 사용자가 증권사 앱으로 직접 주문한다. 시가 체결 알림(아래)은 개장 뒤라 늦다 →
+  // 밤 계산이 다음 미국장 시가 매수 · 매도를 정하면(한국 아침 07:30 무렵 · 늦어도 개장 전) 그날 개장 시각 · 주수 · 주문 방법을 한 번 알린다(신호 날짜마다 한 번).
+  if (s && s.signalBasedOn && +s.signalClose > 0 && /^다음 미국장 시가 (매수|매도) 예정/.test(s.status || "")) {
+    const sd = nextNyseSession(s.signalBasedOn), c = +s.signalClose;
+    const when = (sd === kstDateOf(nowMs) ? "오늘 " : "") + mdKo(sd) + " 밤 " + usOpenKst(sd);
+    if (/^다음 미국장 시가 매수/.test(s.status)) {
+      const p = soxlPlan(c);
+      add("soxl:" + s.signalBasedOn + ":plan", HEAD.soxl + " 🔔 매수 주문 준비", p.shares > 0
+        ? when + " 미국장 시가에 SOXL " + p.shares + "주 매수 — 개장 전에 장개시지정가(LOO) $" + p.limit.toFixed(2) + "(전일 종가 $" + c.toFixed(2) + " +"
+          + Math.round((PILOT_CAP - 1) * 100) + "%) · 실투자 예산 $" + PILOT.soxlUsd
+        : when + " 미국장 시가 매수 신호 — 실투자 예산 $" + PILOT.soxlUsd + " 으로는 1주(지정가 $" + p.limit.toFixed(2) + ")도 못 사 이번은 쉼");
+    } else {
+      add("soxl:" + s.signalBasedOn + ":plan", HEAD.soxl + " 🔔 매도 주문 준비", when + " 미국장 시가에 SOXL 보유분 전량 매도 — 개장 전에 장개시시장가(MOO)"
+        + String(s.status).replace(/^다음 미국장 시가 매도 예정/, "") + " · 전일 종가 $" + c.toFixed(2));
+    }
+  }
   if (s && /^보유중 \(시가 매수\)/.test(s.status || "")) add("soxl:" + String(s.buyTime || "").slice(0, 10) + ":buy", HEAD.soxl + " 🟢 매수", "SOXL 시가 매수 $" + Number(s.buyPrice).toFixed(2) + " → 오른 날 다음 시가 매도");
   if (s && /^청산 \(시가 매도\)/.test(s.status || "")) add("soxl:" + String(s.sellTime || "").slice(0, 10) + ":sell", HEAD.soxl + " 🔴 매도", "SOXL 시가 매도 $" + Number(s.sellPrice).toFixed(2) + (s.pnlPct != null ? " " + KR_PCT(s.pnlPct) : ""));
   return out;

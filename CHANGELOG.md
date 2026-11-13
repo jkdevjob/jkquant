@@ -1,5 +1,20 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-13 · 연구(클로드) ③ 실투자 봇(업비트 KRW-ETH · 사용자 서버) · 기록 엔드포인트 · claude v2.31.0
+
+- 이유: 사용자 11/13 "100만원 소액으로 가자 4는 직접 3은 자동으로" · "당연히 A로". 업비트 주문 키는 허용 IP 가 필요해 고정 IP 무료 서버에서 주문한다.
+- `bots/claude-coinbot/`: 봇(`bot.mjs` — 실시간 화면과 같은 coinHoldToday · 고정 메인 확인 · 예산 · identifier · 다시 안 냄 · 저장 먼저 · 시험 모드 기본 · PAUSE) · 실행기(`coinbot.mjs` — 반복 · `--check` · `--status`) · `install.sh`(Node 22.23.4 체크섬) · `check.sh` · `update.sh` · `README.md`(설치 안내).
+- `functions/api/claude-coinbot.js`(새 경로 — 봇 전용 키 · 기록 먼저 → 처음이면 텔레그램) · `functions/api/_claude_real.js`(기록 형식 · Pages · Worker 공용) · Worker `/claude-real`(쌓기만 · 같은 id 한 번).
+- 시험: `tests/claude-coinbot.test.mjs` 12 · `scripts/mutation_test_claude_coinbot.py` 변이 35종 · `.github/check-steps.yml` 단계 추가 · `mutation_test_opening_gapdown.py` 사본 목록에 `_claude_real.js`.
+- 감사: `AUDIT-SELF-REVIEW.md` 2026-11-13 장. `claude.html` 버전 v2.31.0(화면 변경 없음).
+
+## 2026-11-13 · 연구(클로드) ④ 실투자 사전 알림 · claude v2.30.0
+
+- 이유: 사용자 11/13 "100만원 소액으로 가자 4는 직접 3은 자동으로" — ④ 를 직접 주문하려면 개장 전에 알아야 하는데, 지금 알림은 시가 체결 뒤(개장 뒤)에만 왔다.
+- `functions/api/_claude_push.js`: 밤 계산 다음 할 일이 '다음 미국장 시가 매수/매도 예정'이면 `soxl:<신호 날짜>:plan` 알림 한 번 — 다음 뉴욕 거래일(휴장일 규칙 · 1/1 토요일 예외) · 한국 개장 시각(서머타임) · 매수 주수(예산 $300 ÷ 전일 종가 +10% 지정가 내림) · 매도는 보유분 전량 MOO. 예산 `PILOT` 한 곳.
+- 시험: `test_opening_gapdown.mjs` 1개(휴장일 2026 · 2027 · 다음 거래일 9경우 · 개장 시각 · 예산 불변식 · 문구 · 개장 뒤 없음) · 변이 4종(휴장 무시 · 서머타임 무시 · 예산 초과 반올림 · 개장 뒤에도 보냄).
+- `claude.html` 버전 v2.30.0(화면 변경 없음 — 알림 기능 추가).
+
 ## 2026-11-13 · 연구(클로드) R42 확신 기준 · R43 시중 유명 매매법 · R44 판정(문서 · 연구 스크립트)
 
 - R42(사용자 11/12 "좀 더 지켜보다가 확신이 드는 전략이 나오면 실투자 나한테 권유해"): 실투자 권유 '확신 기준' 사전 등록 — 과거 판정표 통과 + 2026-11-13~ 전향 검증(③ 매매일 20 · ④ 매매 10 · 체결 일치 ≥95% · 누적이 과거 하위 10% 보다 나쁘지 않음 · 낙폭 · 합친 판 누적 > 0).
