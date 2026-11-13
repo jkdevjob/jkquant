@@ -13,6 +13,7 @@ on:
       - 'blog/20*.md'
       - 'blog/blogger_queue.txt'
       - 'blog/blogger_revert.txt'
+      - 'blog/blogger_blogs.json'
 
 permissions:
   contents: write
@@ -59,6 +60,9 @@ jobs:
             if [ $rc -eq 2 ]; then echo "::warning::키 미설정 — 게시 건너뜀: $f (blog/blogger_queue.txt 에 남겨 두면 키 등록 뒤 다시 시도)";
             elif [ $rc -ne 0 ]; then echo "::error::게시 실패: $f"; fail=1; fi
           done
+          if ! git diff --quiet "$BEFORE" "$AFTER" -- blog/blogger_blogs.json 2>/dev/null; then
+            node blog/blogger_check.mjs || { echo "::error::블로그 접근 점검 실패"; fail=1; }
+          fi
           reverts=$( [ -f blog/blogger_revert.txt ] && grep -E '^blog/20[0-9-]+_[A-Za-z0-9_-]+\.md$' blog/blogger_revert.txt || true )
           for f in $reverts; do
             node blog/publish-blogger.mjs "$f" --revert || { echo "::error::초안 되돌리기 실패: $f"; fail=1; }

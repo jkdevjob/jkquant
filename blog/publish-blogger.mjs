@@ -6,6 +6,7 @@
 //         --draft   초안으로 올림(공개 안 됨)
 //         --force   published.json 에 있어도 다시 올림
 //         --revert  이미 게시한 글을 '초안'으로 되돌림(블로그에서 내림, 지우지는 않음)
+//   블로그 고르기: <!-- blog: maniac --> (매니악 브리핑). 없으면 은퇴노트. 목록은 blog/blogger_blogs.json.
 //   예약 게시: 글 2행 아래에 <!-- publish_at: 2026-11-14T05:00:00+09:00 --> 를 쓰면 그 시각에 공개된다(지난 시각이면 바로 게시).
 //
 // 환경변수: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, BLOGGER_BLOG_ID
@@ -37,6 +38,10 @@ if (!titleLine) {
 const title = titleLine.slice(2).trim();
 const labelMatch = src.match(/<!--\s*labels:\s*(.+?)\s*-->/);
 const labels = labelMatch ? labelMatch[1].split(",").map((s) => s.trim()).filter(Boolean) : [];
+const BLOGS = JSON.parse(fs.readFileSync(path.join(__dirname, "blogger_blogs.json"), "utf8"));
+const blogKey = (src.match(/<!--\s*blog:\s*([a-z]+)\s*-->/) || [])[1] || "retire";
+const BLOG = BLOGS[blogKey];
+if (!BLOG) { console.error(`모르는 블로그: ${blogKey} (blog/blogger_blogs.json)`); process.exit(1); }
 const atMatch = src.match(/<!--\s*publish_at:\s*(\S+)\s*-->/);
 let publishAt = null;
 if (atMatch) {
@@ -58,7 +63,7 @@ function inline(s) {
 
 const P = 'style="margin:0 0 10px;"';
 const out = [];
-if (dateLabel) out.push(`<p style="margin:0 0 18px;color:#8a8f98;font-size:13px;">${dateLabel} · 은퇴노트 경제 노트</p>`);
+if (dateLabel) out.push(`<p style="margin:0 0 18px;color:#8a8f98;font-size:13px;">${dateLabel} · ${BLOG.header}</p>`);
 let list = null;
 const images = [];
 const flushList = () => {
@@ -104,7 +109,7 @@ if (flags.has("--dry")) {
   const htmlPath = file.replace(/\.md$/, ".html");
   fs.writeFileSync(htmlPath, `<meta charset="utf-8"><title>${esc(title)}</title><h1>${esc(title)}</h1>\n${html}`);
   console.log(`미리보기 저장: ${htmlPath}`);
-  console.log(`제목: ${title}\n라벨: ${labels.join(", ") || "(없음)"}\n문단: ${out.length}개 · 이미지: ${images.length}개`);
+  console.log(`블로그: ${BLOG.name}\n제목: ${title}\n라벨: ${labels.join(", ") || "(없음)"}\n문단: ${out.length}개 · 이미지: ${images.length}개`);
   process.exit(0);
 }
 
@@ -122,7 +127,7 @@ if (flags.has("--revert")) {
 }
 
 // ── 4. 인증 ──
-const need = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN", "BLOGGER_BLOG_ID"];
+const need = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REFRESH_TOKEN", ...(BLOG.id ? [] : [BLOG.idEnv])];
 const missing = need.filter((k) => !process.env[k]);
 if (missing.length) {
   console.log(`키 미설정으로 게시를 건너뜁니다: ${missing.join(", ")}`);
@@ -153,7 +158,7 @@ async function accessToken() {
 // ── 5. 게시 ──
 try {
   const token = await accessToken();
-  const blogId = process.env.BLOGGER_BLOG_ID;
+  const blogId = BLOG.id || process.env[BLOG.idEnv];
   if (flags.has("--revert")) {
     const r = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${encodeURIComponent(blogId)}/posts/${encodeURIComponent(log[key].id)}/revert`,
       { method: "POST", headers: { Authorization: `Bearer ${token}` } });
@@ -173,7 +178,7 @@ try {
   });
   const j = await r.json();
   if (!r.ok) throw new Error(`게시 실패(HTTP ${r.status}): ${j.error?.message || JSON.stringify(j).slice(0, 300)}`);
-  log[key] = { id: j.id, url: j.url || "(초안)", title, at: new Date().toISOString(), draft: flags.has("--draft"), status: j.status, ...(publishAt ? { publishAt } : {}) };
+  log[key] = { blog: blogKey, id: j.id, url: j.url || "(초안)", title, at: new Date().toISOString(), draft: flags.has("--draft"), status: j.status, ...(publishAt ? { publishAt } : {}) };
   fs.writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n");
   console.log(`${flags.has("--draft") ? "초안 저장" : publishAt ? `예약 게시(${publishAt})` : "게시 완료"}: ${j.url || j.id} · status ${j.status}`);
 } catch (e) {
