@@ -222,7 +222,33 @@ async function uploadYouTube(item, token) {
 }
 
 // ── 인스타그램 ──
-const IG = () => `https://graph.instagram.com/${process.env.IG_GRAPH_VERSION || "v23.0"}`;
+// 인스타 키 종류에 따라 주소가 다르다:
+//   인스타 로그인 토큰(60일, 연장 필요) → graph.instagram.com, 계정은 me
+//   통합 로그인(Unified login)·비즈니스용 Facebook 로그인의 시스템 사용자 토큰(만료 없음) → graph.facebook.com, 계정 ID 필요
+// IG_API_HOST(instagram|facebook) 또는 publish.config.json 의 ig_api_host 로 정하고, 없으면 첫 호출 때 둘 다 시험해 고른다.
+let IG_HOST = process.env.IG_API_HOST || CFG.ig_api_host || null;
+let IG_UID = process.env.IG_USER_ID || null;
+const IG_VER = () => process.env.IG_GRAPH_VERSION || "v23.0";
+const IG = () => `https://graph.${IG_HOST === "facebook" ? "facebook" : "instagram"}.com/${IG_VER()}`;
+async function igReady() {
+  if (IG_HOST && (IG_UID || IG_HOST === "instagram")) return;
+  const tok = process.env.IG_ACCESS_TOKEN;
+  const get = async (u) => { const r = await fetch(u + (u.includes("?") ? "&" : "?") + new URLSearchParams({ access_token: tok })); const j = await r.json().catch(() => ({})); return r.ok && !j.error ? j : null; };
+  if (!IG_HOST) {
+    if (await get(`https://graph.instagram.com/${IG_VER()}/${IG_UID || "me"}?fields=username`)) IG_HOST = "instagram";
+    else IG_HOST = "facebook";
+  }
+  if (IG_HOST === "facebook" && !IG_UID) {
+    // 시스템 사용자 토큰에 맡겨진 인스타 계정을 찾아본다(찾으면 IG_USER_ID 로 저장해 두기를 권함)
+    const fb = `https://graph.facebook.com/${IG_VER()}`;
+    const a = await get(`${fb}/me/assigned_instagram_accounts?fields=id,username`);
+    const b = a?.data?.length ? null : await get(`${fb}/me/accounts?fields=instagram_business_account{id,username}`);
+    const found = a?.data?.[0] || b?.data?.map((x) => x.instagram_business_account).find(Boolean);
+    if (!found) throw new Error("인스타 계정 ID를 찾지 못함 — 메타 화면에 보이는 인스타 계정 숫자 ID를 GitHub 비밀값 IG_USER_ID 로 넣어 주세요");
+    IG_UID = found.id;
+  }
+}
+const igUid = () => IG_UID || "me";
 
 // 저장소 없이 돌 때 쓸 커밋(REPO_SHA 가 없으면 브랜치 최신 커밋)
 let remoteSha;
@@ -272,7 +298,8 @@ async function igCall(method, url, params) {
 // 같은 이유로 인스타 최근 게시물에서 캡션 첫 줄이 같은 것을 찾는다.
 async function igExisting(item) {
   const first = item.caption.split("\n")[0].trim();
-  const r = await igCall("GET", `${IG()}/${process.env.IG_USER_ID || "me"}/media`, { fields: "caption,permalink,timestamp", limit: "25" });
+  await igReady();
+  const r = await igCall("GET", `${IG()}/${igUid()}/media`, { fields: "caption,permalink,timestamp", limit: "25" });
   const hit = (r.data || []).find((m) => (m.caption || "").split("\n")[0].trim() === first);
   return hit ? { media_id: hit.id, url: hit.permalink, at: hit.timestamp, recovered: true } : null;
 }
@@ -281,7 +308,8 @@ async function publishInstagram(item) {
   const videoUrl = await mediaUrl(item);
   const head = await fetch(videoUrl, { method: "HEAD" });
   if (!head.ok) throw new Error(`영상 공개 주소 접근 실패(HTTP ${head.status}): ${videoUrl}`);
-  const uid = process.env.IG_USER_ID || "me";
+  await igReady();
+  const uid = igUid();
   // 1) 컨테이너 만들기
   const c = await igCall("POST", `${IG()}/${uid}/media`, {
     media_type: "REELS", video_url: videoUrl, caption: igCaption(item), share_to_feed: "true",
@@ -303,6 +331,7 @@ async function publishInstagram(item) {
 
 // 장기 토큰(60일) 연장 — 7일에 한 번. 토큰 값은 어디에도 출력·저장하지 않는다.
 async function refreshIgToken() {
+  if (IG_HOST === "facebook") return null; // 시스템 사용자 토큰은 만료되지 않아 연장하지 않는다
   const last = log.meta.ig_refreshed_at ? Date.parse(log.meta.ig_refreshed_at) : 0;
   if (Date.now() - last < 7 * 86400e3) return null;
   const r = await fetch("https://graph.instagram.com/refresh_access_token?" + new URLSearchParams({
@@ -334,8 +363,9 @@ for (const p of targets) {
     if (miss.length) report.push(`${P.name} 키: 없음(${miss.join(", ")})`);
     else if (p === "ig") {
       try {
-        const me = await igCall("GET", `${IG()}/${process.env.IG_USER_ID || "me"}`, { fields: "username" });
-        report.push(`${P.name} 키: 통함 — 계정 @${me.username}`);
+        await igReady();
+        const me = await igCall("GET", `${IG()}/${igUid()}`, { fields: "username" });
+        report.push(`${P.name} 키: 통함 — 계정 @${me.username} (${IG_HOST === "facebook" ? "만료 없는 시스템 사용자 키" : "인스타 로그인 키, 60일·자동 연장"}${process.env.IG_USER_ID ? "" : `, 계정 ID ${igUid()} — IG_USER_ID 로 저장 권장`})`);
       } catch (e) { failed = true; report.push(`${P.name} 키: 안 통함 — ${e.message}`); }
     } else {
       try { await googleToken(); report.push(`${P.name} 키: 통함`); }
