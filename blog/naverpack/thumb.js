@@ -43,7 +43,7 @@ body{width:1000px;height:1000px;background:${t.bg};font-family:"NKR",sans-serif;
 </style></head><body>
 ${c.kicker ? `<div class="k">${esc(c.kicker)}</div>` : ''}${c.badge ? `<div class="b">${esc(c.badge)}</div>` : ''}
 <div class="m">${c.lines.map(l => `<div class="l">${mark(l, c.hl, t)}</div>`).join('')}</div>
-${c.sub ? `<div class="bar"></div><div class="s">${esc(c.sub)}</div>` : ''}<div class="brand">매니악 브리핑</div>
+${c.sub ? `<div class="bar"></div><div class="s">${esc(c.sub)}</div>` : ''}<div class="brand">${esc(c.brand || '매니악 브리핑')}</div>
 </body></html>`;
   fs.mkdirSync(outDir, {recursive: true});
   const f = path.resolve(outDir, (c.out || '00.png').replace(/\.png$/, '.html'));

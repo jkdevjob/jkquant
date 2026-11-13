@@ -11,6 +11,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const LOG = path.join(__dirname, "published.json");
@@ -50,12 +51,31 @@ const P = 'style="margin:0 0 10px;"';
 const out = [];
 if (dateLabel) out.push(`<p style="margin:0 0 18px;color:#8a8f98;font-size:13px;">${dateLabel} · 은퇴노트 경제 노트</p>`);
 let list = null;
+const images = [];
 const flushList = () => {
   if (list) { out.push(`<ul style="margin:0 0 10px;padding-left:20px;font-size:14px;">${list.join("")}</ul>`); list = null; }
 };
 for (const raw of lines) {
   const l = raw.trim();
   if (!l || l === titleLine.trim() || /^<!--.*-->$/.test(l) || /^\[사진:.*\]$/.test(l)) { flushList(); continue; }
+  // 이미지: ![캡션](blog/blogger_img/<날짜>_<이름>/00.png) — 저장소(공개)의 raw 주소로 넣는다.
+  // 주소에는 그 이미지를 마지막으로 바꾼 커밋 해시를 써서, 브랜치가 바뀌어도 그림이 깨지지 않게 한다.
+  const im = l.match(/^!\[([^\]]*)\]\((blog\/[^)\s]+\.(?:png|jpe?g|webp))\)$/i);
+  if (im) {
+    flushList();
+    const [, cap, rel] = im;
+    let src = rel;
+    try { const sha = execSync(`git log -1 --format=%H -- "${rel}"`, { cwd: path.join(__dirname, ".."), encoding: "utf8" }).trim();
+      if (sha) src = `https://raw.githubusercontent.com/jkdevjob/jkquant/${sha}/${rel}`; } catch {}
+    if (src === rel) {
+      if (!flags.has("--dry")) { console.error(`이미지가 아직 커밋되지 않았습니다: ${rel}`); process.exit(1); }
+      src = path.relative(path.dirname(file), path.join(__dirname, "..", rel));
+    }
+    images.push(src);
+    out.push(`<figure style="margin:18px 0 20px;text-align:center;"><img src="${src}" alt="${esc(cap)}" style="max-width:100%;height:auto;border-radius:6px;" loading="lazy">`
+      + (cap ? `<figcaption style="margin-top:6px;color:#8a8f98;font-size:13px;">${esc(cap)}</figcaption>` : "") + `</figure>`);
+    continue;
+  }
   if (l.startsWith("- ")) { (list ||= []).push(`<li style="margin:4px 0;">${inline(l.slice(2))}</li>`); continue; }
   flushList();
   if (l === "---") { out.push('<hr style="border:none;border-top:1px solid #e3e3e3;margin:28px 0 18px;">'); continue; }
@@ -75,7 +95,7 @@ if (flags.has("--dry")) {
   const htmlPath = file.replace(/\.md$/, ".html");
   fs.writeFileSync(htmlPath, `<meta charset="utf-8"><title>${esc(title)}</title><h1>${esc(title)}</h1>\n${html}`);
   console.log(`미리보기 저장: ${htmlPath}`);
-  console.log(`제목: ${title}\n라벨: ${labels.join(", ") || "(없음)"}\n문단: ${out.length}개`);
+  console.log(`제목: ${title}\n라벨: ${labels.join(", ") || "(없음)"}\n문단: ${out.length}개 · 이미지: ${images.length}개`);
   process.exit(0);
 }
 
