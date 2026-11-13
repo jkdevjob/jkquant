@@ -177,3 +177,9 @@ node blog/publish-blogger.mjs blog/<파일>.md
 - 필요한 환경변수: `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `GOOGLE_REFRESH_TOKEN` `BLOGGER_BLOG_ID`
 - 없으면 게시를 건너뛰고 "키 미설정"으로 보고한다(글 파일은 저장·커밋).
 - 이미 게시한 파일은 `blog/published.json` 에 남아 다시 올라가지 않는다.
+- **자동 게시(2026-11-13 사용자 지시 "앞으로는 자동으로 올릴수 있게 구글 블로거에 올리자"):** `.github/workflows/blogger-publish.yml` 이
+  `claude/blog-daily` 에 새 글(`blog/20*.md`)이 푸시되면 GitHub Actions 에서 게시하고 `published.json` 을 커밋한다. 키 4개는 저장소
+  Settings → Secrets and variables → Actions 에만 둔다(채팅·파일 금지). 키 등록 전에 밀린 글·실패한 글은 `blog/blogger_queue.txt` 에 적어 푸시하면 다시 시도한다.
+  확인: 푸시 2~3분 뒤 `git pull` 해 `published.json` 에 그 파일이 있으면 URL 을 curl 로 열어 HTTP 200·제목을 본 뒤에만 '게시 완료'라고 한다.
+  없으면 Actions 실행 결과(키 미설정 경고인지 오류인지)를 보고한다. 이 세션에서 직접 `publish-blogger.mjs`(--dry 아닌)를 돌리지 않는다.
+  Actions 가 `published.json` 을 커밋하므로, 세션의 푸시가 거절되면 `git pull --rebase origin claude/blog-daily` 뒤 다시 푸시한다.

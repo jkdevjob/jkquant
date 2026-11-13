@@ -1,0 +1,72 @@
+name: blogger-publish
+# 블로그 글(blog/YYYY-MM-DD_*.md)이 claude/blog-daily 에 새로 올라오면 구글 블로거에 자동 게시한다(사용자 지시 2026-11-13).
+# 키 4개(GOOGLE_CLIENT_ID · GOOGLE_CLIENT_SECRET · GOOGLE_REFRESH_TOKEN · BLOGGER_BLOG_ID)는
+# 저장소 Settings → Secrets and variables → Actions 에 둔다. 채팅·저장소 파일에는 쓰지 않는다.
+# 게시 대상: ① 이번 푸시에서 새로 추가된 글 ② blog/blogger_queue.txt 에 적힌 글(키 등록 전에 밀린 글·재시도용).
+# 이미 게시한 글은 blog/published.json 에 남아 다시 올라가지 않는다(publish-blogger.mjs 가 건너뜀).
+on:
+  push:
+    branches: [claude/blog-daily]
+    paths:
+      - 'blog/20*.md'
+      - 'blog/blogger_queue.txt'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: blogger-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/blog-daily
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 새 글 게시
+        env:
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+            BEFORE="$AFTER~1"
+          fi
+          added=$(git diff --name-only --diff-filter=A "$BEFORE" "$AFTER" -- 'blog/20*.md')
+          queued=$( [ -f blog/blogger_queue.txt ] && grep -E '^blog/20[0-9-]+_[A-Za-z0-9_-]+\.md$' blog/blogger_queue.txt || true )
+          files=$(printf '%s\n%s\n' "$added" "$queued" | grep -v '^$' | sort -u)
+          echo "게시 대상:"; echo "$files"
+          fail=0
+          for f in $files; do
+            [ -f "$f" ] || { echo "::warning::파일 없음 $f"; continue; }
+            node blog/publish-blogger.mjs "$f"; rc=$?
+            if [ $rc -eq 2 ]; then echo "::warning::키 미설정 — 게시 건너뜀: $f (blog/blogger_queue.txt 에 남겨 두면 키 등록 뒤 다시 시도)";
+            elif [ $rc -ne 0 ]; then echo "::error::게시 실패: $f"; fail=1; fi
+          done
+          exit $fail
+
+      - name: 게시 기록 커밋
+        if: always()
+        run: |
+          git add blog/published.json 2>/dev/null || true
+          if git diff --cached --quiet; then echo "기록 변경 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "blog: 블로거 게시 기록(published.json)"
+          for i in 1 2 3 4; do
+            git pull --rebase origin claude/blog-daily && git push origin HEAD:claude/blog-daily && exit 0
+            sleep $((i*5))
+          done
+          echo "::error::게시 기록 푸시 실패"; exit 1
