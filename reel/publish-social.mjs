@@ -319,6 +319,7 @@ async function publishInstagram(item) {
   // 1) 컨테이너 만들기
   const c = await igCall("POST", `${IG()}/${uid}/media`, {
     media_type: "REELS", video_url: videoUrl, caption: igCaption(item), share_to_feed: "true",
+    thumb_offset: String(item.thumb_ms ?? 1000), // 썸네일 = 1초 장면(표지 v2 가 다 그려진 뒤)
   });
   // 2) 인스타가 영상을 처리할 때까지 대기(최대 10분)
   let status = "IN_PROGRESS";

@@ -44,6 +44,7 @@
   .f-reg  { font-family:'Hand'; font-weight:400; }
   .f-pen  { font-family:'Pen'; }
   .f-sans { font-family:'Sans'; }
+  .f-heavy { font-family:'Sans'; font-weight:800; letter-spacing:-0.03em; }
   .c-ink  { color:#22304a; } .c-red { color:#c0392b; } .c-gray { color:#77797d; } .c-blue { color:#2c5aa0; }
   .hl { position:absolute; border-radius:10px 4px 12px 6px; background:rgba(255,212,56,.62);
         mix-blend-mode:multiply; transform-origin:0 50%; }
@@ -190,6 +191,14 @@
     el.textContent = it.text;
     el.style.fontSize = (it.size || 72) + "px";
     el.style.left = (it.x ?? 0) + "px"; el.style.top = (it.y ?? 0) + "px";
+    // 표지용 강조: box(글자 뒤 색 띠 · 같은 색 글자면 '가림 띠'), stroke(외곽선), shadow, border(도장), 색은 이름 또는 #hex
+    if (it.color && it.color[0] === "#") el.style.color = it.color;
+    if (it.box){ el.style.background = it.box; el.style.padding = it.pad || "0.04em 0.18em 0em"; el.style.borderRadius = (it.radius ?? 8) + "px"; }
+    if (it.stroke){ el.style.webkitTextStroke = `${it.stroke}px ${it.strokeColor || "#111"}`; el.style.paintOrder = "stroke fill"; }
+    if (it.shadow) el.style.textShadow = it.shadow === true ? "0 10px 0 rgba(0,0,0,.16)" : it.shadow;
+    if (it.border){ el.style.border = it.border; el.style.padding = it.pad || "0.02em 0.2em"; el.style.borderRadius = (it.radius ?? 14) + "px"; }
+    if (it.weight) el.style.fontWeight = it.weight;
+    if (it.ls) el.style.letterSpacing = it.ls;
     const rot = it.rot ?? (BRIEF ? 0 : (R() - .5) * 1.4);
     el.style.transform = `rotate(${rot}deg)`;
     container.appendChild(el);
