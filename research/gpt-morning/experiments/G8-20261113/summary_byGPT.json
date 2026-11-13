@@ -1,0 +1,2648 @@
+{
+  "research": "G8-20261113",
+  "generatedAt": "2026-11-13T05:54:07.699Z",
+  "mainSha": "7dcfe2ed97879a1ee0303b19d8e4830a3e8e8319",
+  "sources": [
+    {
+      "ticker": "SPY",
+      "basis": "trade",
+      "first": "1998-01-02",
+      "last": "2026-11-12",
+      "rows": 7261
+    },
+    {
+      "ticker": "QQQ",
+      "basis": "trade",
+      "first": "1999-03-10",
+      "last": "2026-11-12",
+      "rows": 6964
+    },
+    {
+      "ticker": "SOXL",
+      "basis": "trade",
+      "first": "2010-03-11",
+      "last": "2026-11-12",
+      "rows": 4196
+    },
+    {
+      "ticker": "TQQQ",
+      "basis": "trade",
+      "first": "2010-02-11",
+      "last": "2026-11-12",
+      "rows": 4215
+    }
+  ],
+  "validation": {
+    "nativeParity": [
+      {
+        "ticker": "SPY",
+        "capital": 10000,
+        "passed": true
+      },
+      {
+        "ticker": "SPY",
+        "capital": 100000,
+        "passed": true
+      },
+      {
+        "ticker": "QQQ",
+        "capital": 10000,
+        "passed": true
+      },
+      {
+        "ticker": "QQQ",
+        "capital": 100000,
+        "passed": true
+      },
+      {
+        "ticker": "SOXL",
+        "capital": 10000,
+        "passed": true
+      },
+      {
+        "ticker": "SOXL",
+        "capital": 100000,
+        "passed": true
+      },
+      {
+        "ticker": "TQQQ",
+        "capital": 10000,
+        "passed": true
+      },
+      {
+        "ticker": "TQQQ",
+        "capital": 100000,
+        "passed": true
+      }
+    ],
+    "nonFutureSignal": true,
+    "intradayFlat": true,
+    "nonNegativeAccounts": true,
+    "baselineDataBasis": true,
+    "costStressPairs": true
+  },
+  "rows": [
+    {
+      "ticker": "SPY",
+      "capital": 10000,
+      "window": "2020_onward",
+      "method": "Double7_nextOpen",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 16916.99609181481,
+        "totalReturnPct": 69.1699609181481,
+        "cagrPct": 7.96379927530011,
+        "mddPct": -26.335636570800798,
+        "worstDayPct": -5.696781185426536,
+        "fees": 1204.88585,
+        "tax": 248.5392461851833,
+        "trades": 43,
+        "roundTrips": 21,
+        "expectancyPerTradeAfterFeePct": 2.408741617578913,
+        "pfAfterFee": 2.28322749010092,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 10.813080649999929
+          },
+          {
+            "year": "2021",
+            "returnPct": 27.71813392411091
+          },
+          {
+            "year": "2022",
+            "returnPct": -18.899251659907645
+          },
+          {
+            "year": "2023",
+            "returnPct": 4.712069954958231
+          },
+          {
+            "year": "2024",
+            "returnPct": 24.28419147481624
+          },
+          {
+            "year": "2025",
+            "returnPct": 8.055855660563305
+          },
+          {
+            "year": "2026",
+            "returnPct": 4.807859476199705
+          }
+        ],
+        "positiveYearFraction": 0.8571428571428571,
+        "openPosition": true,
+        "meanHoldCalendarDays": 84.33333333333333,
+        "maxHoldCalendarDays": 573,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 11312.299297999996,
+        "totalReturnPct": 13.122992979999971,
+        "cagrPct": 1.813426202856272,
+        "mddPct": -15.818523128696377,
+        "worstDayPct": -4.433951709543527,
+        "fees": 3399.636699999999,
+        "tax": 0,
+        "trades": 133,
+        "roundTrips": 66,
+        "expectancyPerTradeAfterFeePct": 0.20456870571536367,
+        "pfAfterFee": 1.2924601901464206,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -3.0218036800000125
+          },
+          {
+            "year": "2021",
+            "returnPct": 15.162672309845249
+          },
+          {
+            "year": "2022",
+            "returnPct": -9.066540603051788
+          },
+          {
+            "year": "2023",
+            "returnPct": -2.4205920168339
+          },
+          {
+            "year": "2024",
+            "returnPct": 3.4851657369985523
+          },
+          {
+            "year": "2025",
+            "returnPct": 8.104491658949264
+          },
+          {
+            "year": "2026",
+            "returnPct": 2.0378548594593093
+          }
+        ],
+        "positiveYearFraction": 0.5714285714285714,
+        "openPosition": true,
+        "meanHoldCalendarDays": 11.015151515151516,
+        "maxHoldCalendarDays": 41,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 10596.45292399999,
+        "totalReturnPct": 5.964529239999905,
+        "cagrPct": 0.847967494512103,
+        "mddPct": -16.71032918112437,
+        "worstDayPct": -4.440702177192657,
+        "fees": 3944.5313699999997,
+        "tax": 0,
+        "trades": 133,
+        "roundTrips": 66,
+        "expectancyPerTradeAfterFeePct": 0.10441346346645945,
+        "pfAfterFee": 1.143242795691201,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -3.6096234800000127
+          },
+          {
+            "year": "2021",
+            "returnPct": 13.862668351780405
+          },
+          {
+            "year": "2022",
+            "returnPct": -9.413537125343518
+          },
+          {
+            "year": "2023",
+            "returnPct": -3.0399889215249276
+          },
+          {
+            "year": "2024",
+            "returnPct": 2.265420891383929
+          },
+          {
+            "year": "2025",
+            "returnPct": 6.669894084834582
+          },
+          {
+            "year": "2026",
+            "returnPct": 0.767120076071115
+          }
+        ],
+        "positiveYearFraction": 0.5714285714285714,
+        "openPosition": true,
+        "meanHoldCalendarDays": 11.015151515151516,
+        "maxHoldCalendarDays": 41,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "SPY",
+      "capital": 10000,
+      "window": "2020_onward",
+      "method": "VolatilityBreakout_k050_dayClose",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 16916.99609181481,
+        "totalReturnPct": 69.1699609181481,
+        "cagrPct": 7.96379927530011,
+        "mddPct": -26.335636570800798,
+        "worstDayPct": -5.696781185426536,
+        "fees": 1204.88585,
+        "tax": 248.5392461851833,
+        "trades": 43,
+        "roundTrips": 21,
+        "expectancyPerTradeAfterFeePct": 2.408741617578913,
+        "pfAfterFee": 2.28322749010092,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 10.813080649999929
+          },
+          {
+            "year": "2021",
+            "returnPct": 27.71813392411091
+          },
+          {
+            "year": "2022",
+            "returnPct": -18.899251659907645
+          },
+          {
+            "year": "2023",
+            "returnPct": 4.712069954958231
+          },
+          {
+            "year": "2024",
+            "returnPct": 24.28419147481624
+          },
+          {
+            "year": "2025",
+            "returnPct": 8.055855660563305
+          },
+          {
+            "year": "2026",
+            "returnPct": 4.807859476199705
+          }
+        ],
+        "positiveYearFraction": 0.8571428571428571,
+        "openPosition": true,
+        "meanHoldCalendarDays": 84.33333333333333,
+        "maxHoldCalendarDays": 573,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 593.5721624999948,
+        "totalReturnPct": -94.06427837500006,
+        "cagrPct": -33.74273245677741,
+        "mddPct": -94.06427837500006,
+        "worstDayPct": -5.560804204938085,
+        "fees": 7228.752837500007,
+        "tax": 0,
+        "trades": 1180,
+        "roundTrips": 590,
+        "expectancyPerTradeAfterFeePct": -0.5399792028964981,
+        "pfAfterFee": 0.11389964219410242,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -57.714034000000005
+          },
+          {
+            "year": "2021",
+            "returnPct": -35.8648895475157
+          },
+          {
+            "year": "2022",
+            "returnPct": -47.1174132658775
+          },
+          {
+            "year": "2023",
+            "returnPct": -32.12249068610026
+          },
+          {
+            "year": "2024",
+            "returnPct": -29.47728462450825
+          },
+          {
+            "year": "2025",
+            "returnPct": -13.540283408826282
+          },
+          {
+            "year": "2026",
+            "returnPct": 0
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 553.2648799999859,
+        "totalReturnPct": -94.46735120000014,
+        "cagrPct": -34.41836361076409,
+        "mddPct": -94.62100765000014,
+        "worstDayPct": -5.620100869683176,
+        "fees": 7363.275120000011,
+        "tax": 0,
+        "trades": 1028,
+        "roundTrips": 514,
+        "expectancyPerTradeAfterFeePct": -0.6425366294931325,
+        "pfAfterFee": 0.09007702845208196,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -62.028235000000095
+          },
+          {
+            "year": "2021",
+            "returnPct": -41.412148078974155
+          },
+          {
+            "year": "2022",
+            "returnPct": -51.40277227983779
+          },
+          {
+            "year": "2023",
+            "returnPct": -32.595016225636385
+          },
+          {
+            "year": "2024",
+            "returnPct": -26.187644749233385
+          },
+          {
+            "year": "2025",
+            "returnPct": 2.856602872841063
+          },
+          {
+            "year": "2026",
+            "returnPct": 0
+          }
+        ],
+        "positiveYearFraction": 0.14285714285714285,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "SPY",
+      "capital": 100000,
+      "window": "2020_onward",
+      "method": "Double7_nextOpen",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 157968.43968962674,
+        "totalReturnPct": 57.96843968962675,
+        "cagrPct": 6.891129201392965,
+        "mddPct": -29.064370597916888,
+        "worstDayPct": -5.762927081819125,
+        "fees": 12051.929232573091,
+        "tax": 12289.7142514324,
+        "trades": 43,
+        "roundTrips": 21,
+        "expectancyPerTradeAfterFeePct": 2.408741617578913,
+        "pfAfterFee": 2.28322749010092,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 10.857363458999924
+          },
+          {
+            "year": "2021",
+            "returnPct": 28.089228075062977
+          },
+          {
+            "year": "2022",
+            "returnPct": -19.09076623832299
+          },
+          {
+            "year": "2023",
+            "returnPct": 1.1985754541280036
+          },
+          {
+            "year": "2024",
+            "returnPct": 24.40087902176069
+          },
+          {
+            "year": "2025",
+            "returnPct": 8.35994949285459
+          },
+          {
+            "year": "2026",
+            "returnPct": 0.7925526529113824
+          }
+        ],
+        "positiveYearFraction": 0.8571428571428571,
+        "openPosition": true,
+        "meanHoldCalendarDays": 84.33333333333333,
+        "maxHoldCalendarDays": 573,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 108616.16734870474,
+        "totalReturnPct": 8.616167348704739,
+        "cagrPct": 1.2119114286283983,
+        "mddPct": -18.072592189751045,
+        "worstDayPct": -4.477041422670769,
+        "fees": 34127.955058270905,
+        "tax": 4767.51599339154,
+        "trades": 133,
+        "roundTrips": 66,
+        "expectancyPerTradeAfterFeePct": 0.20456870571536367,
+        "pfAfterFee": 1.2924601901464206,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -3.0360439099999637
+          },
+          {
+            "year": "2021",
+            "returnPct": 15.713512332209145
+          },
+          {
+            "year": "2022",
+            "returnPct": -11.708567243929224
+          },
+          {
+            "year": "2023",
+            "returnPct": -2.395797424009727
+          },
+          {
+            "year": "2024",
+            "returnPct": 3.568474942254607
+          },
+          {
+            "year": "2025",
+            "returnPct": 7.049853248817506
+          },
+          {
+            "year": "2026",
+            "returnPct": 1.320968419602786
+          }
+        ],
+        "positiveYearFraction": 0.5714285714285714,
+        "openPosition": true,
+        "meanHoldCalendarDays": 11.015151515151516,
+        "maxHoldCalendarDays": 41,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 102743.31497207936,
+        "totalReturnPct": 2.743314972079358,
+        "cagrPct": 0.39523155885570205,
+        "mddPct": -18.639373251950133,
+        "worstDayPct": -4.483970566314744,
+        "fees": 39728.794862525465,
+        "tax": 3497.4847032151765,
+        "trades": 133,
+        "roundTrips": 66,
+        "expectancyPerTradeAfterFeePct": 0.10441346346645945,
+        "pfAfterFee": 1.143242795691201,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -3.6292632439999917
+          },
+          {
+            "year": "2021",
+            "returnPct": 14.203063509471159
+          },
+          {
+            "year": "2022",
+            "returnPct": -11.654030870866716
+          },
+          {
+            "year": "2023",
+            "returnPct": -3.1842421584167613
+          },
+          {
+            "year": "2024",
+            "returnPct": 2.2795964778192124
+          },
+          {
+            "year": "2025",
+            "returnPct": 6.01830412553479
+          },
+          {
+            "year": "2026",
+            "returnPct": 0.6532942416266341
+          }
+        ],
+        "positiveYearFraction": 0.5714285714285714,
+        "openPosition": true,
+        "meanHoldCalendarDays": 11.015151515151516,
+        "maxHoldCalendarDays": 41,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "SPY",
+      "capital": 100000,
+      "window": "2020_onward",
+      "method": "VolatilityBreakout_k050_dayClose",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 157968.43968962674,
+        "totalReturnPct": 57.96843968962675,
+        "cagrPct": 6.891129201392965,
+        "mddPct": -29.064370597916888,
+        "worstDayPct": -5.762927081819125,
+        "fees": 12051.929232573091,
+        "tax": 12289.7142514324,
+        "trades": 43,
+        "roundTrips": 21,
+        "expectancyPerTradeAfterFeePct": 2.408741617578913,
+        "pfAfterFee": 2.28322749010092,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 10.857363458999924
+          },
+          {
+            "year": "2021",
+            "returnPct": 28.089228075062977
+          },
+          {
+            "year": "2022",
+            "returnPct": -19.09076623832299
+          },
+          {
+            "year": "2023",
+            "returnPct": 1.1985754541280036
+          },
+          {
+            "year": "2024",
+            "returnPct": 24.40087902176069
+          },
+          {
+            "year": "2025",
+            "returnPct": 8.35994949285459
+          },
+          {
+            "year": "2026",
+            "returnPct": 0.7925526529113824
+          }
+        ],
+        "positiveYearFraction": 0.8571428571428571,
+        "openPosition": true,
+        "meanHoldCalendarDays": 84.33333333333333,
+        "maxHoldCalendarDays": 573,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 2192.929250000004,
+        "totalReturnPct": -97.80707075,
+        "cagrPct": -42.69348380597309,
+        "mddPct": -97.80707075000001,
+        "worstDayPct": -5.591090623430572,
+        "fees": 75751.11075000007,
+        "tax": 0,
+        "trades": 1490,
+        "roundTrips": 745,
+        "expectancyPerTradeAfterFeePct": -0.5283444903033558,
+        "pfAfterFee": 0.10290778266233438,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -58.4884885
+          },
+          {
+            "year": "2021",
+            "returnPct": -37.74430864797591
+          },
+          {
+            "year": "2022",
+            "returnPct": -51.22829825096322
+          },
+          {
+            "year": "2023",
+            "returnPct": -36.80260595059897
+          },
+          {
+            "year": "2024",
+            "returnPct": -38.45372131805402
+          },
+          {
+            "year": "2025",
+            "returnPct": -34.19649558915761
+          },
+          {
+            "year": "2026",
+            "returnPct": -32.023451224541496
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 1262.6362550000185,
+        "totalReturnPct": -98.73736374499998,
+        "cagrPct": -47.123715956089896,
+        "mddPct": -98.73736374499998,
+        "worstDayPct": -5.692347293226541,
+        "fees": 77474.70874500001,
+        "tax": 0,
+        "trades": 1490,
+        "roundTrips": 745,
+        "expectancyPerTradeAfterFeePct": -0.6277671801383081,
+        "pfAfterFee": 0.07262763162053662,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -62.88997407500002
+          },
+          {
+            "year": "2021",
+            "returnPct": -43.88085434893144
+          },
+          {
+            "year": "2022",
+            "returnPct": -56.42202345409573
+          },
+          {
+            "year": "2023",
+            "returnPct": -42.805137354629984
+          },
+          {
+            "year": "2024",
+            "returnPct": -43.121488755849725
+          },
+          {
+            "year": "2025",
+            "returnPct": -37.71121124868594
+          },
+          {
+            "year": "2026",
+            "returnPct": -31.341587371721214
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "QQQ",
+      "capital": 10000,
+      "window": "2020_onward",
+      "method": "Double7_nextOpen",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 23026.010784588292,
+        "totalReturnPct": 130.26010784588294,
+        "cagrPct": 12.925870836010622,
+        "mddPct": -27.50821631816061,
+        "worstDayPct": -9.392829061022978,
+        "fees": 926.1773034222921,
+        "tax": 2607.2364708644777,
+        "trades": 25,
+        "roundTrips": 12,
+        "expectancyPerTradeAfterFeePct": 10.94569510808413,
+        "pfAfterFee": 5.585410604989531,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 32.483328700000015
+          },
+          {
+            "year": "2021",
+            "returnPct": 27.119773025449344
+          },
+          {
+            "year": "2022",
+            "returnPct": -17.98087421544662
+          },
+          {
+            "year": "2023",
+            "returnPct": 23.780141323712336
+          },
+          {
+            "year": "2024",
+            "returnPct": 24.967299314535964
+          },
+          {
+            "year": "2025",
+            "returnPct": 14.13863779802984
+          },
+          {
+            "year": "2026",
+            "returnPct": -5.583220252793863
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": true,
+        "meanHoldCalendarDays": 168.16666666666666,
+        "maxHoldCalendarDays": 724,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 13596.892205407386,
+        "totalReturnPct": 35.96892205407387,
+        "cagrPct": 4.580052682608482,
+        "mddPct": -13.945308446571905,
+        "worstDayPct": -6.241260970163031,
+        "fees": 4304.274699999999,
+        "tax": 9.997426592591866,
+        "trades": 139,
+        "roundTrips": 69,
+        "expectancyPerTradeAfterFeePct": 0.5044924352564374,
+        "pfAfterFee": 1.5757021992153775,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 19.120015639999966
+          },
+          {
+            "year": "2021",
+            "returnPct": 7.954358982548926
+          },
+          {
+            "year": "2022",
+            "returnPct": -8.014709762434025
+          },
+          {
+            "year": "2023",
+            "returnPct": 0.9338750242047889
+          },
+          {
+            "year": "2024",
+            "returnPct": 11.45796589781185
+          },
+          {
+            "year": "2025",
+            "returnPct": 1.4751554577382642
+          },
+          {
+            "year": "2026",
+            "returnPct": 0.6905148844787101
+          }
+        ],
+        "positiveYearFraction": 0.8571428571428571,
+        "openPosition": true,
+        "meanHoldCalendarDays": 10.971014492753623,
+        "maxHoldCalendarDays": 33,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 12751.132184000002,
+        "totalReturnPct": 27.511321840000026,
+        "cagrPct": 3.605724268267796,
+        "mddPct": -14.677788726024115,
+        "worstDayPct": -6.304619271818035,
+        "fees": 5013.458160000003,
+        "tax": 0,
+        "trades": 139,
+        "roundTrips": 69,
+        "expectancyPerTradeAfterFeePct": 0.4040374169177101,
+        "pfAfterFee": 1.4426059399222595,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 18.150565039999968
+          },
+          {
+            "year": "2021",
+            "returnPct": 6.62167309767101
+          },
+          {
+            "year": "2022",
+            "returnPct": -8.01920979044809
+          },
+          {
+            "year": "2023",
+            "returnPct": -0.0007008596834001679
+          },
+          {
+            "year": "2024",
+            "returnPct": 10.097769616858265
+          },
+          {
+            "year": "2025",
+            "returnPct": 0.5344147802397892
+          },
+          {
+            "year": "2026",
+            "returnPct": -0.5785519927714589
+          }
+        ],
+        "positiveYearFraction": 0.5714285714285714,
+        "openPosition": true,
+        "meanHoldCalendarDays": 10.971014492753623,
+        "maxHoldCalendarDays": 33,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "QQQ",
+      "capital": 10000,
+      "window": "2020_onward",
+      "method": "VolatilityBreakout_k050_dayClose",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 23026.010784588292,
+        "totalReturnPct": 130.26010784588294,
+        "cagrPct": 12.925870836010622,
+        "mddPct": -27.50821631816061,
+        "worstDayPct": -9.392829061022978,
+        "fees": 926.1773034222921,
+        "tax": 2607.2364708644777,
+        "trades": 25,
+        "roundTrips": 12,
+        "expectancyPerTradeAfterFeePct": 10.94569510808413,
+        "pfAfterFee": 5.585410604989531,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 32.483328700000015
+          },
+          {
+            "year": "2021",
+            "returnPct": 27.119773025449344
+          },
+          {
+            "year": "2022",
+            "returnPct": -17.98087421544662
+          },
+          {
+            "year": "2023",
+            "returnPct": 23.780141323712336
+          },
+          {
+            "year": "2024",
+            "returnPct": 24.967299314535964
+          },
+          {
+            "year": "2025",
+            "returnPct": 14.13863779802984
+          },
+          {
+            "year": "2026",
+            "returnPct": -5.583220252793863
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": true,
+        "meanHoldCalendarDays": 168.16666666666666,
+        "maxHoldCalendarDays": 724,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 603.5246000000005,
+        "totalReturnPct": -93.964754,
+        "cagrPct": -33.58196088615455,
+        "mddPct": -94.01761662499999,
+        "worstDayPct": -7.487568485144336,
+        "fees": 8422.015400000006,
+        "tax": 0,
+        "trades": 1334,
+        "roundTrips": 667,
+        "expectancyPerTradeAfterFeePct": -0.4690268064412922,
+        "pfAfterFee": 0.2116664735841621,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -54.86770099999997
+          },
+          {
+            "year": "2021",
+            "returnPct": -31.546593715511705
+          },
+          {
+            "year": "2022",
+            "returnPct": -33.482382323432894
+          },
+          {
+            "year": "2023",
+            "returnPct": -34.59048329799075
+          },
+          {
+            "year": "2024",
+            "returnPct": -32.96039237356546
+          },
+          {
+            "year": "2025",
+            "returnPct": -25.95426943947895
+          },
+          {
+            "year": "2026",
+            "returnPct": -9.551088766236626
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 523.8164599999975,
+        "totalReturnPct": -94.76183540000002,
+        "cagrPct": -34.93909436462409,
+        "mddPct": -94.76183540000001,
+        "worstDayPct": -7.6164210891182975,
+        "fees": 8381.583539999994,
+        "tax": 0,
+        "trades": 1158,
+        "roundTrips": 579,
+        "expectancyPerTradeAfterFeePct": -0.5714212128255673,
+        "pfAfterFee": 0.167837505857642,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -59.61609749999999
+          },
+          {
+            "year": "2021",
+            "returnPct": -37.690187569168074
+          },
+          {
+            "year": "2022",
+            "returnPct": -39.420101007371045
+          },
+          {
+            "year": "2023",
+            "returnPct": -38.54481215974413
+          },
+          {
+            "year": "2024",
+            "returnPct": -34.585308839248384
+          },
+          {
+            "year": "2025",
+            "returnPct": -14.522458608010025
+          },
+          {
+            "year": "2026",
+            "returnPct": 0
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "QQQ",
+      "capital": 100000,
+      "window": "2020_onward",
+      "method": "Double7_nextOpen",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 218257.80550305816,
+        "totalReturnPct": 118.25780550305818,
+        "cagrPct": 12.04820760739671,
+        "mddPct": -29.66279089416745,
+        "worstDayPct": -9.394141951516566,
+        "fees": 9214.436687091065,
+        "tax": 36781.44405277756,
+        "trades": 25,
+        "roundTrips": 12,
+        "expectancyPerTradeAfterFeePct": 10.94569510808413,
+        "pfAfterFee": 5.585410604989531,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 32.583439184999996
+          },
+          {
+            "year": "2021",
+            "returnPct": 27.16381768596825
+          },
+          {
+            "year": "2022",
+            "returnPct": -18.048171954515592
+          },
+          {
+            "year": "2023",
+            "returnPct": 20.764117907735248
+          },
+          {
+            "year": "2024",
+            "returnPct": 25.271661014686874
+          },
+          {
+            "year": "2025",
+            "returnPct": 14.407008965414626
+          },
+          {
+            "year": "2026",
+            "returnPct": -8.732759520683963
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": true,
+        "meanHoldCalendarDays": 168.16666666666666,
+        "maxHoldCalendarDays": 724,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 127373.42480804716,
+        "totalReturnPct": 27.373424808047165,
+        "cagrPct": 3.589386235065284,
+        "mddPct": -15.157269188231135,
+        "worstDayPct": -6.477799387728645,
+        "fees": 41989.7412598093,
+        "tax": 8686.738657870355,
+        "trades": 139,
+        "roundTrips": 69,
+        "expectancyPerTradeAfterFeePct": 0.5044924352564374,
+        "pfAfterFee": 1.5757021992153775,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 19.274657384999962
+          },
+          {
+            "year": "2021",
+            "returnPct": 4.758194657888071
+          },
+          {
+            "year": "2022",
+            "returnPct": -9.316151453717602
+          },
+          {
+            "year": "2023",
+            "returnPct": 0.9853647369047591
+          },
+          {
+            "year": "2024",
+            "returnPct": 11.655709811689752
+          },
+          {
+            "year": "2025",
+            "returnPct": -1.0060827878161205
+          },
+          {
+            "year": "2026",
+            "returnPct": 0.7081957193761923
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": true,
+        "meanHoldCalendarDays": 10.971014492753623,
+        "maxHoldCalendarDays": 33,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 119849.64105467818,
+        "totalReturnPct": 19.84964105467819,
+        "cagrPct": 2.674198234341052,
+        "mddPct": -15.840130139001399,
+        "worstDayPct": -6.483089440864253,
+        "fees": 48843.90860749003,
+        "tax": 7409.051411177783,
+        "trades": 139,
+        "roundTrips": 69,
+        "expectancyPerTradeAfterFeePct": 0.4040374169177101,
+        "pfAfterFee": 1.4426059399222595,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 18.186574016000034
+          },
+          {
+            "year": "2021",
+            "returnPct": 3.5816830612539263
+          },
+          {
+            "year": "2022",
+            "returnPct": -9.170678552277966
+          },
+          {
+            "year": "2023",
+            "returnPct": -0.02202847776731076
+          },
+          {
+            "year": "2024",
+            "returnPct": 9.952834723192572
+          },
+          {
+            "year": "2025",
+            "returnPct": -1.6250621595549686
+          },
+          {
+            "year": "2026",
+            "returnPct": -0.3300274828940464
+          }
+        ],
+        "positiveYearFraction": 0.42857142857142855,
+        "openPosition": true,
+        "meanHoldCalendarDays": 10.971014492753623,
+        "maxHoldCalendarDays": 33,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "QQQ",
+      "capital": 100000,
+      "window": "2020_onward",
+      "method": "VolatilityBreakout_k050_dayClose",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 218257.80550305816,
+        "totalReturnPct": 118.25780550305818,
+        "cagrPct": 12.04820760739671,
+        "mddPct": -29.66279089416745,
+        "worstDayPct": -9.394141951516566,
+        "fees": 9214.436687091065,
+        "tax": 36781.44405277756,
+        "trades": 25,
+        "roundTrips": 12,
+        "expectancyPerTradeAfterFeePct": 10.94569510808413,
+        "pfAfterFee": 5.585410604989531,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 32.583439184999996
+          },
+          {
+            "year": "2021",
+            "returnPct": 27.16381768596825
+          },
+          {
+            "year": "2022",
+            "returnPct": -18.048171954515592
+          },
+          {
+            "year": "2023",
+            "returnPct": 20.764117907735248
+          },
+          {
+            "year": "2024",
+            "returnPct": 25.271661014686874
+          },
+          {
+            "year": "2025",
+            "returnPct": 14.407008965414626
+          },
+          {
+            "year": "2026",
+            "returnPct": -8.732759520683963
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": true,
+        "meanHoldCalendarDays": 168.16666666666666,
+        "maxHoldCalendarDays": 724,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 3430.639312499937,
+        "totalReturnPct": -96.56936068750007,
+        "cagrPct": -38.83110674413023,
+        "mddPct": -96.57413395000006,
+        "worstDayPct": -7.5932780619295315,
+        "fees": 86928.14568749996,
+        "tax": 0,
+        "trades": 1464,
+        "roundTrips": 732,
+        "expectancyPerTradeAfterFeePct": -0.46639354464355093,
+        "pfAfterFee": 0.20696504243973346,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -55.48812053749997
+          },
+          {
+            "year": "2021",
+            "returnPct": -32.88415539683407
+          },
+          {
+            "year": "2022",
+            "returnPct": -35.66979595559333
+          },
+          {
+            "year": "2023",
+            "returnPct": -37.416610945809545
+          },
+          {
+            "year": "2024",
+            "returnPct": -39.453121362905776
+          },
+          {
+            "year": "2025",
+            "returnPct": -32.95116848305978
+          },
+          {
+            "year": "2026",
+            "returnPct": -29.73855313962075
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 1819.462585000065,
+        "totalReturnPct": -98.18053741499993,
+        "cagrPct": -44.23183381251368,
+        "mddPct": -98.18053741499993,
+        "worstDayPct": -7.688457217255951,
+        "fees": 87242.25241499995,
+        "tax": 0,
+        "trades": 1464,
+        "roundTrips": 732,
+        "expectancyPerTradeAfterFeePct": -0.5658781549283429,
+        "pfAfterFee": 0.15181721094879508,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -60.272603300000014
+          },
+          {
+            "year": "2021",
+            "returnPct": -39.21167781930176
+          },
+          {
+            "year": "2022",
+            "returnPct": -41.984532951968404
+          },
+          {
+            "year": "2023",
+            "returnPct": -43.83708794532992
+          },
+          {
+            "year": "2024",
+            "returnPct": -44.50359034851166
+          },
+          {
+            "year": "2025",
+            "returnPct": -38.23053379753251
+          },
+          {
+            "year": "2026",
+            "returnPct": -32.5470855122418
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "SOXL",
+      "capital": 10000,
+      "window": "2020_onward",
+      "method": "Double7_nextOpen",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 18597.47658919482,
+        "totalReturnPct": 85.9747658919482,
+        "cagrPct": 9.46441924188206,
+        "mddPct": -83.56127515113077,
+        "worstDayPct": -30.534182527830723,
+        "fees": 1294.9047887499999,
+        "tax": 3570.643823185186,
+        "trades": 44,
+        "roundTrips": 22,
+        "expectancyPerTradeAfterFeePct": 22.980585708231697,
+        "pfAfterFee": 3.026637710288185,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 45.51327937380001
+          },
+          {
+            "year": "2021",
+            "returnPct": 118.03428713800601
+          },
+          {
+            "year": "2022",
+            "returnPct": -65.3107486391544
+          },
+          {
+            "year": "2023",
+            "returnPct": 69.78880700173227
+          },
+          {
+            "year": "2024",
+            "returnPct": -41.40325057633878
+          },
+          {
+            "year": "2025",
+            "returnPct": 44.71422025493668
+          },
+          {
+            "year": "2026",
+            "returnPct": 17.364804657846733
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 84.13636363636364,
+        "maxHoldCalendarDays": 617,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 28102.53682658699,
+        "totalReturnPct": 181.02536826586993,
+        "cagrPct": 16.253155489779168,
+        "mddPct": -74.75852319112145,
+        "worstDayPct": -21.144561136231722,
+        "fees": 6700.8015774999985,
+        "tax": 5326.842083912953,
+        "trades": 112,
+        "roundTrips": 56,
+        "expectancyPerTradeAfterFeePct": 3.4816675042585943,
+        "pfAfterFee": 1.8224840175431847,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 60.750135037500044
+          },
+          {
+            "year": "2021",
+            "returnPct": 60.94600202386715
+          },
+          {
+            "year": "2022",
+            "returnPct": -30.406353435912912
+          },
+          {
+            "year": "2023",
+            "returnPct": 33.477961788977886
+          },
+          {
+            "year": "2024",
+            "returnPct": -21.122408916724066
+          },
+          {
+            "year": "2025",
+            "returnPct": 34.05574786485428
+          },
+          {
+            "year": "2026",
+            "returnPct": 10.58487920819855
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 12.321428571428571,
+        "maxHoldCalendarDays": 37,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 26935.351705067034,
+        "totalReturnPct": 169.35351705067032,
+        "cagrPct": 15.53660776178738,
+        "mddPct": -74.74721811553594,
+        "worstDayPct": -21.126647181270563,
+        "fees": 7825.290271500002,
+        "tax": 4982.585163432964,
+        "trades": 112,
+        "roundTrips": 56,
+        "expectancyPerTradeAfterFeePct": 3.3782367763878116,
+        "pfAfterFee": 1.7924936496615151,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 59.266990559999954
+          },
+          {
+            "year": "2021",
+            "returnPct": 59.35740938123626
+          },
+          {
+            "year": "2022",
+            "returnPct": -30.311937295716675
+          },
+          {
+            "year": "2023",
+            "returnPct": 32.27552064074182
+          },
+          {
+            "year": "2024",
+            "returnPct": -21.55448787575721
+          },
+          {
+            "year": "2025",
+            "returnPct": 33.14178914189192
+          },
+          {
+            "year": "2026",
+            "returnPct": 10.23112847199943
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 12.321428571428571,
+        "maxHoldCalendarDays": 37,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "SOXL",
+      "capital": 10000,
+      "window": "2020_onward",
+      "method": "VolatilityBreakout_k050_dayClose",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 18597.47658919482,
+        "totalReturnPct": 85.9747658919482,
+        "cagrPct": 9.46441924188206,
+        "mddPct": -83.56127515113077,
+        "worstDayPct": -30.534182527830723,
+        "fees": 1294.9047887499999,
+        "tax": 3570.643823185186,
+        "trades": 44,
+        "roundTrips": 22,
+        "expectancyPerTradeAfterFeePct": 22.980585708231697,
+        "pfAfterFee": 3.026637710288185,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 45.51327937380001
+          },
+          {
+            "year": "2021",
+            "returnPct": 118.03428713800601
+          },
+          {
+            "year": "2022",
+            "returnPct": -65.3107486391544
+          },
+          {
+            "year": "2023",
+            "returnPct": 69.78880700173227
+          },
+          {
+            "year": "2024",
+            "returnPct": -41.40325057633878
+          },
+          {
+            "year": "2025",
+            "returnPct": 44.71422025493668
+          },
+          {
+            "year": "2026",
+            "returnPct": 17.364804657846733
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 84.13636363636364,
+        "maxHoldCalendarDays": 617,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 1020.0584212500028,
+        "totalReturnPct": -89.79941578749997,
+        "cagrPct": -28.302022897018297,
+        "mddPct": -90.273589310359,
+        "worstDayPct": -25.044239546333557,
+        "fees": 8576.035078750003,
+        "tax": 0,
+        "trades": 1442,
+        "roundTrips": 721,
+        "expectancyPerTradeAfterFeePct": -0.23362822955169033,
+        "pfAfterFee": 0.845971586959617,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -72.21371649375001
+          },
+          {
+            "year": "2021",
+            "returnPct": 11.695751180682223
+          },
+          {
+            "year": "2022",
+            "returnPct": -19.421184109569445
+          },
+          {
+            "year": "2023",
+            "returnPct": -20.036715216958267
+          },
+          {
+            "year": "2024",
+            "returnPct": -39.11172625720582
+          },
+          {
+            "year": "2025",
+            "returnPct": -14.004457401413584
+          },
+          {
+            "year": "2026",
+            "returnPct": -2.5825358991714342
+          }
+        ],
+        "positiveYearFraction": 0.14285714285714285,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 511.3823407499971,
+        "totalReturnPct": -94.88617659250002,
+        "cagrPct": -35.166505275871884,
+        "mddPct": -95.0206931228069,
+        "worstDayPct": -25.24308564585358,
+        "fees": 7930.751909250006,
+        "tax": 0,
+        "trades": 1442,
+        "roundTrips": 721,
+        "expectancyPerTradeAfterFeePct": -0.3333454905710869,
+        "pfAfterFee": 0.7871062246873851,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -75.62472208500009
+          },
+          {
+            "year": "2021",
+            "returnPct": 1.6909084849710876
+          },
+          {
+            "year": "2022",
+            "returnPct": -27.167988412109445
+          },
+          {
+            "year": "2023",
+            "returnPct": -28.262465513538547
+          },
+          {
+            "year": "2024",
+            "returnPct": -44.298836603654614
+          },
+          {
+            "year": "2025",
+            "returnPct": -21.870976942992105
+          },
+          {
+            "year": "2026",
+            "returnPct": -9.266301951061518
+          }
+        ],
+        "positiveYearFraction": 0.14285714285714285,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "SOXL",
+      "capital": 100000,
+      "window": "2020_onward",
+      "method": "Double7_nextOpen",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 176048.9717826973,
+        "totalReturnPct": 76.04897178269732,
+        "cagrPct": 8.592824831015244,
+        "mddPct": -83.91431684169802,
+        "worstDayPct": -30.518571052169296,
+        "fees": 12783.381149150835,
+        "tax": 43837.69818877779,
+        "trades": 44,
+        "roundTrips": 22,
+        "expectancyPerTradeAfterFeePct": 22.980585708231697,
+        "pfAfterFee": 3.026637710288185,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 47.504776651680025
+          },
+          {
+            "year": "2021",
+            "returnPct": 118.69436853115359
+          },
+          {
+            "year": "2022",
+            "returnPct": -65.39340014669992
+          },
+          {
+            "year": "2023",
+            "returnPct": 63.33286193642036
+          },
+          {
+            "year": "2024",
+            "returnPct": -41.97408419967298
+          },
+          {
+            "year": "2025",
+            "returnPct": 44.74911904784342
+          },
+          {
+            "year": "2026",
+            "returnPct": 14.952751954935128
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 84.13636363636364,
+        "maxHoldCalendarDays": 617,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 260385.66994758684,
+        "totalReturnPct": 160.38566994758682,
+        "cagrPct": 14.967813608549818,
+        "mddPct": -74.78441969739387,
+        "worstDayPct": -21.151509632426546,
+        "fees": 64509.998877499995,
+        "tax": 69860.8434069129,
+        "trades": 112,
+        "roundTrips": 56,
+        "expectancyPerTradeAfterFeePct": 3.4816675042585943,
+        "pfAfterFee": 1.8224840175431847,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 61.63209058875005
+          },
+          {
+            "year": "2021",
+            "returnPct": 57.37897460325709
+          },
+          {
+            "year": "2022",
+            "returnPct": -31.517711502503097
+          },
+          {
+            "year": "2023",
+            "returnPct": 33.48088798201587
+          },
+          {
+            "year": "2024",
+            "returnPct": -22.357132611407103
+          },
+          {
+            "year": "2025",
+            "returnPct": 34.08654338510617
+          },
+          {
+            "year": "2026",
+            "returnPct": 7.561949514897481
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 12.321428571428571,
+        "maxHoldCalendarDays": 37,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 248162.52738061693,
+        "totalReturnPct": 148.16252738061695,
+        "cagrPct": 14.164973560812566,
+        "mddPct": -74.8351912322227,
+        "worstDayPct": -21.149039603475828,
+        "fees": 75129.72960899999,
+        "tax": 66249.24999038289,
+        "trades": 112,
+        "roundTrips": 56,
+        "expectancyPerTradeAfterFeePct": 3.3782367763878116,
+        "pfAfterFee": 1.7924936496615151,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 59.99836511699994
+          },
+          {
+            "year": "2021",
+            "returnPct": 55.7112845012417
+          },
+          {
+            "year": "2022",
+            "returnPct": -31.463499617987633
+          },
+          {
+            "year": "2023",
+            "returnPct": 32.286567348521956
+          },
+          {
+            "year": "2024",
+            "returnPct": -22.84784703409397
+          },
+          {
+            "year": "2025",
+            "returnPct": 33.15024108195688
+          },
+          {
+            "year": "2026",
+            "returnPct": 6.948055408636078
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 12.321428571428571,
+        "maxHoldCalendarDays": 37,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "SOXL",
+      "capital": 100000,
+      "window": "2020_onward",
+      "method": "VolatilityBreakout_k050_dayClose",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 176048.9717826973,
+        "totalReturnPct": 76.04897178269732,
+        "cagrPct": 8.592824831015244,
+        "mddPct": -83.91431684169802,
+        "worstDayPct": -30.518571052169296,
+        "fees": 12783.381149150835,
+        "tax": 43837.69818877779,
+        "trades": 44,
+        "roundTrips": 22,
+        "expectancyPerTradeAfterFeePct": 22.980585708231697,
+        "pfAfterFee": 3.026637710288185,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 47.504776651680025
+          },
+          {
+            "year": "2021",
+            "returnPct": 118.69436853115359
+          },
+          {
+            "year": "2022",
+            "returnPct": -65.39340014669992
+          },
+          {
+            "year": "2023",
+            "returnPct": 63.33286193642036
+          },
+          {
+            "year": "2024",
+            "returnPct": -41.97408419967298
+          },
+          {
+            "year": "2025",
+            "returnPct": 44.74911904784342
+          },
+          {
+            "year": "2026",
+            "returnPct": 14.952751954935128
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 84.13636363636364,
+        "maxHoldCalendarDays": 617,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 9819.917752095002,
+        "totalReturnPct": -90.180082247905,
+        "cagrPct": -28.698360169326843,
+        "mddPct": -90.6139017556397,
+        "worstDayPct": -25.274278786467242,
+        "fees": 85329.72941000012,
+        "tax": 376.9628379050888,
+        "trades": 1442,
+        "roundTrips": 721,
+        "expectancyPerTradeAfterFeePct": -0.23362822955169033,
+        "pfAfterFee": 0.845971586959617,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -72.89642841937496
+          },
+          {
+            "year": "2021",
+            "returnPct": 13.15442611048223
+          },
+          {
+            "year": "2022",
+            "returnPct": -20.631455097866446
+          },
+          {
+            "year": "2023",
+            "returnPct": -20.066562080177654
+          },
+          {
+            "year": "2024",
+            "returnPct": -39.465213054367624
+          },
+          {
+            "year": "2025",
+            "returnPct": -14.25343884554212
+          },
+          {
+            "year": "2026",
+            "returnPct": -2.7675700330689
+          }
+        ],
+        "positiveYearFraction": 0.14285714285714285,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 4877.001798500028,
+        "totalReturnPct": -95.12299820149998,
+        "cagrPct": -35.61302440902303,
+        "mddPct": -95.26550823389154,
+        "worstDayPct": -25.342170955390642,
+        "fees": 80585.82570149985,
+        "tax": 0,
+        "trades": 1442,
+        "roundTrips": 721,
+        "expectancyPerTradeAfterFeePct": -0.3333454905710869,
+        "pfAfterFee": 0.7871062246873851,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -75.69782715299999
+          },
+          {
+            "year": "2021",
+            "returnPct": 2.2898278890675305
+          },
+          {
+            "year": "2022",
+            "returnPct": -27.522714309649345
+          },
+          {
+            "year": "2023",
+            "returnPct": -28.326792452617124
+          },
+          {
+            "year": "2024",
+            "returnPct": -45.05178643675708
+          },
+          {
+            "year": "2025",
+            "returnPct": -23.030151849983316
+          },
+          {
+            "year": "2026",
+            "returnPct": -10.701863886523578
+          }
+        ],
+        "positiveYearFraction": 0.14285714285714285,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "TQQQ",
+      "capital": 10000,
+      "window": "2020_onward",
+      "method": "Double7_nextOpen",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 48527.570253106154,
+        "totalReturnPct": 385.27570253106154,
+        "cagrPct": 25.88760395126304,
+        "mddPct": -61.893442151570255,
+        "worstDayPct": -27.445718802470363,
+        "fees": 2089.218101224139,
+        "tax": 9935.088021325286,
+        "trades": 34,
+        "roundTrips": 17,
+        "expectancyPerTradeAfterFeePct": 20.73104034254842,
+        "pfAfterFee": 4.786478013300985,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 58.640522120000014
+          },
+          {
+            "year": "2021",
+            "returnPct": 82.73308625441884
+          },
+          {
+            "year": "2022",
+            "returnPct": -33.20600989442867
+          },
+          {
+            "year": "2023",
+            "returnPct": 30.388103690202396
+          },
+          {
+            "year": "2024",
+            "returnPct": 59.500591989261366
+          },
+          {
+            "year": "2025",
+            "returnPct": 26.786247514297944
+          },
+          {
+            "year": "2026",
+            "returnPct": -4.951028341746689
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 116.29411764705883,
+        "maxHoldCalendarDays": 647,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 12214.149990384583,
+        "totalReturnPct": 22.14149990384584,
+        "cagrPct": 2.9580564736437998,
+        "mddPct": -63.11217230220774,
+        "worstDayPct": -34.37363390391408,
+        "fees": 3675.7006033555836,
+        "tax": 1132.0037188777771,
+        "trades": 129,
+        "roundTrips": 64,
+        "expectancyPerTradeAfterFeePct": 1.65976566103424,
+        "pfAfterFee": 1.517915442069898,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -8.844696580000022
+          },
+          {
+            "year": "2021",
+            "returnPct": 34.224847463077054
+          },
+          {
+            "year": "2022",
+            "returnPct": -25.105876924570826
+          },
+          {
+            "year": "2023",
+            "returnPct": 2.691808276110641
+          },
+          {
+            "year": "2024",
+            "returnPct": 43.84745603486473
+          },
+          {
+            "year": "2025",
+            "returnPct": -1.019493255016457
+          },
+          {
+            "year": "2026",
+            "returnPct": -8.838179645608047
+          }
+        ],
+        "positiveYearFraction": 0.42857142857142855,
+        "openPosition": true,
+        "meanHoldCalendarDays": 11.40625,
+        "maxHoldCalendarDays": 41,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 11584.953247616886,
+        "totalReturnPct": 15.849532476168871,
+        "cagrPct": 2.1674619761975933,
+        "mddPct": -63.22109762754494,
+        "worstDayPct": -34.457404843044124,
+        "fees": 4273.7216202392165,
+        "tax": 958.7095208337757,
+        "trades": 129,
+        "roundTrips": 64,
+        "expectancyPerTradeAfterFeePct": 1.5581559381617185,
+        "pfAfterFee": 1.4817602889870576,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -9.704975608000021
+          },
+          {
+            "year": "2021",
+            "returnPct": 32.37684462111976
+          },
+          {
+            "year": "2022",
+            "returnPct": -24.782738553247064
+          },
+          {
+            "year": "2023",
+            "returnPct": 1.8967054931130933
+          },
+          {
+            "year": "2024",
+            "returnPct": 41.615250459943276
+          },
+          {
+            "year": "2025",
+            "returnPct": -1.518792730812557
+          },
+          {
+            "year": "2026",
+            "returnPct": -9.327123763022193
+          }
+        ],
+        "positiveYearFraction": 0.42857142857142855,
+        "openPosition": true,
+        "meanHoldCalendarDays": 11.40625,
+        "maxHoldCalendarDays": 41,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "TQQQ",
+      "capital": 10000,
+      "window": "2020_onward",
+      "method": "VolatilityBreakout_k050_dayClose",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 48527.570253106154,
+        "totalReturnPct": 385.27570253106154,
+        "cagrPct": 25.88760395126304,
+        "mddPct": -61.893442151570255,
+        "worstDayPct": -27.445718802470363,
+        "fees": 2089.218101224139,
+        "tax": 9935.088021325286,
+        "trades": 34,
+        "roundTrips": 17,
+        "expectancyPerTradeAfterFeePct": 20.73104034254842,
+        "pfAfterFee": 4.786478013300985,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 58.640522120000014
+          },
+          {
+            "year": "2021",
+            "returnPct": 82.73308625441884
+          },
+          {
+            "year": "2022",
+            "returnPct": -33.20600989442867
+          },
+          {
+            "year": "2023",
+            "returnPct": 30.388103690202396
+          },
+          {
+            "year": "2024",
+            "returnPct": 59.500591989261366
+          },
+          {
+            "year": "2025",
+            "returnPct": 26.786247514297944
+          },
+          {
+            "year": "2026",
+            "returnPct": -4.951028341746689
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 116.29411764705883,
+        "maxHoldCalendarDays": 647,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 419.6259719999846,
+        "totalReturnPct": -95.80374028000016,
+        "cagrPct": -37.00850521822513,
+        "mddPct": -96.08601940767811,
+        "worstDayPct": -20.370025423277948,
+        "fees": 7222.819628000011,
+        "tax": 0,
+        "trades": 1476,
+        "roundTrips": 738,
+        "expectancyPerTradeAfterFeePct": -0.3998035117296397,
+        "pfAfterFee": 0.6218996405829659,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -72.41256835000007
+          },
+          {
+            "year": "2021",
+            "returnPct": -14.567513409679956
+          },
+          {
+            "year": "2022",
+            "returnPct": -23.50735499479608
+          },
+          {
+            "year": "2023",
+            "returnPct": -28.380515338140867
+          },
+          {
+            "year": "2024",
+            "returnPct": -43.48459914640704
+          },
+          {
+            "year": "2025",
+            "returnPct": -22.224207493222025
+          },
+          {
+            "year": "2026",
+            "returnPct": -26.062303635908822
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 10000,
+        "final": 218.65228499999725,
+        "totalReturnPct": -97.81347715000003,
+        "cagrPct": -42.71791502571032,
+        "mddPct": -97.91077516692005,
+        "worstDayPct": -20.439511433780776,
+        "fees": 7082.352314999993,
+        "tax": 0,
+        "trades": 1476,
+        "roundTrips": 738,
+        "expectancyPerTradeAfterFeePct": -0.4993546792678981,
+        "pfAfterFee": 0.5519493045950585,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -75.46854248399997
+          },
+          {
+            "year": "2021",
+            "returnPct": -22.485674821409752
+          },
+          {
+            "year": "2022",
+            "returnPct": -30.759816372458882
+          },
+          {
+            "year": "2023",
+            "returnPct": -35.967215693744016
+          },
+          {
+            "year": "2024",
+            "returnPct": -47.66641868342282
+          },
+          {
+            "year": "2025",
+            "returnPct": -27.609271431543792
+          },
+          {
+            "year": "2026",
+            "returnPct": -31.541922784291575
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "TQQQ",
+      "capital": 100000,
+      "window": "2020_onward",
+      "method": "Double7_nextOpen",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 463436.7304190503,
+        "totalReturnPct": 363.4367304190503,
+        "cagrPct": 25.045550028389464,
+        "mddPct": -62.79012468533336,
+        "worstDayPct": -27.570064597225574,
+        "fees": 20410.72673864122,
+        "tax": 112102.26035479674,
+        "trades": 34,
+        "roundTrips": 17,
+        "expectancyPerTradeAfterFeePct": 20.73104034254842,
+        "pfAfterFee": 4.786478013300985,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 58.896074474000024
+          },
+          {
+            "year": "2021",
+            "returnPct": 82.97979697514475
+          },
+          {
+            "year": "2022",
+            "returnPct": -33.25899170005251
+          },
+          {
+            "year": "2023",
+            "returnPct": 27.44009559332927
+          },
+          {
+            "year": "2024",
+            "returnPct": 59.53619331898323
+          },
+          {
+            "year": "2025",
+            "returnPct": 25.581220680456784
+          },
+          {
+            "year": "2026",
+            "returnPct": -6.461292509179007
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 116.29411764705883,
+        "maxHoldCalendarDays": 647,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 111873.95983561907,
+        "totalReturnPct": 11.873959835619075,
+        "cagrPct": 1.648801635496211,
+        "mddPct": -63.196868256476826,
+        "worstDayPct": -34.45195460748284,
+        "fees": 35882.29947037382,
+        "tax": 21842.59414515036,
+        "trades": 129,
+        "roundTrips": 64,
+        "expectancyPerTradeAfterFeePct": 1.65976566103424,
+        "pfAfterFee": 1.517915442069898,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -8.439902153999967
+          },
+          {
+            "year": "2021",
+            "returnPct": 34.29328865704324
+          },
+          {
+            "year": "2022",
+            "returnPct": -27.533448659313997
+          },
+          {
+            "year": "2023",
+            "returnPct": 2.7283332391320414
+          },
+          {
+            "year": "2024",
+            "returnPct": 43.871206031036934
+          },
+          {
+            "year": "2025",
+            "returnPct": -3.865300239719416
+          },
+          {
+            "year": "2026",
+            "returnPct": -11.633722788241464
+          }
+        ],
+        "positiveYearFraction": 0.42857142857142855,
+        "openPosition": true,
+        "meanHoldCalendarDays": 11.40625,
+        "maxHoldCalendarDays": 41,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 105734.73013289216,
+        "totalReturnPct": 5.734730132892163,
+        "cagrPct": 0.8160619057180574,
+        "mddPct": -63.19897123995304,
+        "worstDayPct": -34.43692289759663,
+        "fees": 41717.25996047287,
+        "tax": 20122.27503115379,
+        "trades": 129,
+        "roundTrips": 64,
+        "expectancyPerTradeAfterFeePct": 1.5581559381617185,
+        "pfAfterFee": 1.4817602889870576,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -9.237847902399999
+          },
+          {
+            "year": "2021",
+            "returnPct": 32.58182111966688
+          },
+          {
+            "year": "2022",
+            "returnPct": -27.438593068955964
+          },
+          {
+            "year": "2023",
+            "returnPct": 1.9117730366007502
+          },
+          {
+            "year": "2024",
+            "returnPct": 41.748734238779384
+          },
+          {
+            "year": "2025",
+            "returnPct": -4.531248285594991
+          },
+          {
+            "year": "2026",
+            "returnPct": -12.195169243192394
+          }
+        ],
+        "positiveYearFraction": 0.42857142857142855,
+        "openPosition": true,
+        "meanHoldCalendarDays": 11.40625,
+        "maxHoldCalendarDays": 41,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    },
+    {
+      "ticker": "TQQQ",
+      "capital": 100000,
+      "window": "2020_onward",
+      "method": "VolatilityBreakout_k050_dayClose",
+      "baseline": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 463436.7304190503,
+        "totalReturnPct": 363.4367304190503,
+        "cagrPct": 25.045550028389464,
+        "mddPct": -62.79012468533336,
+        "worstDayPct": -27.570064597225574,
+        "fees": 20410.72673864122,
+        "tax": 112102.26035479674,
+        "trades": 34,
+        "roundTrips": 17,
+        "expectancyPerTradeAfterFeePct": 20.73104034254842,
+        "pfAfterFee": 4.786478013300985,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": 58.896074474000024
+          },
+          {
+            "year": "2021",
+            "returnPct": 82.97979697514475
+          },
+          {
+            "year": "2022",
+            "returnPct": -33.25899170005251
+          },
+          {
+            "year": "2023",
+            "returnPct": 27.44009559332927
+          },
+          {
+            "year": "2024",
+            "returnPct": 59.53619331898323
+          },
+          {
+            "year": "2025",
+            "returnPct": 25.581220680456784
+          },
+          {
+            "year": "2026",
+            "returnPct": -6.461292509179007
+          }
+        ],
+        "positiveYearFraction": 0.7142857142857143,
+        "openPosition": false,
+        "meanHoldCalendarDays": 116.29411764705883,
+        "maxHoldCalendarDays": 647,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "base": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 3916.354476499909,
+        "totalReturnPct": -96.0836455235001,
+        "cagrPct": -37.639115008010926,
+        "mddPct": -96.35100045077442,
+        "worstDayPct": -20.431405851506767,
+        "fees": 72464.48332349997,
+        "tax": 0,
+        "trades": 1476,
+        "roundTrips": 738,
+        "expectancyPerTradeAfterFeePct": -0.3998035117296397,
+        "pfAfterFee": 0.6218996405829659,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -72.77708491700004
+          },
+          {
+            "year": "2021",
+            "returnPct": -14.90163688984697
+          },
+          {
+            "year": "2022",
+            "returnPct": -23.3416519867921
+          },
+          {
+            "year": "2023",
+            "returnPct": -28.865716834850552
+          },
+          {
+            "year": "2024",
+            "returnPct": -44.37493226779097
+          },
+          {
+            "year": "2025",
+            "returnPct": -23.20899518212951
+          },
+          {
+            "year": "2026",
+            "returnPct": -27.421691853334686
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      },
+      "stress": {
+        "start": "2020-01-02",
+        "end": "2026-11-12",
+        "capital": 100000,
+        "final": 1890.1484317999493,
+        "totalReturnPct": -98.10985156820004,
+        "cagrPct": -43.92117117564401,
+        "mddPct": -98.2040534017958,
+        "worstDayPct": -20.514979784752164,
+        "fees": 71175.95096820006,
+        "tax": 0,
+        "trades": 1476,
+        "roundTrips": 738,
+        "expectancyPerTradeAfterFeePct": -0.4993546792678981,
+        "pfAfterFee": 0.5519493045950585,
+        "yearly": [
+          {
+            "year": "2020",
+            "returnPct": -75.68324400879999
+          },
+          {
+            "year": "2021",
+            "returnPct": -22.889773728100582
+          },
+          {
+            "year": "2022",
+            "returnPct": -30.981013057373865
+          },
+          {
+            "year": "2023",
+            "returnPct": -36.55387907028107
+          },
+          {
+            "year": "2024",
+            "returnPct": -49.73123832148474
+          },
+          {
+            "year": "2025",
+            "returnPct": -30.71966983776039
+          },
+          {
+            "year": "2026",
+            "returnPct": -33.90075404049243
+          }
+        ],
+        "positiveYearFraction": 0,
+        "openPosition": false,
+        "meanHoldCalendarDays": 0,
+        "maxHoldCalendarDays": 0,
+        "note": "Trade PF/expectancy use split-corrected price returns and both fees, excluding allocated dividends/tax. Account CAGR/MDD include annual tax and dividend events. No new post-registration forward observations."
+      }
+    }
+  ],
+  "costs": {
+    "fee": 0.0025,
+    "slip": 0.0005,
+    "taxRate": 0.22,
+    "krw": 1350,
+    "deduct": 2500000,
+    "cur": "$"
+  },
+  "limits": [
+    "Double 7 is a multi-session swing method; it fails the current intraday holding limit.",
+    "Breakout uses the published open-plus-prior-range concept with an explicitly experimental day-close exit; it is not certified as Larry Williams original.",
+    "Daily OHLC touch and next-open execution are approximations; queue, spread and market impact are not observed.",
+    "Annual tax allowance is for one isolated account; it cannot be duplicated when combining accounts.",
+    "Previously viewed history and publication-after slices are historical diagnostics, not newly unseen forward results.",
+    "No live recommendation without the preregistered prospective and risk gates; open positions remain marked, not falsely counted as closed."
+  ],
+  "manifestCount": 20,
+  "requestErrors": 4
+}
