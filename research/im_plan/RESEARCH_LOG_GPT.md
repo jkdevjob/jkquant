@@ -1367,3 +1367,9 @@ node research/gpt/record-channel-20261113_byGPT.cjs
 - `research/im_plan/planrule/data/SGOV.json`: `8b4aff04ce55a2582ffd7e65404c090b52087f43db3aea0d52723576af45dae6`
 
 - 변경범위: 상세정본은이로그, 자체도구3개는research/gpt/, 공유표는새통과후보가없으므로변경0. 앱/원본엔진/클로드기록수동수정0, main푸시/PR/배포/실주문/무매외부게시0. 연구브랜치원격보존여부는실제fetch/ref대조뒤별도로확인한다.
+
+### 2026-11-13 · 운영 심층 보충 원격 보존 확인
+
+- 결과·자체도구3개를 `d8f7ec684f7fb1f55132f15c11c5054ac956ae4a`에 research/daily 일반 fast-forward(force=false·expected SHA=28ef3e9 일치)로 저장했다. 실제 git fetch로 SHA와 tree `73a7f55e18768ccbc46021447d77d56c41a66b67`을 수신했고 검증한 로컬 tree와 diff0, 원본 backtest/plan-session-engine/imh hash 불변을 확인했다. 최신 main7dcfe2e의 데이터 변경은 연구 브랜치로만 합쳤으며 main에 쓰지 않았다.
+- CLI push는 Username 인증정보 부재(exit128)였고, 이미 확인한 연결 GitHub 쓰기 경로로 같은 결과 tree를 보존했다. 권한 없음이나 PR 우회로 처리하지 않았다. dual·rotation·im·수정한 감사 프로세스 모두 exit0, 자체도구3개 node --check 및 diff --check 통과. 감사의 rows 인자 위치를 바로잡고 비활성 사례가 실제 관찰됐는지 조건을 추가한 뒤 다시 실행했다(비활성4052건·본매수차0). 이전 비활성0건 감사 결과는 최종 근거로 사용하지 않았다.
+- 현재 판정은 연구 완료·후보 탈락·새 실투자 권유 없음이다. 자동실행이 오늘 정상 완료됐다는 뜻은 아니다. 두 예약 지시 갱신은 실제 성공 응답을 확인했으며 08:37/11:37KST를 유지한다. 앱 수정/배포/실주문은 하지 않았다. 이 확인 행은 후속 기록으로 같은 연구 브랜치에 저장한다.
