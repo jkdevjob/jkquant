@@ -6,6 +6,7 @@
 //         --draft   초안으로 올림(공개 안 됨)
 //         --force   published.json 에 있어도 다시 올림
 //         --revert  이미 게시한 글을 '초안'으로 되돌림(블로그에서 내림, 지우지는 않음)
+//         --update  이미 게시·예약한 글의 제목·본문·라벨만 고침(주소·공개 시각 유지)
 //   블로그 고르기: <!-- blog: maniac --> (매니악 브리핑). 없으면 은퇴노트. 목록은 blog/blogger_blogs.json.
 //   예약 게시: 글 2행 아래에 <!-- publish_at: 2026-11-14T05:00:00+09:00 --> 를 쓰면 그 시각에 공개된다(지난 시각이면 바로 게시).
 //
@@ -116,11 +117,15 @@ if (flags.has("--dry")) {
 // ── 3. 중복 게시 방지 ──
 const log = fs.existsSync(LOG) ? JSON.parse(fs.readFileSync(LOG, "utf8")) : {};
 const key = path.basename(file);
-if (log[key] && !flags.has("--force") && !flags.has("--revert")) {
+if (log[key] && !flags.has("--force") && !flags.has("--revert") && !flags.has("--update")) {
   console.log(`이미 게시됨: ${log[key].url}`);
   process.exit(0);
 }
 
+if (flags.has("--update")) {
+  if (!log[key] || !log[key].id) { console.error(`게시 기록이 없어 고칠 수 없습니다: ${key}`); process.exit(1); }
+  if (log[key].reverted) { console.error(`초안으로 내린 글은 고치지 않습니다: ${key}`); process.exit(1); }
+}
 if (flags.has("--revert")) {
   if (!log[key]) { console.error(`게시 기록이 없어 되돌릴 수 없습니다: ${key}`); process.exit(1); }
   if (log[key].reverted) { console.log(`이미 초안으로 되돌림: ${key}`); process.exit(0); }
@@ -159,6 +164,17 @@ async function accessToken() {
 try {
   const token = await accessToken();
   const blogId = BLOG.id || process.env[BLOG.idEnv];
+  if (flags.has("--update")) {
+    const r = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${encodeURIComponent(blogId)}/posts/${encodeURIComponent(log[key].id)}`, {
+      method: "PATCH", headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ title, content: html, labels }) });
+    const j = await r.json();
+    if (!r.ok) throw new Error(`글 고치기 실패(HTTP ${r.status}): ${j.error?.message || JSON.stringify(j).slice(0, 300)}`);
+    Object.assign(log[key], { title, updatedAt: new Date().toISOString(), status: j.status, url: j.url || log[key].url });
+    fs.writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n");
+    console.log(`글 고침: ${key} · status ${j.status} · ${j.url || ""}`);
+    process.exit(0);
+  }
   if (flags.has("--revert")) {
     const r = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${encodeURIComponent(blogId)}/posts/${encodeURIComponent(log[key].id)}/revert`,
       { method: "POST", headers: { Authorization: `Bearer ${token}` } });
