@@ -1,0 +1,545 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "내 칸 표 #2 · 기초연금",
+  "color": "yellow"
+ },
+ "band": {
+  "lines": [
+   "월급 400만 받아도 기초연금?",
+   "국민연금 있으면 [월급] {얼마까지?}"
+  ]
+ },
+ "out": "queue/issues/2026-11-14_basic-pension-wage-limit.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "월급 사백만 원을 받아도, 기초연금을 받을 수 있을까요?"
+   },
+   {
+    "id": "news",
+    "text": "국회 자료에선 다른 재산이 없으면 월 사백육십팔만 원을 벌어도 대상이 될 수 있대요.",
+    "gap": 0.3
+   },
+   {
+    "id": "rule",
+    "text": "월급은 백십육만 원을 먼저 빼고 남은 돈의 칠십 퍼센트만 소득으로 쳐요. 그런데 국민연금은 그대로 다 쳐요.",
+    "gap": 0.3
+   },
+   {
+    "id": "table",
+    "text": "혼자 사는 분 기준, 국민연금 없으면 사백육십팔만, 백만 원 받으면 삼백이십육만 원까지예요."
+   },
+   {
+    "id": "check",
+    "text": "집과 예금도 소득으로 더해지니 복지로 모의계산으로 확인하세요.",
+    "gap": 0.3
+   },
+   {
+    "id": "cta",
+    "text": "여러분은 몇 번째 줄이세요? 팔로우하면 내 칸 표 계속 드려요.",
+    "gap": 0.35
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "start": 0,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.14,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "tag",
+     "text": "65세 · 혼자 · 다른 재산 없을 때",
+     "x": 86,
+     "y": 250,
+     "size": 54,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": -2,
+     "box": "#d7261e"
+    },
+    {
+     "type": "text",
+     "id": "l1",
+     "text": "월급 400만",
+     "x": 80,
+     "y": 400,
+     "size": 175,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#ffe14d"
+    },
+    {
+     "type": "text",
+     "id": "l2",
+     "text": "받아도",
+     "x": 80,
+     "y": 640,
+     "size": 175,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l3",
+     "text": "기초연금?",
+     "x": 80,
+     "y": 870,
+     "size": 190,
+     "font": "heavy",
+     "color": "#d7261e",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "circle",
+     "target": "l3",
+     "at": 0.15,
+     "dur": 0.5,
+     "color": "red",
+     "pad": 14,
+     "width": 9
+    },
+    {
+     "type": "text",
+     "id": "m1",
+     "text": "연금 100만이면",
+     "x": 92,
+     "y": 1160,
+     "size": 72,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "m2",
+     "text": "??만까지",
+     "x": 590,
+     "y": 1150,
+     "size": 84,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#16130f"
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "일해도 기초연금, 월급 얼마까지?",
+     "x": 128,
+     "y": 200,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(월 468만 벌어도 대상 가능 · 남인순 의원실 자료, 연합뉴스·뉴시스 10/31)",
+     "x": 140,
+     "y": 300,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "s2",
+     "text": "월급 → (월급 − 116만) × 70%만 소득",
+     "x": 140,
+     "y": 355,
+     "size": 44,
+     "font": "bold",
+     "color": "ink",
+     "at": "@rule+0.2",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "s3",
+     "text": "국민연금 → 100% 그대로",
+     "x": 140,
+     "y": 415,
+     "size": 44,
+     "font": "bold",
+     "color": "red",
+     "at": "@rule.end-1.6",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "국민연금 월",
+     "x": 150,
+     "y": 505,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "월급 상한",
+     "x": 430,
+     "y": 505,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "월급 300만이면",
+     "x": 690,
+     "y": 505,
+     "size": 36,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table+1.5",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "없음",
+     "x": 150,
+     "y": 590,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "468만",
+     "x": 430,
+     "y": 590,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "50만",
+     "x": 150,
+     "y": 682,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "397만",
+     "x": 430,
+     "y": 682,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.3",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "100만",
+     "x": 150,
+     "y": 774,
+     "size": 62,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "326만",
+     "x": 430,
+     "y": 774,
+     "size": 62,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "150만",
+     "x": 150,
+     "y": 866,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "254만",
+     "x": 430,
+     "y": 866,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.3",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5a",
+     "text": "200만",
+     "x": 150,
+     "y": 958,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5b",
+     "text": "183만",
+     "x": 430,
+     "y": 958,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "받음",
+     "x": 720,
+     "y": 590,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "받음",
+     "x": 720,
+     "y": 682,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "받음",
+     "x": 720,
+     "y": 774,
+     "size": 58,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+2.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "탈락",
+     "x": 720,
+     "y": 866,
+     "size": 58,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+3.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5c",
+     "text": "탈락",
+     "x": 720,
+     "y": 958,
+     "size": 58,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+3.8",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r3b",
+     "at": "@table.end-1.0",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(혼자 사는 65세+, 집·예금이 공제 안쪽 · 선정기준액 월 247만 · 기준선 가까우면 금액이 줄 수 있음)",
+     "x": 150,
+     "y": 1050,
+     "size": 24,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table.end",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 1095,
+     "w": 760,
+     "h": 215,
+     "rot": -2,
+     "at": "@check-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "지금 확인할 것",
+       "x": 46,
+       "y": 26,
+       "size": 50,
+       "font": "bold",
+       "color": "red",
+       "at": "@check",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "① 집·예금 소득 환산액",
+       "x": 46,
+       "y": 100,
+       "size": 46,
+       "font": "bold",
+       "color": "ink",
+       "at": "@check+0.8",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "② 복지로 '기초연금 모의계산'",
+       "x": 46,
+       "y": 160,
+       "size": 44,
+       "font": "bold",
+       "color": "blue",
+       "at": "@check+2.2",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "(연합뉴스·뉴시스·파이낸셜뉴스·한국경제 10/31 · 직접 계산)",
+     "x": 150,
+     "y": 1330,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1368,
+     "size": 56,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1438,
+     "size": 32,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
