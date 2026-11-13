@@ -467,7 +467,7 @@ def mutate_py(case):
 def mutate_js(case):
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js", "_paper-trading.js", "_opening-execution.js", "_research-broker.js", "_research-orders.js", "_market-day-cache.js", "_closing30.js", "_closing30-storage.js", "_closing30-outcomes.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js", "_claude_real.js", "_paper-trading.js", "_opening-execution.js", "_research-broker.js", "_research-orders.js", "_market-day-cache.js", "_closing30.js", "_closing30-storage.js", "_closing30-outcomes.js"):
             shutil.copy(API / name, folder / name)
         shutil.copy(ROOT.parent / "claude.html", folder / "claude.html")   # 화면 함수(arenaStatus) 시험이 사본 폴더의 claude.html 을 먼저 읽는다
         worker_src = folder / "worker_index.js"                  # 'worker' = worker/opening-scheduler/src/index.js 사본(시험이 JKQ_WORKER_SRC 로 읽는다)

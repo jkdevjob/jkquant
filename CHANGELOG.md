@@ -1,5 +1,13 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-13 · 연구(클로드) ③ 실투자 봇(업비트 KRW-ETH · 사용자 서버) · 기록 엔드포인트 · claude v2.31.0
+
+- 이유: 사용자 11/13 "100만원 소액으로 가자 4는 직접 3은 자동으로" · "당연히 A로". 업비트 주문 키는 허용 IP 가 필요해 고정 IP 무료 서버에서 주문한다.
+- `bots/claude-coinbot/`: 봇(`bot.mjs` — 실시간 화면과 같은 coinHoldToday · 고정 메인 확인 · 예산 · identifier · 다시 안 냄 · 저장 먼저 · 시험 모드 기본 · PAUSE) · 실행기(`coinbot.mjs` — 반복 · `--check` · `--status`) · `install.sh`(Node 22.23.4 체크섬) · `check.sh` · `update.sh` · `README.md`(설치 안내).
+- `functions/api/claude-coinbot.js`(새 경로 — 봇 전용 키 · 기록 먼저 → 처음이면 텔레그램) · `functions/api/_claude_real.js`(기록 형식 · Pages · Worker 공용) · Worker `/claude-real`(쌓기만 · 같은 id 한 번).
+- 시험: `tests/claude-coinbot.test.mjs` 12 · `scripts/mutation_test_claude_coinbot.py` 변이 35종 · `.github/check-steps.yml` 단계 추가 · `mutation_test_opening_gapdown.py` 사본 목록에 `_claude_real.js`.
+- 감사: `AUDIT-SELF-REVIEW.md` 2026-11-13 장. `claude.html` 버전 v2.31.0(화면 변경 없음).
+
 ## 2026-11-13 · 연구(클로드) ④ 실투자 사전 알림 · claude v2.30.0
 
 - 이유: 사용자 11/13 "100만원 소액으로 가자 4는 직접 3은 자동으로" — ④ 를 직접 주문하려면 개장 전에 알아야 하는데, 지금 알림은 시가 체결 뒤(개장 뒤)에만 왔다.
