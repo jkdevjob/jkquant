@@ -4,12 +4,15 @@ name: blogger-publish
 # 저장소 Settings → Secrets and variables → Actions 에 둔다. 채팅·저장소 파일에는 쓰지 않는다.
 # 게시 대상: ① 이번 푸시에서 새로 추가된 글 ② blog/blogger_queue.txt 에 적힌 글(키 등록 전에 밀린 글·재시도용).
 # 이미 게시한 글은 blog/published.json 에 남아 다시 올라가지 않는다(publish-blogger.mjs 가 건너뜀).
+# 글에 <!-- publish_at: …+09:00 --> 가 있으면 그 시각으로 예약 게시한다(은퇴노트는 매일 05:00, 사용자 지시 2026-11-13).
+# blog/blogger_revert.txt 에 적힌 글은 '초안'으로 되돌린다(블로그에서 내림, 지우지 않음).
 on:
   push:
     branches: [claude/blog-daily]
     paths:
       - 'blog/20*.md'
       - 'blog/blogger_queue.txt'
+      - 'blog/blogger_revert.txt'
 
 permissions:
   contents: write
@@ -55,6 +58,10 @@ jobs:
             node blog/publish-blogger.mjs "$f"; rc=$?
             if [ $rc -eq 2 ]; then echo "::warning::키 미설정 — 게시 건너뜀: $f (blog/blogger_queue.txt 에 남겨 두면 키 등록 뒤 다시 시도)";
             elif [ $rc -ne 0 ]; then echo "::error::게시 실패: $f"; fail=1; fi
+          done
+          reverts=$( [ -f blog/blogger_revert.txt ] && grep -E '^blog/20[0-9-]+_[A-Za-z0-9_-]+\.md$' blog/blogger_revert.txt || true )
+          for f in $reverts; do
+            node blog/publish-blogger.mjs "$f" --revert || { echo "::error::초안 되돌리기 실패: $f"; fail=1; }
           done
           exit $fail
 

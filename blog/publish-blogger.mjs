@@ -5,6 +5,8 @@
 //   옵션: --dry     게시하지 않고 HTML만 만들어 <파일>.html 로 저장
 //         --draft   초안으로 올림(공개 안 됨)
 //         --force   published.json 에 있어도 다시 올림
+//         --revert  이미 게시한 글을 '초안'으로 되돌림(블로그에서 내림, 지우지는 않음)
+//   예약 게시: 글 2행 아래에 <!-- publish_at: 2026-11-14T05:00:00+09:00 --> 를 쓰면 그 시각에 공개된다(지난 시각이면 바로 게시).
 //
 // 환경변수: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, BLOGGER_BLOG_ID
 // 종료 코드: 0 게시 완료 또는 이미 게시됨 · 2 키 미설정(글은 그대로) · 1 오류
@@ -35,6 +37,13 @@ if (!titleLine) {
 const title = titleLine.slice(2).trim();
 const labelMatch = src.match(/<!--\s*labels:\s*(.+?)\s*-->/);
 const labels = labelMatch ? labelMatch[1].split(",").map((s) => s.trim()).filter(Boolean) : [];
+const atMatch = src.match(/<!--\s*publish_at:\s*(\S+)\s*-->/);
+let publishAt = null;
+if (atMatch) {
+  const t = Date.parse(atMatch[1]);
+  if (Number.isNaN(t)) { console.error(`publish_at 형식 오류: ${atMatch[1]} (예: 2026-11-14T05:00:00+09:00)`); process.exit(1); }
+  if (t - Date.now() > 2 * 60e3) publishAt = new Date(t).toISOString();   // 2분 넘게 남았을 때만 예약
+}
 const dateMatch = path.basename(file).match(/^(\d{4})-(\d{2})-(\d{2})/);
 const dateLabel = dateMatch ? `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}` : "";
 
@@ -102,9 +111,14 @@ if (flags.has("--dry")) {
 // ── 3. 중복 게시 방지 ──
 const log = fs.existsSync(LOG) ? JSON.parse(fs.readFileSync(LOG, "utf8")) : {};
 const key = path.basename(file);
-if (log[key] && !flags.has("--force")) {
+if (log[key] && !flags.has("--force") && !flags.has("--revert")) {
   console.log(`이미 게시됨: ${log[key].url}`);
   process.exit(0);
+}
+
+if (flags.has("--revert")) {
+  if (!log[key]) { console.error(`게시 기록이 없어 되돌릴 수 없습니다: ${key}`); process.exit(1); }
+  if (log[key].reverted) { console.log(`이미 초안으로 되돌림: ${key}`); process.exit(0); }
 }
 
 // ── 4. 인증 ──
@@ -140,18 +154,28 @@ async function accessToken() {
 try {
   const token = await accessToken();
   const blogId = process.env.BLOGGER_BLOG_ID;
+  if (flags.has("--revert")) {
+    const r = await fetch(`https://www.googleapis.com/blogger/v3/blogs/${encodeURIComponent(blogId)}/posts/${encodeURIComponent(log[key].id)}/revert`,
+      { method: "POST", headers: { Authorization: `Bearer ${token}` } });
+    const j = await r.json();
+    if (!r.ok) throw new Error(`초안 되돌리기 실패(HTTP ${r.status}): ${j.error?.message || JSON.stringify(j).slice(0, 300)}`);
+    Object.assign(log[key], { reverted: true, revertedAt: new Date().toISOString(), draft: true, status: j.status });
+    fs.writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n");
+    console.log(`초안으로 되돌림: ${key} (status ${j.status})`);
+    process.exit(0);
+  }
   const url = `https://www.googleapis.com/blogger/v3/blogs/${encodeURIComponent(blogId)}/posts`
     + (flags.has("--draft") ? "?isDraft=true" : "");
   const r = await fetch(url, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ kind: "blogger#post", title, content: html, labels }),
+    body: JSON.stringify({ kind: "blogger#post", title, content: html, labels, ...(publishAt ? { published: publishAt } : {}) }),
   });
   const j = await r.json();
   if (!r.ok) throw new Error(`게시 실패(HTTP ${r.status}): ${j.error?.message || JSON.stringify(j).slice(0, 300)}`);
-  log[key] = { id: j.id, url: j.url || "(초안)", title, at: new Date().toISOString(), draft: flags.has("--draft") };
+  log[key] = { id: j.id, url: j.url || "(초안)", title, at: new Date().toISOString(), draft: flags.has("--draft"), status: j.status, ...(publishAt ? { publishAt } : {}) };
   fs.writeFileSync(LOG, JSON.stringify(log, null, 2) + "\n");
-  console.log(`${flags.has("--draft") ? "초안 저장" : "게시 완료"}: ${j.url || j.id}`);
+  console.log(`${flags.has("--draft") ? "초안 저장" : publishAt ? `예약 게시(${publishAt})` : "게시 완료"}: ${j.url || j.id} · status ${j.status}`);
 } catch (e) {
   console.error(e.message);
   process.exit(1);
