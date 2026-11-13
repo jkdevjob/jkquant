@@ -1,0 +1,59 @@
+name: G8 공개 매매법 앱 전체 엔진 독립 검증
+on:
+  push:
+    branches: [research/gpt-public-20261113]
+    paths:
+      - scripts/gpt_research/g08_public_methods_byGPT.cjs
+      - .github/workflows/gpt-public-methods-research_byGPT.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: g8-public-research-20261113
+  cancel-in-progress: false
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: research/gpt-public-20261113
+          fetch-depth: 1
+      - uses: actions/checkout@v4
+        with:
+          ref: 7dcfe2ed97879a1ee0303b19d8e4830a3e8e8319
+          path: .engine
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: 연구 브라우저 준비
+        run: |
+          npm install --prefix /tmp/g8-deps playwright@1.56.1
+          /tmp/g8-deps/node_modules/.bin/playwright install --with-deps chromium
+      - name: 고정 main의 전체 앱으로 실행
+        env:
+          NODE_PATH: /tmp/g8-deps/node_modules
+          G8_OUT: ${{ github.workspace }}/g8-output
+        run: |
+          cp scripts/gpt_research/g08_public_methods_byGPT.cjs .engine/scripts/gpt_research/g08_public_methods_byGPT.cjs
+          node --check .engine/scripts/gpt_research/g08_public_methods_byGPT.cjs
+          node .engine/scripts/gpt_research/g08_public_methods_byGPT.cjs
+      - name: 원본 응답·실행 증거 보존
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: G8-public-methods-byGPT
+          path: g8-output/
+          retention-days: 30
+      - name: 연구 요약을 같은 연구 브랜치에 저장
+        if: success()
+        run: |
+          mkdir -p research/gpt-morning/experiments/G8-20261113
+          test ! -f research/gpt-morning/experiments/G8-20261113/summary_byGPT.json
+          cp g8-output/summary_byGPT.json research/gpt-morning/experiments/G8-20261113/summary_byGPT.json
+          git config user.name 'JKQuant GPT research'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add research/gpt-morning/experiments/G8-20261113/summary_byGPT.json
+          git commit -m 'research(gpt): preserve G8 public-methods app-engine result'
+          git push origin HEAD:research/gpt-public-20261113
