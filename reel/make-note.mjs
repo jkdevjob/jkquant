@@ -164,7 +164,7 @@ async function main(){
     } else console.log(`▶ 프레임 재사용: ${framesDir}`);
 
     // 소리: 연필(분홍 잡음의 고음만, 불규칙하게 떨림) + 종이 넘김·스티커(갈색 잡음 짧게) + 아주 작은 방 소리
-    const pen = gateExpr(audio.writes, voice ? 1.5 : 2.6);
+    const pen = gateExpr(audio.writes, (spec.skin === "brief" ? 0.35 : 1) * (voice ? 1.5 : 2.6)); // brief 스킨은 연필 소리를 작게
     const flip = gateExpr(audio.flips.map(t => [t, t + 0.32]), 2.2);
     const filter =
       `[1:a]highpass=f=1700,lowpass=f=7500,apulsator=hz=11:amount=0.55,apulsator=hz=3.3:amount=0.45,aeval='val(0)*(${pen})':c=same[pen];` +

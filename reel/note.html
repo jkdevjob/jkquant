@@ -5,6 +5,8 @@
   @font-face { font-family:'Hand'; font-weight:700; font-display:block; src:url('fonts/Gaegu-Bold.ttf'); }
   @font-face { font-family:'Pen';  font-weight:400; font-display:block; src:url('fonts/NanumPenScript-Regular.ttf'); }
   @font-face { font-family:'Sans'; font-weight:400; font-display:block; src:url('fonts/nanum-400.woff2'); }
+  @font-face { font-family:'Sans'; font-weight:700; font-display:block; src:url('fonts/nanum-700.woff2'); }
+  @font-face { font-family:'Sans'; font-weight:800; font-display:block; src:url('fonts/nanum-800.woff2'); }
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { width:1080px; height:1920px; overflow:hidden; background:#2a211b; }
 
@@ -53,6 +55,25 @@
   #binding { position:absolute; left:46px; top:70px; width:988px; height:110px; pointer-events:none; }
   #vignette { position:absolute; inset:0; pointer-events:none;
               background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.35) 100%); }
+
+  /* ── 스킨 "brief"(매니악 브리핑): 남색 브리핑 보드, 반듯한 고딕, 호박색·하늘색 강조 ── */
+  body.skin-brief { background:#0b111c; }
+  .skin-brief #desk { background:radial-gradient(ellipse at 50% 18%, #1c2c47 0%, #0f1828 58%, #070c15 100%); }
+  .skin-brief #binding, .skin-brief .page .grain, .skin-brief .page .rules, .skin-brief .page .margin,
+  .skin-brief .page .holes, .skin-brief .stain { display:none; }
+  .skin-brief .page { background:linear-gradient(180deg,#14223a 0%,#0f1a2d 100%); border-radius:30px;
+                      box-shadow:0 30px 80px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.07); }
+  .skin-brief .page .light { background:linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,0) 32%); }
+  .skin-brief .f-bold { font-family:'Sans'; font-weight:800; letter-spacing:-1px; }
+  .skin-brief .f-reg  { font-family:'Sans'; font-weight:700; }
+  .skin-brief .f-pen  { font-family:'Sans'; font-weight:400; }
+  .skin-brief .c-ink { color:#f2f5fa; } .skin-brief .c-red { color:#ffb340; } .skin-brief .c-gray { color:#8fa1ba; } .skin-brief .c-blue { color:#5ec8ff; }
+  .skin-brief .tape { font-family:'Sans'; font-weight:800; font-size:40px; color:#0f1a2d; background:#ffb340; border-radius:999px;
+                      padding:12px 32px 10px; letter-spacing:1px; transform:none; mix-blend-mode:normal; clip-path:none; }
+  .skin-brief .sticky { background:#1b2c49; border-left:10px solid #5ec8ff; border-radius:14px; box-shadow:0 16px 40px rgba(0,0,0,.45); }
+  .skin-brief .sticky::before { display:none; }
+  .skin-brief .hl { background:rgba(255,179,64,.26); mix-blend-mode:normal; }
+  .skin-brief #vignette { background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 60%, rgba(0,0,0,.45) 100%); }
 </style></head>
 <body>
 <div id="desk"></div>
@@ -65,7 +86,10 @@
 (async function(){
   const D = window.__DATA__;
   const W = 988, H = 1760;
-  const COLORS = { ink:"#22304a", red:"#c0392b", gray:"#77797d", blue:"#2c5aa0" };
+  const BRIEF = D.skin === "brief";
+  if (BRIEF) document.body.classList.add("skin-brief");
+  const COLORS = BRIEF ? { ink:"#f2f5fa", red:"#ffb340", gray:"#8fa1ba", blue:"#5ec8ff" }
+                       : { ink:"#22304a", red:"#c0392b", gray:"#77797d", blue:"#2c5aa0" };
 
   // ── 결정적 난수 ──
   function rng(seed){ let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0;
@@ -166,7 +190,7 @@
     el.textContent = it.text;
     el.style.fontSize = (it.size || 72) + "px";
     el.style.left = (it.x ?? 0) + "px"; el.style.top = (it.y ?? 0) + "px";
-    const rot = it.rot ?? (R() - .5) * 1.4;
+    const rot = it.rot ?? (BRIEF ? 0 : (R() - .5) * 1.4);
     el.style.transform = `rotate(${rot}deg)`;
     container.appendChild(el);
     return el;
