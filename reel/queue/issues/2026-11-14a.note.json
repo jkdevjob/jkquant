@@ -1,0 +1,567 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #15",
+  "color": "yellow"
+ },
+ "band": {
+  "lines": [
+   "10년 모은 4억이 1억으로",
+   "되찾으려면 [몇 %] {벌어야} 할까?"
+  ]
+ },
+ "out": "queue/issues/2026-11-14_loss-recovery-table.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "사억이 일억이 됐다면, 몇 퍼센트 올라야 원금으로 돌아올까요?"
+   },
+   {
+    "id": "news",
+    "text": "어제 많이 본 뉴스, 십 년 모은 사억이 반도체 주식으로 일억이 된 사연이에요.",
+    "gap": 0.3
+   },
+   {
+    "id": "table",
+    "text": "잃은 것보다 되찾을 수익이 훨씬 커요. 절반 잃으면 백 퍼센트, 칠십오 퍼센트 잃으면 삼백 퍼센트를 벌어야 원금이에요."
+   },
+   {
+    "id": "years",
+    "text": "연 오 퍼센트씩 불려도 절반 잃은 돈은 십사 년 걸려요.",
+    "gap": 0.25
+   },
+   {
+    "id": "check",
+    "text": "노후 자금은 한 곳에 몰린 비중과 빌린 돈부터 확인하세요.",
+    "gap": 0.3
+   },
+   {
+    "id": "cta",
+    "text": "여러분은 몇 번째 줄이세요? 팔로우하면 내 칸 표 계속 드려요.",
+    "gap": 0.35
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "start": 0,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.14,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "tag",
+     "text": "4억 → 1억 · 75% 손실",
+     "x": 86,
+     "y": 250,
+     "size": 58,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": -2,
+     "box": "#d7261e"
+    },
+    {
+     "type": "text",
+     "id": "l1",
+     "text": "75% 잃으면",
+     "x": 80,
+     "y": 400,
+     "size": 160,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#ffe14d"
+    },
+    {
+     "type": "text",
+     "id": "l2",
+     "text": "75% 벌면",
+     "x": 80,
+     "y": 630,
+     "size": 200,
+     "font": "heavy",
+     "color": "#d7261e",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l3",
+     "text": "될까?",
+     "x": 80,
+     "y": 880,
+     "size": 190,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "circle",
+     "target": "l3",
+     "at": 0.15,
+     "dur": 0.5,
+     "color": "red",
+     "pad": 14,
+     "width": 9
+    },
+    {
+     "type": "text",
+     "id": "m1",
+     "text": "정답",
+     "x": 92,
+     "y": 1150,
+     "size": 96,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "m2",
+     "text": "??%",
+     "x": 330,
+     "y": 1150,
+     "size": 96,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#16130f"
+    },
+    {
+     "type": "text",
+     "id": "m3",
+     "text": "← 영상에서",
+     "x": 600,
+     "y": 1172,
+     "size": 62,
+     "font": "pen",
+     "color": "#6b6258",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "잃은 돈, 되찾으려면?",
+     "x": 128,
+     "y": 196,
+     "size": 78,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(10년 모은 4억 → 1억 · 이데일리 11/13)",
+     "x": 140,
+     "y": 300,
+     "size": 32,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "s2",
+     "text": "코스피 하루 5,504 → 5,259 (매일신문)",
+     "x": 140,
+     "y": 355,
+     "size": 42,
+     "font": "bold",
+     "color": "ink",
+     "at": "@news+2.4",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "th",
+     "text": "잃은 % → 원금까지 필요한 수익 → 연 5%면",
+     "x": 150,
+     "y": 440,
+     "size": 38,
+     "font": "pen",
+     "color": "ink",
+     "at": "@table-0.2",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "잃은 %",
+     "x": 150,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "필요한 수익",
+     "x": 430,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "연 5%로",
+     "x": 720,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@years",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "−10%",
+     "x": 150,
+     "y": 600,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "+11%",
+     "x": 430,
+     "y": 600,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "−20%",
+     "x": 150,
+     "y": 692,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "+25%",
+     "x": 430,
+     "y": 692,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.1",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "−30%",
+     "x": 150,
+     "y": 784,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "+43%",
+     "x": 430,
+     "y": 784,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "−50%",
+     "x": 150,
+     "y": 876,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "+100%",
+     "x": 430,
+     "y": 876,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5a",
+     "text": "−75%",
+     "x": 150,
+     "y": 968,
+     "size": 62,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5b",
+     "text": "+300%",
+     "x": 430,
+     "y": 968,
+     "size": 62,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+2.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "2.2년",
+     "x": 720,
+     "y": 600,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@years+0.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "4.6년",
+     "x": 720,
+     "y": 692,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@years+0.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "7.3년",
+     "x": 720,
+     "y": 784,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@years+0.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "14.2년",
+     "x": 720,
+     "y": 876,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": "@years+1.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5c",
+     "text": "28.4년",
+     "x": 720,
+     "y": 968,
+     "size": 62,
+     "font": "bold",
+     "color": "red",
+     "at": "@years+1.6",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r5b",
+     "at": "@table.end-0.8",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "circle",
+     "target": "r4c",
+     "at": "@years.end-0.6",
+     "dur": 0.5,
+     "color": "blue",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(필요한 수익 = 1 ÷ (1 − 잃은 %) − 1 · 연 5%는 가정, 수익 보장 아님)",
+     "x": 150,
+     "y": 1050,
+     "size": 26,
+     "font": "pen",
+     "color": "gray",
+     "at": "@years.end",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 1095,
+     "w": 760,
+     "h": 215,
+     "rot": -2,
+     "at": "@check-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "지금 확인할 것",
+       "x": 46,
+       "y": 26,
+       "size": 50,
+       "font": "bold",
+       "color": "red",
+       "at": "@check",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "① 한 곳에 몰린 비중",
+       "x": 46,
+       "y": 100,
+       "size": 46,
+       "font": "bold",
+       "color": "ink",
+       "at": "@check+0.8",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "② 빌린 돈(레버리지)",
+       "x": 46,
+       "y": 160,
+       "size": 46,
+       "font": "bold",
+       "color": "blue",
+       "at": "@check+1.9",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "(이데일리·매일신문 11/13 · 직접 계산)",
+     "x": 150,
+     "y": 1330,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1368,
+     "size": 56,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1438,
+     "size": 32,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}

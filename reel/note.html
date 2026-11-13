@@ -252,7 +252,8 @@
 
   // ── 고정 제목 띠 ──  band: { lines:["첫 줄","[노란 핵심어] {빨간 숫자}"], from:초(기본=둘째 장), top:250, size:84, scale:0.9 }
   // 화면 0~(top+두 줄) 을 어두운 띠로 덮고, 노트(무대)는 그 아래로 내려 scale 배로 줄인다. 인스타 피드(4:5)에서도 보이게 글자는 y≈250 아래에.
-  const BAND = D.band && D.band.lines && D.band.lines.length ? D.band : null;
+  // 표지 한 장뿐이면(cover-lab 비교) 띠를 그리지 않는다
+  const BAND = D.band && D.band.lines && D.band.lines.length && (D.pages.length > 1 || D.band.from != null) ? D.band : null;
   let bandFrom = 0, bandBottom = 0, bandS = 1, bandTy = 0;
   if (BAND){
     const bandEl = document.getElementById("band");
