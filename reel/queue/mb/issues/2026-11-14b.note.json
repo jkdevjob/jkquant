@@ -1,0 +1,493 @@
+{
+ "skin": "brief",
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.6,
+ "tape": {
+  "text": "매니악 브리핑 #2",
+  "color": "yellow"
+ },
+ "band": {
+  "lines": [
+   "수입물가 한 달 새 내렸는데",
+   "작년보다는 [몇 %] 비쌀까?"
+  ]
+ },
+ "out": "queue/mb/issues/2026-11-14_import-prices.mp4",
+ "voice": {
+  "name": "ko-KR-SunHiNeural",
+  "rate": "+8%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "수입물가가 한 달 새 내렸다는데, 작년보다는 몇 퍼센트 비쌀까요?"
+   },
+   {
+    "id": "news",
+    "text": "한국은행 발표, 시월 수입물가가 한 달 새 일 점 팔 퍼센트 내렸어요.",
+    "gap": 0.3
+   },
+   {
+    "id": "table",
+    "text": "환율이 일 점 육 퍼센트, 두바이유가 이 점 육 퍼센트 내린 덕분이에요. 그런데 일 년 전과 비교하면 아직 십삼 점 오 퍼센트 비싸요."
+   },
+   {
+    "id": "view",
+    "text": "한 달 내린 걸로는 작년보다 오른 몫을 다 못 지운 거죠.",
+    "gap": 0.3
+   },
+   {
+    "id": "next",
+    "text": "한은은 이번 달 유가가 십삼 퍼센트 내려, 수입물가가 더 내릴 수 있다고 봤어요.",
+    "gap": 0.25
+   },
+   {
+    "id": "cta",
+    "text": "내 돈에 닿는 숫자, 팔로우하고 매일 받아 보세요.",
+    "gap": 0.35
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "start": 0,
+   "items": [
+    {
+     "type": "text",
+     "id": "tag",
+     "text": "10월 수입물가 −1.8%",
+     "x": 86,
+     "y": 250,
+     "size": 56,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#5ec8ff"
+    },
+    {
+     "type": "text",
+     "id": "l1",
+     "text": "한 달 내렸는데",
+     "x": 80,
+     "y": 400,
+     "size": 140,
+     "font": "heavy",
+     "color": "#f4f7fb",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l2",
+     "text": "작년보다",
+     "x": 80,
+     "y": 600,
+     "size": 190,
+     "font": "heavy",
+     "color": "#f4f7fb",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "a1",
+     "text": "??%",
+     "x": 80,
+     "y": 840,
+     "size": 200,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#5ec8ff"
+    },
+    {
+     "type": "text",
+     "id": "a2",
+     "text": "비싸",
+     "x": 540,
+     "y": 860,
+     "size": 170,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#ffb340"
+    },
+    {
+     "type": "text",
+     "id": "q",
+     "text": "?",
+     "x": 800,
+     "y": 1000,
+     "size": 260,
+     "font": "heavy",
+     "color": "#ffb340",
+     "at": 0,
+     "dur": 0,
+     "rot": 10
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "10월 수입물가, 작년보다는?",
+     "x": 110,
+     "y": 200,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(한국은행 11/13 발표 · 연합뉴스·뉴시스·아주경제)",
+     "x": 112,
+     "y": 300,
+     "size": 30,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "s2",
+     "text": "한 달 새 −1.8% (9월 → 10월)",
+     "x": 112,
+     "y": 355,
+     "size": 46,
+     "font": "bold",
+     "color": "ink",
+     "at": "@news+1.6",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "무엇",
+     "x": 120,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "9월 → 10월",
+     "x": 450,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "변화",
+     "x": 745,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "수입물가지수",
+     "x": 120,
+     "y": 550,
+     "size": 48,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+0.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "원/달러 평균",
+     "x": 120,
+     "y": 645,
+     "size": 48,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "두바이유 평균",
+     "x": 120,
+     "y": 740,
+     "size": 48,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+3.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "1년 전보다",
+     "x": 120,
+     "y": 835,
+     "size": 48,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+5.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "159.7 → 156.9",
+     "x": 450,
+     "y": 558,
+     "size": 40,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+0.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "1,359 → 1,338",
+     "x": 450,
+     "y": 653,
+     "size": 40,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+2.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "113.7 → 110.7",
+     "x": 450,
+     "y": 748,
+     "size": 40,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+3.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "수입물가지수",
+     "x": 450,
+     "y": 843,
+     "size": 40,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+5.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "−1.8%",
+     "x": 745,
+     "y": 550,
+     "size": 52,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+0.7",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "−1.6%",
+     "x": 745,
+     "y": 645,
+     "size": 52,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.3",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "−2.6%",
+     "x": 745,
+     "y": 740,
+     "size": 52,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+3.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "+13.5%",
+     "x": 745,
+     "y": 835,
+     "size": 52,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+6.2",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r4c",
+     "at": "@table.end-0.9",
+     "dur": 0.5,
+     "color": "blue",
+     "pad": 6,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(수입물가지수 2020=100 · 원화 기준 잠정 · 전년 동월 대비 +13.5%)",
+     "x": 120,
+     "y": 940,
+     "size": 26,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table.end",
+     "dur": 0.5
+    },
+    {
+     "type": "sticky",
+     "x": 110,
+     "y": 1000,
+     "w": 840,
+     "h": 330,
+     "rot": 0,
+     "at": "@view-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "f1",
+       "text": "사실",
+       "x": 40,
+       "y": 30,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@view-0.1",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "f2",
+       "text": "환율·유가 함께 내려 한 달 −1.8% (한은)",
+       "x": 170,
+       "y": 36,
+       "size": 38,
+       "font": "bold",
+       "color": "ink",
+       "at": "@view+0.2",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "v1",
+       "text": "해석",
+       "x": 40,
+       "y": 130,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@view+1.6",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "v2",
+       "text": "1년 전보다는 아직 +13.5% 비싼 수준",
+       "x": 170,
+       "y": 136,
+       "size": 38,
+       "font": "bold",
+       "color": "ink",
+       "at": "@view+1.9",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "p1",
+       "text": "전망",
+       "x": 40,
+       "y": 230,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@next",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "p2",
+       "text": "11월 유가 약 13%↓ → 더 내릴 요인 (한은)",
+       "x": 170,
+       "y": 236,
+       "size": 38,
+       "font": "bold",
+       "color": "blue",
+       "at": "@next+0.3",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "매니악 브리핑",
+     "x": 330,
+     "y": 1365,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@maniacbriefing",
+     "x": 360,
+     "y": 1440,
+     "size": 32,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.5",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
