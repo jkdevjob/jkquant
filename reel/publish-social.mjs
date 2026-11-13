@@ -1,17 +1,21 @@
 #!/usr/bin/env node
-// 발행 큐(queue/queue.json)에서 오늘 올릴 영상 하나를 골라
-// 인스타그램 릴스 + 유튜브 쇼츠로 올린다. 매일 한 번 예약 작업이 실행한다.
+// 발행 큐(queue/queue.json)에서 '지금 올릴 때가 된' 영상을 골라
+// 인스타그램 릴스(·유튜브 쇼츠)로 올린다. GitHub Actions(.github/workflows/publish-social.yml, main 브랜치)가
+// 한국 시간 09·12·18시 직후에 실행한다.
 //
-//   node publish-social.mjs            오늘(한국 시간) 올릴 항목 게시
-//   옵션: --dry          올리지 않고 무엇을 올릴지·파일·문구 길이만 확인
-//         --only ig|yt   한쪽만
-//         --id w2d1      날짜와 상관없이 이 항목(이미 올린 쪽은 건너뜀)
-//         --date 2026-11-02   오늘 날짜를 이 날로 간주
+//   node publish-social.mjs            지금(한국 시간) 올릴 때가 된 항목 게시
+//   옵션: --dry          올리지 않고 무엇을 올릴지·파일·문구 길이·키 상태만 확인
+//         --only ig|yt   한쪽만(없으면 queue/publish.config.json 의 targets)
+//         --id i20261113a  시각과 상관없이 이 항목(이미 올린 쪽은 건너뜀)
+//         --date 2026-11-13 --now 12:05   지금을 이 날·이 시각(한국)으로 간주(점검용)
 //
-// 고르는 규칙(하루 한 편, 오늘 이미 올렸으면 그 플랫폼은 쉰다)
-//   1순위: 오늘 날짜의 이슈 영상(kind: "issue"). 이슈는 그날만 — 지나면 건너뛴다.
-//   2순위(예비): 날짜가 오늘 이하이면서 아직 안 올린 일반 영상 중 가장 오래된 것.
-//   키를 늦게 넣어도 밀린 일반 영상은 하루 한 편씩 순서대로 나간다(몰아 올리지 않음).
+// 고르는 규칙(시각 기준, 여러 편이면 이른 것부터 모두)
+//   각 항목의 게시 시각 = plan_at → metricool.at → date + slot 순으로 읽는다(한국 시간).
+//   게시 시각이 '오늘'이고 지금 이전이며 아직 안 올린 것. late_window_min(기본 150분)보다 늦었으면 건너뛰고 보고.
+//   같은 시각에 새 편과 예비(kind "buffer")가 같이 있으면 예비는 쉰다(예비는 루틴이 못 깨어난 날용).
+//   이미 올린 것: queue/published.json 기록, queue.json 의 published.instagram/youtube(Metricool 시절 기록),
+//   그리고 계정 최근 게시물(인스타 캡션 첫 줄·유튜브 제목)로 한 번 더 막는다.
+//   예전의 '밀린 일반 영상을 하나씩' 규칙은 없앴다 — Metricool 로 이미 나간 영상을 다시 올릴 수 있어서.
 //
 // 환경변수
 //   유튜브:  GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, YT_REFRESH_TOKEN (범위 youtube.upload)
@@ -59,23 +63,55 @@ const PLATFORMS = {
   yt: { name: "유튜브", keys: ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "YT_REFRESH_TOKEN"] },
   ig: { name: "인스타", keys: ["IG_ACCESS_TOKEN"] },
 };
-const targets = Object.keys(PLATFORMS).filter((p) => !ONLY || ONLY === p);
+// 발행 설정(저장소 브랜치에 있어 main 을 건드리지 않고 바꿀 수 있다)
+const CFG_PATH = path.join(__dirname, "queue", "publish.config.json");
+const CFG = fs.existsSync(CFG_PATH) ? JSON.parse(fs.readFileSync(CFG_PATH, "utf8")) : {};
+const targets = Object.keys(PLATFORMS).filter((p) => (ONLY ? ONLY === p : (CFG.targets || Object.keys(PLATFORMS)).includes(p)));
+const LATE_MIN = Number(opt("late") || CFG.late_window_min || 150);
+const NOW = opt("now") ? Date.parse(`${TODAY}T${opt("now")}+09:00`) : Date.now();
+if (Number.isNaN(NOW)) throw new Error(`--now 형식은 HH:MM: ${opt("now")}`);
 
-const done = (id, p) => Boolean(log.items[id]?.[p]);
-const postedToday = (p) => Object.values(log.items).some((e) => e[p]?.at && kstDate(e[p].at) === TODAY);
+const PUB_KEY = { ig: "instagram", yt: "youtube" };
+const done = (id, p) => Boolean(log.items[id]?.[p]) || Boolean(queue.find((q) => q.id === id)?.published?.[PUB_KEY[p]]);
 function kstDate(iso) { return new Date(new Date(iso).getTime() + 9 * 3600e3).toISOString().slice(0, 10); }
+const kstHM = (t) => new Date(t + 9 * 3600e3).toISOString().slice(11, 16);
 
-// 플랫폼별로 오늘 올릴 항목 고르기
-function pick(p) {
+// 항목의 게시 시각(ms). plan_at → metricool.at → date+slot
+function plannedAt(q) {
+  const s = q.plan_at || q.metricool?.at || (q.date && q.slot ? `${q.date}T${q.slot}+09:00` : null);
+  const t = s ? Date.parse(s) : NaN;
+  return Number.isNaN(t) ? null : t;
+}
+
+// 플랫폼별로 지금 올릴 항목들(이른 것부터)과 너무 늦어 건너뛸 항목들
+function due(p) {
   if (opt("id")) {
     const it = queue.find((q) => q.id === opt("id"));
     if (!it) throw new Error(`큐에 없는 id: ${opt("id")}`);
-    return done(it.id, p) ? null : it;
+    return { items: done(it.id, p) ? [] : [it], missed: [] };
   }
-  if (postedToday(p)) return null;
-  const issue = queue.find((q) => q.kind === "issue" && q.date === TODAY && !done(q.id, p));
-  if (issue) return issue;
-  return queue.filter((q) => q.kind !== "issue" && q.date <= TODAY && !done(q.id, p)).sort((a, b) => a.date.localeCompare(b.date))[0] || null;
+  const today = queue
+    .filter((q) => { const t = plannedAt(q); return t != null && kstDate(new Date(t).toISOString()) === TODAY; })
+    .sort((a, b) => plannedAt(a) - plannedAt(b));
+  const items = [], missed = [];
+  for (const q of today) {
+    const t = plannedAt(q);
+    if (done(q.id, p) || t > NOW) continue;
+    if (q.kind === "buffer" && today.some((o) => o !== q && o.kind !== "buffer" && plannedAt(o) === t)) continue;
+    if (NOW - t > LATE_MIN * 60e3) { missed.push(q); continue; }
+    items.push(q);
+  }
+  return { items, missed };
+}
+
+// 인스타 캡션: API 로는 'AI 정보' 표시를 켤 수 없어서 캡션에 한 줄로 밝힌다(해시태그 줄 앞).
+function igCaption(item) {
+  const note = CFG.ig_ai_note;
+  if (!note || item.caption.includes(note)) return item.caption;
+  const lines = item.caption.split("\n");
+  const last = lines.length - 1;
+  if (lines[last].trim().startsWith("#")) { lines.splice(last, 0, note, ""); return lines.join("\n"); }
+  return item.caption + "\n\n" + note;
 }
 
 // ── 사전 점검(--dry 에서도 실행) ──
@@ -89,7 +125,7 @@ function check(item) {
     const sec = durationOf(file);
     if (sec != null && (sec < 3 || sec > 180)) problems.push(`길이 ${sec.toFixed(1)}초(쇼츠·릴스는 3~180초)`);
   }
-  if ([...item.caption].length > 2200) problems.push("인스타 캡션 2,200자 초과");
+  if ([...igCaption(item)].length > 2200) problems.push("인스타 캡션 2,200자 초과");
   if ((item.caption.match(/#[^\s#]+/g) || []).length > 30) problems.push("해시태그 30개 초과");
   if ([...item.yt_title].length > 100) problems.push("유튜브 제목 100자 초과");
   if (/[<>]/.test(item.yt_title + item.caption)) problems.push("유튜브는 제목·설명에 < > 를 허용하지 않음");
@@ -193,15 +229,16 @@ let remoteSha;
 async function repoSha() {
   if (remoteSha) return remoteSha;
   if (process.env.REPO_SHA) return (remoteSha = process.env.REPO_SHA);
+  if (IN_REPO) return (remoteSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: __dirname, encoding: "utf8" }).trim());
   const r = await fetch(`https://api.github.com/repos/${REPO}/commits/${BRANCH}`, { headers: { Accept: "application/vnd.github+json" } });
   if (!r.ok) throw new Error(`브랜치 커밋 조회 실패(HTTP ${r.status})`);
   return (remoteSha = (await r.json()).sha);
 }
 
-// 저장소 없이 돌 때 영상 파일을 그 커밋에서 내려받는다.
+// 영상 파일이 없으면(저장소 없이, 또는 Actions 의 일부만 체크아웃) 그 커밋에서 내려받는다.
 async function ensureLocal(item) {
   const file = path.join(__dirname, item.file);
-  if (IN_REPO || fs.existsSync(file)) return;
+  if (fs.existsSync(file)) return;
   const url = `https://raw.githubusercontent.com/${REPO}/${await repoSha()}/reel/${item.file}`;
   const r = await fetch(url);
   if (!r.ok) throw new Error(`영상 내려받기 실패(HTTP ${r.status}): ${url}`);
@@ -247,7 +284,7 @@ async function publishInstagram(item) {
   const uid = process.env.IG_USER_ID || "me";
   // 1) 컨테이너 만들기
   const c = await igCall("POST", `${IG()}/${uid}/media`, {
-    media_type: "REELS", video_url: videoUrl, caption: item.caption, share_to_feed: "true",
+    media_type: "REELS", video_url: videoUrl, caption: igCaption(item), share_to_feed: "true",
   });
   // 2) 인스타가 영상을 처리할 때까지 대기(최대 10분)
   let status = "IN_PROGRESS";
@@ -291,44 +328,49 @@ let keySkips = 0, failed = false;
 
 for (const p of targets) {
   const P = PLATFORMS[p];
-  let item = pick(p);
-  if (!item) { report.push(`${P.name}: 오늘 올릴 항목 없음`); continue; }
+  const { items, missed } = due(p);
+  for (const q of missed) report.push(`${P.name}: ${q.id}(${kstHM(plannedAt(q))}) ${LATE_MIN}분 넘게 지나 건너뜀 — 다시 쓰려면 plan_at 을 새로 잡기`);
+  if (!items.length) { report.push(`${P.name}: 지금 올릴 항목 없음`); continue; }
   const missing = P.keys.filter((k) => !process.env[k]);
   if (DRY) {
-    try { await ensureLocal(item); } catch (e) { failed = true; report.push(`${P.name}: ${item.id} ${e.message}`); continue; }
-    const problems = check(item);
-    if (problems.length) { failed = true; report.push(`${P.name}: ${item.id} 점검 실패 — ${problems.join(" / ")}`); continue; }
-    let extra = "";
-    if (p === "ig") { try { extra = ` · 공개 주소 ${await mediaUrl(item)}`; } catch (e) { extra = ` · ${e.message}`; } }
-    report.push(`${P.name}: ${item.id}(${item.date}) 올릴 예정 · ${item.file}${extra}` + (missing.length ? ` · 키 없음: ${missing.join(", ")}` : " · 키 있음"));
+    for (const item of items) {
+      try { await ensureLocal(item); } catch (e) { failed = true; report.push(`${P.name}: ${item.id} ${e.message}`); continue; }
+      const problems = check(item);
+      if (problems.length) { failed = true; report.push(`${P.name}: ${item.id} 점검 실패 — ${problems.join(" / ")}`); continue; }
+      let extra = "";
+      if (p === "ig") { try { extra = ` · 공개 주소 ${await mediaUrl(item)}`; } catch (e) { extra = ` · ${e.message}`; } }
+      report.push(`${P.name}: ${item.id}(${kstHM(plannedAt(item))}) 올릴 예정 · ${item.file}${extra}` + (missing.length ? ` · 키 없음: ${missing.join(", ")}` : " · 키 있음"));
+    }
     continue;
   }
   if (missing.length) { keySkips++; report.push(`${P.name}: 키 미설정으로 건너뜀(${missing.join(", ")})`); continue; }
-  try {
-    const token = p === "yt" ? await googleToken() : null;
-    // 계정에 이미 올라가 있는데 기록만 빠진 항목은 기록을 되살리고 다음 항목으로
-    while (item) {
+  let token = null;
+  try { if (p === "yt") token = await googleToken(); }
+  catch (e) { failed = true; report.push(`${P.name}: ${e.message}`); continue; }
+  for (const item of items) {
+    try {
+      // 계정에 이미 올라가 있는데 기록만 빠진 항목은 기록만 되살린다
       const prior = p === "yt" ? await ytExisting(token, item) : await igExisting(item);
-      if (!prior) break;
-      (log.items[item.id] ||= {})[p] = prior;
+      if (prior) {
+        (log.items[item.id] ||= {})[p] = prior;
+        saveLog();
+        report.push(`${P.name}: ${item.id} 이미 올라가 있어 기록만 복구 → ${prior.url}`);
+        continue;
+      }
+      // 저장소 없이 돌면 기록이 남지 않으니, 계정 확인이 안 되면 올리지 않는다(같은 영상이 또 올라가는 것 방지)
+      if (p === "yt" && ytGuardOff && !IN_REPO)
+        throw new Error("저장소 없이 실행 중이라 중복 확인이 필요한데 갱신 토큰에 youtube.readonly 범위가 없음 — SOCIAL_SETUP.md 대로 두 범위로 다시 발급");
+      await ensureLocal(item);
+      const problems = check(item);
+      if (problems.length) throw new Error(`점검 실패 — ${problems.join(" / ")}`);
+      const res = p === "yt" ? await uploadYouTube(item, token) : await publishInstagram(item);
+      (log.items[item.id] ||= {})[p] = { ...res, at: new Date().toISOString() };
       saveLog();
-      report.push(`${P.name}: ${item.id} 이미 올라가 있어 기록만 복구 → ${prior.url}`);
-      item = pick(p);
+      report.push(`${P.name}: ${item.id} 게시 완료 → ${res.url}` + (res.note ? ` (${res.note})` : ""));
+    } catch (e) {
+      failed = true;
+      report.push(`${P.name}: ${item.id} 실패 — ${e.message}`);
     }
-    if (!item) { report.push(`${P.name}: 오늘 올릴 항목 없음`); continue; }
-    // 저장소 없이 돌면 기록이 남지 않으니, 계정 확인이 안 되면 올리지 않는다(매일 같은 영상이 올라가는 것 방지)
-    if (p === "yt" && ytGuardOff && !IN_REPO)
-      throw new Error("저장소 없이 실행 중이라 중복 확인이 필요한데 갱신 토큰에 youtube.readonly 범위가 없음 — SOCIAL_SETUP.md 2-5 대로 두 범위로 다시 발급");
-    await ensureLocal(item);
-    const problems = check(item);
-    if (problems.length) throw new Error(`점검 실패 — ${problems.join(" / ")}`);
-    const res = p === "yt" ? await uploadYouTube(item, token) : await publishInstagram(item);
-    (log.items[item.id] ||= {})[p] = { ...res, at: new Date().toISOString() };
-    saveLog();
-    report.push(`${P.name}: ${item.id} 게시 완료 → ${res.url}` + (res.note ? ` (${res.note})` : ""));
-  } catch (e) {
-    failed = true;
-    report.push(`${P.name}: ${item.id} 실패 — ${e.message}`);
   }
 }
 if (ytGuardOff) report.push("유튜브 중복 확인 생략(갱신 토큰에 youtube.readonly 범위 없음)");
@@ -338,9 +380,12 @@ if (!DRY && targets.includes("ig") && PLATFORMS.ig.keys.every((k) => process.env
   if (msg) report.push(msg);
 }
 
-// 남은 큐
-const left = queue.filter((q) => !(q.kind === "issue" && q.date < TODAY) && targets.some((p) => !done(q.id, p))).map((q) => `${q.id}(${q.date})`);
-report.push(`남은 항목: ${left.length ? left.join(", ") : "없음 — 다음 주 영상을 큐에 추가해야 함"}`);
+// 앞으로 잡힌 항목(지금 이후, 아직 안 올린 것)
+const upcoming = queue
+  .filter((q) => { const t = plannedAt(q); return t != null && t > NOW && targets.some((p) => !done(q.id, p)); })
+  .sort((a, b) => plannedAt(a) - plannedAt(b))
+  .map((q) => `${q.id}(${kstDate(new Date(plannedAt(q)).toISOString()).slice(5)} ${kstHM(plannedAt(q))})`);
+report.push(`앞으로 잡힌 항목: ${upcoming.length ? upcoming.slice(0, 8).join(", ") : "없음 — 루틴이 새 영상을 큐에 넣어야 함"}`);
 
 const code = failed ? 1 : !DRY && keySkips > 0 && keySkips === targets.length ? 2 : 0;
 console.log(`[${TODAY} KST]${DRY ? " (점검만)" : ""}\n` + report.join("\n"));
