@@ -1,8 +1,20 @@
 {
-  "note": "인스타 참고 자료 설정. hashtags = 인기 게시물을 볼 해시태그(7일에 전체 30개 제한, 채널당 4~6개), accounts = 참고할 비즈니스·크리에이터 계정 아이디(@ 없이). 매일 루틴이 잘된 계정을 찾으면 accounts 에 더한다. 바꿔서 푸시하면 ig-refs.yml 이 다시 모은다.",
-  "requested": "2026-11-13",
+  "note": "인스타 참고 자료 설정. 해시태그 인기 게시물(ig_hashtag_search)은 메타 앱 심사('Instagram Public Content Access')가 필요해 11/13 막힘 → hashtags 는 비워 둔다. accounts = 참고할 비즈니스·크리에이터 계정 아이디(@ 없이, business_discovery). 매일 루틴이 유튜브 동향·캡션에서 잘되는 계정을 찾으면 accounts 에 더한다. 바꿔서 푸시하면 ig-refs.yml 이 다시 모은다.",
+  "requested": "2026-11-13 2",
   "channels": {
-    "rn": { "hashtags": ["노후준비", "국민연금", "기초연금", "은퇴준비", "재테크"], "accounts": [] },
-    "mb": { "hashtags": ["경제뉴스", "경제공부", "주식공부", "인공지능", "테크뉴스"], "accounts": [] }
+    "rn": {
+      "hashtags": [],
+      "accounts": [
+        "instagram",
+        "syukaworld",
+        "3protv"
+      ]
+    },
+    "mb": {
+      "hashtags": [],
+      "accounts": [
+        "syukaworld"
+      ]
+    }
   }
 }
