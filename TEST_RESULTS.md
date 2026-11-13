@@ -1,5 +1,16 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-13 · PR #669 병합 · 배포 확인 (claude v2.31.0)
+
+- 병합: squash 6691e9cf(15:56 KST · 주문 경로 배포 창 15:45 뒤).
+  - 마지막 머리(8ab648d9)는 PR 이 열린 뒤 올린 커밋이라 자동 검증이 없었다(check.yml 은 opened · ready_for_review 때만). 그래서 수동 실행 43381687545 성공을 확인한 뒤 병합했다.
+- Worker 배포 43382240467 성공.
+- 운영 확인(15:57)
+  - `jkquant.pages.dev/claude` clVer v2.31.0.
+  - `POST /api/claude-coinbot` 키 없이 401 `unauthorized`(배포 전 405).
+  - Worker `POST /claude-real` 키 없이 401(배포 전 기본 안내 200).
+- 뒤따른 수정: Worker 배포 경로에 `functions/api/_claude_real.js` 추가 — 그 파일만 바뀌어도 Worker 가 다시 배포되게.
+
 ## 2026-11-13 · 연구(클로드) ③ 실투자 봇 · claude v2.31.0
 
 - `node --test tests/claude-coinbot.test.mjs`: 12 pass · 0 fail.
