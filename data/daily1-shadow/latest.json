@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-13T02:01:28.099058+09:00",
+  "generatedAt": "2026-11-13T16:25:32.857606+09:00",
   "mode": "prospective-shadow-paper",
   "paperStart": "2026-10-01",
   "designEnd": "2026-09-30",
@@ -13,8 +13,8 @@
   "latestSourceDates": {
     "opening": "2026-11-06",
     "daytrading": "2026-11-12",
-    "crypto": "2026-11-11",
-    "soxl": "2026-11-11"
+    "crypto": "2026-11-12",
+    "soxl": "2026-11-12"
   },
   "strategies": {
     "opening": {
@@ -3172,12 +3172,12 @@
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 39,
+        "days": 40,
         "trades": 1,
         "tradeDays": 1,
         "winRatePct": 0.0,
         "avgTradePnlPct": -0.3877971022532888,
-        "avgDailyReturnPct": -0.00994351544239202,
+        "avgDailyReturnPct": -0.009694927556332219,
         "plus1Days": 0,
         "plus1DayRatePct": 0.0,
         "plus5Weeks": 0,
@@ -3380,6 +3380,11 @@
           },
           {
             "date": "2026-11-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-11-12",
             "returnPct": 0.0,
             "trades": 0
           }
@@ -3842,21 +3847,21 @@
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 30,
-        "trades": 4,
-        "tradeDays": 4,
-        "winRatePct": 75.0,
-        "avgTradePnlPct": 0.2122989229601998,
-        "avgDailyReturnPct": 0.028306523061359976,
+        "days": 31,
+        "trades": 3,
+        "tradeDays": 3,
+        "winRatePct": 100.0,
+        "avgTradePnlPct": 0.6830652306136037,
+        "avgDailyReturnPct": 0.06610308683357455,
         "plus1Days": 1,
-        "plus1DayRatePct": 3.3333333333333335,
+        "plus1DayRatePct": 3.225806451612903,
         "plus5Weeks": 0,
-        "weeklyAvgPct": 0.11883956190623657,
-        "lossDayAvgPct": -1.200000000000012,
-        "worstDayPct": -1.200000000000012,
-        "profitFactor": 1.7076630765339922,
-        "compoundReturnPct": 0.8348486112721654,
-        "maxDrawdownPct": -1.2000000000000233,
+        "weeklyAvgPct": 0.2916589493179744,
+        "lossDayAvgPct": 0.0,
+        "worstDayPct": 0.10829476746774275,
+        "profitFactor": 999.0,
+        "compoundReturnPct": 2.0595633717329864,
+        "maxDrawdownPct": 0.0,
         "daily": [
           {
             "date": "2026-10-01",
@@ -3990,8 +3995,8 @@
           },
           {
             "date": "2026-11-06",
-            "returnPct": -1.200000000000012,
-            "trades": 1
+            "returnPct": 0.0,
+            "trades": 0
           },
           {
             "date": "2026-11-09",
@@ -4007,9 +4012,14 @@
             "date": "2026-11-11",
             "returnPct": 0.0,
             "trades": 0
+          },
+          {
+            "date": "2026-11-12",
+            "returnPct": 0.0,
+            "trades": 0
           }
         ],
-        "plus1DaysPerYear": 8.333333333333334,
+        "plus1DaysPerYear": 8.064516129032258,
         "plus5WeeksPerYear": 0.0
       },
       "reviewPolicy": "Rules stay frozen. Review after >=20 prospective days AND >=20 prospective trades; positive daily expectancy, PF>=1.10, MDD>=-15%, worst day>=-8%. No automatic live promotion.",
@@ -4058,27 +4068,6 @@
           "reason": "time_exit"
         },
         {
-          "date": "2026-11-06",
-          "strategy": "soxl",
-          "strategyVersion": "soxl_power_hour_v1",
-          "code": "SOXL",
-          "signalTime": 1505,
-          "entryTime": 1510,
-          "entryPrice": 46.36000061035156,
-          "first30RetPct": 1.3171759535316019,
-          "power30RetPct": 1.8676821152290524,
-          "signalVwap": 46.358728981787664,
-          "volumeRatio": 2.166601275375124,
-          "decisionReason": "first30_strength+power_hour_momentum+vwap+prior3_break+volume",
-          "sample": "outOfSample",
-          "exitTime": 1515,
-          "exitPrice": 45.89640060424804,
-          "grossPnlPct": -1.000000000000012,
-          "frictionPct": 0.2,
-          "pnlPct": -1.200000000000012,
-          "reason": "stop"
-        },
-        {
           "date": "2026-11-10",
           "strategy": "soxl",
           "strategyVersion": "soxl_power_hour_v1",
@@ -4088,8 +4077,8 @@
           "entryPrice": 55.439998626708984,
           "first30RetPct": 11.230912114732504,
           "power30RetPct": 1.5681823010789353,
-          "signalVwap": 54.924220102273864,
-          "volumeRatio": 1.465636157610413,
+          "signalVwap": 54.92426684051084,
+          "volumeRatio": 1.4655158355704565,
           "decisionReason": "first30_strength+power_hour_momentum+vwap+prior3_break+volume",
           "sample": "outOfSample",
           "exitTime": 1555,
@@ -4103,21 +4092,21 @@
     }
   },
   "equalWeightPortfolio": {
-    "days": 41,
-    "trades": 104,
-    "tradeDays": 30,
-    "winRatePct": 17.073170731707318,
-    "avgTradePnlPct": -0.09774485975250968,
-    "avgDailyReturnPct": -0.09774485975250968,
+    "days": 42,
+    "trades": 103,
+    "tradeDays": 29,
+    "winRatePct": 16.666666666666664,
+    "avgTradePnlPct": -0.08827474404411653,
+    "avgDailyReturnPct": -0.08827474404411653,
     "plus1Days": 0,
     "plus1DayRatePct": 0.0,
     "plus5Weeks": 0,
-    "weeklyAvgPct": -0.5725524605712295,
-    "lossDayAvgPct": -0.24231746205223398,
+    "weeklyAvgPct": -0.5298674917001756,
+    "lossDayAvgPct": -0.23969552850915357,
     "worstDayPct": -0.6680089751561185,
-    "profitFactor": 0.2809398238391643,
-    "compoundReturnPct": -3.9396789705911983,
-    "maxDrawdownPct": -3.9894866280759222,
+    "profitFactor": 0.2969225900661135,
+    "compoundReturnPct": -3.650630863180737,
+    "maxDrawdownPct": -3.700588393255677,
     "daily": [
       {
         "date": "2026-10-01",
@@ -4301,7 +4290,7 @@
       },
       {
         "date": "2026-11-07",
-        "returnPct": -0.300000000000003,
+        "returnPct": 0.0,
         "trades": 1
       },
       {
@@ -4322,6 +4311,11 @@
       {
         "date": "2026-11-12",
         "returnPct": -0.2625000000000002,
+        "trades": 1
+      },
+      {
+        "date": "2026-11-13",
+        "returnPct": 0.0,
         "trades": 1
       }
     ],
