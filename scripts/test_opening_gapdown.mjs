@@ -458,6 +458,34 @@ t("알림(웹 · 텔레그램 공용): 매수·매도 때만 · [클로드 연�
   assert.deepEqual(PU.pushEvents({ today: "2026-10-07", tabs: { daytrading: { rows: [{ name: "KODEX", buyTime: "2026-10-06 15:30 종가", sellTime: "오늘 09:00 시가", status: "매도 예정(09:00 시가)", pnlPct: null }] },
     opening: { main: M, decision: { breadth: { qualified: 9 } }, rows: [] } } }, now, {}), []);   // 09:00 시가 전 — 매도 알림 없음(공식 시가가 나온 뒤 '청산'일 때 한 번)
 });
+t("④ 실투자 사전 알림(2026-11-13 사용자 '4는 직접'): 다음 시가 매수 · 매도가 정해지면 개장 전 한 번 — 다음 거래일(주말 · 휴장) · 개장 시각(서머타임) · 주수(예산 안)", () => {
+  // 뉴욕증권거래소 휴장일 — 거래소 공표 목록과 같다(2026 · 2027). 2028-01-01 은 토요일이라 2027-12-31 은 연다(NYSE 규칙)
+  assert.deepEqual([...PU.nyseHolidays(2026)].sort(), ["2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03", "2026-05-25", "2026-06-19", "2026-07-03", "2026-09-07", "2026-11-26", "2026-12-25"]);
+  assert.deepEqual([...PU.nyseHolidays(2027)].sort(), ["2027-01-01", "2027-01-18", "2027-02-15", "2027-03-26", "2027-05-31", "2027-06-18", "2027-07-05", "2027-09-06", "2027-11-25", "2027-12-24"]);
+  assert.ok(PU.isNyseSession("2027-12-31") && !PU.nyseHolidays(2028).has("2027-12-31") && !PU.isNyseSession("2026-11-14"));
+  // 신호 날짜(미국 마감일) → 다음 거래일 · 한국 개장 시각
+  for (const [b, nx, at] of [["2026-11-12", "2026-11-13", "23:30"], ["2026-11-13", "2026-11-16", "23:30"], ["2026-11-25", "2026-11-27", "23:30"], ["2027-03-11", "2027-03-12", "23:30"],
+    ["2027-03-25", "2027-03-29", "22:30"], ["2027-07-02", "2027-07-06", "22:30"], ["2027-10-29", "2027-11-01", "22:30"], ["2027-11-05", "2027-11-08", "23:30"], ["2027-12-23", "2027-12-27", "23:30"]]) {
+    assert.equal(PU.nextNyseSession(b), nx, b);
+    assert.equal(PU.usOpenKst(nx), at, nx);
+  }
+  // 주수 — 예산 $300 · 지정가 = 전일 종가 +10%. 시가가 지정가 이하면 어떤 값이든 예산 안 · 1주 더 사면 넘는다
+  assert.deepEqual(PU.soxlPlan(65.53), { limit: 72.08, shares: 4 });
+  for (let c = 5; c < 400; c += 0.37) { const p = PU.soxlPlan(c); assert.ok(p.shares * p.limit <= PU.PILOT.soxlUsd && (p.shares + 1) * p.limit > PU.PILOT.soxlUsd, String(c)); }
+  const ev = (row, at) => PU.pushEvents({ tabs: { soxl: { rows: [row] } } }, Date.parse(at), {});
+  const buy = ev({ status: "다음 미국장 시가 매수 예정", buyTime: "다음 미국장 시가", signalBasedOn: "2026-11-12", signalClose: 65.53, hold: true }, "2026-11-13T06:50:00+09:00");
+  assert.deepEqual(buy.map(e => [e.id, e.title, e.body]), [["soxl:2026-11-12:plan", "[클로드 연구 SOXL] 🔔 매수 주문 준비",
+    "오늘 11/13(금) 밤 23:30 미국장 시가에 SOXL 4주 매수 — 개장 전에 장개시지정가(LOO) $72.08(전일 종가 $65.53 +10%) · 실투자 예산 $300"]]);
+  const sell = ev({ status: "다음 미국장 시가 매도 예정 (2일 보유)", sellTime: "다음 미국장 시가", signalBasedOn: "2026-11-13", signalClose: 70.1, hold: false }, "2026-11-14T07:00:00+09:00");
+  assert.deepEqual(sell.map(e => [e.id, e.title, e.body]), [["soxl:2026-11-13:plan", "[클로드 연구 SOXL] 🔔 매도 주문 준비",
+    "11/16(월) 밤 23:30 미국장 시가에 SOXL 보유분 전량 매도 — 개장 전에 장개시시장가(MOO) (2일 보유) · 전일 종가 $70.10"]]);
+  assert.equal(ev({ status: "다음 미국장 시가 매수 예정", signalBasedOn: "2026-06-22", signalClose: 300.77 }, "2026-06-23T07:00:00+09:00")[0].body,
+    "오늘 6/23(화) 밤 22:30 미국장 시가 매수 신호 — 실투자 예산 $300 으로는 1주(지정가 $330.85)도 못 사 이번은 쉼");
+  // 개장 뒤(시가 체결 · 청산) · 보유 중 · 쉼 — 사전 알림 없음(체결 알림은 따로)
+  for (const st of ["보유중 (시가 매수)", "청산 (시가 매도)", "보유중 2일째 (최대 3일)", "쉼 — 50일 평균 아래"])
+    assert.ok(!ev({ status: st, buyTime: "2026-11-13 시가", sellTime: "2026-11-13 시가", buyPrice: 66, sellPrice: 66, signalBasedOn: "2026-11-12", signalClose: 65.53 }, "2026-11-14T01:00:00+09:00")
+      .some(e => e.id.endsWith(":plan")), st);
+});
 t("웹 알림 암호화(RFC 8291) — 받는 쪽 표준 복호화로 원문 복원 · VAPID 서명 검증", async () => {
   const ua = nodeCrypto.createECDH("prime256v1"); ua.generateKeys();
   const auth = nodeCrypto.randomBytes(16);
