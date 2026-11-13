@@ -9,6 +9,7 @@ import {openingOrderRefs,openingExecutionResult} from "../../../functions/api/_o
 import {researchBroker} from "../../../functions/api/_research-broker.js";
 import {closingBrokerPlans,tenbaggerBrokerPlans,RESEARCH_BROKER_VERSION} from "../../../functions/api/_research-orders.js";
 import { pushEvents, sendPush, vapidPublic, alertText, reportMsg } from "../../../functions/api/_claude_push.js";   // 단타(클로드) 매수·매도 알림(웹 알림 · 텔레그램 같은 사건)
+import { realRecord } from "../../../functions/api/_claude_real.js";   // ③ 실투자 봇 기록 형식(Pages 와 같은 검사)
 
 // Cloudflare Worker — jkquant opening scheduler
 // Primary realtime trigger for the opening strategy.
@@ -1246,6 +1247,15 @@ export default {
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const date=u.searchParams.get("date")||kstParts().date;
       try{return json({ok:true,date,ledger:await readLedger(env,date,"claude")});}
+      catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
+    // ③ 실투자 봇 기록 — Pages /api/claude-coinbot(봇 전용 키 확인)이 감시키로 부른다. claude:{업비트 하루} 장부에 쌓기만 한다(같은 id 는 한 번 · fresh=처음).
+    if(u.pathname==="/claude-real"){
+      if(request.method!=="POST")return json({ok:false,error:"method not allowed"},405);
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const v=realRecord(await request.json().catch(()=>null));
+      if(!v.ok)return json(v,400);
+      try{const j=await claudeAppend(env,v.date,v.id,"real",v.payload,Date.now());return json({ok:true,fresh:(+j.added||0)>0});}
       catch(e){return json({ok:false,error:String(e.message||e)},500);}
     }
     // 한투 접근 토큰(모의투자만) — Pages kis.js 가 감시키로 맡기고 꺼낸다(위 kisTokenRecord)

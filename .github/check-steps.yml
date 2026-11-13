@@ -237,6 +237,13 @@
     node scripts/test_opening_gapdown.mjs functions/api
     python scripts/mutation_test_opening_gapdown.py
 
+- name: 연구(클로드) ③ 실투자 봇 — 판단 · 주문 · 다시 안 냄 · 서명 · 기록 엔드포인트 · Worker 기록 (값·변이)
+  minutes: 1
+  run: |
+    node --test tests/claude-coinbot.test.mjs
+    python scripts/mutation_test_claude_coinbot.py
+    bash -n bots/claude-coinbot/install.sh bots/claude-coinbot/check.sh bots/claude-coinbot/update.sh
+
 - name: 텐배거 GPT 과거 연구 값·미래봉·갭 체결·자료 일치 검사
   run: |
     pip install --quiet numpy pandas lxml
