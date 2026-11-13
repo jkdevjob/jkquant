@@ -33,8 +33,13 @@ import { execFileSync, spawnSync } from "child_process";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const QUEUE = path.join(__dirname, "queue", "queue.json");
-const LOG = path.join(__dirname, "queue", "published.json");
+// 채널별 큐: --channel mb 면 queue/mb/(queue.json·published.json·publish.config.json·last_run.txt). 없으면 은퇴노트(queue/).
+const CH_I = process.argv.indexOf("--channel");
+const CHANNEL = CH_I >= 0 ? process.argv[CH_I + 1] : null;
+if (CHANNEL && !/^[a-z0-9_-]+$/.test(CHANNEL)) throw new Error(`채널 이름 형식: ${CHANNEL}`);
+const QDIR = CHANNEL ? path.join(__dirname, "queue", CHANNEL) : path.join(__dirname, "queue");
+const QUEUE = path.join(QDIR, "queue.json");
+const LOG = path.join(QDIR, "published.json");
 const REPO = "jkdevjob/jkquant";
 const BRANCH = "claude/instagram-reel-video-creation-wl16ee";
 // 저장소 체크아웃 안에서 도는지. 아니면 공개 주소에서 받아 쓰고, 기록은 커밋되지 않는다.
@@ -65,7 +70,7 @@ const PLATFORMS = {
   ig: { name: "인스타", keys: ["IG_ACCESS_TOKEN"] },
 };
 // 발행 설정(저장소 브랜치에 있어 main 을 건드리지 않고 바꿀 수 있다)
-const CFG_PATH = path.join(__dirname, "queue", "publish.config.json");
+const CFG_PATH = path.join(QDIR, "publish.config.json");
 const CFG = fs.existsSync(CFG_PATH) ? JSON.parse(fs.readFileSync(CFG_PATH, "utf8")) : {};
 const targets = Object.keys(PLATFORMS).filter((p) => (ONLY ? ONLY === p : (CFG.targets || Object.keys(PLATFORMS)).includes(p)));
 const LATE_MIN = Number(opt("late") || CFG.late_window_min || 150);
@@ -446,6 +451,6 @@ console.log(`[${TODAY} KST]${DRY ? " (점검만)" : ""}\n` + report.join("\n"));
 // 매 실행 결과를 남겨 예약 작업이 커밋 → 저장소에서 실행 여부를 확인할 수 있게
 if (!DRY) {
   const now = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace("T", " ");
-  fs.writeFileSync(path.join(__dirname, "queue", "last_run.txt"), `${now} KST · exit ${code}\n${report.join("\n")}\n`);
+  fs.writeFileSync(path.join(QDIR, "last_run.txt"), `${now} KST · exit ${code}\n${report.join("\n")}\n`);
 }
 process.exit(code);
