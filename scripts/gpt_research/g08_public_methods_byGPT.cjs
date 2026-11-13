@@ -120,7 +120,9 @@ async function main(){
       window.__g8BuyPx=(t,d)=>{
         const q=current;
         if(q.mode!=='breakout')return tradeBar(t,d)[1];
-        const {ds,idx}=dateIndex[t],i=idx[d],prev=M[t][ds[i-1]];
+        const {ds,idx}=dateIndex[t],i=idx[d];
+        if(i<1)return tradeBar(t,d)[1]; // no previous session: entry is disabled
+        const prev=M[t][ds[i-1]];
         return (M[t][d][1]+q.k*(prev[2]-prev[3]))*unitOf(t,d);
       };
       function metrics(r,days,cap){
