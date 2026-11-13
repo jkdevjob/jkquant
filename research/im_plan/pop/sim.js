@@ -17,14 +17,14 @@ function load(sym){ if(CACHE[sym]) return CACHE[sym]; const j=JSON.parse(fs.read
 // 공통 달력: 모든 종목에 체결가가 있는 날(교집합)
 function calendar(syms){ let ds=null; for(const s of syms){ const k=new Set(Object.keys(load(s).raw)); ds=ds?ds.filter(d=>k.has(d)):[...k]; } return ds.sort(); }
 // opt.rescale: 창마다 종목 가격을 시작일 100 으로 곱해 맞춘다(합성 자료의 정수 주 왜곡 줄이기 · 비율 신호는 그대로) · opt.map: 전략 종목 이름 → 자료 이름(합성 대체)
-function run(strat,{start,end,principal,monthly=0,rescale=false,map=null}){
+function run(strat,{start,end,principal,monthly=0,rescale=false,map=null,dm=1}){   // dm(11-13): 공제 배율 — 사람당 공제를 다리끼리 나눠 쓸 때(안 주면 1 = 그대로)
   const syms=strat.syms, src=s=>(map&&map[s])||s, cal=calendar(syms.map(src)); const i0=cal.findIndex(d=>d>=start); if(i0<0) return null;
   if(Date.parse(cal[i0])-Date.parse(start)>10*864e5) return null;   // 11-13: 자료가 창 시작보다 늦게 시작하면 그 창은 뺀다(짝 창이 어긋나지 않게)
   const iEnd=(()=>{ let k=cal.length-1; while(k>=0&&cal[k]>end) k--; return k; })(); if(iEnd<=i0) return null;
   const D={}; for(const s of syms){ const X=load(src(s)); const f=rescale?100/X.raw[cal[i0]]:1;
     if(f===1) D[s]=X; else { const sc=m=>{ const o={}; for(const d in m) o[d]=m[d]*f; return o; }; D[s]={raw:sc(X.raw),adj:sc(X.adj),div:sc(X.div),op:sc(X.op),hi:sc(X.hi),lo:sc(X.lo),dates:X.dates,idx:X.idx}; } }
   const C=s=>D[s].raw, A=s=>D[s].adj;
-  MAP=map; const pos={}; syms.forEach(s=>pos[s]=0); let cash=principal, inflow=principal, nTr=0, lastW=null; const st={}; const nav=[]; const A_=acc();
+  MAP=map; const pos={}; syms.forEach(s=>pos[s]=0); let cash=principal, inflow=principal, nTr=0, lastW=null; const st={}; const nav=[]; const A_=acc(dm);
   const book={}; syms.forEach(s=>book[s]={q:0,c:0}); let realized=0; let lastMonth=cal[i0].slice(0,7);
   const trades=[];
   for(let i=i0;i<=iEnd;i++){ const date=cal[i], month=date.slice(0,7); let dep=false;
