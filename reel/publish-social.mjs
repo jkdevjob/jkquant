@@ -328,6 +328,20 @@ let keySkips = 0, failed = false;
 
 for (const p of targets) {
   const P = PLATFORMS[p];
+  // 점검 모드: 키가 실제로 통하는지 먼저 확인(인스타는 계정 이름을 받아 본다). 키 값은 출력하지 않는다.
+  if (DRY) {
+    const miss = P.keys.filter((k) => !process.env[k]);
+    if (miss.length) report.push(`${P.name} 키: 없음(${miss.join(", ")})`);
+    else if (p === "ig") {
+      try {
+        const me = await igCall("GET", `${IG()}/${process.env.IG_USER_ID || "me"}`, { fields: "username" });
+        report.push(`${P.name} 키: 통함 — 계정 @${me.username}`);
+      } catch (e) { failed = true; report.push(`${P.name} 키: 안 통함 — ${e.message}`); }
+    } else {
+      try { await googleToken(); report.push(`${P.name} 키: 통함`); }
+      catch (e) { failed = true; report.push(`${P.name} 키: 안 통함 — ${e.message}`); }
+    }
+  }
   const { items, missed } = due(p);
   for (const q of missed) report.push(`${P.name}: ${q.id}(${kstHM(plannedAt(q))}) ${LATE_MIN}분 넘게 지나 건너뜀 — 다시 쓰려면 plan_at 을 새로 잡기`);
   if (!items.length) { report.push(`${P.name}: 지금 올릴 항목 없음`); continue; }
