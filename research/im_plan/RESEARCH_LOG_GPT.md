@@ -1614,3 +1614,9 @@ node research/gpt/record-channel-20261113_byGPT.cjs
 | research/im_plan/data/SYNBIL.json | e38355fe5eb593155ce7b99621f149612d52dbf93cfb9e36173c34f64ac7bd94 |
 
 - 실행: `DS=real node research/gpt/portfolio-transition-20261114_byGPT.cjs /tmp/jkq-pf-transition-real-20261114.json`; `DS=syn SETS=100k` 및 `DS=syn SETS=user` 독립배치·기존 syn 배치의완료10k체크포인트; `DS=oos node research/gpt/portfolio-transition-20261114_byGPT.cjs /tmp/jkq-pf-transition-oos-20261114.json`; `node research/gpt/audit-transition-20261114_byGPT.cjs /tmp/jkq-pf-transition-audit-20261114.json`; `node research/gpt/allocation-taxcash-20261113.cjs /tmp/jkq-pf-allocation-20261114.json`; `node research/gpt/run.cjs research/im_plan/pf_app.js /tmp/jkq-pf-original-20261114.json`; `node research/gpt/record-transition-20261114_byGPT.cjs`. 원본/클로드/공유표수정0, main쓰기/PR/배포/실주문/무매외부게시0.
+
+### 2026-11-14 · 포트폴리오 원격 보존 실제 확인
+
+- 연구결과·자체도구3개는 research/daily 커밋 `6cde0f496dc29e60a7f9a141bfb8dce926e8c24a`에 실제 보존했다. git pull --rebase=merges 후 CLI push dry-run은 Username 인증정보 부재(exit128)였으나 연결 GitHub push/admin 권한은 있어 Git tree/commit/ref 정상 fast-forward(force=false·expected SHA 일치)로 전송했다. PR 우회/권한 없음으로 처리하지 않았다. 이후 실제 git fetch로 SHA와 tree `ba193e7909f454f9f32e70f9f9f2e1b09ef9e39e`를 수신하고 로컬 결과 tree와 diff0 및 원격 로그 본문을 확인했다.
+- 필요한 실제3규모·표본밖3규모·합성100k/user 독립배치와 별도감사/배분재현/원도구pf_app 재현은 exit0. 합성10k는 완료된258창 체크포인트를 사용했고, 그뒤 중복으로 돌기 시작한100k 계산은 별도100k 배치가 있어 의도적으로 중단(exit130)했다. 중단된 중복분을 별도검증완료로 세지 않았다. 합친 결과는 4509창·원금경로×4판=18036계산이며 실제·합성·표본밖 모두 같은 표본/문턱을 유지했다.
+- 자체3도구 문법검사·diff검사 통과. 종료 전 최신 main ce52d766을 다시 fetch해 backtest.html/plan-session-engine.js가 시험엔진과 diff0임을 확인했다. main 부모의 수영자료 갱신은 최신main을 연구브랜치로 읽어온 것이며 수동편집0. 클로드로그·REPLICATION·앱 수동수정0, main쓰기·PR·배포·실주문0. 이번 후보M1은 완료·탈락이며 현재5/6배분방향은 재현확인, 새 실투자권유없음. 현재실계좌사이클상태/실무결제일·환급지연은 별도미완료다.
