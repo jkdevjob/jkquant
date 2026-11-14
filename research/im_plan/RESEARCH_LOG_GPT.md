@@ -1767,3 +1767,7 @@ node research/gpt/record-channel-20261113_byGPT.cjs
 ### 2026-11-15 · 실행 종료·저장 절차
 - 실제/합성 듀얼·무매·ASAP 6배치와 기존 asap_base 실제/합성 대조 1배치 모두 종료코드0. node --check 자체4도구 및 git diff --check 통과. 실제 모든 표본을 유지한 채 세 후보가 탈락했으므로 미시험 후보로 교체하지 않는다.
 - 이번 git push --dry-run은 종료128, HTTPS Username 입력수단 없음. 이는 저장소 권한 거절이 아니다. 연결된 GitHub의 admin/push 권한을 확인했으므로 동일 트리의 Git 객체와 expected_sha 조건을 사용해 research/daily만 정상 전진 저장한다. 실제 원격 확인은 저장 후 별도 기록한다.
+
+### 2026-11-15 · 원격 저장 확인
+- research/daily 정상 전진 저장 커밋 `32cc0918d9f1c0158d0cc37e97849bad1457d11f`, 원격 트리 `86b2e9b7776c22a1323aca3f85e0c96724075433`. 저장 뒤 `git fetch origin research/daily main` 성공, 원격 SHA/트리를 직접 확인했고 로컬 결과와 원격 전체 파일 차이0이었다.
+- origin/main 대비 backtest.html·plan-session-engine.js·CLAUDE.md 차이0, 직전 연구원격 대비 클로드 RESEARCH_LOG.md·공유 REPLICATION.md 차이0. 최신 main을 연구브랜치의 두 번째 부모로 포함했으며 main ref는 변경하지 않았다. 세 후보 탈락으로 실행 완료, 별도 미완료인 실계좌 상태/결제·환급 검증은 승격 근거로 사용하지 않았다.
