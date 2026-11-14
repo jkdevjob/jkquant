@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "date": "2026-11-15",
+  "preparedAt": "2026-11-14T22:05:20Z",
+  "mainSha": "d0652b108d8404bcffc8e8a1464fe591ace846f2",
+  "summary": "신규 확정 매매 없음. BTC·SOXL 원천은 11/13까지 따라왔고 둘 다 확정 무매매 0%; 11/14 BTC는 관찰 중이라 미정산 유지. 주간 동일비중 잠정 −0.30642%. G4는 36/40일, G6는 누락 전이·익일청산 대기. 신규 채택·실투자 권유·전략 변경 없음.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "collecting",
+      "findings": "main d0652b1, scalping-data 5547791 확인. 최신 확정일은 시초가11/06·데이트레이딩/BTC/SOXL11/13이다. 11/9~14 동일비중 주간복리 −0.30642%, +5%까지 5.30642%p이나 시초가 지연 때문에 잠정치다. 신규 확정 종목 매매는 없고 BTC·SOXL 11/13 무매매만 새로 확정됐다. G8은 보류·탈락을 유지하고 같은 후보·구간을 반복하지 않았다. 새 가설의 전체 앱 시험을 완료하지 못했으므로 연구 완료로 세지 않는다.",
+      "nextTest": "G4는 SOXL 40일 후 30/10 시간순·1만/10만달러·추가비용으로 실행하고 G2는 signalId 불일치 해소 후에만 재개한다. 관문을 낮추지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-public-20261113/research/gpt-morning/experiments/G8-20261113/summary_byGPT.json"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "blocked",
+      "findings": "야간 원본 연구는 11/13까지지만 통합 daily1은 11/06에 머물러 11/13을 무매매0%로 만들지 않았다. OOS 20일/16건, 일평균 −0.53873%, PF0.08487, MDD−10.28753%, 최악일−2.02647%, +1%일0, 주간평균 −1.79307%. combo_pb07_amt15는 1/7 연구세션 1위일 뿐 승격 근거가 아니다.",
+      "nextTest": "원본→집계 단계→장부→밤 사본의 날짜 불일치와 G2 signalId·모집단을 확인한다. 규칙·기록은 보정하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/latest.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "verified",
+      "findings": "11/13 이후 신규 매매 없음. 독립 VWAP Breakout의 NHN·고영·NAVER는 각 −1.25% 손절, 계좌 −1.25%, 원본 체결 3/3 일치. 별도 통합 규칙은 일 −0.25%. 통합 OOS 29일/86건, 일평균 −0.20575%, PF0.67230, MDD−6.90203%, 최악일−1.05%, +1%일3, 주간복리 −1.84822%. 독립 baseline 31일/91건, PF0.39474, 포트폴리오 −15.93671%로 탈락 수준이다.",
+      "nextTest": "G7 불변 결과·추가비용·걸어가기 증거가 있을 때만 완료 판정한다. 채택·실투자 권유 없음.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daytrading-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "verified",
+      "findings": "BTC 11/13은 신호·진입 없는 확정 0%. 11/14는 08:55 KST 기준 watching·0건이라 미정산이다. 통합 OOS 41일/1건, 일평균 −0.00946%, PF0, MDD−0.38780%, 최악일−0.38780%, +1%일0, 이번 주0%. 독립 ORB는 399유효일/209건, 일평균 −0.08587%, PF0.36180, MDD−30.42016%, +1%일0으로 관문 미달.",
+      "nextTest": "11/14 마감 원천 뒤 같은 고정 규칙으로 정산하며 미완성 세션을 무매매로 간주하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/crypto-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "collecting",
+      "findings": "11/13은 확정 무매매0%. 독립 ORB는 36일/13건, 거래평균 −0.29231%, 일평균 −0.10556%, PF0.69841, MDD−9.39787%, +1%일4. 통합 Power Hour는 32일/3건, 일평균 +0.06404%, PF999, MDD0, 최악일 +0.10829%, +1%일1, 주간 +0.62973%지만 3건이라 미검증. 첫 30/10 걸어가기에 4일 부족하다.",
+      "nextTest": "40일 후 G4를 1만/10만달러·정수주·동일비용·+0.10%p·주변값으로 실행한다. PF999를 안정성으로 해석하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "closing30",
+      "status": "blocked",
+      "findings": "G6 11/13은 전일과 같다. 당일군 3신호 중 2건만 정산돼 +0.26587%, +0.56365%, 3슬롯 부분값 +0.27651%이나 삼성전기 전이 사유가 없어 일 전체 미확정. 익일군 3건은 11/16 청산 대기다.",
+      "nextTest": "누락 전이 사유와 11/16 청산 후에만 정산한다. 등록 후 20매매일/20건 시계를 재시작하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/closing30/2026-11-13.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/latest.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "전일 이후 자료 변화 없음: 기준일11/12, strategyVersion1.0.0, rulesSha256 5e690d, 원천결합SHA 1fb610, 엔진SHA 9c75e0 유지. 신규 후보·진입·청산·성숙·2/5/10배 도달을 새 발견으로 반복하지 않는다. 60세션 이상 표본이 없어 장기 성과는 미검증이며 종목별 관찰수익을 계좌 CAGR/시장초과수익으로 표현하지 않는다.",
+      "nextTest": "새 기준일 때만 두 청산군·20/60/120/252/756/1260·MFE/MAE/MDD·자료상태를 비교한다. 재무시점·시장대조 없는 가격가설 한계를 유지한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/main/TENBAGGER_FORWARD_RESEARCH.md"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "collecting",
+      "findings": "동일 확정일·자금·슬롯·비용으로 비교 가능한 새 대결 원본이 없다. 서로 다른 규칙의 수익을 한 순위로 합치지 않았고 Claude 기록은 읽기 전용으로 유지했다.",
+      "nextTest": "새 확정 원본 뒤 같은 조건만 맞춰 계산하며 미정산은 제외한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-11-14.json"
+      ]
+    }
+  ]
+}
