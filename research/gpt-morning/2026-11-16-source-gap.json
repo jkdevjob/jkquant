@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-16",
+  "reportedAt": "2026-11-15T23:38:00Z",
+  "sourceSha": "dace920d4852a7b79811ecd0a0f86825cc8e71a4",
+  "collectionRun": 43774800965,
+  "confirmed": "Workflow succeeded, but the collector caps the request at current UTC midnight. Before 09:00 KST the previous complete KST day therefore ends at 08:55 in its merged archive. Re-running the unchanged collector retains the same gap.",
+  "independentEvidence": "Upbit public 400-bar response contains all 288 completed KST 2026-11-15 bars. Python and Worker reproduce the observed -0.64% trade without changing original ledgers.",
+  "plannedFix": "Fetch through the later of completed UTC midnight and completed KST midnight. Retain incomplete UTC pieces in existing content-addressed immutable partial snapshots. Do not fetch the unfinished KST day or overwrite old partial snapshots.",
+  "deploymentStatus": "not_started",
+  "localFullCheck": {"exit": 1, "failedStep": "D-1/D-3 mutation unchanged JS control", "detail": "738 versus 0 in copied control; unmodified main test code. Standard Linux full check is running."},
+  "nextVerification": "Boundary value tests and UTC-midnight mutant; real 400-bar response -> exactly 288 contiguous previous KST bars; both GPT and Claude full checks before merge."
+}
