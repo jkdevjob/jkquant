@@ -16,6 +16,7 @@
     python -m py_compile scripts/gpt_research/g07_daytrading_min2.py scripts/gpt_research/g08_daytrading_slope.py scripts/gpt_research/g09_btc_cutoff.py scripts/gpt_research/g09_verify.py
     node --check scripts/gpt_research/g07_daytrading_parity.mjs
     node --check scripts/gpt_research/g09_btc_cutoff.mjs
+    python scripts/test_crypto_collection_window.py
 
 - name: 종가 당일/익일 시가 · 모든 그림자 이력 · 시간적 오염방지 검사
   run: |

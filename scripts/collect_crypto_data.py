@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Collect completed Upbit KRW-BTC 5-minute candles into the scalping-data branch.
 
-The archive is grouped by Upbit's UTC trading day. UTC 00:00 is 09:00 KST,
-so each file maps exactly to the 09:00 KST session boundary used by the
-bitcoin intraday research tab.
+The archive is grouped by Upbit's UTC trading day. Research merges those files
+into KST calendar days. Before 09:00 KST, an immutable partial UTC snapshot is
+needed to complete the previous KST day without including the unfinished day.
 
 Research/data only. This script never places orders.
 """
@@ -178,10 +178,18 @@ def write_days(bars):
     return written, incomplete
 
 
+def completed_collection_end(now):
+    """Exclusive bound covering closed UTC days and the last closed KST day."""
+    now = now.astimezone(UTC)
+    utc_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    kst_midnight = now.astimezone(KST).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(UTC)
+    return max(utc_midnight, kst_midnight)
+
+
 def main():
     now = datetime.now(UTC)
     today = now.date()
-    end_dt = datetime.combine(today, dtime.min, tzinfo=UTC)  # current UTC day is not complete
+    end_dt = completed_collection_end(now)
 
     have = existing_dates()
     if have:
@@ -194,7 +202,7 @@ def main():
 
     start_dt = datetime.combine(start_day, dtime.min, tzinfo=UTC)
     if start_dt >= end_dt:
-        print("No completed UTC session to collect.")
+        print("No completed research interval to collect.")
         return 0
 
     bars, calls = fetch_range(start_dt, end_dt)
@@ -205,7 +213,8 @@ def main():
         "market": MARKET,
         "unitMinutes": UNIT,
         "from": start_day.isoformat(),
-        "toExclusive": today.isoformat(),
+        "toExclusive": end_dt.isoformat(),
+        "completeKstThrough": (now.astimezone(KST).date() - timedelta(days=1)).isoformat(),
         "apiCalls": calls,
         "barsFetched": len(bars),
         "daysWritten": len(written),
