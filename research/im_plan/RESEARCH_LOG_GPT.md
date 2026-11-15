@@ -1908,3 +1908,7 @@ node research/gpt/record-channel-20261113_byGPT.cjs
 ### 2026-11-15 · 포트폴리오 실행 종료·저장 절차
 - C3 실제3·합성3·표본밖1 독립배치, allocation-taxcash, 원도구pf_app, 추가감사 총10프로세스 모두 종료코드0. 자체3도구 node --check 및 git diff --check 통과. 중심/이웃4판·3자료·3규모·원금3벌을 표본 축소 없이 끝냈다. 사전등록 f1f86336, 첫 완료보존 a58615d6은 결과 시점을 구분한 로컬 커밋이며 원격 선등록이라고 주장하지 않는다.
 - CLI git push --dry-run은 exit128: HTTPS Username 입력수단 없음. 연결 GitHub의 push/admin=true는 실제 확인했으므로 권한 없음이 아니다. pull --rebase=merges 뒤 동일 트리를 Git 객체와 expected_sha 조건으로 research/daily에만 정상 전진 저장하고 실제 git fetch로 원격 SHA/트리를 확인한다. main/클로드/공유표/앱 수동편집·PR·배포·실주문0.
+
+### 2026-11-15 · 포트폴리오 원격 저장 실제 확인
+- research/daily 결과 저장 커밋 `3a4d94ace7124b472fcf47d8fd8a464dbe38fed5`, 트리 `06cbaffa86acd9b0f30864da59466f0746615da6`. 저장 뒤 `git fetch origin research/daily main` 성공, 원격 SHA/트리가 일치했고 로컬 결과와 원격 전체파일 차이0이었다. main 부모는 `83105ac09782ca134d654ef0fab137845ab063b4`이며 main ref는 수정하지 않았다.
+- 원격의 클로드 RESEARCH_LOG.md·공유 REPLICATION.md·가이드 차이0, 최신 main 대비 앱 backtest.html·plan-session-engine.js·plan-tax-check.js·CLAUDE.md 차이0. main 병합으로 가져온 onbid 자료는 원격 blob 그대로이며 내 수동수정이 아니다. 실제 종료·원격 읽기까지 확인한 실행 완료/후보 탈락이다. 기존5/6 방향 재현 확인, 새 실투자 권유 없음; 현재 실계좌 상태/실무 납부·환급 검증의 미완료는 그대로 보존한다.
