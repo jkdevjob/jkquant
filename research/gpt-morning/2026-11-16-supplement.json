@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "date": "2026-11-16",
+  "preparedAt": "2026-11-15T23:31:51.837441+00:00",
+  "mainSha": "1bffe0668feb206dab35adcac39bb313a601fc00",
+  "summary": "G9 BTC18시진입제한은401일/200건·복리−28.91%·시간순9구간전부손실로기각.802회운영대조차이0,11/15공개288봉으로−0.64%재현. G7/G8지연결과도제출하며메인유지.종가17장부929건정합성일치·당일누락과익일대기는미확정유지.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "verified",
+      "findings": "07:01:35 KST 기존8칸 보고9162175b·준비43767097110 성공을 확인했다. ok:true·queued:true·dueAt08:00이며 발송push/telegram 필드는null이라 실제 수신은 미확인이다.08:17 추가 호출로 기존 보고는 보존하고 보충한다.11/15 국내/미국은 휴장0%; BTC는 운영−0.64%와 공개288봉·양쪽엔진 재생이 일치했다.11/13 G7/G8 결과와 오늘G9를 별도 불변 파일로 제출한다.",
+      "nextTest": "11/17 G2 모집단/신호ID와11/13 종가 익일 정산, 수집 후288봉·밤 순위 갱신을 확인한다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://github.com/jkdevjob/jkquant/actions/runs/43767097110"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "collecting",
+      "findings": "11/15 휴장으로0% 확정이며 신호가 없던 거래일과 구분한다. 순위는11/13까지, combo_pb07_amt15가1/7·활성10·퇴출누적4·마지막생성11/9다.11/12 entry_by_0915 퇴출/보충 기록은 보존했다. daily1 통합11/6과 독립 운영/야간11/13의 모집단 차이를 유지하며 G2 미완료다.",
+      "nextTest": "11/17 G2의11/5 signalId·전략버전·실시간/재구성·미선정 원본을 고정해 실제 비교 분모를 정한다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-shadow-ranking",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=opening"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "no_change",
+      "findings": "11/15 휴장0%, 이력 DB 시간초과 경고는 별도다.11/13 baseline3건−1.25%, 통합다른규칙−0.25%를 혼합하지 않는다. G7/G8 고정30일: 기준−14.87262%, min2−10.84861%, slope0.2−8.24574%; 시간순후보−2.65154%/−1.44198%로둘다기각. G7 운영6000대조 차이0, G8 미선정1건에서12:32봉 누락을12:33으로 건너뛴6필드 차이 발견(선정성과영향0). 활성10·slope0.2 2/7·퇴출1·마지막생성11/10.",
+      "nextTest": "누락 다음분을 임의 체결하지 않는 운영/재생 차이를 분리하고 새 버전 검증 전에 과거 장부를 바꾸지 않는다. G3 전향은 별도로 계속 관측한다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-shadow-ranking",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-11-13-research.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "verified",
+      "findings": "G9 등록bdc0fc72 뒤401완료일을 고정했다. entry_by_1800 200건·일기대−0.08465%·복리−28.91242%·PF0.34771·MDD−29.79936%, 시간순270일−20.69461%·양수0/9, 추가비용 후−41.82421%로기각. 운영802회 차이0·비용/계좌와5개변이 PASS·원본수정0.11/15 공개288봉 확보:02:35신호→02:40진입→02:45손절−0.64%는운영과같다. 등록후전향0. 기존hold30m 5/7·활성10·퇴출2·새생성11/14.",
+      "nextTest": "정규 수집43774800965 성공 뒤 실제 봇 최신 산출물의11/15 완전성·그림자 갱신을 확인한다.11/17 기각후보 반복 대신 G2 원천 비교를 우선한다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://api.upbit.com/v1/candles/minutes/5",
+        "https://github.com/jkdevjob/jkquant/actions/runs/43774800965",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-11-16-research.json"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "collecting",
+      "findings": "11/15 미국휴장0%, G4는36/40완료세션으로4일부족하다. 순위11/13까지stop_1.5_tp_3.0 2/7·활성10·퇴출0·마지막생성11/9. 통합PowerHour3건과독립ORB13건은다른규칙이라합쳐표본을늘리지않는다. 새완료일부족으로 기존30/10 결과를 만들어내지 않았다.",
+      "nextTest": "40완료세션 도달 뒤 G4를1만/10만달러·동일비용·정수주·30/10시간순·추가0.10%p로 판정한다.11/17 다음미국완료일 누락을 확인한다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-shadow-ranking",
+        "https://jkquant.pages.dev/api/scalping-history?strategy=soxl"
+      ]
+    },
+    {
+      "tab": "closing30",
+      "status": "blocked",
+      "findings": "17원본장부929건의JS/Python기록·일손익 차이0, 옛사건2241개삭제/변경0.11/13 양유형각50관측·11변형조건·고정메인baseline, 신호57개버전/조건누락0 확인. 당일29신호중18청산·11진입누락, 기준3개중2청산이라전체미확정. 익일28개는11/16개장대기.5/10분은당일18건씩,20/30분·완전MFE/MAE/미도달은결손을null로유지. 각활성10·당일flat1/7·익일momentum1/7·퇴출0. G6새전향당일0일/익일1일3건.",
+      "nextTest": "11/17 아침에11/13 익일시가청산과누락종목의15:06원천/전이기록을 확인한다. 종가전용이력401은인증경계이며 공개봇원본으로대조했다. 새규칙으로과거원본을덮어쓰지않는다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-daily-results",
+        "https://jkquant.pages.dev/api/scalping-shadow-ranking",
+        "https://github.com/jkdevjob/jkquant/blob/d731e46fc315a226487d9f32d2a6db6812c585ca/data/closing30/2026-11-13.json"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "no_change",
+      "findings": "공개기준일2026-11-12·규칙1.0.0·조건해시5e690d를 확인했다. 전일이후가격기준일변화가없어새발견으로반복하지않는다. 신호/미선정·두청산군·20/60/120/252/756/1260일·누락/정지/폐지는보존하며60세션이상장기표본은미성숙이다.",
+      "nextTest": "새기준일이생기면등록·진입·성숙·사후수익·가격수정의변경분만비교한다.종목관찰수익을계좌성과로합성하지않는다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/tenbagger-research"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "collecting",
+      "findings": "공개API HTTP200·ok:true의원본을보존했다. 휴장일과미확정종가를같은확정표본으로합치지않고실시간/독립/통합규칙·슬롯·비용을분리했다.클로드파일은읽기만했다. 새공통확정모집단이완성되기전우열을선언하지않는다.",
+      "nextTest": "G2같은신호ID·버전·당시조건으로공통완료날짜/자금을확정한뒤비교한다.",
+      "evidence": [
+        "https://jkquant.pages.dev/api/scalping-duel"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,691 @@
+{
+  "schema": 1,
+  "date": "2026-11-13",
+  "writtenAt": "2026-11-15T23:31:51.837441+00:00",
+  "lateCompletionReason": "Original research computed on November13; publication paused by automatic approval review usage limit. Completed publication November16 without changing original report or raw artifacts.",
+  "research": {
+    "G7": {
+      "preregistration": "60b9cd340886f54b536d51f8eb0e23d9c50ab7d6",
+      "mainSha": "1ab0fe92a2c2b243f32939d050fda8a4d885199d",
+      "sourceSha": "cebd1b97ba65932934702738848d9e053956e739",
+      "createdAt": "2026-11-12T23:02:51.615642+00:00",
+      "summaries": {
+        "baseline": {
+          "days": 30,
+          "trades": 88,
+          "dailyExpectedPct": -0.5323368322082098,
+          "portfolioReturnPct": -14.872618157681162,
+          "portfolioMddPct": -14.872618157681162,
+          "profitFactor": 0.4128822369046926,
+          "worstDayPct": -1.2500000000000009,
+          "daysAtLeast1Pct": 1,
+          "tradesPerDay": 2.933333333333333,
+          "winRate": 25.0
+        },
+        "session_min_2": {
+          "days": 30,
+          "trades": 88,
+          "dailyExpectedPct": -0.3784739054265031,
+          "portfolioReturnPct": -10.848606504322877,
+          "portfolioMddPct": -10.848606504322877,
+          "profitFactor": 0.5527143601052557,
+          "worstDayPct": -1.2500000000000009,
+          "daysAtLeast1Pct": 2,
+          "tradesPerDay": 2.933333333333333,
+          "winRate": 29.545454545454547
+        }
+      },
+      "stressPlus010": {
+        "baseline": {
+          "days": 30,
+          "trades": 88,
+          "dailyExpectedPct": -0.6301146099859877,
+          "portfolioReturnPct": -17.347583893712414,
+          "portfolioMddPct": -17.347583893712414,
+          "profitFactor": 0.357834654331836,
+          "worstDayPct": -1.3500000000000008,
+          "daysAtLeast1Pct": 1,
+          "tradesPerDay": 2.933333333333333,
+          "winRate": 22.727272727272727
+        },
+        "session_min_2": {
+          "days": 30,
+          "trades": 88,
+          "dailyExpectedPct": -0.4762516832042809,
+          "portfolioReturnPct": -13.436560271935727,
+          "portfolioMddPct": -13.436560271935727,
+          "profitFactor": 0.4802173988496793,
+          "worstDayPct": -1.3500000000000008,
+          "daysAtLeast1Pct": 2,
+          "tradesPerDay": 2.933333333333333,
+          "winRate": 27.27272727272727
+        }
+      },
+      "oos": {
+        "baseline": {
+          "days": 10,
+          "trades": 29,
+          "dailyExpectedPct": -0.4107550486142153,
+          "portfolioReturnPct": -4.068438542096753,
+          "portfolioMddPct": -4.068438542096753,
+          "profitFactor": 0.507093941662942,
+          "worstDayPct": -1.2500000000000009,
+          "daysAtLeast1Pct": 1,
+          "tradesPerDay": 2.9,
+          "winRate": 31.03448275862069
+        },
+        "session_min_2": {
+          "days": 10,
+          "trades": 29,
+          "dailyExpectedPct": -0.2641138689309815,
+          "portfolioReturnPct": -2.65153595067803,
+          "portfolioMddPct": -2.7281640624999715,
+          "profitFactor": 0.6663824813503393,
+          "worstDayPct": -1.2500000000000009,
+          "daysAtLeast1Pct": 1,
+          "tradesPerDay": 2.9,
+          "winRate": 34.48275862068966
+        }
+      },
+      "folds": [
+        {
+          "fold": 1,
+          "trainFrom": "2026-09-29",
+          "trainTo": "2026-10-28",
+          "testFrom": "2026-10-29",
+          "testTo": "2026-11-04",
+          "selected": "baseline",
+          "reason": "fixed training gates",
+          "test": {
+            "days": 5,
+            "trades": 14,
+            "winRate": 28.57142857142857,
+            "avgPnl": -0.5123868619949613,
+            "medianPnl": -1.2500000000000009,
+            "sumPnl": -7.173416067929458,
+            "profitFactor": 0.42612671456564377,
+            "portfolioReturnPct": -2.3746693065771374,
+            "portfolioMddPct": -2.3746693065771374,
+            "tradesPerDay": 2.8,
+            "daily": [
+              {
+                "date": "2026-10-29",
+                "returnPct": -0.25,
+                "trades": 3
+              },
+              {
+                "date": "2026-10-30",
+                "returnPct": -0.8333333333333339,
+                "trades": 2
+              },
+              {
+                "date": "2026-11-02",
+                "returnPct": 0.19219464402351547,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-03",
+                "returnPct": -1.2500000000000009,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-04",
+                "returnPct": -0.25,
+                "trades": 3
+              }
+            ],
+            "dailyExpectedPct": -0.4782277378619638,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 0,
+            "positiveDays": 1,
+            "cashSlots": 1
+          }
+        },
+        {
+          "fold": 2,
+          "trainFrom": "2026-10-07",
+          "trainTo": "2026-11-04",
+          "testFrom": "2026-11-05",
+          "testTo": "2026-11-12",
+          "selected": "baseline",
+          "reason": "fixed training gates",
+          "test": {
+            "days": 5,
+            "trades": 15,
+            "winRate": 33.33333333333333,
+            "avgPnl": -0.34328235936646667,
+            "medianPnl": -1.2500000000000009,
+            "sumPnl": -5.149235390497,
+            "profitFactor": 0.5880611687602403,
+            "portfolioReturnPct": -1.7349690121292616,
+            "portfolioMddPct": -2.7281640624999826,
+            "tradesPerDay": 3.0,
+            "daily": [
+              {
+                "date": "2026-11-05",
+                "returnPct": -0.7164117968323334,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": 1.7500000000000018,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": -0.25,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-11",
+                "returnPct": -1.2500000000000009,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-12",
+                "returnPct": -1.2500000000000009,
+                "trades": 3
+              }
+            ],
+            "dailyExpectedPct": -0.34328235936646667,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 1,
+            "positiveDays": 1,
+            "cashSlots": 0
+          }
+        }
+      ],
+      "chronologicalThirds": {
+        "baseline": [
+          {
+            "days": 10,
+            "trades": 29,
+            "dailyExpectedPct": -0.6362554480104147,
+            "portfolioReturnPct": -6.202034421207713,
+            "portfolioMddPct": -6.202034421207713,
+            "profitFactor": 0.3146891837310151,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 0,
+            "tradesPerDay": 2.9,
+            "winRate": 20.689655172413794
+          },
+          {
+            "days": 10,
+            "trades": 30,
+            "dailyExpectedPct": -0.5499999999999995,
+            "portfolioReturnPct": -5.394944637789301,
+            "portfolioMddPct": -6.099200633041491,
+            "profitFactor": 0.42608695652173956,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 0,
+            "tradesPerDay": 3.0,
+            "winRate": 23.333333333333332
+          },
+          {
+            "days": 10,
+            "trades": 29,
+            "dailyExpectedPct": -0.4107550486142153,
+            "portfolioReturnPct": -4.068438542096753,
+            "portfolioMddPct": -4.068438542096753,
+            "profitFactor": 0.507093941662942,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 1,
+            "tradesPerDay": 2.9,
+            "winRate": 31.03448275862069
+          }
+        ],
+        "session_min_2": [
+          {
+            "days": 10,
+            "trades": 29,
+            "dailyExpectedPct": -0.3362554480104148,
+            "portfolioReturnPct": -3.3524759732444065,
+            "portfolioMddPct": -3.3524759732444065,
+            "profitFactor": 0.5814692827955479,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 1,
+            "tradesPerDay": 2.9,
+            "winRate": 31.03448275862069
+          },
+          {
+            "days": 10,
+            "trades": 30,
+            "dailyExpectedPct": -0.535052399338113,
+            "portfolioReturnPct": -5.243655172370665,
+            "portfolioMddPct": -5.9490373919311885,
+            "profitFactor": 0.4328381479514532,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 0,
+            "tradesPerDay": 3.0,
+            "winRate": 23.333333333333332
+          },
+          {
+            "days": 10,
+            "trades": 29,
+            "dailyExpectedPct": -0.2641138689309815,
+            "portfolioReturnPct": -2.65153595067803,
+            "portfolioMddPct": -2.7281640624999715,
+            "profitFactor": 0.6663824813503393,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 1,
+            "tradesPerDay": 2.9,
+            "winRate": 34.48275862068966
+          }
+        ]
+      },
+      "mutations": [
+        {
+          "name": "baseline",
+          "mutation": "remove_cost",
+          "changedPortfolioReturnPp": 6.504828558005249,
+          "detected": true
+        },
+        {
+          "name": "baseline",
+          "mutation": "one_slot",
+          "changedPortfolioReturnPp": 23.932453495592156,
+          "detected": true
+        },
+        {
+          "name": "session_min_2",
+          "mutation": "remove_cost",
+          "changedPortfolioReturnPp": 6.80125488308193,
+          "detected": true
+        },
+        {
+          "name": "session_min_2",
+          "mutation": "one_slot",
+          "changedPortfolioReturnPp": 18.84567332165862,
+          "detected": true
+        },
+        {
+          "name": "baseline",
+          "mutation": "same_bar_entry",
+          "changedTradeRecords": 88,
+          "detected": true
+        },
+        {
+          "name": "session_min_2",
+          "mutation": "same_bar_entry",
+          "changedTradeRecords": 88,
+          "detected": true
+        }
+      ],
+      "sourceHashChanges": 0,
+      "operationalParity": {
+        "comparisons": 6000,
+        "signals": 1327,
+        "signalDifferences": 0,
+        "tradeDifferences": 0,
+        "passed": true
+      },
+      "tradeDifferences": [],
+      "verdict": "reject_candidate_retain_main",
+      "limits": [
+        "Shared historical engine replay, not live execution parity.",
+        "Original minute archive may have close-only bars and missing minutes; quality counts preserved.",
+        "No live order, FX, integer-share or market impact validation."
+      ]
+    },
+    "G8": {
+      "preregistration": "ad8570343d48d85199d8335002cf3d995e85257d",
+      "mainSha": "1ab0fe92a2c2b243f32939d050fda8a4d885199d",
+      "sourceSha": "cebd1b97ba65932934702738848d9e053956e739",
+      "createdAt": "2026-11-12T23:06:08.285210+00:00",
+      "summaries": {
+        "baseline": {
+          "days": 30,
+          "trades": 88,
+          "dailyExpectedPct": -0.5323368322082098,
+          "portfolioReturnPct": -14.872618157681162,
+          "portfolioMddPct": -14.872618157681162,
+          "profitFactor": 0.4128822369046926,
+          "worstDayPct": -1.2500000000000009,
+          "daysAtLeast1Pct": 1,
+          "tradesPerDay": 2.933333333333333,
+          "winRate": 25.0
+        },
+        "vwap_slope_0.2": {
+          "days": 30,
+          "trades": 82,
+          "dailyExpectedPct": -0.2833358768020362,
+          "portfolioReturnPct": -8.245742728270022,
+          "portfolioMddPct": -8.504476111937498,
+          "profitFactor": 0.6318460808655569,
+          "worstDayPct": -1.2500000000000009,
+          "daysAtLeast1Pct": 2,
+          "tradesPerDay": 2.7333333333333334,
+          "winRate": 31.70731707317073
+        }
+      },
+      "stressPlus010": {
+        "baseline": {
+          "days": 30,
+          "trades": 88,
+          "dailyExpectedPct": -0.6301146099859877,
+          "portfolioReturnPct": -17.347583893712414,
+          "portfolioMddPct": -17.347583893712414,
+          "profitFactor": 0.357834654331836,
+          "worstDayPct": -1.3500000000000008,
+          "daysAtLeast1Pct": 1,
+          "tradesPerDay": 2.933333333333333,
+          "winRate": 22.727272727272727
+        },
+        "vwap_slope_0.2": {
+          "days": 30,
+          "trades": 82,
+          "dailyExpectedPct": -0.37444698791314734,
+          "portfolioReturnPct": -10.727954195505852,
+          "portfolioMddPct": -10.727954195505852,
+          "profitFactor": 0.5503652303494803,
+          "worstDayPct": -1.3500000000000008,
+          "daysAtLeast1Pct": 2,
+          "tradesPerDay": 2.7333333333333334,
+          "winRate": 30.48780487804878
+        }
+      },
+      "oos": {
+        "baseline": {
+          "days": 10,
+          "trades": 29,
+          "dailyExpectedPct": -0.4107550486142153,
+          "portfolioReturnPct": -4.068438542096753,
+          "portfolioMddPct": -4.068438542096753,
+          "profitFactor": 0.507093941662942,
+          "worstDayPct": -1.2500000000000009,
+          "daysAtLeast1Pct": 1,
+          "tradesPerDay": 2.9,
+          "winRate": 31.03448275862069
+        },
+        "vwap_slope_0.2": {
+          "days": 10,
+          "trades": 25,
+          "dailyExpectedPct": -0.14166666666666622,
+          "portfolioReturnPct": -1.4419827431625731,
+          "portfolioMddPct": -2.7281640624999826,
+          "profitFactor": 0.7875000000000006,
+          "worstDayPct": -1.2500000000000009,
+          "daysAtLeast1Pct": 1,
+          "tradesPerDay": 2.5,
+          "winRate": 36.0
+        }
+      },
+      "folds": [
+        {
+          "fold": 1,
+          "trainFrom": "2026-09-29",
+          "trainTo": "2026-10-28",
+          "testFrom": "2026-10-29",
+          "testTo": "2026-11-04",
+          "selected": "baseline",
+          "reason": "fixed training gates",
+          "test": {
+            "days": 5,
+            "trades": 14,
+            "winRate": 28.57142857142857,
+            "avgPnl": -0.5123868619949613,
+            "medianPnl": -1.2500000000000009,
+            "sumPnl": -7.173416067929458,
+            "profitFactor": 0.42612671456564377,
+            "portfolioReturnPct": -2.3746693065771374,
+            "portfolioMddPct": -2.3746693065771374,
+            "tradesPerDay": 2.8,
+            "daily": [
+              {
+                "date": "2026-10-29",
+                "returnPct": -0.25,
+                "trades": 3
+              },
+              {
+                "date": "2026-10-30",
+                "returnPct": -0.8333333333333339,
+                "trades": 2
+              },
+              {
+                "date": "2026-11-02",
+                "returnPct": 0.19219464402351547,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-03",
+                "returnPct": -1.2500000000000009,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-04",
+                "returnPct": -0.25,
+                "trades": 3
+              }
+            ],
+            "dailyExpectedPct": -0.4782277378619638,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 0,
+            "positiveDays": 1,
+            "cashSlots": 1
+          }
+        },
+        {
+          "fold": 2,
+          "trainFrom": "2026-10-07",
+          "trainTo": "2026-11-04",
+          "testFrom": "2026-11-05",
+          "testTo": "2026-11-12",
+          "selected": "baseline",
+          "reason": "fixed training gates",
+          "test": {
+            "days": 5,
+            "trades": 15,
+            "winRate": 33.33333333333333,
+            "avgPnl": -0.34328235936646667,
+            "medianPnl": -1.2500000000000009,
+            "sumPnl": -5.149235390497,
+            "profitFactor": 0.5880611687602403,
+            "portfolioReturnPct": -1.7349690121292616,
+            "portfolioMddPct": -2.7281640624999826,
+            "tradesPerDay": 3.0,
+            "daily": [
+              {
+                "date": "2026-11-05",
+                "returnPct": -0.7164117968323334,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-06",
+                "returnPct": 1.7500000000000018,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-10",
+                "returnPct": -0.25,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-11",
+                "returnPct": -1.2500000000000009,
+                "trades": 3
+              },
+              {
+                "date": "2026-11-12",
+                "returnPct": -1.2500000000000009,
+                "trades": 3
+              }
+            ],
+            "dailyExpectedPct": -0.34328235936646667,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 1,
+            "positiveDays": 1,
+            "cashSlots": 0
+          }
+        }
+      ],
+      "chronologicalThirds": {
+        "baseline": [
+          {
+            "days": 10,
+            "trades": 29,
+            "dailyExpectedPct": -0.6362554480104147,
+            "portfolioReturnPct": -6.202034421207713,
+            "portfolioMddPct": -6.202034421207713,
+            "profitFactor": 0.3146891837310151,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 0,
+            "tradesPerDay": 2.9,
+            "winRate": 20.689655172413794
+          },
+          {
+            "days": 10,
+            "trades": 30,
+            "dailyExpectedPct": -0.5499999999999995,
+            "portfolioReturnPct": -5.394944637789301,
+            "portfolioMddPct": -6.099200633041491,
+            "profitFactor": 0.42608695652173956,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 0,
+            "tradesPerDay": 3.0,
+            "winRate": 23.333333333333332
+          },
+          {
+            "days": 10,
+            "trades": 29,
+            "dailyExpectedPct": -0.4107550486142153,
+            "portfolioReturnPct": -4.068438542096753,
+            "portfolioMddPct": -4.068438542096753,
+            "profitFactor": 0.507093941662942,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 1,
+            "tradesPerDay": 2.9,
+            "winRate": 31.03448275862069
+          }
+        ],
+        "vwap_slope_0.2": [
+          {
+            "days": 10,
+            "trades": 28,
+            "dailyExpectedPct": -0.4149552310679958,
+            "portfolioReturnPct": -4.087360738973411,
+            "portfolioMddPct": -4.087360738973411,
+            "profitFactor": 0.49628227807576675,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 0,
+            "tradesPerDay": 2.8,
+            "winRate": 28.57142857142857
+          },
+          {
+            "days": 10,
+            "trades": 29,
+            "dailyExpectedPct": -0.2933857326714465,
+            "portfolioReturnPct": -2.935946426476066,
+            "portfolioMddPct": -4.605352753293435,
+            "profitFactor": 0.641506784687276,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 1,
+            "tradesPerDay": 2.9,
+            "winRate": 31.03448275862069
+          },
+          {
+            "days": 10,
+            "trades": 25,
+            "dailyExpectedPct": -0.14166666666666622,
+            "portfolioReturnPct": -1.4419827431625731,
+            "portfolioMddPct": -2.7281640624999826,
+            "profitFactor": 0.7875000000000006,
+            "worstDayPct": -1.2500000000000009,
+            "daysAtLeast1Pct": 1,
+            "tradesPerDay": 2.5,
+            "winRate": 36.0
+          }
+        ]
+      },
+      "mutations": [
+        {
+          "name": "baseline",
+          "mutation": "remove_cost",
+          "changedPortfolioReturnPp": 6.504828558005249,
+          "detected": true
+        },
+        {
+          "name": "baseline",
+          "mutation": "one_slot",
+          "changedPortfolioReturnPp": 23.932453495592156,
+          "detected": true
+        },
+        {
+          "name": "vwap_slope_0.2",
+          "mutation": "remove_cost",
+          "changedPortfolioReturnPp": 6.500177020010177,
+          "detected": true
+        },
+        {
+          "name": "vwap_slope_0.2",
+          "mutation": "one_slot",
+          "changedPortfolioReturnPp": 14.997350397515296,
+          "detected": true
+        },
+        {
+          "name": "baseline",
+          "mutation": "same_bar_entry",
+          "changedTradeRecords": 88,
+          "detected": true
+        },
+        {
+          "name": "vwap_slope_0.2",
+          "mutation": "same_bar_entry",
+          "changedTradeRecords": 82,
+          "detected": true
+        }
+      ],
+      "sourceHashChanges": 0,
+      "operationalParity": {
+        "comparisons": 6000,
+        "signals": 1078,
+        "signalDifferences": 0,
+        "tradeDifferences": 6,
+        "passed": false
+      },
+      "tradeDifferences": [
+        {
+          "key": "2026-11-02:vwap_slope_0.2:030530",
+          "field": "entryTime",
+          "js": 1232,
+          "python": 1233
+        },
+        {
+          "key": "2026-11-02:vwap_slope_0.2:030530",
+          "field": "entryPrice",
+          "js": null,
+          "python": 32050
+        },
+        {
+          "key": "2026-11-02:vwap_slope_0.2:030530",
+          "field": "exitTime",
+          "js": null,
+          "python": 1239
+        },
+        {
+          "key": "2026-11-02:vwap_slope_0.2:030530",
+          "field": "exitPrice",
+          "js": null,
+          "python": 31729.5
+        },
+        {
+          "key": "2026-11-02:vwap_slope_0.2:030530",
+          "field": "reason",
+          "js": null,
+          "python": "stop"
+        },
+        {
+          "key": "2026-11-02:vwap_slope_0.2:030530",
+          "field": "pnl",
+          "js": null,
+          "python": -1.2500000000000009
+        }
+      ],
+      "verdict": "reject_candidate_retain_main",
+      "limits": [
+        "Shared historical engine replay, not live execution parity.",
+        "Original minute archive may have close-only bars and missing minutes; quality counts preserved.",
+        "No live order, FX, integer-share or market impact validation."
+      ]
+    }
+  }
+}
