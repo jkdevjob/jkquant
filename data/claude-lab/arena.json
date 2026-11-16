@@ -5494,7 +5494,19 @@
     "g_coin_ma5_s5_hi2_h18_btc",
     "g_coin_ma60_s10_hi_h12_btc",
     "g_coin_ma10_s10_vb0.8_both",
-    "g_coin_ma25_s10_hi5_h15_both"
+    "g_coin_ma25_s10_hi5_h15_both",
+    "g_coin_ma50_s5_vb0.8_h15_eth",
+    "g_coin_ma30_s2_hi3_h18_eth",
+    "g_coin_ma100_s2_hi15_h12_eth",
+    "g_coin_ma100_s8_hi_h18_btc",
+    "g_coin_ma15_s5_vb1_eth",
+    "g_coin_ma15_s8_hi7_h15_eth",
+    "g_coin_ma80_s3_hi5_both",
+    "g_coin_ma5_s5_hi5_h18_both",
+    "g_coin_ma40_s2_hi4_h18_btc",
+    "g_coin_ma60_s99_vb0.7_h18_btc",
+    "g_coin_ma40_s4_hi4_h21_eth",
+    "g_coin_ma50_s3_vb0.7_h21_both"
    ],
    "snapshots": [
     {
@@ -6429,11 +6441,11 @@
      "accepted": 0
     },
     "explore": {
-     "tried": 3942,
+     "tried": 3969,
      "accepted": 13
     },
     "jump2": {
-     "tried": 389,
+     "tried": 390,
      "accepted": 10
     },
     "struct": {
@@ -10059,7 +10071,18 @@
     "g_soxl_r2lt25_dn3_ma150_d3",
     "g_soxl_r4lt25_ibs0.1_ma200_d5",
     "g_soxl_r3lt20_ibs0.6_dn1_ma150_d3",
-    "g_soxl_r3lt20_ibs0.1_dn2_ma150_d3"
+    "g_soxl_r3lt20_ibs0.1_dn2_ma150_d3",
+    "g_soxl_r2lt15_dn1_ma150_d5",
+    "g_soxl_r2lt10_ibs0.7_dn2_ma50_d5",
+    "g_soxl_r4lt40_ibs0.3_dn2_ma100_d2",
+    "g_soxl_r4lt25_ibs0.2_dn2_ma150_d3",
+    "g_soxl_r3lt5_ibs0.6_dn2_ma100_d3",
+    "g_soxl_r2lt10_ibs0.3_dn3_ma150_d2",
+    "g_soxl_r2lt25_ibs0.6_dn3_ma100_d5",
+    "g_soxl_norsi_ibs0.6_dn3_ma100_d2",
+    "g_soxl_r3lt5_ibs0.1_dn2_ma200_d4",
+    "g_soxl_r3lt10_ibs0.6_dn3_ma150_d1",
+    "g_soxl_r2lt10_ibs0.5_dn3_ma100_d4"
    ],
    "snapshots": [
     {
@@ -10967,8 +10990,8 @@
      "top": "g_soxl_norsi_ibs0.6_dn1_ma50_d3",
      "main": "g_soxl_norsi_ibs0.6_dn1_ma50_d3",
      "bottom": [
-      "g_soxl_r4lt40_ibs0.3_ma150_d5",
-      "g_soxl_r4lt35_ibs0.3_ma150_d5",
+      "g_soxl_norsi_ibs0.6_dn2_ma150_d3",
+      "g_soxl_r2lt35_ibs0.6_dn1_ma150_d5",
       "g_soxl_r4lt40_ibs0.3_ma100_d3"
      ],
      "ranks": [
@@ -10982,8 +11005,8 @@
       "g_soxl_r2lt25_dn1_ma100_d4",
       "g_soxl_r2lt30_ibs0.5_dn1_ma100_d4",
       "g_soxl_r3lt40_dn1_ma100_d5",
-      "g_soxl_r4lt40_ibs0.3_ma150_d5",
-      "g_soxl_r4lt35_ibs0.3_ma150_d5",
+      "g_soxl_norsi_ibs0.6_dn2_ma150_d3",
+      "g_soxl_r2lt35_ibs0.6_dn1_ma150_d5",
       "g_soxl_r4lt40_ibs0.3_ma100_d3"
      ]
     }
@@ -10994,7 +11017,7 @@
      "accepted": 7
     },
     "explore": {
-     "tried": 2796,
+     "tried": 2815,
      "accepted": 19
     },
     "jump2": {
@@ -11573,21 +11596,21 @@
     {
      "date": "2026-11-16",
      "top": "g_c30_th3.75",
-     "main": "close30_dip_v1",
+     "main": "g_c30_th3.75",
      "bottom": [
-      "close30_dip_th05",
       "close30_dip_th1",
-      "close30_dip_th4"
+      "close30_dip_th4",
+      "close30_dip_th2"
      ],
      "ranks": [
       "g_c30_th3.75",
       "close30_dip_th3",
-      "close30_dip_v1",
       "close30_dip_th15",
-      "close30_dip_th2",
+      "close30_dip_v1",
       "close30_dip_th05",
       "close30_dip_th1",
-      "close30_dip_th4"
+      "close30_dip_th4",
+      "close30_dip_th2"
      ]
     }
    ],
@@ -16737,8 +16760,26 @@
    "version": "g_c30_th3.75",
    "name": "15:00 까지 3.75% 넘게 내린 날",
    "reason": "7일 연속 1위 → 2026-11-17 부터 메인 (이전 메인 close30_dip_v1)"
+  },
+  {
+   "date": "2026-11-16",
+   "at": "2026-11-16T22:07+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 28개 계산 → 기준 통과 25 · 투입 0(교체 0) · 탈락: 점수 부족 9 · 손실 기준 미달 2 · 해마다 일관성 부족 1"
+  },
+  {
+   "date": "2026-11-16",
+   "at": "2026-11-16T22:07+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 19개 계산 → 기준 통과 17 · 투입 0(교체 0) · 탈락: 점수 부족 9 · 손실 기준 미달 2"
   }
  ],
- "updatedAt": "2026-11-16T11:18+09:00",
+ "updatedAt": "2026-11-16T22:07+09:00",
  "freqBeta": 0.25
 }

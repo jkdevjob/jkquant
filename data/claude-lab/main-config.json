@@ -2,6 +2,25 @@
   "ok": true,
   "events": [
     {
+      "tab": "close30",
+      "version": "g_c30_th3.75",
+      "name": "15:00 까지 3.75% 넘게 내린 날",
+      "rule": "KODEX 코스닥150레버리지가 15:00 에 전일 종가보다 3.75% 넘게 내려 있으면 15:00 매수 → 15:30 종가 매도",
+      "params": {
+        "code": "233740",
+        "th": -3.75
+      },
+      "effectiveFrom": "2026-11-17",
+      "promotedAt": "2026-11-16T02:19:21.529552+00:00",
+      "prevVersion": "close30_dip_v1",
+      "by": "auto:arena-7d-top1",
+      "basis": {
+        "labGeneratedAt": "2026-11-16T11:19:21.529567+09:00",
+        "rank": 1,
+        "promotion": "7일 연속 1위 · 순위 점수 +0.019 vs 메인 -0.002"
+      }
+    },
+    {
       "tab": "crypto",
       "version": "g_coin_ma15_s99_hi7_eth",
       "name": "평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만",
