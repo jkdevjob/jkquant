@@ -1,5 +1,14 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-16 · 연구(클로드) ④ 메인 교체 경계 · claude v2.31.1
+
+- `python -m unittest test_opening_gapdown.SoxlParamsTest`: 3 OK(경계 시험 포함). `python scripts/test_opening_gapdown.py`: 99 OK. `node scripts/test_opening_gapdown.mjs functions/api`: 71 ALL PASS.
+- `JKQ_MUT_ONLY="soxl" python scripts/mutation_test_opening_gapdown.py`: 대조군 2 초록 · 새 변이 4종(경계 분기 · 보유 확인 · 경계 달력일 · 마지막 시가 달력일)과 기존 ④ 변이 모두 잡힘.
+- 실제 자료(SOXL ~11/13 · Worker 메인 기록 사본): 고친 뒤 `nextSignal` = g_soxl_norsi_ibs0.6_dn1_ma50_d3 · action none · '50일 평균 아래' · `switchNext`(고치기 전: 앞 메인 g_soxl_r2lt30_ibs0.6_ma100_d5 · `pendingSwitch`).
+- PR #673: GitHub 검증 성공 · squash 438dc70c · Worker 배포 43864959738 성공.
+- 11/14 리포트: 실행 43517679886 · `{"ok":true,"subs":1,"sent":[201],"telegram":{"result":"sent"}}` 08:00:02.
+- R47 `r47_coin_others.py`: 10개 중 ① ② 통과 0 · 매매 평균 플러스 6/10 · 두 번 실행 값 같음(첫 실행은 LINK 받는 중 50분 제한으로 멈춤).
+
 ## 2026-11-16 · 모의 세후 CAGR / 일별 세후 MDD / MAR 1.5 검증
 
 - `scripts/check-paper-aftertax-risk.cjs`: 동일한 `index.html` 함수를 VM에서 실행하여 연말 양도세·미실현 양도세·세후 청산가치·연복리·부호 있는 성장 MAR·듀얼가드 NAV·UI 열순서·정렬·캐시 버전·오류 변이를 대조하도록 추가함.
@@ -7,6 +16,25 @@
 - 해석의 한계: 추가적립·단리 인출의 세후 CAGR은 현재 누적 세후 TR의 연환산이며 IRR/TWR이 아님. 매일 전량 청산할 경우의 예상 세금이 적용된 세후 MDD는 실제 세금 납부 현금흐름을 완벽히 재현한 값이 아닌 위험 지표.
 
 
+
+## 2026-11-14 · 연구(클로드) 아침 루틴 — R46 · 11/13 결과
+
+- 11/13 결과(`latest.json` 06:00 · `opening-gapdown-live/2026-11-13.json`): ① preopen 통과 3(메인 7) · ② etf_buy dropPct +0.47% · signal false · rule.max24h true · shadow etf_nolimit 신호 없음 · ⑤ c30_buy +0.35% 신호 없음 · ③ ETH 쉼 · ④ nextSignal basedOn 11/12 action none.
+- ④: 06:00:55 계산은 뉴욕 16:00 직후라 `drop_open_session`(16:15 ET 전 그날 봉 버림)대로 11/12 봉까지 — 설계대로. 다음 반영은 월 07:30 예약.
+- R46 `r46_cap5.py`: (가) Double 7s 220번 · +1.11% · t 2.1 · 연 +6.6% · MDD −26.1% · 상한 판매 131번 · 상한 없음 연 +10.2% · MDD −21.0% / (나) 147번 · t 1.5 · 연 +3.1% · 정수주 3.4%p 차이 / (다) 371번 · t 1.9 · MDD −30.5% · 정수주 4.1%p — 셋 다 보류.
+- 11/13 리포트: 실행 43317345316 · Worker subs 1 → [201] · 텔레그램 sent 08:00:02.
+- 미확인: ② 금요일 · 연휴 전 매수 금지 이유(no_signal_next_day_closed_max24h)는 하락 신호가 난 날에만 확인된다.
+
+## 2026-11-13 · PR #669 병합 · 배포 확인 (claude v2.31.0)
+
+- 병합: squash 6691e9cf(15:56 KST · 주문 경로 배포 창 15:45 뒤).
+  - 마지막 머리(8ab648d9)는 PR 이 열린 뒤 올린 커밋이라 자동 검증이 없었다(check.yml 은 opened · ready_for_review 때만). 그래서 수동 실행 43381687545 성공을 확인한 뒤 병합했다.
+- Worker 배포 43382240467 성공.
+- 운영 확인(15:57)
+  - `jkquant.pages.dev/claude` clVer v2.31.0.
+  - `POST /api/claude-coinbot` 키 없이 401 `unauthorized`(배포 전 405).
+  - Worker `POST /claude-real` 키 없이 401(배포 전 기본 안내 200).
+- 뒤따른 수정: Worker 배포 경로에 `functions/api/_claude_real.js` 추가 — 그 파일만 바뀌어도 Worker 가 다시 배포되게.
 
 ## 2026-11-13 · 연구(클로드) ③ 실투자 봇 · claude v2.31.0
 
