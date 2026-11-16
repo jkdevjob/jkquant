@@ -303,8 +303,8 @@ def soxl_meanrev(rows, p, entry_from=None, no_entry_from=None):
     pos = None                                     # dict(entry=i, days=n) — 보유 중이면
     pending = None                                 # "buy" | "sell" — 전날 종가에 정한 오늘 시가 주문
 
-    def exec_date(i):                              # i 일 종가 판단이 실행되는 시가 날짜(마지막 날은 다음 달력일로 본다)
-        return D[i + 1] if i + 1 < len(D) else (date.fromisoformat(D[i]) + timedelta(days=1)).isoformat()
+    def exec_date(i):                              # i 일 종가 판단이 실행되는 시가 날짜(마지막 날은 다음 평일 — 토 · 일은 미국장이 없다)
+        return D[i + 1] if i + 1 < len(D) else next_weekday(D[i])
     for i in range(max(n, rn + 1), len(rows)):
         rec = dict(date=D[i], strategyVersion=p["version"], action="flat", pnlPct=None, heldDays=None, entryPrice=None, exitPrice=None,
                    close=None, rsi2=None, ibs=None, downRun=None, ma=None, next="")
@@ -351,6 +351,14 @@ def soxl_meanrev(rows, p, entry_from=None, no_entry_from=None):
                rsiMax=p["rsiMax"], rsiN=rn, ibsMax=ibs_max, downDays=dn_min, maDays=n, maxHoldDays=p["maxHoldDays"], version=p.get("version"),
                entryRule=soxl_entry_text(p), why=soxl_why(p, last) if last and not pos and pending is None else "") if rows else None
     return dv, decisions, nxt
+
+
+def next_weekday(d):
+    """d 다음 평일(토 · 일 건너뜀). 마지막 확정 종가의 다음 시가 날짜 — 미국 휴장일은 모른다(그날은 자료에 다음 줄이 생기면 그 날짜를 쓴다)."""
+    x = date.fromisoformat(d) + timedelta(days=1)
+    while x.weekday() >= 5:
+        x += timedelta(days=1)
+    return x.isoformat()
 
 
 def soxl_signal(p, r2, ibs, down):
@@ -1340,8 +1348,14 @@ def soxl_piecewise(srows):
         full_all.update({d: v for d, v in full.items() if keep(d)})
         dec_all += [r for r in dec if keep(r["date"])]
         switches.append(dict(version=e["version"], effectiveFrom=e["effectiveFrom"], switchDate=sw))
-        if not sw:                                   # 앞 규칙이 아직 들고 있다 — 새 규칙은 판 다음 날부터
-            return dv_all, full_all, dec_all, dict(nx_old, pendingSwitch=e["version"]), switches
+        if not sw:
+            # 효력일 뒤 거래일이 아직 자료에 없다. 앞 규칙이 비어 있고 다음 시가 날짜가 효력일 뒤면 그 거래일이 교체일이다 →
+            # 그 시가 주문은 새 규칙이 정한다(2026-11-16 고침: 전에는 앞 규칙(효력일부터 새로 안 삼)이 '쉼'을 내고, 다음 날 자료가 생기면
+            # 장부는 새 규칙으로 그 시가 매수를 적었다 — 실시간 알림 ≠ 나중 장부).
+            if nx_old and not nx_old.get("holding") and next_weekday(nx_old["basedOn"]) >= e["effectiveFrom"]:
+                nx_new = soxl_series(dict(e["params"], version=e["version"]), srows, e["effectiveFrom"])[3]
+                return dv_all, full_all, dec_all, dict(nx_new, switchNext=e["version"]), switches
+            return dv_all, full_all, dec_all, dict(nx_old, pendingSwitch=e["version"]), switches   # 앞 규칙이 아직 들고 있다 — 새 규칙은 판 다음 날부터
         start, cur = sw, dict(e["params"], version=e["version"])
     dv, full, dec, nx = soxl_series(cur, srows, start)
     dv_all.update({d: v for d, v in dv.items() if not start or d >= start})

@@ -1,5 +1,13 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-16 · 연구(클로드) ④ 메인 교체 경계 · claude v2.31.1
+
+- `python -m unittest test_opening_gapdown.SoxlParamsTest`: 3 OK(경계 시험 포함). `python scripts/test_opening_gapdown.py`: 99 OK. `node scripts/test_opening_gapdown.mjs functions/api`: 71 ALL PASS.
+- `JKQ_MUT_ONLY="soxl" python scripts/mutation_test_opening_gapdown.py`: 대조군 2 초록 · 새 변이 4종(경계 분기 · 보유 확인 · 경계 달력일 · 마지막 시가 달력일)과 기존 ④ 변이 모두 잡힘.
+- 실제 자료(SOXL ~11/13 · Worker 메인 기록 사본): 고친 뒤 `nextSignal` = g_soxl_norsi_ibs0.6_dn1_ma50_d3 · action none · '50일 평균 아래' · `switchNext`(고치기 전: 앞 메인 g_soxl_r2lt30_ibs0.6_ma100_d5 · `pendingSwitch`).
+- PR #673: GitHub 검증 성공 · squash 438dc70c · Worker 배포 43864959738 성공.
+- 11/14 리포트: 실행 43517679886 · `{"ok":true,"subs":1,"sent":[201],"telegram":{"result":"sent"}}` 08:00:02.
+
 ## 2026-11-16 · 모의 세후 CAGR / 일별 세후 MDD / MAR 1.5 검증
 
 - `scripts/check-paper-aftertax-risk.cjs`: 동일한 `index.html` 함수를 VM에서 실행하여 연말 양도세·미실현 양도세·세후 청산가치·연복리·부호 있는 성장 MAR·듀얼가드 NAV·UI 열순서·정렬·캐시 버전·오류 변이를 대조하도록 추가함.

@@ -906,6 +906,44 @@ class SoxlParamsTest(unittest.TestCase):
         finally:
             lab.MAIN_EVENTS[:] = old
 
+    def test_switch_boundary_new_rule_decides_next_open(self):
+        """교체 경계(2026-11-16 고침): 효력일 뒤 거래일이 아직 없고 앞 규칙이 비어 있으면, 다음 시가 판단은 새 규칙이 한다.
+        금요일이 마지막 봉 · 효력일 월요일(다음 평일) — 그 시가 매수를 실시간이 알리고, 월요일 봉이 생긴 뒤 장부도 같은 매수를 적는다."""
+        old = list(lab.MAIN_EVENTS)
+        days, d = [], lab.date(2026, 6, 1)                                         # 월요일부터 평일만
+        while len(days) < 40:
+            if d.weekday() < 5:
+                days.append(d.isoformat())
+            d += lab.timedelta(days=1)
+        closes = [100.0] * 39 + [99.0]                                             # 마지막 날(금) 하루 하락 · 시고저종 같음 → IBS 0.5
+        r = [(x, c, c, c, c) for x, c in zip(days, closes)]
+        fri = days[-1]
+        self.assertEqual(lab.date.fromisoformat(fri).weekday(), 4)
+        mon = lab.next_weekday(fri)
+        self.assertEqual(lab.date.fromisoformat(mon).weekday(), 0)
+        base = dict(lab.MAIN_DEFAULT["soxl"]["params"], ma=0)
+        try:
+            lab.MAIN_EVENTS[:] = [dict(tab="soxl", version="x_old", name="x", rule="", effectiveFrom=days[5], promotedAt="t1",
+                                       params=dict(base, rsiMax=20.0, ibsMax=0.3)),           # 앞 규칙: IBS ≤ 0.3 → 이 날은 신호 없음
+                                  dict(tab="soxl", version="x_new", name="y", rule="", effectiveFrom=mon, promotedAt="t2",
+                                       params=dict(base, rsiMax=100.0, ibsMax=0.6, downDays=1))]   # 새 규칙: IBS ≤ 0.6 · 1일 하락 → 신호
+            _, _, _, nx, sw = lab.soxl_piecewise(r)
+            self.assertEqual(sw[-1]["switchDate"], None)
+            self.assertEqual((nx["action"], nx["version"], nx.get("switchNext")), ("buy", "x_new", "x_new"))
+            r2 = r + [(mon, 99.5, 101.0, 99.0, 100.5)]                                # 월요일 봉이 생긴 뒤 — 장부도 같은 시가 매수
+            _, _, dec2, nx2, sw2 = lab.soxl_piecewise(r2)
+            self.assertEqual(sw2[-1]["switchDate"], mon)
+            m = next(x for x in dec2 if x["date"] == mon)
+            self.assertEqual((m["action"], m["strategyVersion"], m["entryPrice"]), ("enter", "x_new", 99.5))
+            # 앞 규칙이 들고 있으면(효력일 전에 산 것) 교체는 판 뒤 — 앞 규칙이 정한다(그대로)
+            r3 = [(x, c, c, c, c) for x, c in zip(days, [100.0] * 36 + [99.0, 95.0, 90.0, 89.0])]
+            lab.MAIN_EVENTS[0]["params"] = dict(base, rsiMax=20.0, ibsMax=1.0)
+            _, _, _, nx3, _ = lab.soxl_piecewise(r3)
+            self.assertTrue(nx3["holding"])
+            self.assertEqual((nx3["version"], nx3.get("pendingSwitch")), ("x_old", "x_new"))
+        finally:
+            lab.MAIN_EVENTS[:] = old
+
 
 def fake_metrics(sc, gate=True, trade_days=100, years=(9, 9), dv=None, cal=None, tpy=None):
     """경쟁 시험용 가짜 성적 — arena_eval 과 같은 모양(점수 = adj = raw). tpy: 연 매매 횟수(빈도 보정)."""
