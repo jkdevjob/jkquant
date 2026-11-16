@@ -721,7 +721,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.136.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.137.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1849,7 +1849,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.136.0</b> · 2026-11-12</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.137.0</b> · 2026-11-12</div>
   </footer>
 </div>
 
@@ -7680,7 +7680,7 @@ function planAfterTax(R){
   if(!R||!Array.isArray(R.nav)||!R.nav.length) return null;
   const ev=((R.ledger&&R.ledger.events)||[]).filter(e=>e&&e.type==='trade').slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   const pos={}, AT=paperAfterTaxAcc('TECL',{});   // TECL · TQQQ · SGOV — 미국 규약
-  let i=0, realized=0;
+  let i=0, realized=0, atSamples=[];
   for(const n of R.nav){
     while(i<ev.length && ev[i].date<=n.date){
       const e=ev[i++], q=+e.qty||0, px=+e.price||0, fee=+e.fee||0, p=pos[e.symbol]||(pos[e.symbol]={q:0,c:0});
@@ -7690,8 +7690,11 @@ function planAfterTax(R){
     let cost=0; for(const k in pos) cost+=pos[k].c;
     AT.step(n.date, +n.total||0, +n.inflow||0, {realized, turnover:0, cost,
       held:(+n.tecl||0)*(+n.teclPx||0)+(+n.tqqq||0)*(+n.tqqqPx||0)+(+n.sgov||0)*(+n.sgovPx||0)});
+    const marked=AT.mark();
+    if(marked)atSamples.push({date:n.date,final:marked.final,inflow:+n.inflow||0});
   }
-  return AT.done();
+  const result=AT.done();
+  return result?{...result,afterTaxMdd:paperAfterTaxDrawdown(atSamples)}:null;
 }
 function paperStatPlan(sess){
   const R=PLAN_PAPER_CACHE[sess&&sess.id],z=R&&R.stats;if(!z)return null;
@@ -7700,7 +7703,8 @@ function paperStatPlan(sess){
   return {tab:'plan',id:sess.id,name:sess.name,opts:paperOpts('plan',{...st,horizon:+sess.horizon||+st.horizon||5}),sym:'TECL/TQQQ/SGOV',cur:curOf(st),
     from:z.from,to:z.to,yrs:z.yrs,spanDays:z.spanDays,inflow:base,inflowWon,total:z.total,ret:z.ret,retNow:z.ret,retOut:0,
     cagr:z.cagr,nTrade:z.nTrade,price:1,out:null,mdd:{pct:z.mdd,nDay:z.nDay},
-    atr:_at?_at.tr:null,atrTax:_at?_at.tax:null,atrFee:_at?_at.fee:null};
+    atr:_at?_at.tr:null,atrTax:_at?_at.tax:null,atrFee:_at?_at.fee:null,
+    ...paperAfterTaxMetrics(_at,_at&&_at.afterTaxMdd,z.yrs)};
 }
 /* 한 세션의 성과. 전략마다 자산 구조가 달라(VR의 초기투입, 적립의 현금 없음 …)
    여기서 장부를 다시 걸으면 반드시 어긋난다 — 실제로 밸류·적립이 틀렸다.
@@ -8022,6 +8026,13 @@ function paperAfterTaxAcc(sym, opt){
   const feeRate=(opt&&opt.addFee)?costOf(sym).fee:0, simple=!!(opt&&opt.simple);
   let N=0, Lost=0, C=0, year='', rg=0, taxPaid=0, feePaid=0, last=null;
   const s=()=>simple?1:Math.max(0,(N-Lost)/N);
+  /* 중간 거래일의 세후 청산가치와 완료시 세후TR은 반드시 같은 계산이다. */
+  const mark=()=>{
+    if(!last)return null;
+    const k=s(),liq=k*feeRate*last.held,gainNow=rg+k*(last.held-last.cost)-liq,Tn=capGainTax(gainNow,sym);
+    const final=(simple?last.E-C:k*last.E)-Tn-liq;
+    return {tr:(final/last.inflow-1)*100,tax:taxPaid+Tn,fee:feePaid+liq,final};
+  };
   return {
     step(date, E, inflow, x){
       if(!(E>0) || !(inflow>0)) return;
@@ -8039,13 +8050,32 @@ function paperAfterTaxAcc(sym, opt){
         if(simple) C+=fee; else if(fee>0) Lost+=k*fee/(E/N); }
       last={E, inflow, realized:+x.realized||0, turnover:+x.turnover||0, held:+x.held||0, cost:+x.cost||0};
     },
-    done(){
-      if(!last) return null;
-      const k=s(), liq=k*feeRate*last.held, gainNow=rg+k*(last.held-last.cost)-liq, Tn=capGainTax(gainNow, sym);
-      const final=(simple?last.E-C:k*last.E)-Tn-liq;
-      return {tr:(final/last.inflow-1)*100, tax:taxPaid+Tn, fee:feePaid+liq, final};
-    }
+    mark,done:mark
   };
+}
+
+/* 매 거래일 '전량 청산'을 가정한 세후 순자산 / 누적 투자금 경로의 최대낙폭. */
+function paperAfterTaxDrawdown(points){
+  let peak=-Infinity,mdd=0,n=0;
+  for(const p of points||[]){
+    if(!p||!(+p.inflow>0)||!Number.isFinite(+p.final))continue;
+    const uv=Math.max(0,+p.final)/p.inflow;
+    n++;
+    if(uv>peak)peak=uv;
+    else if(peak>0)mdd=Math.max(mdd,(peak-uv)/peak);
+  }
+  return n>=3?{pct:mdd*100,nDay:n}:null;
+}
+/* 연환산은 현재 세후TR과 같은 누적투입 기준이다. 중간 적립/인출의 IRR/TWR이 아닌 참고치. */
+function paperAfterTaxMetrics(at,dd,yrs){
+  const tr=at&&Number.isFinite(+at.tr)?+at.tr:null,ratio=tr==null?null:1+tr/100;
+  const atCagr=(ratio!=null&&ratio>=0&&Number.isFinite(yrs)&&yrs>0)
+    ?(Math.pow(ratio,1/yrs)-1)*100:null;
+  const atMdd=dd&&Number.isFinite(+dd.pct)?Math.max(0,+dd.pct):null;
+  const atMar=(atCagr!=null&&atMdd>0)?atCagr/atMdd:null;
+  const growMar=(atCagr!=null&&atMdd>0)
+    ?Math.sign(atCagr)*Math.pow(Math.abs(atCagr)/100,1.5)/(atMdd/100):null;
+  return {atCagr,atMdd,atMar,growMar};
 }
 /* ── 모의 MDD — 최대 낙폭 ──
    재는 건 '단위가치 = 총자산 ÷ 그때까지 넣은 돈'이다. 총자산 그대로 재면 적립식에서
@@ -8090,7 +8120,7 @@ function paperMdd(tab, sess, R, hist){
     /* 세후 TR 도 같은 걸음에서 센다 — 날마다 총자산을 다시 걸을 일을 두 번 만들지 않는다 */
     const _st=sess.settings||{}, AT=paperAfterTaxAcc(String(_st.ticker||'').toUpperCase(),
       {addFee:PAPER_NOFEE_TABS.has(tab), simple:tab==='inf'&&_st.compound===false});
-    let peak=-Infinity, mdd=0, n=0, endTot=0, cur=null, idx=0;
+    let peak=-Infinity, mdd=0, n=0, endTot=0, cur=null, idx=0, atSamples=[];
     try{
       for(const row of D){
         let grew=false;
@@ -8104,6 +8134,8 @@ function paperMdd(tab, sess, R, hist){
         n++; endTot=tot;
         if(uv>peak) peak=uv; else if(peak>0){ const dd=(peak-uv)/peak; if(dd>mdd) mdd=dd; }
         AT.step(row.date, tot, cur.inflow, {realized:cur.realized, turnover:cur.turnover, held, cost:cur.cost});
+        const marked=AT.mark();
+        if(marked)atSamples.push({date:row.date,final:marked.final,inflow:cur.inflow});
         if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink)   // 포트폴리오 — 같은 걸음의 날마다 값을 받아 간다(합친 추이·MDD · 올해 실현손익). 다시 세지 않는다
           { const o=(cur.out&&((+cur.out.saved||0)+(+cur.out.withdrawn||0)))||0, hv={};   // hv = 그날 종목별 평가(주식 × 종가 · 1배수 짝) · cash = 계좌 현금(나머지 − 나간 돈) — 종목별 추이(2026-11-09)
             if(cur.sym&&cur.qty) hv[cur.sym]=cur.qty*row.close; if(cur.sym1&&cur.qty1) hv[cur.sym1]=(hv[cur.sym1]||0)+cur.qty1*p1;
@@ -8111,8 +8143,17 @@ function paperMdd(tab, sess, R, hist){
       }
     } finally { sess.hist=real; }
     /* 마지막은 목록의 TR 과 같은 값(지금 시세 · paperRaw)으로 — 확정 종가와 현재가가 다르면 둘이 어긋난다 */
-    if(n>=3 && R && R.price>0 && R.inflow>0)
-      AT.step(D[D.length-1].date, R.total, R.inflow, {realized:R.realized, turnover:R.turnover, held:R.qty*R.price+(R.qty1||0)*(R.price1||0), cost:R.cost});
+    if(n>=3 && R && R.price>0 && R.inflow>0){
+      const day=D[D.length-1].date;
+      AT.step(day,R.total,R.inflow,{realized:R.realized,turnover:R.turnover,
+        held:R.qty*R.price+(R.qty1||0)*(R.price1||0),cost:R.cost});
+      const marked=AT.mark();
+      if(marked){
+        const point={date:day,final:marked.final,inflow:R.inflow};
+        if(atSamples.length&&atSamples[atSamples.length-1].date===day)atSamples[atSamples.length-1]=point;
+        else atSamples.push(point);
+      }
+    }
     if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink&&R&&R.price>0&&R.inflow>0){   // 끝 값도 목록·카드와 같은 지금 시세(같은 날이면 바꿔 넣는다) — 날이 셋이 안 되는 새 세션도
       /* 날짜는 마지막 종가 날과 마지막 기록 날 중 늦은 쪽 — 종가가 아직 없는 날의 체결(오늘 · 12/31 매도)이 그 전 종가 날로 잡혀 해를 잘못 타지 않게 */
       const endD=D.length?D[D.length-1].date:'', lastH=h.reduce((m,x)=>String(x.date)>m?String(x.date):m,'');
@@ -8122,7 +8163,7 @@ function paperMdd(tab, sess, R, hist){
       if(k&&_pfSeriesSink[k-1].date===end.date) _pfSeriesSink[k-1]=end; else _pfSeriesSink.push(end);
     }
     if(n<3) return null;   // 낙폭 · 세후 TR 은 날이 셋은 있어야 잰다(그릇에는 위에서 넣었다)
-    return {pct:mdd*100, nDay:n, endTot, afterTax:AT.done()};
+    return {pct:mdd*100,nDay:n,endTot,afterTax:AT.done(),afterTaxMdd:paperAfterTaxDrawdown(atSamples)};
   }catch(e){ console.error('paperMdd',tab,e); return null; }
 }
 
@@ -8323,7 +8364,8 @@ function paperStat(tab, sess){
   const row={tab, id:sess.id, name:sess.name, opts:paperOpts(tab,st), sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, inflowWon, total,
     ret:(total/base-1)*100, retNow:((total-outAmt)/base-1)*100, retOut:(outAmt/base)*100,
     cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out, mdd,
-    atr:(mdd&&mdd.afterTax)?mdd.afterTax.tr:null, atrTax:(mdd&&mdd.afterTax)?mdd.afterTax.tax:null, atrFee:(mdd&&mdd.afterTax)?mdd.afterTax.fee:null};
+    atr:(mdd&&mdd.afterTax)?mdd.afterTax.tr:null, atrTax:(mdd&&mdd.afterTax)?mdd.afterTax.tax:null, atrFee:(mdd&&mdd.afterTax)?mdd.afterTax.fee:null,
+    ...paperAfterTaxMetrics(mdd&&mdd.afterTax,mdd&&mdd.afterTaxMdd,yrs)};
   /* 포트폴리오 채우기 동안만(그릇이 있을 때) 보유를 그 계산 그대로 넘긴다 — 수량·원가(paperRaw)·계좌 현금(= 나머지 − 나간 돈).
      모의 목록 줄(클라우드 캐시에 저장됨)에는 넣지 않는다 — 문서가 커지지 않게. 종목별 합 + 현금 = 지금 계좌(시험 P1). */
   if(typeof _pfSeriesSink!=='undefined'&&_pfSeriesSink)
@@ -8548,7 +8590,7 @@ function paperFxFallback(){
      하루가 바뀌는 때 = 자정이 아니라 그 통화 거래소의 종가 확정(장 마감 + 20분 · 미국 종목은 한국 시각 아침 5:20/6:20 · 국내 오후 3:50).
      주말엔 새 봉이 없어 다시 세지 않는다.
    - 전체 적용/오늘 갱신은 force=true로 전부 다시 계산한다. */
-const PAPER_VIEW_CACHE_VER=9;   // 9: 세션마다 저장(keys) — 한 덩어리 서명이던 옛 판은 한 번 전부 다시 센다 (2026-11-12) · 8: 밸류리밸런싱 모의 첫 매수 누락(듀얼가드 화면 합치기) 복구 — 지난 목록 값을 다시 센다 (2026-11-10) · 7: ASAP 모의 줄 빼기 — ASAP 줄이 든 지난 목록을 재계산 실패 대체 화면에도 안 씀 (2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?") · 6: 줄 설명·이름에 남은 옛 글자(띄어 쓴 이름 · '5년'이 붙은 설명)를 다시 셈 (2026-11-09 사용자: 이름은 '듀얼가드' · '5년' 지움) · 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
+const PAPER_VIEW_CACHE_VER=10;   // 9: 세션마다 저장(keys) — 한 덩어리 서명이던 옛 판은 한 번 전부 다시 센다 (2026-11-12) · 8: 밸류리밸런싱 모의 첫 매수 누락(듀얼가드 화면 합치기) 복구 — 지난 목록 값을 다시 센다 (2026-11-10) · 7: ASAP 모의 줄 빼기 — ASAP 줄이 든 지난 목록을 재계산 실패 대체 화면에도 안 씀 (2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?") · 6: 줄 설명·이름에 남은 옛 글자(띄어 쓴 이름 · '5년'이 붙은 설명)를 다시 셈 (2026-11-09 사용자: 이름은 '듀얼가드' · '5년' 지움) · 5: 폐지된 자산플랜 세션(10·15·20년 · 새 규칙 · 공격형) 줄 빼기 (2026-11-08) · 4: VR 저장 중 첫 매수 누락 복구 (2026-11-05)
 let _paperViewRefreshPromise=null;
 function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
 function paperRowKey(tab,x){ return String(tab)+':'+String((x&&x.id)||''); }
@@ -8773,6 +8815,10 @@ async function openPaper(){
          TR(토탈리턴) = (평가금 + 잔금 + 나간 돈) ÷ 원금 − 1 — 단리 인출·출금까지 넣는다(예전 이름 '최종', 값은 그대로). */
       + `<th style="cursor:pointer" onclick="paperSortTable('name',this)">전략 · 세션</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('atr',this)" title="세후 TR = 지금 다 팔고 세금·수수료를 다 낸 뒤의 수익률. 해마다 실현손익에 양도세(미국 22% · 연 250만원 공제 · 국내 별도)를 내고 그만큼 덜 굴린다 · 장부에 수수료가 없는 무매·적립·ASAP 은 0.25%">세후 TR</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('atcagr',this)" title="세후 CAGR = 세후TR 연복리 환산(적립/인출 전략 참고치)">세후 CAGR</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('atmdd',this)" title="세후 MDD = 매 거래일 예상 양도세·수수료 차감 청산가치 고점 대비 낙폭">세후 MDD</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('atmar',this)" title="세후 MAR = 세후 CAGR ÷ |세후 MDD|">세후 MAR</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('growmar',this)" title="성장 MAR 1.5 = 부호(세후CAGR)×|세후CAGR(소수)|^1.5÷|세후MDD(소수)|">성장 MAR 1.5</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('ret',this)" title="TR(토탈리턴) = 평가금 + 잔금 + 나간 돈 ÷ 원금 − 1 — 단리 인출·출금까지 넣은 전체 수익률. 현재 + 인출 과 정확히 같습니다">TR</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('mdd',this)" title="최대 낙폭 — 하루하루 '총자산 ÷ 그때까지 넣은 돈'을 재서 고점 대비 가장 깊이 빠진 폭. 적립금이 상승처럼 잡히지 않도록 투입으로 나눠 잽니다">MDD</th>`
       + `<th style="cursor:pointer" onclick="paperSortTable('mar',this)" title="MAR = CAGR ÷ |MDD| — 전체 모의기간의 연복리 수익률을 최대 낙폭 절대값으로 나눈 값">MAR</th>`
@@ -8813,6 +8859,11 @@ async function openPaper(){
       const _krwFinalRet=ok?paperKrwRet(r):null;
       /* 세후 TR — 맨 앞 칸. 둘째 줄은 낸 세금·수수료(원화 · 지금 환율) — 폰에서는 툴팁이 안 보인다 */
       const _atr=(ok&&r.atr!=null&&Number.isFinite(+r.atr))?+r.atr:null, _sortAtr=_atr==null?'':_atr;
+      const _atCagr=(ok&&long&&r.atCagr!=null&&Number.isFinite(+r.atCagr))?+r.atCagr:null;
+      const _atMdd=(ok&&r.atMdd!=null&&Number.isFinite(+r.atMdd))?+r.atMdd:null;
+      const _atMar=(_atCagr!=null&&_atMdd>0&&r.atMar!=null&&Number.isFinite(+r.atMar))?+r.atMar:null;
+      const _growMar=(_atCagr!=null&&_atMdd>0&&r.growMar!=null&&Number.isFinite(+r.growMar))?+r.growMar:null;
+      const _atCell=(v,digits=1,suffix='')=>v==null?'—':(v>=0?'+':'')+v.toFixed(digits)+suffix;
       const _atrCost=(+r.atrTax||0)+(+r.atrFee||0), _won=v=>{ const w=v*(r.cur==='krw'?1:(+r.wonRate||1)); return w>=1e8?(w/1e8).toFixed(1)+'억원':w>=1e4?Math.round(w/1e4).toLocaleString('ko-KR')+'만원':Math.round(w).toLocaleString('ko-KR')+'원'; };
       /* 전략 설명은 표 폭을 잡아먹지 않게 핵심 단위로 끊는다.
          ASAP부터는 캡처처럼 긴 설명 때문에 첫 칸이 넓어지므로 2줄로 강제 분리하고 행 패딩도 줄인다. */
@@ -8825,9 +8876,13 @@ async function openPaper(){
       const _paperOptsRest=_paperOpts.slice(_paperSplitAt);
       const _paperOptTopText=_paperOptsTop.length?' · '+_paperOptsTop.join(' · '):'';
       const _paperOptRestText=_paperOptsRest.length?`<span class="cw paper-opt-more">${_paperOptsRest.join(' · ')}</span>`:'';
-      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-atr="${_sortAtr}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell">${paperTitle(r)}<span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>`
+      h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-atr="${_sortAtr}" data-atcagr="${_atCagr==null?'':_atCagr}" data-atmdd="${_atMdd==null?'':-_atMdd}" data-atmar="${_atMar==null?'':_atMar}" data-growmar="${_growMar==null?'':_growMar}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><div class="pcell">${paperTitle(r)}<span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</div></td>`
         + (ok
           ? `<td style="color:${_atr==null?'var(--faint)':(_atr>=0?'var(--buy)':'var(--sell)')};font-weight:700" title="${_atr==null?'종가 이력이 모자라 세후를 못 쟀습니다':'세금 '+_won(+r.atrTax||0)+' · 수수료 '+_won(+r.atrFee||0)+' — 세전 TR '+(up?'+':'')+r.ret.toFixed(1)+'%'}">${_atr==null?'—':(_atr>=0?'+':'')+_atr.toFixed(1)+'%'}${_atr==null?'':`<span class="cw">세금 ${_won(_atrCost)}</span>`}</td>`
+              + `<td style="color:${_atCagr==null?'var(--faint)':(_atCagr>=0?'var(--buy)':'var(--sell)')}" title="세후TR의 연복리 환산">${_atCell(_atCagr,1,'%')}</td>`
+              + `<td style="color:${_atMdd==null?'var(--faint)':'var(--sell)'}" title="세후 일별 청산가치 고점 대비 낙폭">${_atMdd==null?'—':'−'+_atMdd.toFixed(1)+'%'}</td>`
+              + `<td style="color:${_atMar==null?'var(--faint)':(_atMar>=0?'var(--buy)':'var(--sell)')}" title="세후 CAGR ÷ 세후 MDD">${_atCell(_atMar,2)}</td>`
+              + `<td style="color:${_growMar==null?'var(--faint)':(_growMar>=0?'var(--buy)':'var(--sell)')}" title="세후 CAGR(소수)의 부호 있는 1.5제곱 / 세후 MDD(소수)">${_atCell(_growMar,2)}</td>`
              + `<td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%${Number.isFinite(_krwFinalRet)?`<span class="cw" style="color:${_krwFinalRet>=0?'var(--buy)':'var(--sell)'}" title="원화 TR = 현재 환율로 환산한 총평가액(인출 포함) ÷ 투입 원화 - 1">원화 ${_krwFinalRet>=0?'+':''}${_krwFinalRet.toFixed(1)}%</span>`:''}</td>`
              /* MDD는 종가 이력이 있어야 잰다 — 못 재면 0%처럼 보이지 않게 비운다 */
              + `<td style="color:${r.mdd?'var(--sell)':'var(--faint)'}" title="${r.mdd?r.mdd.nDay+'거래일을 하루하루 재봤습니다':'종가 이력이 모자라 못 쟀습니다'}">${r.mdd?'−'+r.mdd.pct.toFixed(1)+'%':'—'}</td>`
@@ -8839,8 +8894,8 @@ async function openPaper(){
              + `<td style="color:${outAmt>0?'var(--gold)':'var(--faint)'}">${outAmt>0?'+'+r.retOut.toFixed(1)+'%':'—'}</td>`
              + `<td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
           : (r.pending
-            ? `<td colspan="8" style="color:var(--faint)">계산 중 — ${r.sym} 시세를 받는 대로 채웁니다</td>`
-            : `<td colspan="8" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`))
+            ? `<td colspan="12" style="color:var(--faint)">계산 중 — ${r.sym} 시세를 받는 대로 채웁니다</td>`
+            : `<td colspan="12" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`))
         // 투입·기간은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과·위험(세후 TR·TR·MDD·MAR·평가)이다
         + `<td style="color:var(--dim)">${paperInflowText(r)}</td>`
         + `<td>${per}<span class="cw">${r.nTrade}거래</span></td></tr>`; });
@@ -8848,7 +8903,7 @@ async function openPaper(){
     h=paperFxLine(rows)+h;
     if(paperStaleNote) h=`<p class="note" id="paper_stale_note" style="color:var(--vio)">🔄 지난번 계산 결과입니다 — 오늘 기준으로 다시 계산하는 중… (끝나면 자동으로 바뀝니다)</p>`+h;
     if(!cur && rows.some(r=>!(r.price>0)&&!r.pending)) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 새로고침하면 다시 받습니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · <b>세후 TR</b> = 지금 다 팔고 세금·수수료를 낸 뒤 수익률(해마다 실현손익에 양도세 22% · 연 250만원 공제를 내고 그만큼 덜 굴린다 · 국내 종목은 국내 규약 · 장부에 수수료가 없는 무매·적립·ASAP 은 0.25% · 근사) · <b>TR</b>(토탈리턴) = 평가 ÷ 투입 − 1(세전 · 단리 인출·출금 포함 · 현재 + 인출) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다) · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · 기간 = 모의 시작일부터. <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
+    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>달러 종목은 달러 + 원화 병기</b> · 국내 종목은 원화 표시 · 평가·인출 원화 = 현재 USD/KRW · 투입 원화 = 입력한 원화(시작일 환율로 전략 계산) · <b>세후 TR</b> = 지금 다 팔고 세금·수수료를 낸 뒤 수익률(해마다 실현손익에 양도세 22% · 연 250만원 공제를 내고 그만큼 덜 굴린다 · 국내 종목은 국내 규약 · 장부에 수수료가 없는 무매·적립·ASAP 은 0.25% · 근사) · <b>세후 CAGR</b> = 세후TR 기간 연환산(적립·인출 전략은 IRR/TWR이 아닌 참고값) · <b>세후 MDD</b> = 매일 전량 청산할 때 예상 세금·수수료를 제외한 순자산/누적투입 고점 대비 낙폭 · <b>세후 MAR</b> = 세후 CAGR ÷ |세후 MDD| · <b>성장 MAR 1.5</b> = 부호(세후 CAGR) × |세후 CAGR(소수)|^1.5 ÷ |세후 MDD(소수)| · <b>TR</b>(토탈리턴) = 평가 ÷ 투입 − 1(세전 · 단리 인출·출금 포함 · 현재 + 인출) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다) · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · 기간 = 모의 시작일부터. <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
     void paperLoadTickerNames(body);
