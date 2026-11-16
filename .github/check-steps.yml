@@ -84,6 +84,9 @@
 - name: 모의 목록 표 세션마다 저장(새·바뀐 세션만 계산 · 새 종가면 전부 · 주말 안 셈) 값·변이 검사
   run: node scripts/check-paper-row-cache.cjs
 
+- name: 모의 세후 CAGR·일별 세후 MDD·세후 MAR·성장 MAR 1.5 값·변이 검사
+  run: node scripts/check-paper-aftertax-risk.cjs
+
 - name: 전 페이지 상단 메뉴·탭 고정 값 및 변이 검사
   run: node scripts/check-sticky-layout.cjs
 
