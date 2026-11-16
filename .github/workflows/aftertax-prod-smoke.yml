@@ -1,0 +1,17 @@
+name: QA production aftertax paper columns
+on:
+  pull_request:
+    paths:
+      - scripts/aftertax-prod-smoke.cjs
+      - .github/workflows/aftertax-prod-smoke.yml
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Confirm Pages actual deployed columns
+        run: node scripts/aftertax-prod-smoke.cjs
