@@ -1,0 +1,552 @@
+{
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.7,
+ "tape": {
+  "text": "어제 뉴스, 내 돈은? #18",
+  "color": "yellow"
+ },
+ "out": "queue/issues/2026-11-17_working-pension-cut.mp4",
+ "voice": {
+  "name": "ko-KR-HyunsuMultilingualNeural",
+  "rate": "+10%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "은퇴하고 다시 일해서 월 오백만 원을 벌면, 국민연금이 깎일까요?"
+   },
+   {
+    "id": "news",
+    "text": "퇴직 은행원 재취업이 신입 채용을 앞질렀다는 뉴스처럼, 은퇴 뒤 다시 일하는 분이 늘고 있죠.",
+    "gap": 0.3
+   },
+   {
+    "id": "rule",
+    "text": "올해부터 월 소득 오백십구만 원 미만이면 국민연금이 깎이지 않아요.",
+    "gap": 0.3
+   },
+   {
+    "id": "table",
+    "text": "작년엔 월 삼백오십만 원만 벌어도 이만 오백 원, 오백만 원이면 십사만 천 원씩 깎였어요."
+   },
+   {
+    "id": "check",
+    "text": "오백십구만 원을 넘으면 여전히 깎이고, 월 소득은 근로소득공제를 뺀 금액이에요.",
+    "gap": 0.3
+   },
+   {
+    "id": "cta",
+    "text": "여러분은 몇 번째 줄이세요? 팔로우하면 내 칸 표 계속 드려요.",
+    "gap": 0.35
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "start": 0,
+   "stains": [
+    {
+     "x": 720,
+     "y": 1480,
+     "r": 170,
+     "opacity": 0.14,
+     "rot": -6
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "tag",
+     "text": "은퇴 뒤 재취업 늘어나는 요즘 · 2026",
+     "x": 86,
+     "y": 250,
+     "size": 50,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": -2,
+     "box": "#d7261e"
+    },
+    {
+     "type": "text",
+     "id": "l1",
+     "text": "월 500만 벌어도",
+     "x": 80,
+     "y": 400,
+     "size": 122,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#ffe14d"
+    },
+    {
+     "type": "text",
+     "id": "l2",
+     "text": "국민연금",
+     "x": 80,
+     "y": 620,
+     "size": 190,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l3",
+     "text": "안 깎인다?",
+     "x": 80,
+     "y": 860,
+     "size": 185,
+     "font": "heavy",
+     "color": "#d7261e",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "circle",
+     "target": "l3",
+     "at": 0.15,
+     "dur": 0.5,
+     "color": "red",
+     "pad": 14,
+     "width": 9
+    },
+    {
+     "type": "text",
+     "id": "m1",
+     "text": "월",
+     "x": 92,
+     "y": 1150,
+     "size": 96,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "m2",
+     "text": "??만",
+     "x": 200,
+     "y": 1150,
+     "size": 96,
+     "font": "heavy",
+     "color": "#ffffff",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#16130f"
+    },
+    {
+     "type": "text",
+     "id": "m3",
+     "text": "원까지",
+     "x": 430,
+     "y": 1150,
+     "size": 96,
+     "font": "heavy",
+     "color": "#16130f",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "stains": [
+    {
+     "x": 700,
+     "y": 1500,
+     "r": 170,
+     "opacity": 0.18,
+     "rot": -8
+    }
+   ],
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "일하면 깎이던 국민연금, 올해부터",
+     "x": 128,
+     "y": 196,
+     "size": 62,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0,
+     "rot": -0.8
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(퇴직 은행원 재취업, 신입 채용 앞질러 · TV조선 11/16)",
+     "x": 140,
+     "y": 300,
+     "size": 30,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.7
+    },
+    {
+     "type": "text",
+     "id": "s2",
+     "text": "월 소득 519만 원 미만 → 감액 없음 (2026~)",
+     "x": 140,
+     "y": 355,
+     "size": 42,
+     "font": "bold",
+     "color": "red",
+     "at": "@rule+0.3",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "th",
+     "text": "한 달 깎이는 국민연금 (월 소득 = 근로소득공제 뒤)",
+     "x": 150,
+     "y": 440,
+     "size": 34,
+     "font": "pen",
+     "color": "ink",
+     "at": "@table-0.2",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "월 소득",
+     "x": 150,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "2025년",
+     "x": 470,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "2026년",
+     "x": 760,
+     "y": 515,
+     "size": 40,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "319만 이하",
+     "x": 150,
+     "y": 600,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.2",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "0원",
+     "x": 470,
+     "y": 600,
+     "size": 52,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "0원",
+     "x": 760,
+     "y": 600,
+     "size": 54,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+0.8",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "350만",
+     "x": 150,
+     "y": 692,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.8",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "2만 500원",
+     "x": 470,
+     "y": 692,
+     "size": 46,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.1",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "0원",
+     "x": 760,
+     "y": 692,
+     "size": 54,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.4",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "400만",
+     "x": 150,
+     "y": 784,
+     "size": 54,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.4",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "4만 5,500원",
+     "x": 470,
+     "y": 784,
+     "size": 46,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+2.7",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "0원",
+     "x": 760,
+     "y": 784,
+     "size": 54,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+3.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "500만",
+     "x": 150,
+     "y": 876,
+     "size": 54,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+3.6",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "14만 1천원",
+     "x": 470,
+     "y": 876,
+     "size": 46,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+3.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "0원",
+     "x": 760,
+     "y": 876,
+     "size": 54,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+4.2",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5a",
+     "text": "519만 넘으면",
+     "x": 150,
+     "y": 968,
+     "size": 46,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+5.0",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r5b",
+     "text": "깎임",
+     "x": 470,
+     "y": 968,
+     "size": 52,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+5.3",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r5c",
+     "text": "여전히 깎임",
+     "x": 760,
+     "y": 968,
+     "size": 44,
+     "font": "bold",
+     "color": "blue",
+     "at": "@check+0.6",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r4c",
+     "at": "@table.end-0.6",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 10,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(2025 기준 평균소득 A값 309만 · 2026은 319만, 519만 미만 감액 폐지 · 감액액은 기사 예시와 같은 계산)",
+     "x": 150,
+     "y": 1080,
+     "size": 22,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table.end",
+     "dur": 0.6
+    },
+    {
+     "type": "sticky",
+     "x": 150,
+     "y": 1120,
+     "w": 760,
+     "h": 200,
+     "rot": -2,
+     "at": "@check-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "m1",
+       "text": "지금 확인할 것",
+       "x": 46,
+       "y": 22,
+       "size": 48,
+       "font": "bold",
+       "color": "red",
+       "at": "@check",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m2",
+       "text": "① 내 월 소득(공제 뒤)",
+       "x": 46,
+       "y": 90,
+       "size": 44,
+       "font": "bold",
+       "color": "ink",
+       "at": "@check+1.0",
+       "dur": 0.5
+      },
+      {
+       "type": "text",
+       "id": "m3",
+       "text": "② 작년 감액분 환급 여부",
+       "x": 46,
+       "y": 148,
+       "size": 44,
+       "font": "bold",
+       "color": "blue",
+       "at": "@check+2.6",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "n9",
+     "text": "(TV조선 11/16 · 한국경제 26/2/10 · 동아일보 1/22 · 서울경제 1/15 · 직접 계산)",
+     "x": 150,
+     "y": 1350,
+     "size": 26,
+     "font": "pen",
+     "color": "gray",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "늦지 않았습니다. — 은퇴노트",
+     "x": 330,
+     "y": 1420,
+     "size": 60,
+     "font": "pen",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.8,
+     "rot": -2
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@retire.note",
+     "x": 600,
+     "y": 1510,
+     "size": 36,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.6",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
