@@ -8,6 +8,25 @@
 
 
 
+## 2026-11-14 · 연구(클로드) 아침 루틴 — R46 · 11/13 결과
+
+- 11/13 결과(`latest.json` 06:00 · `opening-gapdown-live/2026-11-13.json`): ① preopen 통과 3(메인 7) · ② etf_buy dropPct +0.47% · signal false · rule.max24h true · shadow etf_nolimit 신호 없음 · ⑤ c30_buy +0.35% 신호 없음 · ③ ETH 쉼 · ④ nextSignal basedOn 11/12 action none.
+- ④: 06:00:55 계산은 뉴욕 16:00 직후라 `drop_open_session`(16:15 ET 전 그날 봉 버림)대로 11/12 봉까지 — 설계대로. 다음 반영은 월 07:30 예약.
+- R46 `r46_cap5.py`: (가) Double 7s 220번 · +1.11% · t 2.1 · 연 +6.6% · MDD −26.1% · 상한 판매 131번 · 상한 없음 연 +10.2% · MDD −21.0% / (나) 147번 · t 1.5 · 연 +3.1% · 정수주 3.4%p 차이 / (다) 371번 · t 1.9 · MDD −30.5% · 정수주 4.1%p — 셋 다 보류.
+- 11/13 리포트: 실행 43317345316 · Worker subs 1 → [201] · 텔레그램 sent 08:00:02.
+- 미확인: ② 금요일 · 연휴 전 매수 금지 이유(no_signal_next_day_closed_max24h)는 하락 신호가 난 날에만 확인된다.
+
+## 2026-11-13 · PR #669 병합 · 배포 확인 (claude v2.31.0)
+
+- 병합: squash 6691e9cf(15:56 KST · 주문 경로 배포 창 15:45 뒤).
+  - 마지막 머리(8ab648d9)는 PR 이 열린 뒤 올린 커밋이라 자동 검증이 없었다(check.yml 은 opened · ready_for_review 때만). 그래서 수동 실행 43381687545 성공을 확인한 뒤 병합했다.
+- Worker 배포 43382240467 성공.
+- 운영 확인(15:57)
+  - `jkquant.pages.dev/claude` clVer v2.31.0.
+  - `POST /api/claude-coinbot` 키 없이 401 `unauthorized`(배포 전 405).
+  - Worker `POST /claude-real` 키 없이 401(배포 전 기본 안내 200).
+- 뒤따른 수정: Worker 배포 경로에 `functions/api/_claude_real.js` 추가 — 그 파일만 바뀌어도 Worker 가 다시 배포되게.
+
 ## 2026-11-13 · 연구(클로드) ③ 실투자 봇 · claude v2.31.0
 
 - `node --test tests/claude-coinbot.test.mjs`: 12 pass · 0 fail.
