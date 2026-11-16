@@ -1,5 +1,13 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-16 · 모의 세후 CAGR / 일별 세후 MDD / MAR 1.5 검증
+
+- `scripts/check-paper-aftertax-risk.cjs`: 동일한 `index.html` 함수를 VM에서 실행하여 연말 양도세·미실현 양도세·세후 청산가치·연복리·부호 있는 성장 MAR·듀얼가드 NAV·UI 열순서·정렬·캐시 버전·오류 변이를 대조하도록 추가함.
+- **검사 결과는 GitHub Actions 실행 후 기재**. 현재 소스 작성만으로 검증 성공이나 Pages 배포 성공을 주장하지 않는다.
+- 해석의 한계: 추가적립·단리 인출의 세후 CAGR은 현재 누적 세후 TR의 연환산이며 IRR/TWR이 아님. 매일 전량 청산할 경우의 예상 세금이 적용된 세후 MDD는 실제 세금 납부 현금흐름을 완벽히 재현한 값이 아닌 위험 지표.
+
+
+
 ## 2026-11-14 · 연구(클로드) 아침 루틴 — R46 · 11/13 결과
 
 - 11/13 결과(`latest.json` 06:00 · `opening-gapdown-live/2026-11-13.json`): ① preopen 통과 3(메인 7) · ② etf_buy dropPct +0.47% · signal false · rule.max24h true · shadow etf_nolimit 신호 없음 · ⑤ c30_buy +0.35% 신호 없음 · ③ ETH 쉼 · ④ nextSignal basedOn 11/12 action none.
@@ -18,14 +26,6 @@
   - `POST /api/claude-coinbot` 키 없이 401 `unauthorized`(배포 전 405).
   - Worker `POST /claude-real` 키 없이 401(배포 전 기본 안내 200).
 - 뒤따른 수정: Worker 배포 경로에 `functions/api/_claude_real.js` 추가 — 그 파일만 바뀌어도 Worker 가 다시 배포되게.
-
-## 2026-11-16 · 모의 세후 CAGR / 일별 세후 MDD / MAR 1.5 검증
-
-- `scripts/check-paper-aftertax-risk.cjs`: 동일한 `index.html` 함수를 VM에서 실행하여 연말 양도세·미실현 양도세·세후 청산가치·연복리·부호 있는 성장 MAR·듀얼가드 NAV·UI 열순서·정렬·캐시 버전·오류 변이를 대조하도록 추가함.
-- **검사 결과는 GitHub Actions 실행 후 기재**. 현재 소스 작성만으로 검증 성공이나 Pages 배포 성공을 주장하지 않는다.
-- 해석의 한계: 추가적립·단리 인출의 세후 CAGR은 현재 누적 세후 TR의 연환산이며 IRR/TWR이 아님. 매일 전량 청산할 경우의 예상 세금이 적용된 세후 MDD는 실제 세금 납부 현금흐름을 완벽히 재현한 값이 아닌 위험 지표.
-
-
 
 ## 2026-11-13 · 연구(클로드) ③ 실투자 봇 · claude v2.31.0
 
