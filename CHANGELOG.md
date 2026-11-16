@@ -1,5 +1,17 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-16 · 연구(클로드) ④ 메인 교체 경계 고침 · R47 · claude v2.31.1
+
+- 이유: 11/16 저녁 점검. ④ 새 메인(효력 11/14)의 첫 거래일(11/16) 시가 판단이 앞 메인으로 나왔다.
+  - 교체일 줄이 아직 자료에 없으면 앞 규칙의 '쉼'을 냈다. 다음 날 장부는 새 규칙의 시가 매수를 적을 수 있었다(실시간 ≠ 장부).
+- `scripts/claude_lab.py`
+  - `soxl_piecewise`: 앞 규칙이 비어 있고 다음 시가 날짜가 효력일 이후면 다음 판단은 새 규칙이 한다(`switchNext`).
+  - `next_weekday`: 마지막 봉의 다음 시가 날짜를 다음 평일로(토 · 일 건너뜀).
+  - 이번 교체는 영향 없음(새 규칙도 '50일 평균 아래' 쉼).
+- 시험: `SoxlParamsTest.test_switch_boundary_new_rule_decides_next_open` · 변이 4종(`mutation_test_opening_gapdown.py`).
+- 감사: `AUDIT-SELF-REVIEW.md` 2026-11-16 장. `claude.html` v2.31.1(화면 변경 없음).
+- 연구: R47 ③ 고정 규칙을 업비트 다른 큰 코인에(`scripts/research/r47_coin_others.py`) — 결과는 연구 기록 R47 장.
+
 ## 2026-11-16 · 모의투자 세후 위험 4열 · 운영 v3.137.0 (PR 검증 중)
 
 - 사용자 지정 순서대로 세후 TR 다음에 세후 CAGR, 세후 MDD, 세후 MAR, 성장 MAR 1.5 추가. 열 머리글 클릭 정렬, 시세 대기 행 colspan 보정.
