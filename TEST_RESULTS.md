@@ -7,6 +7,7 @@
 - 실제 자료(SOXL ~11/13 · Worker 메인 기록 사본): 고친 뒤 `nextSignal` = g_soxl_norsi_ibs0.6_dn1_ma50_d3 · action none · '50일 평균 아래' · `switchNext`(고치기 전: 앞 메인 g_soxl_r2lt30_ibs0.6_ma100_d5 · `pendingSwitch`).
 - PR #673: GitHub 검증 성공 · squash 438dc70c · Worker 배포 43864959738 성공.
 - 11/14 리포트: 실행 43517679886 · `{"ok":true,"subs":1,"sent":[201],"telegram":{"result":"sent"}}` 08:00:02.
+- R47 `r47_coin_others.py`: 10개 중 ① ② 통과 0 · 매매 평균 플러스 6/10 · 두 번 실행 값 같음(첫 실행은 LINK 받는 중 50분 제한으로 멈춤).
 
 ## 2026-11-16 · 모의 세후 CAGR / 일별 세후 MDD / MAR 1.5 검증
 
