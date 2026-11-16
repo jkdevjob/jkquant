@@ -1,5 +1,15 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-17 · 연구(클로드) 아침 루틴 — R48
+
+- 11/16 결과(`latest.json` 06:04 · `opening-gapdown-live/2026-11-16.json` · `claude-live/2026-11-16.json`)
+  - ① 통과 2.
+  - ⑤ c30_buy sofar −10.4% · 3,875 → 3,845 · −0.87%(settled) · vts '모의투자 꺼짐(설정)'.
+  - ② etf_buy dropPct −11.4% · signal true · max24h true · shadow 신호 · 종가 3,845 매수 보유(11/17 09:00 매도 예정).
+  - ④ `nextSignal` = 새 메인 · `switchNext`(11/16 고침 운영 동작) · basedOn 11/13(06:04 는 16:15 ET 전).
+- R48 `r48_coin_basket.py`: (가) 밖 표본 5개 t 1.952 · 날 평균 +0.166% · 연 +13.11% · MDD −18.85% · 4/6 → ① X · ② O → 기록만 / (나) ETH 포함 t 2.319 · 연 +14.59% · MDD −16.09%(참고).
+- 미확인: ② 11/17 시가 매도 손익(오늘 장 뒤) · 11/17 리포트 발송(08:00 뒤 로그 확인).
+
 ## 2026-11-16 · 연구(클로드) ④ 메인 교체 경계 · claude v2.31.1
 
 - `python -m unittest test_opening_gapdown.SoxlParamsTest`: 3 OK(경계 시험 포함). `python scripts/test_opening_gapdown.py`: 99 OK. `node scripts/test_opening_gapdown.mjs functions/api`: 71 ALL PASS.
