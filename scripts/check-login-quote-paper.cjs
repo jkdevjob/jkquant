@@ -229,7 +229,7 @@ await t('P2 첫 화면: 오늘 결과가 없으면 목록을 비우고 "조회 �
   const sum=new Function('PAPER_TABS','S','paperStat',fn('function paperSummary()')+'\nreturn paperSummary;')(
     [['inf','무매'],['vr','VR']],{inf:{sessions:[{paper:true,id:'a'}]},vr:{sessions:[{paper:true,id:'b'}]}},(tab)=>({tab,price:tab==='inf'?0:12}));
   const rows=sum(); assert.equal(rows[0].pending,true); assert.equal(rows[1].pending,undefined);
-  assert(/r\.pending\s*\n?\s*\? `<td colspan="8" style="color:var\(--faint\)">계산 중/.test(op),'아직 계산 전 줄은 실패로 안 보인다');
+  assert(/r\.pending\s*\n?\s*\? `<td colspan="12" style="color:var\(--faint\)">계산 중/.test(op),'아직 계산 전 줄은 실패로 안 보인다');
 });
 await t('P2 지난 목록 캐시 판 ≥7 — ASAP 모의 줄이 든 지난 결과(판 6)는 재계산 실패 대체 화면에도 안 쓴다 · 값 및 변이 1종',async()=>{
   // 2026-11-09 사용자: "asap 모의투자가 왜 아직도 나오지?" — ASAP 모의를 목록에서 뺀 판(v3.123.3)은 지난 목록 캐시 판도 올린다
