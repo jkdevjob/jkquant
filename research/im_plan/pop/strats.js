@@ -176,4 +176,19 @@ function tom(name,risk,safe,syn){ return {name,syn,syms:[risk,safe],decide:c=>{ 
   if(k===3&&c.st.on){ c.st.on=false; return {[safe]:1}; }
   return null; }}; }
 S.TOM_TQ=tom('월말·월초 4일 TQQQ · 나머지 BIL','TQQQ','BIL',{TQQQ:'SYNTQQQ',BIL:'SYNBIL'});
+// 11-16 시중 매매법 5차(통용 규칙 · 원문 값) — QQQ 신호(전일 확정 종가) → TQQQ · 밖은 BIL
+//   MACD(12·26·9 · Appel): MACD = EMA12 − EMA26 · 신호선 = MACD 의 EMA9 · MACD > 신호선이면 보유
+//   볼린저 평균회귀(20일 · 2σ · Bollinger 2001): 종가 < 20일 평균 − 2σ 면 사고 · 종가 > 20일 평균이면 판다
+const _ema=(arr,n)=>{ const k=2/(n+1), o=[]; let e=null; for(const x of arr){ if(x==null){ o.push(e); continue; } e=e==null?x:e+k*(x-e); o.push(e); } return o; };
+function macdS(name,sig,lev,safe,syn){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.mc){ const cl=c.cal.map((_,j)=>c.c(sig,j)), e1=_ema(cl,12), e2=_ema(cl,26), m=e1.map((x,j)=>(x!=null&&e2[j]!=null)?x-e2[j]:null); c.st.mc=m; c.st.sg=_ema(m,9); }   // 그날 값은 그날까지의 종가로만 정해진다(앞으로의 값 안 씀)
+  const p=c.p; if(p<60) return null; const on=c.st.mc[p]>c.st.sg[p];
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+function bbS(name,sig,lev,safe,syn,n=20,kk=2){ return {name,syn,syms:[sig,lev,safe],decide:c=>{ const p=c.p; if(p<n+1) return null;
+  let s=0,s2=0; for(let j=p-n+1;j<=p;j++){ const x=c.c(sig,j); s+=x; s2+=x*x; } const m=s/n, sd=Math.sqrt(Math.max(0,s2/n-m*m)), x=c.c(sig,p);
+  let on=!!c.st.on; if(!on){ if(x<m-kk*sd) on=true; } else if(x>m) on=false;
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+const _sQB={QQQ:'SYNQQQ',TQQQ:'SYNTQQQ',BIL:'SYNBIL'};
+S.MACD_TQ=macdS('MACD(12·26·9) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+S.BB_TQ=bbS('볼린저 평균회귀(20·2σ) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
 module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};

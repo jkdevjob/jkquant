@@ -43,7 +43,10 @@ const P=[
   ["need=teclHit||guardFlip||tqReb||force||first||sgNew;",
    "const __wq=(RULES.tqVol&&guard==='ON')?Math.min(1,Math.pow(RULES.tqVol.s0/Math.max(1e-9,realizedVol(S.tqqq,p,RULES.tqVol.look||20)||RULES.tqVol.s0),2)):1,__qHit=!!(RULES.tqVol&&guard==='ON'&&!guardFlip&&pos.TQQQ>0&&Math.abs(((pos.TQQQ*sp.TQQQ)/Math.max(total,1))/D.guardWeight-__wq)>(RULES.tqVol.band??.10));need=teclHit||guardFlip||tqReb||force||first||sgNew||__qHit;"],
   ["const tq=(guardFlip||tqReb||force||first)?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/sp.TQQQ)):0):pos.TQQQ;",
-   "const tq=(guardFlip||tqReb||force||first||__qHit)?(guard==='ON'?Math.max((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq/sp.TQQQ)):0):pos.TQQQ;"]];
+   "const tq=(guardFlip||tqReb||force||first||__qHit)?(guard==='ON'?Math.max((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq/sp.TQQQ)):0):pos.TQQQ;"],
+  // 11-16 고리 decHold(날짜): 그날(전일 확정) TECL 이 목표보다 많아도 TECL 을 팔지 않음(밴드 맞춤 · 입금 날 맞춤 모두 — 12월 실현이익을 다음 해로 미루는 시험) · 안 주면 앱 그대로
+  ["let {teclHit,guard,guardFlip,tqReb}=dec;", "let {teclHit,guard,guardFlip,tqReb}=dec; const __dh=!!(RULES.decHold&&sleeveNow>w&&RULES.decHold(S.dates[p])); if(__dh) teclHit=false;"],
+  ["Math.max((RULES.holdT||(RULES.depBuy&&force&&!teclHit&&!first))?pos.TECL:0,", "Math.max((RULES.holdT||__dh||(RULES.depBuy&&force&&!teclHit&&!first))?pos.TECL:0,"]];
 function load(V){
   let src=fs.readFileSync(path.join(__dirname,'..','..','..','plan-session-engine.js'),'utf8');
   for(const [a,b] of P){ const n=src.split(a).length-1; if(n!==1) throw new Error(`앱 엔진 모양이 바뀌었다(${n}곳) — engine_var.js 의 바꿔 넣을 줄을 고칠 것: ${a.slice(0,50)}`); src=src.replace(a,()=>b); }

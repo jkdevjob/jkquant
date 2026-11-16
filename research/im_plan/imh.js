@@ -53,6 +53,7 @@ const SETUP=`(()=>{
   inj('?0:isq(orig/4,orig);','?0:isq(__H.qMode==="round"?Math.round(orig/4):orig/4,orig);');   // 11-14 o.qMode 'round': 쿼터매도 1/4 반올림(무매 후보 6 ②)
   inj('imRowsOf({rows:__H.rows})','imRowsOf({rows:(__H.rowsMin&&(cash/Math.max(1,divs-T))<__H.rowsMin*prevC)?0:__H.rows})');   // 11-14 o.rowsMin: 1회분(잔금÷(분할−T))이 전일 종가 × rowsMin 주 미만이면 그날 하방 줄 0(후보 6 ③)
   inj('let soldToday=false;','if(__H.boost&&shares>0&&__H.boost(d)){ const _u2=cash/Math.max(1,divs-T), _q=Math.floor(_u2/prevC+1e-9); if(_q>0){ buys.push({lim:buyLimit,q:_q,dT:1,ladder:false}); __H.bN=(__H.bN||0)+1; } } let soldToday=false;');   // 11-14 o.boostFn(d): 공포 끝 추가 1회분(큰수 한도 LOC · 체결되면 T+1 · 전일 VIX 로 정함)
+  inj('if(imCycleEnds(soldToday, shares)){__flrS=false;','if(imCycleEnds(soldToday, shares)){__H.lastEndD=d;__flrS=false;');   // 11-16: 사이클이 끝난 날(o.sig.coolN 관문용)
   window.__H={eqs:[]};
   (0,eval)(src);
   window.RUN=function(o){
@@ -80,6 +81,7 @@ const SETUP=`(()=>{
     const P=k=>k-1;  // 전일 확정 지표
     const sig=o.sig||{};
     if(sig.gateMA){ const m=maOf(sig.gateMA); __H.gate=(d)=>{ const k=P(idx[d]); return !(m[k]>0) || closes[k]>m[k]*(1+(sig.gateBand||0)); }; }
+    if(sig.coolN){ __H.gate=(d)=>!__H.lastEndD||(idx[d]-idx[__H.lastEndD])>sig.coolN; }   // 11-16 W4: 사이클이 끝난 날부터 coolN 거래일이 지나야 새 사이클
     if(sig.dnGate){ __H.gate=(d)=>{ const k=P(idx[d]); let c=0; for(let j=k;j>0&&closes[j]<closes[j-1];j--) c++; return c>=sig.dnGate-1; }; }   // 새 사이클은 전일까지 (dnGate−1)일 연속 하락일 때만 — 큰수 0.01 과 같이 쓰면 그날도 하락(LOC)이어야 첫 매수
     if(sig.bearDivs){ const m=maOf(sig.bearMA||150); __H.divsAt=(d)=>{ const k=P(idx[d]); return (m[k]>0&&closes[k]<m[k])?sig.bearDivs:o.divs||20; }; }
     if(sig.volDivs){ const v=volOf(sig.volN||60); __H.divsAt=(d)=>{ const k=P(idx[d]); const x=v[k]; if(!(x>0)) return o.divs||20; return x>sig.volHi?sig.volDivs:(o.divs||20); }; }
