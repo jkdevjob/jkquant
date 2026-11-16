@@ -191,4 +191,26 @@ function bbS(name,sig,lev,safe,syn,n=20,kk=2){ return {name,syn,syms:[sig,lev,sa
 const _sQB={QQQ:'SYNQQQ',TQQQ:'SYNTQQQ',BIL:'SYNBIL'};
 S.MACD_TQ=macdS('MACD(12·26·9) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
 S.BB_TQ=bbS('볼린저 평균회귀(20·2σ) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+// 11-17 시중 매매법 6차 — QQQ 신호(전일 확정) → TQQQ · 밖은 BIL · 지표는 그날까지의 값으로만(배열을 한 번 만들고 신호일 칸만 읽음)
+//   슈퍼트렌드(ATR 10 · 배수 3 · Seban 이 알린 통용 기본값 · ATR 은 Wilder 평활): 추세 위면 보유
+//   일목균형표 구름(9·26·52 · 선행 26 · 細田悟一): 종가 > 구름 위(선행스팬 A·B 큰 쪽)면 사고 · < 구름 아래(작은 쪽)면 판다 · 구름 안이면 그대로
+function stS(name,sig,lev,safe,syn,n=10,mult=3){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.tr){ const N=c.cal.length, H=[],L=[],C=[]; for(let j=0;j<N;j++){ C.push(c.c(sig,j)); H.push(c.h(sig,j)??C[j]); L.push(c.l(sig,j)??C[j]); }
+    const tr=C.map((x,j)=>j?Math.max(H[j]-L[j],Math.abs(H[j]-C[j-1]),Math.abs(L[j]-C[j-1])):H[j]-L[j]); const atr=[]; let a=null; for(let j=0;j<N;j++){ a=j<n?(j===n-1?tr.slice(0,n).reduce((s,x)=>s+x,0)/n:null):(a*(n-1)+tr[j])/n; atr.push(a); }
+    const up=[],dn=[],dir=[]; for(let j=0;j<N;j++){ if(atr[j]==null){ up.push(null); dn.push(null); dir.push(null); continue; } const m=(H[j]+L[j])/2, bu=m+mult*atr[j], bl=m-mult*atr[j];
+      const pu=up[j-1], pl=dn[j-1], pd=dir[j-1]; const fu=(pu==null||bu<pu||C[j-1]>pu)?bu:pu, fl=(pl==null||bl>pl||C[j-1]<pl)?bl:pl; up.push(fu); dn.push(fl);
+      dir.push(pd==null?(C[j]>fu?1:-1):(pd===-1&&C[j]>pu)?1:(pd===1&&C[j]<pl)?-1:pd); }
+    c.st.tr=dir; }
+  const p=c.p; if(p<n+2||c.st.tr[p]==null) return null; const on=c.st.tr[p]===1;
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+function ichS(name,sig,lev,safe,syn){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.ck){ const N=c.cal.length, H=[],L=[]; for(let j=0;j<N;j++){ const x=c.c(sig,j); H.push(c.h(sig,j)??x); L.push(c.l(sig,j)??x); }
+    const mid=(j,n)=>{ if(j<n-1) return null; let h=-Infinity,l=Infinity; for(let k=j-n+1;k<=j;k++){ if(H[k]>h) h=H[k]; if(L[k]<l) l=L[k]; } return (h+l)/2; };
+    const top=[],bot=[]; for(let j=0;j<N;j++){ const k=j-26; if(k<51){ top.push(null); bot.push(null); continue; } const A=(mid(k,9)+mid(k,26))/2, B=mid(k,52); top.push(Math.max(A,B)); bot.push(Math.min(A,B)); }   // 오늘의 구름 = 26일 전에 정해진 선행스팬
+    c.st.ck={top,bot}; }
+  const p=c.p, T=c.st.ck.top[p], Bt=c.st.ck.bot[p]; if(T==null) return null; const x=c.c(sig,p); let on=!!c.st.on;
+  if(!on){ if(x>T) on=true; } else if(x<Bt) on=false;
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+S.ST_TQ=stS('슈퍼트렌드(10·3) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+S.ICH_TQ=ichS('일목 구름(9·26·52) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
 module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};

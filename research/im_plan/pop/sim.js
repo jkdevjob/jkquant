@@ -36,7 +36,7 @@ function run(strat,{start,end,principal,monthly=0,rescale=false,map=null,dm=1}){
       for(const o of od){ const s=o.s, px=o.px; if(!(px>0)) continue; if(o.q<0){ const q=Math.min(-o.q,pos[s]); if(q<=0) continue; const f=fee(q,px); cash+=q*px-f; const b=book[s], avg=b.c/b.q; realized+=q*px-f-avg*q; b.q-=q; b.c-=avg*q; if(b.q<=0){b.q=0;b.c=0;} pos[s]-=q; nTr++; trades.push([date,s,-q,px,'예약']); }
         else if(o.q>0){ const mx=Math.floor(cash/(px*(1+FEE_RATE))), q=Math.min(o.q,mx); if(q>0){ const f=fee(q,px); cash-=q*px+f; book[s].q+=q; book[s].c+=q*px+f; pos[s]+=q; nTr++; trades.push([date,s,q,px,'예약']); } } } }
     const totalP=syms.reduce((t,s)=>t+pos[s]*C(s)[sig],0)+cash;
-    const ctx={i,p,date,sig,cal,c:(s,k)=>C(s)[cal[k]],a:(s,k)=>A(s)[cal[k]],pos,cash,total:totalP,first:i===i0,dep,depAmt:dep?monthly:0,avg:s=>book[s].q>0?book[s].c/book[s].q:null,
+    const ctx={i,p,date,sig,cal,c:(s,k)=>C(s)[cal[k]],a:(s,k)=>A(s)[cal[k]],h:(s,k)=>D[s].hi[cal[k]],l:(s,k)=>D[s].lo[cal[k]],   // h·l(11-17): 고가·저가(자료에 없으면 종가)pos,cash,total:totalP,first:i===i0,dep,depAmt:dep?monthly:0,avg:s=>book[s].q>0?book[s].c/book[s].q:null,
       newMonth:i===i0||cal[p].slice(0,7)!==month, newQuarter:i===i0||(cal[p].slice(0,7)!==month&&['01','04','07','10'].includes(month.slice(5,7))), st};
     let W=strat.decide(ctx); let buyOnly=false;
     if(!W&&dep){ W=strat.deposit?strat.deposit(ctx):lastW; buyOnly=true; }

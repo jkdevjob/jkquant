@@ -29,6 +29,9 @@ const PAGE_RUN=()=>{ window.__mkBoost=function(b){ const V=window.__VIXM||{}, ks
   if(o.dedW!=null){ if(!window.__dedP){ const s0=costOf.toString(); if(!s0.includes('deduct:COST_DEDUCT,')) throw new Error('costOf 모양이 바뀜'); (0,eval)('costOf='+s0.split('deduct:COST_DEDUCT,').join('deduct:COST_DEDUCT*(window.__DEDW??1),')); window.__dedP=true; } window.__DEDW=o.dedW; }   // dedW(11-11): 양도세 공제 배율(0 = 공제를 다른 계좌가 다 씀)
   if(o.sleeve){ const s=o.sleeve; x.sgov={sym:s[o.ds],k:s.k||10,mode:s.mode||'week',fee:s.fee!=null?s.fee:0.0026,tax:!!s.tax}; }
   delete x.boost; if(o.boost) x.boostFn=window.__mkBoost(o.boost);
+  delete x.pauseVix; if(o.pauseVix){ const g=o.pauseVix, V=window.__VIXM||{}, ks=Object.keys(V).sort(), arm=new Array(ks.length); let a=false; for(let k=0;k<ks.length;k++){ const v=V[ks[k]]; if(v>=g.hi) a=true; else if(a&&v<g.lo) a=false; arm[k]=a; }
+    x.pauseBuyFn=d=>{ let lo=0,hi=ks.length-1,j=-1; while(lo<=hi){ const m=(lo+hi)>>1; if(ks[m]<d){ j=m; lo=m+1; } else hi=m-1; } return j>=0&&arm[j]; }; }   // 11-17 W6: 전일 VIX 무장 중이면 그날 매수 없음
+  delete x.guardGate; if(o.guardGate){ const G=(window.__GST||{})[o.guardGate], ks=Object.keys(G||{}).sort(); const st={}; for(const d of Object.keys(M[o.tkr||'SOXL'])){ let lo=0,hi=ks.length-1,j=-1; while(lo<=hi){ const m=(lo+hi)>>1; if(ks[m]<d){ j=m; lo=m+1; } else hi=m-1; } st[d]=!(j>=0&&G[ks[j]]===false); } x.regime={st,gate:true}; }   // 11-17 W11: 전일 TQQQ Guard OFF 면 새 사이클 안 시작
   delete x.vixGate; if(o.vixGate){ const g=o.vixGate, V=window.__VIXM||{}, ks=Object.keys(V).sort(), arm=new Array(ks.length); let a=false; for(let k=0;k<ks.length;k++){ const v=V[ks[k]]; if(v>=g.hi) a=true; else if(a&&v<g.lo) a=false; arm[k]=a; }
     const st={}; for(const d of Object.keys(M[o.tkr||'SOXL'])){ let lo=0,hi=ks.length-1,j=-1; while(lo<=hi){ const m=(lo+hi)>>1; if(ks[m]<d){ j=m; lo=m+1; } else hi=m-1; } st[d]=!(j>=0&&arm[j]); } x.regime={st,gate:true}; }   // 11-16 W5: 전일 VIX 무장 중이면 새 사이클 안 시작(보유 중 사이클은 그대로)   // 11-14 o.boost={hi,lo,look,n}: 공포 끝 추가 1회분 날(전일 VIX 상태)
   delete x.lad;   // 11-13 o.lad=n: 하방 LOC 줄 크기 축 — 줄당 수량 s = max(1, floor(본 주문 주수 ÷ n)) · 값 = 1회분 ÷ (본 주문 주수 + k×s) · s=1 이면 원래와 같은 식(1만$)
@@ -45,6 +48,10 @@ const PAGE_RUN=()=>{ window.__mkBoost=function(b){ const V=window.__VIXM||{}, ks
 (async()=>{ const out={VARS,DS,CAPS,JIT,sets:{}};
   for(const ds of DS){ const S=SETS[ds]; const pages=[]; for(let w=0;w<W;w++){ const p=await open(S.syms); await p.pg.evaluate(PAGE_RUN); pages.push(p); }
     { const vm={}; JSON.parse(fs.readFileSync(require('path').join(__dirname,'data','VIX.json'),'utf8')).series.forEach(x=>{ if(+x.close>0) vm[x.date]=+x.close; }); for(const p of pages) await p.pg.evaluate(v=>{window.__VIXM=v;},vm); }
+    { // 11-17: 듀얼 가드와 같은 TQQQ Guard 상태(SMA225 · 밴드 이력) — 실제 = planrule/data TQQQ 체결가 · 합성 = data/SYNTQQQ · 그날 종가 뒤 상태
+      const P=require('path'); const rows=ds==='real'?JSON.parse(fs.readFileSync(P.join(__dirname,'planrule','data','TQQQ.json'),'utf8')).ohlcTrade.map(x=>[x.date,+x.close]).filter(x=>x[1]>0):JSON.parse(fs.readFileSync(P.join(__dirname,'data','SYNTQQQ.json'),'utf8')).series.map(x=>[x.date,+x.close]).filter(x=>x[1]>0);
+      const mk=b=>{ const o={}; let s=0,on=null; const q=[]; for(const [d,c] of rows){ q.push(c); s+=c; if(q.length>225) s-=q.shift(); if(q.length===225){ const m=s/225; if(on==null) on=c>m; else if(c>m*(1+b)) on=true; else if(c<m*(1-b)) on=false; o[d]=on; } } return o; };
+      const GST={b05:mk(.005),b1:mk(.01),b2:mk(.02)}; for(const p of pages) await p.pg.evaluate(v=>{window.__GST=v;},GST); }
     const all=await pages[0].pg.evaluate(t=>Object.keys(M[t]).sort(),S.tk), F0=all[0];
     const starts=[]; for(let y=S.y0;y<=2021;y++) for(let m=1;m<=12;m++){ const s=`${y}-${String(m).padStart(2,'0')}-01`; if(s<all[20]) continue; const e=`${y+5}-${String(m).padStart(2,'0')}-01`; if(e>all[all.length-1]) continue; starts.push([s,e]); }
     const jobs=[]; for(const cap of CAPS) for(const v of Object.keys(VARS)) for(const j of JIT) jobs.push({cap,v,j});
