@@ -1,0 +1,480 @@
+{
+ "skin": "brief",
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.6,
+ "tape": {
+  "text": "매니악 브리핑 #3",
+  "color": "yellow"
+ },
+ "band": {
+  "lines": [
+   "매달 100만, 연 12% 적금 1년",
+   "이자 [144만 원]일까?"
+  ]
+ },
+ "out": "queue/mb/issues/2026-11-17_savings-12pct.mp4",
+ "voice": {
+  "name": "ko-KR-SunHiNeural",
+  "rate": "+8%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "연 십이 퍼센트 적금에 매달 백만 원씩 일 년, 이자는 백사십사만 원일까요?"
+   },
+   {
+    "id": "news",
+    "text": "최고 연 십이 퍼센트 특판 적금이 나와 화제인데요.",
+    "gap": 0.3
+   },
+   {
+    "id": "why",
+    "text": "적금은 매달 넣어서, 첫 달 돈만 열두 달 이자를 받고 마지막 달 돈은 한 달 치만 받아요."
+   },
+   {
+    "id": "table",
+    "text": "그래서 매달 백만 원이면 세전 칠십팔만 원, 세금 떼면 육십육만 원. 원금 대비 세전 육 점 오 퍼센트예요.",
+    "gap": 0.25
+   },
+   {
+    "id": "warn",
+    "text": "게다가 기본금리는 이 퍼센트라, 우대 조건을 다 채워야 십이 퍼센트예요.",
+    "gap": 0.3
+   },
+   {
+    "id": "cta",
+    "text": "내 돈에 닿는 숫자, 팔로우하고 매일 받아 보세요.",
+    "gap": 0.35
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "start": 0,
+   "items": [
+    {
+     "type": "text",
+     "id": "tag",
+     "text": "매달 100만 · 1년 · 연 12%",
+     "x": 86,
+     "y": 250,
+     "size": 54,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#5ec8ff"
+    },
+    {
+     "type": "text",
+     "id": "l1",
+     "text": "이자 144만 원?",
+     "x": 80,
+     "y": 400,
+     "size": 140,
+     "font": "heavy",
+     "color": "#f4f7fb",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l2",
+     "text": "아니요,",
+     "x": 80,
+     "y": 610,
+     "size": 170,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#ffb340"
+    },
+    {
+     "type": "text",
+     "id": "l3",
+     "text": "??만 원",
+     "x": 80,
+     "y": 850,
+     "size": 210,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#5ec8ff"
+    },
+    {
+     "type": "text",
+     "id": "q",
+     "text": "?",
+     "x": 820,
+     "y": 1000,
+     "size": 260,
+     "font": "heavy",
+     "color": "#ffb340",
+     "at": 0,
+     "dur": 0,
+     "rot": 10
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "연 12% 적금, 실제로 받는 이자",
+     "x": 110,
+     "y": 200,
+     "size": 66,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(최고 연 12% 특판 · KBS 11/16 · 매일경제 9/29·11/7)",
+     "x": 112,
+     "y": 300,
+     "size": 30,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "s2",
+     "text": "첫 달 돈만 12개월, 마지막 달 돈은 1개월 이자",
+     "x": 112,
+     "y": 355,
+     "size": 42,
+     "font": "bold",
+     "color": "ink",
+     "at": "@why+0.3",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "매달 넣는 돈",
+     "x": 120,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table-0.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "1년 원금",
+     "x": 470,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table-0.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "세후 이자",
+     "x": 740,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table-0.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "10만",
+     "x": 120,
+     "y": 550,
+     "size": 56,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+4.6",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "120만",
+     "x": 470,
+     "y": 550,
+     "size": 52,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+4.8",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "6.6만",
+     "x": 740,
+     "y": 550,
+     "size": 56,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+5.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "30만",
+     "x": 120,
+     "y": 645,
+     "size": 56,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+5.1",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "360만",
+     "x": 470,
+     "y": 645,
+     "size": 52,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+5.3",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "19.8만",
+     "x": 740,
+     "y": 645,
+     "size": 56,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+5.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "50만",
+     "x": 120,
+     "y": 740,
+     "size": 56,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+5.6",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "600만",
+     "x": 470,
+     "y": 740,
+     "size": 52,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+5.8",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "33만",
+     "x": 740,
+     "y": 740,
+     "size": 56,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+6.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "100만",
+     "x": 120,
+     "y": 835,
+     "size": 56,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+0.2",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "1,200만",
+     "x": 470,
+     "y": 835,
+     "size": 52,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+0.7",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "66만",
+     "x": 740,
+     "y": 835,
+     "size": 56,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.2",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r4c",
+     "at": "@table+3.0",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 8,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(단리 · 이자소득세 15.4% · 원금 대비 세전 6.5%, 세후 5.5% · 직접 계산)",
+     "x": 120,
+     "y": 940,
+     "size": 26,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table.end",
+     "dur": 0.5
+    },
+    {
+     "type": "sticky",
+     "x": 110,
+     "y": 1000,
+     "w": 840,
+     "h": 330,
+     "rot": 0,
+     "at": "@warn-0.3",
+     "items": [
+      {
+       "type": "text",
+       "id": "f1",
+       "text": "사실",
+       "x": 40,
+       "y": 30,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@warn-0.2",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "f2",
+       "text": "기본 2% + 우대 조건 다 채워야 12%",
+       "x": 170,
+       "y": 36,
+       "size": 38,
+       "font": "bold",
+       "color": "ink",
+       "at": "@warn+0.2",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "v1",
+       "text": "해석",
+       "x": 40,
+       "y": 130,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@warn+2.0",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "v2",
+       "text": "적금 12% ≈ 한 번에 넣는 예금 6.5%",
+       "x": 170,
+       "y": 136,
+       "size": 36,
+       "font": "bold",
+       "color": "ink",
+       "at": "@warn+2.3",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "p1",
+       "text": "주의",
+       "x": 40,
+       "y": 230,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@warn.end-0.6",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "p2",
+       "text": "한도 월 30만·6개월이면 세후 약 5.3만",
+       "x": 170,
+       "y": 236,
+       "size": 38,
+       "font": "bold",
+       "color": "blue",
+       "at": "@warn.end-0.3",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "매니악 브리핑",
+     "x": 330,
+     "y": 1365,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@maniacbriefing",
+     "x": 360,
+     "y": 1440,
+     "size": 32,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.5",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
