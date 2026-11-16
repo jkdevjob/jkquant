@@ -1,0 +1,502 @@
+{
+ "skin": "brief",
+ "duration": "auto",
+ "fps": 30,
+ "flip": 0.6,
+ "tape": {
+  "text": "매니악 브리핑 #4",
+  "color": "yellow"
+ },
+ "band": {
+  "lines": [
+   "상위 10% 집값 +2.2억",
+   "하위 10%는 [얼마나] 올랐을까?"
+  ]
+ },
+ "out": "queue/mb/issues/2026-11-17_housing-gap.mp4",
+ "voice": {
+  "name": "ko-KR-SunHiNeural",
+  "rate": "+8%",
+  "lead": 0.35,
+  "gap": 0.28,
+  "tail": 1.6,
+  "lines": [
+   {
+    "id": "hook",
+    "text": "작년 상위 십 퍼센트 집값은 이억 이천만 원 올랐는데, 하위 십 퍼센트는 얼마나 올랐을까요?"
+   },
+   {
+    "id": "news",
+    "text": "국가데이터처 주택소유통계를 보면, 작년 집 가진 가구 평균 주택자산은 삼억 육천삼백만 원으로 구 퍼센트 올랐어요.",
+    "gap": 0.3
+   },
+   {
+    "id": "table",
+    "text": "상위 십 퍼센트는 십오억 육천만 원이 됐지만, 하위 십 퍼센트는 삼천만 원 그대로, 영 원 올랐어요."
+   },
+   {
+    "id": "gap",
+    "text": "위아래 격차는 오십이 배, 통계 작성 이후 가장 커요.",
+    "gap": 0.25
+   },
+   {
+    "id": "view",
+    "text": "공시가격 기준이라 시세와는 다르고, 오른 건 비싼 집 위주였다는 뜻이에요.",
+    "gap": 0.3
+   },
+   {
+    "id": "cta",
+    "text": "내 돈에 닿는 숫자, 팔로우하고 매일 받아 보세요.",
+    "gap": 0.35
+   }
+  ]
+ },
+ "pages": [
+  {
+   "cover": true,
+   "start": 0,
+   "items": [
+    {
+     "type": "text",
+     "id": "tag",
+     "text": "작년 1년 집값 변화(공시가격)",
+     "x": 86,
+     "y": 250,
+     "size": 52,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#5ec8ff"
+    },
+    {
+     "type": "text",
+     "id": "l1",
+     "text": "상위 10%",
+     "x": 80,
+     "y": 400,
+     "size": 150,
+     "font": "heavy",
+     "color": "#f4f7fb",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "l2",
+     "text": "+2.2억",
+     "x": 80,
+     "y": 600,
+     "size": 210,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#ffb340"
+    },
+    {
+     "type": "text",
+     "id": "l3",
+     "text": "하위 10%는?",
+     "x": 80,
+     "y": 860,
+     "size": 160,
+     "font": "heavy",
+     "color": "#f4f7fb",
+     "at": 0,
+     "dur": 0,
+     "rot": 0
+    },
+    {
+     "type": "text",
+     "id": "m2",
+     "text": "??원",
+     "x": 92,
+     "y": 1080,
+     "size": 150,
+     "font": "heavy",
+     "color": "#0f1a2d",
+     "at": 0,
+     "dur": 0,
+     "rot": 0,
+     "box": "#5ec8ff"
+    },
+    {
+     "type": "text",
+     "id": "q",
+     "text": "?",
+     "x": 820,
+     "y": 1000,
+     "size": 260,
+     "font": "heavy",
+     "color": "#ffb340",
+     "at": 0,
+     "dur": 0,
+     "rot": 10
+    }
+   ]
+  },
+  {
+   "start": "@hook.end+0.05",
+   "items": [
+    {
+     "type": "text",
+     "id": "h1",
+     "text": "우리 집은 어디쯤? (집 가진 가구)",
+     "x": 110,
+     "y": 200,
+     "size": 64,
+     "font": "bold",
+     "color": "ink",
+     "at": 0,
+     "dur": 0
+    },
+    {
+     "type": "text",
+     "id": "s1",
+     "text": "(국가데이터처 2025 주택소유통계 · 서울신문·매경이코노미 11/16)",
+     "x": 112,
+     "y": 300,
+     "size": 28,
+     "font": "pen",
+     "color": "gray",
+     "at": "@news+0.3",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "s2",
+     "text": "평균 주택자산 3.33억 → 3.63억 (+9%)",
+     "x": 112,
+     "y": 355,
+     "size": 44,
+     "font": "bold",
+     "color": "ink",
+     "at": "@news+3.0",
+     "dur": 0.8
+    },
+    {
+     "type": "text",
+     "id": "hda",
+     "text": "가구",
+     "x": 120,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdb",
+     "text": "주택자산(공시가)",
+     "x": 400,
+     "y": 470,
+     "size": 36,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "hdc",
+     "text": "1년 변화",
+     "x": 750,
+     "y": 470,
+     "size": 38,
+     "font": "pen",
+     "color": "gray",
+     "at": "@table",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1a",
+     "text": "하위 10%",
+     "x": 120,
+     "y": 550,
+     "size": 52,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+5.0",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r1b",
+     "text": "3,000만",
+     "x": 400,
+     "y": 550,
+     "size": 48,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+5.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r1c",
+     "text": "0원",
+     "x": 750,
+     "y": 550,
+     "size": 48,
+     "font": "bold",
+     "color": "blue",
+     "at": "@table+6.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2a",
+     "text": "전체 평균",
+     "x": 120,
+     "y": 645,
+     "size": 52,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+0.0",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r2b",
+     "text": "3억 6,300만",
+     "x": 400,
+     "y": 645,
+     "size": 48,
+     "font": "bold",
+     "color": "gray",
+     "at": "@table+0.5",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r2c",
+     "text": "+3,000만",
+     "x": 750,
+     "y": 645,
+     "size": 48,
+     "font": "bold",
+     "color": "ink",
+     "at": "@table+1.0",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3a",
+     "text": "12억 초과",
+     "x": 120,
+     "y": 740,
+     "size": 52,
+     "font": "bold",
+     "color": "ink",
+     "at": "@view-1.2",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r3b",
+     "text": "64만 가구",
+     "x": 400,
+     "y": 740,
+     "size": 48,
+     "font": "bold",
+     "color": "gray",
+     "at": "@view-0.9",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r3c",
+     "text": "+32%",
+     "x": 750,
+     "y": 740,
+     "size": 48,
+     "font": "bold",
+     "color": "ink",
+     "at": "@view-0.6",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4a",
+     "text": "상위 10%",
+     "x": 120,
+     "y": 835,
+     "size": 52,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+0.6",
+     "dur": 0.3
+    },
+    {
+     "type": "text",
+     "id": "r4b",
+     "text": "15억 6,000만",
+     "x": 400,
+     "y": 835,
+     "size": 48,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.1",
+     "dur": 0.4
+    },
+    {
+     "type": "text",
+     "id": "r4c",
+     "text": "+2.2억",
+     "x": 750,
+     "y": 835,
+     "size": 48,
+     "font": "bold",
+     "color": "red",
+     "at": "@table+1.6",
+     "dur": 0.4
+    },
+    {
+     "type": "circle",
+     "target": "r1c",
+     "at": "@table.end-0.8",
+     "dur": 0.5,
+     "color": "blue",
+     "pad": 8,
+     "width": 6
+    },
+    {
+     "type": "circle",
+     "target": "r4c",
+     "at": "@table+2.6",
+     "dur": 0.5,
+     "color": "red",
+     "pad": 8,
+     "width": 6
+    },
+    {
+     "type": "text",
+     "id": "n0",
+     "text": "(공시가격 기준 · 상·하위 10% 격차 44.7배 → 52배)",
+     "x": 120,
+     "y": 940,
+     "size": 26,
+     "font": "pen",
+     "color": "gray",
+     "at": "@gap",
+     "dur": 0.5
+    },
+    {
+     "type": "sticky",
+     "x": 110,
+     "y": 1000,
+     "w": 840,
+     "h": 330,
+     "rot": 0,
+     "at": "@gap-0.2",
+     "items": [
+      {
+       "type": "text",
+       "id": "f1",
+       "text": "사실",
+       "x": 40,
+       "y": 30,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@gap",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "f2",
+       "text": "상·하위 10% 격차 52배, 역대 최대",
+       "x": 170,
+       "y": 36,
+       "size": 38,
+       "font": "bold",
+       "color": "ink",
+       "at": "@gap+0.3",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "v1",
+       "text": "해석",
+       "x": 40,
+       "y": 130,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@view",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "v2",
+       "text": "오른 건 비싼 집 위주 · 공시가는 시세와 다름",
+       "x": 170,
+       "y": 136,
+       "size": 36,
+       "font": "bold",
+       "color": "ink",
+       "at": "@view+0.3",
+       "dur": 0.6
+      },
+      {
+       "type": "text",
+       "id": "p1",
+       "text": "참고",
+       "x": 40,
+       "y": 230,
+       "size": 46,
+       "font": "bold",
+       "color": "red",
+       "at": "@view.end-0.8",
+       "dur": 0.3
+      },
+      {
+       "type": "text",
+       "id": "p2",
+       "text": "주택 소유율 57.6% · 서울 48.3%",
+       "x": 170,
+       "y": 236,
+       "size": 38,
+       "font": "bold",
+       "color": "blue",
+       "at": "@view.end-0.5",
+       "dur": 0.6
+      }
+     ]
+    },
+    {
+     "type": "text",
+     "id": "sig",
+     "text": "매니악 브리핑",
+     "x": 330,
+     "y": 1365,
+     "size": 58,
+     "font": "bold",
+     "color": "ink",
+     "at": "@cta",
+     "dur": 0.6
+    },
+    {
+     "type": "text",
+     "id": "handle",
+     "text": "@maniacbriefing",
+     "x": 360,
+     "y": 1440,
+     "size": 32,
+     "font": "sans",
+     "color": "gray",
+     "at": "@cta+0.5",
+     "dur": 0.5,
+     "fade": true
+    }
+   ]
+  }
+ ]
+}
