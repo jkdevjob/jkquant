@@ -199,6 +199,11 @@
 - 점검: `node publish-social.mjs --dry --id iYYYYMMDD` → 커밋·푸시
   (브랜치 `claude/instagram-reel-video-creation-wl16ee`, main 금지).
 
+## 6-0. 인스타 자동 발행 (11/16~)
+
+- 푸시 한 번이면 그날부터 **3일 동안** 09:00 · 12:00 · 18:00 칸을 다 지킨다(대기 작업은 5시간 이하로 쪼갬). 루틴이 늦게 깨어나는 날을 대비해 다음 날 편·예비를 미리 넣어 두면 그대로 나간다.
+- workflow 파일은 `reel/tools/gen-publish-workflows.mjs` 로 만든다(손으로 고치지 말 것). 게시 칸을 바꾸려면 그 파일의 `day`/`night` 를 고치고 다시 돌린다.
+
 ## 6-1. 게시 예약 (Metricool)
 
 게시는 Metricool 커넥터로 **그날 09:00·12:00(·18:00)(Asia/Seoul)** 에 예약한다. 지났으면 가장 빠른 빈 시각.
