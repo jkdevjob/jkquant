@@ -41,8 +41,8 @@ const order=['atr','atcagr','atmdd','atmar','growmar','ret'].map(k=>src.indexOf(
 assert(order.every((v,i)=>v>0&&(i===0||v>order[i-1])));
 assert(src.includes('colspan="12" style="color:var(--faint)"'));
 assert(src.includes('const PAPER_VIEW_CACHE_VER=10;'));
-assert(src.includes('...paperAfterTaxMetrics(_at,_at&&_at.afterTaxMdd,z.yrs)'));
-assert(src.includes('...paperAfterTaxMetrics(mdd&&mdd.afterTax,mdd&&mdd.afterTaxMdd,yrs)'));n++;
+assert(src.includes('paperAfterTaxMetrics(_at,_at&&_at.afterTaxMdd,z.yrs)'));
+assert(src.includes('paperAfterTaxMetrics(mdd&&mdd.afterTax,mdd&&mdd.afterTaxMdd,yrs)'));n++;
 const altered=raw.replace('Math.max(0,+p.final)/p.inflow','Math.max(0,+p.inflow)/p.inflow');
 assert.notEqual(altered,raw);
 const bad={costOf:env.costOf,capGainTax:env.capGainTax,Math,Number};
