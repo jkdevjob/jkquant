@@ -213,4 +213,25 @@ function ichS(name,sig,lev,safe,syn){ return {name,syn,syms:[sig,lev,safe],decid
   if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
 S.ST_TQ=stS('슈퍼트렌드(10·3) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
 S.ICH_TQ=ichS('일목 구름(9·26·52) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+// 11-18 시중 매매법 7차 — QQQ 신호(전일 확정) → TQQQ · 밖은 BIL · 지표 배열은 그날까지의 값으로만
+//   파라볼릭 SAR(Wilder 1978 · 가속 0.02 · 증분 0.02 · 상한 0.20): 상승 추세(SAR 가 가격 아래)면 보유
+//   KAMA(Kaufman 1995 · 효율비 10일 · 빠름 2 · 느림 30): 종가 > KAMA 면 보유
+function sarS(name,sig,lev,safe,syn,a0=0.02,da=0.02,aMax=0.20){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.sr){ const N=c.cal.length, H=[],L=[],C=[]; for(let j=0;j<N;j++){ C.push(c.c(sig,j)); H.push(c.h(sig,j)??C[j]); L.push(c.l(sig,j)??C[j]); }
+    const dir=new Array(N).fill(null); if(N>2){ let up=C[1]>=C[0], sar=up?Math.min(L[0],L[1]):Math.max(H[0],H[1]), ep=up?Math.max(H[0],H[1]):Math.min(L[0],L[1]), af=a0; dir[1]=up?1:-1;
+      for(let j=2;j<N;j++){ let s2=sar+af*(ep-sar);
+        if(up){ s2=Math.min(s2,L[j-1],L[j-2]); if(L[j]<s2){ up=false; s2=ep; ep=L[j]; af=a0; } else if(H[j]>ep){ ep=H[j]; af=Math.min(af+da,aMax); } }
+        else { s2=Math.max(s2,H[j-1],H[j-2]); if(H[j]>s2){ up=true; s2=ep; ep=H[j]; af=a0; } else if(L[j]<ep){ ep=L[j]; af=Math.min(af+da,aMax); } }
+        sar=s2; dir[j]=up?1:-1; } }
+    c.st.sr=dir; }
+  const p=c.p; if(p<5||c.st.sr[p]==null) return null; const on=c.st.sr[p]===1;
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+function kamaS(name,sig,lev,safe,syn,n=10,fast=2,slow=30){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.km){ const N=c.cal.length, C=[]; for(let j=0;j<N;j++) C.push(c.c(sig,j)); const fs=2/(fast+1), ss=2/(slow+1), K=new Array(N).fill(null);
+    for(let j=n;j<N;j++){ if(j===n){ K[j]=C[j]; continue; } let vol=0; for(let k=j-n+1;k<=j;k++) vol+=Math.abs(C[k]-C[k-1]); const er=vol>0?Math.abs(C[j]-C[j-n])/vol:0, sc=Math.pow(er*(fs-ss)+ss,2); K[j]=K[j-1]+sc*(C[j]-K[j-1]); }
+    c.st.km=K; }
+  const p=c.p; if(p<n+30||c.st.km[p]==null) return null; const on=c.c(sig,p)>c.st.km[p];
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+S.SAR_TQ=sarS('파라볼릭 SAR(0.02·0.20) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+S.KAMA_TQ=kamaS('KAMA(10·2·30) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
 module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};

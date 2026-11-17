@@ -57,6 +57,8 @@ const SETUP=`(()=>{
   inj('const buys=(__m1pause&&!flat0)?[]:','const buys=((__m1pause&&!flat0)||(__H.pauseBuy&&__H.pauseBuy(d)))?[]:');   // 11-17 W6: o.pauseBuyFn(d) 가 참인 날은 매수 주문을 하나도 안 냄(매도는 그대로)
   window.__H={eqs:[]};
   (0,eval)(src);
+  // 11-18 N2: 하방 줄 간격(o.lsp) — 주면 줄 가격 = 본 주문 가장 낮은 값 × (1 − lsp × k) (계좌 크기와 무관) · 안 주면 앱 그대로(1회매수금 ÷ (본 주문 주수 + k))
+  { let b=imBuyOrders.toString(); const a='const p=vrTickDn(o.buy1/(Q+k), o.cur);'; if(b.split(a).length!==2) throw new Error('inject imBuyOrders lsp'); b=b.replace(a,'const p=vrTickDn((window.__H&&window.__H.lsp&&lo<Infinity)?lo*(1-window.__H.lsp*k):o.buy1/(Q+k), o.cur);'); (0,eval)('imBuyOrders='+b); }
   window.RUN=function(o){
     const tkr=o.tkr||'SOXL', all=Object.keys(M[tkr]).sort(), days=all.filter(d=>d>=(o.from||'0')&&d<=(o.to||'9'));
     const C0=C; const closes=all.map(d=>M[tkr][d][C0]); const idx={}; all.forEach((d,k)=>idx[d]=k);
@@ -67,7 +69,7 @@ const SETUP=`(()=>{
     const IRX=window.__IRX||{}; const irxDates=Object.keys(IRX).sort();
     let lastIrx=0, li=0; const irxAt=d=>{ while(li<irxDates.length&&irxDates[li]<=d){ lastIrx=IRX[irxDates[li]]; li++; } return lastIrx; };
     let prevD=null;
-    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.floor=!!o.floor; __H.ye=o.ye||null; __H.tpLoc=!!o.tpLoc; __H.tpHyb=o.tpHyb||0; __H.qMode=o.qMode||null; __H.rowsMin=o.rowsMin||0; __H.boost=o.boostFn||null; __H.pauseBuy=o.pauseBuyFn||null; if(o.yp) __H.yp=[];
+    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.lsp=o.lsp||0; __H.floor=!!o.floor; __H.ye=o.ye||null; __H.tpLoc=!!o.tpLoc; __H.tpHyb=o.tpHyb||0; __H.qMode=o.qMode||null; __H.rowsMin=o.rowsMin||0; __H.boost=o.boostFn||null; __H.pauseBuy=o.pauseBuyFn||null; if(o.yp) __H.yp=[];
     if(o.xfer){ const X=o.xfer; let F=1, yr=null, pend=false; __H.xlog=[];   // 조합 입출금(11-06): X={mode:'year'|'oneway'|'band'|'oneband', w, b, pl:{날짜:플랜값}, fee} — 플랜 쪽은 비례 배율 F 로(플랜은 사이클이 없어 비례 근사가 맞다)
       __H.xfer=(d,cash)=>{ const P0=X.pl[d]; if(!(P0>0)) return 0; const P=P0*F, y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ yr=y; if(X.mode==='year'||X.mode==='oneway') pend=true; }
         const t=cash+P, wa=cash/t; let x=cash-t*X.w;   // x>0: 무매 → 플랜
