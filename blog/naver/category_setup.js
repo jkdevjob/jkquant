@@ -2,7 +2,7 @@
 // usage: node category_setup.js [--go]      --go 없이는 추가만 해 보고 저장(확인)하지 않는다.
 // 이미 있는 카테고리('경제' 등)는 건드리지 않는다. 없는 이름만 맨 아래에 1단계 카테고리로 추가하고 공개로 둔다.
 const {chromium}=require('playwright');
-const WANT=['IT·과학','사회','정치','국제','연예·방송','스포츠','생활·건강'];
+const WANT=['IT·과학','사회·정치','국제','연예·방송','스포츠','생활·건강']; // 2026-11-18 사용자가 '사회'·'정치'를 '사회·정치'로 합침
 const GO=process.argv.includes('--go');
 (async()=>{
   const b=await chromium.connectOverCDP('http://127.0.0.1:9222');
