@@ -1,0 +1,39 @@
+{
+  "date": "2026-11-17",
+  "strategy": "−4.75% 이하 마감",
+  "strategyVersion": "g_etf_th4.75",
+  "params": {
+    "code": "233740",
+    "th": -4.75
+  },
+  "action": "trade",
+  "pnlPct": -2.7608192457737344,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "KODEX 코스닥150레버리지",
+      "code": "233740",
+      "entryTime": "2026-11-16 15:30 종가",
+      "entryPrice": 3845,
+      "exitTime": "09:00 시가",
+      "exitPrice": 3750,
+      "qty": 0,
+      "pnlPct": -2.7608192457737344,
+      "vtsOk": false,
+      "signal": {
+        "at": "15:21:41",
+        "expectedPrice": 3830,
+        "basePrice": 4325,
+        "dropPct": -11.445086705202312,
+        "th": -4.75,
+        "version": "g_etf_th4.75",
+        "reason": "expected_close_vs_base<=-4.75%"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "15:21 예상 전일 대비 -3.90% (기준 −4.75% 이하 아님) → 매수 없음",
+  "liveVersion": "g_etf_th4.75",
+  "recordedAt": "2026-11-18T03:46:20.717654+09:00"
+}

@@ -1,0 +1,342 @@
+{
+  "ok": true,
+  "date": "2026-11-17",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-11-17",
+    "mainVariant": "baseline",
+    "createdAt": "2026-11-17T06:40:44.016Z",
+    "updatedAt": "2026-11-17T15:05:40.028Z",
+    "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1794927936406,
+        "capturedAt": "2026-11-17T15:05:39.887Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
+      {
+        "id": "close:close30",
+        "scheduledTime": 1794897636406,
+        "capturedAt": "2026-11-17T06:40:46.761Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1794897636406,
+        "capturedAt": "2026-11-17T06:40:45.806Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1794897636406,
+        "capturedAt": "2026-11-17T06:40:43.890Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      }
+    ],
+    "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-11-17",
+        "capturedAt": "2026-11-17T15:05:39.887Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타",
+          "date": "2026-11-17",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 2,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "close:close30",
+        "date": "2026-11-17",
+        "capturedAt": "2026-11-17T06:40:46.761Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "close30",
+          "name": "⑤ 종가 30분 · 코스닥150 레버리지 장 마감 30분 반등(실험)",
+          "date": "2026-11-17",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_c30_th3.75",
+          "params": {
+            "code": "233740",
+            "th": -3.75
+          },
+          "note": "15:00 전일 대비 -3.51% (기준 −3.75% 미만 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:daytrading",
+        "date": "2026-11-17",
+        "capturedAt": "2026-11-17T06:40:45.806Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-11-17",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [
+            {
+              "name": "KODEX 코스닥150레버리지",
+              "code": "233740",
+              "entryTime": "2026-11-16 15:30 종가",
+              "entryPrice": 3845,
+              "exitTime": "09:00 시가",
+              "exitPrice": 3750,
+              "qty": 0,
+              "notional": 0,
+              "pnlPct": -2.7608192457737344,
+              "pnlAmount": 0,
+              "reason": "다음 날 시가 청산",
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "qty": 0,
+                "avg": null
+              },
+              "signal": {
+                "at": "15:21:41",
+                "expectedPrice": 3830,
+                "basePrice": 4325,
+                "dropPct": -11.445086705202312,
+                "th": -4.75,
+                "version": "g_etf_th4.75",
+                "reason": "expected_close_vs_base<=-4.75%"
+              }
+            }
+          ],
+          "open": [],
+          "watched": 1,
+          "exits": 1,
+          "wins": 0,
+          "losses": 1,
+          "winRate": 0,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": -2.7608192457737344,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_etf_th4.75",
+          "params": {
+            "code": "233740",
+            "th": -4.75,
+            "max24h": true
+          },
+          "note": "15:21 예상 전일 대비 -3.90% (기준 −4.75% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-11-17",
+        "capturedAt": "2026-11-17T06:40:43.890Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-11-17",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [
+            {
+              "name": "한화",
+              "code": "000880",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:10",
+                "expectedPrice": 69000,
+                "basePrice": 73700,
+                "expectedGapPct": -6.3772048846675755,
+                "rsi14Prev": 22.786,
+                "qualified": 22,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 73300,
+              "exitTime": "10:00 매도",
+              "exitPrice": 70700,
+              "notional": 0,
+              "pnlPct": -4.186343792633011,
+              "pnlAmount": 0,
+              "reason": "10:00 청산",
+              "exitAt": "2026-11-17T01:00:39.877Z",
+              "exitSource": "exit10"
+            },
+            {
+              "name": "유진테크",
+              "code": "084370",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:10",
+                "expectedPrice": 64300,
+                "basePrice": 67700,
+                "expectedGapPct": -5.022156573116687,
+                "rsi14Prev": 28.459,
+                "qualified": 22,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 66100,
+              "exitTime": "10:00 매도",
+              "exitPrice": 69100,
+              "notional": 0,
+              "pnlPct": 3.8547201210287443,
+              "pnlAmount": 0,
+              "reason": "10:00 청산",
+              "exitAt": "2026-11-17T01:00:41.205Z",
+              "exitSource": "exit10"
+            },
+            {
+              "name": "파두",
+              "code": "440110",
+              "entryTime": "09:00 시가(동시호가)",
+              "qty": 0,
+              "vts": {
+                "ok": false,
+                "msg": "모의투자 꺼짐(설정)",
+                "buyQty": 0,
+                "buyAvg": null,
+                "sellQty": 0,
+                "sellAvg": null
+              },
+              "signal": {
+                "at": "08:58:10",
+                "expectedPrice": 31000,
+                "basePrice": 32600,
+                "expectedGapPct": -4.907975460122705,
+                "rsi14Prev": 28.847,
+                "qualified": 22,
+                "recheck": true,
+                "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+              },
+              "entryPrice": 31750,
+              "exitTime": "10:00 매도",
+              "exitPrice": 32350,
+              "notional": 0,
+              "pnlPct": 1.1873228346456748,
+              "pnlAmount": 0,
+              "reason": "10:00 청산",
+              "exitAt": "2026-11-17T01:00:42.676Z",
+              "exitSource": "exit10"
+            }
+          ],
+          "open": [],
+          "measure": [],
+          "exits": 3,
+          "wins": 2,
+          "losses": 1,
+          "winRate": 66.66666666666666,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": 0.28523305434713614,
+          "watched": 35,
+          "candidates": 22,
+          "entries": 3,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "exitRule": "exit10",
+          "note": "메인 매매일(통과 22종목)"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
