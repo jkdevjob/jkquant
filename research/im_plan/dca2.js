@@ -1,18 +1,23 @@
 // 운영 메뉴 적립·거치 ② (11-18) — 주기(매일 10$ · 매주 50$ · 매달 210$) · 하락 배수(전일 종가 ≤ 200일선이면 × 1.5 · 2 · 3)
 // backtest.html _dcaOne(앱 엔진 그대로 · 앱 기본 USD · 배당 재투자 · 비용 켬) · 값: 돈 가중 연수익(IRR · 세전) · 끝날 청산세(22% · 250만원 · 1350원) 뺀 IRR(낸 돈 1만$·10만$ 규모) · 단위 MDD
 // 실제 USD 2007~ · 합성 SYNUSD_S 1995~ · 5년 창(매달 시작) — 기준(매일 10$ · 배수 1) 대비 같은 창 짝 차. 하락 배수는 낸 돈 합이 달라 IRR 로만 비교.
-// 사용: node dca2.js [out.json]   env: DS=usd,usdsyn
+// 11-18 확인판(DS 에 tqqq · qqq · tqsyn 추가 · VARS=chk 면 D2 와 '무작위 날 2배'(같은 비율) 위약만)
+// 사용: node dca2.js [out.json]   env: DS=usd,usdsyn · VSET=all|chk
 const {open}=require('./imh'); const fs=require('fs');
 const OUT=process.argv[2]||'dca2_out.json', DS=(process.env.DS||'usd,usdsyn').split(',');
-const SETS={usd:{sym:'USD',file:'USD',y0:2007,half:'2014-06-01'},usdsyn:{sym:'USD',file:'SYNUSD_S',y0:1995,half:'2008-06-01'}};
-const VARS=[['base','daily',10,1],['F1','weekly',50,1],['F2','monthly',210,1],['D2','daily',10,2],['D15','daily',10,1.5],['D3','daily',10,3]];
-const PAGE=()=>{ window.DCARUN2=function(tkr,from,to,amt,freq,mul){ const days=Object.keys(M[tkr]).sort().filter(d=>d>=from&&d<=to); const r=_dcaOne(tkr,days,amt,freq,true,mul);
+const SETS={usd:{sym:'USD',file:'USD',y0:2007,half:'2014-06-01'},usdsyn:{sym:'USD',file:'SYNUSD_S',y0:1995,half:'2008-06-01'},tqqq:{sym:'TQQQ',file:'TQQQ',y0:2010,half:'2016-01-01'},qqq:{sym:'QQQ',file:'QQQ',y0:2000,half:'2010-06-01'},tqsyn:{sym:'TQQQ',file:'SYNTQQQ_S',y0:1990,half:'2005-06-01'}};
+const VARS=process.env.VSET==='chk'?[['base','daily',10,1],['D2','daily',10,2],['D2R','daily',10,-2]]:[['base','daily',10,1],['F1','weekly',50,1],['F2','monthly',210,1],['D2','daily',10,2],['D15','daily',10,1.5],['D3','daily',10,3]];
+const PAGE=()=>{ window.DCARUN2=function(tkr,from,to,amt,freq,mul){ const days=Object.keys(M[tkr]).sort().filter(d=>d>=from&&d<=to); let r;
+  if(mul<0){ const MA=_dcaMA(tkr,200); let nd=0,nt=0; for(let i=1;i<days.length;i++){ const pd=days[i-1], pp=M[tkr][pd]?.[C]??0, ma=MA[pd]; if(ma!=null&&pp>0){ nt++; if(pp<=ma) nd++; } } const f=nt?nd/nt:0;
+    let sd=12345; window.__RND=()=>(sd=(sd*1103515245+12345)%2147483648)/2147483648; window.__PF=f; r=_dcaOne(tkr,days,amt,freq,true,-mul); window.__RND=null; }
+  else r=_dcaOne(tkr,days,amt,freq,true,mul);
   const t=d=>(Date.parse(d)-Date.parse(days[0]))/(365.25*864e5), T=t(days[days.length-1]);
   const solve=(cfs,fin)=>{ const f=x=>{ let s=0; for(const [d,a] of cfs) s-=a*Math.pow(1+x,-t(d)); return s+fin*Math.pow(1+x,-T); }; let lo=-0.99,hi=5; if(f(lo)*f(hi)>0) return null; for(let k=0;k<100;k++){ const m=(lo+hi)/2; if(f(lo)*f(m)<=0) hi=m; else lo=m; } return (lo+hi)/2*100; };
   const at=(scale)=>{ const k=scale/r.invested, fin=r.final*k, inv=r.invested*k, g=fin-inv, tax=g>0?Math.max(0,g*1350-250e4)*0.22/1350:0; return solve(r.cf.map(([d,a])=>[d,a*k]),fin-tax); };
   return {inv:r.invested,fin:r.final,irr:solve(r.cf,r.final),at1:at(1e4),at10:at(1e5),mdd:r.mdd,first:days[0],last:days[days.length-1]}; }; };
 (async()=>{ const out={sets:{}}; const q=(a,p)=>{ const b=[...a].filter(x=>x!=null).sort((x,y)=>x-y); return b[Math.floor(p*(b.length-1))]; }, f2=x=>x==null?'-':(x>=0?'+':'')+x.toFixed(2);
   for(const ds of DS){ const S=SETS[ds]; const {pg,close}=await open([{sym:S.sym,file:S.file}]); await pg.evaluate(PAGE);
+    await pg.evaluate(()=>{ let b=_dcaOne.toString(); const a='const dip=(ma!=null&&pp>0&&pp<=ma);'; if(b.split(a).length!==2) throw new Error('inject _dcaOne dip'); b=b.replace(a,'const dip=window.__RND?(window.__RND()<window.__PF):(ma!=null&&pp>0&&pp<=ma);'); (0,eval)('_dcaOne='+b); });
     const all=await pg.evaluate(t=>Object.keys(M[t]).sort(),S.sym), END=all[all.length-1], F0=all[0];
     const starts=[]; for(let y=S.y0;y<=2021;y++) for(let m=1;m<=12;m++){ const s=`${y}-${String(m).padStart(2,'0')}-01`; if(s<F0) continue; const e=`${y+5}-${String(m).padStart(2,'0')}-01`; if(e>END) continue; starts.push([s,e]); }
     const W=[]; for(const [s,e] of starts){ const row={s}; for(const [v,fr,amt,mul] of VARS) row[v]=await pg.evaluate(a=>DCARUN2(...a),[S.sym,s,e,amt,fr,mul]); W.push(row); }
