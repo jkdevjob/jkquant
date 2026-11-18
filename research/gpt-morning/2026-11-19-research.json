@@ -1,0 +1,333 @@
+{
+  "schema": 1,
+  "kind": "gpt-daily-research-evidence",
+  "date": "2026-11-19",
+  "observedAt": "2026-11-19T07:15:09+09:00",
+  "mainSha": "5d96b8031d99ad875e7e556c46ea3da2f3bcf48f",
+  "scalpingDataSha": "b0ce9762cc2ce3f94ac7252682091a1e422cbcfa",
+  "reportBranchHeadBeforeWrite": "54c1f4906ddb82100f070eb4496ca3b47aefe5c8",
+  "reportHistory": {
+    "latestDate": "2026-11-16",
+    "missingDailyReports": [
+      "2026-11-17",
+      "2026-11-18"
+    ],
+    "lastKnownWorkflow": {
+      "runId": 43767097110,
+      "result": "success",
+      "ok": true,
+      "queued": true,
+      "dueAt": "2026-11-16T08:00:00+09:00",
+      "actualDeliveryReceipt": null
+    }
+  },
+  "sourceSnapshot": {
+    "daily1": {
+      "generatedAt": "2026-11-19T07:13:20.243572+09:00",
+      "latestSourceDates": {
+        "opening": "2026-11-06",
+        "daytrading": "2026-11-18",
+        "crypto": "2026-11-17",
+        "soxl": "2026-11-18"
+      },
+      "portfolio": {
+        "days": 48,
+        "trades": 115,
+        "tradeDays": 33,
+        "avgDailyReturnPct": -0.088099986182405,
+        "profitFactor": 0.2702123913077721,
+        "compoundReturnPct": -4.152009059142825,
+        "maxDrawdownPct": -4.184007198028905,
+        "worstDayPct": -0.6680089751561185,
+        "plus1Days": 0
+      },
+      "currentWeekPartial": {
+        "dates": "2026-11-16..2026-11-18",
+        "compoundReturnPct": -0.4581615235702552,
+        "target5GapPct": 5.458161523570255,
+        "official": false
+      }
+    },
+    "nightlyGeneratedAt": "latest stored nightly research is 2026-11-19 early KST; it predates the 07:09 SOXL refresh",
+    "sourceGap": "daily1-shadow.daily[].trades is still 1 on every calendar row although the aggregate trade count is 115 actual strategy trades; do not use per-day trades field as execution count"
+  },
+  "tests": {
+    "G2_openingLedgerParity": {
+      "status": "incomplete",
+      "date": "2026-11-18",
+      "mainVariant": "combo_pb05_e0920",
+      "tradeRows": 7,
+      "operationalTrades": 5,
+      "signalRecords": 71,
+      "ledgerEvents": 162,
+      "executionEvents": 12,
+      "operationalTradesMissingSignalOrVariantEvent": [
+        "010170",
+        "058610"
+      ],
+      "note": "Only 3 of 5 operational trades have a matching signalRecords row and event for the same code/variant. 11/05 has two operational trades whose symbol, entry/exit time/price, PnL and reason match the trade rows; 005380 has no signal record. The trade table is baseline while operationalTrades uses combo_pb05_e0920, so variant metadata must not be conflated.",
+      "rootCause": "The first confirmed mismatch is between operationalTrades and the signal/event ledger. The raw full-universe source for 010170/058610 is absent, so the exact source-versus-stage break is not yet assigned.",
+      "sourceArchiveLatest": "2026-11-06",
+      "collectionFailure": {
+        "runId": 44346816465,
+        "zeroBarCodes": [
+          "069500",
+          "122630",
+          "396500",
+          "403870"
+        ],
+        "exitCode": 2,
+        "backfillResearchSave": "skipped"
+      }
+    },
+    "G3_G7_sessionMin2": {
+      "status": "collecting",
+      "preregistrationCommit": "60b9cd340886f54b536d51f8eb0e23d9c50ab7d6",
+      "registeredAt": "2026-11-12T23:02:51.615642+00:00",
+      "firstEligibleSession": "2026-11-16",
+      "postRegistrationWindow": {
+        "from": "2026-11-16",
+        "to": "2026-11-18",
+        "days": 3,
+        "trades": 9
+      },
+      "baseline": {
+        "avgDailyReturnPct": -1.25,
+        "profitFactor": 0,
+        "compoundReturnPct": -3.7033203125,
+        "mddPct": -3.7033203125,
+        "worstDayPct": -1.25,
+        "plus1Days": 0
+      },
+      "candidate": {
+        "avgDailyReturnPct": -1.25,
+        "profitFactor": 0,
+        "compoundReturnPct": -3.7033203125,
+        "mddPct": -3.7033203125,
+        "worstDayPct": -1.25,
+        "plus1Days": 0
+      },
+      "extraCostPlus010": {
+        "avgDailyReturnPct": -1.35,
+        "profitFactor": 0,
+        "compoundReturnPct": -3.9955710375,
+        "mddPct": -3.9955710375,
+        "worstDayPct": -1.35
+      },
+      "parity": {
+        "exactTradeRows": 8,
+        "totalRowsPerVariant": 9,
+        "oneSubstitution": "2026-11-16 baseline 003490 vs candidate 100790; both -1.25%",
+        "dailyAccountReturnsIdentical": true
+      },
+      "historicalPreRegistration": {
+        "baseline": {
+          "days": 30,
+          "trades": 88,
+          "avgDailyExpectedPct": -0.5323368322,
+          "portfolioReturnPct": -14.8726181577,
+          "profitFactor": 0.4128822369
+        },
+        "candidate": {
+          "days": 30,
+          "trades": 88,
+          "avgDailyExpectedPct": -0.3784739054,
+          "portfolioReturnPct": -10.8486065043,
+          "profitFactor": 0.5527143601
+        },
+        "candidateStress": {
+          "avgDailyExpectedPct": -0.4762516832,
+          "portfolioReturnPct": -13.4365602719,
+          "profitFactor": 0.4802173988
+        }
+      },
+      "gate": {
+        "requiredDays": 20,
+        "requiredTrades": 20,
+        "daysCompleted": 3,
+        "tradesCompleted": 9,
+        "passed": false
+      },
+      "taskMapIssue": "GPT-SCALPING-RESEARCH.md calls this G3; the later preregistered experiment calls the same session_min_2 rule G7. G7 registration date is authoritative for prospective counting; pre-registration history and old walk-forward folds are not counted again."
+    },
+    "G4_soxl": {
+      "status": "collecting",
+      "sourceRefreshRunId": 44226382817,
+      "result": "success",
+      "to": "2026-11-18",
+      "validSessions": 39,
+      "requiredSessions": 40,
+      "baseline": {
+        "trades": 13,
+        "avgTradePnlPct": -0.2923076923,
+        "profitFactor": 0.6984126984,
+        "compoundReturnPct": -3.9061004532,
+        "mddPct": -9.3978706682,
+        "target1Days": 4
+      },
+      "holdout": {
+        "days": 12,
+        "trades": 3,
+        "avgTradePnlPct": 1,
+        "profitFactor": 3.1428571429,
+        "compoundReturnPct": 2.9861224,
+        "mddPct": -1.4
+      },
+      "decision": "one valid session short; holdout only three trades, no promotion"
+    },
+    "G6_closing30": {
+      "status": "not_adopted",
+      "dayBaseline": {
+        "trades": 24,
+        "days": 8,
+        "avgPnlPct": -0.2018,
+        "profitFactor": 0.295,
+        "totalReturnPct": -1.608,
+        "mddPct": -1.938,
+        "worstDayPct": -0.734,
+        "unsettled": 16,
+        "weeklyReturnPct": -0.2277
+      },
+      "dayDip1": {
+        "trades": 27,
+        "days": 9,
+        "avgPnlPct": -0.1869,
+        "profitFactor": 0.387,
+        "totalReturnPct": -1.676,
+        "mddPct": -1.956,
+        "worstDayPct": -0.734,
+        "unsettled": 16,
+        "stressAvgPnlPct": -0.287,
+        "stressPF": 0.232
+      },
+      "overnightBaseline": {
+        "trades": 51,
+        "days": 17,
+        "avgPnlPct": -0.5847,
+        "profitFactor": 0.665,
+        "totalReturnPct": -10.838,
+        "mddPct": -18.388,
+        "worstDayPct": -13.305,
+        "unsettled": 9,
+        "weeklyReturnPct": 0.764
+      },
+      "overnightDip1": {
+        "trades": 51,
+        "days": 17,
+        "avgPnlPct": -0.5562,
+        "profitFactor": 0.684,
+        "totalReturnPct": -10.402,
+        "mddPct": -17.991,
+        "worstDayPct": -13.305,
+        "stressAvgPnlPct": -0.656,
+        "stressPF": 0.639,
+        "unsettled": 9
+      },
+      "latestLedger": {
+        "date": "2026-11-18",
+        "dayExits": 3,
+        "dayAccount3SlotPct": 0.0905,
+        "pathMinutesObserved": 14,
+        "pathMinutesExpected": 24,
+        "overnightOpenPositions": 3,
+        "overnightPnl": null,
+        "priorOvernightExit3SlotPct": 3.4595,
+        "priorOvernightPathObserved": 0,
+        "priorOvernightPathExpected": 1050
+      },
+      "exploratoryUp1": {
+        "days": 17,
+        "trades": 51,
+        "avgPnlPct": 0.759,
+        "profitFactor": 1.775,
+        "totalReturnPct": 12.771,
+        "mddPct": -10.58,
+        "worstDayPct": -4.617,
+        "unsettled": 8,
+        "stressAvgPnlPct": 0.659,
+        "stressPF": 1.637,
+        "adoption": "not pre-registered and under 20 days; no promotion"
+      }
+    },
+    "G8_publicMethod": {
+      "status": "previously_completed_no_repeat",
+      "branch": "research/gpt-public-20261113",
+      "double7QQQ": {
+        "afterTaxCAGR2020OnCapital10000": 4.58005,
+        "afterTaxCAGR2020OnCapital100000": 3.58939,
+        "mdd10000": -13.94531,
+        "mdd100000": -15.15727,
+        "decision": "hold"
+      },
+      "soxlTqqqDouble7": "rejected due to large drawdowns",
+      "volatilityBreakoutK05DayClose": "negative expectancy on all four tested symbols"
+    }
+  },
+  "otherFindings": {
+    "openingResearch": {
+      "to": "2026-11-18",
+      "archiveDays": 42,
+      "baselineTrades": 153,
+      "avgPnlPct": -0.6192933876,
+      "last5AvgPnlPct": -1.211002391,
+      "last20AvgPnlPct": -0.8144719725
+    },
+    "daytrading": {
+      "to": "2026-11-18",
+      "baselineTrades": 100,
+      "avgPnlPct": -0.629103149,
+      "profitFactor": 0.34877179,
+      "portfolioReturnPct": -19.04984331,
+      "livePaperComparison": "3/3 trades, entry/exit/PnL exact match"
+    },
+    "crypto": {
+      "to": "2026-11-17",
+      "archiveDays": 416,
+      "baselineTrades": 211,
+      "avgPnlPct": -0.166045024,
+      "profitFactor": 0.356664425,
+      "compoundReturnPct": -29.69116308,
+      "mddPct": -30.56838888,
+      "holdoutTrades": 71,
+      "holdoutAvgPnlPct": -0.180683764,
+      "holdoutCompoundReturnPct": -12.08905414
+    },
+    "tenbagger": {
+      "asOf": "2026-11-17",
+      "newRegistrations": 1,
+      "entered": 266,
+      "closedArms": 136,
+      "records": 284,
+      "firstTouchRecords": 0,
+      "twentySessionMedians": {
+        "trend200": -26.07,
+        "breakout252": -24.24,
+        "pullback50": -17.5
+      }
+    }
+  },
+  "workflows": {
+    "soxlRerun": {
+      "runId": 44226382817,
+      "result": "success",
+      "url": "https://github.com/jkdevjob/jkquant/actions/runs/44226382817"
+    },
+    "daily1Rerun": {
+      "runId": 44358984019,
+      "result": "success",
+      "url": "https://github.com/jkdevjob/jkquant/actions/runs/44358984019"
+    },
+    "scalpingDataFailure": {
+      "runId": 44346816465,
+      "result": "failure",
+      "url": "https://github.com/jkdevjob/jkquant/actions/runs/44346816465"
+    },
+    "nextExpectedCryptoCollectionKst": "2026-11-19T09:20:00+09:00",
+    "nextExpectedNightlyResearchKst": "2026-11-19T19:10:00+09:00"
+  },
+  "limitations": [
+    "G2 remains incomplete because source bars/snapshot for 010170 and 058610 are missing from the raw full-universe archive; do not infer the source-versus-stage cause.",
+    "G7 post-registration data was reaggregated from the current engine-produced variant-trades.csv; the full original app engine was not independently rerun in this session. Only 3 prospective sessions exist.",
+    "The KRX collection job failed and should only be retried after valid 09:00-10:00 bars are available. No live orders, mock-trading ON flag, broker connection, Claude data mutation, or strategy baseline change was made."
+  ]
+}
