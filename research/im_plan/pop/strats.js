@@ -234,4 +234,17 @@ function kamaS(name,sig,lev,safe,syn,n=10,fast=2,slow=30){ return {name,syn,syms
   if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
 S.SAR_TQ=sarS('파라볼릭 SAR(0.02·0.20) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
 S.KAMA_TQ=kamaS('KAMA(10·2·30) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+// 11-19 시중 매매법 8차 — QQQ 신호(전일 확정) → TQQQ · 밖은 BIL
+//   Double 7s(Connors · Alvarez 2009): 종가 > 200일선이고 그날 종가가 최근 7일 최저면 사고 · 최근 7일 최고면 판다(200일선 아래로 가면 새로 안 삼)
+//   Aroon(25 · Chande 1995): Aroon Up = (25 − 최고가 뒤 지난 날) ÷ 25 × 100 · Down 도 같음 · Up > Down 이면 보유
+function d7S(name,sig,lev,safe,syn,n=7,ma=200){ return {name,syn,syms:[sig,lev,safe],decide:c=>{ const p=c.p; if(p<ma+n) return null;
+  let s=0; for(let j=p-ma+1;j<=p;j++) s+=c.c(sig,j); const m=s/ma, x=c.c(sig,p); let lo=Infinity,hi=-Infinity; for(let j=p-n+1;j<=p;j++){ const v=c.c(sig,j); if(v<lo) lo=v; if(v>hi) hi=v; }
+  let on=!!c.st.on; if(!on){ if(x>m&&x<=lo) on=true; } else if(x>=hi) on=false;
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+function aroonS(name,sig,lev,safe,syn,n=25){ return {name,syn,syms:[sig,lev,safe],decide:c=>{ const p=c.p; if(p<n+1) return null;
+  let hi=-Infinity,lo=Infinity,ih=p,il=p; for(let j=p-n;j<=p;j++){ const h=c.h(sig,j)??c.c(sig,j), l=c.l(sig,j)??c.c(sig,j); if(h>=hi){ hi=h; ih=j; } if(l<=lo){ lo=l; il=j; } }
+  const up=(n-(p-ih))/n*100, dn=(n-(p-il))/n*100, on=up>dn;
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+S.D7_TQ=d7S('Double 7s(200일선·7일) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+S.AROON_TQ=aroonS('Aroon(25) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
 module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};
