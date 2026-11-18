@@ -11,6 +11,13 @@
 - name: 검사 단계 목록 한 곳 · check-before-push 병렬·조각·offline · GitHub 검증 조각 값 검사
   run: node scripts/check-ci-steps.cjs
 
+- name: GPT 사전등록 G7·G8·G9 재현 스크립트 문법 검사
+  run: |
+    python -m py_compile scripts/gpt_research/g07_daytrading_min2.py scripts/gpt_research/g08_daytrading_slope.py scripts/gpt_research/g09_btc_cutoff.py scripts/gpt_research/g09_verify.py
+    node --check scripts/gpt_research/g07_daytrading_parity.mjs
+    node --check scripts/gpt_research/g09_btc_cutoff.mjs
+    python scripts/test_crypto_collection_window.py
+
 - name: 종가 당일/익일 시가 · 모든 그림자 이력 · 시간적 오염방지 검사
   run: |
     node --test tests/closing30-research.test.mjs tests/closing30-budget.test.mjs tests/trade-history.test.mjs tests/paper-trading-settings.test.mjs tests/research-broker.test.mjs
