@@ -2075,3 +2075,12 @@ node research/gpt/record-channel-20261113_byGPT.cjs
 ### 2026-11-16 · 운영 실행 종료·저장 절차
 - 듀얼실제/합성·표본밖, 무매실제/합성·다른기초, DCA재실행실제/합성·다른기초, 기존dca_base원문대조 총7최종배치 모두exit0. 초기DCA두배치exit1은위실패기록그대로이며수정후같은후보/표본으로처음부터성공했다. 자체4도구문법검사·git diff --check 통과. 실제완료/탈락과별도실계좌상태·브로커세금미완료를분리했다.
 - CLI git push --dry-run은HTTPS Username입력수단없음exit128. 연결GitHub push/admin=true를실제확인했으므로권한거부가아니다. pull --rebase=merges 뒤같은결과트리를Git객체/expected_sha조건으로research/daily에만정상전진저장하고실제git fetch로SHA/트리를확인한다. 앱·원본엔진·클로드기록·가이드·공유표수동편집0, main쓰기/PR/배포/실주문0.
+
+
+### 2026-11-19 08:32 KST · 운영 메뉴 · 실행 차단(환경 미충족, 성과 수치 미생성)
+
+- 상태: **구체적 실행 차단 · 미완료**. 오늘의 시험 결과나 성과 수치는 만들지 않았다. 최신 `research/daily`의 `CLAUDE.md`, `GPT_DAILY_GUIDE.md` 전체(0-1~9장), 본 기록, 클로드 `RESEARCH_LOG.md`, `REPLICATION.md`를 읽고 이번 운영 메뉴 범위의 교차 재현 대기를 먼저 확인했다. 이번 범위에서 먼저 재현해야 할 클로드 요청은 R-20261119-1 기대 인플레 다이얼 I1(듀얼 가드), 시한이 지난 R-20261116-1 VR 밴드 20%, R-20261118-1 적립·거치 하락 배수 2다. 어느 것도 오늘 재현했다고 표시하지 않는다.
+- 브랜치 확인: GitHub compare 결과 `main` 최신 `6a4fdd9ec2f8ef4a95ca1ccedd0c22dec6b1de31`, `research/daily`는 main보다 1커밋 뒤·218커밋 앞이며 상태 `diverged`. 컨테이너에서 `git clone --branch research/daily --single-branch https://github.com/jkdevjob/jkquant.git /tmp/jkquant`를 시도했으나 `Could not resolve host: github.com`로 실패했다. 따라서 로컬 `git fetch`/fast-forward/main 병합/실제 CLI push-rebase는 수행·검증할 수 없었다.
+- 환경 관문: Node `v22.16.0`은 기준(18+)을 통과했다. 그러나 `node -e "require('playwright').chromium.launch()..."`는 `Cannot find module 'playwright'`로 실패했고, 지정 `https://jkquant.pages.dev/api/quote?symbol=SOXL...` 요청도 DNS 오류 `Could not resolve host: jkquant.pages.dev`로 실패했다. 즉 실제 Chromium·시세 연결·저장소 clone/fetch 중 필수 조건이 충족되지 않았다.
+- 이에 따라 `fetch.sh`, `synsplit.js`, `planrule/fetch.sh`, 앱 원본 엔진, 독립 재현·후보 시험을 실행하지 않고 중단했다. **재현 실패가 아니라 실행 차단**이며, 숫자·MDD·후보 판정·실투자 권유는 전부 미생성이다. `REPLICATION.md`와 클로드 기록은 수정하지 않았다. 앱/main/엔진 수정·PR·배포·실주문은 없었다.
+- 재개 순서: 네트워크/DNS가 복구되고 `research/gpt/run.cjs --environment`에서 실제 Chromium 실행이 확인된 뒤 `git fetch origin research/daily main` → 연구 브랜치 fast-forward → `origin/main` 병합 → 최신 기준으로 자료 재수집한다. 먼저 R-20261119-1을 동일 자료 끝·앱 엔진으로 실제/합성/표본 밖 네 규모·이웃·위약·1일 지연까지 독립 검증하고, 이어 R-20261116-1 및 R-20261118-1의 미완료 재현을 처리한다. 그 뒤에만 오늘의 무매 후보와 차례 전략을 결과 전 사전등록하여 실행한다. 현재 저장소가 main보다 뒤인 상태를 숨기지 않는다.
