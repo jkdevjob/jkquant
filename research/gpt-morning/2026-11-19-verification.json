@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "kind": "gpt-morning-report-verification",
+  "date": "2026-11-19",
+  "observedAt": "2026-11-19T07:17:11+09:00",
+  "report": {
+    "path": "research/gpt-morning/2026-11-19.json",
+    "commit": "23a2d5385ee35146c931de7b797cfa3fa34163d7",
+    "blobSha": "e8110a0fd30148810497487915db481770fda4e6",
+    "schemaValidation": "success",
+    "tabs": [
+      "today",
+      "opening",
+      "daytrading",
+      "crypto",
+      "soxl",
+      "closing30",
+      "tenbagger",
+      "duel"
+    ]
+  },
+  "latest": {
+    "path": "research/gpt-morning/latest.json",
+    "commit": "520eef63eafc19a79eda4806230e252772714a64",
+    "blobSha": "e8110a0fd30148810497487915db481770fda4e6",
+    "identicalToDateFile": true,
+    "previousDate": "2026-11-16"
+  },
+  "workflow": {
+    "runId": 44409995411,
+    "url": "https://github.com/jkdevjob/jkquant/actions/runs/44409995411",
+    "conclusion": "success",
+    "validationStep": "success",
+    "reservationStep": "success",
+    "workerResponse": {
+      "ok": true,
+      "queued": true,
+      "duplicate": null,
+      "dueAt": "2026-11-18T23:00:00.000Z",
+      "dueAtKst": "2026-11-19T08:00:00+09:00",
+      "delivery": {
+        "push": null,
+        "telegram": null
+      }
+    }
+  },
+  "priorDelivery": {
+    "lastKnownRunId": 43767097110,
+    "workflowResult": "success",
+    "reservationOk": true,
+    "queued": true,
+    "actualDeliveryReceipt": {
+      "push": null,
+      "telegram": null
+    },
+    "missingDailyReports": [
+      "2026-11-17",
+      "2026-11-18"
+    ]
+  },
+  "currentData": {
+    "mainSha": "5d96b8031d99ad875e7e556c46ea3da2f3bcf48f",
+    "scalpingDataSha": "b0ce9762cc2ce3f94ac7252682091a1e422cbcfa",
+    "daily1Run": {
+      "id": 44358984019,
+      "result": "success"
+    },
+    "soxlRun": {
+      "id": 44226382817,
+      "result": "success"
+    },
+    "krxCollectionRun": {
+      "id": 44346816465,
+      "result": "failure",
+      "reason": "4 of 100 codes returned zero 09:00-10:00 bars; exit code 2; backfill/research/save skipped"
+    }
+  },
+  "remaining": {
+    "actualDelivery": "pending until 08:00 KST; no push/Telegram receipt exists at this observation time",
+    "krx": "retry only after valid current-session bars exist; do not rerun before market open",
+    "crypto": "next scheduled completed-day collection 09:20 KST; 11/18 is not yet in research latest",
+    "nightly": "next scheduled research run 19:10 KST; current nightly snapshot predates the 07:09 SOXL refresh",
+    "researchGates": "G2 source/event root cause unresolved; G7 prospective 3/20 days and 9/20 trades; G4 SOXL 39/40 sessions; G6 unsettled positions remain"
+  },
+  "actions": "No direct external message was sent. No live order, mock-trading ON, broker connection, baseline change, or Claude mutation was performed."
+}
