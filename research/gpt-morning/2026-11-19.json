@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "date": "2026-11-19",
+  "preparedAt": "2026-11-19T07:16:08+09:00",
+  "mainSha": "5d96b8031d99ad875e7e556c46ea3da2f3bcf48f",
+  "summary": "SOXL 수집·백테스트와 daily1 재계산 성공. 시초가 운영 장부는 신호 이벤트 2/5 누락, session_min_2 등록 후 3일/9건은 기준 대비 개선 없음. SOXL 39/40세션, 종가 미정산 유지. baseline·주문 변경 없음.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "blocked",
+      "findings": "main 5d96b8, scalping-data b0ce97. daily1(07:13 KST) 48일/115거래, 평균 일수익 −0.0881%, PF0.270, 누적 −4.152%, MDD−4.184%, 최악일 −0.668%, +1%일 0. 주간 11/16~18은 부분 복리 −0.458%(+5%까지 5.458%p)이나 시초가 원천은 11/06, BTC는 11/17까지만 확정되어 공식 주간값 아님. 포트폴리오 daily[].trades가 모든 날짜 1로 남는 집계 오류도 지속. 보고 브랜치 최신 일자는 11/16이며 11/17·18 보고 파일은 없음.",
+      "nextTest": "09:00~10:00 KRX 분봉이 완성된 뒤 수집 실패 원인을 재확인하고 full-universe 시초가 아카이브를 복구한다. 그 후 daily1/nightly를 재생성하고 오늘 Worker의 예약과 실제 발송 영수증을 분리 확인한다. 누락일을 0%로 채우거나 과거 보고를 소급 전송하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/actions/runs/44346816465",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-11-19-research.json"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "blocked",
+      "findings": "야간 시초가 연구는 11/18까지 42일·baseline 153건, 평균 거래 −0.619%, 최근5건 −1.211%, 최근20건 −0.814%. 반면 daily1 OOS는 11/06에서 멈춘 20일/16건, 평균 −0.539%, PF0.085, MDD−10.288%, 최악일 −2.026%, +1%일 0. 11/18 운영 장부 5건 중 010170·058610은 같은 variant의 signalRecords/event가 없다. 11/05도 두 거래의 가격·손익은 일치하지만 005380 신호 기록이 빠졌다. full-universe 원천은 11/06까지만 있고 수집 run 44346816465는 4/100 종목 분봉 0개로 실패해 백필·연구·저장을 건너뛰었다.",
+      "nextTest": "010170·058610의 원본 Worker 시세/신호 스냅샷을 확보해 시세→단계→장부→야간 사본을 순서대로 대조한다. 09:00~10:00 유효 분봉 수집 후에만 full-universe 아카이브를 갱신한다. 누락 신호를 추정 생성하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/opening-history/2026-11-18.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/opening-history/2026-11-05.json",
+        "https://github.com/jkdevjob/jkquant/blob/main/scripts/daily1_shadow_lab.py",
+        "https://github.com/jkdevjob/jkquant/actions/runs/44346816465"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "verified",
+      "findings": "11/18 운영 모의장부 3건은 모두 −1.25% 손절, 3슬롯 일수익 −1.25%; 연구 재구성은 3/3 종목·진입·청산·손익이 정확히 일치했다. 통합 OOS 32일/95건, 평균 −0.244%, PF0.622, 누적 −7.595%, MDD−8.602%, 최악일 −1.05%, +1%일 3. 독립 vwap_slope_0.2는 94건 평균 −0.399%, PF0.548, 계좌 −11.865%로 직전 85건/−0.344%/PF0.599/−9.393%보다 악화. G7 session_min_2 등록 후 11/16~18은 3일/9건, baseline과 일별 −1.25% 동일, 정확 일치 8/9(대체 종목도 −1.25%). PF0, 누적/MDD −3.703%; +0.10%p 비용 스트레스 누적 −3.996%. 20일 관문 미달.",
+      "nextTest": "G7의 사전등록일(11/13) 이후 표본만 계속 누적한다. 3/20일·9/20건이며 과거 30일/88건과 기존 walk-forward는 전향 표본으로 세지 않는다. 최소 17개 추가 매매일, 비용 스트레스와 원본 엔진 재검증 전 후보·baseline을 승격하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daytrading-live/2026/2026-11-18.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daytrading-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daytrading-research/variant-trades.csv",
+        "https://github.com/jkdevjob/jkquant/blob/60b9cd340886f54b536d51f8eb0e23d9c50ab7d6/docs/research/G7-20261113-preregistration.md"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "collecting",
+      "findings": "통합 BTC OOS 45일/1거래, 평균 일수익 −0.0086%, PF0, 누적/MDD −0.388%, 최악일 −0.388%, +1%일 0; 마지막 확정 원천은 11/17. 독립 baseline은 211건 평균 −0.166%, PF0.357, 누적 −29.691%, MDD−30.568%; holdout 71건 평균 −0.181%, 누적 −12.089%. 11/18은 이전 실행에서 too_few_bars였고 완료 UTC일 자료가 아직 연구 latest에 반영되지 않아 무매매 0%로 계산하지 않았다.",
+      "nextTest": "오늘 09:20 KST 예정 수집에서 완료된 11/18 UTC 일자의 5분봉 288개와 겹침 백필을 검증한 뒤 연구를 재생성한다. 완전 일봉·수수료·슬리피지 확인 전 전략 변경 금지.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/crypto-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/crypto/KRW-BTC/5m/2026-11-17.json.gz",
+        "https://github.com/jkdevjob/jkquant/blob/main/.github/workflows/crypto-research.yml"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "verified",
+      "findings": "SOXL 수집/백테스트 재실행 run 44226382817 성공, 11/18 ET까지 39 유효 세션(40세션 관문까지 1회 부족). 독립 baseline 13건 평균 −0.292%, PF0.698, 누적 −3.906%, MDD−9.398%, +1%일 4/39. holdout 12일/3건 평균 +1.00%, PF3.143, 누적 +2.986%, MDD−1.40%지만 표본 3건뿐. 통합 daily1은 35일/3건, 누적 +2.060%, PF999, MDD0, +1%일 1로 보이지만 3건만으로 안정성은 입증되지 않는다.",
+      "nextTest": "40번째 유효 세션까지 현재 규칙을 고정해 관측하고, 도달 후 사전 고정한 30/10 시간순 검증과 +0.10%p 비용 스트레스를 실행한다. 현재 baseline은 유지한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/actions/runs/44226382817"
+      ]
+    },
+    {
+      "tab": "closing30",
+      "status": "collecting",
+      "findings": "11/18 baseline 당일 3건 청산의 3슬롯 수익은 +0.0905%지만 경로 관측 14/24분으로 MFE/MAE 불완전. 익일 3포지션은 미청산·PnL null이며, 11/17 익일군은 +3.4595%/3슬롯이나 경로 0/1050분. baseline 당일 24건/8일 평균 −0.202%, PF0.295, MDD−1.938%, 최악일 −0.734%, 미정산16; G6 dip_1은 27건/9일 평균 −0.187%, PF0.387, 누적 −1.676%, MDD−1.956%, 스트레스 PF0.232로 미달. 익일 baseline 51건/17일 PF0.665, MDD−18.388%, 최악일 −13.305%, 미정산9. 탐색 up_1은 17일/51건 양수지만 미정산8·20일 미달로 채택하지 않는다.",
+      "nextTest": "미정산 16/9건과 누락된 경로 관측을 해결하고, G6 등록 이후 공통 날짜만 baseline과 비교한다. +0.10%p 스트레스·3슬롯 계좌·원본 체결 일치가 충족되기 전 새 shadow 승격 금지.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/closing30/2026-11-18.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/closing30/2026-11-17.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/main/GPT-SCALPING-RESEARCH.md"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "최신 기준일 11/17, 신규 등록 1건, 진입 266건, 종료된 arm 136개, 관측 레코드 284개. 20세션 수익 중앙값은 trend200 −26.07%(16개 중 14개 음수), breakout252 −24.24%(16개 중 12개 음수), pullback50 −17.50%(3/3 음수); 2x/5x/10x 첫 도달 기록은 0. 11/12의 trend200 −30.55%, breakout252 −26.81%보다 덜 나쁘지만 아직 수익성 증거가 아니다.",
+      "nextTest": "등록된 코호트의 40/60세션까지 전향 추적하고 첫 2x/5x/10x 도달·비용 후 순수익을 갱신한다. 중간 성과로 새 패턴을 고르거나 운영 보유기간을 바꾸지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/2026-11-16.json"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "blocked",
+      "findings": "11/18 Claude 원장은 읽기 전용으로 확인했으나 종목별 당일 체결·공통 비용·같은 자금의 짝지어진 결과가 없어 GPT 대결 순위를 산출할 수 없다. G8 공개 매매법 결과는 재검토 완료: Double7 QQQ 2020+ 세후 CAGR은 $10k 4.58%, $100k 3.59%, MDD −13.95%/−15.16%로 전체·롤링·보유시간 관문 미달. SOXL/TQQQ Double7은 큰 낙폭, 변동성 돌파 k=0.5 당일청산은 4종목 모두 음의 기대값으로 기존 판정을 유지한다.",
+      "nextTest": "동일 날짜·동일 자금·동일 비용·전체 체결 로그가 존재할 때만 대결 비교를 재개한다. Claude 데이터/전략은 수정하지 않고 G8의 같은 후보·구간은 반복 실행하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/claude-live/2026-11-18.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-public-20261113/research/gpt-morning/experiments/G8-20261113/summary_byGPT.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-public-20261113/research/gpt-morning/experiments/G8-20261113/preregistration_byGPT.md"
+      ]
+    }
+  ]
+}
