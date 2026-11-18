@@ -312,8 +312,17 @@ async function igExisting(item) {
 
 async function publishInstagram(item) {
   const videoUrl = await mediaUrl(item);
-  const head = await fetch(videoUrl, { method: "HEAD" });
-  if (!head.ok) throw new Error(`영상 공개 주소 접근 실패(HTTP ${head.status}): ${videoUrl}`);
+  // jsDelivr 는 새 커밋의 큰 파일을 처음 가져올 때 잠깐 403 을 줄 때가 있다(11/18 09:00 b05). 앞 1바이트를 받아 보며 최대 5번(약 4분) 다시 시도.
+  let probe = 0;
+  for (let i = 0; i < 5; i++) {
+    if (i) await sleep(15000 * i);
+    const r = await fetch(videoUrl, { headers: { Range: "bytes=0-0" } }).catch(() => null);
+    probe = r ? r.status : 0;
+    if (r) await r.arrayBuffer().catch(() => {});
+    if (probe >= 200 && probe < 300) break;
+    console.log(`  영상 공개 주소 응답 ${probe} — ${i < 4 ? "다시 시도" : "포기"}`);
+  }
+  if (!(probe >= 200 && probe < 300)) throw new Error(`영상 공개 주소 접근 실패(HTTP ${probe}): ${videoUrl}`);
   await igReady();
   const uid = igUid();
   // 1) 컨테이너 만들기
