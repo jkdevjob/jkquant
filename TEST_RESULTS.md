@@ -1,5 +1,14 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-19 · 연구(클로드) 아침 루틴 — R50
+
+- 11/18 결과(scalping-data 09bc51ac · `claude-live/2026-11-18.json` · `claude-lab/review/2026-11-18.json` · `latest.json` 04:26)
+  - ① close:opening settled · 통과 3 < 7 · ② close:daytrading settled · 15:21 +4.35% · ⑤ close:close30 settled · 15:00 +3.95% — 셋 다 매매 없음.
+  - ③ `nextSignals` KRW-ETH basedOn 11/17 · 248.0만 < 282.0만 → 쉼 · ④ `nextSignal` basedOn 11/17 · $49.07 · IBS 0.79 · 50일 평균 $107.5 아래 → none.
+- R50 `r50_turn_of_month.py`(사전 등록 08e3b1f0): SPY t 0.70 · QQQ t 0.86 · TQQQ t 1.47(MDD −31.1%) · SOXL t 0.84(MDD −39.4%) → ① 모두 X → 기록만. 장부 날짜는 사전 등록대로(2025-12-31 → 2026-01-07 등).
+- 11/19 리포트: REPORT19
+- 미확인: ④ 11/18 미국장 반영(07:30 계산) · R42 매매 없음 · ③ 봇 실거래 기록 없음(사용자 서버 설치 전).
+
 ## 2026-11-18 · 연구(클로드) 아침 루틴 — R49
 
 - 11/17 결과(`latest.json` · `opening-gapdown-live/2026-11-17.json` · `claude-live/2026-11-17.json`)
