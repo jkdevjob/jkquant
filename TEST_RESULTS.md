@@ -6,7 +6,7 @@
   - ① close:opening settled · 통과 3 < 7 · ② close:daytrading settled · 15:21 +4.35% · ⑤ close:close30 settled · 15:00 +3.95% — 셋 다 매매 없음.
   - ③ `nextSignals` KRW-ETH basedOn 11/17 · 248.0만 < 282.0만 → 쉼 · ④ `nextSignal` basedOn 11/17 · $49.07 · IBS 0.79 · 50일 평균 $107.5 아래 → none.
 - R50 `r50_turn_of_month.py`(사전 등록 08e3b1f0): SPY t 0.70 · QQQ t 0.86 · TQQQ t 1.47(MDD −31.1%) · SOXL t 0.84(MDD −39.4%) → ① 모두 X → 기록만. 장부 날짜는 사전 등록대로(2025-12-31 → 2026-01-07 등).
-- 11/19 리포트: REPORT19
+- 11/19 리포트: 실행 44409501791 · `{"ok":true,"id":"report:2026-11-19","subs":1,"sent":[201],"telegram":{"result":"sent","tries":1}}` 08:00:02.
 - ④ 11/18 미국장 반영: `latest.json` 07:22 · `nextSignal` basedOn 11/18 · $49.26 · IBS 0.51 · downRun 0 · 50일 평균 $106.0 → none(오늘 밤 쉼).
 - 미확인: R42 매매 없음 · ③ 봇 실거래 기록 없음(사용자 서버 설치 전).
 
