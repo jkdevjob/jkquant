@@ -57,24 +57,23 @@
   #vignette { position:absolute; inset:0; pointer-events:none;
               background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.35) 100%); }
 
-  /* ── 스킨 "brief"(매니악 브리핑): 남색 브리핑 보드, 반듯한 고딕, 호박색·하늘색 강조 ── */
-  body.skin-brief { background:#0b111c; }
-  .skin-brief #desk { background:radial-gradient(ellipse at 50% 18%, #1c2c47 0%, #0f1828 58%, #070c15 100%); }
+  /* ── 스킨 "brief"(매니악 브리핑) v2(11/19 "남색 맘에 안 들어 전체적으로 다 바꿔"): 주황 배경 + 흰 보드, 검정 고딕, 주황·노랑 강조 ── */
+  body.skin-brief { background:#ff6a2b; }
+  .skin-brief #desk { background:radial-gradient(ellipse at 50% 20%, #ff8f4d 0%, #ff6a2b 55%, #e8521a 100%); }
   .skin-brief #binding, .skin-brief .page .grain, .skin-brief .page .rules, .skin-brief .page .margin,
   .skin-brief .page .holes, .skin-brief .stain { display:none; }
-  .skin-brief .page { background:linear-gradient(180deg,#14223a 0%,#0f1a2d 100%); border-radius:30px;
-                      box-shadow:0 30px 80px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.07); }
-  .skin-brief .page .light { background:linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,0) 32%); }
+  .skin-brief .page { background:#ffffff; border-radius:34px; box-shadow:0 24px 60px rgba(120,30,0,.35); }
+  .skin-brief .page .light { background:none; }
   .skin-brief .f-bold { font-family:'Sans'; font-weight:800; letter-spacing:-1px; }
   .skin-brief .f-reg  { font-family:'Sans'; font-weight:700; }
   .skin-brief .f-pen  { font-family:'Sans'; font-weight:400; }
-  .skin-brief .c-ink { color:#f2f5fa; } .skin-brief .c-red { color:#ffb340; } .skin-brief .c-gray { color:#8fa1ba; } .skin-brief .c-blue { color:#5ec8ff; }
-  .skin-brief .tape { font-family:'Sans'; font-weight:800; font-size:40px; color:#0f1a2d; background:#ffb340; border-radius:999px;
-                      padding:12px 32px 10px; letter-spacing:1px; transform:none; mix-blend-mode:normal; clip-path:none; }
-  .skin-brief .sticky { background:#1b2c49; border-left:10px solid #5ec8ff; border-radius:14px; box-shadow:0 16px 40px rgba(0,0,0,.45); }
+  .skin-brief .c-ink { color:#15171c; } .skin-brief .c-red { color:#ff4d1f; } .skin-brief .c-gray { color:#7a7f8a; } .skin-brief .c-blue { color:#1f6fff; }
+  .skin-brief .tape { font-family:'Sans'; font-weight:800; font-size:40px; color:#ffffff; background:#15171c; border-radius:999px;
+    padding:12px 34px; transform:none; box-shadow:none; }
+  .skin-brief .sticky { background:#fff4cc; border-left:10px solid #ff4d1f; border-radius:14px; box-shadow:0 12px 30px rgba(0,0,0,.12); }
   .skin-brief .sticky::before { display:none; }
-  .skin-brief .hl { background:rgba(255,179,64,.26); mix-blend-mode:normal; }
-  .skin-brief #vignette { background:radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 60%, rgba(0,0,0,.45) 100%); }
+  .skin-brief .hl { background:rgba(255,214,10,.55); mix-blend-mode:multiply; }
+  .skin-brief #vignette { background:none; }
 
   /* ── 고정 제목 띠(band): 표지 다음부터 화면 위에 두 줄 제목을 계속 띄움(쇼츠 '뉴스 템플릿' 패턴) ── */
   #stage { position:absolute; inset:0; transform-origin:50% 0; }
@@ -83,7 +82,7 @@
   #band::after { content:""; position:absolute; left:0; right:0; bottom:0; height:8px; background:var(--band-line, #ffe14d); }
   #band .bl { font-family:'Sans'; font-weight:800; letter-spacing:-0.03em; color:#fff; line-height:1.16; white-space:nowrap; }
   #band .bl .k { color:var(--band-k, #ffe14d); } #band .bl .r { color:#ff4a3d; }
-  .skin-brief #band { background:#070c15; }
+  .skin-brief #band { background:#15171c; --band-k:#ffd60a; --band-line:#ff6a2b; }
   .mascot { position:absolute; visibility:hidden; transform-origin:50% 100%; }
   .mascot img { width:100%; display:block; filter:drop-shadow(0 8px 10px rgba(0,0,0,.25)); }
   .mascot .mbub { position:absolute; bottom:100%; right:40%; margin-bottom:-6px; background:#fff; color:#16130f; border:5px solid #16130f; border-radius:30px;
@@ -106,7 +105,7 @@
   const W = 988, H = 1760;
   const BRIEF = D.skin === "brief";
   if (BRIEF) document.body.classList.add("skin-brief");
-  const COLORS = BRIEF ? { ink:"#f2f5fa", red:"#ffb340", gray:"#8fa1ba", blue:"#5ec8ff" }
+  const COLORS = BRIEF ? { ink:"#15171c", red:"#ff4d1f", gray:"#7a7f8a", blue:"#1f6fff" }
                        : { ink:"#22304a", red:"#c0392b", gray:"#77797d", blue:"#2c5aa0" };
 
   // ── 결정적 난수 ──
@@ -269,7 +268,7 @@
         .replace(/\[([^\]]+)\]/g, '<span class="k">$1</span>').replace(/\{([^}]+)\}/g, '<span class="r">$1</span>');
       bandEl.appendChild(d);
     });
-    if (BRIEF){ bandEl.style.setProperty("--band-k", "#ffb340"); bandEl.style.setProperty("--band-line", "#ffb340"); }
+    if (BRIEF){ bandEl.style.setProperty("--band-k", "#ffd60a"); bandEl.style.setProperty("--band-line", "#ff6a2b"); }
     if (BAND.accent) bandEl.style.setProperty("--band-k", BAND.accent);
     bandEl.style.visibility = "hidden"; bandEl.style.display = "flex";
     // 넘치면 줄 단위로 줄임

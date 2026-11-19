@@ -27,8 +27,8 @@ module.exports = { RED, YEL, INK, T, t, VOICE, cover, table, writeNote, mascotEn
 // o = { skin:"rn"|"mb", t1, t2, t2color?, sub?, cols:[x..], head:[..], rows:[[..]], hi: 강조 줄 번호, note?, foot?, size? }
 function sheetCover(o) {
   const MB = o.skin === "mb";
-  const INKc = MB ? "#f4f7fb" : "#16130f", ACC = MB ? "#ffb340" : "#d7261e", HEADBG = MB ? "#5ec8ff" : "#16130f", HEADFG = MB ? "#0f1a2d" : "#ffffff";
-  const HIBG = MB ? "#ffb340" : "#ffe14d", HIFG = MB ? "#0f1a2d" : "#16130f", GRAY = MB ? "#8fa1ba" : "#5d554c";
+  const INKc = MB ? "#15171c" : "#16130f", ACC = MB ? "#ff4d1f" : "#d7261e", HEADBG = MB ? "#15171c" : "#16130f", HEADFG = "#ffffff"; // 매니악 v2(11/19): 흰 보드 + 검정·주황
+  const HIBG = MB ? "#ffd60a" : "#ffe14d", HIFG = "#16130f", GRAY = MB ? "#7a7f8a" : "#5d554c";
   const size = o.size || 62, step = o.step || Math.round(size * 1.55), y0 = o.y0 || 520;
   const items = [
     T("t1", o.t1, 70, 190, o.t1size || 84, { color: INKc }),
