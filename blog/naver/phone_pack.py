@@ -4,12 +4,16 @@
 실험 E6(2026-11-17 사용자 승인 "두개 다 해보자"): 서버 자동 게시 대신 사용자가 휴대폰 앱으로 직접 올려,
 검색 누락이 '올리는 방법' 때문인지 가린다. 서버는 이 기간에 네이버에 로그인하지 않는다.
 
-usage: python3 -I blog/naver/phone_pack.py <post.json> <출력.txt>
+usage: python3 -I blog/naver/phone_pack.py <post.json> <출력.txt> [묶음.zip]
 출력: 제목 · 카테고리/주제 · 본문(이미지 넣을 자리 표시) · 태그 한 줄. 이미지 파일은 assets/<날짜>/ 에 있다.
+묶음.zip 을 주면 원고 txt 와 이미지(txt 에 적힌 이름 그대로)를 폴더 하나로 압축한다
+(2026-11-20 사용자 "한번에 다운받게 압축해" · "앞으로도 압축해서 보내").
 """
 import json
+import os
 import re
 import sys
+import zipfile
 
 
 def main():
@@ -60,10 +64,25 @@ def main():
     # 운영자의 경험과 관점을 더한다. 이 부분은 사용자만 쓸 수 있다(대신 지어내지 않는다) — 안 쓰면 그냥 넘어간다.
     if not slot:
         L.append(SLOT); L.append('')
-    L.append('■ 태그 (발행 화면 태그 칸에 하나씩)')
+    # 2026-11-20 사용자 "■ 태그 (발행 화면 태그 칸에 하나씩) 요건 쓰지마" — 머리말 없이 태그 줄만 둔다
     L.append(' '.join('#' + t for t in d.get('tags', [])))
     open(out, 'w', encoding='utf-8').write('\n'.join(L) + '\n')
     print('OK', out, 'images', n, 'chars', sum(len(x) for x in L))
+    if len(sys.argv) > 3:
+        zpath = sys.argv[3]
+        base = os.path.basename(src)[:-5]                      # 2026-11-20_silson-5gen
+        date, slug = base[:10], base[11:]
+        assets = os.path.join(os.path.dirname(os.path.abspath(src)), 'assets', date)
+        files = [b['file'] for b in d['blocks'] if b.get('t') == 'img']
+        missing = [f for f in files if not os.path.exists(os.path.join(assets, f))]
+        if missing:
+            sys.exit('missing images: ' + ', '.join(missing))
+        top = f'naver_{date}'
+        with zipfile.ZipFile(zpath, 'w', zipfile.ZIP_DEFLATED) as z:
+            z.write(out, f'{top}/원고_{slug}.txt')
+            for f in files:
+                z.write(os.path.join(assets, f), f'{top}/{f}')
+        print('ZIP', zpath, 'files', len(files) + 1, 'bytes', os.path.getsize(zpath))
 
 
 if __name__ == '__main__':
