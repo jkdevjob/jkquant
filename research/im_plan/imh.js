@@ -70,7 +70,7 @@ const SETUP=`(()=>{
     const IRX=window.__IRX||{}; const irxDates=Object.keys(IRX).sort();
     let lastIrx=0, li=0; const irxAt=d=>{ while(li<irxDates.length&&irxDates[li]<=d){ lastIrx=IRX[irxDates[li]]; li++; } return lastIrx; };
     let prevD=null;
-    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.lsp=o.lsp||0; __H.rowsT=o.rowsT||0; __H.rowsTx=o.rowsTx||0; __H.floor=!!o.floor; __H.ye=o.ye||null; __H.tpLoc=!!o.tpLoc; __H.tpHyb=o.tpHyb||0; __H.qMode=o.qMode||null; __H.rowsMin=o.rowsMin||0; __H.boost=o.boostFn||null; __H.pauseBuy=o.pauseBuyFn||null; if(o.yp) __H.yp=[];
+    __H={eqs:[]}; if(o.rows!=null) __H.rows=o.rows; __H.lsp=o.lsp||0; __H.rowsT=o.rowsT||0; __H.rowsTx=o.rowsTx||0; __H.floor=!!o.floor; __H.ye=o.ye||null; __H.tpLoc=!!o.tpLoc; __H.tpHyb=o.tpHyb||0; __H.qMode=o.qMode||null; __H.rowsMin=o.rowsMin||0; __H.boost=o.boostFn||null; __H.pauseBuy=o.pauseBuyFn||null; if(o.tpAt2Fn) __H.tpAt=o.tpAt2Fn; if(o.divsAt2Fn) __H.divsAt=o.divsAt2Fn;   /* 11-20 Z1·Z2: 기존 tpAt(별%·기울기·exitMul 함께) · divsAt 고리에 함수로 */ if(o.yp) __H.yp=[];
     if(o.xfer){ const X=o.xfer; let F=1, yr=null, pend=false; __H.xlog=[];   // 조합 입출금(11-06): X={mode:'year'|'oneway'|'band'|'oneband', w, b, pl:{날짜:플랜값}, fee} — 플랜 쪽은 비례 배율 F 로(플랜은 사이클이 없어 비례 근사가 맞다)
       __H.xfer=(d,cash)=>{ const P0=X.pl[d]; if(!(P0>0)) return 0; const P=P0*F, y=d.slice(0,4); if(yr===null) yr=y; else if(y!==yr){ yr=y; if(X.mode==='year'||X.mode==='oneway') pend=true; }
         const t=cash+P, wa=cash/t; let x=cash-t*X.w;   // x>0: 무매 → 플랜

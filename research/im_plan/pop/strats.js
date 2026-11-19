@@ -247,4 +247,32 @@ function aroonS(name,sig,lev,safe,syn,n=25){ return {name,syn,syms:[sig,lev,safe
   if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
 S.D7_TQ=d7S('Double 7s(200일선·7일) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
 S.AROON_TQ=aroonS('Aroon(25) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+// 11-20 시중 매매법 9차 — QQQ 신호(전일 확정) → TQQQ · 밖은 BIL · 지표는 그날까지의 값으로만
+//   DMI(Wilder 1978 · 14): +DI14 > −DI14 면 보유 · 변형 DMIX: 그리고 ADX14 ≥ 20(추세 강도 · Wilder 해석)
+//   Keltner 원판(Keltner 1960): 10일 대표가격((고+저+종)/3) 평균 ± 10일 평균 폭(고−저) · 종가 > 위 띠면 사고 < 아래 띠면 판다
+//   KELTR(Raschke): EMA20(종가) ± 2×ATR10(Wilder) · 위 띠 위면 사고 가운데 선 아래면 판다
+function dmiS(name,sig,lev,safe,syn,n=14,adxMin=0){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.dm){ const N=c.cal.length, H=[],L=[],C=[]; for(let j=0;j<N;j++){ C.push(c.c(sig,j)); H.push(c.h(sig,j)??C[j]); L.push(c.l(sig,j)??C[j]); }
+    const pdi=new Array(N).fill(null), mdi=new Array(N).fill(null), adx=new Array(N).fill(null); let sTR=0,sP=0,sM=0,cnt=0,ad=null,dxs=[];
+    for(let j=1;j<N;j++){ const up=H[j]-H[j-1], dn=L[j-1]-L[j], pdm=(up>dn&&up>0)?up:0, mdm=(dn>up&&dn>0)?dn:0, tr=Math.max(H[j]-L[j],Math.abs(H[j]-C[j-1]),Math.abs(L[j]-C[j-1]));
+      if(cnt<n){ sTR+=tr; sP+=pdm; sM+=mdm; cnt++; if(cnt<n) continue; } else { sTR=sTR-sTR/n+tr; sP=sP-sP/n+pdm; sM=sM-sM/n+mdm; }
+      const p=sTR>0?100*sP/sTR:0, m=sTR>0?100*sM/sTR:0; pdi[j]=p; mdi[j]=m; const dx=(p+m)>0?100*Math.abs(p-m)/(p+m):0;
+      if(ad==null){ dxs.push(dx); if(dxs.length===n) ad=dxs.reduce((a,b)=>a+b,0)/n; } else ad=(ad*(n-1)+dx)/n; adx[j]=ad; }
+    c.st.dm={pdi,mdi,adx}; }
+  const p=c.p, D=c.st.dm; if(p<3*n||D.pdi[p]==null||(adxMin>0&&D.adx[p]==null)) return null; const on=D.pdi[p]>D.mdi[p]&&(adxMin<=0||D.adx[p]>=adxMin);
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+function keltS(name,sig,lev,safe,syn,mode='orig'){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.kc){ const N=c.cal.length, H=[],L=[],C=[]; for(let j=0;j<N;j++){ C.push(c.c(sig,j)); H.push(c.h(sig,j)??C[j]); L.push(c.l(sig,j)??C[j]); }
+    const up=new Array(N).fill(null), mid=new Array(N).fill(null), lo=new Array(N).fill(null);
+    if(mode==='orig'){ for(let j=9;j<N;j++){ let tp=0,rg=0; for(let k=j-9;k<=j;k++){ tp+=(H[k]+L[k]+C[k])/3; rg+=H[k]-L[k]; } tp/=10; rg/=10; mid[j]=tp; up[j]=tp+rg; lo[j]=tp-rg; } }
+    else { const a=2/21; let e=null, atr=null, trs=[]; for(let j=0;j<N;j++){ e=e==null?C[j]:e+a*(C[j]-e); if(j>0){ const tr=Math.max(H[j]-L[j],Math.abs(H[j]-C[j-1]),Math.abs(L[j]-C[j-1])); if(atr==null){ trs.push(tr); if(trs.length===10) atr=trs.reduce((x,y)=>x+y,0)/10; } else atr=(atr*9+tr)/10; }
+        if(j>=20&&atr!=null){ mid[j]=e; up[j]=e+2*atr; lo[j]=e-2*atr; } } }
+    c.st.kc={up,mid,lo}; }
+  const p=c.p, K=c.st.kc; if(p<25||K.up[p]==null) return null; const x=c.c(sig,p); let on=!!c.st.on;
+  if(!on){ if(x>K.up[p]) on=true; } else if(x<(mode==='orig'?K.lo[p]:K.mid[p])) on=false;
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+S.DMI_TQ=dmiS('DMI(14 · Wilder) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB);
+S.DMIX_TQ=dmiS('DMI(14) + ADX ≥ 20 QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,14,20);
+S.KELT_TQ=keltS('Keltner 원판(10일 · 1960) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,'orig');
+S.KELTR_TQ=keltS('Keltner Raschke(EMA20 ± 2ATR10) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,'raschke');
 module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};
