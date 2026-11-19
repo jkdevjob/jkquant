@@ -1,0 +1,170 @@
+{
+  "ok": true,
+  "date": "2026-11-19",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-11-19",
+    "mainVariant": "baseline",
+    "createdAt": "2026-11-19T06:40:39.550Z",
+    "updatedAt": "2026-11-19T06:40:41.441Z",
+    "scans": [
+      {
+        "id": "close:close30",
+        "scheduledTime": 1795070436406,
+        "capturedAt": "2026-11-19T06:40:41.392Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1795070436406,
+        "capturedAt": "2026-11-19T06:40:40.827Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1795070436406,
+        "capturedAt": "2026-11-19T06:40:39.499Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      }
+    ],
+    "events": [
+      {
+        "id": "close:close30",
+        "date": "2026-11-19",
+        "capturedAt": "2026-11-19T06:40:41.392Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "close30",
+          "name": "⑤ 종가 30분 · 코스닥150 레버리지 장 마감 30분 반등(실험)",
+          "date": "2026-11-19",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_c30_th3.75",
+          "params": {
+            "code": "233740",
+            "th": -3.75
+          },
+          "note": "15:00 전일 대비 +2.21% (기준 −3.75% 미만 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:daytrading",
+        "date": "2026-11-19",
+        "capturedAt": "2026-11-19T06:40:40.827Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-11-19",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_etf_th4.75",
+          "params": {
+            "code": "233740",
+            "th": -4.75,
+            "max24h": true
+          },
+          "note": "15:21 예상 전일 대비 +2.47% (기준 −4.75% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-11-19",
+        "capturedAt": "2026-11-19T06:40:39.499Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-11-19",
+          "currency": "KRW",
+          "basis": "orders",
+          "trades": [],
+          "open": [],
+          "measure": [],
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "settled": true,
+          "dayPct": null,
+          "watched": 34,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "g_open_q7_k3_gap3",
+          "params": {
+            "minQ": 7,
+            "topK": 3,
+            "gapMax": -3
+          },
+          "exitRule": "exit10",
+          "note": "매매 없음 — no_expected_prices"
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
