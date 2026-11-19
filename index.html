@@ -721,7 +721,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.137.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.138.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1849,7 +1849,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.137.0</b> · 2026-11-12</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.138.0</b> · 2026-11-19</div>
   </footer>
 </div>
 
@@ -1911,11 +1911,13 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
     </div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력(실험적)</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
+    <div class="seclabel">밴드 폭 <span class="hint" style="color:var(--faint);font-weight:500">원문(공식)은 15%</span></div><div class="seg" id="set_vband"><button data-v="15">15% 공식</button><button data-v="20">20% 실험적 확장</button></div>
+    <p class="note" style="margin:4px 0 8px"><b>20%</b>는 원문이 아닌 <b>실험적 확장</b>입니다 — 앱 백테(TQQQ 적립식 · G 10 · 비용 반영 · 5년 창)에서 15%보다 연수익이 약 0.3~0.5%p 높고 최대 낙폭은 조금 낮았습니다(매매가 줄어든 몫 · 클로드 연구 · 지피티 재현 2026-11-19). 가장 좋은 폭은 아직 모릅니다. 다른 값은 아래 칸에 직접 넣을 수 있고, 15가 아니면 화면에 실험적 확장으로 표시합니다.</p>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>G (Gradient) <span class="hint" id="set_g_guide">1~50, 클수록 보수</span></label><input id="set_g" type="number" inputmode="numeric" value="10" oninput="vrGGuideRefresh()"></div>
     <div class="field"><label id="set_initamt_lbl" data-tk="set_vticker">초기 투자금 ($) <span class="hint">첫 매수에 넣을 돈</span></label><input id="set_initamt" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <div class="field"><label id="set_add_lbl" data-tk="set_vticker">매 사이클 적립금 ($)</label><input id="set_add" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
-    <div class="field"><label>밴드 폭 (%) <span class="hint">±, 좁을수록 매매↑</span></label><input id="set_band" type="number" inputmode="decimal" value="15"></div>
+    <div class="field"><label>밴드 폭 (%) <span class="hint">±, 좁을수록 매매↑ · 15 = 원문</span></label><input id="set_band" type="number" inputmode="decimal" value="15" oninput="vrBandSegSync()"></div>
     <div class="field"><label id="set_startv_lbl" data-tk="set_vticker">시작 V ($) <span class="hint">0이면 첫 매수가 V</span></label><input id="set_startv" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
     <div class="field"><label id="set_startpool_lbl" data-tk="set_vticker">시작 Pool ($)</label><input id="set_startpool" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
   </div>
@@ -4794,7 +4796,7 @@ function renderVrBandGauge(){
     +(avg>0?`<span class="pgl"><i style="background:var(--faint)"></i>평단 <b>${wn(avg)}</b></span>`:'')
     +`<span class="pgl"><i style="background:var(--sell)"></i>상단·매도 <b>${wn(upP)}</b></span>`
     +(price>0?`<span class="pgl"><i style="background:var(--vio)"></i>현재 <b>${wn(price)}</b></span>`:'');
-  if(note)note.textContent='';
+  if(note)note.textContent=vrBandExp(st.band)?'밴드 '+vrBandText(st.band)+' — 원문은 ±15%입니다.':'';
 }
 
 /* Pool 사용 한도 = 사이클 시작 Pool × mode − 이번 사이클 누적 매수액.
@@ -4921,7 +4923,7 @@ function computeNextV(c,ev){
 function renderVrNext(){
   const c=computeVr(), st=c.st;
   /* 실력공식은 원전 출처 미확인 — '공식' 이라고 단정하지 않는다 (4차 감사 ⑯) */
-  $('nv_formula_lbl').textContent= st.formula==='skill'?'실력공식(실험적 확장)':'기본공식(오피셜)';
+  $('nv_formula_lbl').textContent=(st.formula==='skill'?'실력공식(실험적 확장)':vrBandExp(st.band)?'기본공식':'기본공식(오피셜)')+(vrBandExp(st.band)?' · 밴드 '+vrBandText(st.band):'');   // 밴드가 원문(15%)이 아니면 '오피셜'이라 적지 않는다
   if(c.V<=0){
     $('nv_v').textContent='첫 매수 후'; $('nv_calc').innerHTML='<span class="lbl">계산</span>첫 매수를 기록하면 V가 설정됩니다';
     $('nv_pool').textContent='—';$('nv_min').textContent='—';$('nv_max').textContent='—';
@@ -11648,7 +11650,7 @@ function stratStatusHtml(strat,s){
   }else{
     const st=s.settings;
     const mode=st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
-    html+=`<span>${tickerLabel(st.ticker)} · ${mode} · ±${st.band}% · ${st.formula==='skill'?'실력(실험적)':'기본'}공식</span>`;
+    html+=`<span>${tickerLabel(st.ticker)} · ${mode} · ${vrBandText(st.band)} · ${st.formula==='skill'?'실력(실험적)':'기본'}공식</span>`;
   }
   return html;
 }
@@ -11713,7 +11715,7 @@ function openSettings(){
     $('set_vticker').value=st.ticker;segSet('set_vmode',String(st.mode));segSet('set_vformula',st.formula);segSet('set_vrdivmode',st.divmode||'reinv');
     segSet('set_vauto',st.autoCyc?'1':'0');
     segSet('set_vmodel', vrModelOf(st));
-    $('set_g').value=st.g;$('set_add').value=nfix(st.add,0);$('set_band').value=st.band;$('set_startv').value=nfix(st.startv,0);$('set_startpool').value=nfix(st.startpool,0);
+    $('set_g').value=st.g;$('set_add').value=nfix(st.add,0);$('set_band').value=st.band;vrBandSegSync();$('set_startv').value=nfix(st.startv,0);$('set_startpool').value=nfix(st.startpool,0);
     $('set_initamt').value=nfix(st.initAmt!=null?st.initAmt:10000,0);
     $('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;
     $('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;
@@ -11787,6 +11789,11 @@ function vrGGuideText(mode, g){
   const m=String(mode), isWd=m==='0.25', gv=isWd?20:10, cur=+g||0;
   return `라오어 시작 가이드 G=${gv} (${isWd?'인출식':m==='0.5'?'거치식':'적립식'})`+(cur&&cur!==gv?` · 지금 ${cur}`:'')+' · 클수록 보수';
 }
+/* VR 밴드 — 원문(공식)은 15% · 20% 선택지(2026-11-19 사용자 승인 · 연구 REPLICATION R-20261116-1 지피티 재현 확인)를 포함해
+   15 가 아니면 '실험적 확장'으로 표시한다(공식 결과와 실험 결과가 같은 이름으로 보이지 않게). 계산은 원래대로 band 값 그대로. */
+function vrBandExp(b){ return (+b||15)!==15; }   // 원문(공식) 15% — 상수 대신 글자 그대로(읽는 순서와 무관)
+function vrBandText(b){ const v=+b||15; return '±'+v+'%'+(vrBandExp(v)?' (실험적 확장)':''); }
+function vrBandSegSync(){ const e=$('set_band'); if(e) segSet('set_vband',String(+e.value)); }
 function vrGGuideRefresh(){ const gg=$('set_g_guide'); if(gg) gg.textContent=vrGGuideText(segGet('set_vmode')||'0.75', ($('set_g')||{}).value); }
 function applyVrModeUI(mode){
   const isLump=String(mode)==='0.5', isWd=String(mode)==='0.25';
@@ -11832,7 +11839,7 @@ function syncSetCurLabels(){
 function setupSegs(){
   ['set_div','set_reverse','set_tgtdyn','set_autotp','set_vmode','set_vformula','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
    'set_infdivmode','set_vrdivmode','set_madivmode','set_ivsdivmode','set_asapdivmode',
-   'set_vauto','set_vmodel','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
+   'set_vauto','set_vmodel','set_vband','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -11842,6 +11849,7 @@ function setupSegs(){
         if(id==='set_dcamode') dcaModeUI();          // 적립↔거치 전환 시 칸·라벨 갱신
         // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
         if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
+        if(id==='set_vband'){ const e=$('set_band'); if(e) e.value=b.dataset.v; }   // 고르기는 칸 값만 바꾼다 — 저장·계산은 칸 값 그대로
         if(id==='set_ivspark'||id==='set_ivsmode')
           syncIvsSetUI(segGet('set_ivspark')||'bill', tkVal('set_ivsticker_in','TQQQ'), segGet('set_ivsmode')||'iv');
       };

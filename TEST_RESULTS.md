@@ -1,5 +1,13 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-19 · VR 밴드 20% 실험적 확장 선택지 (운영 v3.138.0 · 백테 v2.18.0)
+
+- 회귀 `node regression-check.js index.html backtest.html testdata`: **2831 PASS / 0 FAIL — ALL PASS** · 새 절 [139] 5개 ✓.
+- 값: testdata TQQQ 2021-01-04~2026-01-02(1,256일) · 1만$ · 적립 100$ · G10 · 적립식 · 기본공식 · 비용 반영 — 밴드 20 끝값 59,402.67$ · 15 는 57,894.05$. 실제 backtest.html(Chromium · 같은 행)의 runVR 도 같은 값 · 단추 클릭 → 칸 20 · 17.5 입력 → 두 단추 꺼짐 · 15 → [15 공식].
+- 변이(변이 사본으로 회귀 전체): 20 단추 data-v 를 15 로 · 운영 단추 배선 빼기 · vrBandExp 늘 거짓 → 각각 [139] 1개만 ✗(2830 PASS / 1 FAIL) — 3/3 빨간불.
+- `node scripts/check-before-push.cjs`(병렬 4): **PASS 65 CI 검사 단계 — 전체 검증 완료 · 5분 47초**.
+- 미확인(이 커밋 시점): GitHub 검증 · 병합 · 배포 화면 버전은 병합 뒤 확인.
+
 ## GPT · 2026-11-19 G9·G7 원본 엔진 검증
 
 - 기준 main6a4fdd9e·봇 원천c481c5be. G9 사전등록6cfc02e4가 세부 계산보다 앞선다. 07:16의 알려진 후보 성과를 이용한 역사 진단이며 새 독립 holdout이 아니다.
