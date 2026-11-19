@@ -3,7 +3,7 @@
 // thumb.json: {"out":"00.png","kicker":"어제 가장 많이 본 뉴스","lines":["젠슨 황 딸","방한 하루 전","돌연 취소"],
 //              "hl":["돌연 취소"],"badge":"왜?","sub":"FT 보도로 본 쟁점 3가지","theme":"black"}
 // - lines: 큰 글씨 2~3줄(줄마다 9자 안팎). hl: 노란 형광펜을 칠할 낱말(줄 안의 일부도 됨). badge: 오른쪽 위 동그라미(?/숫자).
-// - theme: black | navy | red | green | purple. 사진을 쓰지 않는다(초상권·저작권). 글자는 본문이 증명하는 내용만.
+// - theme: black | red | green | purple. (navy 금지 — 2026-11-20 사용자 "네이비 색 좀 쓰지마 별로야") 사진을 쓰지 않는다(초상권·저작권). 글자는 본문이 증명하는 내용만.
 const {chromium} = require('playwright');
 const fs = require('fs'), path = require('path'), {execSync} = require('child_process');
 const FONT = '/root/.fonts/NotoSansKR.ttf';
@@ -11,8 +11,7 @@ const FONT_URL = 'https://raw.githubusercontent.com/google/fonts/main/ofl/notosa
 const fontPath = process.env.NKR_FONT || FONT;
 if (!fs.existsSync(fontPath)) { fs.mkdirSync(path.dirname(fontPath), {recursive: true}); execSync(`curl -sS -L -o "${fontPath}" "${FONT_URL}"`); }
 const THEMES = {
-  black: {bg: '#111827', fg: '#ffffff', accent: '#facc15', sub: '#d1d5db'},
-  navy: {bg: '#0b2a5b', fg: '#ffffff', accent: '#fde047', sub: '#cbd5e1'},
+  black: {bg: '#171717', fg: '#ffffff', accent: '#facc15', sub: '#d1d5db'},
   red: {bg: '#b91c1c', fg: '#ffffff', accent: '#fde047', sub: '#fee2e2'},
   green: {bg: '#065f46', fg: '#ffffff', accent: '#fde047', sub: '#d1fae5'},
   purple: {bg: '#4c1d95', fg: '#ffffff', accent: '#fde047', sub: '#ede9fe'},
@@ -26,6 +25,7 @@ const mark = (line, hls, t) => {
 (async () => {
   const [spec, outDir] = process.argv.slice(2);
   const c = JSON.parse(fs.readFileSync(spec, 'utf8'));
+  if (c.theme && !THEMES[c.theme]) { console.error('unknown theme', c.theme, '(navy 는 쓰지 않는다)'); process.exit(1); }
   const t = THEMES[c.theme] || THEMES.black;
   const maxChars = Math.max(...c.lines.map(l => [...l].length));
   const fs1 = Math.min(150, Math.floor(820 / Math.max(maxChars, 4)));

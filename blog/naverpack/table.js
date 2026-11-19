@@ -13,7 +13,7 @@ const CSS = `@font-face{font-family:"NKR";src:url("file://${FONT}");font-weight:
 *{box-sizing:border-box;margin:0;padding:0}body{width:1000px;background:#fff;font-family:"NKR",sans-serif;color:#1f2933}
 .wrap{padding:40px 48px 32px}h1{font-size:31px;font-weight:800;letter-spacing:-0.5px;line-height:1.3}.sub{font-size:18px;color:#52606d;margin-top:8px}
 table{width:100%;border-collapse:collapse;margin-top:26px;font-size:21px;line-height:1.4}
-th{background:#1f2937;color:#fff;font-weight:700;padding:14px 16px;text-align:left}
+th{background:#262626;color:#fff;font-weight:700;padding:14px 16px;text-align:left}
 td{padding:14px 16px;border-bottom:1px solid #e5e7eb;vertical-align:top}td:first-child{font-weight:700;color:#111827;white-space:nowrap}
 tr.hl td{background:#fef9c3}tr:nth-child(even):not(.hl) td{background:#f9fafb}
 .foot{margin-top:20px;font-size:15px;color:#6b7280;line-height:1.6}`;
