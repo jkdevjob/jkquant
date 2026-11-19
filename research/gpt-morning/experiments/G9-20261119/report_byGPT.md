@@ -38,4 +38,8 @@
 - SOXL은 39/40 유효 세션이다. 11/20 아침에 40번째 원천이 있을 때만 기존 30/10 검증을 진행한다.
 - BTC 운영 11/18 확정 −0.64%와 과거 연구 원천의 마지막 날짜 11/17은 서로 다른 자료다. 예정된 09:20 수집의 실행·완료를 확인하기 전 연구가 갱신됐다고 하지 않는다.
 
-재현: 최신 main의 g05_closing_parity.py에 고정 원천 SHA를 넣어 원본 묶음을 만든 뒤 g09_closing_up1_byGPT.py --bundle <묶음> --out <결과>를 실행한다. G7은 g07_refresh_byGPT.py --sources <고정원천체크아웃> --out <결과>다. 결과·원본 해시 목록·두 스크립트를 이 폴더에 함께 보존했다.
+재현: 기준 main 6a4fdd9e를 체크아웃하고 이 폴더의 스크립트 사본을 scripts/gpt_research에 복사한다. g05_closing_parity.py에 고정 원천 SHA를 넣어 원본 묶음을 만든 뒤 g09_closing_up1_byGPT.py --bundle <묶음> --out <결과>를 실행한다. G7은 g07_refresh_byGPT.py --sources <고정원천체크아웃> --out <결과>다. 결과·원본 해시 목록·두 스크립트를 이 폴더에 함께 보존했다.
+
+재현 스크립트는 원천 스냅샷과 기준 엔진 코드가 다르면 중단한다. 다른 데이터·새 엔진의 결과를 오늘 수치로 잘못 표시하지 않도록 했다.
+
+공용 연구 기록과 재현 스크립트 반영: [PR #678](https://github.com/jkdevjob/jkquant/pull/678), 병합 95535760. GitHub 정본 전체 검사(4조각 + 최종 check) 성공. 로컬 정본 65단계·수치 재현·잘못된 원천 거부 결과는 validation_byGPT.json에 남겼다.

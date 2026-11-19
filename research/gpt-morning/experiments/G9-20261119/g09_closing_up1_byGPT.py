@@ -11,6 +11,7 @@ import datetime as dt
 import hashlib
 import json
 from pathlib import Path
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +23,7 @@ SOURCE = "c481c5beadc97d8d20185909172995a68ce55c73"
 PREREG = "6cfc02e4b7ab521747124ef82e47d208ca08a2fb"
 NAMES = ("baseline", "up_1")
 END = "2026-11-18"
+APP = "6a4fdd9ec2f8ef4a95ca1ccedd0c22dec6b1de31"
 
 
 def compact(summary):
@@ -29,6 +31,11 @@ def compact(summary):
 
 
 def run(bundle: Path, out: Path):
+    for path in ("scripts/nightly_closing30_research.py", "scripts/closing30_metrics.py",
+                 "scripts/nightly_scalping_research.py", "functions/api/_closing30-ledger.js"):
+        pinned = subprocess.check_output(["git", "show", APP + ":" + path], cwd=ROOT)
+        if (ROOT / path).read_bytes() != pinned:
+            raise ValueError("G9 requires the pinned operating/research engine at " + APP)
     audit = json.loads((bundle / "g05-audit.json").read_text())
     assert audit["sourceSha"] == SOURCE and audit["passed"], "source/JS parity failed"
     ledgers = [x for x in json.loads((bundle / "ledgers.json").read_text()) if x["date"] <= END]
@@ -153,7 +160,7 @@ def run(bundle: Path, out: Path):
         "cashSlotProbe": {"date": probe["date"], "code": probe["code"], "returnPct": pd[0]["returnPct"], "includedInPerformance": False}}
     validation["passed"] = audit["passed"] and not fee_diffs and not hash_changes and all(mutations.values())
     report = {"schema": 1, "research": "G9", "preregistrationCommit": PREREG,
-        "mainSha": "6a4fdd9ec2f8ef4a95ca1ccedd0c22dec6b1de31", "sourceSha": SOURCE,
+        "mainSha": APP, "sourceSha": SOURCE,
         "generatedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "lastSignalDate": END,
         "sourceLedgers": len(ledgers), "sourceManifest": audit["sourceManifest"],
         "knownBeforeRegistration": "up_1 overnight 17d/51 trades +12.771%, PF1.775; post-selection historical diagnosis",

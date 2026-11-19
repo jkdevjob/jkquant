@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import statistics
+import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,6 +19,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import backtest_daytrading as engine
 
 NAMES = ("baseline", "session_min_2")
+SOURCE = "c481c5beadc97d8d20185909172995a68ce55c73"
+APP = "6a4fdd9ec2f8ef4a95ca1ccedd0c22dec6b1de31"
 
 
 def metrics(rows, labels, extra=0):
@@ -30,6 +33,13 @@ def metrics(rows, labels, extra=0):
 
 
 def run(source: Path, out: Path):
+    source_head = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True).strip()
+    if source_head != SOURCE:
+        raise ValueError("G7 requires the pinned source snapshot " + SOURCE)
+    path = "scripts/backtest_daytrading.py"
+    pinned = subprocess.check_output(["git", "show", APP + ":" + path], cwd=ROOT)
+    if (ROOT / path).read_bytes() != pinned:
+        raise ValueError("G7 requires the pinned actual research engine at " + APP)
     engine.DATA = source / "data/daytrading"
     engine.LIVE = source / "data/daytrading-live"
     primary, excluded = engine.split_primary_days(engine.load_days())
@@ -96,8 +106,7 @@ def run(source: Path, out: Path):
         assert abs(mdd - summary["portfolioMddPct"]) < 1e-9
     report = {"research": "G7", "continuation": True,
         "preregistrationCommit": "60b9cd340886f54b536d51f8eb0e23d9c50ab7d6",
-        "mainSha": "6a4fdd9ec2f8ef4a95ca1ccedd0c22dec6b1de31",
-        "sourceSha": "c481c5beadc97d8d20185909172995a68ce55c73",
+        "mainSha": APP, "sourceSha": source_head,
         "generatedAt": dt.datetime.now(dt.timezone.utc).isoformat(), "primaryDays": len(days),
         "excludedSnapshots": excluded, "windows": windows, "researchEngineVsArchivedCsv": parity,
         "baselineLiveLedgerComparison": live, "walkForward": wf, "trainOnlyChoices": choices,
