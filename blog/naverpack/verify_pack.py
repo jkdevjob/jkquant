@@ -60,7 +60,8 @@ ok(all(b.get('text', '').strip() for b in paras), 'empty paragraph')
 ok(not any(re.search(r'<[a-zA-Z/][^>]*>|\*\*|^#|\[[^\]]+\]\(|https?://', b['text']) for b in paras), 'html/markdown/link in body text')
 nums_p = [b for b in paras if re.match(r'^\d+\. ', b['text'])]
 ok(8 <= len(nums_p) <= 15, f'numbered paragraphs {len(nums_p)} (8~15)')
-ok(2 <= len(imgs) <= 3, f'images {len(imgs)} (2~3)')
+# 2026-11-19 상위 글 136개 비교(naver/peer_study.py): 이미지 하위 25% 4개 · 중앙값 5개, 우리는 2개(하위 15%) → 4~6개
+ok(4 <= len(imgs) <= 6, f'images {len(imgs)} (4~6)')
 bad_words = ['example.com', '여기에 이미지', '이미지 삽입', '제목 후보', 'TODO', 'replace-with']
 ok(not any(w in raw.decode('utf-8') for w in bad_words), 'placeholder text remains')
 
