@@ -31,6 +31,7 @@ import fs from "fs";
 import path from "path";
 import { execFileSync, spawnSync } from "child_process";
 import { fileURLToPath } from "url";
+import { aiTells } from "./tools/ai-tells.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // 채널별 큐: --channel mb 면 queue/mb/(queue.json·published.json·publish.config.json·last_run.txt). 없으면 은퇴노트(queue/).
@@ -112,9 +113,10 @@ function due(p) {
 }
 
 // 인스타 캡션: API 로는 'AI 정보' 표시를 켤 수 없어서 캡션에 한 줄로 밝힌다(해시태그 줄 앞).
+// 목소리가 없는 카드뉴스(carousel)에는 붙이지 않는다.
 function igCaption(item) {
   const note = CFG.ig_ai_note;
-  if (!note || item.caption.includes(note)) return item.caption;
+  if (!note || item.kind === "carousel" || item.caption.includes(note)) return item.caption;
   const lines = item.caption.split("\n");
   const last = lines.length - 1;
   if (lines[last].trim().startsWith("#")) { lines.splice(last, 0, note, ""); return lines.join("\n"); }
@@ -458,6 +460,8 @@ for (const p of targets) {
       let extra = "";
       if (p === "ig") { try { extra = ` · 공개 주소 ${await mediaUrl(item)}`; } catch (e) { extra = ` · ${e.message}`; } }
       report.push(`${P.name}: ${item.id}(${kstHM(plannedAt(item))}) 올릴 예정 · ${item.kind === "carousel" ? `카드뉴스 ${item.images.length}장` : item.file}${extra}` + (missing.length ? ` · 키 없음: ${missing.join(", ")}` : " · 키 있음"));
+      const tells = aiTells(item.caption); // 11/20 "AI 느낌 덜나게" — 알려만 주고 막지는 않음
+      if (tells.length) report.push(`  ⚠ AI 티(캡션): ${tells.join(" / ")}`);
     }
     continue;
   }
