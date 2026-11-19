@@ -85,6 +85,16 @@ if last.get('text', '').startswith('한줄 코멘트.'):
     ok(60 <= len(c) <= 220, f'한줄 코멘트 length {len(c)} (60~220)')
     ok(len([x for x in re.split(r'(?<=[.!?])\s+', c) if x]) <= 3, '한줄 코멘트: 3 sentences max')
 ok(8 <= len(imgs) <= 12, f'images {len(imgs)} (8~12)')
+# 2026-11-20 사용자 "AI 느낌 덜나게 못할까?": 메르 10개 글과 비교(번호 줄 60개당) — (해석)·(계산) 꼬리표 0 · '보도됐' 0 ·
+# 첫째/둘째 나열 0 · '그럼/이제' 이음말 0 · '개인적·생각·같음' 2.7. 우리 11/20 초안은 꼬리표 16 · 보도됐 3.7 · 자기 목소리 0 이었다.
+# 해석은 꼬리표 대신 말투로 드러낸다('~같음·~보임·~라고 봄·개인적으로는'). 경험은 지어내지 않는다(생각·판단만).
+alltext = '\n'.join(b['text'] for b in paras)
+ok(not re.search(r'\((해석|계산|정리|계산·가정)\)', alltext), "no (해석)/(계산) tags — show opinion by wording instead")
+ok(alltext.count('보도됐') <= 2, f"'보도됐' {alltext.count('보도됐')} (<=2)")
+ok(sum(1 for b in nums_p if re.match(r'^\d+\.\s*(첫째|둘째|셋째|넷째|다섯째)', b['text'])) <= 1, "no 첫째/둘째/셋째 lists")
+ok(sum(1 for b in nums_p if re.match(r'^\d+\.\s*(그럼|이제)\s', b['text'])) <= 2, "'그럼/이제' signpost lines <=2")
+voice = sum(1 for b in paras if re.search(r'개인적|생각|같음|보임|라고 봄|듯함|싶음', b['text']))
+ok(voice >= 3, f'own-voice lines {voice} (>=3: 개인적·생각·같음·보임 …)')
 pos = [i for i, b in enumerate(bl) if b.get('type') == 'image']
 ok(pos and pos[0] <= 1, 'thumbnail within the first 2 blocks')
 ok(all(b - a >= 3 for a, b in zip(pos, pos[1:])), 'images must be spread: at least 2 paragraphs between images')
