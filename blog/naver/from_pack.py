@@ -4,7 +4,7 @@
 usage: python3 -I from_pack.py <pack post.json> <원본 이미지 폴더> <날짜 YYYY-MM-DD> <슬러그>
   -> posts/<날짜>_<슬러그>.json, 이미지는 posts/assets/<날짜>/<슬러그>_01.png …
 """
-import html, json, os, shutil, sys
+import html, json, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -12,6 +12,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def a(url):
     u = html.escape(url, quote=True)
     return f'<a href="{u}">{u}</a>'
+
+
+def outlets(links):
+    # 언론사 이름만, 겹치면 한 번. links 의 'src' 가 있으면 그것을, 없으면 label 의 첫 낱말(예: '중앙일보 황 없이도…' → '중앙일보')
+    out = []
+    for l in links:
+        n = (l.get('src') or l['label'].split()[0]).strip()
+        if n and n not in out:
+            out.append(n)
+    return out
 
 
 def main():
@@ -31,16 +41,17 @@ def main():
         name = f"{slug}_{os.path.basename(b['file'])}"
         shutil.copyfile(os.path.join(imgdir, os.path.basename(b['file'])), os.path.join(assets, name))
         cap = b['caption'].replace('. 블로그 직접 작성 도표', '').replace(' 블로그 직접 작성 도표', '').strip()
+        cap = re.sub(r'^도표:\s*', '', cap)
         links = b.get('links') or []
-        if b.get('thumb'):  # 대표 이미지(썸네일): 블로그가 직접 만든 글자 이미지라 출처 링크가 없다
-            blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': ['이미지: 블로그 직접 제작(사진 아님)']})
+        # 2026-11-19 사용자 지시("쓸데없는 글 남기지 말고" · "출처 주소 줄 빼고 해"): 썸네일은 사진 설명·제작 표기 없이,
+        # 도표는 '도표:' 머리말 없이 설명 한 줄 + 사진 아래 '자료: 언론사 · 언론사' 한 줄만. 주소(URL)는 네이버 글에 넣지 않고
+        # 원고(post.json 의 links)에만 남겨 사실 확인 기록으로 쓴다. 메르 글 비교: 출처 줄 0 · 링크 1~6(STRATEGY_LAB H10).
+        if b.get('thumb'):
+            blocks.append({'t': 'img', 'file': name, 'cap': '', 'attr': []})
             continue
         if not links:
             sys.exit('image without source link: ' + b['file'])
-        attr = ['사진: 블로그 직접 작성 도표 / 출처: ' + a(links[0]['url'])]
-        attr += ['출처: ' + a(l['url']) for l in links[1:]]
-        attr.append('자료: ' + ' · '.join(l['label'] for l in links))
-        blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': attr})
+        blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': ['자료: ' + ' · '.join(outlets(links))]})
     out = {'title': pk['title'], 'blocks': blocks, 'tags': pk['tags'], 'topic': pk.get('topic') or '비즈니스·경제', 'category': pk.get('category') or '', 'priority': pk.get('priority') or 1, 'keyword': pk.get('keyword') or ''}  # keyword: STRATEGY_LAB 순위 추적용 노린 검색어
     dst = os.path.join(HERE, 'posts', f'{date}_{slug}.json')
     if os.path.exists(dst):

@@ -54,7 +54,7 @@ async function pasteConfirmed(p,f,html,ci,expectAdd){
     const bl=blocks[i];
     if(bl.t==='img' && ATTR_ONLY){ ATTR_ONLY=false;
       const {ci,empty}=await caretEndOfLast(); if(!empty){ await p.keyboard.press('Enter'); await p.waitForTimeout(300); }
-      if(!await pasteConfirmed(p,f,attrHTML(bl.attr),ci,bl.attr.length)) throw new Error('attr paste not applied'); console.log('attr only done',bl.file,'comp',ci); i++; continue; }
+      if(bl.attr.length && !await pasteConfirmed(p,f,attrHTML(bl.attr),ci,bl.attr.length)) throw new Error('attr paste not applied'); console.log('attr only done',bl.file,'comp',ci); i++; continue; }
     if(bl.t==='img'){
       await caretEndOfLast();
       const before=await f.locator('.se-component.se-image').count();
@@ -64,12 +64,14 @@ async function pasteConfirmed(p,f,html,ci,expectAdd){
       await p.waitForTimeout(1500);
       const comp=f.locator('.se-component.se-image').nth(before);
       const img=comp.locator('img').first(); await img.scrollIntoViewIfNeeded(); await img.click(); await p.waitForTimeout(600);
-      await comp.locator('.se-caption').first().click(); await p.waitForTimeout(300);
-      await p.keyboard.type(bl.cap,{delay:2}); await p.waitForTimeout(500);
+      // 2026-11-19 사용자 형식: 썸네일은 설명·자료 줄이 비어 있다(cap '' · attr []) — 빈 것은 넣지 않는다
+      if(bl.cap){ await comp.locator('.se-caption').first().click(); await p.waitForTimeout(300);
+        await p.keyboard.type(bl.cap,{delay:2}); await p.waitForTimeout(500); }
       // attribution into the text component after the image
       const {ci,empty}=await caretEndOfLast();
-      if(!empty){ await p.keyboard.press('Enter'); await p.waitForTimeout(300); }
-      if(!await pasteConfirmed(p,f,attrHTML(bl.attr),ci,bl.attr.length)) throw new Error('attr paste not applied at comp '+ci);
+      if(bl.attr.length){
+        if(!empty){ await p.keyboard.press('Enter'); await p.waitForTimeout(300); }
+        if(!await pasteConfirmed(p,f,attrHTML(bl.attr),ci,bl.attr.length)) throw new Error('attr paste not applied at comp '+ci); }
       console.log('image done',bl.file,'-> comp',ci-1);
       imgIdx++; i++;
     } else {

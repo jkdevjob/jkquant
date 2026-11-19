@@ -7,7 +7,7 @@ const post=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
   const doc=await f.evaluate(()=>[...document.querySelectorAll('.se-components-wrap > .se-component')].map(c=>({
     type:c.className.split(' ')[1],
     paras:[...c.querySelectorAll(':scope .se-module-text:not(.se-caption) .se-text-paragraph, :scope.se-documentTitle .se-text-paragraph')].map(x=>x.innerText.trim()).filter(Boolean),
-    caption:c.querySelector('.se-caption')?c.querySelector('.se-caption').innerText.trim():null,
+    caption:c.querySelector('.se-caption')?(()=>{const x=c.querySelector('.se-caption').cloneNode(true);x.querySelectorAll('.se-placeholder').forEach(e=>e.remove());return x.innerText.trim();})():null,
     links:[...c.querySelectorAll('[data-href]')].map(a=>a.getAttribute('data-href')),
     img:!!c.querySelector('img[src^="https://blogfiles"]')})));
   const title=doc.find(c=>c.type==='se-documentTitle').paras[0];
@@ -19,7 +19,7 @@ const post=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
   const caps=doc.filter(c=>c.type==='se-image').map(c=>c.caption);
   const expCaps=post.blocks.filter(x=>x.t==='img').map(x=>x.cap);
   console.log('title ok',title===post.title,'| paras',ed.length,'/',exp.length,'mismatch',bad);
-  console.log('captions ok',JSON.stringify(caps.map((c,i)=>c===expCaps[i])),'| images uploaded',doc.filter(c=>c.img).length);
+  console.log('captions ok',JSON.stringify(caps.map((c,i)=>(c||'')===(expCaps[i]||''))),'| images uploaded',doc.filter(c=>c.img).length);
   console.log('links',JSON.stringify(doc.flatMap(c=>c.links)));
   await b.close();
 })();
