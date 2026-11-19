@@ -1,0 +1,698 @@
+{
+  "schema": 1,
+  "study": "G9 next-calendar-day guard",
+  "preregistrationCommit": "78fa6afc7ce80eb73211754d429f667d5770e7bd",
+  "sourceSha": "c481c5beadc97d8d20185909172995a68ce55c73",
+  "auditedAt": "2026-11-19T01:07:50.826251+00:00",
+  "mainSha": "955357604546105ceb8404167754094e8a87fc22",
+  "completeCommonDays": [
+    "2026-10-23",
+    "2026-10-26",
+    "2026-10-27",
+    "2026-10-28",
+    "2026-10-29",
+    "2026-10-30",
+    "2026-11-02",
+    "2026-11-03",
+    "2026-11-05",
+    "2026-11-06",
+    "2026-11-09",
+    "2026-11-10",
+    "2026-11-11",
+    "2026-11-12",
+    "2026-11-13",
+    "2026-11-16",
+    "2026-11-17"
+  ],
+  "scheduleBlockedDays": [
+    "2026-10-23",
+    "2026-10-30",
+    "2026-11-06",
+    "2026-11-13"
+  ],
+  "calendar": {
+    "2026-10-23": {
+      "next": "2026-10-24",
+      "closed": true,
+      "reason": "weekend",
+      "known": true
+    },
+    "2026-10-26": {
+      "next": "2026-10-27",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-10-27": {
+      "next": "2026-10-28",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-10-28": {
+      "next": "2026-10-29",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-10-29": {
+      "next": "2026-10-30",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-10-30": {
+      "next": "2026-10-31",
+      "closed": true,
+      "reason": "weekend",
+      "known": true
+    },
+    "2026-11-02": {
+      "next": "2026-11-03",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-11-03": {
+      "next": "2026-11-04",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-11-05": {
+      "next": "2026-11-06",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-11-06": {
+      "next": "2026-11-07",
+      "closed": true,
+      "reason": "weekend",
+      "known": true
+    },
+    "2026-11-09": {
+      "next": "2026-11-10",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-11-10": {
+      "next": "2026-11-11",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-11-11": {
+      "next": "2026-11-12",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-11-12": {
+      "next": "2026-11-13",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-11-13": {
+      "next": "2026-11-14",
+      "closed": true,
+      "reason": "weekend",
+      "known": true
+    },
+    "2026-11-16": {
+      "next": "2026-11-17",
+      "closed": false,
+      "reason": "",
+      "known": true
+    },
+    "2026-11-17": {
+      "next": "2026-11-18",
+      "closed": false,
+      "reason": "",
+      "known": true
+    }
+  },
+  "completeGuardedTradingDays": [
+    "2026-10-26",
+    "2026-10-27",
+    "2026-10-28",
+    "2026-10-29",
+    "2026-11-02",
+    "2026-11-03",
+    "2026-11-05",
+    "2026-11-09",
+    "2026-11-10",
+    "2026-11-11",
+    "2026-11-12",
+    "2026-11-16",
+    "2026-11-17"
+  ],
+  "jsPythonAudit": {
+    "records": 1107,
+    "recordDifferences": 0,
+    "dailyDifferences": 0,
+    "passed": true
+  },
+  "recordedMetricsMatchG9": true,
+  "allUnsettledSignals": {
+    "baseline": 9,
+    "up_1": 8
+  },
+  "scenarios": {
+    "baseline": {
+      "asRecorded": {
+        "normal": {
+          "trades": 51,
+          "observedDays": 17,
+          "tradingDays": 17,
+          "winRate": 39.21568627450981,
+          "avgPnl": -0.5847388330137939,
+          "expectancyPct": -0.5847388330137939,
+          "avgWin": 2.9634915382455165,
+          "avgLoss": -2.8739197176972198,
+          "profitFactor": 0.6652691141304724,
+          "mddPct": -18.388383699642198,
+          "worst": -13.304809939442386,
+          "dailyAvgPct": -0.5847388330137939,
+          "totalReturnPct": -10.837800044412571,
+          "goalDays": 5,
+          "unsettled": 0,
+          "currentDrawdownPct": -12.423340969713681,
+          "lossStreakTradeDays": 0,
+          "weekStart": "2026-11-16",
+          "weeklyReturnPct": 0.7639846696642749,
+          "weeklyTargetGapPct": 4.236015330335725,
+          "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+        },
+        "stress": {
+          "trades": 51,
+          "observedDays": 17,
+          "tradingDays": 17,
+          "winRate": 39.21568627450981,
+          "avgPnl": -0.6847388330137939,
+          "expectancyPct": -0.6847388330137939,
+          "avgWin": 2.8634915382455164,
+          "avgLoss": -2.97391971769722,
+          "profitFactor": 0.6212050327548072,
+          "mddPct": -18.975487161677528,
+          "worst": -13.404809939442385,
+          "dailyAvgPct": -0.6847388330137939,
+          "totalReturnPct": -12.352983294279884,
+          "goalDays": 5,
+          "unsettled": 0,
+          "currentDrawdownPct": -13.654282122977824,
+          "lossStreakTradeDays": 0,
+          "weekStart": "2026-11-16",
+          "weeklyReturnPct": 0.5632305539443383,
+          "weeklyTargetGapPct": 4.436769446055662,
+          "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+        }
+      },
+      "guarded": {
+        "normal": {
+          "trades": 39,
+          "observedDays": 17,
+          "tradingDays": 13,
+          "winRate": 48.717948717948715,
+          "avgPnl": -0.3316818546597114,
+          "expectancyPct": -0.3316818546597114,
+          "avgWin": 3.0823241184363392,
+          "avgLoss": -3.5749875291009596,
+          "profitFactor": 0.8190819936233205,
+          "mddPct": -15.223893530714793,
+          "worst": -13.304809939442386,
+          "dailyAvgPct": -0.25363906532801456,
+          "totalReturnPct": -5.621247452776679,
+          "goalDays": 5,
+          "unsettled": 0,
+          "currentDrawdownPct": -9.101993426929711,
+          "lossStreakTradeDays": 0,
+          "weekStart": "2026-11-16",
+          "weeklyReturnPct": 0.7639846696642749,
+          "weeklyTargetGapPct": 4.236015330335725,
+          "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+        },
+        "stress": {
+          "trades": 39,
+          "observedDays": 17,
+          "tradingDays": 13,
+          "winRate": 48.717948717948715,
+          "avgPnl": -0.4316818546597113,
+          "expectancyPct": -0.4316818546597113,
+          "avgWin": 2.9823241184363396,
+          "avgLoss": -3.6749875291009597,
+          "profitFactor": 0.7709435447275197,
+          "mddPct": -15.66193250089334,
+          "worst": -13.404809939442385,
+          "dailyAvgPct": -0.3301096535633087,
+          "totalReturnPct": -6.847693424285273,
+          "goalDays": 5,
+          "unsettled": 0,
+          "currentDrawdownPct": -10.106834126190577,
+          "lossStreakTradeDays": 0,
+          "weekStart": "2026-11-16",
+          "weeklyReturnPct": 0.5632305539443383,
+          "weeklyTargetGapPct": 4.436769446055662,
+          "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+        }
+      },
+      "removedDayReturns": [
+        {
+          "date": "2026-10-23",
+          "returnPct": -1.9443712805708369,
+          "trades": 3,
+          "mainVariant": "baseline",
+          "source": "closing30-paper-live",
+          "finalized": true
+        },
+        {
+          "date": "2026-10-30",
+          "returnPct": -2.3311258863714834,
+          "trades": 3,
+          "mainVariant": "baseline",
+          "source": "closing30-paper-live",
+          "finalized": true
+        },
+        {
+          "date": "2026-11-06",
+          "returnPct": -1.4350897219225551,
+          "trades": 3,
+          "mainVariant": "baseline",
+          "source": "closing30-paper-live",
+          "finalized": true
+        },
+        {
+          "date": "2026-11-13",
+          "returnPct": 0.08189083820662618,
+          "trades": 3,
+          "mainVariant": "baseline",
+          "source": "closing30-paper-live",
+          "finalized": true
+        }
+      ]
+    },
+    "up_1": {
+      "asRecorded": {
+        "normal": {
+          "trades": 51,
+          "observedDays": 17,
+          "tradingDays": 17,
+          "winRate": 47.05882352941177,
+          "avgPnl": 0.7592923800983188,
+          "expectancyPct": 0.7592923800983188,
+          "avgWin": 3.6956981761081766,
+          "avgLoss": -1.8508461052437772,
+          "profitFactor": 1.774899077844622,
+          "mddPct": -10.580927353944203,
+          "worst": -4.617096255622192,
+          "dailyAvgPct": 0.7592923800983188,
+          "totalReturnPct": 12.770985313285376,
+          "goalDays": 7,
+          "unsettled": 0,
+          "currentDrawdownPct": 0.0,
+          "lossStreakTradeDays": 0,
+          "weekStart": "2026-11-16",
+          "weeklyReturnPct": 5.971966832767728,
+          "weeklyTargetGapPct": 0,
+          "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+        },
+        "stress": {
+          "trades": 51,
+          "observedDays": 17,
+          "tradingDays": 17,
+          "winRate": 45.09803921568628,
+          "avgPnl": 0.6592923800983188,
+          "expectancyPct": 0.6592923800983188,
+          "avgWin": 3.7561665486828297,
+          "avgLoss": -1.884568544096101,
+          "profitFactor": 1.6372036622378154,
+          "mddPct": -11.037277228870268,
+          "worst": -4.717096255622192,
+          "dailyAvgPct": 0.6592923800983188,
+          "totalReturnPct": 10.881514307727326,
+          "goalDays": 7,
+          "unsettled": 0,
+          "currentDrawdownPct": 0.0,
+          "lossStreakTradeDays": 0,
+          "weekStart": "2026-11-16",
+          "weeklyReturnPct": 5.7661065871752015,
+          "weeklyTargetGapPct": 0,
+          "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+        }
+      },
+      "guarded": {
+        "normal": {
+          "trades": 39,
+          "observedDays": 17,
+          "tradingDays": 13,
+          "winRate": 56.41025641025641,
+          "avgPnl": 1.1978680514066566,
+          "expectancyPct": 1.1978680514066566,
+          "avgWin": 3.8698522185656943,
+          "avgLoss": -2.2599938119756278,
+          "profitFactor": 2.2159547610343684,
+          "mddPct": -9.855937811527326,
+          "worst": -4.617096255622192,
+          "dailyAvgPct": 0.9160167451933255,
+          "totalReturnPct": 15.834995913372452,
+          "goalDays": 7,
+          "unsettled": 0,
+          "currentDrawdownPct": 0.0,
+          "lossStreakTradeDays": 0,
+          "weekStart": "2026-11-16",
+          "weeklyReturnPct": 5.971966832767728,
+          "weeklyTargetGapPct": 0,
+          "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+        },
+        "stress": {
+          "trades": 39,
+          "observedDays": 17,
+          "tradingDays": 13,
+          "winRate": 53.84615384615385,
+          "avgPnl": 1.0978680514066566,
+          "expectancyPct": 1.0978680514066566,
+          "avgWin": 3.9538963429311487,
+          "avgLoss": -2.2341649553719174,
+          "profitFactor": 2.0646994106955314,
+          "mddPct": -10.225485281540958,
+          "worst": -4.717096255622192,
+          "dailyAvgPct": 0.8395461569580315,
+          "totalReturnPct": 14.353993149924138,
+          "goalDays": 7,
+          "unsettled": 0,
+          "currentDrawdownPct": 0.0,
+          "lossStreakTradeDays": 0,
+          "weekStart": "2026-11-16",
+          "weeklyReturnPct": 5.7661065871752015,
+          "weeklyTargetGapPct": 0,
+          "returnRule": "sum of net trade PnL / 3 fixed slots; unused slots are cash"
+        }
+      },
+      "removedDayReturns": [
+        {
+          "date": "2026-10-23",
+          "returnPct": -1.3900070617644416,
+          "trades": 3,
+          "mainVariant": "up_1",
+          "source": "closing30-paper-live",
+          "finalized": true
+        },
+        {
+          "date": "2026-10-30",
+          "returnPct": -0.8042565697794669,
+          "trades": 3,
+          "mainVariant": "up_1",
+          "source": "closing30-paper-live",
+          "finalized": true
+        },
+        {
+          "date": "2026-11-06",
+          "returnPct": 0.30171114345115607,
+          "trades": 3,
+          "mainVariant": "up_1",
+          "source": "closing30-paper-live",
+          "finalized": true
+        },
+        {
+          "date": "2026-11-13",
+          "returnPct": -0.7717617185223636,
+          "trades": 3,
+          "mainVariant": "up_1",
+          "source": "closing30-paper-live",
+          "finalized": true
+        }
+      ]
+    }
+  },
+  "timeBlocks": [
+    {
+      "period": [
+        "2026-10-23",
+        "2026-10-29"
+      ],
+      "trades": 12,
+      "normalPct": 5.639537516715376,
+      "stressPct": 5.223278937836362
+    },
+    {
+      "period": [
+        "2026-10-30",
+        "2026-11-09"
+      ],
+      "trades": 12,
+      "normalPct": -0.5830139204874296,
+      "stressPct": -0.9811844718846663
+    },
+    {
+      "period": [
+        "2026-11-10",
+        "2026-11-17"
+      ],
+      "trades": 15,
+      "normalPct": 10.29420724943433,
+      "stressPct": 9.75435868488088
+    }
+  ],
+  "leaveOneDayOut": [
+    {
+      "drop": "2026-10-23",
+      "netPct": 15.834995913372452,
+      "stressPct": 14.353993149924138
+    },
+    {
+      "drop": "2026-10-26",
+      "netPct": 12.8716700531744,
+      "stressPct": 11.537238609118926
+    },
+    {
+      "drop": "2026-10-27",
+      "netPct": 12.077702274758106,
+      "stressPct": 10.751897690718959
+    },
+    {
+      "drop": "2026-10-28",
+      "netPct": 14.479958283633554,
+      "stressPct": 13.128085001374789
+    },
+    {
+      "drop": "2026-10-29",
+      "netPct": 17.679015722149494,
+      "stressPct": 16.292580216693153
+    },
+    {
+      "drop": "2026-10-30",
+      "netPct": 15.834995913372452,
+      "stressPct": 14.353993149924138
+    },
+    {
+      "drop": "2026-11-02",
+      "netPct": 20.577298737760287,
+      "stressPct": 19.159701608268964
+    },
+    {
+      "drop": "2026-11-03",
+      "netPct": 15.901271425689734,
+      "stressPct": 14.534020851874985
+    },
+    {
+      "drop": "2026-11-05",
+      "netPct": 21.442094302145986,
+      "stressPct": 20.015226925398586
+    },
+    {
+      "drop": "2026-11-06",
+      "netPct": 15.834995913372452,
+      "stressPct": 14.353993149924138
+    },
+    {
+      "drop": "2026-11-09",
+      "netPct": 6.702736925171782,
+      "stressPct": 5.435617449359809
+    },
+    {
+      "drop": "2026-11-10",
+      "netPct": 16.905822704723626,
+      "stressPct": 15.52772464778478
+    },
+    {
+      "drop": "2026-11-11",
+      "netPct": 13.674616042360665,
+      "stressPct": 12.331471145484452
+    },
+    {
+      "drop": "2026-11-12",
+      "netPct": 12.371975528685653,
+      "stressPct": 11.042972260573492
+    },
+    {
+      "drop": "2026-11-13",
+      "netPct": 15.834995913372452,
+      "stressPct": 14.353993149924138
+    },
+    {
+      "drop": "2026-11-16",
+      "netPct": 15.599620309378693,
+      "stressPct": 14.235630434108693
+    },
+    {
+      "drop": "2026-11-17",
+      "netPct": 9.529769278844302,
+      "stressPct": 8.231722050099455
+    }
+  ],
+  "walkForward": {
+    "folds": [],
+    "evaluationDays": 0,
+    "dailyAvgPct": null,
+    "baselineDailyAvgPct": null,
+    "candidateSelections": 0,
+    "passed": false,
+    "rule": "expanding first20 complete common sessions -> next5; train-only choice; no partial last fold"
+  },
+  "holdingAudit": {
+    "baseline": {
+      "over24hBefore": 12,
+      "over24hAfter": 0,
+      "maxHoursAfter": 17.5,
+      "longPositions": [
+        {
+          "date": "2026-10-23",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-23",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-23",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-30",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-30",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-30",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-06",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-06",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-06",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-13",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-13",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-13",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        }
+      ]
+    },
+    "up_1": {
+      "over24hBefore": 12,
+      "over24hAfter": 0,
+      "maxHoursAfter": 17.5,
+      "longPositions": [
+        {
+          "date": "2026-10-23",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-23",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-23",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-30",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-30",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-10-30",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-06",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-06",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-06",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-13",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-13",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        },
+        {
+          "date": "2026-11-13",
+          "hours": 65.5,
+          "skippedBySchedule": true
+        }
+      ]
+    }
+  },
+  "newProspectiveDays": 0,
+  "newProspectiveTrades": 0,
+  "definition": "Skip closing entry when the next calendar date is a known KRX closure",
+  "limit": "Historical sensitivity after G9 selection. A schedule filter does not guarantee exit on a halt or missing open fill.",
+  "resultSha256": "d4759dbce1dc33792defdd155e198a6c85dccd4bfea4b9a7c3b498308497ed5c",
+  "fullResultFile": "closing_24h_result_byGPT.json.gz",
+  "decision": "priority_forward_shadow_validation_only",
+  "firstProspectiveSignalDate": "2026-11-20"
+}
