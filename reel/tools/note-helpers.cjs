@@ -19,7 +19,9 @@ function table(rows, { cols = [150, 430, 720], y0 = 590, step = 80, at0 = "@tabl
   return out;
 }
 function writeNote(file, spec) { fs.writeFileSync(file, JSON.stringify(spec, null, 1) + "\n"); }
-module.exports = { RED, YEL, INK, T, t, VOICE, cover, table, writeNote };
+// 끝 장면 마스코트(말풍선): 본문 마지막 페이지에 넣는다 — 서명·핸들과 겹치지 않게 x·y 를 조정
+const mascotEnd = (at, say, x = 760, y = 1190, size = 230, brand) => ({ type: "mascot", brand, x, y, size, at, dur: 0.45, say });
+module.exports = { RED, YEL, INK, T, t, VOICE, cover, table, writeNote, mascotEnd };
 
 // ── 표지 v3(11/17 사용자 "물음표 ?? 넣지마" + 인기 쇼츠 썸네일 48장 분석): 위 두 줄 제목 + 정리표 전체를 처음부터 다 보여 줌(답을 가리지 않음) ──
 // o = { skin:"rn"|"mb", t1, t2, t2color?, sub?, cols:[x..], head:[..], rows:[[..]], hi: 강조 줄 번호, note?, foot?, size? }
@@ -41,6 +43,8 @@ function sheetCover(o) {
   const yEnd = y0 + 70 + o.rows.length * step;
   if (o.note) items.push(T("note", o.note, 76, yEnd + 10, 32, { color: GRAY, font: "sans", weight: 700 }));
   if (o.foot) items.push(T("foot", o.foot, 76, yEnd + 70, 50, { color: ACC, font: "pen" }));
+  // (11/19 사용자 "마스코트도 만들어서 넣어") 표지 오른쪽 아래에 채널 마스코트 — o.mascot === false 면 뺀다
+  if (o.mascot !== false) items.push({ type: "mascot", brand: MB ? "mb" : "rn", x: o.mascotX ?? 760, y: o.mascotY ?? yEnd + 60, size: o.mascotSize ?? 270, at: 0, dur: 0, say: o.mascotSay });
   return { cover: true, start: 0, items };
 }
 module.exports.sheetCover = sheetCover;

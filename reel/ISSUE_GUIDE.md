@@ -155,6 +155,9 @@
    - '내 위치' — "대한민국 40대 평균 월급은"(59만), "월 1,000만 원 벌면 상위 몇 %"
    2줄 결론 숫자는 그대로. 내용과 다른 과장·공포 문구는 쓰지 않는다(숫자로 뒷받침되는 반전만). 물음표는 표지에서 계속 피한다.
 7. **(11/20~) 카드뉴스 시험**: 12:00 칸 하루 걸러 영상 대신 인스타 카드뉴스(6장, 1080×1350) — `node make-cards.mjs --config queue/cards/<id>.cards.json`, 큐 항목 `kind:"carousel"`, `images:[…]`, `exp:"carousel"`. 첫 편 i20261120b(국민연금 당길까 늦출까). 비교 지표: 저장·공유·도달·팔로우(영상 12:00 편과).
+8. **(11/19~) 마스코트** — 사용자 "마스코트도 만들어서 넣어". 은퇴노트 **'노트쌤'**(둥근 안경·연필 든 스프링 노트, `assets/mascot-rn.svg`), 매니악 **'매니'**(숫자판 든 남색 부엉이, `assets/mascot-mb.svg`) — 직접 그린 그림.
+   - 영상: `sheetCover` 가 표지 오른쪽 아래에 자동으로 넣는다(`mascot:false` 로 뺌, `mascotSay` 로 말풍선). 끝 장면은 `mascotEnd("@cta", "팔로우!")`(note-helpers) 를 본문 마지막 페이지 items 에 넣는다 — 서명·핸들과 겹치면 x·y 조정. 노트 설정에선 `{type:"mascot", x, y, size, at, say}`.
+   - 카드뉴스: 2장부터 오른쪽 위에 작은 배지(모든 장 같은 자리 — 신문사 로고 배지처럼), hero 표지에 서 있는 모습, point 장은 번호 옆에 말풍선(`say`), cta 장은 크게("저장! 팔로우!"). `"mascot":false` 로 끔.
    - 꼴 두 가지를 번갈아: **v1 노트 정리표**(cover·table·list·cta) / **v2 굵은 글씨**(`"style":"bold"` — `hero`: 위 노트 손글씨 그림 + 아래 검은 바탕 큰 글씨 3줄, `point`: 01·02… 한 장에 한 문장 + '덜 받는 사람 vs 더 받는 사람' 칸). v2 제목 꼴: "A와 B의 결정적인 차이 N가지", "평생 월 ○○만 원 ~", "~ top 5". 예시 `queue/cards/c20261122b.cards.json`.
 6. 금지는 그대로: 영상에 없는 숫자, 빈 과장, 실존 인물 사진·남의 화면.
 - 예시: `queue/issues/2026-11-17b.note.json`(은퇴노트) · `queue/issues/b04.note.json` 첫 장 · `queue/mb/issues/2026-11-17b.note.json`(매니악, skin brief).
