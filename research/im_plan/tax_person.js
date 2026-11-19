@@ -6,7 +6,7 @@
 //     pa25 = pa 인데 섀넌 정리 수수료 0.25%(백테 COST_FEE · 민감도) · sep = 다리별 세금(공제 5/6:1/6 나눔 · mix2 '5/6:USD' 와 같은 셈 · 참고)
 //     위약 = 두 다리 원금·입금 × 1.003 의 pn(경로 잡음)
 // 섀넌 수량·값은 창 시작 단위(실제 = 그날 실제 거래 가격 단위 · 합성 = 시작 100$)로 바꿔 앱 정수 주 판정에 넣는다(값은 그대로).
-// 사용: node tax_person.js [out.json]   env: DS=real,syn,oos · CFGS='3만+210,1만,10만' · CHK=1(검산만)
+// 사용: node tax_person.js [out.json]   env: DS=real,syn,oos · CFGS='3만+210,1만,10만' · CHK=1(검산만) · PS=1(11-19 ⑥-d: ps 판 = 섀넌 다리만 정리 · 듀얼 장부 harvest:false)
 const fs=require('fs'),path=require('path'); const {open}=require('./imh'); const {acc,afterTax,afterTaxApp,capGainTax}=require('./planrule/aftertax');
 const TC=require('../../plan-tax-check.js'); const E=require('./planrule/engine_var').load({});
 const DD=path.join(__dirname,'data'), PD=path.join(__dirname,'planrule','data');
@@ -39,8 +39,8 @@ function personAT(R,S,o){ const mode=o.mode, F=S.F||1, fS=o.feeS||feeS;
     if(sm[n.date]) last=sm[n.date];
     const y=n.date.slice(0,4); let fees=0;
     if(mode!=='pn'&&hd[y]===n.date&&t>0&&t<NV.length-1&&n.date.slice(5)>='12-01'){ const k=A.surv();
-      const srcs=[{key:'plan',kind:'plan',ledger:{base:R.ledger.base,events:evD.slice(0,iD).concat(exD)},prices:{TECL:n.teclPx,TQQQ:n.tqqqPx,SGOV:n.sgovPx||0},feeFn:feeD,harvest:true}];
-      if(S.cap>0) srcs.push({key:'ivs',kind:'trades',trades:trS.slice(0,iS).concat(exS),prices:{USD:last.px*F},feeFn:fS,harvest:mode==='pa'});
+      const srcs=[{key:'plan',kind:'plan',ledger:{base:R.ledger.base,events:evD.slice(0,iD).concat(exD)},prices:{TECL:n.teclPx,TQQQ:n.tqqqPx,SGOV:n.sgovPx||0},feeFn:feeD,harvest:mode!=='ps'}];
+      if(S.cap>0) srcs.push({key:'ivs',kind:'trades',trades:trS.slice(0,iS).concat(exS),prices:{USD:last.px*F},feeFn:fS,harvest:mode==='pa'||mode==='ps'});
       const C=TC.portfolio({sources:srcs,fxSeries:FX,year:y,dedKrw:250e4/k,rate:.22,margin:o.margin});
       if(C.ok){ hv[C.mode]=(hv[C.mode]||0)+1;
         for(const sg of C.suggestions){ const isS=sg.key==='ivs', f1=(isS?fS:feeD)(sg.qty,sg.price);
@@ -92,7 +92,7 @@ const HOOK=()=>{ const patch=(name,from,to)=>{ let s=window[name].toString(); if
         if(!sn.eqs.length) continue;
         const F=D.rescale?100/sn.p0:sn.u0, S={eqs:sn.eqs,tr:sn.tr,cap:sc,F}, Sp={eqs:sp.eqs,tr:sp.tr,cap:sc*1.003,F};
         const yrs=R.stats.yrs, row={s,yrs,nTrS:sn.tr.length};
-        for(const [k,o] of [['pn',{mode:'pn'}],['pa',{mode:'pa'}],['pd',{mode:'pd'}],['pa25',{mode:'pa',feeS:fee25}]]){ const a=personAT(R,S,o); row[k]={a:ann(a.tr,yrs),fv:a.final,tax:a.tax,hv:a.hv}; }
+        for(const [k,o] of (process.env.PS?[['pn',{mode:'pn'}],['pa',{mode:'pa'}],['pd',{mode:'pd'}],['ps',{mode:'ps'}],['pa25',{mode:'pa',feeS:fee25}]]:[['pn',{mode:'pn'}],['pa',{mode:'pa'}],['pd',{mode:'pd'}],['pa25',{mode:'pa',feeS:fee25}]])){ const a=personAT(R,S,o); row[k]={a:ann(a.tr,yrs),fv:a.final,tax:a.tax,hv:a.hv}; }
         const ap=personAT(Rp,Sp,{mode:'pn'}); row.plc={a:ann(ap.tr,Rp.stats.yrs)};
         { const at=afterTax(R,W), lf=ss.final-capGainTax(ss.unr,1-W), fv=at.final+lf, inflow=+R.nav[R.nav.length-1].inflow+sc; row.sep={a:ann((fv/inflow-1)*100,yrs),fv}; }
         rows.push(row); }
@@ -101,7 +101,7 @@ const HOOK=()=>{ const patch=(name,from,to)=>{ let s=window[name].toString(); if
       const d0=rows.map(r=>r.plc.a-r.pn.a);
       console.log('\n■ '+ds+' '+cn+' · 5년 창 '+rows.length+' · 사람 단위 세후 연 중앙(pn) '+qq(rows.map(r=>r.pn.a),.5).toFixed(2)+' · 섀넌 체결 중앙 '+qq(rows.map(r=>r.nTrS),.5)+'건/창 · '+((Date.now()-t1)/1000).toFixed(0)+'초');
       console.log('  위약(×1.003) 경로 잡음: 연 차 중앙 '+f(qq(d0,.5))+' · |차| 90% '+qq(d0.map(Math.abs),.9).toFixed(3)+' · 가장 나쁜 '+f(Math.min(...d0))+' · 가장 좋은 '+f(Math.max(...d0)));
-      for(const k of ['pa','pd','pa25','sep']){ const d=rows.map(r=>r[k].a-r.pn.a), h1=rows.filter(r=>r.s<D.half).map(r=>r[k].a-r.pn.a), h2=rows.filter(r=>r.s>=D.half).map(r=>r[k].a-r.pn.a);
+      for(const k of (process.env.PS?['pa','pd','ps','pa25','sep']:['pa','pd','pa25','sep'])){ const d=rows.map(r=>r[k].a-r.pn.a), h1=rows.filter(r=>r.s<D.half).map(r=>r[k].a-r.pn.a), h2=rows.filter(r=>r.s>=D.half).map(r=>r[k].a-r.pn.a);
         let ex=''; if(k!=='sep'){ const g=rows.map(r=>r[k].hv.g/r.yrs), l=rows.map(r=>r[k].hv.l/r.yrs), fe=rows.map(r=>r[k].hv.fees/r.yrs), tx=rows.map(r=>r.pn.tax-r[k].tax);
           ex=' | 해마다 채움 '+qq(g,.5).toFixed(0)+'$ · 상계 '+qq(l,.5).toFixed(0)+'$ · 수수료 '+qq(fe,.5).toFixed(1)+'$ · 세금 줄어든 합 중앙 '+qq(tx,.5).toFixed(0)+'$ · 판정 채우기:상계:갈림 '+sum(k,'fill')+':'+sum(k,'offset')+':'+sum(k,'mixed')+' · 제안 '+sum(k,'nSug')+'건(섀넌 '+sum(k,'nS')+' · 섀넌 채움 '+sum(k,'gS').toFixed(0)+'$ · 상계 '+sum(k,'lS').toFixed(0)+'$)'; }
         console.log('  '+k.padEnd(5)+' − pn 연 차 중앙 '+f(qq(d,.5))+' · 평균 '+f(d.reduce((a,b)=>a+b,0)/d.length)+' · 10% '+f(qq(d,.1))+' · 최소 '+f(Math.min(...d))+' · 최대 '+f(Math.max(...d))+' · 나빠진 창 '+d.filter(x=>x<-1e-9).length+' · 앞/뒤 '+f(qq(h1,.5))+'/'+f(qq(h2,.5))+ex); }
