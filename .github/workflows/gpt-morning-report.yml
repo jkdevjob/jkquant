@@ -1,6 +1,6 @@
-name: 지피티 아침 연구 보고서 준비 · 서버 08시 발송
+name: 지피티 아침 연구 최종 보고서 예약
 # Model research writes only sanitized evidence/report data on this branch.
-# GitHub queues the report early; Durable Object alarm sends at 08:00 KST.
+# GitHub queues the report early; the Durable Object sets the delivery time.
 on:
   push:
     branches: [research/gpt-morning]
@@ -27,7 +27,7 @@ jobs:
         with: {node-version: '22'}
       - name: 모든 탭 보고서 검증
         run: node .app/scripts/validate-gpt-morning-report.mjs research/gpt-morning/latest.json > /tmp/gpt-report.json
-      - name: 기존 푸시 서버에 08시 보고서 예약
+      - name: 푸시 서버에 최종 보고서 예약
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
         shell: bash
