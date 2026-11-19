@@ -327,8 +327,7 @@ async function igExisting(item) {
 }
 
 async function publishInstagram(item) {
-  const videoUrl = await mediaUrl(item);
-  await probeUrl(videoUrl);
+  const videoUrl = await probeUrl(await mediaUrl(item));
   await igReady();
   const uid = igUid();
   // 1) 컨테이너 만들기
@@ -351,16 +350,22 @@ async function publishInstagram(item) {
   return { media_id: m.id, url: info.permalink || "(링크 조회 실패 — 앱에서 확인)", video_url: videoUrl };
 }
 
-// jsDelivr 는 새 커밋의 큰 파일을 처음 가져올 때 잠깐 403 을 줄 때가 있다(11/18 09:00 b05). 앞 1바이트를 받아 보며 최대 5번(약 4분) 다시 시도.
+// jsDelivr 는 저장소가 50MB 를 넘어서 새 커밋의 첫 요청에 403("Package size exceeded")을 주고 그 403 을 그 주소에 한동안 기억한다
+// (11/18 09:00 b05 실패, 11/19 카드뉴스 01.jpg 확인). 같은 커밋을 짧은 해시(7·10·12자)로 부르면 새 주소라 바로 열린다.
+// → 1바이트씩 받아 보며 주소 꼴을 바꿔 가며 시도하고, 열린 주소를 돌려준다(인스타에 그 주소를 넘김).
 async function probeUrl(url) {
+  const m = url.match(/@([0-9a-f]{40})\//);
+  const forms = m ? [url, ...[7, 10, 12].map((n) => url.replace(`@${m[1]}/`, `@${m[1].slice(0, n)}/`))] : [url];
   let probe = 0;
-  for (let i = 0; i < 5; i++) {
-    if (i) await sleep(15000 * i);
-    const r = await fetch(url, { headers: { Range: "bytes=0-0" } }).catch(() => null);
-    probe = r ? r.status : 0;
-    if (r) await r.arrayBuffer().catch(() => {});
-    if (probe >= 200 && probe < 300) return;
-    console.log(`  공개 주소 응답 ${probe} — ${i < 4 ? "다시 시도" : "포기"}`);
+  for (let round = 0; round < 3; round++) {
+    for (const u of forms) {
+      const r = await fetch(u, { headers: { Range: "bytes=0-0" } }).catch(() => null);
+      probe = r ? r.status : 0;
+      if (r) await r.arrayBuffer().catch(() => {});
+      if (probe >= 200 && probe < 300) { if (u !== url) console.log(`  공개 주소를 짧은 해시 꼴로 바꿈: ${u}`); return u; }
+    }
+    console.log(`  공개 주소 응답 ${probe} — ${round < 2 ? "잠시 뒤 다시" : "포기"}`);
+    if (round < 2) await sleep(20000 * (round + 1));
   }
   throw new Error(`공개 주소 접근 실패(HTTP ${probe}): ${url}`);
 }
@@ -368,7 +373,7 @@ async function probeUrl(url) {
 // 카드뉴스(사진 2~10장, JPEG) — 장마다 컨테이너 → 묶음(CAROUSEL) 컨테이너 → 게시
 async function publishCarousel(item) {
   const urls = [];
-  for (const f of item.images) { const u = await mediaUrl({ file: f }); await probeUrl(u); urls.push(u); }
+  for (const f of item.images) urls.push(await probeUrl(await mediaUrl({ file: f })));
   await igReady();
   const uid = igUid();
   const kids = [];
