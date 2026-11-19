@@ -140,9 +140,10 @@ async function check(S){
     const calls=[];O._resetOwnerFeeForTest();
     const v1=await O.ownerFeeRate(ENV,{fetchImpl:fakeGoogle({rate:0.001,calls}),now:1e6});
     const n1=calls.length,v1b=await O.ownerFeeRate(ENV,{fetchImpl:fakeGoogle({rate:0.002,calls}),now:1e6+299e3});
-    const v1c=await O.ownerFeeRate(ENV,{fetchImpl:fakeGoogle({rate:0.002,calls}),now:1e6+301e3});
-    t('O1 소유자 문서의 commonFee 만 읽는다(mask) · 율 0.1% · 출처 user · 5분 안은 다시 안 읽고 5분 뒤 다시',
-      v1.rate===0.001&&v1.source==='user'&&v1.updated===123&&calls.some(u=>/\/documents\/users\/U1\?mask\.fieldPaths=commonFee$/.test(u))&&v1b.rate===0.001&&calls.length>n1&&v1c.rate===0.002,J([v1,v1b,v1c,calls]));
+    const n2=calls.length,v1c=await O.ownerFeeRate(ENV,{fetchImpl:fakeGoogle({rate:0.002,calls}),now:1e6+301e3});
+    t('O1 소유자 문서의 commonFee 만 읽는다(mask) · 율 0.1% · 출처 user · 5분 안은 다시 안 읽고 5분 뒤 다시 — 토큰 · uid 는 둬서 요청 1번(사용자 문서)만',
+      v1.rate===0.001&&v1.source==='user'&&v1.updated===123&&calls.some(u=>/\/documents\/users\/U1\?mask\.fieldPaths=commonFee$/.test(u))&&n1===3&&v1b.rate===0.001&&n2===n1
+      &&v1c.rate===0.002&&calls.length===n2+1&&/\/documents\/users\/U1\?mask/.test(calls[calls.length-1]),J([v1,v1b,v1c,calls]));
     O._resetOwnerFeeForTest();const v2=await O.ownerFeeRate({},{now:1});
     O._resetOwnerFeeForTest();const v3=await O.ownerFeeRate(ENV,{fetchImpl:fakeGoogle({}),now:1});
     O._resetOwnerFeeForTest();const v4=await O.ownerFeeRate(ENV,{fetchImpl:fakeGoogle({rate:0}),now:1});
@@ -267,6 +268,8 @@ const MUT=[
   ['율 읽기: 문서 전체를 받는다(mask 없음)','own',s=>s.replace('"?mask.fieldPaths=" + FEE_FIELD','""')],
   ['율 읽기: 저장 안 한 사람도 출처 user','own',s=>s.replace('note: "저장된 공통 수수료 없음 — 기본값" }','note: "저장된 공통 수수료 없음 — 기본값", source: "user" }')],
   ['율 읽기: 캐시가 안 끝남','own',s=>s.replace('if (CACHE && now - CACHE.at < (CACHE.v.error ? failTtlMs : ttlMs)) return CACHE.v;\n  fetchImpl','if (CACHE) return CACHE.v;\n  fetchImpl')],
+  ['율 읽기: 토큰을 안 둔다(5분마다 요청 2번 더)','own',s=>s.replace('if (TOKEN && TOKEN.client === sa.client_email && now < TOKEN.exp) return TOKEN.v;','')],
+  ['율 읽기: uid 를 안 둔다(5분마다 profiles 다시)','own',s=>s.replace('if (UID && UID.email === email && UID.pid === pid) return UID.v;','')],
   ['율 읽기: useOwnerFee 가 비용 모듈에 안 넣음','own',s=>s.replace('  setScalpFee(v.rate, v.source);\n','')],
   ['엔드포인트: 인증 없음','ep',s=>s.replace('if (!(feeKeyOk(request, env) || await claudeAuthorized(request, env)))','if (false)')],
   ['엔드포인트: AUTOTRADE_KEY 만 받음','ep',s=>s.replace('[env.DAYTRADING_MONITOR_KEY, env.OPENING_MONITOR_KEY, env.AUTOTRADE_KEY]','[env.AUTOTRADE_KEY]')],

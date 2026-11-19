@@ -68,10 +68,44 @@ cr2.soxl.set("2026-10-06",{trades:[]});gc2.soxl.add("2026-10-06");
 const d3=buildDuel({claudeRecords:cr2,gptTrades:gt2,gptCoverage:gc2});
 assert.ok(d3.tabs.soxl.days.some(x=>x.date==="2026-10-06"));
 
+// 대결 API 요청 한도(Cloudflare 한 번 실행 50) — 클로드 날짜 파일 60개 · 밤 묶음(duel-index.json) 이 있으면 지난 날은 묶음 · 최근 6일만 날짜 파일
+console.log("[scalping duel] 요청 한도 · 묶음 = 날짜 파일 값 시험");
+const SDsrc=(await import("node:fs")).readFileSync(new URL("../functions/api/scalping-duel.js",import.meta.url),"utf8");
+const loadSD=async src=>import("data:text/javascript;base64,"+Buffer.from(src.replace(/from\s+(["'])\.\/([^"']+)\1/g,(m,q,f)=>"from "+q+new URL("../functions/api/"+f,import.meta.url).href+q)).toString("base64"));
+const dayN=i=>new Date(Date.parse("2026-10-05T00:00:00Z")+i*864e5).toISOString().slice(0,10);
+const dates=Array.from({length:60},(_,i)=>dayN(i)),NOW=Date.parse(dates[59]+"T12:00:00+09:00");
+const fileOf=dd=>({ok:true,date:dd,ledger:{events:[{id:"close:crypto",payload:{date:dd,status:"closed",trades:[{name:"BTC",entryPrice:100,exitPrice:101+(+dd.slice(8))%3}]}},{id:"buy:x",payload:{}}]}});
+const idxBody={schema:1,files:dates.slice(0,59).map(dd=>({date:dd,ledger:{events:fileOf(dd).ledger.events.filter(e=>e.id.startsWith("close:"))}}))};
+const fakeGh=(withIndex,calls)=>async u=>{const url=String(u);calls.push(url);
+  if(url.includes("/branches/"))return Response.json({commit:{sha:"s"}});
+  if(url.includes("/git/trees/"))return Response.json({tree:[...dates.map(dd=>({path:"data/claude-live/"+dd+".json"})),...(withIndex?[{path:"data/claude-live/duel-index.json"}]:[])]});
+  const m=url.match(/claude-live\/(\d{4}-\d{2}-\d{2})\.json/);if(m)return new Response(JSON.stringify(fileOf(m[1])));
+  if(url.includes("claude-live/duel-index.json"))return new Response(JSON.stringify(idxBody));
+  return new Response("",{status:404});};
+async function duelCalls(src,withIndex){
+  const SD=await loadSD(src),calls=[],real=globalThis.fetch;globalThis.fetch=fakeGh(withIndex,calls);
+  try{const paths=dates.map(dd=>"data/claude-live/"+dd+".json").concat(withIndex?["data/claude-live/duel-index.json"]:[]);
+    const r=await SD.claudeLiveFiles(paths,NOW),nFiles=calls.length;calls.length=0;const rep=await SD.loadReport(NOW);
+    return {r,nFiles,nReport:calls.length,rep};}
+  finally{globalThis.fetch=real;}
+}
+const withIdx=await duelCalls(SDsrc,true),noIdx=await duelCalls(SDsrc,false);
+const recs=r=>JSON.stringify([...normalizeClaudeEvents(r.files).crypto.entries()]);
+assert.equal(withIdx.nFiles,1+7);                                    // 묶음 1 + 최근 6일(11/27~12/03 · 7개 날짜)
+assert.equal(noIdx.nFiles,60);                                      // 묶음 없으면 예전처럼 날짜 파일 60개(한도 넘음)
+assert.ok(withIdx.nReport<=20,String(withIdx.nReport));               // 대결 보고서 전체(목록 2 · 묶음 · 최근 · CSV 6) — 한도 50 안
+assert.equal(recs(withIdx.r),recs(noIdx.r));                           // 묶음으로 센 마감 기록 = 날짜 파일로 센 기록(60일 모두)
+assert.equal(normalizeClaudeEvents(withIdx.r.files).crypto.size,60);
+assert.equal(JSON.stringify(withIdx.rep.tabs.crypto.days),JSON.stringify(noIdx.rep.tabs.crypto.days));
+console.log("  ✓ 요청: 묶음 있으면 날짜 파일 "+withIdx.nFiles+"개 · 보고서 "+withIdx.nReport+"개(예전 "+noIdx.nReport+"개) · 기록 같음");
 console.log("[scalping duel] 변이 시험");
 function killed(label,mutantCheck){assert.equal(mutantCheck(),true,"변이를 못 잡음: "+label);console.log("  ✓ "+label+" 변이 적발");}
 killed("시작일 무시",()=>["2026-10-04","2026-10-05"].filter(x=>x>=DUEL_START).length!==2);
 killed("한쪽만 있는 날 포함",()=>new Set(["2026-10-05","2026-10-06","2026-10-07","2026-10-08"]).size!==d.tabs.opening.days.length);
 killed("비용 다르게",()=>Math.abs((grossPct(100,101)-.10)-d.tabs.opening.days[0].claude.pnlPct)>1e-9);
 killed("합계 25% 균등 아님",()=>Math.abs((.4*(1-.25)+.2*(2-.15)+.2*(3-.14)+.2*(4-.20))-d2.total.days[0].claudePct)>1e-9);
+{const mut=SDsrc.replace("if(d<recentFrom&&have.has(d)){files.push(have.get(d));continue;}","");assert.notEqual(mut,SDsrc);
+ const m=await duelCalls(mut,true);killed("묶음 안 읽음(날짜 파일 60개 · 한도 넘음)",()=>m.nReport>50);}
+{const mut=SDsrc.replace("if(d<recentFrom&&have.has(d))","if(have.has(d))");assert.notEqual(mut,SDsrc);
+ const m=await duelCalls(mut,true);killed("최근 6일도 묶음(새로 받은 사본 무시)",()=>m.nFiles!==1+7);}
 console.log("ALL PASS — scalping duel rules");

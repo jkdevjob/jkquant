@@ -259,6 +259,44 @@ def account_return(strategy, ledger):
     return sum(vals)
 
 
+def friction_sum(ledger):
+    """그 장부 거래들이 뺀 왕복 비용 합 — 거래 칸이 없으면 장부 칸(frictionPct). 모르면 None"""
+    lf = num((ledger or {}).get("frictionPct"))
+    tot = 0.0
+    for t in (ledger or {}).get("trades") or []:
+        f = num(t.get("frictionPct"))
+        f = lf if f is None else f
+        if f is None:
+            return None
+        tot += f
+    return tot
+
+
+def friction_gap(strategy, ref_ledger, db_ledger):
+    """같은 거래를 다른 비용으로 센 차이(2026-11-19 공통 수수료 ~): 연구 CSV 는 지금 율로 다시 세고,
+    DB 의 지난 기록은 그때 율 그대로다(덮어쓰지 않는다 — 단타 누적 원칙). 비교할 때만 비용 차이를 맞춘다.
+    거래 수가 다르거나 비용을 모르면 0(그대로 비교 — 진짜 차이는 그대로 잡힌다)."""
+    rt, dt = (ref_ledger or {}).get("trades") or [], (db_ledger or {}).get("trades") or []
+    if len(rt) != len(dt) or not rt:
+        return 0.0
+    a, b = friction_sum(ref_ledger), friction_sum(db_ledger)
+    if a is None or b is None:
+        return 0.0
+    gap = a - b
+    if strategy == "daytrading":
+        gap /= max(1, int((db_ledger or {}).get("maxTrades") or 3))
+    return gap
+
+
+def ledger_matches(strategy, ref_ledger, db_ledger):
+    """(맞나, 기대 손익(비용 맞춘 값), DB 손익, 비용 차이)"""
+    gap = friction_gap(strategy, ref_ledger, db_ledger)
+    want = account_return(strategy, ref_ledger) + gap
+    got = account_return(strategy, db_ledger)
+    same_count = len((db_ledger or {}).get("trades") or []) == len((ref_ledger or {}).get("trades") or [])
+    return same_count and abs(got - want) <= 1e-6, want, got, gap
+
+
 def audit_strategy(strategy, key, do_backfill=False):
     ref = reference(strategy)
     db_dates = get_dates(strategy, key)
@@ -290,15 +328,13 @@ def audit_strategy(strategy, key, do_backfill=False):
             malformed.append(date)
             continue
         checked += 1
-        want = account_return(strategy, ref[date])
-        got = account_return(strategy, ledger)
-        trade_count_ok = len(ledger.get("trades") or []) == len(ref[date].get("trades") or [])
-        ret_ok = abs(got - want) <= 1e-6
-        if not (trade_count_ok and ret_ok):
+        ok, want, got, gap = ledger_matches(strategy, ref[date], ledger)
+        if not ok:
             item = {
                 "date": date,
                 "wantReturn": want,
                 "dbReturn": got,
+                "frictionGap": gap,
                 "wantTrades": len(ref[date].get("trades") or []),
                 "dbTrades": len(ledger.get("trades") or []),
                 "mode": ledger.get("mode"),

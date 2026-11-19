@@ -46,7 +46,21 @@ export function rateFromFields(fields) {
   return { rate: feeValid(n), updated: u };
 }
 
-let CACHE = null;
+let CACHE = null, TOKEN = null, UID = null;
+/* 구글 토큰(1시간)은 50분 · 소유자 uid 는 메일이 같으면 계속 둔다 — 5분마다 율을 다시 읽을 때 Cloudflare 요청은 1번(사용자 문서)만.
+   연구 함수는 한 번 실행에 요청 50개 한도가 있다(클로드 실시간 · 대결이 이미 많이 쓴다). 첫 실행만 3번. */
+async function cachedToken(sa, fetchImpl, now) {
+  if (TOKEN && TOKEN.client === sa.client_email && now < TOKEN.exp) return TOKEN.v;
+  const v = await saToken(sa, fetchImpl);
+  TOKEN = { v, client: sa.client_email, exp: now + 50 * 60e3 };
+  return v;
+}
+async function cachedUid(tok, pid, email, fetchImpl) {
+  if (UID && UID.email === email && UID.pid === pid) return UID.v;
+  const v = await ownerUid(tok, pid, email, fetchImpl);
+  if (v) UID = { v, email, pid };
+  return v;
+}
 /* 요청마다 제한 시간(기본 3초) — 구글이 늦어도 연구 함수가 멈추지 않고 기본값으로 간다 */
 function withTimeout(fetchImpl, ms) {
   return async (u, o = {}) => {
@@ -64,13 +78,14 @@ export async function ownerFeeRate(env, { fetchImpl = fetch, now = Date.now(), t
     try { sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "{}"); } catch (e) { throw new Error("FIREBASE_SERVICE_ACCOUNT 가 JSON 이 아닙니다"); }
     if (!sa.client_email || !sa.private_key) throw new Error("FIREBASE_SERVICE_ACCOUNT 없음");
     const pid = sa.project_id || "jk-invest";
-    const tok = await saToken(sa, fetchImpl);
-    const uid = String(env.AUTOTRADE_UID || "").trim() || await ownerUid(tok, pid, ownersOf(env)[0], fetchImpl);
+    const tok = await cachedToken(sa, fetchImpl, now);
+    const uid = String(env.AUTOTRADE_UID || "").trim() || await cachedUid(tok, pid, ownersOf(env)[0], fetchImpl);
     if (!uid) throw new Error("소유자 uid 를 찾지 못했습니다");
     const r = await fetchImpl(FS(pid, "users/" + uid) + "?mask.fieldPaths=" + FEE_FIELD, { headers: { authorization: "Bearer " + tok } });
     if (r.status === 404) v = { rate: FEE_DEFAULT, source: "default", updated: null, note: "사용자 문서 없음" };
     else {
       const j = await r.json().catch(() => ({}));
+      if (r.status === 401 || r.status === 403) TOKEN = null;   // 토큰이 풀렸으면 다음엔 새로 받는다
       if (!r.ok) throw new Error("사용자 문서 읽기 실패 " + r.status);
       const x = rateFromFields(j.fields || {});
       v = x.rate == null ? { rate: FEE_DEFAULT, source: "default", updated: null, note: "저장된 공통 수수료 없음 — 기본값" }
@@ -80,7 +95,7 @@ export async function ownerFeeRate(env, { fetchImpl = fetch, now = Date.now(), t
   CACHE = { at: now, v };
   return v;
 }
-export function _resetOwnerFeeForTest() { CACHE = null; }
+export function _resetOwnerFeeForTest() { CACHE = null; TOKEN = null; UID = null; }
 /* 진입점용 — 소유자 율을 읽어 단타 비용 모듈에 넣고 그 값을 돌려준다(응답 · 기록에 남길 것) */
 export async function useOwnerFee(env, opts = {}) {
   const v = await ownerFeeRate(env, opts);
