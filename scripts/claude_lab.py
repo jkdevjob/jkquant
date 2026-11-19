@@ -27,6 +27,10 @@ import time
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 from pathlib import Path
 
 KST = timezone(timedelta(hours=9))
@@ -35,18 +39,19 @@ OUT = DATA / "claude-lab"
 DESIGN_END = "2026-09-30"
 GATE = dict(mdd=-25.0, worstDay=-15.0)
 
-BTC = dict(version="btc_trend20_v1", ma=20, stopPct=4.0, size=0.5, costRoundTripPct=0.14, stopSlipPct=0.1,
+# 왕복 비용(costRoundTripPct) = 공통 수수료 × 2 + 미끄러짐 — scalp_cost.py(코인 0.04 · 미국 0). 2026-11-19 전 코인 0.14 · 미국 0.20.
+BTC = dict(version="btc_trend20_v1", ma=20, stopPct=4.0, size=0.5, costRoundTripPct=SC.cost_pct("coin"), stopSlipPct=0.1,
            note="업비트 KRW-BTC 일봉(09시 기준). 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 자금 50%.")
 CRYPTO = dict(version="crypto_trend20_v2", markets=["KRW-BTC", "KRW-ETH"], ma=20, stopPct=4.0, size=1.0, tabSize=0.6,
-              costRoundTripPct=0.14, stopSlipPct=0.1,
+              costRoundTripPct=SC.cost_pct("coin"), stopSlipPct=0.1,
               note="업비트 BTC·ETH 일봉(09시 기준) 각각: 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 두 코인 반반, 자금 60%.")
 ACCOUNT = dict(krWeight=0.3, cryptoWeight=0.3, usWeight=0.4, cryptoSize=1.0, usSize=1.0,
                note="같은 원금: 국내 30%(① D-1 v2 + ② ETF 야간 + ⑤ 종가 30분, 같은 날 여럿이면 똑같이 나눔) + 코인 30%(BTC·ETH 고가 돌파 하루 단타, 칸 안 전액) + 미국 40%(SOXL 과매도 반등 ≤5일, 칸 안 전액).")
 KR_KEYS = ("opening_d1v2", "daytrading_etf", "close30_etf")      # 국내 칸을 나눠 쓰는 장부 키
 US = dict(version="tqqq_trend200_v1", trade="TQQQ", signal="QQQ", ma=200, stopPct=10.0, size=1.0, tabSize=0.5,
-          costRoundTripPct=0.20, stopSlipPct=0.1,
+          costRoundTripPct=SC.cost_pct("us"), stopSlipPct=0.1,
           note="QQQ 종가 > 200일 평균이면 TQQQ 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −10% 닿으면 손절. 탭 표시는 자금 50%. SOXL 은 변동성이 너무 커 TQQQ 로 바꿨다(SOXL 안은 참고로 같이 계산).")
-SOXL = dict(version="soxl_trend50_v1", ma=50, stopPct=8.0, size=0.25, costRoundTripPct=0.20, stopSlipPct=0.2,
+SOXL = dict(version="soxl_trend50_v1", ma=50, stopPct=8.0, size=0.25, costRoundTripPct=SC.cost_pct("us"), stopSlipPct=0.2,
             note="SOXX 종가 > 50일 평균이면 SOXL 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −8% 닿으면 손절. 자금 25%.")
 GPT_FILES = {
     "opening": ("opening-history/baseline-trades.csv", "pnl"),
@@ -118,7 +123,7 @@ def fetch_btc_daily(market="KRW-BTC"):
 
 
 COIN_BO = dict(version="coin_breakout_v1", markets=["KRW-BTC", "KRW-ETH"], ma=20, stopPct=5.0, level="prevhigh", k=0.5, hiN=1,
-               size=1.0, tabSize=0.8, costRoundTripPct=0.14, entrySlipPct=0.05, stopSlipPct=0.1,
+               size=1.0, tabSize=0.8, costRoundTripPct=SC.cost_pct("coin"), entrySlipPct=0.05, stopSlipPct=0.1,
                note="업비트 BTC·ETH 각각(하루 = 09:00~다음날 09:00): 어제 종가 > 20일 평균인 날만, 오늘 가격이 어제 고가를 넘는 순간 매수 → "
                     "다음 날 09:00 에 무조건 매도(보유 24시간 미만). 매수가 대비 −5% 닿으면 손절. 두 코인 반반, 탭 표시 자금 80%.")
 HOURLY = DATA / "claude-lab" / "hourly"
@@ -274,7 +279,7 @@ def trend_daily(rows, p, signal_close=None):
 
 
 SOXL_MR = dict(version="soxl_rsi2_meanrev_v1", trade="SOXL", rsiMax=20.0, ibsMax=1.0, downDays=0, ma=200, maxHoldDays=5, size=1.0, tabSize=0.5,
-               costRoundTripPct=0.20,
+               costRoundTripPct=SC.cost_pct("us"),
                note="SOXL 단기 과매도 반등(최대 5거래일). 장 마감 확정 종가로 RSI(2)<20 이고 종가 > 200일 평균이면 다음 날 시가 매수 → "
                     "종가가 전날보다 오른 날이 나오면 그다음 날 시가 매도, 늦어도 5거래일째 종가 뒤 다음 시가 매도. 탭 표시 자금 50%.")
 
@@ -990,7 +995,7 @@ def etf_trades(code, th):
         if abs(chg) <= 35 and chg <= th and etf_24h(b[i][0], b[i + 1][0]):   # 연구와 같은 경계(35% 넘는 값은 액면분할 등 자료 오류로 본다) · 최대 24시간
             tick = 5 if b[i][2] >= 2000 else 1
             out.append(dict(buyDate=b[i][0], buyPrice=b[i][2], sellDate=b[i + 1][0], sellPrice=b[i + 1][1], dropPct=chg,
-                            pnl=(b[i + 1][1] / b[i][2] - 1) * 100 - (0.03 + 2 * tick / b[i][2] * 100)))
+                            pnl=(b[i + 1][1] / b[i][2] - 1) * 100 - (SC.cost_pct("etf") + 2 * tick / b[i][2] * 100)))
     return out, [x[0] for x in b]
 
 
@@ -1061,7 +1066,7 @@ def close30_trades(code, th):
         cal.append(d)
         if sofar < th:
             tick = 5 if p15 >= 2000 else 1
-            out.append(dict(date=d, buyPrice=p15, sellPrice=close, sofarPct=sofar, pnl=(close / p15 - 1) * 100 - (0.03 + tick / 2 / p15 * 100)))
+            out.append(dict(date=d, buyPrice=p15, sellPrice=close, sofarPct=sofar, pnl=(close / p15 - 1) * 100 - (SC.cost_pct("etf") + tick / 2 / p15 * 100)))
     return out, cal
 
 
@@ -2355,7 +2360,9 @@ def week_summary(summary, today):
 
 
 # ── GPT 와 같은 조건 비교: 같은 날짜(청산일) · 같은 시장 데이터 · 같은 비용표 ──
-FAIR_COST = {"opening": 0.25, "daytrading_stock": 0.25, "daytrading_etf": 0.15, "crypto": 0.14, "soxl": 0.20}
+# 대결 같은 비용표 = 공통 수수료 × 2 + 수수료 아닌 몫(_scalping_duel.js COSTS 와 같은 값). 2026-11-19 전 0.25 · 0.25 · 0.15 · 0.14 · 0.20.
+FAIR_COST = {"opening": SC.cost_pct("krDay"), "daytrading_stock": SC.cost_pct("krDay"), "daytrading_etf": SC.cost_pct("etfFair"),
+             "crypto": SC.cost_pct("coin"), "soxl": SC.cost_pct("us")}
 FAIR_NOTE = ("두 전략 모두 매매마다 (청산가 ÷ 진입가 − 1) 총수익에서 같은 시장 같은 비용(왕복)을 뺀다. 하루 손익은 그날 청산한 매매의 "
              "자금 배분대로(여러 종목이면 균등, 코인은 클로드 두 코인 반반 · GPT 한 종목 전액), 칸 자금 100% 기준. 매매 없는 날 0%.")
 REASON_KO = {"stop": "손절", "take_profit": "익절", "time_exit": "시간 청산", "trade": "다음 09시 청산", "exit": "반등 청산",

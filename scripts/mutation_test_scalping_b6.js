@@ -5,7 +5,10 @@ function extractFn(src,marker){ const i=src.indexOf(marker); if(i<0)throw new Er
 function env(src){
   const code=[
     'const REF_ATR_LEN=14, REF_ATR_STOP_MULT=2, REF_ATR_TGT_MULT=4;',
-    'const OPENING_FIXED_FRICTION_PCT=0.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE='+(src.match(/OPENING_FALLBACK_TICKS_PER_SIDE=([0-9.]+)/)||[])[1]+';',
+    // 고정 몫 = 화면 SCALP_FEE(공통 수수료) — 값 시험은 옛 국내 수수료 0.015%(고정 0.23)로 둔다
+    (src.match(/let SCALP_FEE=\{[^\n]*\};/)||[''])[0],extractFn(src,'function scalpCost('),extractFn(src,'function openingFixedFrictionPct('),
+    'SCALP_FEE={...SCALP_FEE,rate:0.00015,roundTripPct:0.03};',
+    'const OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE='+(src.match(/OPENING_FALLBACK_TICKS_PER_SIDE=([0-9.]+)/)||[])[1]+';',
     'let OPENING_FRICTION_CAL={completeMatches:0,observedRoundTripSlippagePct:null};',
     extractFn(src,'function referenceAtr14('),extractFn(src,'function openingKrTickSize('),extractFn(src,'function openingFrictionPct('),extractFn(src,'function levelsOf('),
     'const BT={hold:5,minAmt:50};',extractFn(src,'function btSimOne('),

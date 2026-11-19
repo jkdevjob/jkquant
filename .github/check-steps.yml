@@ -722,5 +722,7 @@
 
 - name: 공통 수수료(설정 › 💸 수수료 · 기본 0.25%) — 설정 탭 읽기·저장 · 브라우저=서버 규칙 · 장부 9벌(거래금액×율 · 기록 칸 무시 · seed 0) · 주문 수량 · 모의 지문 · 배선 값·변이 검사
   run: node scripts/check-common-fee.cjs
+- name: 단타 연구 봇 공통 수수료 — 왕복 비용 = 공통 율 × 2 + 세금·미끄러짐 · 파이썬=JS · 화면 · 율 읽기(mask·캐시) · /api/common-fee 인증 · 워커 · 지난 거래 비용 유지 · 배선 값·변이 검사
+  run: node scripts/check-scalp-fee.cjs
 - name: MA150 하향 기준 및 시간대 경계 검증
   run: node scripts/check-ma150-cutover.cjs

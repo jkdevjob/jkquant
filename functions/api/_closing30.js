@@ -1,5 +1,6 @@
 // 종가 30분 연구 엔진. 시점 고정(lookahead 방지), 종가 경매는 15:40 후 확정.
 // 매매는 종이모의(paper)만. 실계좌/KIS VTS 주문 경로에 연결하지 않는다.
+import {scalpCostPct,scalpFeeRate,SCALP_COST_MODEL} from "./_scalp_cost.js";
 export const CLOSE_VARIANTS=Object.freeze([
   {id:"baseline",label:"기준 · 장마감 반등",side:"dip",threshold:0,volume:0},
   {id:"dip_1",label:"−1% 이하 낙폭",side:"dip",threshold:-1,volume:0},
@@ -13,7 +14,8 @@ export const CLOSE_VARIANTS=Object.freeze([
   {id:"flat",label:"보합 · 근소 낙폭",side:"flat",threshold:1,volume:0},
   {id:"all",label:"모든 종목 (대조군)",side:"all",threshold:0,volume:0},
 ]);
-export const CLOSE_FEES_PCT=.23;
+// 왕복 비용 % = 거래세 0.20 + 공통 수수료(설정 › 💸 수수료) × 2 — _scalp_cost.js. 2026-11-19 전 0.23 고정(그때 기록은 그 값 그대로)
+export function closeFeesPct(){return scalpCostPct("kr");}
 export const CLOSE_RESERVE_VARIANTS=Object.freeze([
   {id:'dip_05',side:'dip',threshold:-.5,volume:0},
   {id:'dip_15',side:'dip',threshold:-1.5,volume:0},
@@ -65,12 +67,12 @@ export function chooseClosingSignals(stockFeatures,model,limit=3,variants=CLOSE_
       .sort((a,b)=>b.feature.liquidity-a.feature.liquidity||String(a.code).localeCompare(String(b.code)))
       .slice(0,limit);
     for(const x of matches)all.push({kind:model,variant:v.id,variantLabel:v.label,code:x.code,name:x.name,
-      strategyParams:{...v,maxTrades:limit,frictionPct:CLOSE_FEES_PCT,signalCutoff:model==="day"?1504:1520,entry:model==="day"?"next_completed_minute_proxy":"official_close",exit:model==="day"?"official_close":"next_session_open"},
+      strategyParams:{...v,maxTrades:limit,frictionPct:closeFeesPct(),costModel:SCALP_COST_MODEL,feeRatePct:Math.round(scalpFeeRate()*1e8)/1e6,signalCutoff:model==="day"?1504:1520,entry:model==="day"?"next_completed_minute_proxy":"official_close",exit:model==="day"?"official_close":"next_session_open"},
       signal:{...x.feature,reason:`${v.id}: side=${v.side}, threshold=${v.threshold}, volume>=${v.volume}; cutoff ${x.feature.signalHm}; liquidity top ${limit}`},
       signalHm:x.feature.signalHm,fillStatus:"signal_only",strategyVersion:"close30-paper-v1"});
   }
   return all;
 }
-export function closeNetPct(entry,exit,cost=CLOSE_FEES_PCT){
+export function closeNetPct(entry,exit,cost=closeFeesPct()){
   return entry>0&&exit>0?(exit/entry-1)*100-cost:null;
 }

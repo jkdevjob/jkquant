@@ -62,9 +62,16 @@ def summarize(reports,strategy):
         "avgVtsNetPnlPct":avg(m.get("vtsNetPnlPct") for m in complete),
         "avgBrokerCostRatePct":avg(m.get("vtsBrokerCostRatePct") for m in complete),
         "avgObservedExecutionDragPct":avg(m.get("observedExecutionDragPct") for m in complete),
-        "frictionGapVsInternal025Pct":(
+        "frictionGapVsInternal025Pct":(  # 옛 칸(0.25 고정 가정) — 이어 보기용
             avg(m.get("observedExecutionDragPct") for m in complete)-0.25
             if avg(m.get("observedExecutionDragPct") for m in complete) is not None else None
+        ),
+        # 그 거래들이 실제로 뺀 내부 마찰(기록값 · 공통 수수료 반영 2026-11-19 ~ · 칸 없는 옛 기록 0.25)과의 차이
+        "avgInternalFrictionPct":avg((m.get("internalFrictionPct") if m.get("internalFrictionPct") is not None else 0.25) for m in complete),
+        "frictionGapVsInternalPct":(
+            avg(m.get("observedExecutionDragPct") for m in complete)
+            -avg((m.get("internalFrictionPct") if m.get("internalFrictionPct") is not None else 0.25) for m in complete)
+            if avg(m.get("observedExecutionDragPct") for m in complete) is not None and complete else None
         ),
         "calibrationStatus":"reviewable" if len(complete)>=20 else "collecting",
         "calibrationMatches":len(complete),

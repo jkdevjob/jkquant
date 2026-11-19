@@ -143,7 +143,7 @@ PY = [
     ("review late uses today cell", "claude_lab.py", 'res = r.get("last") if r.get("lastDate") == today else r.get("prev") if r.get("prevDate") == today else None', 'res = r.get("last")'),
     ("c30 buys flat day", "claude_lab.py", "        if sofar < th:\n", "        if sofar <= th:\n"),
     ("c30 decides on close (lookahead)", "claude_lab.py", "        sofar = (p15 / prev - 1) * 100\n", "        sofar = (close / prev - 1) * 100\n"),
-    ("c30 no cost", "claude_lab.py", "pnl=(close / p15 - 1) * 100 - (0.03 + tick / 2 / p15 * 100))", "pnl=(close / p15 - 1) * 100)"),
+    ("c30 no cost", "claude_lab.py", "pnl=(close / p15 - 1) * 100 - (SC.cost_pct(\"etf\") + tick / 2 / p15 * 100))", "pnl=(close / p15 - 1) * 100)"),
     ("c30 unfinished bar kept", "claude_lab.py", " or k + timedelta(hours=1) > now:", ":"),
     ("c30 cached bar overwritten", "claude_lab.py", "            if d in H and str(k.hour) in H[d]:\n                continue", "            if False:\n                continue"),
     ("c30 partial day kept", "claude_lab.py", 'if sorted(int(k) for k in h) != [9, 10, 11, 12, 13, 14] or', 'if "14" not in h or'),
@@ -324,7 +324,7 @@ JS = [
     ("krx holiday etf note", "claude-live.js", '}else if(buy.decisionReason==="krx_holiday")', '}else if(false)'),
     ("d1 rule cell ignored on closed day", "claude-live.js", 'if(!all.length)return rule||{v:"no_trade"', 'if(!all.length)return {v:"no_trade"'),
     ("d1 rule cell ignored intraday", "claude-live.js", 'if(q.noTrade)return rule||{v:"no_trade"', 'if(q.noTrade)return {v:"no_trade"'),
-    ("d1 rule cost one side", "claude-live.js", "export function d1CostPct(p){return 0.23+2*1.5*krTick(p)/p*100;}", "export function d1CostPct(p){return 0.23+1.5*krTick(p)/p*100;}"),
+    ("d1 rule cost one side", "claude-live.js", "export function d1CostPct(p){return scalpCostPct(\"kr\")+2*1.5*krTick(p)/p*100;}", "export function d1CostPct(p){return scalpCostPct(\"kr\")+1.5*krTick(p)/p*100;}"),
     ("d1 rule cell without main-day gate", "claude-live.js", "if(!b||b.qualified==null||!openingCounts(P,b.qualified))return null;", "if(!b)return null;"),
     ("c30 buys flat", "opening-gapdown.js", "if(!(sofar<th))return {signal:false", "if(sofar>th)return {signal:false"),
     ("c30 main threshold ignored", "opening-gapdown.js", "return {sofarPct,...c30Decision(sofarPct,R.rule.th)};", "return {sofarPct,...c30Decision(sofarPct)};"),
@@ -337,7 +337,7 @@ JS = [
     ("c30 sells again", "opening-gapdown.js", "  const qty=Math.max(0,out.boughtQty-out.alreadySoldQty);\n  if(!(qty>0)){out.decisionReason=\"no_position\";return out;}\n  await sleep(1200);\n  out.decisionReason=\"close_exit\";",
      "  const qty=Math.max(0,out.boughtQty);\n  if(!(qty>0)){out.decisionReason=\"no_position\";return out;}\n  await sleep(1200);\n  out.decisionReason=\"close_exit\";"),
     ("c30 budget ignores setting", "opening-gapdown.js", "const qty=Math.floor(vts.budget/Math.max(1,+q.price||0));", "const qty=Math.floor(2000000/Math.max(1,+q.price||0));"),
-    ("c30 live no cost", "claude-live.js", "export function c30CostPct(px){px=+px;return px>0?0.03+((px>=2000?5:1)/2)/px*100:0.03;}", "export function c30CostPct(px){return 0;}"),
+    ("c30 live no cost", "claude-live.js", "export function c30CostPct(px){px=+px;const f=scalpCostPct(\"etf\");return px>0?f+((px>=2000?5:1)/2)/px*100:f;}", "export function c30CostPct(px){return 0;}"),
     ("c30 live rejected no pnl", "claude-live.js", "pnlPct:bp&&ref?pct(ref,bp)-c30CostPct(bp):null", "pnlPct:bp&&ref&&buy.order&&buy.order.vts&&buy.order.vts.ok?pct(ref,bp)-c30CostPct(bp):null"),
     ("c30 live closes before 15:31", "claude-live.js", "sp=hm>=1531&&+(bar||{}).close>0?+bar.close:null", "sp=+(bar||{}).close>0?+bar.close:null"),
     ("c30 live fill over 15:00 price", "claude-live.js", "const bp=+((buy.quote||{}).price)||null", "const bp=+((((st.c30_reconcile||{}).fills||{}).buy||{}).avgPrice)||+((buy.quote||{}).price)||null"),
@@ -451,7 +451,7 @@ def run_js(folder, worker_src=None):
 def mutate_py(case):
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "backtest_etf_overnight.py", "claude_lab.py", "test_opening_gapdown.py"):
+        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "backtest_etf_overnight.py", "claude_lab.py", "test_opening_gapdown.py", "scalp_cost.py"):
             shutil.copy(ROOT / name, folder / name)
         # claude_lab.krx_holidays() 는 __file__ 옆의 functions/api/_krx_calendar.js 를 읽는다 — 사본 폴더에도 둬야 휴장 시험이 변이와 무관하게 빨간불이 되지 않는다
         (folder / "functions" / "api").mkdir(parents=True)
@@ -471,7 +471,7 @@ def mutate_py(case):
 def mutate_js(case):
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js", "_claude_real.js", "_paper-trading.js", "_opening-execution.js", "_research-broker.js", "_research-orders.js", "_market-day-cache.js", "_closing30.js", "_closing30-storage.js", "_closing30-outcomes.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js", "_claude_real.js", "_paper-trading.js", "_opening-execution.js", "_research-broker.js", "_research-orders.js", "_market-day-cache.js", "_closing30.js", "_closing30-storage.js", "_closing30-outcomes.js", "_scalp_cost.js", "_fee.js", "_owner_fee.js"):
             shutil.copy(API / name, folder / name)
         shutil.copy(ROOT.parent / "claude.html", folder / "claude.html")   # 화면 함수(arenaStatus) 시험이 사본 폴더의 claude.html 을 먼저 읽는다
         worker_src = folder / "worker_index.js"                  # 'worker' = worker/opening-scheduler/src/index.js 사본(시험이 JKQ_WORKER_SRC 로 읽는다)

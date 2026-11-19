@@ -4,6 +4,7 @@
 // 사용자 요청(2026-10-13): 모든 메시지는 '[클로드 연구 시초가]' 처럼 시작하고, 실제 매수 · 매도 때만 보낸다(후보 · 매매 없음 · 요약은 보내지 않음).
 // 알림이 실패해도 주문 · 장부에는 영향이 없다(주문 경로와 따로 돈다).
 import { MAIN_DEFAULT, openingCounts, openingExit, openingPick } from "./_claude_main.js";
+import { scalpCostPct } from "./_scalp_cost.js";
 
 const KR_PCT = v => (v >= 0 ? "+" : "") + Number(v).toFixed(2) + "%";
 const won = v => (v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("en-US"));
@@ -65,6 +66,7 @@ const mdKo = d => +d.slice(5, 7) + "/" + +d.slice(8, 10) + "(" + "일월화수�
 export function pushEvents(live, nowMs, sent = {}) {
   const T = (live && live.tabs) || {}, d = (live && live.today) || kstDateOf(nowMs), out = [];
   const add = (id, title, body, price) => out.push({ id, title, body, tag: id.split(":").slice(0, 2).join(":"), url: "/claude", price: price ?? null });
+  const coinCost = scalpCostPct("coin", live && live.fee ? live.fee.rate : undefined);   // ③ 왕복 비용 — /api/claude-live 가 알려 준 공통 수수료 율(없으면 기본)
   // ① 시초가 — 08:56 판단 · 08:59 장전 동시호가 매수 / 매도(2026-11-09~ 10:00 · 그 전 15:30 종가 — _claude_main.openingExit, 장부 · 화면과 같은 표).
   // 메인 전략 매매일(통과 종목 수 ≥ 메인 기준)에 메인이 고르는 종목만 알린다 — 다른 날 · 다른 종목 주문은 체결 측정용(실시간 화면 · 장부와 같은 함수).
   const ot = T.opening || {}, P = (ot.main && ot.main.params) || MAIN_DEFAULT.opening.params, br = (ot.decision || {}).breadth, X = openingExit(d);
@@ -105,7 +107,7 @@ export function pushEvents(live, nowMs, sent = {}) {
     const mm = /^coin:(\d{4}-\d{2}-\d{2}):(KRW-[A-Z]+):buy$/.exec(id);
     if (!mm || mm[1] !== pud || sent["coin:" + pud + ":" + mm[2] + ":stop"]) continue;
     const nm = mm[2].replace("KRW-", ""), bp = +(sent[id] && sent[id].price), now = (coins.find(r => r.code === mm[2]) || {}).nowPrice;
-    add("coin:" + pud + ":" + mm[2] + ":sell", HEAD.coin + " 🔴 " + nm + " 매도", nm + " 09:00 매도(어제 돌파분)" + (bp > 0 && now > 0 ? " 약 " + KR_PCT((now / bp - 1) * 100 - 0.14) : ""));
+    add("coin:" + pud + ":" + mm[2] + ":sell", HEAD.coin + " 🔴 " + nm + " 매도", nm + " 09:00 매도(어제 돌파분)" + (bp > 0 && now > 0 ? " 약 " + KR_PCT((now / bp - 1) * 100 - coinCost) : ""));
   }
   // ④ SOXL — 미국장 시가 매수 · 매도(전날 밤 마감 종가로 판단)
   const s = ((T.soxl && T.soxl.rows) || [])[0];

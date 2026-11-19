@@ -1,5 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
 import {soxlBrokerPlans,sendResearchPlans,reconcileResearchBroker,RESEARCH_BROKER_VERSION} from "../../../functions/api/_research-orders.js";
+import {scalpCostPct,scalpFeeRate,scalpFeeSource,setScalpFee,fetchCommonFee,SCALP_COST_MODEL} from "../../../functions/api/_scalp_cost.js";
+// 왕복 마찰 % = 공통 수수료(설정 › 💸 수수료) × 2 + 미끄러짐(코인 0.04 · 미국 0) — _scalp_cost.js. 실행마다 /api/common-fee 에서 율을 받는다.
+// 2026-11-19 전: 코인 0.14(수수료 0.05×2 + 0.04) · 미국 0.20(수수료 0.10×2) — 그때 만든 거래는 저장된 frictionPct 그대로(덮어쓰지 않는다).
+const btcFrictionPct=()=>scalpCostPct("coin"),soxlFrictionPct=()=>scalpCostPct("us");
+const frictionOf=s=>s==="crypto"?btcFrictionPct():soxlFrictionPct();
+const pct2=x=>Number(x).toFixed(2)+"%";
+async function useCommonFee(env){const v=await fetchCommonFee(baseUrl(env),env.MONITOR_KEY);setScalpFee(v.rate,v.source);return v;}
 
 // Cloudflare Worker — BTC + SOXL intraday research signal scheduler
 // Every minute, but signals are based only on completed 5m strategy bars.
@@ -222,20 +229,21 @@ async function importHistoricalPaper(env,strategy,ledger){
 // Replay may update prices, but it cannot replace an already observed entry or a closed fill.
 function storedOrbTrade(strategy,date,old,candidate,bars,now,params){
   const x=old?.trades?.[0];if(!x)return candidate;
+  const fr=x.frictionPct!=null&&Number.isFinite(+x.frictionPct)?+x.frictionPct:(old.frictionPct??candidate?.friction);   // 이 거래를 처음 남길 때 마찰
   const rows=bars.filter(b=>b.date===date),p=x.strategyParams||old.strategyParams||params;
   const signal=rows.find(b=>b.ms===x.signalMs||b.time===x.signalTime)||{time:x.signalTime,ms:x.signalMs};
   if(x.status==='closed')return {...candidate,date,signal,entry:{time:x.entryTime,ms:x.entryMs,hm:x.entryHm,o:x.entryPrice},entryPrice:x.entryPrice,
-    params:p,exit:{bar:{time:x.exitTime,ms:x.exitMs,c:x.exitPrice},price:x.exitPrice,reason:x.reason},friction:old.frictionPct,
+    params:p,exit:{bar:{time:x.exitTime,ms:x.exitMs,c:x.exitPrice},price:x.exitPrice,reason:x.reason},friction:fr,
     opening:old.signalEvidence?.opening||candidate?.opening||{},orHigh:old.signalEvidence?.orHigh||candidate?.orHigh,vwap:old.signalEvidence?.vwap||candidate?.vwap,vr:old.signalEvidence?.vr||candidate?.vr};
   const entry=rows.find(b=>b.ms===x.entryMs||b.time===x.entryTime)||rows.find(b=>b.ms===signal.ms+FIVE);
   if(!entry||entry.ms>now){
     if(x.entryPrice>0)return {...candidate,date,signal,entry:{time:x.entryTime,ms:x.entryMs,hm:x.entryHm,o:x.entryPrice},entryPrice:x.entryPrice,
-      currentBar:{c:x.currentPrice||x.entryPrice},exit:null,deadlineMs:x.deadlineMs,waiting:false,params:p};
-    return {...candidate,date,signal,entry:null,entryPrice:null,waiting:true,params:p};
+      currentBar:{c:x.currentPrice||x.entryPrice},exit:null,deadlineMs:x.deadlineMs,waiting:false,params:p,friction:fr};
+    return {...candidate,date,signal,entry:null,entryPrice:null,waiting:true,params:p,friction:fr};
   }
   const fixed={...entry,o:x.entryPrice>0?x.entryPrice:entry.o};
   return {...candidate,date,signal,entry:fixed,entryPrice:fixed.o,waiting:false,params:p,
-    ...orbExit(rows,fixed,now,p,strategy==='crypto'?1440:960),friction:old.frictionPct,
+    ...orbExit(rows,fixed,now,p,strategy==='crypto'?1440:960),friction:fr,
     opening:old.signalEvidence?.opening||candidate?.opening||{},orHigh:old.signalEvidence?.orHigh||candidate?.orHigh,vwap:old.signalEvidence?.vwap||candidate?.vwap,vr:old.signalEvidence?.vr||candidate?.vr};
 }
 function globalShadowLedgers(strategy,date,bars,now,main,previous={},extra=[]){
@@ -248,7 +256,7 @@ function globalShadowLedgers(strategy,date,bars,now,main,previous={},extra=[]){
     const t=storedOrbTrade(strategy,date,old,candidate,bars,now,p);
     out[name]=paperLedger(strategy,date,t,{currency:strategy==='crypto'?'KRW':'USD',timezone:strategy==='crypto'?'Asia/Seoul':'America/New_York',
       version:old?.strategyVersion||(strategy==='crypto'?BTC_STRATEGY_VERSION:SOXL_STRATEGY_VERSION)+'@'+name,
-      mainVariant:name,params:p,friction:strategy==='crypto'?.14:.20,previous:old,now});
+      mainVariant:name,params:p,friction:frictionOf(strategy),previous:old,now});
   }
   return out;
 }
@@ -263,7 +271,11 @@ async function researchVariantNames(strategy){
   }catch{return cached?.names||[];}
 }
 function paperLedger(strategy,date,t,opts={}){
-  const currency=opts.currency||"USD",timezone=opts.timezone||"UTC",version=opts.version||"",friction=Number(opts.friction||0);
+  // 이미 남은 거래는 그때 마찰(frictionPct · 율 기록)을 그대로 — 율을 바꿔도 지난 거래 손익을 다시 쓰지 않는다
+  const kept=t?opts.previous?.trades?.[0]:null,keep=!!kept&&kept.frictionPct!=null&&Number.isFinite(+kept.frictionPct);
+  const currency=opts.currency||"USD",timezone=opts.timezone||"UTC",version=opts.version||"",friction=keep?Number(kept.frictionPct):Number(opts.friction||0);
+  const feeMeta=keep?(kept.costModel?{costModel:kept.costModel,feeRatePct:kept.feeRatePct,feeSource:kept.feeSource}:{})
+    :{costModel:SCALP_COST_MODEL,feeRatePct:Math.round(scalpFeeRate()*1e8)/1e6,feeSource:scalpFeeSource()};
   let trades=[];
   if(t){
     const waiting=!!t.waiting,unverified=!waiting&&!t.exit&&Number.isFinite(t.deadlineMs)&&Number(opts.now||Date.now())>=t.deadlineMs+1500;
@@ -285,7 +297,7 @@ function paperLedger(strategy,date,t,opts={}){
       exitTime:t.exit&&t.exit.bar&&t.exit.bar.time||null,
       entryPrice,exitPrice,currentPrice,
       reason:t.exit?t.exit.reason:(waiting?"next_bar_open_wait":unverified?"deadline_exit_unconfirmed":"tracking"),
-      grossPnlPct:gross,pnlPct:pnl,frictionPct:friction,
+      grossPnlPct:gross,pnlPct:pnl,frictionPct:friction,...feeMeta,
       currency,updatedAt:new Date().toISOString()
     }];
   }
@@ -293,7 +305,7 @@ function paperLedger(strategy,date,t,opts={}){
   const sum=live.reduce((a,b)=>a+b,0);
   const ledger={
     schema:2,strategy,date,timezone,strategyVersion:version,executionModelVersion:"orb_completed_candle_deadline_v2",mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t?.params||null,mode:"server-live-paper-no-order",
-    updatedAt:new Date().toISOString(),slots:1,frictionPct:friction,trades,decision:opts.decision||null,
+    updatedAt:new Date().toISOString(),slots:1,frictionPct:friction,...feeMeta,trades,decision:opts.decision||null,
     signalEvidence:opts.previous?.signalEvidence||(t?{opening:t.opening||null,orHigh:t.orHigh||null,vwap:t.vwap||null,vr:t.vr||null}:null),
     summary:{selected:trades.length,pending:trades.filter(x=>x.status==="pending").length,open:trades.filter(x=>x.status==="open").length,
       closed:trades.filter(x=>x.status==="closed").length,unverified:trades.filter(x=>x.status==="unverified").length,accountReturnPct:sum,tradeSumPct:sum}
@@ -488,7 +500,7 @@ function btcTrade(bars,now,date,overrides={}){
     if(!entry||entry.ms!==x.ms+FIVE||entry.ms>now)return {waiting:true,date,signal:x,opening:{h:orHigh,l:orLow},vwap,vr,params:p};
     if(entry.hm>BTC_LAST_ENTRY_HM)return null;
     const entryPrice=entry.o;if(!(entryPrice>0))return null;
-    return {date,signal:x,opening:{h:orHigh,l:orLow},vwap,vr,entry,entryPrice,...orbExit(a,entry,now,p,1440),friction:.14,params:p};
+    return {date,signal:x,opening:{h:orHigh,l:orLow},vwap,vr,entry,entryPrice,...orbExit(a,entry,now,p,1440),friction:btcFrictionPct(),params:p};
   }
   return null;
 }
@@ -537,7 +549,7 @@ function soxlTrade(bars,now,date,overrides={}){
     const entry=a[i+1];
     if(!entry||entry.ms!==x.ms+FIVE||entry.ms>now)return {waiting:true,date,signal:x,orHigh,orLow,vwap,vr,params:p};
     const entryPrice=entry.o;if(!(entryPrice>0))return null;
-    return {date,signal:x,orHigh,orLow,vwap,vr,entry,entryPrice,...orbExit(a,entry,now,p,960),friction:.20,params:p};
+    return {date,signal:x,orHigh,orLow,vwap,vr,entry,entryPrice,...orbExit(a,entry,now,p,960),friction:soxlFrictionPct(),params:p};
   }
   return null;
 }
@@ -554,7 +566,7 @@ async function runBtc(env,now){
   const decision=t
     ? {code:t.waiting?"qualified_wait":"qualified_signal",reason:t.waiting?"조건 충족 신호 발생 · 다음 5분봉 시가 진입 대기":"돌파·거래량·VWAP 조건 충족"}
     : btcNoTradeDecision(bars,now,k.date,vp.params);
-  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.14,decision,previous,bars,now,extraVariants:await researchVariantNames("crypto")}));
+  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:btcFrictionPct(),decision,previous,bars,now,extraVariants:await researchVariantNames("crypto")}));
   if(!t||t.waiting||!Number.isFinite(t.entry?.ms)||!Number.isFinite(t.vr))return;
   await alert(env,{
     strategy:"crypto",stage:"buy",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+mainVariant+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time,eventAt:new Date(t.entry.ms).toISOString(),
@@ -562,7 +574,7 @@ async function runBtc(env,now){
       "KRW-BTC · 메인 "+mainVariant+" · 다음 5분봉 시가 "+money(t.entryPrice,"KRW"),
       "신호 "+t.signal.time+" · 00:00~00:05 OR고점 "+money(t.opening.h,"KRW")+" · VWAP "+money(t.vwap,"KRW")+" · 거래량 "+t.vr.toFixed(2)+"배",
       "손절 "+money(t.stop,"KRW")+" (-"+t.params.stopPct.toFixed(2)+"%) · 익절 "+money(t.tp,"KRW")+" (+"+t.params.takeProfitPct.toFixed(2)+"%) · 최대 "+(t.params.maxHoldBars*5)+"분",
-      "비용가정: 수수료+슬리피지 왕복 0.14%"
+      "비용가정: 수수료(공통 "+(Math.round(scalpFeeRate()*1e8)/1e6)+"% × 2)+슬리피지 왕복 "+pct2(t.friction)
     ]
   });
   if(t.exit){
@@ -573,7 +585,7 @@ async function runBtc(env,now){
         "KRW-BTC · 메인 "+mainVariant+" · "+reasonKo(t.exit.reason),
         "매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),
         "매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),
-        "전략 손익 "+signed(net)+" · 왕복 비용 0.14% 반영"
+        "전략 손익 "+signed(net)+" · 왕복 비용 "+pct2(t.friction)+" 반영"
       ]
     });
   }
@@ -592,7 +604,7 @@ async function runSoxl(env,now){
   }
   const mainVariant=await mainVariantForDate(env,"soxl",n.date),vp=variantParams("soxl",mainVariant);
   const previous=await readPaper(env,"soxl",n.date),t=storedOrbTrade("soxl",n.date,previous,soxlTrade(bars,now,n.date,vp.params),bars,now,vp.params);
-  const saved=await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:.20,previous,bars,now,extraVariants:await researchVariantNames("soxl")}));
+  const saved=await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:previous?.strategyParams||vp.params,friction:soxlFrictionPct(),previous,bars,now,extraVariants:await researchVariantNames("soxl")}));
   try{await sendResearchPlans(env,soxlBrokerPlans(saved,now));}
   catch(e){console.error(JSON.stringify({type:'soxl_broker_error',date:n.date,error:String(e.message||e)}));}
   if(!t||t.waiting||!Number.isFinite(t.entry?.ms)||!Number.isFinite(t.vr))return;
@@ -602,7 +614,7 @@ async function runSoxl(env,now){
       "SOXL · 메인 "+mainVariant+" · 다음 5분봉 시가 "+money(t.entryPrice,"USD"),
       "신호 "+t.signal.time+" ET · OR고점 "+money(t.orHigh,"USD")+" · VWAP "+money(t.vwap,"USD")+" · 거래량 "+t.vr.toFixed(2)+"배",
       "청산계획: 손절 "+money(t.stop,"USD")+" (-"+t.params.stopPct.toFixed(2)+"%) · 익절 "+money(t.tp,"USD")+" (+"+t.params.takeProfitPct.toFixed(2)+"%) · 최대 "+(t.params.maxHoldBars*5)+"분",
-      "비용가정: 왕복 마찰 0.20%"
+      "비용가정: 왕복 마찰 "+pct2(t.friction)+"(수수료 공통 "+(Math.round(scalpFeeRate()*1e8)/1e6)+"% × 2)"
     ]
   });
   if(t.exit){
@@ -613,7 +625,7 @@ async function runSoxl(env,now){
         "SOXL · 메인 "+mainVariant+" · "+reasonKo(t.exit.reason),
         "매수 "+t.entry.time+" ET · "+money(t.entryPrice,"USD"),
         "매도 "+t.exit.bar.time+" ET · "+money(t.exit.price,"USD"),
-        "전략 손익 "+signed(net)+" · 왕복 마찰 0.20% 반영"
+        "전략 손익 "+signed(net)+" · 왕복 마찰 "+pct2(t.friction)+" 반영"
       ]
     });
   }
@@ -665,10 +677,10 @@ async function runCloseSummaries(env,now){
     if(old&&(old.trades?.some(x=>x.status!=="closed")||Object.values(old.shadowLedgers||{}).some(l=>l.trades?.some(x=>x.status!=="closed")))){
       const vp=variantParams("crypto",old.mainVariant||"baseline"),bars=await fetchBtc(date),t=storedOrbTrade("crypto",date,old,btcTrade(bars,now,date,old.strategyParams||vp.params),bars,now,old.strategyParams||vp.params);
       if(t||Object.keys(old.shadowLedgers||{}).length){
-        await writePaper(env,paperLedger("crypto",date,t,{currency:"KRW",timezone:"Asia/Seoul",version:old.strategyVersion,mainVariant:vp.name,params:old.strategyParams||vp.params,friction:.14,decision:old.decision,previous:old,bars,now}));
+        await writePaper(env,paperLedger("crypto",date,t,{currency:"KRW",timezone:"Asia/Seoul",version:old.strategyVersion,mainVariant:vp.name,params:old.strategyParams||vp.params,friction:btcFrictionPct(),decision:old.decision,previous:old,bars,now}));
         if(t?.exit&&Number.isFinite(t.exit.bar.ms))await alert(env,{strategy:"crypto",stage:"sell",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+vp.name+":"+date+":"+t.signal.time+":sell:"+t.exit.bar.time,
           date,time:t.exit.bar.time,eventAt:new Date(t.exit.bar.ms+FIVE).toISOString(),
-          lines:["KRW-BTC · 메인 "+vp.name+" · "+reasonKo(t.exit.reason),"매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),"매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),"전략 손익 "+signed(pct(t.exit.price,t.entryPrice)-.14)+" · 왕복 비용 0.14% 반영"]});
+          lines:["KRW-BTC · 메인 "+vp.name+" · "+reasonKo(t.exit.reason),"매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),"매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),"전략 손익 "+signed(pct(t.exit.price,t.entryPrice)-t.friction)+" · 왕복 비용 "+pct2(t.friction)+" 반영"]});
       }
     }
   }
@@ -703,13 +715,14 @@ async function refreshPaper(env,strategy,date,now=Date.now()){
   const t=storedOrbTrade(strategy,date,previous,(strategy==='crypto'?btcTrade:soxlTrade)(bars,now,date,p),bars,now,p);
   const ledger=paperLedger(strategy,date,t,{currency:strategy==='crypto'?'KRW':'USD',timezone:tz,
     version:previous?.strategyVersion||(strategy==='crypto'?BTC_STRATEGY_VERSION:SOXL_STRATEGY_VERSION)+'@'+main,
-    mainVariant:main,params:p,friction:strategy==='crypto'?.14:.20,previous,bars,now,extraVariants:await researchVariantNames(strategy)});
+    mainVariant:main,params:p,friction:frictionOf(strategy),previous,bars,now,extraVariants:await researchVariantNames(strategy)});
   if(!previous&&date<today)ledger.mode='historical-research-import-no-order';
   ledger.refreshSource='authenticated-source-refresh-no-alert-no-order';
   return writePaper(env,ledger);
 }
 async function run(env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
+  await useCommonFee(env);   // 이번 실행의 새 거래 마찰 = 공통 수수료(설정 › 💸 수수료) — 못 받으면 기본 0.25% · feeSource default
   const now=Date.now();
   // 같은 분의 장부 갱신이 끝난 뒤 마감요약을 읽는다. 16:05 SOXL 요약이 16:04 장부를 읽는 경합을 막는다.
   const live=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
@@ -742,6 +755,7 @@ export default {
         const b=await request.json(),strategy=String(b.strategy||'');
         if(!['crypto','soxl'].includes(strategy))return json({ok:false,error:'unsupported strategy'},400);
         const date=String(b.date||parts(Date.now(),strategy==='crypto'?'Asia/Seoul':'America/New_York').date);
+        await useCommonFee(env);
         return json({ok:true,ledger:await refreshPaper(env,strategy,date)});
       }catch(e){return json({ok:false,error:String(e.message||e)},502);}
     }

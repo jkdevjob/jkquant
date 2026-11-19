@@ -15,6 +15,7 @@ on:
     paths:
       - ".github/workflows/daily1-shadow-research.yml"
       - "scripts/daily1_shadow_lab.py"
+      - "scripts/scalp_cost.py"
       - "functions/api/daily1-shadow.js"
 
 permissions:
@@ -47,6 +48,8 @@ jobs:
           python-version: "3.12"
 
       - name: 네 탭 +1% 그림자 모의전략 재계산
+        env:
+          JKQ_FEE_KEY: ${{ secrets.AUTOTRADE_KEY }}   # 단타 비용 = 공통 수수료(/api/common-fee · scripts/scalp_cost.py)
         run: python .app/scripts/daily1_shadow_lab.py
 
       - name: 결과 저장

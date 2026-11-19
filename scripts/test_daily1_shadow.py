@@ -27,7 +27,10 @@ def test_opening():
     t=m.opening_candidate({"date":date},row)
     assert t and t["signalTime"]==908,t
     assert t["entryTime"]==909,t
-    assert t["pnlPct"]>1.0,t
+    # 비용 = 거래세 0.20 + 공통 수수료 × 2(scalp_cost · 기본 0.25%) + 호가 2.5틱 × 2 — 2026-11-19 전 0.23 + 틱
+    assert abs(t["frictionPct"]-(m.SC.cost_pct("kr")+2*m.KR_TICKS_PER_SIDE*m.kr_tick(t["entryPrice"])/t["entryPrice"]*100))<1e-9,t
+    assert abs(m.SC.cost_pct("kr")-0.70)<1e-9
+    assert abs(t["pnlPct"]-(t["grossPnlPct"]-t["frictionPct"]))<1e-9 and t["grossPnlPct"]>1.7,t
 
 
 def minute_bars(date,start=900,end=1520):
@@ -55,7 +58,9 @@ def test_daytrading():
     assert t and t["signalTime"]==1006,t
     assert t["entryTime"]==1007,t
     assert t["relativeStrengthPctPoint"]>=1.0,t
-    assert t["pnlPct"]>1.0,t
+    # 데이트레이딩 마찰 = 세금 0.20 + 미끄러짐 0.02 + 공통 수수료 × 2(scalp_cost · krDay) — 2026-11-19 전 0.25
+    assert abs(t["frictionPct"]-m.SC.cost_pct("krDay"))<1e-9 and abs(m.SC.cost_pct("krDay")-0.72)<1e-9,t
+    assert abs(t["pnlPct"]-(t["grossPnlPct"]-t["frictionPct"]))<1e-9 and t["grossPnlPct"]>1.5,t
 
 
 def t5(i,date="2026-10-01",o=100,h=100.2,l=99.8,c=100,v=100,zone="kst"):
@@ -74,7 +79,9 @@ def test_crypto():
     t=m.crypto_candidate({"date":"2026-10-01","bars":a})
     assert t and t["signalTime"]==100,t
     assert t["entryTime"]==105,t
-    assert t["pnlPct"]>1.0,t
+    # 비용 = 공통 수수료 × 2 + 미끄러짐(scalp_cost · 기본 율) — 2026-11-19 전 코인 0.14 · 미국 0.20
+    assert abs(t["frictionPct"]-m.SC.cost_pct("coin"))<1e-9 and abs(m.SC.cost_pct("coin")-0.54)<1e-9,t
+    assert abs(t["pnlPct"]-(t["grossPnlPct"]-t["frictionPct"]))<1e-9 and t["grossPnlPct"]>1.1,t
 
 
 def et5(i,date="2026-10-01",c=100,v=100):
@@ -99,7 +106,9 @@ def test_soxl():
     t=m.soxl_candidate({"sessionDateEt":"2026-10-01","bars":a})
     assert t and t["signalTime"]==1500,t
     assert t["entryTime"]==1505,t
-    assert t["pnlPct"]>1.0,t
+    # 비용 = 공통 수수료 × 2 + 미끄러짐(scalp_cost · 기본 율) — 2026-11-19 전 코인 0.14 · 미국 0.20
+    assert abs(t["frictionPct"]-m.SC.cost_pct("us"))<1e-9 and abs(m.SC.cost_pct("us")-0.50)<1e-9,t
+    assert abs(t["pnlPct"]-(t["grossPnlPct"]-t["frictionPct"]))<1e-9 and t["grossPnlPct"]>1.1,t
 
 
 def test_metrics():

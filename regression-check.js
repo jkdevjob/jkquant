@@ -1673,7 +1673,9 @@ console.log('[28] KIS 모의투자 실행 · 주문 이력');
   let rz=null; try{ rz=extractFn(sc,'function klogRealized()'); }catch(e){}
   ok('실현손익 함수 존재', !!rz, rz?'':'klogRealized 없음');
   if(rz){
-    const frConst='const OPENING_FIXED_FRICTION_PCT=0.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5; let OPENING_FRICTION_CAL={completeMatches:0,observedRoundTripSlippagePct:null};';
+    // 단타 비용은 화면 SCALP_FEE(봇과 같은 공통 수수료) — 여기서는 FIFO 를 보려고 옛 국내 수수료 0.015%(왕복 0.03 → 고정 0.23)로 둔다
+    const frConst=(sc.match(/let SCALP_FEE=\{[^\n]*\};/)||[''])[0]+extractFn(sc,'function scalpCost(')+extractFn(sc,'function openingFixedFrictionPct(')
+      +'SCALP_FEE={...SCALP_FEE,rate:0.00015,roundTripPct:0.03};const OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5; let OPENING_FRICTION_CAL={completeMatches:0,observedRoundTripSlippagePct:null};';
     const fr=extractFn(sc,'function openingKrTickSize(')+extractFn(sc,'function openingFrictionPct(');
     const mk=new Function('KLOG','"use strict";'+frConst+fr+rz+'return klogRealized();');
     const run=(log)=>mk(log).map(x=>[x.qty,x.inPx,x.outPx,+x.pct.toFixed(2)]);
@@ -11272,10 +11274,13 @@ console.log('[SCALPING IMPROVEMENTS V2] 경로·엔진·비용·그림자·UI');
      && /stop_hit = z\["l"\] <= stop_px/.test(py)
      && py.indexOf('if stop_hit:') < py.indexOf('if tp_hit:')
      && /"officialCompatibilityModel": "close"/.test(py));
-  ok('A-3 고정 0.23 + VTS 30건 또는 2.5틱 fallback',
-     /FIXED_KR_FRICTION_PCT = 0\.23/.test(py) && /VTS_MIN_MATCHES = 30/.test(py)
+  // 2026-11-19 사용자 "단타 연구 봇에도 공통 수수료 적용해": 고정 몫 = 거래세 0.20 + 공통 수수료 × 2(_scalp_cost.js · scalp_cost.py 한 곳)
+  ok('A-3 고정(거래세 0.20 + 공통 수수료 × 2) + VTS 30건 또는 2.5틱 fallback',
+     /FIXED_KR_FRICTION_PCT = SC\.cost_pct\("kr"\)/.test(py) && /VTS_MIN_MATCHES = 30/.test(py)
      && /FALLBACK_TICKS_PER_SIDE = 2\.5/.test(py)
-     && /OPENING_FIXED_FRICTION_PCT=\.23/.test(oj)
+     && /export function openingFixedFrictionPct\(\)\{return scalpCostPct\("kr"\);\}/.test(oj)
+     && /NON_FEE_PCT = Object\.freeze\(\{ kr: 0\.20,/.test(fs.readFileSync(__d+'/functions/api/_scalp_cost.js','utf8'))
+     && /NON_FEE_PCT = \{"kr": 0\.20,/.test(fs.readFileSync(__d+'/scripts/scalp_cost.py','utf8'))
      && /OPENING_VTS_MIN_MATCHES=30/.test(oj)
      && /openingVtsCalibration/.test(om));
   ok('A-2/A-3 감사 문서 존재',
@@ -11436,12 +11441,17 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
 /* ════ SCALPING B-6. 폐기 참고전략 ATR 레벨 · A-3 실행비용 값 시험 ════ */
 console.log('\n[SCALPING B-6] ATR(14) 레벨 · 실행비용 통합');
 {
-  ok('B-6 상수 = ATR14 / 손절2x / 목표4x / 고정0.23% / VTS30건 / fallback2.5틱',
+  // 2026-11-19 ~ 고정 몫 = 거래세 0.20 + 공통 수수료 × 2(SCALP_FEE · /api/common-fee). 값 시험은 옛 국내 수수료 0.015%(고정 0.23)로 둔다
+  ok('B-6 상수 = ATR14 / 손절2x / 목표4x / 고정(거래세 0.20 + 공통 수수료 × 2) / VTS30건 / fallback2.5틱',
      /const REF_ATR_LEN=14, REF_ATR_STOP_MULT=2, REF_ATR_TGT_MULT=4;/.test(scl)
-     && /OPENING_FIXED_FRICTION_PCT=0\.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2\.5/.test(scl));
+     && /const OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2\.5;/.test(scl)
+     && /function openingFixedFrictionPct\(\)\{return scalpCost\('kr'\);\}/.test(scl)
+     && /let SCALP_FEE=\{rate:0\.0025,source:'default',roundTripPct:0\.5,nonFeePct:\{kr:0\.20,/.test(scl));
   const src=[
     'const REF_ATR_LEN=14, REF_ATR_STOP_MULT=2, REF_ATR_TGT_MULT=4;',
-    'const OPENING_FIXED_FRICTION_PCT=0.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5;',
+    (scl.match(/let SCALP_FEE=\{[^\n]*\};/)||[''])[0],extractFn(scl,'function scalpCost('),extractFn(scl,'function openingFixedFrictionPct('),
+    'SCALP_FEE={...SCALP_FEE,rate:0.00015,roundTripPct:0.03};',
+    'const OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5;',
     'let OPENING_FRICTION_CAL={completeMatches:0,observedRoundTripSlippagePct:null};',
     extractFn(scl,'function referenceAtr14('),
     extractFn(scl,'function openingKrTickSize('),
@@ -11595,7 +11605,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
     ok('GPT 와 같은 조건 비교: 같은 비용표 · GPT 기록 구간만 · 매매 단위부터 다시 계산 · 탭마다 ⚖️ 카드(후보→진입→결과→누적)',
-       /FAIR_COST = \{"opening": 0\.25, "daytrading_stock": 0\.25, "daytrading_etf": 0\.15, "crypto": 0\.14, "soxl": 0\.20\}/.test(lp)
+       /FAIR_COST = \{"opening": SC\.cost_pct\("krDay"\), "daytrading_stock": SC\.cost_pct\("krDay"\), "daytrading_etf": SC\.cost_pct\("etfFair"\),\s*"crypto": SC\.cost_pct\("coin"\), "soxl": SC\.cost_pct\("us"\)\}/.test(lp)   // 같은 비용표 = 공통 수수료 × 2 + 수수료 아닌 몫(_scalping_duel.js COSTS 와 같은 값)
        &&/days = \[d for d in cal if start <= d <= min\(end, c_last\)\]/.test(lp)&&/report\["fair"\]\[tab\] = fair_compare\(tab, cal\)/.test(lp)
        &&/function fairCard\(tab\)/.test(scl2)&&/liveCard\(tab\)\+fairCard\(tab\)/.test(scl2));
   }

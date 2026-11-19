@@ -22,6 +22,10 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import requests
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 RAW = "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data"
 WORKERS = {
@@ -34,7 +38,8 @@ TZ = {
     "crypto": ZoneInfo("Asia/Seoul"),
     "soxl": ZoneInfo("America/New_York"),
 }
-FRICTION = {"daytrading": 0.25, "crypto": 0.14, "soxl": 0.20}
+# 연구 CSV(밤 백테 · 지금 율)의 마찰 라벨 — scalp_cost.py. 2026-11-19 전 0.25 · 0.14 · 0.20.
+FRICTION = {"daytrading": SC.cost_pct("krDay"), "crypto": SC.cost_pct("coin"), "soxl": SC.cost_pct("us")}
 
 
 def num(v, default=None):

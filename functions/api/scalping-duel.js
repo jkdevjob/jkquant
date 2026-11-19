@@ -1,4 +1,5 @@
 import {DUEL_START,DUEL_TABS,COSTS,buildDuel,normalizeClaudeEvents,normalizeTrades} from "./_scalping_duel.js";
+import {useOwnerFee} from "./_owner_fee.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const REPO="jkdevjob/jkquant",BRANCH="scalping-data";
@@ -90,11 +91,13 @@ function message(date,d){
   L.push("자세히: jkquant.pages.dev/scalping → 🆚 클로드 대결");
   return L.join("\n");
 }
-export async function onRequestGet(){
-  try{return json({ok:true,report:await loadReport()});}catch(e){return json({ok:false,error:String(e.message||e)},502);}
+export async function onRequestGet({env}={}){
+  const {error,...fee}=await useOwnerFee(env||{});   // 같은 비용표 = 공통 수수료(설정 › 💸 수수료) · 공개 응답이라 실패 이유는 빼고 율 · 출처만
+  try{return json({ok:true,fee,report:await loadReport()});}catch(e){return json({ok:false,error:String(e.message||e)},502);}
 }
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+  await useOwnerFee(env);
   try{
     const b=await request.json(),date=String(b.date||"");
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<DUEL_START)return json({ok:true,pending:true,reason:"before_start"});

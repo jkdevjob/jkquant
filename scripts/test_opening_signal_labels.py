@@ -6,6 +6,7 @@ from backtest_opening_rebreak import (
     one_trade, simulate_exit
 )
 from backfill_opening_paths import merge_bars
+import scalp_cost as SC  # 단타 비용 = 공통 수수료 × 2 + 세금 · 미끄러짐
 
 
 def bar(hm, close=100.0, high=None, low=None, volume=100.0):
@@ -153,16 +154,16 @@ def test_parallel_exit_models_stop_first():
 def test_friction_fallback_and_vts_threshold():
     fallback = opening_friction(15000, {"completeMatches": 0, "observedRoundTripSlippagePct": None})
     assert fallback["source"] == "2.5tick-fallback", fallback
-    assert abs(fallback["fixedPct"] - 0.23) < 1e-12, fallback
+    assert abs(fallback["fixedPct"] - SC.cost_pct("kr")) < 1e-12 and abs(SC.cost_pct("kr") - 0.70) < 1e-12, fallback   # 거래세 0.20 + 공통 수수료 0.25% × 2
     assert abs(fallback["slippagePct"] - (5 * 10 / 15000 * 100)) < 1e-12, fallback
-    assert abs(fallback["totalPct"] - 0.5633333333333334) < 1e-9, fallback
+    assert abs(fallback["totalPct"] - (0.70 + 5 * 10 / 15000 * 100)) < 1e-9, fallback
 
     too_small = opening_friction(15000, {"completeMatches": 29, "observedRoundTripSlippagePct": 0.42})
     assert too_small["source"] == "2.5tick-fallback", too_small
 
     calibrated = opening_friction(15000, {"completeMatches": 30, "observedRoundTripSlippagePct": 0.42})
     assert calibrated["source"] == "vts-observed", calibrated
-    assert abs(calibrated["totalPct"] - 0.65) < 1e-12, calibrated
+    assert abs(calibrated["totalPct"] - (0.70 + 0.42)) < 1e-12, calibrated   # 고정 몫(0.20 + 공통 수수료 × 2) + VTS 실측 0.42
 
 
 def test_shadow_design_date_is_excluded():

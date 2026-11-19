@@ -20,6 +20,7 @@ on:
       - "scripts/backtest_opening_gapdown.py"
       - "scripts/backtest_etf_overnight.py"
       - "scripts/claude_lab.py"
+      - "scripts/scalp_cost.py"
 
 permissions:
   contents: write
@@ -106,6 +107,7 @@ jobs:
           JKQ_GAPDOWN_OUT: data/opening-gapdown-research
           JKQ_GAPDOWN_LIVE: data/opening-gapdown-live
           JKQ_GAPDOWN_FROM_YEAR: "2018"
+          JKQ_FEE_KEY: ${{ secrets.AUTOTRADE_KEY }}   # 단타 비용 = 공통 수수료(/api/common-fee · scripts/scalp_cost.py)
         run: python .app/scripts/backtest_opening_gapdown.py
 
       - name: ② ETF 하락일 야간 연구 + ①+② 목표지표(+1% 일·+5% 주)
@@ -113,6 +115,7 @@ jobs:
           JKQ_ETF_OUT: data/etf-overnight-research
           JKQ_GAPDOWN_OUT: data/opening-gapdown-research
           JKQ_GAPDOWN_LIVE: data/opening-gapdown-live
+          JKQ_FEE_KEY: ${{ secrets.AUTOTRADE_KEY }}
         run: python .app/scripts/backtest_etf_overnight.py
 
       - name: 단타(클로드) 메인 전략 승격 기록 사본 (Worker claude-config — 쌓기만 하는 원본)

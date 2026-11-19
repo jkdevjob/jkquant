@@ -96,7 +96,10 @@ test('outcomes exclude after-exit spikes and keep missing 30-minute/overnight ho
   const r=closingOutcomes(100,at('15:06'),101,at('15:30'),[...bars,{t:date+' 15:31',close:999,high:999,low:1}]);
   assert.equal(r.complete,true);assert.equal(r.horizons[5].at,date+' 15:11');assert.equal(r.horizons[30].returnPct,null);
   assert.ok(Math.abs(r.mfePct-1.5)<1e-10);assert.ok(Math.abs(r.maePct+.5)<1e-10);assert.equal(r.hits['1'].hit,true);
-  assert.equal(r.hits['2'].hit,false);assert.ok(Math.abs(r.finalNetPnlPct-.77)<1e-10);
+  assert.equal(r.hits['2'].hit,false);assert.ok(Math.abs(r.finalNetPnlPct-.30)<1e-10);   // 1 − (거래세 0.20 + 공통 수수료 0.25% × 2) — 기본 율
+  assert.equal(r.costPct,.7);
+  const legacy=closingOutcomes(100,at('15:06'),101,at('15:30'),bars,.23);                  // 신호가 남긴 옛 비용(0.23)이면 그 값으로 — 지난 기록을 다시 쓰지 않는다
+  assert.ok(Math.abs(legacy.finalNetPnlPct-.77)<1e-10);assert.equal(legacy.costPct,.23);
   const missing=closingOutcomes(100,at('15:06'),101,at('15:30'),bars.slice(1));assert.equal(missing.mfePct,null);assert.equal(missing.hits['2'].hit,null);
   const overnight=closingOutcomes(100,at('15:30'),101,'2026-11-11T09:00:00+09:00',[]);
   assert.equal(overnight.horizons[5].returnPct,null);assert.equal(overnight.maePct,null);assert.equal(overnight.complete,false);
@@ -107,7 +110,7 @@ test('value mutations detect fixed-slot scaling and a path extending beyond the 
   const m=await import('data:text/javascript;base64,'+Buffer.from(changed).toString('base64'));
   assert.throws(()=>assert.equal(m.closingDaySummary(ledger(closed()),'closing30').returnPct,.77/3),{name:'AssertionError'});
   const outcomes=fs.readFileSync(new URL('../functions/api/_closing30-outcomes.js',import.meta.url),'utf8');
-  const mutant=outcomes.replace('x.ms<=end','true');assert.notEqual(mutant,outcomes);
+  const mutant=outcomes.replace('x.ms<=end','true').replace("from './_scalp_cost.js'","from '"+new URL('../functions/api/_scalp_cost.js',import.meta.url).href+"'");assert.notEqual(mutant,outcomes);
   const o=await import('data:text/javascript;base64,'+Buffer.from(mutant).toString('base64'));
   const r=o.closingOutcomes(100,at('15:06'),101,at('15:30'),[{t:date+' 15:31',close:999,high:999,low:1}]);
   assert.throws(()=>assert.equal(r.observedMfePct,null),{name:'AssertionError'});

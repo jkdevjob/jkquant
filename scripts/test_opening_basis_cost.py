@@ -3,6 +3,7 @@ import copy
 import backtest_opening_rebreak as engine
 from test_opening_backfill import signal_row
 from opening_basis_cost import cost_range, overnight_basis_status
+import scalp_cost as SC  # 단타 비용 = 공통 수수료 × 2 + 세금 · 미끄러짐
 
 
 class BasisCostTests(unittest.TestCase):
@@ -54,7 +55,7 @@ class BasisCostTests(unittest.TestCase):
 
     def test_identity_preserves_existing_cost(self):
         x = cost_range(168600, dict(status='identical_ohlc'))
-        self.assertAlmostEqual(x['totalCostPctMax'], .23 + 500/168600*100)
+        self.assertAlmostEqual(x['totalCostPctMax'], SC.cost_pct('kr') + 500/168600*100)   # 거래세 0.20 + 공통 수수료 × 2 (2026-11-19 전 0.23)
 
     def test_cost_parameters_come_from_engine_configuration(self):
         x = cost_range(10000, dict(status='identical_ohlc'),fixed_pct=.5,ticks_per_side=1)
@@ -62,15 +63,15 @@ class BasisCostTests(unittest.TestCase):
 
     def test_tenfold_adjustment_uses_original_cost_band(self):
         x = cost_range(25350, dict(status='bounded_rounding_hypothesis', lower=9.9996, upper=10.0004))
-        expected = .23 + 25/2535*100
+        expected = SC.cost_pct('kr') + 25/2535*100
         self.assertLess(x['totalCostPctMin'], expected)
         self.assertGreater(x['totalCostPctMax'], expected)
         self.assertLess(x['totalCostPctMax']-x['totalCostPctMin'], .001)
 
     def test_tick_boundary_retains_both_cost_bands(self):
         x = cost_range(2000, dict(status='bounded_rounding_hypothesis', lower=.9999, upper=1.0001))
-        self.assertLess(x['totalCostPctMin'], .49)
-        self.assertGreater(x['totalCostPctMax'], 1.47)
+        self.assertLess(x['totalCostPctMin'], SC.cost_pct('kr') + .26)        # 2,000원 아래 1원 틱 띠
+        self.assertGreater(x['totalCostPctMax'], SC.cost_pct('kr') + 1.24)   # 2,000원 이상 5원 틱 띠
 
     def test_execution_price_need_not_be_on_quote_grid(self):
         x = cost_range(194684, dict(status='bounded_rounding_hypothesis', lower=.9531613226452906, upper=.9531670702179177))

@@ -13,6 +13,10 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 KST=ZoneInfo("Asia/Seoul")
 DATA=Path("data/daytrading")
@@ -40,7 +44,7 @@ class Params:
     stop:float=1.0
     take_profit:float=2.0
     final_exit:int=1510
-    fee:float=0.25
+    fee:float=SC.cost_pct("krDay")   # 왕복 마찰 = 세금 0.20 + 미끄러짐 0.02 + 공통 수수료 × 2 (2026-11-19 전 0.25)
     max_trades:int=3
     evaluation_start:str=""
 

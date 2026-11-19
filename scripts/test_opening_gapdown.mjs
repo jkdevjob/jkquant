@@ -26,6 +26,10 @@ let n = 0;
 const pending = [];
 const t = (name, fn) => { const r = fn(); if (r && r.then) pending.push(r.then(() => { n++; })); else n++; };
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
+// 단타 비용(왕복 %) = 공통 수수료 × 2 + 세금 · 미끄러짐 — 시험 env 에는 서비스 계정이 없어 늘 기본 0.25%(_scalp_cost.js). 2026-11-19 전 국내 0.23 · ETF 0.03 · 코인 0.14 · 미국 0.20
+const SCOST = await import(pathToFileURL(path.join(dir, "_scalp_cost.js")).href);
+const FEE_RT = 0.5, KR = 0.20 + FEE_RT, ETF = FEE_RT, COIN = 0.04 + FEE_RT, US = FEE_RT;
+assert.deepEqual([SCOST.scalpCostPct("kr"), SCOST.scalpCostPct("etf"), SCOST.scalpCostPct("coin"), SCOST.scalpCostPct("us")], [0.7, 0.5, 0.54, 0.5]);   // 기본 율 값
 
 t("KRX calendar: 10/5 개천절 대체휴일 · 10/9 한글날 · 주말은 휴장, 10/6 은 개장, 목록 없는 해는 known=false", () => {
   assert.deepEqual(KRX.krxDay("2026-10-05"), { closed: true, reason: "krx_holiday", known: true });
@@ -104,7 +108,7 @@ t("③ 메인 변수: 변동성 돌파 기준선 · 밤(21시~) 돌파 안 삼 �
   const night = LV.coinBreakoutDay(h, [B("20", 120, 124, 119, 123), B("21", 123, 130, 122, 129)], 129, P);
   assert.equal(night.hold, false); assert.ok(night.status.includes("21시 전까지"));
   const day = LV.coinBreakoutDay(h, [B("10", 123, 127, 121, 126), B("11", 126, 126, 120, 121)], 121, P);
-  near(day.stopPrice, 125 * 1.0005 * 0.97); assert.equal(day.stopped, true); near(day.pnlPct, -3 - 0.1 - 0.14);
+  near(day.stopPrice, 125 * 1.0005 * 0.97); assert.equal(day.stopped, true); near(day.pnlPct, -3 - 0.1 - COIN);
   const D = (d, close, high) => ({ candle_date_time_kst: d + "T09:00:00", trade_price: close, high_price: high });
   const daily = [D("2026-10-05", 1, 1), D("2026-10-04", 120, 121), D("2026-10-03", 118, 119), ...Array.from({ length: 22 }, (_, i) => D("2026-09-" + String(30 - i).padStart(2, "0"), 100, 101))];
   const Hh = (kst, o, hi, l, cl) => ({ candle_date_time_kst: kst, opening_price: o, high_price: hi, low_price: l, trade_price: cl });
@@ -290,11 +294,11 @@ t("live ③: breakout of yesterday's high in an uptrend; stop and no-break are e
   const bars = [B("09", 121, 124, 120, 123), B("10", 123, 127, 122, 126), B("11", 126, 128, 125, 127)];
   const r = LV.coinBreakoutDay(h, bars, 130);
   const e = 125 * 1.0005;
-  assert.equal(r.buyTime, "10:00"); near(r.buyPrice, e); near(r.pnlPct, (130 / e - 1) * 100 - 0.14); assert.equal(r.hold, true);
+  assert.equal(r.buyTime, "10:00"); near(r.buyPrice, e); near(r.pnlPct, (130 / e - 1) * 100 - COIN); assert.equal(r.hold, true);
   const gap = LV.coinBreakoutDay(h, [B("09", 126, 127, 125.5, 126)], 126);      // 시가가 이미 기준 위 → 시가에 산다
   near(gap.buyPrice, 126 * 1.0005);
   const st = LV.coinBreakoutDay(h, [B("10", 123, 127, 122, 126), B("11", 126, 126, 118, 119)], 119);
-  assert.equal(st.stopped, true); near(st.pnlPct, -5 - 0.1 - 0.14);
+  assert.equal(st.stopped, true); near(st.pnlPct, -5 - 0.1 - COIN);
   const nb = LV.coinBreakoutDay(h, [B("09", 121, 124, 120, 123)], 123);
   assert.equal(nb.hold, false); assert.equal(nb.pnlPct, 0); assert.ok(nb.status.startsWith("돌파 대기"));
   const down = LV.coinBreakoutDay({ ...h, hold: false }, bars, 130);
@@ -429,8 +433,14 @@ t("알림(웹 · 텔레그램 공용): 매수·매도 때만 · [클로드 연�
   assert.equal(by["open:2026-10-07:sell"].body, "다 +2.00% · 평균 +2.00% — 15:30 종가");                 // '라'(갭 −2.5%)는 메인 종목 아님(측정용)
   assert.equal(by["etf:2026-10-07:buy"].title, "[클로드 연구 데이트레이딩] 🟢 매수");
   assert.equal(by["coin:2026-10-06:KRW-BTC:sell"].title, "[클로드 연구 비트코인] 🔴 BTC 매도");
-  assert.equal(by["coin:2026-10-06:KRW-BTC:sell"].body, "BTC 09:00 매도(어제 돌파분) 약 +9.86%");      // 121/110 − 1 − 비용 0.14
+  assert.equal(by["coin:2026-10-06:KRW-BTC:sell"].body, "BTC 09:00 매도(어제 돌파분) 약 +9.46%");      // 121/110 − 1 − 비용 0.54(기본 율 0.25% × 2 + 0.04)
   assert.equal(by["soxl:2026-10-06:buy"].title, "[클로드 연구 SOXL] 🟢 매수");
+  {                                                                                                  // 율은 /api/claude-live 응답(fee.rate)을 따른다 — 옛 업비트 0.05% 면 옛 글(+9.86%)
+    const ev2 = PU.pushEvents({ ...live, fee: { rate: 0.0005, source: "user" } }, now, sent), s2 = ev2.find(e => e.id === "coin:2026-10-06:KRW-BTC:sell");
+    assert.equal(s2.body, "BTC 09:00 매도(어제 돌파분) 약 +9.86%");
+    const ev3 = PU.pushEvents({ ...live, fee: { rate: 0.01, source: "user" } }, now, sent), s3 = ev3.find(e => e.id === "coin:2026-10-06:KRW-BTC:sell");
+    assert.equal(s3.body, "BTC 09:00 매도(어제 돌파분) 약 +7.96%");                                       // 10 − (2 + 0.04)
+  }
   assert.equal(by["coin:2026-10-07:KRW-BTC:buy"].price, 120000000);                                 // 다음 날 매도 알림이 쓸 매수가
   assert.ok(!ids.includes("coin:2026-10-06:KRW-ETH:sell"));                                          // 어제 손절한 코인은 09:00 매도 없음
   assert.equal(PU.alertText(by["etf:2026-10-07:buy"]), "[클로드 연구 데이트레이딩] 🟢 매수\nKODEX 종가 매수 (오늘 -3.40%) → 다음 거래일 09:00 시가 매도\n\n자세히: jkquant.pages.dev/claude");
@@ -849,14 +859,14 @@ t("soxl live: planned open buy/sell executes only in the session after the decis
   const pre = LV.soxlLive(nxB, q("2026-10-01", 100, 100, 100), null);
   assert.equal(pre.status, "다음 미국장 시가 매수 예정"); assert.equal(pre.pnlPct, null);
   const on = LV.soxlLive(nxB, q("2026-10-02", 98, 101, 100), null);
-  assert.equal(on.buyPrice, 98); near(on.pnlPct, (101 / 98 - 1) * 100 - 0.1); assert.ok(on.status.startsWith("보유중"));
+  assert.equal(on.buyPrice, 98); near(on.pnlPct, (101 / 98 - 1) * 100 - US / 2); assert.ok(on.status.startsWith("보유중"));
   const nxS = { basedOn: "2026-10-01", action: "sell", holding: true, heldDays: 2, close: 100, ma: 90, rsi2: 70 };
   const sold = LV.soxlLive(nxS, q("2026-10-02", 103, 99, 100), null);
-  near(sold.pnlPct, 3 - 0.1); assert.equal(sold.realized, true); assert.equal(sold.sellPrice, 103);
+  near(sold.pnlPct, 3 - US / 2); assert.equal(sold.realized, true); assert.equal(sold.sellPrice, 103);
   const flat = LV.soxlLive({ basedOn: "2026-10-01", action: "none", holding: false, heldDays: 0, close: 100, ma: 90, rsi2: 55 }, q("2026-10-02", 98, 101, 100), null);
   assert.equal(flat.pnlPct, 0); assert.ok(flat.status.includes("과매도 아님"));
   assert.equal(LV.soxlLive({ basedOn: "2026-10-01", holdNext: true, signalClose: 100, ma: 90 }, q("2026-10-02", 98, 101, 100), null).status, "판단 없음(밤 계산 점검)");
-  const sm = LV.todaySummary("soxl", { rows: [sold] }, 600); assert.equal(sm.trades, 1); near(sm.accountPct, (3 - 0.1) * 0.4);
+  const sm = LV.todaySummary("soxl", { rows: [sold] }, 600); assert.equal(sm.trades, 1); near(sm.accountPct, (3 - US / 2) * 0.4);
   assert.equal(LV.todaySummary("soxl", { rows: [flat] }, 600).trades, 0);
 });
 t("day close ①: 주문한 종목을 공식 시가 → 종가로 정산(모의투자 체결 · 거절과 상관없이) · 매매일 아니면 측정용 · 휴장", () => {
@@ -868,7 +878,7 @@ t("day close ①: 주문한 종목을 공식 시가 → 종가로 정산(모의�
     { stage: "reconcile", payload: { positions: [{ code: "A", buy: { qty: picksOk ? 10 : 0, avgPrice: 1001 }, sell: { qty: sellQty, avgPrice: 1025 } },
                                                   { code: "B", buy: { qty: 5, avgPrice: 2002 }, sell: { qty: 5, avgPrice: 1975 } }] } }] });
   const bars = { A: { open: 1000, close: 1020 }, B: { open: 2000, close: 1980 } };
-  const cA = 0.23 + 2 * 1.5 * 1 / 1000 * 100, cB = 0.23 + 2 * 1.5 * 5 / 2000 * 100;   // d1 비용: 0.23% + 1.5틱 × 2(2,000원 아래 틱 1원 · 2,000~5,000원 5원)
+  const cA = KR + 2 * 1.5 * 1 / 1000 * 100, cB = KR + 2 * 1.5 * 5 / 2000 * 100;   // d1 비용: 0.23% + 1.5틱 × 2(2,000원 아래 틱 1원 · 2,000~5,000원 5원)
   const r = DAY.openingDay("2026-10-05", L(true, true, 10), true, {}, null, bars);
   assert.deepEqual([r.status, r.basis, r.settled, r.watched, r.candidates, r.entries, r.exits, r.wins, r.losses], ["closed", "orders", true, 8, 6, 2, 2, 1, 1]);
   near(r.trades[0].pnlPct, 2 - cA); near(r.trades[0].entryPrice, 1000); near(r.trades[0].exitPrice, 1020);   // 체결가(1,001 · 1,025)가 아니라 공식 시가 · 종가
@@ -894,7 +904,8 @@ t("day close ①: 주문한 종목을 공식 시가 → 종가로 정산(모의�
   assert.equal(DAY.openingDay("2026-10-05", null, false).status, "holiday");
   const txt = DAY.composeDay(r);
   assert.ok(txt.startsWith("[① 시초가 · D-1 갭하락 과매도 · 2026-10-05 종료]") && txt.includes("감시 8 / 후보 6 / 진입 2 / 청산 2") && txt.includes("승 1 / 패 1 / 승률 50.0%")
-    && txt.includes("1. 가 09:00 시가(동시호가) 1,000 → 15:30 종가(동시호가) 1,020 +1.47% +147원 종가 청산") && txt.includes("미청산: 0"), txt);
+    && txt.includes("1. 가 09:00 시가(동시호가) 1,000 → 15:30 종가(동시호가) 1,020 +1.00% +100원 종가 청산") && txt.includes("미청산: 0"), txt);   // 2 − (0.70 + 3틱 0.30) — 기본 율
+  assert.ok(txt.includes("실현수익률 -0.72% · 실현손익 -145원 (비용 뺀 순손익)") && txt.includes("2. 나 09:00 시가(동시호가) 2,000 → 15:30 종가(동시호가) 1,980 -2.45% -245원 종가 청산"), txt);
   const none = DAY.openingDay("2026-10-05", { events: [{ stage: "preopen", payload: { watchlist: { size: 8 }, orders: [], decisionReason: "no_expected_gap_down" } }] }, true);
   assert.deepEqual([none.dayPct, none.settled, none.entries], [null, true, 0]);
   assert.ok(DAY.composeDay(none).includes("진입 0 / 청산 0") && DAY.composeDay(none).includes("거래 없음") && DAY.composeDay(none).includes("매매 없음 — no_expected_gap_down"));
@@ -911,7 +922,7 @@ t("day close ②: 전날 신호를 전날 공식 종가 → 오늘 시가로 정
                            { stage: "etf_buy", payload: { signal: true, dropPct: -3.4, quote: { expectedPrice: 7750 }, order: nvo } }] };
   const bars = { "2026-10-02": { open: 7900, close: 8000 }, "2026-10-05": { open: 8200, close: 7700 } };
   const r = DAY.etfDay("2026-10-05", today, prev, "2026-10-02", true, bars);
-  const cost = 0.03 + 2 * 5 / 8000 * 100;                                                              // 0.03% + 2틱(2,000원 이상 5원)
+  const cost = ETF + 2 * 5 / 8000 * 100;                                                              // 0.03% + 2틱(2,000원 이상 5원)
   assert.deepEqual([r.basis, r.settled, r.exits, r.entries, r.candidates, r.open.length], ["orders", true, 1, 1, 1, 1]);
   near(r.trades[0].pnlPct, 2.5 - cost); near(r.dayPct, 2.5 - cost); near(r.trades[0].entryPrice, 8000); near(r.trades[0].exitPrice, 8200);
   near(r.realizedAmount, 800000 * (2.5 - cost) / 100);
@@ -951,7 +962,7 @@ t("day close ③: KST 00:00 day — realized = closed in the day, open = held at
     hourly.push(k === 0 ? H(s, 120.5, 120.9, 120.4, 120.8) : k === 1 ? H(s, 120, 122, 119.9, 121.5) : k >= 15 ? H(s, 100, 100, 50, 60) : H(s, 121.5, 121.6, 121.4, 123)); }
   const day = DAY.coinDay("2026-10-05", [{ market: "KRW-BTC", daily, hourly: hourly.reverse() }], Date.parse("2026-10-06T00:00:00+09:00"));
   assert.equal(day.exits, 1); assert.equal(day.trades[0].exitTime, "10-05 09:00"); assert.equal(day.trades[0].entryTime, "10-04 13:00");
-  near(day.trades[0].pnlPct, (121 / (119 * 1.0005) - 1) * 100 - 0.14);
+  near(day.trades[0].pnlPct, (121 / (119 * 1.0005) - 1) * 100 - COIN);
   assert.equal(day.open.length, 1); assert.equal(day.open[0].entryTime, "10-05 10:00"); near(day.open[0].markPrice, 123);   // 23시 봉 종가 — 자정 뒤 급락 안 씀
   assert.equal(day.entries, 1); near(day.realizedAmount, 10000000 * day.trades[0].pnlPct / 100);
   // ETH: 10/04 13시 매수 → 10/04 20시 손절(전날 한국 날짜) → 10/05 결과에는 없다
@@ -966,8 +977,8 @@ t("day close ③: KST 00:00 day — realized = closed in the day, open = held at
 t("day close ④: SOXL session after the decision; holiday when no session; sell realized in USD", () => {
   const q = (d, o, c) => ({ ohlc: [{ date: "2026-10-02", open: 100, close: 100 }, { date: d, open: o, close: c }] });
   const sell = DAY.soxlDay("2026-10-05", { basedOn: "2026-10-02", action: "sell", heldDays: 2, holding: true }, q("2026-10-05", 106, 104), { date: "2026-10-01", entryPrice: "100" });
-  near(sell.trades[0].pnlPct, 6 - 0.2); near(sell.realizedAmount, 10000 * 5.8 / 100); assert.equal(sell.exits, 1);
-  assert.ok(DAY.composeDay(sell).includes("+$580.00"));
+  near(sell.trades[0].pnlPct, 6 - US); near(sell.realizedAmount, 10000 * (6 - US) / 100); assert.equal(sell.exits, 1);
+  assert.ok(DAY.composeDay(sell).includes("+$550.00"), DAY.composeDay(sell));                       // 10,000 × (6 − 0.50)% — 기본 율
   const buy = DAY.soxlDay("2026-10-05", { basedOn: "2026-10-02", action: "buy", rsi2: 9, holding: false }, q("2026-10-05", 90, 92), null);
   assert.equal(buy.open.length, 1); assert.equal(buy.entries, 1); assert.equal(buy.exits, 0);
   assert.equal(DAY.soxlDay("2026-10-05", { basedOn: "2026-10-02", action: "none" }, q("2026-10-02", 1, 1), null).status, "holiday");
@@ -1040,14 +1051,14 @@ t("오늘 탭 전일·당일 칸(밤 확정 전 값): ① 마감 장부·장중 
   // ② 실제 10/12 → 10/13: 15:21 신호(예상 7185) · 모의투자 매수 실패(현금 부족) → 규칙대로 10/12 종가 7175 → 10/13 시가 6760, 비용 0.03%+2틱
   const buy = { etf_buy: { signal: true, quote: { expectedPrice: 7185 } }, etf_reconcile: { fills: { closeBuy: { qty: 0 }, openSell: { qty: 0 } } } };
   const e2 = LV.etfDayCell(buy, {}, { buyClose: 7175, sellOpen: 6760 }, false);
-  near(e2.v, (6760 / 7175 - 1) * 100 - (0.03 + 2 * 5 / 7175 * 100)); near(e2.v, -5.953344947735195);         // 밤 계산 장부와 같은 값
+  near(e2.v, (6760 / 7175 - 1) * 100 - (ETF + 2 * 5 / 7175 * 100)); near(e2.v, -5.78397212543554 - (FEE_RT + 2 * 5 / 7175 * 100));         // 밤 계산 장부와 같은 값
   assert.deepEqual([e2.final, e2.src, e2.trades], [true, "rule", 1]); assert.match(e2.note, /모의투자 매수 안 됨/);
   assert.deepEqual(LV.etfDayCell({ etf_buy: { signal: false } }, {}, { buyClose: 7000, sellOpen: 6935 }, false).v, "no_trade");   // 10/13 신호 없음 → 10/14 매매 없음
   assert.equal(LV.etfDayCell(buy, {}, { buyClose: 7175 }, false), null);                                 // 시가 전
   assert.equal(LV.etfDayCell(null, {}, { buyClose: 7175, sellOpen: 6760 }, false), null);                 // 매수일 판단 기록 없음
   assert.equal(LV.etfDayCell(null, null, null, true).v, "holiday");
   const filled = { etf_buy: { signal: true }, etf_reconcile: { fills: { closeBuy: { qty: 10, avgPrice: 7180 } } } };
-  near(LV.etfDayCell(filled, {}, { sellOpen: 7300 }, false).v, (7300 / 7180 - 1) * 100 - (0.03 + 2 * 5 / 7180 * 100));   // 종가 없으면 체결가
+  near(LV.etfDayCell(filled, {}, { sellOpen: 7300 }, false).v, (7300 / 7180 - 1) * 100 - (ETF + 2 * 5 / 7180 * 100));   // 종가 없으면 체결가
   assert.match(LV.etfDayCell(filled, {}, { sellOpen: 7300 }, false).note, /매수일 종가 대신 체결가/);
   // ③ 업비트 하루 10/13(10/13 09:00 ~ 10/14 09:00): 오르는 추세 · 10/12 고가 125 를 11:00 봉이 돌파 → 마지막 봉 130 에 매도
   const P = { ma: 20, stopPct: 5, level: "prevhigh", k: 0.5, hiN: 1, lastEntryHour: null, tabSize: 0.8, markets: ["KRW-BTC", "KRW-ETH"] };
@@ -1061,10 +1072,10 @@ t("오늘 탭 전일·당일 칸(밤 확정 전 값): ① 마감 장부·장중 
   const coins = ["KRW-BTC", "KRW-ETH"].map(m => ({ market: m, daily, hourly: bars.slice().reverse() }));
   const at = s => Date.parse(s + "+09:00");
   const fin = LV.coinDayCell("2026-10-13", coins, P, at("2026-10-14T10:30:00"));
-  const pnl = (130 / (125 * 1.0005) - 1) * 100 - 0.14;
+  const pnl = (130 / (125 * 1.0005) - 1) * 100 - COIN;
   near(fin.v, pnl * 0.8); assert.deepEqual([fin.final, fin.trades, fin.src], [true, 2, "rule"]);
   const mid = LV.coinDayCell("2026-10-13", coins, P, at("2026-10-13T15:30:00"));                           // 진행 중 — 15:00 봉 종가 126 으로 평가
-  near(mid.v, ((126 / (125 * 1.0005) - 1) * 100 - 0.14) * 0.8); assert.equal(mid.final, false);
+  near(mid.v, ((126 / (125 * 1.0005) - 1) * 100 - COIN) * 0.8); assert.equal(mid.final, false);
   assert.equal(LV.coinDayCell("2026-10-13", coins, P, at("2026-10-13T08:59:00")), null);                    // 시작 전
   assert.equal(LV.coinDayCell("2026-10-13", coins.map(c => ({ ...c, hourly: c.hourly.slice(0, 20) })), P, at("2026-10-14T10:30:00")), null);   // 끝난 하루인데 봉 부족
   const flat = LV.coinDayCell("2026-10-13", coins.map(c => ({ ...c, hourly: c.hourly.map(b => ({ ...b, high_price: 124 })) })), P, at("2026-10-14T10:30:00"));
@@ -1076,9 +1087,9 @@ t("오늘 탭 전일·당일 칸(밤 확정 전 값): ① 마감 장부·장중 
   assert.equal(s4.date, "2026-10-14"); near(s4.cell.v / 0.5, -0.6464129603692137); assert.equal(s4.cell.final, true);
   const r4 = LV.soxlDayCell(nx, { ...q4, price: 130, marketState: "REGULAR" }, 0.5);
   near(r4.cell.v, ((130 / 128.39999389648438 - 1) * 100) * 0.5); assert.equal(r4.cell.final, false);         // 정규장 중 — 진행
-  near(LV.soxlDayCell({ ...nx, action: "buy", holding: false }, q4, 0.5).cell.v, ((127.56999969482422 / 126 - 1) * 100 - 0.1) * 0.5);
+  near(LV.soxlDayCell({ ...nx, action: "buy", holding: false }, q4, 0.5).cell.v, ((127.56999969482422 / 126 - 1) * 100 - US / 2) * 0.5);
   const sl = LV.soxlDayCell({ ...nx, action: "sell" }, { ...q4, marketState: "REGULAR" }, 0.5);
-  near(sl.cell.v, ((126 / 128.39999389648438 - 1) * 100 - 0.1) * 0.5); assert.equal(sl.cell.final, true);    // 시가 매도는 장중에도 끝난 값
+  near(sl.cell.v, ((126 / 128.39999389648438 - 1) * 100 - US / 2) * 0.5); assert.equal(sl.cell.final, true);    // 시가 매도는 장중에도 끝난 값
   assert.equal(LV.soxlDayCell({ ...nx, basedOn: "2026-10-13" }, q4, 0.5), null);                             // 밤 계산이 이미 확정한 세션
   assert.equal(LV.soxlDayCell({ ...nx, holding: false }, q4, 0.5).cell.v, "no_trade");
 });
@@ -1172,7 +1183,7 @@ t("실시간 API 전체 실행(가짜 원천 · 10/14 09:41 KST): 200 · 탭마�
     near(D("opening")["2026-10-13"].v, -0.885); assert.equal(D("opening")["2026-10-13"].src, "vts");
     near(D("opening")["2026-10-14"].v, ((10 - LV.d1CostPct(1000)) + (5 - LV.d1CostPct(2000))) / 2); assert.deepEqual([D("opening")["2026-10-14"].final, D("opening")["2026-10-14"].src], [false, "rule"]);
     assert.deepEqual(j.tabs.opening.rows.map(x => [x.buyPrice, x.buyPriceKind, x.status, x.sellPrice]), [[1000, "시가", "보유중", null], [2000, "시가", "보유중", null]]);   // 공식 시가 · 장중(종가 전)
-    near(D("daytrading")["2026-10-13"].v, -5.953344947735195);
+    near(D("daytrading")["2026-10-13"].v, -5.78397212543554 - (FEE_RT + 2 * 5 / 7175 * 100));        // 밤 계산 장부와 같은 식(옛 비용 0.03 이면 −5.9533)
     const e2t = D("daytrading")["2026-10-14"], c5t = D("close30")["2026-10-14"];
     assert.ok(e2t && c5t, "②⑤ 오늘 칸은 15:40 장부가 있으면 비지 않는다");                           // 장부를 무시하면 ⑤ 는 15:00 판단 전이라 null
     assert.deepEqual([e2t.v, e2t.settled, D("daytrading")["2026-10-13"].settled], [-1.23, true, undefined]);   // 오늘 15:40 장부 = 확정 · 어제는 시세 계산 칸
@@ -1193,10 +1204,10 @@ t("① 규칙 칸: 메인 매매일 · 체결 0건(현금 부족)이면 그날 �
     orders: ["073240", "064350", "329180"].map(code => ({ code, side: "buy", qty: 0, vts: skip("매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 382주") })) };
   const bars = { "073240": { open: 5460, close: 5330 }, "064350": { open: 86000, close: 84800 }, "329180": { open: 310500, close: 305500 } };
   assert.deepEqual([LV.krTick(1999), LV.krTick(2000), LV.krTick(5460), LV.krTick(86000), LV.krTick(310500), LV.krTick(600000)], [1, 5, 10, 100, 500, 1000]);
-  near(LV.d1CostPct(5460), 0.23 + 3 * 10 / 5460 * 100);
-  const want = [[5330, 5460, 10], [84800, 86000, 100], [305500, 310500, 500]].map(([c, o, k]) => (c / o - 1) * 100 - (0.23 + 3 * k / o * 100)).reduce((a, x) => a + x, 0) / 3;
+  near(LV.d1CostPct(5460), KR + 3 * 10 / 5460 * 100); near(KR, 0.20 + FEE_RT);
+  const want = [[5330, 5460, 10], [84800, 86000, 100], [305500, 310500, 500]].map(([c, o, k]) => (c / o - 1) * 100 - (KR + 3 * k / o * 100)).reduce((a, x) => a + x, 0) / 3;
   const r = LV.openingRuleCell(pre, M, bars, true);
-  near(r.v, want); assert.ok(Math.abs(r.v - -2.486) < 0.01, String(r.v));                           // 10/22 실제 시가 · 종가로 약 −2.49%
+  near(r.v, want); assert.ok(Math.abs(r.v - -2.956) < 0.01, String(r.v));                           // 10/22 실제 시가 · 종가로 약 −2.96%(기본 율 · 옛 0.23 이면 −2.49%)
   assert.deepEqual([r.final, r.src, r.trades, r.wins, r.losses], [true, "rule", 3, 0, 3]);
   assert.equal(r.note, "모의투자 매수 안 됨(3종목 · 매수가능 0주(계좌 현금 부족)) — 규칙대로 계산");
   assert.equal(LV.openingRuleCell({ ...pre, breadth: { qualified: 6 } }, M, bars, true), null);   // 메인 매매일 아님(6<7) — 측정용
@@ -1272,8 +1283,8 @@ t("⑤ 실시간 줄 · 오늘 요약 · 국내 칸 나누기(①②⑤ 매매�
   assert.deepEqual([no.status, no.note], ["매매 없음", "15:00 전일 대비 +0.42% (기준 −1% 미만 아님)"]);
   const held = LV.close30Rows(base, 9850)[0];
   assert.deepEqual([held.status, held.buyPrice, held.buyPriceKind, held.realized, held.vts], ["보유중", 9800, "15:00 가격", false, "모의계좌 주문 접수"]);
-  near(held.pnlPct, (9850 / 9800 - 1) * 100 - (0.03 + 2.5 / 9800 * 100));                       // 비용 = 수수료 0.03% + 15:00 매수 반 호가(밤 계산과 같은 식)
-  near(LV.c30CostPct(9800), 0.03 + 2.5 / 9800 * 100); near(LV.c30CostPct(1500), 0.03 + 0.5 / 1500 * 100);
+  near(held.pnlPct, (9850 / 9800 - 1) * 100 - (ETF + 2.5 / 9800 * 100));                       // 비용 = 수수료 0.03% + 15:00 매수 반 호가(밤 계산과 같은 식)
+  near(LV.c30CostPct(9800), ETF + 2.5 / 9800 * 100); near(LV.c30CostPct(1500), ETF + 0.5 / 1500 * 100);
   // 정산은 주문한 건(15:00 신호)을 15:00 판단 가격 → 공식 종가로 — 모의투자 매도 접수 · 실패 · 체결가와 상관없이(2026-10-22 사용자)
   assert.equal(LV.close30Rows({ ...base, c30_sell: { order: { vts: { ok: false, msg: "거절" } } } }, 9850)[0].status, "보유중");
   assert.equal(LV.close30Rows(base, 9850, { close: 9850 }, 1525)[0].status, "보유중");             // 장중 네이버 일봉 종가 = 지금 가격 — 15:31 전에는 청산으로 안 본다
@@ -1549,7 +1560,7 @@ t("15:40 마감 장부(closeDay — Worker op=close 경로): ①②⑤ 주문한
     const e = await TG.closeDay("https://p.test", env, "daytrading", "2026-10-22");                 // 10/21 신호 — 10/21 종가 9,750 → 10/22 시가 9,800
     const e0 = e.trades[0] || {};
     assert.deepEqual([e.basis, e.settled, e.exits, e.open.length, e0.entryPrice, e0.exitPrice, e0.qty], ["orders", true, 1, 0, 9750, 9800, 300]);
-    near(e.dayPct, (9800 / 9750 - 1) * 100 - (0.03 + 2 * 5 / 9750 * 100));
+    near(e.dayPct, (9800 / 9750 - 1) * 100 - (ETF + 2 * 5 / 9750 * 100));
     const c = await TG.closeDay("https://p.test", env, "close30", "2026-10-22");                    // 15:00 9,800 → 종가 9,890
     const c0 = c.trades[0] || {};
     assert.deepEqual([c.basis, c.settled, c.exits, c0.entryPrice, c0.exitPrice, c0.qty], ["orders", true, 1, 9800, 9890, 500]);
