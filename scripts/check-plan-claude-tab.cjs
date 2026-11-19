@@ -30,9 +30,13 @@ const VOL0=D.findIndex(d=>d>='2020-06-01'),VOL1=D.findIndex(d=>d>='2020-07-15');
 const tecl=[];{let p=50;for(let k=0;k<D.length;k++){const r=(k>=VOL0&&k<VOL1)?.0366:.02;if(k)p*=1+(k%2?r:-r/(1+r));tecl.push({date:D[k],close:p});}}
 const sgov=D.map((d,k)=>({date:d,close:100*Math.pow(1.0001,k)})),sgovDiv=D.filter((d,k)=>k%21===5).map(d=>({date:d,amount:.35}));
 const BASE={startDate:D[START],principal:100000,tecl,tqqq,sgov,sgovDiv};
-/* 기준값 — 개편 전 엔진(main 0b2cb4c · plan-session-engine.js)으로 같은 자료를 돌린 결과. 개편 뒤에도 장부·평가액이 글자까지 같아야 한다. */
-const GOLD={lump:{monthlyAdd:0,total:112072.65925706532,nTrade:8,ledger:'52510c9b',nav:'48ebfb5b'},
-            monthly:{monthlyAdd:500,total:128292.50862924177,nTrade:82,ledger:'72bd28b2',nav:'50ed85a'}};
+/* 기준값 — 개편 전 엔진(main 0b2cb4c · plan-session-engine.js)으로 같은 자료를 돌린 결과. 개편 뒤에도 장부·평가액이 글자까지 같아야 한다.
+   2026-11-19 공통 수수료(설정 › 💸 수수료): 개편 전 엔진의 수수료 식(토스 0.1% · 10$ 이하 무료 · 센트 내림)만 '거래금액 × 율'로 바꿔 끼우고
+   (장부 표지 feeModel 이름도 common-v1) 율 0 · 0.25% 두 번 돌린 값이다 — 규칙은 그대로이고 수수료 식만 바뀌었다는 증명. */
+const GOLD={'lump@0':{monthlyAdd:0,fee:0,total:112343.98020962409,nTrade:8,ledger:'798c21ae',nav:'db0d8f4f'},
+            'monthly@0':{monthlyAdd:500,fee:0,total:128594.95582606712,nTrade:78,ledger:'130617c2',nav:'b98b2835'},
+            'lump@0.25%':{monthlyAdd:0,fee:.0025,total:111655.40605466881,nTrade:8,ledger:'d2d60528',nav:'d3b08324'},
+            'monthly@0.25%':{monthlyAdd:500,fee:.0025,total:127822.74440334098,nTrade:81,ledger:'f461ad00',nav:'d7ca89b5'}};
 
 function el(extra={}){return Object.assign({hidden:false,dataset:{},tabIndex:0,attrs:{},_cls:new Set(),classList:{toggle(c,on){on?this.o._cls.add(c):this.o._cls.delete(c);},contains(c){return this.o._cls.has(c);}},setAttribute(k,v){this.attrs[k]=String(v);}},extra);}
 
@@ -53,12 +57,16 @@ async function check(S){
     t('A4 폐지 재생 거절 '+JSON.stringify(o),/^폐지된 세션 — /.test(R.error)&&R.stats===null&&R.nav.length===0&&R.ledger.events.length===0&&!!R.retired,R.error);
   }
   for(const [k,g] of Object.entries(GOLD)){
+    E.setFeeRate(g.fee);
     const opt={...BASE,horizon:5,monthlyAdd:g.monthlyAdd},R=E.replay(opt),Rb=E.replay({...opt,rules:'base'}),Rn=E.replay({...opt,horizon:undefined});
     t('A5 기본 규칙 결과 = 개편 전 엔진('+k+' · 총액 '+g.total.toFixed(2)+' · 체결 '+g.nTrade+')',
       R.error===''&&R.stats.total===g.total&&R.stats.nTrade===g.nTrade&&fnv(JSON.stringify(R.ledger))===g.ledger&&fnv(JSON.stringify(R.nav))===g.nav,
       R.error+' '+(R.stats&&R.stats.total)+' '+(R.stats&&R.stats.nTrade)+' '+fnv(JSON.stringify(R.ledger))+' '+fnv(JSON.stringify(R.nav)));
     t('A5 '+k+' — rules 없음 = base = 기간 생략(5년)',JSON.stringify(R.ledger)===JSON.stringify(Rb.ledger)&&JSON.stringify(R.ledger)===JSON.stringify(Rn.ledger)&&R.rules==='base'&&R.horizon===5);
   }
+  E.setFeeRate(.0025);
+  t('A5 수수료 — 율 0.25% 의 총액이 율 0 보다 작다(수수료가 실제로 빠진다) · 엔진 기본 율 0.25% · 범위 밖(−1 · 0.5 · 문자)은 무시',GOLD['lump@0.25%'].total<GOLD['lump@0'].total&&E.FEE_RATE===.0025
+    &&E.setFeeRate(-1)===.0025&&E.setFeeRate(.5)===.0025&&E.setFeeRate('x')===.0025&&E.setFeeRate(.001)===.001&&E.alphaFee(20,100)===2&&E.setFeeRate(.0025)===.0025,String(E.FEE_RATE));
   const dec=r=>E.alphaDecide({rules:r,w:.95,sleeveNow:1,teclQty:10,tqqqQty:10,tqqqClose:98,sma:100,tqqqWeight:.35,guardWeight:.30,yearStart:true});
   const d0=dec('base');
   t('A6 기본 판정 — TECL 5%p 많음 유지 · TQQQ −2% OFF 전환 · 1월 맞춤 없음',!d0.teclHit&&d0.guard==='OFF'&&d0.guardFlip&&!d0.tqReb&&Math.abs(d0.lower-99)<1e-9,JSON.stringify(d0));

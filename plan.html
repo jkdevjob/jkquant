@@ -13,7 +13,8 @@
   if(/[?&]autoh=1(&|$)/.test(location.search)) document.documentElement.classList.add('autoh');   // 바깥이 창 높이를 내용에 맞춘다(아래 html.autoh)
   var b=document.createElement('base'); b.target='_top'; document.head.appendChild(b); })();
 </script>
-<script src="/plan-session-engine.js?v=9"></script>
+<script src="/plan-session-engine.js?v=10"></script>
+<script src="/jk-fee.js?v=1.0.0"></script>
 <script src="/plan-session-settings.js?v=5"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
 <script src="/jk-trade-chart.js?v=1.0.0"></script>
@@ -425,7 +426,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.14.1</span></h1></div>
+    <div class="brand"><div class="logo">Dual Guard</div><h1>JK <span class="v">투자</span> 듀얼가드 <span class="ver">v2.15.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -846,7 +847,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
     <div class="btnrow" style="margin-top:8px">
       <button class="btn" id="slFillPrice">현재 확정종가 넣기</button>
       <button class="btn" id="slReset">장부 초기화</button>
-      <span class="save-state" id="slNote">수수료는 별도 차감하지 않습니다. 실제 체결가 기준 기록입니다.</span>
+      <span class="save-state" id="slNote">수수료는 공통 수수료율(<span class="jk-fee-pct">0.25%</span> · 설정 › 💸 수수료)로 현금에서 자동 차감합니다. 실제 체결가 기준 기록입니다.</span>
     </div>
     <div class="table-wrap" style="margin-top:10px">
       <table><thead><tr><th>날짜</th><th>종목</th><th>구분</th><th>수량</th><th>체결가</th><th>금액</th><th></th></tr></thead><tbody id="slBody"></tbody></table>
@@ -1039,7 +1040,7 @@ function renderHorizonCopy(){
     +'<b>② 추세 가드 (TQQQ)</b> — TQQQ'+gw+'%는 SMA'+D.guardMA+' ±1.0% 경계를 넘을 때만 켜고(ON) 끕니다(OFF). 남는 금액은 SGOV에 둡니다.<br>'
     +'<b>입금</b> — 입금을 기록하면 다음 주문에서 TECL·TQQQ·SGOV 전체를 목표 비중으로 맞춥니다(모의 계산과 같은 규칙).<br>'
     +'<span class="sub">🤖 클로드 담당 전략 · 판 '+P.version+' ('+(P.since||'2026-11-08')+'~). 매일 연구로 검증하고, 규칙을 바꿀 때는 판 번호를 올려 예전 기록과 섞지 않습니다. 10·15·20년 기간과 새 규칙·공격형은 2026-11-08 폐지했습니다(예전 세션은 지우지 않고 숨김).</span>';
-  if($('alphaValidation'))$('alphaValidation').innerHTML='<b>앱 엔진과 같은 체결로 다시 잰 값</b><br><span class="sub">전일 확정종가로 주수 · 다음 거래일 종가 체결 · 수수료 0.1% · 해외주식 양도세 22%(250만원 공제) 세후 · 2011-04~2026-11 시작 · 2만$ 거치: 전 구간 연 30.9% · MDD 40.6%. 같은 조건에서 새 규칙 29.9%/38.1% · 공격형 30.7%/42.1%로 기본보다 낫지 않아 폐지했습니다(연구 2026-11-08).</span><br>'
+  if($('alphaValidation'))$('alphaValidation').innerHTML='<b>앱 엔진과 같은 체결로 다시 잰 값</b><br><span class="sub">전일 확정종가로 주수 · 다음 거래일 종가 체결 · 수수료 0.1%(연구 당시 · 지금 장부 · 모의는 공통 수수료 '+(window.JKFee?JKFee.pct(ALPHA_FEE_RATE):ALPHA_FEE_RATE*100)+'%) · 해외주식 양도세 22%(250만원 공제) 세후 · 2011-04~2026-11 시작 · 2만$ 거치: 전 구간 연 30.9% · MDD 40.6%. 같은 조건에서 새 규칙 29.9%/38.1% · 공격형 30.7%/42.1%로 기본보다 낫지 않아 폐지했습니다(연구 2026-11-08).</span><br>'
     +'<b>⚠️ 과거 롤링 연구치 재검증 대기</b><br><span class="sub">기존 137개 시작구간 CAGR/MDD는 주문 수량을 미확정 다음날 종가로 계산한 현재 모의 체결규칙과 동일한 조건에서 다시 검증되지 않았습니다. 주문수량 규칙 v2 적용 후 전체·롤링 검증 전에는 공식 성과로 표시하지 않습니다. 운영 전략 기본값은 그대로입니다.</span>';
 }
 let activePlanTab='alpha';
@@ -1077,13 +1078,22 @@ let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVr
 let planBootHydrating=true;
 let planStateCloudHydrated=false,planStateCloudRev=0,planStateConflict=false,planStateHistorySig='',planStateDbBase=null;
 let planCloudHydrated=false,planCloudRev=0,planCloudHistorySig='',planDbState=null;
-const FEE=0.0025;
-const ALPHA_FEE_RATE=0.001; // 토스증권 미국주식 표준 0.1% (A안 실전 장부/주문 전용)
-function alphaFee(q,p){const gross=Math.max(0,(+q||0)*(+p||0));return gross<=10?0:Math.floor(gross*ALPHA_FEE_RATE*100)/100;}
+/* 공통 수수료율 — 설정 › 💸 수수료(users/{uid}.commonFee · jk-fee.js). 사용자 문서를 읽으면 planApplyFee 가 바꾼다(없으면 0.25%).
+   듀얼가드 장부 · 주문 · 무매 · VR(5년 플랜) 모두 이 율 하나 — 엔진(plan-session-engine.js setFeeRate)도 같은 율로 맞춘다.
+   예전엔 토스 미국 0.1%(센트 내림 · 10$ 이하 무료)였다(2026-11-19 사용자: "수수료는 전부 똑같이 적용하고"). */
+let ALPHA_FEE_RATE=0.0025;
+function alphaFee(q,p){const gross=Math.max(0,(+q||0)*(+p||0));return gross*ALPHA_FEE_RATE;}
+function planApplyFee(d){
+  const K=window.JKFee,r=K?K.fromDoc(d||{}):0.0025;
+  ALPHA_FEE_RATE=r;
+  try{if(window.JKPlanSessionEngine&&JKPlanSessionEngine.setFeeRate)JKPlanSessionEngine.setFeeRate(r);}catch(e){console.warn('fee rate → engine',e);}
+  try{const t=(K?K.pct(r):String(r*100))+'%';for(const el of document.querySelectorAll('.jk-fee-pct'))el.textContent=t;}catch(e){}
+  return r;
+}
 let planLinks={inf:"",vr:"",sleeve:""};
 let sleeveSessions=[];
 let sleeveLedger={startQLD:0,startSGOV:0,startCash:0,trades:[]};
-let alphaLedger={base:{date:"",tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
+let alphaLedger={base:{date:"",tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"common-v1"};
 let pendingAlphaOrders=[], alphaEditingId="", alphaOrderHold="";   // alphaOrderHold — 공포 모드 판정 불가로 오늘 주문을 비운 이유(기록 창 추천 칸에 그대로 적는다)
 const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t*0.25,
   '지정가매도+1회매수':t=>t*0.25+1,'지정가매도+절반매수':t=>t*0.25+0.5,
@@ -1329,7 +1339,7 @@ function planHistoryRelation(a,b){
 }
 function planHistorySig(o){return planMapSig(planHistoryMap(o));}
 function assetLedgerSeed(date,cap){
-  return {base:{date:date||todayISO(),tecl:0,tqqq:0,sgov:0,cash:+cap||0,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
+  return {base:{date:date||todayISO(),tecl:0,tqqq:0,sgov:0,cash:+cap||0,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'common-v1'};
 }
 function assetSessionSettingsFromView(capOverride){
   const cap=capOverride!=null?+capOverride:Math.max(1,num('startCapital',20000));
@@ -2157,8 +2167,8 @@ function imAutoTPM1(bars,cycStart,date,base){
   return base;
 }
 function calcInfState(sess){
-  const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL',revFrom='';
-  const simple=st.compound===false;
+  const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,fees=0,revState='NORMAL',revFrom='';
+  const simple=st.compound===false,FR=ALPHA_FEE_RATE;   // 공통 수수료율 — 매수 · 매도 금액 × 율을 잔금에서 뺀다(앱 computeInf · 서버 imCompute · 백테 runIM 과 같다)
   /* 익절 변환 자동(실험 · imAutoTP) — 앱 computeInf · 서버 imCompute 와 같은 자리·같은 식. 확정 종가 봉은 imOrders 가 sess.autoBars 로 넘긴다 */
   const auto=st.autoTp===true,mode=auto?autoTpModeOf(st):'ret120',ab=(auto&&sess.autoBars&&sess.autoBars.length)?sess.autoBars:null,tpAt=d=>(auto&&ab&&d)?imAutoTPByMode(ab,d,mode):null;
   let cycStart='',cycTp=null;
@@ -2170,15 +2180,15 @@ function calcInfState(sess){
     const flat0=!(qty>1e-9)&&T===0;   // 이 줄 전에 사이클이 비어 있었나 — 여기서 사면 새 사이클 첫 매수
     const kind=String(h.kind||''),isRev=kind==='리버스매도'||kind==='리버스매수';
     if(kind==='지정가매도'||kind==='쿼터매도'||kind==='리버스매도'){
-      realized+=(+h.price-avg)*(+h.qty||0);qty-=+h.qty||0;inv-=avg*(+h.qty||0);
+      realized+=(+h.price-avg)*(+h.qty||0);qty-=+h.qty||0;inv-=avg*(+h.qty||0);fees+=(+h.price||0)*(+h.qty||0)*FR;
     }else if(kind==='1회매수'||kind==='절반매수'||kind==='리버스매수'){
-      const q=+h.qty||0,nq=qty+q;avg=nq>0?(avg*qty+(+h.price||0)*q)/nq:(+h.price||0);qty=nq;inv+=(+h.price||0)*q;
+      const q=+h.qty||0,nq=qty+q;avg=nq>0?(avg*qty+(+h.price||0)*q)/nq:(+h.price||0);qty=nq;inv+=(+h.price||0)*q;fees+=(+h.price||0)*q*FR;
     }else if(kind==='출금')withdrawn+=Math.max(0,+h.amt||0);
     else if(kind==='배당')divTotal+=Math.max(0,+h.amt||0);
     else if(kind.startsWith('지정가매도+')||kind.includes('+지정가매도')){
       const sp=+h.sellPrice||0,sq=+h.sellQty||0,bp=+h.buyPrice||0,bq=+h.buyQty||0,sellFirst=kind.startsWith('지정가매도+');
-      const ds=()=>{if(sq>0){realized+=(sp-avg)*sq;qty-=sq;inv-=avg*sq;}};
-      const db=()=>{if(bq>0){const nq=qty+bq;avg=nq>0?(avg*qty+bp*bq)/nq:bp;qty=nq;inv+=bp*bq;}};
+      const ds=()=>{if(sq>0){realized+=(sp-avg)*sq;qty-=sq;inv-=avg*sq;fees+=sp*sq*FR;}};
+      const db=()=>{if(bq>0){const nq=qty+bq;avg=nq>0?(avg*qty+bp*bq)/nq:bp;qty=nq;inv+=bp*bq;fees+=bp*bq*FR;}};
       sellFirst?(ds(),db()):(db(),ds());
     }
     if(typeof h.tManual==='number'&&!isNaN(h.tManual))T=h.tManual;
@@ -2197,14 +2207,14 @@ function calcInfState(sess){
     if(flat0&&qty>1e-9){cycStart=h.date||'';cycTp=tpAt(cycStart);}
     if(imCycleEnds(daySold,qty)&&!imDayOpenAfter(hist,hi)){
       T=0;revState='NORMAL';daySold=false;cycStart='';cycTp=null;
-      if(simple){const P0=+st.principal||0,cash=P0+realized+divTotal-withdrawn-saved;if(cash>P0)saved+=cash-P0;}
+      if(simple){const P0=+st.principal||0,cash=P0+realized+divTotal-withdrawn-saved-fees;if(cash>P0)saved+=cash-P0;}
     }
     if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>1e-9&&((+st.div||20)-T)<1){revState='DAY1';revFrom=h.date||'';}
   }
   if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1){revState='DAY1';revFrom='';}
-  const bal=(+st.principal||0)+realized+divTotal-inv-withdrawn-saved;
+  const bal=(+st.principal||0)+realized+divTotal-inv-withdrawn-saved-fees;
   const tpAuto=auto?((qty>1e-9&&cycStart)?imAutoTPM1(ab,cycStart,'9999-12-31',cycTp):tpAt('9999-12-31')):null;
-  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,revFrom,tp:tpAuto?tpAuto.tp:st.target,tpAuto,cycStart,
+  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,fees,outside:withdrawn+saved,revState,revFrom,tp:tpAuto?tpAuto.tp:st.target,tpAuto,cycStart,
     reverseActive:st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
@@ -2242,7 +2252,7 @@ function imOrders(sess,price,rows){
   /* 매수 주문은 앱·모의·서버·백테와 같은 정식 함수(imBuyOrders)에서 — 잔금 안에서만 · 아래로 LOC 추가 */
   if(slot>=1&&buy1>0){
     const first=!(c.avg>0);
-    for(const o of imBuyOrders({first, half:!first&&half, buy1, bal:c.bal, firstPrice:limit, starPrice:buyPt, avg:c.avg, rows:imRowsOf(st), fee:0, cur:'usd'}))
+    for(const o of imBuyOrders({first, half:!first&&half, buy1, bal:c.bal, firstPrice:limit, starPrice:buyPt, avg:c.avg, rows:imRowsOf(st), fee:ALPHA_FEE_RATE, cur:'usd'}))
       orders.push({side:'buy',name:o.name,price:o.price,qty:o.q,tag:'LOC'});
   }
   if(c.qty>0&&c.avg>0){
@@ -2263,12 +2273,12 @@ function calcVrState(sess){
     if(!seen){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;cycleBaseQty=qty;cycleSellFilled=0;cycleBuyFilled=0;seen=true;}
     else if(hc!==curCyc){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;cycleHasTrade=false;cycleBaseQty=qty;cycleSellFilled=0;cycleBuyFilled=0;}
     if(h.type==='buy'){
-      const amt=(+h.price||0)*(+h.qty||0),fee=+h.fee||0,q=+h.qty||0;qty+=q;totbuy+=amt;buyShares+=q;cost+=amt;
+      const amt=(+h.price||0)*(+h.qty||0),fee=h.seed?0:amt*ALPHA_FEE_RATE,q=+h.qty||0;qty+=q;totbuy+=amt;buyShares+=q;cost+=amt;   // 수수료 = 앱 computeVr 와 같은 식(공통 율 · 기록 칸 안 씀)
       const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}
       if(isInit){initBuy+=amt+fee;cycleStartPool=pool;if(cycleBaseQty<=0)cycleBaseQty=qty;}
       else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;cycleBuyFilled+=Math.max(0,Math.round(q));}
     }else if(h.type==='sell'){
-      const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;cycleHasTrade=true;cycleSellFilled+=Math.max(0,Math.round(q));
+      const q=+h.qty||0,amt=(+h.price||0)*q,fee=h.seed?0:amt*ALPHA_FEE_RATE,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;cycleHasTrade=true;cycleSellFilled+=Math.max(0,Math.round(q));
     }else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;if((h.auto||(curCyc===0&&!cycleHasTrade))&&!cycleHasTrade)cycleStartPool=pool;}
     else if(h.type==='wd'){pool-=+h.amt||0;totwd+=+h.amt||0;if(h.auto&&!cycleHasTrade)cycleStartPool=pool;}
     else if(h.type==='div'){pool+=+h.amt||0;totdiv+=+h.amt||0;}
@@ -2434,12 +2444,12 @@ function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? M
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
-  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+FEE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 밴드 1주 예약표가 생성됩니다.'};}
+  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+ALPHA_FEE_RATE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 밴드 1주 예약표가 생성됩니다.'};}
   const B=Math.floor(c.cycleBaseQty||c.qty),sf=Math.max(0,c.cycleSellFilled),bf=Math.max(0,c.cycleBuyFilled),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
   let more=0;
   if(B>0){
     /* 차수 목록은 앱·백테와 같은 vrTiers 에서 (호가 단위 값 · 제8차 P2-9) — 여기서 다시 세지 않는다 */
-    const L=vrTiersShow(B, sf, bf, c.up, c.lo, remain, 1+FEE, 'usd');   // 화면용 — 매도·매수 각각 다음 줄부터 20줄 (앱 주문표와 같은 함수)
+    const L=vrTiersShow(B, sf, bf, c.up, c.lo, remain, 1+ALPHA_FEE_RATE, 'usd');   // 화면용 — 매도·매수 각각 다음 줄부터 20줄 (앱 주문표와 같은 함수)
     for(const t of L.sells) orders.push({side:'sell',name:'예약매도 '+t.k+'차',price:t.p,qty:t.q,tag:'예약'});
     for(const t of L.buys) orders.push({side:'buy',name:'예약매수 '+t.k+'차',price:t.p,qty:t.q,tag:'예약'});
     more=Math.max(0,B-sf-L.sells.reduce((a,t)=>a+t.q,0));   // 표에 다 못 보인 매도 주식 — 더 오르면 같은 식으로 이어 건다
@@ -2728,7 +2738,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov,bg){
     '<br><b>목표비중:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 신호기준 평가액 '+usd(signalTotal)+
     '<br><b>오늘 매수금액:</b> TECL '+usd(buyMap.TECL)+' · TQQQ '+usd(buyMap.TQQQ)+' · SGOV '+usd(buyMap.SGOV)+' · 합계 '+usd(totalBuy)+' · <b>수수료 포함 필요현금 약 '+usd(totalNeed)+'</b>'+
     '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+(force?' · 입금 맞춤 '+usd2(dep.amount):'')+
-    '<br><span class="sub">목표 주수는 전일 확정종가로 계산하며, 매수가능 주수와 거래금액은 현재가·수수료(0.1%)로 추정합니다. 실제 체결가가 달라지면 매수량이 감소할 수 있습니다.</span>';
+    '<br><span class="sub">목표 주수는 전일 확정종가로 계산하며, 매수가능 주수와 거래금액은 현재가·공통 수수료('+(window.JKFee?JKFee.pct(ALPHA_FEE_RATE):ALPHA_FEE_RATE*100)+'% · 설정 › 💸 수수료)로 추정합니다. 실제 체결가가 달라지면 매수량이 감소할 수 있습니다.</span>';
   // 실제 매매결과를 바꾸지 않고, 확정 종가 기준 판단과 발주 가능 건수를 구분해 표시한다.
   const guide=V&&$('alphaGuide');
   if(guide){
@@ -2841,7 +2851,7 @@ function ledgerCalc(){
   for(const t of (sleeveLedger.trades||[])){
     const q=+t.qty||0,p=+t.price||0,amt=q*p,sym=String(t.symbol||'').toUpperCase(),buy=t.side==='buy';
     if(sym==='QLD')qld+=buy?q:-q; else if(sym==='SGOV')sgov+=buy?q:-q;
-    cash+=buy?-amt:amt;
+    cash+=buy?-amt*(1+ALPHA_FEE_RATE):amt*(1-ALPHA_FEE_RATE);   // 공통 수수료(설정 › 💸 수수료) — 예전엔 수수료를 안 뺐다(2026-11-19)
   }
   return {qld,sgov,cash};
 }
@@ -2925,6 +2935,7 @@ async function loadOperatingState(user){
   try{
     const fresh=takePlanSnap(user.uid);
     const d=fresh||await (async()=>{const snap=await getDoc(doc(db,'users',user.uid));return snap.exists()?(snap.data()||{}):{};})(),hasV2=!!d.stateV2;
+    planApplyFee(d);   // 공통 수수료율(설정 › 💸 수수료) — 장부 · 주문을 세기 전에
     const cloud=hasV2?d.stateV2:(d.state||null),legacyCloud=!hasV2&&!!cloud;
     planStateCloudRev=+d.stateV2Rev||0;planStateHistorySig=cloud?planOpHistorySig(cloud):'';
     liveState=cloud?cloneObj(cloud):null;planStateDbBase=cloud?cloneObj(cloud):null;
@@ -3022,7 +3033,7 @@ function defaults(){
   const s=todayISO(),t=plusYears(s,5);
   return {startDate:s,targetDate:t,startCapital:20000,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",
     aTeclQty:0,aTqqqQty:0,aSgovQty:0,aCash:20000,
-    alphaLedger:{base:{date:s,tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"},
+    alphaLedger:{base:{date:s,tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"common-v1"},
     balMM:0,balVR:0,balQLD:0,balSGOV:0,cagrLow:8,cagrBase:15,cagrHigh:22,
     incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0,autoBalances:true,autoSleeve:true,
     planLinks:{inf:"",vr:"",sleeve:""},sleeveSessions:[],sleeveLedger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}};
@@ -3044,13 +3055,12 @@ function planLedgerFrom(o,all){
   if(o&&o.alphaLedger&&typeof o.alphaLedger==='object'){
     const al=o.alphaLedger,b=al.base||{};
     const L={base:{date:String(b.date||todayISO()),tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),cash:Number.isFinite(+b.cash)?+b.cash:Math.max(1,+all.startCapital||20000),avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null},events:Array.isArray(al.events)?al.events:[],feeModel:String(al.feeModel||"")};
-    if(L.feeModel!=="toss-us-0.1-v1"){
-      L.events=L.events.map(e=>e&&e.type==='trade'?{...e,fee:alphaFee(e.qty,e.price),feeRate:ALPHA_FEE_RATE}:e);
-      L.feeModel="toss-us-0.1-v1";
-    }
+    /* 장부 계산(엔진 ledgerCalc)은 기록의 fee 칸을 안 쓰고 늘 공통 율로 센다 — 기록 칸도 지금 율로 맞춰 둔다(보여 주기 · 내보내기용) */
+    L.events=L.events.map(e=>e&&e.type==='trade'?{...e,fee:alphaFee(Math.max(0,Math.floor(+e.qty||0)),Math.max(0,+e.price||0)),feeRate:ALPHA_FEE_RATE}:e);
+    L.feeModel="common-v1";
     return L;
   }
-  return {base:{date:todayISO(),tecl:Math.max(0,Math.floor(+all.aTeclQty||0)),tqqq:Math.max(0,Math.floor(+all.aTqqqQty||0)),sgov:Math.max(0,Math.floor(+all.aSgovQty||0)),cash:Number.isFinite(+all.aCash)?+all.aCash:Math.max(1,+all.startCapital||20000),avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
+  return {base:{date:todayISO(),tecl:Math.max(0,Math.floor(+all.aTeclQty||0)),tqqq:Math.max(0,Math.floor(+all.aTqqqQty||0)),sgov:Math.max(0,Math.floor(+all.aSgovQty||0)),cash:Number.isFinite(+all.aCash)?+all.aCash:Math.max(1,+all.startCapital||20000),avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"common-v1"};
 }
 function apply(o){
   const all={...defaults(),...o};
@@ -3102,7 +3112,7 @@ function alphaPerfCalc(ledger,startCap,prices){
     if(e.type!=='trade')continue;
     const sym=String(e.symbol||'').toUpperCase(),q=Math.max(0,Math.floor(+e.qty||0)),p=Math.max(0,+e.price||0);
     if(!by[sym]||!q||!(p>0))continue;                       // 엔진이 건너뛰는 줄은 여기서도 건너뛴다
-    fees+=Math.max(0,+e.fee||0);
+    fees+=alphaFee(q,p);   // 엔진 장부(ledgerCalc)와 같은 식 — 공통 율
     if(e.side==='buy')buyAmt+=q*p;
     else if(e.side==='sell'){sellAmt+=q*p;sells++;by[sym].sells++;const t=S.tradePnl[e._i];
       if(t&&Number.isFinite(t.profit)){realized+=t.profit;by[sym].realized+=t.profit;}else unknownSells++;}
@@ -3201,7 +3211,7 @@ function renderAlphaLedger(){
       const gross=(+e.qty||0)*(+e.price||0),buy=e.side==='buy';
       const pnl=S.tradePnl[e._i],profit=pnl?pnl.profit:null,known=Number.isFinite(profit),col=known?(profit>=0?'pos':'neg'):'',sign=known&&profit>=0?'+':'';
       const pct=known&&cap>0?sign+(profit/cap*100).toFixed(2)+'%':'—',amount=known?sign+usd2(profit):(pnl&&pnl.reason||'—');
-      return '<tr><td>'+String(e.date||'')+'</td><td>'+String(e.symbol||'')+'</td><td class="'+(buy?'buytxt':'selltxt')+'">'+(buy?'매수':'매도')+'</td><td>'+Math.floor(+e.qty||0)+'</td><td>'+usd2(+e.price||0)+'</td><td>'+usd2(+e.fee||0)+'</td><td>'+usd2(gross)+'</td><td class="'+col+'">'+pct+'</td><td class="'+col+'">'+amount+'</td><td>'+actions+'</td></tr>';
+      return '<tr><td>'+String(e.date||'')+'</td><td>'+String(e.symbol||'')+'</td><td class="'+(buy?'buytxt':'selltxt')+'">'+(buy?'매수':'매도')+'</td><td>'+Math.floor(+e.qty||0)+'</td><td>'+usd2(+e.price||0)+'</td><td>'+usd2(alphaFee(Math.floor(+e.qty||0),+e.price||0))+'</td><td>'+usd2(gross)+'</td><td class="'+col+'">'+pct+'</td><td class="'+col+'">'+amount+'</td><td>'+actions+'</td></tr>';
     });
     const baseParts=['TECL '+Math.max(0,Math.floor(+b.tecl||0))+'주'+(Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?' @ '+usd2(+b.avgTecl):''),
       'TQQQ '+Math.max(0,Math.floor(+b.tqqq||0))+'주'+(Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?' @ '+usd2(+b.avgTqqq):''),
@@ -3622,6 +3632,7 @@ async function cloudLoad(user){
   try{
     const restoredMorning=await restoreMorningPlanFromLegacy(user);
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},hasPlanV2=!!d.fiveYearPlanV2,v=hasPlanV2?d.fiveYearPlanV2:d.fiveYearPlan;
+    planApplyFee(d);   // 공통 수수료율(설정 › 💸 수수료) — 장부를 그리기 전에
     let wrote=false;
     planCloudRev=+d.fiveYearPlanV2Rev||0;planCloudHistorySig=v?planHistorySig(v):'';
     if(v){

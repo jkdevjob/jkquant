@@ -13,6 +13,10 @@ let pass=0, fail=0;
 /* 플랜 운영 장부 계산(ledgerEvents·ledgerCalc)은 엔진(plan-session-engine.js) 한 곳에 있다(2026-11-09 plan.html 에서 옮김).
    plan.html 의 alphaEventList·alphaLedgerCalc 는 그 함수를 부르므로, 페이지 함수를 뽑아 돌리는 시험이 같은 엔진을 보게 전역에 올려 둔다. */
 const PLAN_ENGINE_SRC=fs.readFileSync(__d+'/plan-session-engine.js','utf8'); new Function(PLAN_ENGINE_SRC)();
+/* 공통 수수료율(설정 › 💸 수수료 · 2026-11-19) — 페이지에서 떼어 온 함수가 보는 값. 사용자 문서가 없을 때와 같은 기본 0.25%.
+   플랜(plan.html)은 ALPHA_FEE_RATE · 운영(index.html)은 JK_FEE(없으면 0.25%) · 서버는 fee 인자(없으면 0.25%) · 백테는 costOf 가 JK_FEE(없으면 COST_FEE).
+   원문(V4.0 골든) 대조처럼 수수료 0 이 필요한 시험은 그 자리에서 셋 다 0 으로 맞춘다. */
+global.ALPHA_FEE_RATE=0.0025;
 function ok(name, cond, detail=''){ if(cond){pass++;console.log('  ✓ '+name);} else {fail++;console.log('  ✗ '+name+(detail?' — '+detail:''));} }
 function near(a,b,tol){ return Math.abs(a-b)<=Math.max(tol??1e-6, Math.abs(b)*1e-9); }
 
@@ -373,7 +377,7 @@ __strat={settings:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,
 }
 __strat={settings:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,startv:0,startpool:1000,cur:'usd'},
   hist:[{type:'buy',price:77,qty:10,cyc:0},{type:'buy',price:40,qty:5,cyc:1}]};
-ok('2회차 매수는 Pool 정상 차감 (1000→800)', near(computeVr().pool,800));
+ok('2회차 매수는 Pool 정상 차감 (1000→799.5 · 체결 200 + 공통 수수료 0.25% 0.5 — 수수료 칸 없는 손 기록도 수수료)', near(computeVr().pool,1000-200*1.0025), 'pool='+computeVr().pool);
 // 사이클 진입 후 재계산: enterNextCycle이 startv를 갱신(startCyc=1)해도 이력의 초기투입 매수가 Pool을 다시 까면 안 됨
 __strat={settings:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,startv:800,startpool:0,startCyc:1,cur:'usd'},
   hist:[{type:'buy',price:77,qty:10,cyc:0}]};
@@ -384,7 +388,7 @@ __strat={settings:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,
 // 이어받기 시작(startv 직접입력, 진입이력 없음): 첫 buy는 추가매수 → Pool 차감이 맞음
 __strat={settings:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,startv:770,startpool:200,cur:'usd'},
   hist:[{type:'buy',price:77,qty:2,cyc:0}]};
-ok('이어받기 시작: 첫 buy는 Pool 차감 (200→46)', near(computeVr().pool,46));
+ok('이어받기 시작: 첫 buy는 Pool 차감 (200→45.615 · 154 + 수수료 0.385)', near(computeVr().pool,200-154*1.0025), 'pool='+computeVr().pool);
 
 /* ════ 4. 차분 테스트 (5차·6차) — 실데이터, 두 엔진 회계 항등 ════ */
 console.log('[4] 차분 테스트 (runIM 거래로그 → computeInf 재생)');
@@ -417,16 +421,30 @@ const CONFIGS=[
   ['TQQQ',20,15,true],['TQQQ',40,15,true],['TQQQ',20,15,false],
   ['TECL',20,20,true],['TECL',40,20,false],
 ];
+/* 공통 수수료(2026-11-19) — 원문 대조는 수수료 0(백테 비용 끔 · 장부 율 0)으로, 수수료 대조는 같은 율(0.25%)로 한다.
+   수수료 대조의 백테는 '수수료만' 켠다(슬리피지 · 양도세 0) — 장부(computeInf)는 체결가 그대로 · 세금 없음이라 그것만 같아야 한다.
+   백테 실현손익은 세무 원가(수수료 포함)라 장부 실현손익(가격만)과 정의가 달라 수수료 대조에서는 잔금 · 평단 · 보유 · T 만 본다. */
+const __feeRun=(R, fn)=>{ const s={JK:global.JK_FEE, on:global.imCostOn, co:global.costOf, tax:global.capGainTax};
+  try{ global.JK_FEE=R;
+    /* capGainTax 는 제 안의 costOf 를 부른다(전역을 갈아도 22%) — 세금은 함수째 0 으로 */
+    if(R>0){ global.imCostOn=true; global.costOf=t=>({...s.co(t), fee:R, slip:0, taxRate:0}); global.capGainTax=()=>0; } else global.imCostOn=false;
+    return fn(); }
+  finally{ if(s.JK===undefined) delete global.JK_FEE; else global.JK_FEE=s.JK; global.imCostOn=s.on; global.costOf=s.co; global.capGainTax=s.tax; } };
 for(const [tkr,div,tgt,compound] of CONFIGS){
   if(!DAYS[tkr]) continue;
-  tradeLog=[]; finalState=null;
-  runIM(DAYS[tkr], tkr, 10000, div, tgt, compound);
-  __strat={settings:{ticker:tkr,div,principal:10000}, hist:tradeLog};
-  const ci=computeInf();
-  const btBal=finalState.cash+finalState.savedProfit-(finalState.addedCash||0);
-  const okAll=near(ci.avg,finalState.avg)&&near(ci.qty,finalState.shares)&&near(ci.T,finalState.T)&&near(ci.realized,finalState.realized)&&near(ci.bal,btBal);
-  ok(`${tkr} ${div}분할 ${tgt}% ${compound?'복리':'단리'} — 거래 ${tradeLog.length}건 5지표 항등`, okAll,
-    okAll?'':`avg ${ci.avg}/${finalState.avg} qty ${ci.qty}/${finalState.shares} T ${ci.T}/${finalState.T} bal ${ci.bal}/${btBal}`);
+  for(const R of [0, 0.0025]){
+    __feeRun(R, ()=>{
+      tradeLog=[]; finalState=null;
+      runIM(DAYS[tkr], tkr, 10000, div, tgt, compound);
+      __strat={settings:{ticker:tkr,div,principal:10000}, hist:tradeLog};
+      const ci=computeInf();
+      const btBal=finalState.cash+finalState.savedProfit-(finalState.addedCash||0);
+      const okAll=near(ci.avg,finalState.avg)&&near(ci.qty,finalState.shares)&&near(ci.T,finalState.T)&&(R>0||near(ci.realized,finalState.realized))&&near(ci.bal,btBal,1e-6)
+        &&(R>0?ci.fees>0:ci.fees===0);
+      ok(`${tkr} ${div}분할 ${tgt}% ${compound?'복리':'단리'} · 수수료 ${R*100}% — 거래 ${tradeLog.length}건 ${R>0?'잔금(수수료 뺀 현금)·평단·보유·T 항등':'5지표 항등'}`, okAll,
+        okAll?'':`avg ${ci.avg}/${finalState.avg} qty ${ci.qty}/${finalState.shares} T ${ci.T}/${finalState.T} bal ${ci.bal}/${btBal} fees ${ci.fees}`);
+    });
+  }
 }
 
 /* ════ 4b. runIM50 (V5.0 국면) 스모크 + runIM(V4.0) 앵커 ════ */
@@ -506,7 +524,10 @@ console.log('[4c] 섀넌 차분 (runIVS 거래로그 → ivsPos 재생)');
       if(!DAYS[tkr]) continue;
       ivsLog=[];
       const r=runIVS(DAYS[tkr],tkr,10000,s0/100,N,band/100,costOn,mode,'cash');
+      /* 장부 수수료는 기록 칸이 아니라 공통 율(JK_FEE)로 센다 — 백테 비용 끔이면 율 0, 켬이면 백테와 같은 율(0.25%) */
+      global.JK_FEE=costOn?0.0025:0;
       const P=ivsPos(10000,ivsLog);
+      delete global.JK_FEE;
       const good=near(P.qty,r.endShares,1e-6)&&near(P.cash,r.endCash,0.01);
       ok(`${tkr} s0=${s0}% N=${N} 밴드=${band}% ${mode==='fix'?'고정5:5':'역분산'} 수수료${costOn?'ON':'OFF'} — 거래 ${ivsLog.length}건`,
          good, good?'':`수량 ${P.qty.toFixed(6)}/${r.endShares.toFixed(6)} 현금 ${P.cash.toFixed(2)}/${r.endCash.toFixed(2)}`);
@@ -697,11 +718,11 @@ console.log('[9] 모의 기록·설정 정합');
 console.log('[10] 모의 장부 정합');
 {
   let led=''; try{ led=extractFn(idx,'function maLedger(hist, price, principal)'); }catch(e){}
-  ok('로테 장부가 수수료를 반영', /IVS_FEE/.test(led) && /fee/.test(led), led?'':'maLedger 없음');
+  ok('로테 장부가 수수료를 반영', /JK_FEE/.test(led) && /fee/.test(led), led?'':'maLedger 없음');
   ok('로테 실현손익이 수수료 차감 후', /\(pr-avg\)\*sq-fee/.test(led));
   // maReplay(생성)와 maLedger(장부)가 같은 수수료율을 써야 한다
   let rep=''; try{ rep=extractFn(idx,'function maReplay()'); }catch(e){}
-  const feeOf=src=>{ const m=src.match(/IVS_FEE!=='undefined'\)\?IVS_FEE:([\d.]+)/); return m?m[1]:null; };
+  const feeOf=src=>{ const m=src.match(/JK_FEE!=='undefined'\)\?JK_FEE:([\d.]+)/); return m?m[1]:null; };
   ok('생성·장부의 수수료 기본값 동일', feeOf(rep)!==null && feeOf(rep)===feeOf(led),
      `생성 ${feeOf(rep)} / 장부 ${feeOf(led)}`);
 
@@ -854,8 +875,8 @@ console.log('[14] 체결가 규약');
   ok('익절 지정가는 고가 터치로 판정', /if\(hi>=tgt && qTp>0\)/.test(sim) && !/if\(cl>=tgt && qTp>0\)/.test(sim));
   ok('익절 체결가는 max(익절가, 시가)', /put\('지정가매도',d,\(op>tgt\?op:tgt\),qTp\)/.test(sim));
   // 규약을 바꾸면 이미 쌓인 모의 기록도 다시 만들어져야 한다 — 설정 지문만으로는 안 걸린다
-  ok('체결 규약 판이 모의 지문에 들어간다',
-     /const SIM_RULE_VER=\d+/.test(idx) && /'r'\+SIM_RULE_VER\+'\|'/.test(idx));
+  ok('체결 규약 판 · 공통 수수료율이 모의 지문에 들어간다(율을 바꾸면 모의를 처음부터)',
+     /const SIM_RULE_VER=\d+/.test(idx) && /'r'\+SIM_RULE_VER\+'\|f'\+\(\(typeof JK_FEE!=='undefined'\)\?JK_FEE:0\.0025\)\+'\|'/.test(idx));
 }
 
 
@@ -1042,7 +1063,7 @@ console.log('[19] 출금 · 복리/단리');
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
   // 입금 자리(added)는 아예 없앴다 — 무매는 나가기만 한다
-  ok('출금·단리인출을 밖으로 낸다', /withdrawn,saved,divTotal,flows,simple,outside:withdrawn\+saved/.test(ci));
+  ok('출금·단리인출을 밖으로 낸다', /withdrawn,saved,divTotal,fees,feeRate:FR,flows,simple,outside:withdrawn\+saved/.test(ci));
   ok('무매 반환값에 입금 자리가 없다', !/added:0/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
   ok('출금은 매수·매도가 아니다', /function isBuy\(k\)\{return k==='출금'\?false/.test(idx)
@@ -2061,14 +2082,17 @@ console.log('[37-세후] 세후 TR — 세금 규약 대조 · 값');
   const run=(opt,rows)=>{ const A=F.paperAfterTaxAcc('SOXL',opt); rows.forEach(([d,E,inf,x])=>A.step(d,E,inf,x)); return A.done(); };
   const z={realized:0,turnover:0,held:0,cost:0}, X=o=>Object.assign({},z,o);
   { const r=run({},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-30',20000,10000,X({held:20000,cost:10000})]]);
-    ok('S1 보유만 1만→2만$ — 다 판다고 보고 평가익 1만$ 에 세금 → +'+((20000-tax(10000))/100-100).toFixed(2)+'%', near(r.tr,(20000-tax(10000))/10000*100-100,1e-9), r&&r.tr.toFixed(4)); }
+    /* 다 판다고 볼 때의 매도 수수료(공통 율 0.25%)는 모든 전략에 뗀다 — 장부에 없는 매매다(2026-11-19 · 예전엔 수수료 없는 장부만 뗐다) */
+    const L1=0.0025*20000, f1=20000-tax(10000-L1)-L1;
+    ok('S1 보유만 1만→2만$ — 다 판다고 보고 매도 수수료 '+L1+'$ · 평가익 '+(10000-L1)+'$ 에 세금 → +'+(f1/100-100).toFixed(2)+'%', near(r.tr,f1/10000*100-100,1e-9) && near(r.fee,L1,1e-9), r&&(r.tr.toFixed(4)+' · 수수료 '+r.fee)); }
   { // S2 2024 실현 1만$ → 연말 세금 T1 → 그만큼 덜 굴려 2025 두 배도 덜 는다
-    const T1=tax(10000), k=1-T1/20000, fin=k*40000-tax(k*20000);
+    const T1=tax(10000), k=1-T1/20000, liq2=k*0.0025*40000, fin=k*40000-tax(k*20000-liq2)-liq2;
     const r=run({},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-31',20000,10000,X({realized:10000})],['2025-12-31',40000,10000,X({realized:10000,held:40000,cost:20000})]]);
     ok('S2 해마다 낸 세금만큼 덜 굴린다 — 세후 '+(fin/100-100).toFixed(2)+'% (세금을 끝에 한 번만 빼면 '+((40000-T1-tax(20000))/100-100).toFixed(2)+'%)', near(r.tr,fin/10000*100-100,1e-9), r&&r.tr.toFixed(4));
     // S3 단리 — 이익은 계좌 밖에 있어 세금도 거기서 낸다(굴릴 원금은 그대로)
     const r3=run({simple:true},[['2024-01-02',10000,10000,X({held:10000,cost:10000})],['2024-12-31',20000,10000,X({realized:10000})],['2025-12-31',40000,10000,X({realized:10000,held:40000,cost:20000})]]);
-    ok('S3 단리 — 세금은 빼 둔 돈에서 · 세후 '+((40000-T1-tax(20000))/100-100).toFixed(2)+'%', near(r3.tr,(40000-T1-tax(20000))/10000*100-100,1e-9), r3&&r3.tr.toFixed(4)); }
+    const f3=40000-T1-tax(20000-100)-100;   // 단리 — 굴린 원금 그대로(k=1) · 다 팔 때 수수료 40,000 × 0.25% = 100
+    ok('S3 단리 — 세금은 빼 둔 돈에서 · 매도 수수료 100 · 세후 '+(f3/100-100).toFixed(2)+'%', near(r3.tr,f3/10000*100-100,1e-9), r3&&r3.tr.toFixed(4)); }
   { // S4 수수료 없는 장부(무매) — 첫날 첫 매수 1만$ 의 0.25% · 팔 때 0.25%
     const k=1-25/10000, liq=k*0.0025*10000, fin=k*10000-liq;
     const r=run({addFee:true},[['2024-01-02',10000,10000,X({turnover:10000,held:10000,cost:10000})],['2024-06-28',10000,10000,X({turnover:10000,held:10000,cost:10000})]]);
@@ -2082,7 +2106,8 @@ console.log('[37-세후] 세후 TR — 세금 규약 대조 · 값');
   ok('배선 — paperMdd 가 날마다 AT.step · 지금 시세로 마지막 한 번 · afterTax 를 돌려준다 · paperStat·플랜이 atr 로',
      /AT\.step\(row\.date, tot, cur\.inflow,/.test(md) && /AT\.step\(day,R\.total,R\.inflow,/.test(md) && /afterTax:AT\.done\(\)/.test(md) && /afterTaxMdd:typeof paperAfterTaxDrawdown/.test(md)
      && /atr:\(mdd&&mdd\.afterTax\)\?mdd\.afterTax\.tr:null/.test(ps) && /const _at=planAfterTax\(R\);/.test(pp) && /atr:_at\?_at\.tr:null/.test(pp));
-  ok('수수료 없는 장부만 수수료를 더한다 — 무매 · 적립 · ASAP', /const PAPER_NOFEE_TABS=new Set\(\['inf','dca','asap'\]\);/.test(idx));
+  ok('수수료를 더 붙일 장부가 없다 — 모든 전략 장부가 공통 수수료를 센다(두 번 떼지 않음 · 2026-11-19)', /const PAPER_NOFEE_TABS=new Set\(\[\]\);/.test(idx)
+     && /liqRate=costOf\(sym\)\.fee/.test(extractFn(idx,'function paperAfterTaxAcc(sym, opt)')));
 }
 
 console.log('[38] 세션 이동 — 보던 자리도 지킨다');
@@ -3139,7 +3164,7 @@ console.log('\n[57] 분배금 현금 수령 — 월 수입으로 읽는다');
   ok('현금 수령분을 날짜째로 남긴다',
      /else divFlows\.push\(\{date:d\.date, out:cash, in:0\}\);/.test(cd) && /pos\.flows=divFlows;/.test(cd));
   // 재투자는 계좌 안에 남으므로 나간 돈이 아니다
-  ok('재투자는 흐름에 넣지 않는다', /if\(reinv\)\{[^}]*divShares\+=cash\/rp; divInv\+=cash; \} \}[^\n]*\n\s*else divFlows\.push/.test(cd));
+  ok('재투자는 흐름에 넣지 않는다 (재매수 주수는 수수료 뺀 몫 · 백테 _dcaOne 과 같은 식)', /if\(reinv\)\{[^}]*const dq=cash\/\(rp\*f1\); divShares\+=dq; divInv\+=cash; pos\.fees\+=cash-dq\*rp; \} \}[^\n]*\n\s*else divFlows\.push/.test(cd));
 
   /* 카드는 이제 분석탭에 있다 — 무매가 요약·월별표를 분석탭에 두는 것과 같은 자리.
      '현재' 탭에 따로 그리던 옛 카드는 지웠다(같은 표를 두 군데서 그리면 또 어긋난다). */
@@ -3181,7 +3206,9 @@ console.log('\n[58] 국내 종목의 비용·세금 규약');
 
   const us=costOf('SOXL'), kr=costOf('069500'), krOther=costOf('0104N0');
   ok('미국은 종전 그대로', us.fee===0.0025 && us.taxRate===0.22 && us.krw===1350 && us.deduct===250e4 && us.cur==='$');
-  ok('국내 수수료는 0.015%', kr.fee===0.00015 && krOther.fee===0.00015);
+  ok('국내도 공통 수수료 — 저장값 없으면 기본 0.25% (예전 0.015%)', kr.fee===0.0025 && krOther.fee===0.0025 && us.fee===kr.fee);
+  { const _j=global.JK_FEE; global.JK_FEE=0.001; const a=costOf('SOXL').fee, b=costOf('069500').fee, c=costOf('0104N0').fee; if(_j===undefined) delete global.JK_FEE; else global.JK_FEE=_j;
+    ok('공통 수수료율을 0.1% 로 바꾸면 미국 · 국내 모두 0.1% (설정 › 💸 수수료 한 값)', a===0.001 && b===0.001 && c===0.001, [a,b,c].join('/')); }
   ok('국내엔 환율·공제를 쓰지 않는다', kr.krw===1 && kr.deduct===0 && krOther.krw===1 && krOther.deduct===0);
   ok('국내 통화 기호는 ₩', kr.cur==='₩');
 
@@ -3278,11 +3305,11 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   /* VR — 인출이 본질인 전략. 실현손익을 아예 안 재고 있었고 인출도 화면에 없었다. */
   const cv=(()=>{ try{ return extractFn(idx,'function computeVr()'); }catch(e){ return ''; } })();
   // 수수료는 필요경비라 실현손익에서 뺀다 (무매·백테와 같은 규약)
-  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*q-fee; cost-=av\*q;/.test(cv) && /\brealized,cost,fees,flows,/.test(cv));
+  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*q-fee; cost-=av\*q;/.test(cv) && /\brealized,cost,fees,feeRate:FR,flows,/.test(cv));
   /* 기록에 적힌 수수료를 그대로 되살려야 재생기 안 장부와 화면 장부가 같아진다.
      실계좌 기록엔 fee 칸이 없어 0 — 예전과 글자 그대로 같다. */
-  ok('VR이 기록의 수수료로 Pool 을 복원한다',
-     (cv.match(/fee=\+h\.fee\|\|0/g)||[]).length===2
+  ok('VR 수수료 = 체결금액 × 공통 율(기록 칸 안 씀 · 이어받은 보유 seed 0)로 Pool 을 센다',
+     (cv.match(/fee=feeOf\(h,amt\)/g)||[]).length===2 && /feeOf=\(h,amt\)=>h\.seed\?0:amt\*FR/.test(cv) && !/\+h\.fee/.test(cv)
      && /const out=amt\+fee;[\s\S]{0,160}pool-=out; cycTrade-=out;/.test(cv)
      && /pool\+=amt-fee; cycTrade\+=amt-fee;/.test(cv));
   ok('VR 인출은 나온 돈, 적립은 넣은 돈',
@@ -3332,7 +3359,7 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   ok('로테도 매수 수수료를 원가에 넣는다', /avg=nq>0\?\(avg\*qty\+pr\*q\+fee\)\/nq:/.test(ml));
   {
     // 다 청산하면 실현 = 현재 = 누적 이어야 한다 (열린 포지션이 없으니)
-    const fn=new Function('hist','price','principal','const IVS_FEE=0.0025;'+ml+';return maLedger(hist,price,principal);');
+    const fn=new Function('hist','price','principal','const JK_FEE=0.0025;'+ml+';return maLedger(hist,price,principal);');
     const L=fn([{date:'2025-01-06',type:'in',qty:100,price:30},
                 {date:'2025-05-02',type:'out',qty:100,price:40}], 0, 10000);
     ok('전량 청산이면 실현 = 총자산 − 원금',
@@ -4769,8 +4796,8 @@ console.log('\n[74] 리버스 — 규칙이 있는 분할(20·40)에서만');
 console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
 {
   const cv2=extractFn(idx,'function computeVr()');
-  ok('기록의 수수료로 Pool 을 되살린다',
-     (cv2.match(/fee=\+h\.fee\|\|0/g)||[]).length===2
+  ok('Pool 은 체결금액 × 공통 수수료율로 센 수수료로 되살린다(기록 칸 대신 · 율이 같으면 재생기 안 장부와 같은 값)',
+     (cv2.match(/fee=feeOf\(h,amt\)/g)||[]).length===2
      && /const out=amt\+fee;[\s\S]{0,100}pool-=out;/.test(cv2) && /pool\+=amt-fee;/.test(cv2));
   ok("'초기 투입인가'를 기록이 직접 말한다",
      /const isInit=\(h\.init!==undefined\) \? !!h\.init : \(!sawBuy && !carriedIn\);/.test(cv2));
@@ -4809,7 +4836,7 @@ console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
       const w=vr2.slice(vr2.indexOf('while(due && d>=due'));
       const iAdd=w.indexOf('pool=TR.nextPool;'), iSet=w.indexOf('cycStartPool=pool;');
       return iAdd>0 && iSet>iAdd; })());
-  ok('모의 체결도 같은 수수료·고정차수 규약', /const _F=\(typeof IVS_FEE!=='undefined'\)\?IVS_FEE:0\.0025;/.test(idx)
+  ok('모의 체결도 같은 수수료·고정차수 규약', /const _F=\(typeof JK_FEE!=='undefined'\)\?JK_FEE:0\.0025;/.test(idx)
      && /budgetRemaining:poolLimit\(c\), FEE:_F, model:vrModelOf\(st\),[\s\S]{0,160}baseShares:c\.cycBaseQty, sellFilled:c\.cycSellFilled, buyFilled:c\.cycBuyFilled\}, row\)/.test(idx) && !/maxTiers:20/.test(idx));
   /* 사이클 매수한도는 '그 사이클 시작 Pool × 비중 − 이미 쓴 돈' 이다. 세 갈래(모의체결·
      과거재생·백테)가 각자 세면 갈린다 — 실제로 매도 대금이 같은 사이클 한도를 늘렸다. */
@@ -4863,8 +4890,9 @@ console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
     // init 칸이 없는 실계좌 기록은 예전과 같아야 한다 (하위호환)
     __strat={settings:st, hist:[{type:'buy',date:'2026-01-05',price:100,qty:10,cyc:0}]};
     const c3=computeVr();
-    ok('fee·init 없는 옛 기록은 예전 그대로', c3.qty===10 && near(c3.pool,0,1e-9) && near(c3.fees,0,1e-9),
-       `qty=${c3.qty} pool=${c3.pool} fees=${c3.fees}`);
+    ok('fee·init 칸 없는 옛 기록 — 보유 · Pool 은 예전 그대로 · 수수료는 공통 율(1,000 × 0.25% = 2.5 · 초기 투입 원가에 든다)',
+       c3.qty===10 && near(c3.pool,0,1e-9) && near(c3.fees,2.5,1e-9) && near(c3.initBuy,1002.5,1e-9),
+       `qty=${c3.qty} pool=${c3.pool} fees=${c3.fees} initBuy=${c3.initBuy}`);
   }
 }
 
@@ -5322,7 +5350,7 @@ console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
     const sess={settings:st, hist:[], paper:true};
     const D=days.map(d=>({date:d, close:M[T][d][C]}));
     const D1=days.map(d=>({date:d, close:M[U][d][C]}));
-    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','ivsX1Of','IVS_FEE',
+    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','ivsX1Of','JK_FEE',
       'ivsQuoteData','ivsQuote1','sortHist','save','refreshIvs','pushRemote','px',
       appSrc+'\nreturn ivsReplay;')(
       ()=>sess, (id)=>({value: id==='rp_from'?days[0]:''}), ()=>true, ()=>{},
@@ -7000,7 +7028,7 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
   const plDefs=[
     pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
     (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
-    (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0] ].join('\n');
+    (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0], (pl.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0] ].join('\n');
   ok('플랜 장부 의존 정의를 실코드에서 뗐다', /const KIND_T=/.test(plDefs) && /const isBuyKind=/.test(plDefs)
      && /const isSellKind=/.test(plDefs) && /const REV_DIVS_PLAN=\[20,40\];/.test(plDefs));
   const stateF=new Function('reverseTPlan', plDefs+'\n'+
@@ -7108,11 +7136,12 @@ console.log('\n[101] 무매 배당 기록 — 잔금만 늘고 나머지는 불�
              {kind:'지정가매도', date:'2026-06-01', price:2000, qty:5}];
     __strat={settings:st2, hist:JSON.parse(JSON.stringify(h))};
     const c=computeInf();
-    ok('D 단리 인출에 배당이 들어간다', near(c.saved, 9900, 1e-9), String(c.saved));
+    /* 수수료(공통 0.25%) — 매수 500 → 1.25 · 매도 10,000 → 25. 사이클 종료 잔액에서 이미 나간 돈이라 인출도 그만큼 준다 */
+    ok('D 단리 인출에 배당이 들어간다 (실현 9,500 + 배당 400 − 수수료 26.25 = 9,873.75)', near(c.saved, 9900-26.25, 1e-9), String(c.saved));
     ok('D 다음 사이클은 원금으로 다시 시작', near(c.bal, 10000, 1e-9), String(c.bal));
     /* 배당이 없으면 9,500 만 나간다 — 같은 경로에서 값이 갈리는지 본다 (변이 대조) */
     __strat={settings:st2, hist:h.filter(x=>x.kind!=='배당')};
-    ok('D 배당을 빼면 인출도 그만큼 준다', near(computeInf().saved, 9500, 1e-9)); }
+    ok('D 배당을 빼면 인출도 그만큼 준다 (9,500 − 26.25)', near(computeInf().saved, 9500-26.25, 1e-9), String(computeInf().saved)); }
 
   /* E. 모의체결이 배당락일마다 스스로 적는다 — 없으면 위 장부가 영영 안 채워진다 */
   { const f=extractFn(idx,'function infSimForward(startFrom)');
@@ -7265,7 +7294,7 @@ console.log('\n[103] 무매 모의체결 — 실엔진을 굴려 배당 기록�
     ok('A 반환값이 배당 건수를 알린다', r && r.nDiv===1, r?String(r.nDiv):'null');
     __strat=sess;
     const c=computeInf();
-    ok('A 잔금에 들어간다', near(c.bal, 600-500+8.46, 1e-6), String(c.bal));
+    ok('A 잔금에 들어간다 (600 − 매수 500 − 수수료 1.25 + 배당 8.46)', near(c.bal, 600-500*1.0025+8.46, 1e-6), String(c.bal));
     ok('A 보유·평단·T는 그대로', c.qty===5 && near(c.avg,100,1e-9) && near(c.T,1,1e-9),
        `${c.qty}주 / ${c.avg} / ${c.T}`); }
 
@@ -7274,7 +7303,7 @@ console.log('\n[103] 무매 모의체결 — 실엔진을 굴려 배당 기록�
     ok("A' 배당 없는 종목이면 기록도 없다",
        sess.hist.filter(h=>h.kind==='배당').length===0 && r && r.nDiv===0);
     __strat=sess;
-    ok("A' 잔금도 그대로", near(computeInf().bal, 100, 1e-9), String(computeInf().bal)); }
+    ok("A' 잔금도 그대로 (600 − 500 − 수수료 1.25)", near(computeInf().bal, 600-500*1.0025, 1e-9), String(computeInf().bal)); }
 
   /* B. 조정 기준이면 안 적는다 — 배당이 이미 가격에 들어 있다 (이중계상) */
   { const sess=mkSess(); run(sess, mkQ('total_return'));
@@ -7392,7 +7421,11 @@ console.log('\n[105] 7차 — 무매 백테 ↔ 모의 ↔ 운영(주문표→�
 const __P7={};
 {
   // ── 백테: 날짜 달린 거래로그 (하네스의 __LOG 주입본에서 날짜만 더한다) ──
-  const btD=btSrc.replace(/__LOG\(/g,'__LOGD(d,');
+  /* 모의 기록은 체결가를 소수 4자리로 적는다(infSimForward put · price.toFixed(4)) — 백테 지정가 체결가(평단 × (1+익절%) 그대로)도 같은 자리로 맞춘다.
+     안 맞추면 익절마다 잔금이 1센트 미만씩 벌어져 몇 년 뒤 1주가 갈린다(수수료 0.25% 대조에서 SOXL 2022-04-20 37↔38주로 드러남 · 차이 0.0073$ · 2026-11-19).
+     엔진 규칙이 아니라 기록 자릿수 맞춤이다 — 값 시험 [4] 는 백테 자기 거래로그를 그대로 다시 세므로 손대지 않는다. */
+  const btD=btSrc.replace(/__LOG\(/g,'__LOGD(d,').replace("const __px=o>tgt?o:tgt;","const __px=+(o>tgt?o:tgt).toFixed(4);");
+  if(btD.indexOf("const __px=+(o>tgt?o:tgt).toFixed(4);")<0) throw new Error('[105] 지정가 체결가 자릿수 맞춤 주입 실패');
   let LOGD=[]; global.__LOGD=(d,k,p,q)=>LOGD.push({date:d,kind:k,price:+p,qty:+q});
   const runIMd=new Function(btD+'\nreturn runIM;')();
   // ── 모의: infSimForward 실코드 ──
@@ -7491,8 +7524,10 @@ const __P7={};
   const _save={imFill:global.imFill, imCostOn:global.imCostOn, imTgtDyn:global.imTgtDyn, imRevGap:global.imRevGap, imReverse:global.imReverse};
   global.imFill='high'; global.imCostOn=false; global.imTgtDyn=false; global.imRevGap=0;   // 모의와 같은 모델
   const CFG=[['SOXL',20,20,true,false,true],['TQQQ',40,15,false,false,false],['SOXL',20,20,true,true,true],['TQQQ',40,15,true,true,false]];
-  for(const [tk,div,tgt,comp,rev,live] of CFG){
-    if(!DAYS[tk]) continue;
+  /* 공통 수수료(2026-11-19) — 수수료 0(원문 · 백테 비용 끔)과 0.25%(백테 '수수료만' 켬 · 슬리피지 · 세금 0) 두 번 대조한다.
+     0.25% 에서 같아야 하는 것: 아침 주문 수량(배정금 = 매수금 + 수수료 · imBuyOrders fee) · 잔금(수수료를 뺀 현금)이 굴러간 결과의 매 거래. */
+  for(const [tk,div,tgt,comp,rev,live] of CFG) for(const R of [0,0.0025]) __feeRun(R, ()=>{
+    if(!DAYS[tk]) return;
     global.imReverse=rev;
     const all=DAYS[tk], days=all.slice(1);
     const st={ticker:tk,div,target:tgt,principal:10000,compound:comp,reverse:rev,big:15,revGap:0,tgtDyn:false,divmode:'reinv',
@@ -7502,7 +7537,7 @@ const __P7={};
     const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]};
     paperRun(sess, quoteOfTk(tk), days[0]);
     const P=trades(sess.hist);
-    const nm=`${tk} ${div}분할 ${comp?'복리':'단리'} 리버스${rev?'ON':'OFF'}`;
+    const nm=`${tk} ${div}분할 ${comp?'복리':'단리'} 리버스${rev?'ON':'OFF'} · 수수료 ${R*100}%`;
     const k1=firstDiff(B,P);
     ok(`${nm} — 백테 ↔ 모의 거래 ${B.length}건 한 건도 안 다르다`, k1<0,
        k1<0?'':`#${k1} 백테 [${B[k1]||'—'}] 모의 [${P[k1]||'—'}]`);
@@ -7512,7 +7547,9 @@ const __P7={};
       ok(`${nm} — 운영(주문표→실제 체결) ↔ 모의 거래 ${L.length}건 한 건도 안 다르다`, k2<0,
          k2<0?'':`#${k2} 운영 [${L[k2]||'—'}] 모의 [${P[k2]||'—'}]`);
     }
-  }
+    if(R>0){ __strat={settings:{...st},hist:sess.hist}; const c=computeInf();
+      ok(`${nm} — 수수료가 실제로 장부에 든다(누계 ${c.fees.toFixed(2)}$ = 체결금액 합 × 0.25%)`, c.fees>0 && near(c.fees,(c.totbuy+c.totsell)*R,1e-6), `${c.fees} / ${(c.totbuy+c.totsell)*R}`); }
+  });
   Object.assign(global,_save);
 
   /* 7차 ② 를 값으로 — 쿼터매도가 체결된 날 같은 종가에 되사면 안 된다.
@@ -7591,8 +7628,9 @@ console.log('\n[105-자동] 무매 실계좌 설정(익절 자동 · 큰수 20 �
   const firstDiff=(A,B)=>{ let k=0; while(k<A.length&&k<B.length&&A[k]===B[k]) k++; return (k===A.length&&k===B.length)?-1:k; };
   const _save={imFill:global.imFill, imCostOn:global.imCostOn, imTgtDyn:global.imTgtDyn, imRevGap:global.imRevGap, imReverse:global.imReverse, imAutoTp:global.imAutoTp, imAutoBars:global.imAutoBars};
   global.imFill='high'; global.imCostOn=false; global.imTgtDyn=false; global.imRevGap=0; global.imAutoTp=true;
-  for(const [tk,rev] of [['SOXL',false],['SOXL',true],['TQQQ',false]]){
-    if(!DAYS[tk]) continue;
+  /* 실계좌 설정은 공통 수수료 0.25% 로 굴린다 — 그 율(백테 '수수료만')과 원문 대조용 0 두 번 (2026-11-19) */
+  for(const [tk,rev] of [['SOXL',false],['SOXL',true],['TQQQ',false]]) for(const R of [0.0025,0]) __feeRun(R, ()=>{
+    if(!DAYS[tk]) return;
     global.imReverse=rev;
     /* 앱 장부(computeInf)는 익절 자동 판정 봉을 imAutoBars 로 받는다 — 하네스 기본은 null(끔과 같음)이라 갈아 끼운다.
        imAutoTP·imAutoTPM1 은 판정일 '전' 봉만 보므로 전 구간을 줘도 룩어헤드가 아니다(백테 runIM 도 같은 봉). */
@@ -7607,14 +7645,14 @@ console.log('\n[105-자동] 무매 실계좌 설정(익절 자동 · 큰수 20 �
     const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]};
     paperRun(sess, quoteOfTk(tk), days[0]);
     const P=trades(sess.hist), L=trades(liveRun(tk,st));
-    const nm=`${tk} 20분할 익절 자동 큰수 20 리버스${rev?'ON':'OFF'}`;
+    const nm=`${tk} 20분할 익절 자동 큰수 20 리버스${rev?'ON':'OFF'} · 수수료 ${R*100}%`;
     const k1=firstDiff(B,P), k2=firstDiff(L,P);
     ok(`${nm} — 백테 ↔ 모의 거래 ${B.length}건 한 건도 안 다르다`, B.length>50 && k1<0, k1<0?'':`#${k1} 백테 [${B[k1]||'—'}] 모의 [${P[k1]||'—'}]`);
     ok(`${nm} — 운영(주문표→실제 체결) ↔ 모의 거래 ${L.length}건 한 건도 안 다르다`, L.length>50 && k2<0, k2<0?'':`#${k2} 운영 [${L[k2]||'—'}] 모의 [${P[k2]||'—'}]`);
     /* 시험이 헛돌지 않는다 — 같은 장부를 익절 고정 20% 로 다시 세면 거래가 달라야 한다(익절 자동이 실제로 10% 사이클을 만들었다) */
     { global.imAutoBars=()=>null; const s0={paper:true,id:'q',simStart:days[0],settings:{...st,autoTp:false},hist:[]}; paperRun(s0, quoteOfTk(tk), days[0]); global.imAutoBars=()=>_ENV.CDATE?_bars.filter(b=>b.date<=_ENV.CDATE):_bars;
       const F=trades(s0.hist); ok(`${nm} — 익절 자동이 실제로 결과를 바꾼다(고정 20% 와 다른 첫 거래 #${firstDiff(F,P)})`, firstDiff(F,P)>=0, ''); }
-  }
+  });
   Object.assign(global,_save);
 }
 
@@ -7624,7 +7662,7 @@ console.log('\n[106] 7차 — 무매 운영 3벌 (장부·주문)');
   const SV=new Function(imSrc7.replace(/export /g,'')+'\nreturn {imOrders,imCompute,imBigPct,IM_BIG_DEFAULT,REV_DIVS};')();
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   const PL=new Function([
-    (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+    (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0],
     pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
     (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
     (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
@@ -7676,7 +7714,7 @@ console.log('\n[106] 7차 — 무매 운영 3벌 (장부·주문)');
        && /리버스/.test(SV.imOrders({st:{...st,big:15},hist:[{kind:'1회매수',date:'d1',price:10,qty:20,tManual:20},
           {kind:'리버스매도',date:'d2',price:9,qty:2},{kind:'출금',date:'d3',amt:10}],close:7.5,days:[]}).skip||''));
     const r3=C3('배당은 잔금에 들어간다 (N1)',[{kind:'1회매수',date:'d1',price:100,qty:5},{kind:'배당',date:'d2',amt:37.5,qty:0}]);
-    ok('   └ 서버 잔금도 +37.5', Math.abs(r3.b.bal-(10000-500+37.5))<1e-9, String(r3.b.bal));
+    ok('   └ 서버 잔금도 +37.5 (10,000 − 매수 500 − 수수료 1.25 + 배당 37.5 · 서버 기본 율 0.25%)', Math.abs(r3.b.bal-(10000-500*1.0025+37.5))<1e-9, String(r3.b.bal));
     C3('30분할은 리버스 규칙이 없다',[{kind:'1회매수',date:'d1',price:10,qty:20,tManual:29.5}],{...st,div:30}); }
   // ── 주문 3벌 — 같은 장부·같은 확정 종가에서 (5거래일마다) ──
   const norm=o=>`${o.side} ${o.tag||''} ${(+o.price).toFixed(4)} x${o.qty}`;
@@ -7728,7 +7766,7 @@ console.log('\n[107] 7차 — VR 백테 ↔ 모의 ↔ 과거재생 거래 단�
     'function isTradeBasis(Q)','function divPerShareQ(Q, d)','function divCashQ(Q, d, shares, taxOn)','function vrFirstAmt(st)']
     .map(sig=>extractFn(idx,sig)).join('\n');
   const vconsts=[(idx.match(/const CYC_DAYS=\d+;/)||[''])[0], (idx.match(/const DIV_TAXRATE=[^;]*;/)||[''])[0],
-    "const VR_MODEL_DEFAULT='ladder'; const IVS_FEE=0.0025;",
+    "const VR_MODEL_DEFAULT='ladder'; const JK_FEE=0.0025;",
     "const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30}; const SETTLE_LAG_MIN=20;",
     "function _exchNow(cur){ return {date:'2099-12-31', min:23*60}; }", "function curOf(st){ return 'usd'; }"].join('\n');
   const mkVr=(sess,Q,from)=>{ __strat=sess;
@@ -7835,7 +7873,7 @@ console.log('\n[108] 7차 — VR 주문표·체결 엔진·5년 플랜이 같은
   /* 운영 매수·매도표 화면 — renderVrTable 을 그대로 돌려 줄 수·가격·수량을 센다 (표 줄 수 20 은 구현값 · 엔진과 같아야 한다) */
   { const els={}; const $el=id=>els[id]||(els[id]={innerHTML:'',textContent:''});
     const run=(c,price)=>{ for(const k in els) delete els[k];
-      new Function('computeVr','vrLastPrice','poolLimit','vrEval','vrTiersShow','curOf','wn','IVS_FEE','$', extractFn(idx,'function renderVrTable()')+'\nrenderVrTable();')(
+      new Function('computeVr','vrLastPrice','poolLimit','vrEval','vrTiersShow','curOf','wn','JK_FEE','$', extractFn(idx,'function renderVrTable()')+'\nrenderVrTable();')(
         ()=>c, ()=>price, cc=>Math.max(0,(cc.cycStartPool||0)*(cc.st.mode||0.75)-(cc.cycBuySpent||0)), ()=>price*c.qty, vrTiersShow, ()=>'usd', v=>(+v).toFixed(2)+'$', 0.0025, $el);
       const rows=id=>[...(els[id]||{innerHTML:''}).innerHTML.matchAll(/<span class="lx-p">([^<]*)<\/span>/g)].map(m=>m[1]);
       return {s:rows('sell_lad'), b:rows('buy_lad')}; };
@@ -7874,7 +7912,7 @@ console.log('\n[108] 7차 — VR 주문표·체결 엔진·5년 플랜이 같은
     /* 플랜 자신의 한 줄 주수·표시 줄 수·반올림을 쓴다 — 없으면 앱(전역) 것으로 조용히 떨어지지 않게 먼저 확인한다 */
     const plOwn=[(pl.match(/const VR_ROWS_SHOW=\d+;/)||[''])[0], (pl.match(/const VR_ROW_DIV=\d+;/)||[''])[0], (pl.match(/function vrRowQty\(B\)\{[^\n]*/)||[''])[0]];
     ok('5년 플랜 시험이 플랜 자신의 한 줄 주수 · 표시 줄 수 · 호가 반올림을 쓴다', plOwn.every(Boolean) && /function imTickRound\(p, cur\)/.test(pl), plOwn.map(x=>x.slice(0,30)).join(' | '));
-    const PLV=new Function([(pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0], ...plOwn,
+    const PLV=new Function([(pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0], ...plOwn,
       extractFn(pl,'function calcVrState(sess)'), (pl.match(/function nextVrDate\(s\)\{[^\n]*/)||[''])[0],
       (pl.match(/function vrCycleStart\(c\)\{[^\n]*/)||[''])[0], extractFn(pl,'function vrOrders(sess,price)'),
       ...['function vrTick(p, cur)','function vrTickUp(p, cur)','function vrTickDn(p, cur)','function imTickRound(p, cur)','function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur)',
@@ -7996,7 +8034,7 @@ console.log('\n[111] 7차 D8 — 섀넌·200일선·ASAP 체결가 + 배당 기�
   ok('7차 D8 섀넌 1배 짝도 배당·가격기준을 싣는다',
      /dividends:q1\.dividends\|\|\[\], priceBasis:q1\.priceBasis\|\|null\}/.test(extractFn(idx,'async function loadIvsData(force)')));
   // ── 장부 값 ──
-  { const ivsPosF=new Function('IVS_FEE', extractFn(idx,'function ivsPos(principal,hist)')+'\nreturn ivsPos;')(0.0025);
+  { const ivsPosF=new Function('JK_FEE', extractFn(idx,'function ivsPos(principal,hist)')+'\nreturn ivsPos;')(0.0025);
     const H=[{type:'buy',leg:'lev',date:'2024-01-02',price:100,qty:10,amt:1000,fee:2.5,ts:1},
              {type:'div',leg:'lev',sym:'TQQQ',date:'2024-03-20',amt:5,ts:2}];
     const P=ivsPosF(10000,H);
@@ -8011,8 +8049,9 @@ console.log('\n[111] 7차 D8 — 섀넌·200일선·ASAP 체결가 + 배당 기�
   { const ap=new Function(extractFn(idx,'function asapPos(hist)')+'\nreturn asapPos;')();
     const P=ap([{type:'sgov',date:'2024-01-02',amt:100},{type:'buy',date:'2024-01-03',price:20,qty:2.5,amt:50,from:'reserve'},
                 {type:'div',date:'2024-03-20',amt:3}]);
-    ok('7차 D8 ASAP 장부 — 배당은 리저브로, 새로 넣은 돈과 따로 센다',
-       near(P.reserve,53,1e-12) && near(P.divs,3,1e-12) && near(P.shares,2.5,1e-12), JSON.stringify(P)); }
+    /* 주수는 금액에서 — 50 ÷ (20 × 1.0025) = 2.49377 주 · 수수료 50 − 2.49377×20 = 0.1247 (공통 0.25% · 기록의 qty 2.5 는 안 쓴다 · 백테 runASAP buyQty 와 같은 식) */
+    ok('7차 D8 ASAP 장부 — 배당은 리저브로, 새로 넣은 돈과 따로 센다 · 매수 주수는 금액 ÷ (가격 × (1+수수료))',
+       near(P.reserve,53,1e-12) && near(P.divs,3,1e-12) && near(P.shares,50/(20*1.0025),1e-12) && near(P.fees,50-50/1.0025,1e-12) && near(P.cost,50,1e-12), JSON.stringify(P)); }
   { const pr=extractFn(idx,'function paperRaw(tab, sess)');
     ok('7차 D8 ASAP 투입 원금에 배당이 안 들어간다',
        /if\(x\.type==='sgov'\) inflow\+=\+x\.amt\|\|0;/.test(pr) && !/x\.type==='div'/.test(pr)); }
@@ -8079,7 +8118,7 @@ console.log('\n[112] 7차 ⑯ — 섀넌 운영 재생 ↔ 백테 거래 단위 
   const runApp=(T,st,from,D1,DV,DV1)=>{
     const Dall=dtsOf(T).map(d=>({date:d, close:M[T][d][C]}));
     const sess={settings:st, hist:[], paper:true};
-    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','ivsX1Of','IVS_FEE',
+    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','ivsX1Of','JK_FEE',
       'ivsQuoteData','ivsQuote1','sortHist','save','refreshIvs','pushRemote','px','imBuyQty',
       appSrc+'\nreturn ivsReplay;')(
       ()=>sess, id=>({value: id==='rp_from'?from:''}), ()=>true, ()=>{},
@@ -8174,7 +8213,7 @@ console.log('\n[113] 7차 ⑰ — 200일선 운영 재생 ↔ 백테 거래 단�
   const runApp=(T,Dall,from,st0,DV)=>{
     const st=Object.assign({ticker:T, principal:10000, buy:'ma', sell:'ma', park:'cash'}, st0||{});
     const sess={settings:st, hist:[], paper:true};
-    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','IVS_FEE','maQuoteData',
+    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','JK_FEE','maQuoteData',
       'sortHist','save','refreshMa','pushRemote','px', appSrc+'\nreturn maReplay;')(
       ()=>sess, id=>({value: id==='rp_ma_from'?from:''}), ()=>true, ()=>{}, ()=>'2099-12-31', ()=>'USD', 0.0025,
       {symbol:T, days:Dall, price:0, dividends:DV||[], priceBasis:DV?'trade':null}, ()=>{}, ()=>{}, ()=>{}, null, n=>String(n));
@@ -8317,17 +8356,21 @@ console.log('\n[115] 7차 — ASAP 모의 ↔ 백테 (매수일·금액)');
   const mkDiv=(sym)=>{ const ds=dtsOf(sym), out=[]; ds.forEach((d,i)=>{ if(i%63===17) out.push({date:d, amount:+(M[sym][d][C]*0.004).toFixed(4)}); });
     DIVMAP[sym]={}; out.forEach(x=>{ DIVMAP[sym][x.date]=x.amount; }); PBASIS[sym]='trade'; return out; };
   let nRun=0;
+  /* 공통 수수료(2026-11-19) — 수수료가 주수를 줄여 배당도 달라진다. 0(백테 비용 끔 · 장부 율 0)과 0.25%(백테 비용 켬 = 매수 수수료만 · 리저브 이자 뺌 · 배당 세후) 두 번 */
+  for(const R of [0,0.0025])
   for(const T of ['SOXL','TQQQ','TECL']){
     if(!DAYS[T]) continue;
+    global.JK_FEE=R;
     const all=dtsOf(T), Dall=all.map(d=>({date:d, close:M[T][d][C]}));
     const from=all[260], LOG=[], DV=mkDiv(T);
-    mkBt(LOG)(all.filter(d=>d>=from), T, {base:10, mid:50, deep:100, costOn:false});
+    mkBt(LOG)(all.filter(d=>d>=from), T, {base:10, mid:50, deep:100, costOn:R>0});
     const H=runApp(T,Dall,from,DV);
+    delete global.JK_FEE;
     let diff=-1;
     for(let i=0;i<Math.max(LOG.length,H.length);i++){
       if(!LOG[i]||!H[i]||LOG[i].date!==H[i].date||!!LOG[i].div!==!!H[i].div||Math.abs(LOG[i].amt-H[i].amt)>1e-6){ diff=i; break; } }
     const nD=H.filter(x=>x.div).length;
-    ok(`7차 ASAP ${T} — 매수·배당 ${LOG.length}건(배당 ${nD}) 모의 ↔ 백테 날짜·금액 한 건도 안 다르다 (리저브 이자·비용 끔 · 배당 세후)`,
+    ok(`7차 ASAP ${T} · 수수료 ${R*100}% — 매수·배당 ${LOG.length}건(배당 ${nD}) 모의 ↔ 백테 날짜·금액 한 건도 안 다르다 (리저브 이자 끔 · 배당 세후)`,
        LOG.length>10 && nD>0 && diff<0,
        diff<0?'':`#${diff} 백테 [${LOG[diff]?LOG[diff].date+' '+LOG[diff].amt.toFixed(4)+(LOG[diff].div?' 배당':''):'—'}] 모의 [${H[diff]?H[diff].date+' '+(+H[diff].amt).toFixed(4)+(H[diff].div?' 배당':''):'—'}]`);
     delete DIVMAP[T]; delete PBASIS[T];
@@ -8451,7 +8494,7 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /const teclAmt=targetTq\*tp,tqqqAmt=targetQq\*qp,sgovAmt=targetSq\*sp/.test(pl)
      && /const buyMap=\{TECL:0,TQQQ:0,SGOV:0\}/.test(pl)
      && /gross=Math\.max\(0,qty\*price\),fee=alphaFee\(qty,price\)/.test(pl)
-     && /function alphaFee\(q,p\)\{const gross=Math\.max\(0,\(\+q\|\|0\)\*\(\+p\|\|0\)\);return gross<=10\?0:Math\.floor\(gross\*ALPHA_FEE_RATE\*100\)\/100;\}/.test(pl));
+     && /function alphaFee\(q,p\)\{const gross=Math\.max\(0,\(\+q\|\|0\)\*\(\+p\|\|0\)\);return gross\*ALPHA_FEE_RATE;\}/.test(pl));   // 공통 수수료 = 거래금액 × 율(2026-11-19)
   ok('PATH B 균형성장 배분 — SOXL 무매 50% + TECL VR 50%',
      /a=\[50,50,0\],inf=Math\.round\(total\*PATH_DEFAULTS\.classic\.infWeight\)/.test(pl)
      && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:20,infReverse:false,infRows:3,vrG:11,vrBand:35,vrFormula:'basic'/.test(pl)
@@ -8590,7 +8633,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
   { const L=idxVr.vrTiers(100,0,0,11500,8500,0,1,20,'usd');
     P8('VR 체결 — 운영 주문표(vrTiers): 1차 115.00 × 1 · 2차 116.16 × 1', L.sells[0].p===VG.p1 && L.sells[0].q===1 && L.sells[1].p===VG.p2 && L.sells[1].q===1,
        `${L.sells[0].p}×${L.sells[0].q} · ${L.sells[1].p}×${L.sells[1].q}`); }
-  const PLV=new Function([(pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+  const PLV=new Function([(pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0],
       extractFn(pl,'function calcVrState(sess)'), (pl.match(/function nextVrDate\(s\)\{[^\n]*/)||[''])[0],
       (pl.match(/function vrCycleStart\(c\)\{[^\n]*/)||[''])[0], extractFn(pl,'function vrOrders(sess,price)'),
       fnOf(pl,['function vrTick(p, cur)','function vrTickUp(p, cur)','function vrTickDn(p, cur)','function imTickRound(p, cur)','function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur)',
@@ -8672,7 +8715,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
      reverse=true 여도 리버스가 아니다. div=30 · T=29.5 · 보유 100주 → 모든 경로 reverse=false. */
   G8('리버스 미지원 — 10·30분할은 규칙 없음 → reverse=false (문서의 리버스 분할 20·40)', JSON.stringify(REV_DIVS)==='[20,40]');
   const PLI=new Function([
-    (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+    (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0],
     pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
     (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
     (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
@@ -8840,7 +8883,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
      && /const BO=imBuyOrders\(\{/.test(extractFn(idx,'function renderOrder()')) && /imBuyOrders\(\{/.test(imSrc8));
   { // 서버 주문 = 정식 함수 그대로 (값) — 평단 10 · 50주 · 잔금 9500 · T=1 → 1회매수금 500, 본 주문 21+25=46주
     const st={ticker:'SOXL',div:20,target:20,principal:10000,compound:true,reverse:false,big:15,revGap:0,rows:2,rowqty:1};
-    const so=SV8.imOrders({st,hist:[{kind:'1회매수',date:'2026-01-02',price:10,qty:50}],close:10,days:[{date:'2026-01-02',close:10}]});
+    const so=SV8.imOrders({st,hist:[{kind:'1회매수',date:'2026-01-02',price:10,qty:50}],close:10,days:[{date:'2026-01-02',close:10}],fee:0});   // 원문 값 — 공통 수수료 0
     const lad=(so.orders||[]).filter(o=>/하방/.test(o.kind)), mains=(so.orders||[]).filter(o=>o.side==='buy'&&!/하방/.test(o.kind));
     const lo=Math.min(...mains.map(o=>o.price));
     ok('정식 문서 반영 — 서버 아래로 LOC 추가: 1회매수금÷(46+k) · 1주씩 · 본 주문보다 아래만 (평단 10 위인 ÷47~50 은 건너뜀)',
@@ -9059,7 +9102,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
        e.od.length===1 && e.od[0].tag==='MOC' && e.od[0].side==='sell' && e.od[0].qty===9 && /중간 소진/.test(e.html),
        e.od.map(o=>o.name+'/'+o.tag+'/'+o.qty).join(','));
     const PLI10=new Function([
-      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0],
       pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
       (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
       (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
@@ -9111,7 +9154,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
 
   /* ── 합성 급락 — 운영(주문표→실제 체결) ↔ 모의 ↔ 백테 거래 단위 대조, 중간 소진 갈래 포함 ──
      −2.5%/일 45일로 소진 → 리버스 → 연속 쿼터매수로 잔금이 마르면 중간 소진 MOC, 이어서 +4%/일 30일로 복귀까지. */
-  { const T0='__SYN10__', px=[]; let p=100;
+  for(const R of [0,0.0025]) __feeRun(R, ()=>{ const T0='__SYN10__', px=[]; let p=100;   // 수수료 0(원문) · 0.25%(백테 '수수료만') 두 번
     for(let i=0;i<45;i++){ px.push(p); p*=0.975; }
     for(let i=0;i<30;i++){ px.push(p); p*=1.04; }
     DAYS[T0]=[]; M[T0]={};
@@ -9122,7 +9165,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
     const trades=a=>a.filter(h=>h.kind!=='리버스복귀'&&h.kind!=='배당').map(key);
     const firstDiff=(A,B)=>{ let k=0; while(k<A.length&&k<B.length&&A[k]===B[k]) k++; return (k===A.length&&k===B.length)?-1:k; };
     const sv={r:global.imReverse, f:global.imFill, c:global.imCostOn, t:global.imTgtDyn, g:global.imRevGap};
-    Object.assign(global,{imReverse:true, imFill:'high', imCostOn:false, imTgtDyn:false, imRevGap:0});
+    Object.assign(global,{imReverse:true, imFill:'high', imCostOn:R>0, imTgtDyn:false, imRevGap:0});
     __P7.setLOGD([]); __P7.runIMd(DAYS[T0].slice(1), T0, 10000, 20, 20, true, 15);
     const Bk=__P7.LOGD().map(key);
     const sess={paper:true,id:'syn10',simStart:DAYS[T0][1],settings:{...st},hist:[]};
@@ -9133,12 +9176,12 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
     delete global.__SPENT;
     Object.assign(global,{imReverse:sv.r, imFill:sv.f, imCostOn:sv.c, imTgtDyn:sv.t, imRevGap:sv.g});
     const nRev=sess.hist.filter(h=>h.kind==='리버스매도').length, nBack=sess.hist.filter(h=>h.kind==='리버스복귀').length;
-    ok('제10차 · 합성 급락이 소진 → 리버스 → 중간 소진 MOC → 복귀를 모두 지난다', spent2>0 && nRev>=2 && nBack>=1,
+    ok(`제10차 · 합성 급락이 소진 → 리버스 → 중간 소진 MOC → 복귀를 모두 지난다 · 수수료 ${R*100}%`, spent2>0 && nRev>=2 && nBack>=1,
        `중간 소진 ${spent2}일 · 리버스매도 ${nRev} · 복귀 ${nBack}`);
     const k1=firstDiff(Bk,Pk), k2=firstDiff(Lk,Pk);
-    ok(`제10차 · 합성 급락 — 백테 ↔ 모의 거래 ${Bk.length}건 한 건도 안 다르다`, k1<0, k1<0?'':`#${k1} 백테 [${Bk[k1]||'—'}] 모의 [${Pk[k1]||'—'}]`);
-    ok(`제10차 · 합성 급락 — 운영(주문표→실제 체결) ↔ 모의 거래 ${Lk.length}건 한 건도 안 다르다`, k2<0, k2<0?'':`#${k2} 운영 [${Lk[k2]||'—'}] 모의 [${Pk[k2]||'—'}]`);
-    delete DAYS[T0]; delete M[T0]; }
+    ok(`제10차 · 합성 급락 · 수수료 ${R*100}% — 백테 ↔ 모의 거래 ${Bk.length}건 한 건도 안 다르다`, k1<0, k1<0?'':`#${k1} 백테 [${Bk[k1]||'—'}] 모의 [${Pk[k1]||'—'}]`);
+    ok(`제10차 · 합성 급락 · 수수료 ${R*100}% — 운영(주문표→실제 체결) ↔ 모의 거래 ${Lk.length}건 한 건도 안 다르다`, k2<0, k2<0?'':`#${k2} 운영 [${Lk[k2]||'—'}] 모의 [${Pk[k2]||'—'}]`);
+    delete DAYS[T0]; delete M[T0]; });
 }
 
 /* ════ 120. 제11차 감사 대응 — 라오어 정식 무매 V4.0 + VR 원문 기준 ════
@@ -9235,7 +9278,7 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
     const app=__P7.appOrders().map(key).sort();
     const sv=SV11.imOrders({st:{...st},hist:H,close:80,days:[]});
     const PLI11=new Function([
-      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0],
       pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
       (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
       (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
@@ -9496,21 +9539,23 @@ console.log('\n[124] 5년 플랜 v1.26.4 — 현재계좌 실시간 평가·초�
      && /L&&\+L\.price>0\?\+L\.price:\(L&&L\.settled\?\+L\.settled\.close:0\)/.test(pl)
      && /hasLivePrice:j\.price!=null&&\+j\.price>0/.test(pl)
      && /L&&L\.hasLivePrice\?\(L\.marketState==='REGULAR'\?'실시간 ':'최근가 '\):'확정종가 '/.test(pl));
-  ok('A안 실전 수수료는 토스 미국주식 0.1%로 백테스트 FEE 0.25%와 분리',
-     /const FEE=0\.0025;\s*const ALPHA_FEE_RATE=0\.001/.test(pl)
-     && /function alphaFee\(q,p\)/.test(pl)
-     && /gross<=10\?0:Math\.floor\(gross\*ALPHA_FEE_RATE\*100\)\/100/.test(pl)
-     && /feeModel:"toss-us-0\.1-v1"/.test(pl));
+  /* 2026-11-19 사용자: "수수료는 전부 똑같이 적용하고 … 설정에서 탭 하나 더 만들어서 기본 0.25" — 토스 0.1%(센트 내림 · 10$ 이하 무료)를 없애고 공통 율 하나로 */
+  ok('듀얼가드 실전 수수료 = 공통 수수료율(설정 › 💸 수수료 · 기본 0.25%) — 따로 둔 토스 0.1% · 백테 FEE 상수 없음 · 사용자 문서에서 받아 엔진과 같은 율',
+     /let ALPHA_FEE_RATE=0\.0025;/.test(pl) && !/const FEE=0\.0025;/.test(pl) && !/toss-us-0\.1-v1/.test(pl)
+     && /function alphaFee\(q,p\)/.test(pl) && !/gross<=10\?0/.test(pl)
+     && /feeModel:"common-v1"/.test(pl) && /function planApplyFee\(d\)\{/.test(pl) && /JKPlanSessionEngine\.setFeeRate\(r\)/.test(extractFn(pl,'function planApplyFee(d)'))
+     && (pl.match(/planApplyFee\(d\);/g)||[]).length===2);
   const feeSrc=extractFn(pl,'function alphaFee(q,p)');
-  const fee=new Function('ALPHA_FEE_RATE',feeSrc+'\nreturn alphaFee;')(.001);
-  ok('토스 수수료 계산 — $10 이하 무료, $2,000 매수는 $2.00', fee(1,10)===0 && near(fee(20,100),2,1e-9), JSON.stringify([fee(1,10),fee(20,100)]));
+  const fee=new Function('ALPHA_FEE_RATE',feeSrc+'\nreturn alphaFee;');
+  ok('공통 수수료 계산 — 거래금액 × 율: 10$ 도 0.025$(무료 구간 없음) · 2,000$ 는 5.00$(0.25%) · 율 0.1% 면 2.00$', fee(.0025)(1,10)===10*.0025 && near(fee(.0025)(20,100),5,1e-12) && near(fee(.001)(20,100),2,1e-12),
+     JSON.stringify([fee(.0025)(1,10),fee(.0025)(20,100),fee(.001)(20,100)]));
   ok('새 체결 저장 시 현금이 음수가 되면 차단하고 기존 음수현금은 화면에 경고',
      /if\(chk\.cash<-\.005\)\{alert\('현금이 '/.test(pl)
      && /id="alphaCashWarn"/.test(pl)
      && /기록된 매수금액\+수수료가 시작 현금을 초과했습니다/.test(pl));
-  ok('기존 0.25% A장부는 v1.26 로딩 때 토스 0.1% 수수료로 1회 마이그레이션',
-     /if\(L\.feeModel!=="toss-us-0\.1-v1"\)/.test(extractFn(pl,'function planLedgerFrom(o,all)'))   // 장부 정리는 planLedgerFrom 한 곳(apply · 포트폴리오 뒤 계산 · 2026-11-11)
-     && /L\.events=L\.events\.map\(e=>e&&e\.type==='trade'\?\{\.\.\.e,fee:alphaFee\(e\.qty,e\.price\),feeRate:ALPHA_FEE_RATE\}:e\)/.test(extractFn(pl,'function planLedgerFrom(o,all)'))
+  ok('장부를 열 때 기록의 수수료 칸을 지금 공통 율로 맞춘다(보여 주기용 — 장부 계산은 엔진이 율로 다시 센다)',
+     /L\.feeModel="common-v1";/.test(extractFn(pl,'function planLedgerFrom(o,all)'))   // 장부 정리는 planLedgerFrom 한 곳(apply · 포트폴리오 뒤 계산 · 2026-11-11)
+     && /L\.events=L\.events\.map\(e=>e&&e\.type==='trade'\?\{\.\.\.e,fee:alphaFee\(Math\.max\(0,Math\.floor\(\+e\.qty\|\|0\)\),Math\.max\(0,\+e\.price\|\|0\)\),feeRate:ALPHA_FEE_RATE\}:e\)/.test(extractFn(pl,'function planLedgerFrom(o,all)'))
      && /alphaLedger=planLedgerFrom\(o,all\);/.test(extractFn(pl,'function apply(o)')));
 }
 
@@ -9579,7 +9624,7 @@ console.log('\n[125] 제12차 — VR 적립식 첫 매수 · 무매 리버스 1�
     ok('① 첫 매수 금액 값표 7칸 — 적립 5,000/250→5,000 · 적립 0/250→250 · 거치·인출 0→0 · 거치 8,000 · 모드 없음(=적립) 0/250→250 · 초기 없음→10,000',
        bad.length===0, JSON.stringify(bad));
     const run=(st,pr)=>{ const sess={settings:{...st},hist:[]}; let msg='';
-      const f=new Function('computeVr','vrLastPrice','alert','confirm','curStrat','tickerLabel','wn','nfix','sortHist','save','refreshVr','pushRemote','vrDue','IVS_FEE',
+      const f=new Function('computeVr','vrLastPrice','alert','confirm','curStrat','tickerLabel','wn','nfix','sortHist','save','refreshVr','pushRemote','vrDue','JK_FEE',
         extractFn(idx,'function vrFirstAmt(st)')+'\n'+extractFn(idx,'function vrFirstBuy()')+'\nreturn vrFirstBuy;')(
         ()=>{ __strat=sess; return computeVr(); }, ()=>pr, m=>{ msg+=m; }, ()=>true, ()=>sess, t=>t, v=>String(v), v=>String(v),
         ()=>{}, ()=>{}, ()=>{}, null, ()=>null, 0.0025);
@@ -9647,7 +9692,7 @@ console.log('\n[125] 제12차 — VR 적립식 첫 매수 · 무매 리버스 1�
   { const pl=fs.readFileSync(__d+'/plan.html','utf8'), imSrc=fs.readFileSync(__d+'/functions/api/_im.js','utf8');
     const SV=new Function(imSrc.replace(/export /g,'')+'\nreturn {imOrders,imCompute,imRevExitDue};')();
     const PL=new Function([
-      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0],
       pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
       (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
       (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
@@ -9765,7 +9810,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
 
   /* ── 섀넌(역분산) ── 목표 비중(σ)도, 밴드 이탈도 확정 종가 · 주문 수량만 현재가 (백테 runIVS 와 같은 규약) */
   const runIvs=(st,hist,Q)=>new Function('curStrat','ivsQuoteData','ivsQuote1','__CUT','nfix',
-      base+'\n'+(idx.match(/const IVS_FEE=[^\n]*/)||[''])[0]+'\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
+      base+'\nlet JK_FEE=0;   // 판정 가격 시험 — 손으로 센 값(현금 = 원금 − 매수금)이 수수료 0 이다\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
       +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function imBuyQty(alloc, refPx, feeRate)','function computeIvs()'])+'\nreturn computeIvs();')(
       ()=>({settings:st,hist}), Q, null, ()=>CUT, v=>String(v));
   { /* 하루 +5% / −4.5% 번갈아 — σ 가 s0 보다 커서 목표 비중이 1 아래(밴드 시험이 뜻이 있다) */
@@ -9799,7 +9844,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
     const st={ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,park:'x1',principal:10000,monthly:0};
     const Q={symbol:'TQQQ', days:[...vol,{date:tD,close:vS.close}], price:vS.close}, Q1={symbol:'QQQ', days:q1Days, price:p1S*3, last:{close:p1S*3}};
     const run1=(hist)=>new Function('curStrat','ivsQuoteData','ivsQuote1','__CUT','nfix',
-      base+'\n'+(idx.match(/const IVS_FEE=[^\n]*/)||[''])[0]+'\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
+      base+'\nlet JK_FEE=0;   // 판정 가격 시험 — 손으로 센 값(현금 = 원금 − 매수금)이 수수료 0 이다\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
       +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function imBuyQty(alloc, refPx, feeRate)','function computeIvs()'])+'\nreturn computeIvs();')(
       ()=>({settings:st,hist}), Q, Q1, ()=>CUT, v=>String(v));
     const z=at(vS.date,()=>run1([]));
@@ -9844,10 +9889,13 @@ console.log('\n[127] 제14차 — 무매 전량 익절 뒤 같은 날 LOC 재매
 {
   const SIG_END='function imCycleEnds(soldToday, qtyAtDayEnd)', SIG_OPEN='function imDayOpenAfter(hist, i)';
   const pl=fs.readFileSync(__d+'/plan.html','utf8'), imSrc=fs.readFileSync(__d+'/functions/api/_im.js','utf8');
-  const SV=new Function(imSrc.replace(/export /g,'')+'\nreturn {imCompute, imOrders};')();
+  /* Source Golden 은 원문 표 값(수수료 0)이다 — 여섯 경로 모두 공통 수수료율 0 으로 돈다(앱 JK_FEE · 플랜 ALPHA_FEE_RATE · 서버 fee 인자 · 백테 비용 끔) */
+  const SV0=new Function(imSrc.replace(/export /g,'')+'\nreturn {imCompute, imOrders};')();
+  const SV={imCompute:(st,h,d)=>SV0.imCompute(st,h,d,0), imOrders:o=>SV0.imOrders({...o,fee:0})};
+  const __jk127=global.JK_FEE; global.JK_FEE=0;
   /* 플랜 — 제 파일의 판정 함수 사본으로 돈다 (전역 사본을 쓰면 플랜 쪽 변이를 못 본다) */
   const PL=new Function([
-      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], 'let ALPHA_FEE_RATE=0;',
       pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
       (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
       (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
@@ -10078,6 +10126,7 @@ console.log('\n[127] 제14차 — 무매 전량 익절 뒤 같은 날 LOC 재매
 
   Object.assign(global,{imReverse:sv.r, imFill:sv.f, imCostOn:sv.c, imTgtDyn:sv.t, imRevGap:sv.g});
   delete DAYS[TK]; delete M[TK];
+  if(__jk127===undefined) delete global.JK_FEE; else global.JK_FEE=__jk127;
 }
 
 /* ════ 128. 자산플랜 검증 후속 — 20년 월말 신호 · 장부 현금 기록(배당·입출금) · 표시 문구 ════
@@ -10102,8 +10151,9 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
     {id:'5',type:'cash',date:'2026-09-05',kind:'div',amount:-7}]};           // 음수·0 은 무시
   { const LC=new Function(extractFn(pl,'function alphaEventList(ledger=alphaLedger)')+'\n'+extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)')+'\nreturn alphaLedgerCalc;')();
     const c=LC(L0);
-    ok('② 장부 현금 기록 — 배당 +3.5 · 입금 +1,000 · 출금 −200 → 현금 1,303.5 · 입출금 순액 800 · 배당 3.5 · SGOV 5주 · 평단 100 그대로',
-       Math.abs(c.cash-1303.5)<1e-9 && c.netFlow===800 && Math.abs(c.divIn-3.5)<1e-9 && c.sgov===5 && c.avgSgov===100 && !c.invalid,
+    /* SGOV 매수 500 의 공통 수수료 1.25(0.25% · 기록의 fee 0 은 안 쓴다 · 2026-11-19) */
+    ok('② 장부 현금 기록 — 배당 +3.5 · 입금 +1,000 · 출금 −200 → 현금 1,302.25(매수 수수료 1.25) · 입출금 순액 800 · 배당 3.5 · SGOV 5주 · 평단 100 그대로',
+       Math.abs(c.cash-1302.25)<1e-9 && c.netFlow===800 && Math.abs(c.divIn-3.5)<1e-9 && c.sgov===5 && c.avgSgov===100 && !c.invalid,
        JSON.stringify({cash:c.cash,netFlow:c.netFlow,divIn:c.divIn,sgov:c.sgov})); }
 
   /* ② 추가 · 삭제 — 실제 함수로 */
@@ -10118,12 +10168,12 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
   { const A=mk(L0,{date:'2026-09-06',kind:'div',amt:12.34});
     if(A.add) A.add();   // 장부 변경·안내는 첫 await 전에 동기로 끝난다 (저장만 비동기)
     const ev=A.get().events, last=ev[ev.length-1], c=A.calc(A.get());
-    ok('② 현금 기록 추가 — 배당 12.34 한 줄 (type cash · 날짜 · 금액) · 현금 1,315.84',
-       !!A.add && ev.length===L0.events.length+1 && last.type==='cash' && last.kind==='div' && last.amount===12.34 && last.date==='2026-09-06' && Math.abs(c.cash-1315.84)<1e-9,
+    ok('② 현금 기록 추가 — 배당 12.34 한 줄 (type cash · 날짜 · 금액) · 현금 1,314.59',
+       !!A.add && ev.length===L0.events.length+1 && last.type==='cash' && last.kind==='div' && last.amount===12.34 && last.date==='2026-09-06' && Math.abs(c.cash-1314.59)<1e-9,
        JSON.stringify(last)+' · '+(c&&c.cash));
     const W=mk(L0,{date:'2026-09-06',kind:'wd',amt:5000});
     if(W.add) W.add();
-    ok('② 출금이 현금을 넘으면 막는다 (현금 1,303.5 에서 5,000 출금 → 기록 안 됨 · 안내)',
+    ok('② 출금이 현금을 넘으면 막는다 (현금 1,302.25 에서 5,000 출금 → 기록 안 됨 · 안내)',
        !!W.add && W.get().events.length===L0.events.length && W.msgs.some(m=>/출금하면 현금이/.test(m)), W.msgs.join(' / ')); }
   { const L1={base:{date:'2026-09-01',tecl:0,tqqq:0,sgov:0,cash:100},events:[
       {id:'d',type:'cash',date:'2026-09-02',kind:'dep',amount:1000},
@@ -10132,7 +10182,7 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
     ok('② 삭제도 현금 부족을 키우면 막는다 — 뒤 매수가 기대는 입금 1,000 을 지우면 현금 −900 → 삭제 안 됨 (체결 저장·수정과 같은 규칙)',
        D.get().events.length===2 && D.msgs.some(m=>/삭제하면 현금이/.test(m)), D.msgs.join(' / '));
     const D2=mk(L0,{}); D2.del('2');
-    ok('② 문제없는 삭제는 그대로 된다 (배당 3.5 삭제 → 현금 1,300)', D2.get().events.length===L0.events.length-1 && Math.abs(D2.calc(D2.get()).cash-1300)<1e-9); }
+    ok('② 문제없는 삭제는 그대로 된다 (배당 3.5 삭제 → 현금 1,298.75)', D2.get().events.length===L0.events.length-1 && Math.abs(D2.calc(D2.get()).cash-1298.75)<1e-9, String(D2.calc(D2.get()).cash)); }
 
   /* ② 목표 진행률 — 입금은 성장이 아니다 */
   { const PP=new Function('activePlanTab','alphaPlanTotal','num','alphaLedgerCalc',extractFn(pl,'function planProgress()')+'\nreturn planProgress;');
@@ -10182,7 +10232,8 @@ console.log('\n[130] 무매 자동주문 서버 함수 — 주문 직전 선점 
   async function __atHarness(){
     const fs=require('fs'); const IM=process.argv[2], AT=process.argv[3];
     const {hydratePaperDoc,packPaperDoc}=await import(require('url').pathToFileURL(require('path').resolve(require('path').dirname(AT),'../../jk-paper-store.mjs')).href);
-    const body=fs.readFileSync(IM,'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(AT,'utf8').replace(/^import [^\n]*\n/gm,'').replace(/^export /gm,'')+'\nreturn onRequest;';
+    const FEEP=require('path').resolve(require('path').dirname(AT),'_fee.js');   // 공통 수수료 규칙(사용자 문서 → 율) — autotrade 가 가져다 쓴다
+    const body=fs.readFileSync(IM,'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(FEEP,'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(AT,'utf8').replace(/^import [^\n]*\n/gm,'').replace(/^export /gm,'')+'\nreturn onRequest;';
     const W=v=>{ if(v===null||v===undefined) return {nullValue:null}; if(typeof v==='string') return {stringValue:v};
       if(typeof v==='boolean') return {booleanValue:v}; if(typeof v==='number') return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
       if(Array.isArray(v)) return {arrayValue:{values:v.map(W)}}; const f={}; for(const [k,x] of Object.entries(v)) f[k]=W(x); return {mapValue:{fields:f}}; };
@@ -10454,7 +10505,7 @@ console.log('\n[132] 익절 변환 자동 — 통합 ON/OFF · 룩어헤드 없�
      && bt.includes('>켬</button>')
      && bt.includes("imAutoTp=e.target.dataset.x==='1'"));
 
-  ok('G 모의 규약 버전 14 — MA150 −10% 하향 기준으로 자동익절 모의 기록 재생성',/const SIM_RULE_VER=14;/.test(idx));
+  ok('G 모의 규약 버전 15 이상 — MA150 −10% 하향 기준(14) · 공통 수수료(15)로 자동 모의 기록 재생성',(()=>{ const m=idx.match(/const SIM_RULE_VER=(\d+);/); return !!m && +m[1]>=15; })());
   const M1SIG='function imAutoTPM1(bars,cycStart,date,base)',M1CRE=/const IM_AUTOTP_M1=\{[^\n]*\};/;
   const m1body=src=>(src.match(M1CRE)||[''])[0]+'\n'+extractFn(src,M1SIG).replace('export function','function');
   const M1={index:imAutoTPM1,backtest:global.imAutoTPM1,plan:new Function(m1body(pl)+'\nreturn imAutoTPM1;')(),server:new Function(m1body(im)+'\nreturn imAutoTPM1;')()};
@@ -12841,8 +12892,8 @@ Promise.all(PENDING).then(()=>{
      pdg.status===0&&(pdg.stdout||'').includes('ALL PASS dg tab · 변이 27/27 red'),(pdg.stdout||'').slice(-600)+(pdg.stderr||''));
   const ptx=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-plan-tax.cjs')],{encoding:'utf8'});
   /* 2026-11-11 — 연말 세금 점검을 듀얼가드 화면에서 💰 포트폴리오로(사용자 "포트폴리오에 속한 전략 전부로 판단해야지") · 셈 portfolio() */
-  ok('연말 세금 점검(포트폴리오 전략 전부): 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계 · 체결 목록(소수 주) · 공제 한 번 · 팔고 되사기 후보 · 추정 낮춤 · 선입선출 함정 · 듀얼가드 화면에서 빠짐 · 변이 10종',
-     ptx.status===0&&(ptx.stdout||'').includes('ALL PASS plan tax · 변이 10/10 red'),(ptx.stdout||'')+(ptx.stderr||''));
+  ok('연말 세금 점검(포트폴리오 전략 전부): 결제일 T+1·마지막 체결일·선입선출/이동평균 원화 실현손익·환율 함정·공제 채우기/손실 상계 · 체결 목록(소수 주) · 공제 한 번 · 팔고 되사기 후보 · 추정 낮춤 · 선입선출 함정 · 듀얼가드 화면에서 빠짐 · 수수료 = 공통 율(2026-11-19) · 변이 12종',
+     ptx.status===0&&(ptx.stdout||'').includes('ALL PASS plan tax · 변이 12/12 red'),(ptx.stdout||'')+(ptx.stderr||''));
   ok('LOC 기록: 주문표 고정 수량·하방 체결·장 시작 전 장부·변이 3종',rec.status===0,(rec.stdout||'')+(rec.stderr||''));
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));

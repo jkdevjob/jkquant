@@ -129,9 +129,12 @@ function imCycleEnds(soldToday, qtyAtDayEnd){ return !!soldToday && !(qtyAtDayEn
 /* 장부는 하루를 여러 줄로 적는다(익절 한 줄 · 매수 한 줄). hist[i] 뒤에 같은 날짜의 매매 줄이 더 있으면 그날 주문은 아직 다 처리되지 않았다. */
 function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return false; for(let j=i+1;j<hist.length&&hist[j]&&hist[j].date===d;j++){ if(/매수|매도/.test(String(hist[j].kind||''))) return true; } return false; }
 
-export function imCompute(st, hist, days) {
+/* fee — 공통 수수료율(사용자 문서 users/{uid}.commonFee · _fee.js 의 feeRateFromDoc · 기본 0.25%). 매수 · 매도마다 거래금액 × 율을 잔금에서 뺀다 —
+   평단 · 투입원가는 가격 그대로(앱 computeInf · 백테 runIM 과 같은 규약 · 2026-11-19 "수수료는 전부 똑같이"). 생략하면 기본 0.25%. */
+export function imCompute(st, hist, days, fee) {
+  const FR = (fee != null && Number.isFinite(+fee) && +fee >= 0) ? +fee : 0.0025;
   let avg = 0, qty = 0, inv = 0, realized = 0, T = 0;
-  let withdrawn = 0, saved = 0, divTotal = 0;
+  let withdrawn = 0, saved = 0, divTotal = 0, fees = 0;
   const simple = (st.compound === false);
   let revState = "NORMAL", revFrom = "";   // revFrom — 1일차로 들어온 기록의 날짜 (앱 computeInf 와 같다 · 제12차 ②)
   const revEnter = (d) => {
@@ -152,9 +155,9 @@ export function imCompute(st, hist, days) {
     const kind = String(h.kind || "");
     const isRev = (kind === "리버스매도" || kind === "리버스매수");
     if (kind === "지정가매도" || kind === "쿼터매도" || kind === "리버스매도") {
-      realized += (h.price - avg) * h.qty; qty -= h.qty; inv -= avg * h.qty;
+      realized += (h.price - avg) * h.qty; qty -= h.qty; inv -= avg * h.qty; fees += h.price * h.qty * FR;
     } else if (kind === "1회매수" || kind === "절반매수" || kind === "리버스매수") {
-      const nq = qty + h.qty; avg = nq > 0 ? (avg * qty + h.price * h.qty) / nq : h.price; qty = nq; inv += h.price * h.qty;
+      const nq = qty + h.qty; avg = nq > 0 ? (avg * qty + h.price * h.qty) / nq : h.price; qty = nq; inv += h.price * h.qty; fees += h.price * h.qty * FR;
     } else if (kind === "출금") {
       withdrawn += Math.max(0, +h.amt || 0);
     } else if (kind === "배당") {
@@ -162,8 +165,8 @@ export function imCompute(st, hist, days) {
     } else if (kind.startsWith("지정가매도+") || kind.includes("+지정가매도")) {
       const sp = +h.sellPrice || 0, sq = +h.sellQty || 0, bp = +h.buyPrice || 0, bq = +h.buyQty || 0;
       const sellFirst = kind.startsWith("지정가매도+");
-      const doSell = () => { if (sq > 0) { realized += (sp - avg) * sq; qty -= sq; inv -= avg * sq; } };
-      const doBuy = () => { if (bq > 0) { const nq = qty + bq; avg = nq > 0 ? (avg * qty + bp * bq) / nq : bp; qty = nq; inv += bp * bq; } };
+      const doSell = () => { if (sq > 0) { realized += (sp - avg) * sq; qty -= sq; inv -= avg * sq; fees += sp * sq * FR; } };
+      const doBuy = () => { if (bq > 0) { const nq = qty + bq; avg = nq > 0 ? (avg * qty + bp * bq) / nq : bp; qty = nq; inv += bp * bq; fees += bp * bq * FR; } };
       if (sellFirst) { doSell(); doBuy(); } else { doBuy(); doSell(); }
     }
     if (typeof h.tManual === "number" && !isNaN(h.tManual)) T = h.tManual;
@@ -183,7 +186,7 @@ export function imCompute(st, hist, days) {
       T = 0; revState = "NORMAL"; daySold = false; cycStart = ""; cycTp = null;
       if (simple) {
         const P0 = +st.principal || 0;
-        const cashNow = P0 + realized + divTotal - withdrawn - saved;
+        const cashNow = P0 + realized + divTotal - withdrawn - saved - fees;
         if (cashNow > P0) saved += cashNow - P0;
       }
     }
@@ -192,10 +195,10 @@ export function imCompute(st, hist, days) {
   revEnter();
   const reverseActive = revEnabled(st) && revState !== "NORMAL" && qty > 0;
   const reverseDay1 = reverseActive && revState === "DAY1";
-  const bal = (+st.principal || 0) + realized + divTotal - inv - withdrawn - saved;
+  const bal = (+st.principal || 0) + realized + divTotal - inv - withdrawn - saved - fees;
   const tpAuto = auto ? ((qty > 1e-9 && cycStart) ? imAutoTPM1(ab, cycStart, "9999-12-31", cycTp) : tpAt("9999-12-31")) : null;
   const tp = tpAuto ? tpAuto.tp : st.target;
-  return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, revFrom, withdrawn, saved, divTotal, simple, tp, tpAuto, cycStart };
+  return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, revFrom, withdrawn, saved, divTotal, fees, feeRate: FR, simple, tp, tpAuto, cycStart };
 }
 
 /* ── 확정 종가 ──
@@ -319,14 +322,14 @@ function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
    운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
 function imRevExitDue(c, close, target, date){ return !!(c && c.reverseActive && (!c.reverseDay1 || !!(date && c.revFrom && date>c.revFrom)) && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
 /* 오늘 낼 주문. index.html renderOrder의 일반모드와 같은 순서·같은 값으로 낸다.
-   close = 확정 종가(전일 종가). days = 종가 이력(익절 조절용, 없으면 조절 안 함). */
-export function imOrders({ st, hist, close, days }) {
-  let c = imCompute(st, hist, days);
+   close = 확정 종가(전일 종가). days = 종가 이력(익절 조절용, 없으면 조절 안 함). fee = 공통 수수료율(없으면 0.25% · 장부 잔금 · 매수 수량 둘 다). */
+export function imOrders({ st, hist, close, days, fee }) {
+  let c = imCompute(st, hist, days, fee);
   const out = [];
   /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 장부 끝에 복귀 기록을 가상으로 얹어 다시 센다 (앱 renderOrder 와 같다 · 제11차 7).
      그래도 T > 분할−1 이면 새 리버스 1일차라 아래에서 건너뛴다(리버스 자동주문 미지원). */
   const closeDate = (days && days.length) ? String(days[days.length - 1].date || "") : "";   // days 의 마지막 봉 = 그 확정 종가
-  if (imRevExitDue(c, close, c.tp, closeDate)) c = imCompute(st, [...(hist || []), { date: closeDate, kind: "리버스복귀", price: close, qty: 0, virtual: true }], days);
+  if (imRevExitDue(c, close, c.tp, closeDate)) c = imCompute(st, [...(hist || []), { date: closeDate, kind: "리버스복귀", price: close, qty: 0, virtual: true }], days, fee);
   if (c.reverseActive) return { orders: out, skip: "리버스모드 — 자동 주문 미지원", c };
   if (!(close > 0)) return { orders: out, skip: "확정 종가 없음", c };
   /* 익절 변환 자동인데 판정 자료가 없으면 보유 중엔 주문하지 않는다 — 설정값으로 낸 익절·별지점 주문은 되돌릴 수 없다.
@@ -350,7 +353,7 @@ export function imOrders({ st, hist, close, days }) {
   if (!B1.spent) {
     const first = !(c.avg > 0);
     for (const o of imBuyOrders({ first, half: !first && half, buy1, bal: c.bal, firstPrice: close * (1 + bigPct / 100),
-                                  starPrice: buyPt, avg: c.avg, rows: imRowsOf(st), fee: 0, cur }))
+                                  starPrice: buyPt, avg: c.avg, rows: imRowsOf(st), fee: c.feeRate, cur }))   // 배정금 = 매수금 + 수수료 (앱 주문표와 같다)
       push("buy", o.name, "LOC", o.price, o.q);
   }
 

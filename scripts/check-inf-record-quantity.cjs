@@ -26,6 +26,7 @@ function scope(src){
   const at=src.indexOf('const KIND_T=');
   vm.runInContext(src.slice(at,src.indexOf('};',at)+2)+'\n'+
     'const REV_DIVS=[20,40], IM_BIG_DEFAULT=20, IM_ROWS_DEFAULT=3; let _infReplayAsOf="", _infResume=null;\n'+
+    'let JK_FEE=0;\n'+   // 손으로 센 1회분(655.2755…)·LOC 가격은 수수료 0 기준 — 수수료 반영 수량은 회귀 [105] 운영↔모의↔백테 0.25% 대조가 본다
     'const isCx=k=>k.includes("+");\n'+names.map(n=>fn(src,n)).join('\n'),ctx);
   return {ctx,e,quote,run:k=>ctx.infSuggest(k), buy:(c,p,v)=>ctx.infRecordBuy(c,p,v)};
 }

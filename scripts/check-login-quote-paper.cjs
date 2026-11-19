@@ -594,7 +594,7 @@ await t('P14 같은 원장을 두 번 읽지 않는다 — 방금(20초 안) 쓰
   const mk=data=>{ let now=1e12, reads=0, saves=0;
     const C={console:{error(){}},Date:{now:()=>now},getDoc:async()=>{ reads++; return {exists:()=>true,data:()=>JSON.parse(JSON.stringify(data))}; },doc:(db,c,id)=>c+'/'+id,db:{},
       restoreMorningPlanFromLegacy:async()=>false,PLAN_LEGACY_RESTORE_MARK:'mark',planHistorySig:()=>'',planOpHistorySig:()=>'',cloneObj:x=>JSON.parse(JSON.stringify(x)),
-      apply(){},renderSessionSelectors(){},renderLedger(){},renderAlphaLedger(){},render(){},renderAssetSessions(){},$:()=>null,defaults:()=>({}),
+      apply(){},renderSessionSelectors(){},renderLedger(){},renderAlphaLedger(){},render(){},renderAssetSessions(){},$:()=>null,defaults:()=>({}),planApplyFee(){},
       cloudSave:async()=>{ saves++; },saveOperatingState:async()=>{ saves++; },ensureLiveBoxes(){},migrateLiveInfOperatingDefaults:()=>false,opLocalState:()=>null,
       planStateConflict:false,liveState:null,planStateDbBase:null,liveStateSource:'',planStateCloudRev:0,planStateHistorySig:'',planStateCloudHydrated:false,planCloudHydrated:false,planCloudRev:0,planCloudHistorySig:'',planDbState:null};
     vm.createContext(C); vm.runInContext(decl+'\n'+cl+'\n'+lo+'\nthis.cloudLoad=cloudLoad;this.loadOperatingState=loadOperatingState;',C);
@@ -647,7 +647,7 @@ await t('D5 운영 원장 읽기 — 읽자마자 true(화면 열기) · 고칠 
   let pushResolve=null, pushes=0; const busySeen=[];
   const mk=(data,fail)=>{ const C={console:{error(){},warn(){}},curUid:'u1',
       window:{fb:{db:{},doc:(db,c,id)=>c+'/'+id,getDoc:async()=>{ busySeen.push(C.dbReadsBusy); if(fail) throw Object.assign(new Error('Missing or insufficient permissions.'),{code:'permission-denied'}); return {exists:()=>true,data:()=>JSON.parse(JSON.stringify(data))}; }}},
-      stateCloudHydrated:false,cacheStrategyDefaults(){},KR_NAME_MEMO:{},validState:x=>!!(x&&x.inf&&x.vr),_historySignature:()=>'sig',S:null,stateDbBase:null,ensureBoxes(){},
+      stateCloudHydrated:false,cacheStrategyDefaults(){},setCommonFee(){},KR_NAME_MEMO:{},validState:x=>!!(x&&x.inf&&x.vr),_historySignature:()=>'sig',S:null,stateDbBase:null,ensureBoxes(){},
       _repairLegacyMergeDupes:()=>0,stateCloudPending:false,migrateInfOperatingDefaults:()=>true,lastPushedJSON:'',freshState:()=>({inf:{},vr:{}}),
       pushRemoteNow:()=>{ pushes++; return new Promise(r=>{ pushResolve=r; }); },setSync(){},stateCloudRev:0,stateCloudHistorySig:'',
       dbReadStart:0,dbReadMs:0,dbReadKB:0,dbReadTop:'',pullLastErr:'',dbReadsBusy:0,

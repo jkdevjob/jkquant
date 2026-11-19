@@ -25,7 +25,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm');
 const root=path.join(__dirname,'..');
 const IDX0=fs.readFileSync(path.join(root,'index.html'),'utf8'),PL0=fs.readFileSync(path.join(root,'plan.html'),'utf8'),ENG=fs.readFileSync(path.join(root,'plan-session-engine.js'),'utf8');
 const fnOf=(src,m)=>{const s=src.indexOf(m);if(s<0)throw new Error('없음: '+m);let i=src.indexOf('{',s),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;else if(src[i]==='}'&&!--d)return src.slice(s,i+1);}throw new Error('끝 없음: '+m);};
-const declOf=(src,re)=>{const m=src.match(re);if(!m)throw new Error('선언 없음: '+re);return m[0].replace(/^const /,'var ');};
+const declOf=(src,re)=>{const m=src.match(re);if(!m)throw new Error('선언 없음: '+re);return m[0].replace(/^(?:const|let) /,'var ');};
 /* 함수 하나 안에서만 바꾼다(같은 줄이 여러 함수에 있을 때) — 바꿀 글자가 그 함수에 정확히 한 번 있어야 한다 */
 const inFn=(src,marker,from,to)=>{const f=fnOf(src,marker);if(f.split(from).length!==2)throw new Error('변이 대상 '+marker+' · '+from);return src.replace(f,f.replace(from,to));};
 
@@ -58,7 +58,7 @@ function idxCtx(H){
     px:v=>String(v),nfix:v=>String(v),inputNum:()=>0};
   c.alert=m=>{c.ALERTS.push(String(m));}; c.simCutoff=()=>c.CUT; c.curStrat=()=>c.SESS; c.$=()=>({value:c.FROM});
   vm.createContext(c);
-  vm.runInContext([/const KR_CODE_RE=[^\n]*/,/const IVS_FEE=[^\n;]*;/,/const IVS_X1=\{[^}]*\};/,/const DCA_N=\d+;/,/const DCA_N_AUTO=\d+;/,/const DIV_TAXRATE=[^;]*;/].map(re=>declOf(H,re)).join('\n')+'\n'+IDX_FNS.map(m=>fnOf(H,m)).join('\n'),c);
+  vm.runInContext([/const KR_CODE_RE=[^\n]*/,/let JK_FEE=[^\n;]*;/,/const IVS_X1=\{[^}]*\};/,/const DCA_N=\d+;/,/const DCA_N_AUTO=\d+;/,/const DIV_TAXRATE=[^;]*;/].map(re=>declOf(H,re)).join('\n')+'\n'+IDX_FNS.map(m=>fnOf(H,m)).join('\n'),c);
   return c;
 }
 /* 하루 시세 — d 장중 봉까지 붙어 오고(시세 API 가 그렇다) 현재가 = d 종가. 판정은 확정 봉(CUT = d 전날)까지만 써야 한다 */
@@ -127,7 +127,7 @@ function dca(H,T,st,fromIdx){
 function planCtx(PL){
   const ectx={};vm.runInNewContext(ENG,ectx);const E=ectx.JKPlanSessionEngine;
   const c={window:{JKPlanSessionEngine:E},$:()=>null,num:()=>0};vm.createContext(c);
-  vm.runInContext([/const PATH_DEFAULTS=\{[\s\S]*?\n\};/,/const ALPHA_FEE_RATE=[^;]*;/,/const usd=[^\n]*/,/const usd2=[^\n]*/].map(re=>declOf(PL,re)).join('\n')
+  vm.runInContext([/const PATH_DEFAULTS=\{[\s\S]*?\n\};/,/let ALPHA_FEE_RATE=[^;]*;/,/const usd=[^\n]*/,/const usd2=[^\n]*/].map(re=>declOf(PL,re)).join('\n')
     +'\nvar horizonRebalancePending=false,pendingAlphaOrders=[],alphaOrderHold="",planLivePanicMemo=new Map(),planIndexError="",planIndexLoading=false,liveQuotes={},planIndexCache={};\n'
     +['function indicatorSeries(a,n)','function realizedVol(rows,n)','function alphaRuleSet()','function alphaFee(q,p)','function alphaPanicApply(PX,sigma,decGuard)','function planLivePanic(x,signalDate,posOn,startOverride)',
       'function alphaExplainBounds(target,current,band)','function renderAlphaPlan(qTecl,qTqqq,qSgov,bg)'].map(m=>fnOf(PL,m)).join('\n'),c);
@@ -185,7 +185,7 @@ function vaCtx(H,fns){
     wn:v=>'P['+(+v)+']',px:v=>'$'+(+v).toFixed(2),nfix:(v,d)=>(+v).toFixed(d==null?2:d),tickerLabel:t=>String(t),paperPreferredSimStart:()=>null,document:{querySelector:()=>({click(){}})}};
   c.simCutoff=()=>c.CUT;c.curStrat=()=>c.SESS;c.$=$;
   vm.createContext(c);
-  vm.runInContext([/const KR_CODE_RE=[^\n]*/,/const IVS_FEE=[^\n;]*;/,/const DIV_TAXRATE=[^;]*;/,/const CYC_DAYS=\d+;/,/const VR_MODEL_DEFAULT=[^;]*;/,/const VR_ROWS_SHOW=\d+;/,/const VR_ROWS_MAX=\d+;/,/const VR_ROW_DIV=\d+;/]
+  vm.runInContext([/const KR_CODE_RE=[^\n]*/,/let JK_FEE=[^\n;]*;/,/const DIV_TAXRATE=[^;]*;/,/const CYC_DAYS=\d+;/,/const VR_MODEL_DEFAULT=[^;]*;/,/const VR_ROWS_SHOW=\d+;/,/const VR_ROWS_MAX=\d+;/,/const VR_ROW_DIV=\d+;/]
     .map(re=>declOf(H,re)).join('\n')+'\nvar _vrAutoBusy=false, _vnFor={price:null,eval:null};\n'+BASE_FNS.concat(fns).filter((m,i,a)=>a.indexOf(m)===i).map(m=>fnOf(H,m)).join('\n'),c);
   return c;
 }
@@ -198,7 +198,7 @@ const ladRows=html=>{const out=[],re=/<div class="lxr[^"]*"[^>]*>([\s\S]*?)<\/di
    사이클 진입: 모의가 장 마감에 넘어간 날, 그날 체결을 기록한 운영 장부에서 renderVrNext(진입일 칸 채움) → enterNextCycle 을 눌렀을 때 V · 적립 · 시작일 == 모의 */
 function vr(H,T,st,fromIdx){
   const c=vaCtx(H,VR_FNS),rows=RAW[T],Q={symbol:T,ohlc:rows,days:rows.map(r=>({date:r.date,close:r.close})),priceBasis:'trade',dividends:DIVS[T],last:0};
-  const from=rows[fromIdx].date,FEE=c.IVS_FEE,fee1=1+FEE;
+  const from=rows[fromIdx].date,FEE=c.JK_FEE,fee1=1+FEE;
   const sess={paper:true,id:'v',simStart:from,simStartMode:'explicit',settings:{ticker:T,mode:0.75,formula:'basic',g:10,initAmt:10000,add:250,band:15,startv:0,startpool:0,autoCyc:true,vrModel:'ladder',divmode:'reinv',...st},hist:[]};
   const S=sess.settings,name=`VR ${T} ${({0.75:'적립',0.5:'거치',0.25:'인출'})[S.mode]} ${S.formula} G${S.g} 밴드 ${S.band}%`;
   const use=(x,i)=>{c.SESS=x;c.S.vr={sessions:[x],active:x.id};c.lastQuote={inf:null,vr:{...Q,last:rows[i].close,days:Q.days.slice(0,i+1)}};};
@@ -282,7 +282,7 @@ function values(H){
     c.ivsQuoteData=Q;c.ivsQuote1=null;c.CUT='2099-12-31';
     c.SESS={settings:{ticker:'TQQQ',park:'bill',mode:'iv',s0:55,look:40,band:15,principal:10000,monthly:0},hist:[]};
     const o=c.computeIvs();
-    t('섀넌 매수 경계 — 배정금 10,000$ · 99.7503$ → 100주(수수료 얹어 냄 · 재생 imBuyQty 와 같음 · 옛 식 99주)',o.ready&&o.hit&&o.side==='buy'&&o.orderQty===100&&c.imBuyQty(10000,99.7503,c.IVS_FEE)===100,JSON.stringify([o.side,o.orderQty,o.w]));
+    t('섀넌 매수 경계 — 배정금 10,000$ · 99.7503$ → 100주(수수료 얹어 냄 · 재생 imBuyQty 와 같음 · 옛 식 99주)',o.ready&&o.hit&&o.side==='buy'&&o.orderQty===100&&c.imBuyQty(10000,99.7503,c.JK_FEE)===100,JSON.stringify([o.side,o.orderQty,o.w]));
     const c2=idxCtx(H);c2.ivsQuoteData={...Q,days:days.map(x=>({...x})).concat([{date:'2026-04-30',close:99.7503}])};c2.ivsQuote1=null;c2.FROM='2026-04-30';c2.CUT='2099-12-31';
     const s2={settings:{ticker:'TQQQ',park:'bill',mode:'iv',s0:55,look:40,band:15,principal:10000,monthly:0},hist:[],paper:true};c2.SESS=s2;c2.ivsReplay();
     const b=s2.hist.find(x=>x.type==='buy');
@@ -294,7 +294,7 @@ function values(H){
     const E=c.maEntryQty(st,hist,80);
     t('로테 진입 수량 = 장부 현금 19,875.375$ 전액 ÷ (80 × 1.0025) → 247주 (옛 식 원금÷가격 125주)',Math.abs(E.cash-19875.375)<1e-6&&E.qty===247,JSON.stringify(E));
     const E0=c.maEntryQty(st,[],80);
-    t('로테 첫 진입 = 원금 10,000 ÷ (80 × 1.0025) → 124주 (재생 maReplay 첫 매수와 같은 식)',E0.qty===124&&E0.qty===c.imBuyQty(10000,80,c.IVS_FEE),JSON.stringify(E0));
+    t('로테 첫 진입 = 원금 10,000 ÷ (80 × 1.0025) → 124주 (재생 maReplay 첫 매수와 같은 식)',E0.qty===124&&E0.qty===c.imBuyQty(10000,80,c.JK_FEE),JSON.stringify(E0));
     c.computeMa=()=>({ready:true,price:80,lastClose:80});c.SESS={settings:st,hist:hist.slice()};c.maRecord('in');
     const last=c.SESS.hist[c.SESS.hist.length-1];
     t('로테 🟢 진입 기록 — 장부에 적는 수량도 247주(안내와 같은 함수)',last.type==='in'&&last.qty===247&&last.price===80,JSON.stringify(last));
@@ -320,7 +320,7 @@ function suite(H,PL,parts){
 
 /* 변이 — [이름, 바꾸는 쪽(idx|plan), 바꾸기, 돌릴 묶음] */
 const MUT=[
-  ['섀넌 옛 매수 식 배정금×(1−수수료)÷가격','idx',s=>inFn(s,'function computeIvs()','out.orderQty=_ivsBuyQ(spend,price);','out.orderQty=Math.floor(spend*(1-IVS_FEE)/price);'),['val','ivs']],
+  ['섀넌 옛 매수 식 배정금×(1−수수료)÷가격','idx',s=>inFn(s,'function computeIvs()','out.orderQty=_ivsBuyQ(spend,price);','out.orderQty=Math.floor(spend*(1-JK_FEE)/price);'),['val','ivs']],
   ['섀넌 밴드 판정을 현재가 비중으로(확정 종가 대신)','idx',s=>inFn(s,'function computeIvs()','out.hit=Math.abs(out.gap)>band;','out.hit=Math.abs(out.w-out.wNow)>band;'),['ivs']],
   ['섀넌 σ 에 오늘 장중 봉 섞음','idx',s=>inFn(s,'function computeIvs()','const days=_dAll ? settledBars(_dAll, curOf(st)) : null;','const days=_dAll;'),['ivs']],
   ['섀넌 매도 주수 1e-9 여유 없음(재생 _sq 와 다름) + 보유 넘게','idx',s=>inFn(s,'function computeIvs()','const _ivsSellQ=(x,have)=>Math.min(Math.floor(x+1e-9), Math.floor(have+1e-9));','const _ivsSellQ=(x,have)=>Math.ceil(x);'),['ivs']],
