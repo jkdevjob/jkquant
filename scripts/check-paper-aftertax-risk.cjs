@@ -15,8 +15,10 @@ for(const [i,price] of [100,200,130].entries()){
  series.push({final:p.mark().final,inflow:100});
  near(p.mark().final,p.done().final);
 }
-near(series[1].final,178);near(series[2].final,123.4);
-near(env.paperAfterTaxDrawdown(series).pct,(178-123.4)/178*100);n++;
+/* 다 판다고 볼 때 매도 수수료(공통 율 0.25%)를 모든 전략에 뗀다(2026-11-19) — 평가 200: 수수료 0.5 · 과세 99.5 · 130: 0.325 · 29.675 */
+const F2=200-(100-0.5)*.22-0.5, F3=130-(30-0.325)*.22-0.325;
+near(series[1].final,F2);near(series[2].final,F3);
+near(env.paperAfterTaxDrawdown(series).pct,(F2-F3)/F2*100);n++;
 const q=env.paperAfterTaxAcc('SOXL',{addFee:false});
 q.step('2023-12-29',150,100,{realized:50,held:0,cost:0});
 near(q.mark().final,139);
@@ -34,7 +36,7 @@ const nav=[100,200,130].map((total,i)=>({
  date:'2024-01-0'+(i+1),total,inflow:100,tecl:10,teclPx:total/10,tqqq:0,sgov:0
 }));
 const plan=env.planAfterTax({ledger:{events:[trade]},nav});
-near(plan.afterTaxMdd.pct,(178-123.4)/178*100);near(plan.tr,23.4);n++;
+near(plan.afterTaxMdd.pct,(F2-F3)/F2*100);near(plan.tr,F3-100);n++;
 for(const key of ['atcagr','atmdd','atmar','growmar'])
  assert(src.includes("paperSortTable('"+key+"',this)")&&src.includes('data-'+key+'='),key);
 const order=['atr','atcagr','atmdd','atmar','growmar','ret'].map(k=>src.indexOf("paperSortTable('"+k+"',this)"));

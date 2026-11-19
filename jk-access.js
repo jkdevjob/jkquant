@@ -43,7 +43,7 @@
     '/claude':{sel:'#tabs .tab[data-tab]',attr:'data-tab',items:[['today','📅 오늘'],['opening','⚡ 시초가'],['daytrading','📈 데이트레이딩'],['crypto','₿ 비트코인'],['soxl','⚡ SOXL'],['close30','⏰ 종가 30분'],['tenbagger','🔟 텐배거'],['duel','🆚 GPT 대결']]},
     '/realestate':{sel:'#tabs .tab[data-tab]',attr:'data-tab',items:[['claude','🤖 클로드'],['gpt','⚡ 지피티']]},
     '/job':{sel:'#tabs .tab[data-cat]',attr:'data-cat',items:[['all','전체'],['java_ai','Java·AI'],['regular_dev','개발자 정규직'],['salary500','월 500+'],['salary450','월 450~499'],['short_term','단기알바'],['scrap','★ 스크랩'],['applied','✓ 지원완료']]},
-    '/settings':{sel:'.tabs .tab[data-settings-tab]',attr:'data-settings-tab',items:[['notifications','🔔 알림'],['paper','🧪 모의투자']]},
+    '/settings':{sel:'.tabs .tab[data-settings-tab]',attr:'data-settings-tab',items:[['notifications','🔔 알림'],['paper','🧪 모의투자'],['fee','💸 수수료']]},
     '/workout':{sel:'.mode-tabs [data-mode]',attr:'data-mode',items:[['round','라운드'],['tabata','타바타'],['stopwatch','스톱워치']]}
   };
   var SUB_ALIAS={'/portfolio':'/','/paper':'/'};   // 운영 파일(index.html)이 포트폴리오·모의도 그린다 — 탭 줄은 같은 것

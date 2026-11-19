@@ -107,7 +107,7 @@ async function check(S){
       (I.match(/const REV_DIVS=\[[^\]]*\];/)||[''])[0],fnOf(I,'function revSupported(div)'),fnOf(I,'function revEnabled(st)'),
       fnOf(I,'function computeInf()'),fnOf(I,'function computeVr()'),fnOf(I,'function ivsPos(principal,hist)'),fnOf(I,'function computeDca()'),fnOf(I,'function maLedger(hist, price, principal)'),
       fnOf(I,'function tcFromInf(c)'),fnOf(I,'function tcFromVr(c)'),fnOf(I,'function tcFromMa(st,hist)'),fnOf(I,'function tcFromIvs(c)'),fnOf(I,'function tcFromDca(c)')];
-    const c={console,Math,Date,JSON,Map,Set,Number,String,Array,Object,isFinite,IVS_FEE:0.0025,__strat:null,_infReplayAsOf:'',_infResume:null,imAutoBars:()=>null,dcaQuoteData:null,
+    const c={console,Math,Date,JSON,Map,Set,Number,String,Array,Object,isFinite,JK_FEE:0.0025,__strat:null,_infReplayAsOf:'',_infResume:null,imAutoBars:()=>null,dcaQuoteData:null,
       _dcaRawMap:()=>new Map(),settledBars:x=>x,curOf:()=>'usd',nfix:(v,d)=>(+v).toFixed(d)};
     c.curStrat=()=>c.__strat; vm.createContext(c);
     vm.runInContext(parts.join('\n')+'\n;this.__fns={computeInf,computeVr,ivsPos,computeDca,tcFromInf,tcFromVr,tcFromMa,tcFromIvs,tcFromDca};',c);
@@ -136,7 +136,7 @@ async function check(S){
     // 적립 — 평단 = 넣은 돈 ÷ 주수
     c.__strat={settings:{ticker:'QLD',amount:100,mode:'dca'},hist:[{date:'2026-01-05',amt:100,price:80},{date:'2026-01-12',amt:200,price:70,mul:2},{date:'2026-01-20',amt:100,price:90}]};
     const cd=F.computeDca(), td=F.tcFromDca(cd), ld=lastStep(td.steps);
-    t('C4 적립 — 매수 3 · 보유 · 평단 = computeDca.pos(shares · avg) · 배수 적립 이름',td.trades.length===3&&near(ld.held,cd.pos.shares)&&near(ld.avg,cd.pos.avg)&&td.trades[1].label==='배수 적립 ×2'&&near(td.trades[1].qty,200/70),JSON.stringify({ld,pos:cd.pos}));
+    t('C4 적립 — 매수 3 · 보유 · 평단 = computeDca.pos(shares · avg) · 배수 적립 이름',td.trades.length===3&&near(ld.held,cd.pos.shares)&&near(ld.avg,cd.pos.avg)&&td.trades[1].label==='배수 적립 ×2'&&near(td.trades[1].qty,200/(70*1.0025))&&near(td.trades[1].fee,200-200/1.0025),JSON.stringify({ld,pos:cd.pos}));   // 적립금에 공통 수수료 0.25% 포함 — 주수 = 200 ÷ (70 × 1.0025)
     // 로테이션 — 진입가 · 수량 모르는 진입
     const tm=F.tcFromMa({ticker:'SOXL',principal:10000},[{type:'in',date:'2026-01-05',price:30,qty:40},{type:'out',date:'2026-03-20',price:25},{type:'div',date:'2026-03-25',amt:3},{type:'in',date:'2026-04-21',price:20}]);
     const want=(25-(30*40+30*40*0.0025)/40)*40-25*40*0.0025;   // 분석 탭 장부(maLedger) — 수수료 포함 원가 · 청산 수수료 차감
@@ -183,13 +183,14 @@ const MUT=[
   ['그림: 기간이 늘 전체','mod',s=>s.replace("else i0=Math.max(0,all.length-per[2]);","else { i0=all.findIndex(d=>d.date>=tr[0].date); i0=Math.max(0,i0-10); }")],
   ['값 상자: 다음 매수가 판 날 앞 매수','mod',s=>s.replace("const nb=G.all.find(z=>z.side==='buy'&&z.date>t.date);","const nb=G.all.find(z=>z.side==='buy');")],
   ['값 상자: 손익 안 적음','mod',s=>s.replace("+(t.side==='sell'&&t.pnl!=null?' · 손익 '+(t.pnl>=0?'+':'')+G.M0(t.pnl):'')","")],
-  ['무매: 복합 매도 손익 버림','idx',s=>s.replace("const sl={date:h.date,side:'sell',qty:+h.sellQty,price:+h.sellPrice,pnl:h.profit,label:'지정가매도'};","const sl={date:h.date,side:'sell',qty:+h.sellQty,price:+h.sellPrice,label:'지정가매도'};")],
+  ['무매: 복합 매도 손익 버림','idx',s=>s.replace("fee:(+h.sellQty||0)*(+h.sellPrice||0)*F,pnl:h.profit,label:'지정가매도'};","fee:(+h.sellQty||0)*(+h.sellPrice||0)*F,label:'지정가매도'};")],
   ['무매: 출금 · 배당도 매매로','idx',s=>s.replace("    }else if(isAmtKind(k)||k==='리버스복귀') continue;","    }else if(k==='리버스복귀') continue;\n    else if(isAmtKind(k)) trades.push({date:h.date,side:'buy',qty:1,price:+h.amt||1});")],
   ['무매: 평단을 기록 값 대신 체결가로','idx',s=>s.replace("steps.push({date:h.date,held:+h.qtyAfter||0,avg:(+h.qtyAfter>0&&+h.avgAfter>0)?+h.avgAfter:null});","steps.push({date:h.date,held:+h.qtyAfter||0,avg:+h.qtyAfter>0?+h.price:null});")],
-  ['VR: 실효평단 대신 이동평균 원가(옛 계산 아님)','idx',s=>s.replace("rows.push({h,held:qty,avgEff:qty>0&&eff>0?eff/qty:null,pnl:_pnl});","rows.push({h,held:qty,avgEff:qty>0?cost/qty:null,pnl:_pnl});")],
+  ['VR: 실효평단 대신 이동평균 원가(옛 계산 아님)','idx',s=>s.replace("rows.push({h,held:qty,avgEff:qty>0&&eff>0?eff/qty:null,pnl:_pnl,","rows.push({h,held:qty,avgEff:qty>0?cost/qty:null,pnl:_pnl,")],
   ['VR: 매도 손익 안 넘김','idx',s=>s.replace("pnl:h.type==='sell'?r.pnl:null,label:h.type==='buy'?'매수':'매도'});","pnl:null,label:h.type==='buy'?'매수':'매도'});")],
   ['섀넌: 1배 짝도 레버리지 종목에','idx',s=>s.replace("const sym=String(h.sym||(r.leg==='x1'?c.sym1:c.sym)||'').toUpperCase(); if(!sym) continue;","const sym=String(c.sym||'').toUpperCase(); if(!sym) continue;")],
-  ['적립: 평단을 마지막 값으로','idx',s=>s.replace("rows.push({h,held:shares,avg:inv/shares});","rows.push({h,held:shares,avg:p});")],
+  ['적립: 평단을 마지막 값으로','idx',s=>s.replace("rows.push({h,held:shares,avg:inv/shares,fee:a-q*p});","rows.push({h,held:shares,avg:p,fee:a-q*p});")],
+  ['적립: 수수료 없이 주수(옛 계산 · 적립금 ÷ 가격)','idx',s=>s.replace("const q=a/(p*f1); inv+=a;","const q=a/p; inv+=a;")],
   ['로테이션: 청산 손익을 분석 장부에서 안 받음','idx',s=>s.replace("fee:q?feeOf(h,q):0,pnl:o?o.pnl:null,label:'청산'});","fee:q?feeOf(h,q):0,pnl:null,label:'청산'});")],
   ['듀얼가드: 날짜 무시하고 마지막 장부로','plan',s=>s.replace("for(const d of dates)put(d,alphaLedgerCalc(Object.assign({},L,{events:(L.events||[]).filter(e=>String(e.date||'')<=d)})));","for(const d of dates)put(d,S);")],
   ['듀얼가드: 손익을 표와 다른 값으로','plan',s=>s.replace("pnl:e.side==='sell'&&pn&&Number.isFinite(pn.profit)?pn.profit:null});","pnl:e.side==='sell'?(+e.price||0)*Math.floor(+e.qty||0):null});")],

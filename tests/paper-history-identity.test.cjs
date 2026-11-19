@@ -91,7 +91,7 @@ test('migration waits for matching quotes; unrelated strategy signatures stay un
   assert.equal(c.paperSyncSig('vr',s),false);
   assert.deepEqual(clone(s),before);
   const inf={ticker:'SOXL',div:20,target:20,big:20,rows:3,revGap:5,reverse:false,tgtDyn:false,principal:10000,compound:true,divmode:'reinv',engine:'v40',shortMA:30,loPct:6};
-  assert.equal(c.simSig('inf',inf),'r14|SOXL|20|20|20|3|5|false|false|10000|true|reinv|v40|30|6');
+  assert.equal(c.simSig('inf',inf),'r15|f0.0025|SOXL|20|20|20|3|5|false|false|10000|true|reinv|v40|30|6');   // 규약 판 15 · 공통 수수료율(기본 0.25%) — 2026-11-19
 });
 
 /* ── 듀얼가드 화면(plan.html)도 같은 원장(stateV2)을 합쳐 저장한다 — 신분 규칙이 운영 화면과 같아야 한다 ──
@@ -156,7 +156,7 @@ test('mutations: restoring the timestamp-only identity in plan.html is caught',(
 
 test('damaged VR paper ledgers are rebuilt once more (ledger3) and the stale list cache is dropped',()=>{
   const c=runtime(),s=state(rows.slice(2)).vr.sessions[0];
-  assert.match(c.simSig('vr',s.settings),/^r\d+\|ledger3\|/);
+  assert.match(c.simSig('vr',s.settings),/^r\d+\|f[\d.]+\|ledger3\|/);
   s.settings.simSig=c.simSig('vr',s.settings).replace('ledger3|','ledger2|');   // 어제까지의 지문 — 머리가 빠진 장부
   assert.equal(c.paperSyncSig('vr',s),true,'다시 만든다');assert.deepEqual(clone(s.hist),[]);assert.equal(c.paperSyncSig('vr',s),false,'한 번만');
   assert.ok(+((html.match(/const PAPER_VIEW_CACHE_VER=(\d+);/)||[])[1])>=8,'지난 목록 값(머리 빠진 장부로 센 것)을 다시 센다');

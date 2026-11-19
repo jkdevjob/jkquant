@@ -12,7 +12,9 @@
 'use strict';
 const DED_KRW=2500000,RATE=0.22,SYMS=['TECL','TQQQ','SGOV'],KEY={TECL:['tecl','avgTecl'],TQQQ:['tqqq','avgTqqq'],SGOV:['sgov','avgSgov']},EPS=1e-9;
 const pad=n=>String(n).padStart(2,'0'),iso=d=>d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate()),parse=s=>new Date(String(s||'')+'T00:00:00Z');
-function defaultFee(q,p){const gross=Math.max(0,(+q||0)*(+p||0));return gross<=10?0:Math.floor(gross*0.001*100)/100;}   // plan.html alphaFee 와 같은 식(화면은 alphaFee 를 넘긴다)
+/* 수수료 = 거래금액 × 공통 수수료율(설정 › 💸 수수료 · 2026-11-19) — 듀얼가드 엔진 alphaFee 한 곳(운영 화면이 setCommonFee 로 율을 맞춘다).
+   엔진이 없으면 기본 0.25%. 예전엔 토스 0.1%(10$ 이하 무료 · 센트 내림)였다. */
+function defaultFee(q,p){const E=g.JKPlanSessionEngine;if(E&&typeof E.alphaFee==='function')return E.alphaFee(q,p);return Math.max(0,(+q||0)*(+p||0))*0.0025;}
 /* 미국 결제 휴일 — 연말·연초만 정확히: 1월 1일(일요일이면 1월 2일) · 12월 25일(토요일이면 24일 · 일요일이면 26일). 그 밖의 휴장은 평일로 본다. */
 function isHoliday(d){const m=d.getUTCMonth()+1,day=d.getUTCDate(),w=d.getUTCDay();
   return (m===1&&(day===1||(day===2&&w===1)))||(m===12&&(day===25||(day===24&&w===5)||(day===26&&w===1)));}
@@ -44,7 +46,8 @@ function lotTrade(S,s,side,q,p,fee,d,sells,notes){
 }
 function posOut(P){for(const k of Object.keys(P))delete P[k].fx;return P;}
 /* 거래이력 → 종목별 세금 원가(선입선출 lots · 이동평균 합계)와 매도별 실현손익(USD · KRW · 두 방식) */
-function build(ledger,fx){
+function build(ledger,fx,feeFn){
+  const F=feeFn||defaultFee;   // 체결 수수료 = 거래금액 × 공통 율(기록의 fee 칸은 안 쓴다 — 엔진 장부 ledgerCalc 와 같은 값 · 2026-11-19)
   const b=(ledger&&ledger.base)||{},P={},sells=[],notes=[];
   const reset=(s,q,avg,d,tag)=>{const cu=avg!=null?q*avg:0,r=fx(settleDate(d)||d);P[s]={lots:q>0?[{date:d,qty:q,costUsd:cu,costKrw:cu*r,tag}]:[],qty:q,costUsd:cu,costKrw:cu*r,unknown:q>0&&avg==null,fx};};
   for(const s of SYMS){const [qk,ak]=KEY[s];reset(s,Math.max(0,Math.floor(+b[qk]||0)),+b[ak]>0?+b[ak]:null,String(b.date||''),'base');}
@@ -52,7 +55,7 @@ function build(ledger,fx){
     if(e.type==='reconcile'&&e.snapshot){for(const s of SYMS){const [qk,ak]=KEY[s];reset(s,Math.max(0,Math.floor(+e.snapshot[qk]||0)),+e.snapshot[ak]>0?+e.snapshot[ak]:null,String(e.date||''),'reconcile');}notes.push('reconcile');continue;}
     if(e.type!=='trade')continue;
     const s=String(e.symbol||'').toUpperCase(),S=P[s];if(!S)continue;
-    const q=Math.max(0,Math.floor(+e.qty||0)),p=+e.price||0,fee=Math.max(0,+e.fee||0);
+    const q=Math.max(0,Math.floor(+e.qty||0)),p=+e.price||0,fee=e.seed?0:Math.max(0,+F(q,p)||0);
     if(!(q>0&&p>0))continue;
     lotTrade(S,s,e.side,q,p,fee,String(e.date||''),sells,notes);
   }
@@ -94,7 +97,7 @@ function portfolio(o){
   const sources=[],positions=[];
   for(const s of (o.sources||[])){
     let B=null,est=s.kind==='est',estWhy=est?(s.estWhy||'원화 원가(산 날 환율)를 모릅니다'):'';
-    if(s.kind==='plan')B=build(s.ledger,fx);
+    if(s.kind==='plan')B=build(s.ledger,fx,s.feeFn);
     else if(s.kind==='trades'){B=buildTrades(s.trades,fx);if(s.expect&&!sameQty(B.pos,s.expect)){B=null;est=true;estWhy='체결 기록으로 다시 센 보유가 그 전략 계산과 달라 원화 원가를 모릅니다';}}
     let realized;
     if(B){const ys=B.sells.filter(x=>x.year===year),sum=(k,u)=>ys.reduce((a,x)=>a+x[k][u],0);

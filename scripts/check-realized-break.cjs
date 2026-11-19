@@ -23,7 +23,7 @@ const blockOf=(I,id)=>{ const a=I.indexOf('<div class="block" id="'+id+'"'); con
 function check(S){
   const bad=[];const t=(name,cond,info)=>{if(!cond)bad.push(name+(info!=null?' · '+String(info).slice(0,300):''));};
   const I=S.idx;
-  const ctx={console,Math,Date,JSON,Map,Set,Number,String,Array,Object,isFinite,wn,IVS_FEE:0.0025,dshort:d=>String(d).slice(5).replace('-','/'),__strat:null,$:id=>ctx.__els[id],__els:{}};
+  const ctx={console,Math,Date,JSON,Map,Set,Number,String,Array,Object,isFinite,wn,JK_FEE:0.0025,dshort:d=>String(d).slice(5).replace('-','/'),__strat:null,$:id=>ctx.__els[id],__els:{}};
   ctx.curStrat=()=>ctx.__strat; vm.createContext(ctx);
   vm.runInContext([fnOf(I,'function realizedBreakHtml(sells, cap, o={}){'),fnOf(I,'function computeVr()'),fnOf(I,'function renderVrBreak(c)'),fnOf(I,'function maLedger(hist, price, principal)'),
     fnOf(I,'function ivsPos(principal,hist)'),fnOf(I,'function ivsSellsOf(c)')].join('\n')+'\n;this.__f={realizedBreakHtml,computeVr,renderVrBreak,maLedger,ivsPos,ivsSellsOf};',ctx);

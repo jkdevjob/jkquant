@@ -216,14 +216,16 @@ const AT=retry(()=>{ const out={};
     const ctx=context(true, c=>{ c.S={activeTab:'inf',inf:{active:'p',sessions:[{id:'p',paper:true,settings:{...BASE,...set},hist:[]}]}}; c.lastQuote={inf:null}; c.save=()=>{}; });
     const q=quote('2023-06-30'); q.price=q.last=q.ohlc[q.ohlc.length-1].close; ctx.lastQuote.inf=q;
     vm.runInContext("infSimForward('2021-01-04')",ctx);
-    out[name]=vm.runInContext("(()=>{ const r=paperStat('inf', curStrat()), c=computeInf(); return r&&{ret:r.ret,atr:r.atr,tax:r.atrTax,fee:r.atrFee,turn:c.totbuy+c.totsell,held:c.qty*lastQuote.inf.price}; })()",ctx); }
+    out[name]=vm.runInContext("(()=>{ const r=paperStat('inf', curStrat()), c=computeInf(); return r&&{ret:r.ret,atr:r.atr,tax:r.atrTax,fee:r.atrFee,turn:c.totbuy+c.totsell,held:c.qty*lastQuote.inf.price,ledgerFee:c.fees}; })()",ctx); }
   return out; });
 for(const [name,r] of Object.entries(AT)){
   assert(r&&Number.isFinite(r.atr)&&Number.isFinite(r.ret),name+' — 세후 TR 이 나온다 '+JSON.stringify(r));
   assert(r.atr<r.ret,name+' — 세후 TR 은 세전 TR 보다 낮다 '+JSON.stringify(r));
   assert(r.tax>0,name+' — 2021 실현이익엔 세금이 붙는다 '+JSON.stringify(r));
-  // 무매 장부엔 수수료가 없어 거래액(매수+매도)의 0.25% 를 더한다 — 세금으로 줄어든 비율(≥0.8)만큼만 작아질 수 있다 · 다 팔 때 수수료까지가 위
-  assert(r.fee>=0.0025*0.8*r.turn && r.fee<=0.0025*(r.turn+r.held)*1.000001,name+' — 수수료 = 거래액 × 0.25% '+JSON.stringify(r));
-  console.log(`  ✓ 세후 TR 배선(${name}) — 2021-01~2023-06 TR ${r.ret.toFixed(1)}% → 세후 ${r.atr.toFixed(1)}% · 세금 ${Math.round(r.tax)}$ · 수수료 ${Math.round(r.fee)}$`); }
+  /* 공통 수수료(2026-11-19) — 무매 장부가 거래액(매수+매도) × 0.25% 를 이미 센다(잔금에서 뺌). 세후는 그걸 다시 붙이지 않고
+     '다 판다'고 볼 때 매도 수수료(보유 평가 × 0.25%)만 더한다 — 세금으로 줄어든 비율(≥0.8)만큼만 작아질 수 있다 */
+  assert(Math.abs(r.ledgerFee-0.0025*r.turn)<1e-6*Math.max(1,r.turn),name+' — 장부 수수료 = 거래액 × 0.25% '+JSON.stringify(r));
+  assert(r.held>0 && r.fee>=0.0025*0.8*r.held && r.fee<=0.0025*r.held*1.000001,name+' — 세후 수수료 = 다 팔 때 수수료만(장부 수수료 두 번 안 뗌) '+JSON.stringify(r));
+  console.log(`  ✓ 세후 TR 배선(${name}) — 2021-01~2023-06 TR ${r.ret.toFixed(1)}% → 세후 ${r.atr.toFixed(1)}% · 세금 ${Math.round(r.tax)}$ · 장부 수수료 ${Math.round(r.ledgerFee)}$ · 다 팔 때 수수료 ${Math.round(r.fee)}$`); }
 
 console.log(`PASS 모의 재생 이어 계산 — 재생 ${SC.length}종(computeInf ${nCalls}회) · 무작위 ${nProp}회 · 경계 시험 전부 처음부터 센 장부와 같다 · 세후 TR 배선`);

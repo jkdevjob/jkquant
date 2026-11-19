@@ -15,8 +15,8 @@ const fnOf=(src,marker)=>{const s=src.indexOf(marker);if(s<0)throw Error('없음
 const near=(a,b,e=1e-9)=>Math.abs(a-b)<=e;
 function harness(S,sess){
   const V={shi_date:{value:'2026-11-09'},shi_price:{value:''},shi_qty:{value:''},shi_amt:{value:''},sheet_iform:{style:{},scrollIntoView(){}},shi_stock:{style:{}},shi_amtwrap:{style:{}}};
-  const log=[]; const fee=+((S.idx.match(/const IVS_FEE=([\d.]+)/)||[])[1]);
-  const c={$:id=>V[id],V,log,IVS_FEE:fee,curStrat:()=>sess,ivsX1Of:s=>s==='USD'?'SMH':'X1OF_'+s,save(){ log.push('save'); },refreshIvs(){ log.push('refresh'); },pushRemote(){ log.push('push'); },closeSheet(){ log.push('close'); },
+  const log=[]; const fee=+((S.idx.match(/let JK_FEE=([\d.]+)/)||[])[1]);   // 공통 수수료율 기본값(설정 › 💸 수수료 저장값이 없을 때)
+  const c={$:id=>V[id],V,log,JK_FEE:fee,curStrat:()=>sess,ivsX1Of:s=>s==='USD'?'SMH':'X1OF_'+s,save(){ log.push('save'); },refreshIvs(){ log.push('refresh'); },pushRemote(){ log.push('push'); },closeSheet(){ log.push('close'); },
     alert(m){ log.push('alert:'+m); },document:{querySelectorAll:()=>[]},Date,Math,String,Number};
   vm.createContext(c);
   vm.runInContext(((S.idx.match(/let shIvsType='buy', shIvsLeg='lev';/)||[''])[0]).replace('let ','var ')+'\n'+['function sheetIvsHTML(today)','function sheetSelIvs(t)','function sheetSelIvsLeg(l)','function sheetSaveIvs()','function _ivsPush(leg,side,q,price,date,sym)','function sortHist(arr)','function unComma(s)'].map(m=>fnOf(S.idx,m)).join('\n'),c);
@@ -29,17 +29,17 @@ async function check(S){
     const ha=a.sheetIvsHTML('2026-11-09'), hb=b.sheetIvsHTML('2026-11-09');
     t('V1 양식 — 다섯 유형(매수·매도·입금·출금·배당) · 국채면 종목 글자(USD) · 1배수 짝이면 USD/SMH 고르기(seg 아님 · 시트 선택지와 같은 줄) · 수수료 0.25% 안내 · 기록하기 → sheetSaveIvs',
       (ha.match(/class="kindopt"/g)||[]).length===5&&/data-it="buy"/.test(ha)&&/data-it="div"/.test(ha)&&/id="shi_sym">USD</.test(ha)&&!/id="shi_leg"/.test(ha)
-      &&/id="shi_legs"/.test(hb)&&/data-leg="x1"[^>]*><span class="kn">SMH<\/span><span class="kt cx">1배수 짝</.test(hb)&&!/class="seg"/.test(hb)&&!/id="shi_leg"/.test(ha)&&/수수료 0\.25%는 자동으로 붙습니다/.test(ha)&&/onclick="sheetSaveIvs\(\)"/.test(ha)&&/value="2026-11-09"/.test(ha),ha.slice(0,200)); }
+      &&/id="shi_legs"/.test(hb)&&/data-leg="x1"[^>]*><span class="kn">SMH<\/span><span class="kt cx">1배수 짝</.test(hb)&&!/class="seg"/.test(hb)&&!/id="shi_leg"/.test(ha)&&/수수료\(공통 0\.25% · 설정 › 💸 수수료\)는 장부가 자동으로 셉니다/.test(ha)&&/onclick="sheetSaveIvs\(\)"/.test(ha)&&/value="2026-11-09"/.test(ha),ha.slice(0,200)); }
   // ── V2 저장
   { const sess={settings:{ticker:'USD',park:'bill'},hist:[{type:'add',date:'2026-11-10',amt:1,ts:1}]}, c=harness(S,sess);
     c.sheetSelIvs('buy'); c.V.shi_price.value='53.83'; c.V.shi_qty.value='13'; c.sheetSaveIvs();
     const r=sess.hist[0];
     t('V2 매수 13주 × 53.83 → {buy · lev · USD · 2026-11-09 · 699.79 · 수수료 699.79×0.25%} · 날짜순 정렬(11-10 입금 뒤가 아니라 앞) · 저장→갱신→클라우드→닫기',
-      r&&r.type==='buy'&&r.leg==='lev'&&r.sym==='USD'&&r.date==='2026-11-09'&&r.price===53.83&&r.qty===13&&near(r.amt,699.79,1e-9)&&near(r.fee,699.79*c.IVS_FEE,1e-9)&&typeof r.ts==='number'
+      r&&r.type==='buy'&&r.leg==='lev'&&r.sym==='USD'&&r.date==='2026-11-09'&&r.price===53.83&&r.qty===13&&near(r.amt,699.79,1e-9)&&near(r.fee,699.79*c.JK_FEE,1e-9)&&typeof r.ts==='number'
       &&sess.hist[1].type==='add'&&c.log.join()==='save,refresh,push,close',JSON.stringify([r,c.log]));
     const s2={settings:{ticker:'USD',park:'x1'},hist:[]}, d=harness(S,s2);
     d.sheetSelIvs('sell'); d.sheetSelIvsLeg('x1'); d.V.shi_price.value='250'; d.V.shi_qty.value='2'; d.sheetSaveIvs();
-    t('V2 1배수 짝 매도 → leg x1 · sym SMH(ivsX1Of) · 수수료 자동',s2.hist.length===1&&s2.hist[0].type==='sell'&&s2.hist[0].leg==='x1'&&s2.hist[0].sym==='SMH'&&near(s2.hist[0].fee,500*d.IVS_FEE,1e-9),JSON.stringify(s2.hist));
+    t('V2 1배수 짝 매도 → leg x1 · sym SMH(ivsX1Of) · 수수료 자동',s2.hist.length===1&&s2.hist[0].type==='sell'&&s2.hist[0].leg==='x1'&&s2.hist[0].sym==='SMH'&&near(s2.hist[0].fee,500*d.JK_FEE,1e-9),JSON.stringify(s2.hist));
     const s3={settings:{ticker:'USD',park:'bill'},hist:[]}, e=harness(S,s3);
     e.sheetSelIvsLeg('x1'); e.sheetSelIvs('buy'); e.V.shi_price.value='50'; e.V.shi_qty.value='1'; e.sheetSaveIvs();
     t('V2 국채(1배수 아님)면 x1 을 골라도 lev · 주 종목',s3.hist[0]&&s3.hist[0].leg==='lev'&&s3.hist[0].sym==='USD',JSON.stringify(s3.hist));
@@ -65,7 +65,7 @@ async function check(S){
   return bad;
 }
 const MUT=[
-  ['저장: 수수료 안 붙음(_ivsPush fee 0)','idx',s=>s.replace("const amt=q*price, fee=amt*IVS_FEE;","const amt=q*price, fee=0;")],
+  ['저장: 수수료 안 붙음(_ivsPush fee 0)','idx',s=>s.replace("const amt=q*price, fee=amt*JK_FEE;","const amt=q*price, fee=0;")],
   ['저장: 1배수 짝을 골라도 주 종목으로','idx',s=>s.replace("const leg=(X1&&shIvsLeg==='x1')?'x1':'lev';","const leg='lev';")],
   ['저장: 검증 없이 기록','idx',s=>s.replace("if(!(price>0)||!(qty>0)){ alert('단가와 수량을 입력하세요'); return; }\n    const leg=","if(false){ alert('단가와 수량을 입력하세요'); return; }\n    const leg=")],
   ['저장: 입금·출금·배당 유형을 안 적음','idx',s=>s.replace("c.hist.push({type:shIvsType,date,amt:+amt,ts:Date.now()});","c.hist.push({type:'add',date,amt:+amt,ts:Date.now()});")],

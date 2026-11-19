@@ -92,7 +92,10 @@ async function check(S,opt){
       .filter(([,f])=>{const x=clone(base);f(x);return G(x)===s0;}).map(([n])=>n);
     const same=[['이름',x=>x.name='새 이름'],['포트폴리오 칸',x=>x.portfolio=false],['만든 때',x=>x.createdAt=1],['환율',x=>x.paperFxRate=1400]].filter(([,f])=>{const x=clone(base);f(x);return G(x)!==s0;}).map(([n])=>n);
     t('B2 재생 조건이 바뀌면 sig 가 달라진다(규칙 · 시작일 · 원금 · 월 적립) · 상관없는 칸(이름 · 포트폴리오 · 만든 때 · 환율)은 그대로',!ch.length&&!same.length,'안 바뀜:'+ch.join(',')+' 바뀜:'+same.join(','));
-    const E2=loadEngine(S.eng),E3=loadEngine(S.eng.replace('const FEE_RATE=.001;','const FEE_RATE=.001; '));
+    /* 공통 수수료율(설정 › 💸 수수료)을 바꾸면 sig 가 달라져 저장본을 다시 재생한다 — 같은 율로 돌아오면 같은 sig (2026-11-19) */
+    { const f0=E.FEE_RATE; E.setFeeRate(.001); const s1=G(base); E.setFeeRate(f0); const s2=G(base);
+      t('B2 공통 수수료율이 바뀌면 sig 가 달라진다(0.25% → 0.1%) · 되돌리면 같다',s1!==s0&&s2===s0&&/\|f0\.0025$/.test(s0)&&/\|f0\.001$/.test(s1),[s0,s1,s2].join(' / ')); }
+    const E2=loadEngine(S.eng),E3=loadEngine(S.eng.replace('let FEE_RATE=.0025;','let FEE_RATE=.0025; '));
     t('B3 엔진 코드 지문: 같은 파일이면 같은 값(두 화면) · 코드가 한 글자라도 바뀌면 다른 값 → 저장본을 다시 센다',E2.ENGINE_FP===E.ENGINE_FP&&E3.ENGINE_FP!==E.ENGINE_FP&&E2.paperRunSig(E2.paperRunOpts(sessB))===s0&&E3.paperRunSig(E3.paperRunOpts(sessB))!==s0,[E.ENGINE_FP,E2.ENGINE_FP,E3.ENGINE_FP].join());
   }
   // ── C 오늘 것인가 · 재생 끝 날 ──
@@ -248,7 +251,8 @@ const MUT=[
   ['묶기: 다시 풀어 확인 안 함','eng',s=>s.replace("  try{if(JSON.stringify(unpackRun(JSON.parse(run)))!==JSON.stringify(R))return null;}catch(e){return null;}\n","")],
   ['묶기: 크기 한도 안 봄','eng',s=>s.replace("  if(run.length>PAPER_RUN_MAX)return null;\n","")],
   ['풀기: 판·조건 안 봄','eng',s=>s.replace("if(!d||d.v!==PAPER_RUN_VER||d.sig!==sig||typeof d.run!=='string')return null;","if(!d||typeof d.run!=='string')return null;")],
-  ['조건: 원금 빠짐','eng',s=>s.replace("o.startDate,o.principal,o.monthlyAdd].join('|')","o.startDate,o.monthlyAdd].join('|')")],
+  ['조건: 원금 빠짐','eng',s=>s.replace("o.startDate,o.principal,o.monthlyAdd,'f'+FEE_RATE].join('|')","o.startDate,o.monthlyAdd,'f'+FEE_RATE].join('|')")],
+  ['조건: 공통 수수료율 빠짐(율을 바꿔도 옛 저장본을 그대로 씀)','eng',s=>s.replace("o.startDate,o.principal,o.monthlyAdd,'f'+FEE_RATE].join('|')","o.startDate,o.principal,o.monthlyAdd].join('|')")],
   ['조건: 공포 모드를 모의 여부 없이','eng',s=>s.replace("rules:r==='panic'?((sess&&sess.paper)?'panic':'base'):(r||'base')","rules:r==='panic'?'panic':(r||'base')")],
   ['지문: 엔진 코드와 무관한 고정값','eng',s=>s.replace("const ENGINE_FP=(()=>{const s=String(jkPlanSessionEngine);","const ENGINE_FP=(()=>{const s='fixed';")],
   ['오늘 것: 평일 안 따짐','eng',s=>s.replace("function paperRunFresh(upto,cut){const w=weekdayOnOrBefore(cut);","function paperRunFresh(upto,cut){const w=String(cut||'');")],

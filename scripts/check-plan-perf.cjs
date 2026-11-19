@@ -8,6 +8,9 @@ function fn(s,m){const a=s.indexOf(m);assert(a>=0,m);let i=s.indexOf('{',a),n=0;
 const near=(a,b,m)=>assert.ok(Math.abs(a-b)<1e-6,(m||'')+' '+a+' ≠ '+b);
 function load(src){
   const c={console};vm.createContext(c);c.window=c;vm.runInContext(ENG,c);
+  /* 공통 수수료율을 0.1% 로 둔다(설정 › 💸 수수료 값 · 엔진 setFeeRate 와 플랜 ALPHA_FEE_RATE 둘 다) — 아래 장부의 기록 수수료(10 · 5 · 3.2)가 그 율과 같아 손으로 센 값이 그대로다.
+     장부는 기록 칸이 아니라 이 율로 다시 센다(2026-11-19) — 율이 실제로 쓰이는지는 끝의 0.25% 시험이 본다 */
+  vm.runInContext('JKPlanSessionEngine.setFeeRate(0.001);var ALPHA_FEE_RATE=0.001;'+fn(src,'function alphaFee(q,p)'),c);
   vm.runInContext('const usd2=v=>"$"+(Number(v)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});var alphaLedger=null;'
     +'function alphaEventList(ledger=alphaLedger){return JKPlanSessionEngine.ledgerEvents(ledger);}function alphaLedgerCalc(ledger=alphaLedger){return JKPlanSessionEngine.ledgerCalc(ledger);}'
     +fn(src,'function alphaPerfCalc(ledger,startCap,prices)')+fn(src,'function alphaPerfHtml(P)'),c);
@@ -60,6 +63,10 @@ function check(src){
   assert.ok(src.includes("if(typeof renderAlphaPerf==='function')renderAlphaPerf();"),'계좌 카드와 같이 다시 그린다');
   assert.ok(src.includes("el.innerHTML=alphaPerfHtml(alphaPerfCalc(alphaLedger,num('startCapital'),prices));"));
   assert.ok(src.includes('<div class="k">평가손익 (보유분 · 확정 손익은 분석 탭)</div>'),'현재 탭 평가손익은 보유분만이라고 적는다');
+  // 공통 수수료율 0.25% 로 바꾸면 — 기록 칸(10 · 5 · 3.2)이 아니라 체결금액 18,200 × 0.25% = 45.5 를 떼고 현금 · 총손익도 그만큼(그 밖 0 그대로)
+  vm.runInContext('JKPlanSessionEngine.setFeeRate(0.0025);ALPHA_FEE_RATE=0.0025;',c);
+  const Q=c.alphaPerfCalc(LEDGER,20000,PX);
+  near(Q.fees,45.5,'0.25% 수수료');near(Q.total,19976.53-(45.5-18.2),'0.25% 총 자산');near(Q.pnl,-2580.70-(45.5-18.2),'0.25% 총손익');near(Q.other,0,'0.25% 분해');
 }
 check(SRC);
 const MUT=[
