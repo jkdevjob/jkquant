@@ -7476,7 +7476,7 @@ const __P7={};
         mains.forEach((o,i)=>H.push({date:d,kind:kindOf(o,rev),price:+cl.toFixed(4),qty:o.qty+(i===0?extra:0),ts:++seq}));
         if(!mains.length && extra>0) H.push({date:d,kind:'1회매수',price:+cl.toFixed(4),qty:extra,ts:++seq}); }
       __strat={settings:{...st},hist:H}; const c1=computeInf();
-      if(rev && c1.qty>0 && cl>c1.avg*exitMulOf(st.target)) H.push({date:d,kind:'리버스복귀',price:cl,qty:0,ts:++seq});
+      if(rev && c1.qty>0 && cl>c1.avg*exitMulOf(c1.tp)) H.push({date:d,kind:'리버스복귀',price:cl,qty:0,ts:++seq});   // 복귀선 = 그 사이클 익절%(앱 주문표·모의와 같게 · 익절 자동이면 10% 사이클은 평단×0.9)
     }
     ENV.CDATE='';   // 확정 종가 날짜를 다음 시험으로 흘리지 않는다
     return H;
@@ -7576,6 +7576,45 @@ const __P7={};
 /* ════ 106. 7차 — 무매 운영 3벌: 앱 주문표 · 서버 자동주문 · 5년 플랜 ════
    장부(computeInf·imCompute·calcInfState)와 주문(renderOrder·imOrders·플랜 imOrders)을 같은 입력에서 맞댄다.
    서버 판은 4·5차 감사 이전 규칙에 멈춰 있었다 — 복합거래 0주 종료·배당·리버스 상태·큰수 기본값이 달랐다. */
+/* ════ 105-자동. 사용자 실계좌 설정 그대로 — 익절 자동(MA150+초강세·고변동 · −10%→10%) · 큰수 20 · 하방 3줄 ════
+   (2026-11-19 점검 · 사용자: "운영 메뉴, 포트폴리오, 모의투자가 전략대로 제대로 코드가 구현되어 있는지 점검해봐")
+   [105] 는 익절 고정 · 큰수 15 만 대조했다. 실계좌 세션(키움·토스 SOXL 20분할)은 익절 자동 · 큰수 20 이다 —
+   같은 하네스로 백테(runIM) ↔ 모의(infSimForward) ↔ 운영(주문표 → 그날 봉 체결)을 거래 단위로 맞춘다. 리버스 끔(실계좌) · 켬 둘 다. */
+console.log('\n[105-자동] 무매 실계좌 설정(익절 자동 · 큰수 20 · 하방 3줄) — 백테 ↔ 모의 ↔ 운영 거래 단위 대조');
+{
+  const {runIMd, paperRun, quoteOfTk, liveRun, setLOGD, LOGD}=__P7;
+  const key=x=>`${x.date} ${x.kind} ${(+x.price).toFixed(4)} x${x.qty}`;
+  const trades=a=>a.filter(h=>h.kind!=='리버스복귀'&&h.kind!=='배당').map(key);
+  const firstDiff=(A,B)=>{ let k=0; while(k<A.length&&k<B.length&&A[k]===B[k]) k++; return (k===A.length&&k===B.length)?-1:k; };
+  const _save={imFill:global.imFill, imCostOn:global.imCostOn, imTgtDyn:global.imTgtDyn, imRevGap:global.imRevGap, imReverse:global.imReverse, imAutoTp:global.imAutoTp, imAutoBars:global.imAutoBars};
+  global.imFill='high'; global.imCostOn=false; global.imTgtDyn=false; global.imRevGap=0; global.imAutoTp=true;
+  for(const [tk,rev] of [['SOXL',false],['SOXL',true],['TQQQ',false]]){
+    if(!DAYS[tk]) continue;
+    global.imReverse=rev;
+    /* 앱 장부(computeInf)는 익절 자동 판정 봉을 imAutoBars 로 받는다 — 하네스 기본은 null(끔과 같음)이라 갈아 끼운다.
+       imAutoTP·imAutoTPM1 은 판정일 '전' 봉만 보므로 전 구간을 줘도 룩어헤드가 아니다(백테 runIM 도 같은 봉). */
+    const _bars=DAYS[tk].map(d=>({date:d, close:M[tk][d][C]}));
+    /* 운영 주문표는 앱처럼 확정 봉만(전날까지 · ENV.CDATE) — 모의 재생은 재생 날짜(_infReplayAsOf)로 스스로 막는다 */
+    const _ENV=__P7.ENV; global.imAutoBars=()=>_ENV.CDATE?_bars.filter(b=>b.date<=_ENV.CDATE):_bars;
+    const all=DAYS[tk], days=all.slice(1);
+    const st={ticker:tk,div:20,target:20,principal:10000,compound:true,reverse:rev,big:20,revGap:0,tgtDyn:false,divmode:'reinv',
+              rows:3,rowqty:1,autoTp:true,autoTpMode:'auto'};
+    setLOGD([]); runIMd(days, tk, 10000, 20, 20, true, 20);
+    const B=LOGD().map(key);
+    const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]};
+    paperRun(sess, quoteOfTk(tk), days[0]);
+    const P=trades(sess.hist), L=trades(liveRun(tk,st));
+    const nm=`${tk} 20분할 익절 자동 큰수 20 리버스${rev?'ON':'OFF'}`;
+    const k1=firstDiff(B,P), k2=firstDiff(L,P);
+    ok(`${nm} — 백테 ↔ 모의 거래 ${B.length}건 한 건도 안 다르다`, B.length>50 && k1<0, k1<0?'':`#${k1} 백테 [${B[k1]||'—'}] 모의 [${P[k1]||'—'}]`);
+    ok(`${nm} — 운영(주문표→실제 체결) ↔ 모의 거래 ${L.length}건 한 건도 안 다르다`, L.length>50 && k2<0, k2<0?'':`#${k2} 운영 [${L[k2]||'—'}] 모의 [${P[k2]||'—'}]`);
+    /* 시험이 헛돌지 않는다 — 같은 장부를 익절 고정 20% 로 다시 세면 거래가 달라야 한다(익절 자동이 실제로 10% 사이클을 만들었다) */
+    { global.imAutoBars=()=>null; const s0={paper:true,id:'q',simStart:days[0],settings:{...st,autoTp:false},hist:[]}; paperRun(s0, quoteOfTk(tk), days[0]); global.imAutoBars=()=>_ENV.CDATE?_bars.filter(b=>b.date<=_ENV.CDATE):_bars;
+      const F=trades(s0.hist); ok(`${nm} — 익절 자동이 실제로 결과를 바꾼다(고정 20% 와 다른 첫 거래 #${firstDiff(F,P)})`, firstDiff(F,P)>=0, ''); }
+  }
+  Object.assign(global,_save);
+}
+
 console.log('\n[106] 7차 — 무매 운영 3벌 (장부·주문)');
 {
   const imSrc7=fs.readFileSync(__d+'/functions/api/_im.js','utf8');
@@ -9724,7 +9763,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
   /* ── 섀넌(역분산) ── 목표 비중(σ)도, 밴드 이탈도 확정 종가 · 주문 수량만 현재가 (백테 runIVS 와 같은 규약) */
   const runIvs=(st,hist,Q)=>new Function('curStrat','ivsQuoteData','ivsQuote1','__CUT','nfix',
       base+'\n'+(idx.match(/const IVS_FEE=[^\n]*/)||[''])[0]+'\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
-      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function computeIvs()'])+'\nreturn computeIvs();')(
+      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function imBuyQty(alloc, refPx, feeRate)','function computeIvs()'])+'\nreturn computeIvs();')(
       ()=>({settings:st,hist}), Q, null, ()=>CUT, v=>String(v));
   { /* 하루 +5% / −4.5% 번갈아 — σ 가 s0 보다 커서 목표 비중이 1 아래(밴드 시험이 뜻이 있다) */
     const vol=[{date:dayOf(0),close:50}]; for(let i=1;i<80;i++) vol.push({date:dayOf(i), close:+(vol[i-1].close*(i%2?1.05:0.955)).toFixed(4)});
@@ -9758,7 +9797,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
     const Q={symbol:'TQQQ', days:[...vol,{date:tD,close:vS.close}], price:vS.close}, Q1={symbol:'QQQ', days:q1Days, price:p1S*3, last:{close:p1S*3}};
     const run1=(hist)=>new Function('curStrat','ivsQuoteData','ivsQuote1','__CUT','nfix',
       base+'\n'+(idx.match(/const IVS_FEE=[^\n]*/)||[''])[0]+'\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
-      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function computeIvs()'])+'\nreturn computeIvs();')(
+      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function imBuyQty(alloc, refPx, feeRate)','function computeIvs()'])+'\nreturn computeIvs();')(
       ()=>({settings:st,hist}), Q, Q1, ()=>CUT, v=>String(v));
     const z=at(vS.date,()=>run1([]));
     const q=Math.round(z.w*10000/vS.close), q1=Math.floor((10000-q*vS.close)/p1S);

@@ -721,7 +721,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.138.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.138.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1849,7 +1849,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.138.0</b> · 2026-11-19</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.138.1</b> · 2026-11-19</div>
   </footer>
 </div>
 
@@ -5351,9 +5351,9 @@ function renderMaNow(){
   // 판단 (신호 vs 내 포지션)
   let v='';
   if(hold && c.pos!=='hold'){
-    const qty=price>0?Math.floor((st.principal||0)/price):0;
+    const E=maEntryQty(st, curStrat().hist, price);
     v=`<div class="oitem b"><span class="tag">진입</span><span class="nm">현금 → 100% 매수 전환</span><span class="pr">${px(price)}</span></div>
-       <p class="note" style="margin-top:8px">약 ${qty}주 매수 (원금 ${wn(st.principal)} 기준). 아래 <b>🟢 진입 기록</b>으로 남기세요.</p>`;
+       <p class="note" style="margin-top:8px">약 ${E.qty}주 매수 (현금 ${wn(E.cash)} 전액 · 수수료 포함). 아래 <b>🟢 진입 기록</b>으로 남기세요.</p>`;
   }else if(!hold && c.pos==='hold'){
     v=`<div class="oitem s"><span class="tag">청산</span><span class="nm">보유 → 전액 현금 전환</span><span class="pr">${px(price)}</span></div>
        <p class="note" style="margin-top:8px">보유분 전량 매도 후 현금 보유. 아래 <b>🔴 청산 기록</b>으로 남기세요.</p>`;
@@ -5509,12 +5509,22 @@ function maReplay(){
   alert(`${rec.length}건 생성됨 ✓`);
   return true;
 }
+/* 로테 진입 수량 — 장부 현금(maLedger: 원금 ± 지난 매매 · 배당) 전액 ÷ (가격 × (1+수수료)) 내림.
+   모의 재생(maReplay)·백테(runMA200)가 사는 식 그대로(imBuyQty). 운영 '오늘 할 일' 안내(renderMaNow)와 🟢 진입 기록(maRecord)이 이 함수 하나를 쓴다.
+   예전엔 둘 다 원금 ÷ 가격(수수료 없음)이라 첫 청산 뒤엔 실제 현금과 상관없는 수량을 안내하고 장부에도 그 수량을 적었다
+   (2026-11-19 점검: 운영 ↔ 재생 하루씩 대조 — 원금 1만$ 가 2만$ 가 된 계좌에 절반만 사라고 했다). */
+function maEntryQty(st, hist, price){
+  const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025, L=maLedger(hist||[], price, +(st&&st.principal)||0);
+  return {cash:L.cash, qty:(price>0)?imBuyQty(L.cash, price, FEE):0};
+}
 function maRecord(type){
   const c=computeMa(), st=curStrat().settings;
   const price=c.ready?(c.price||c.lastClose):inputNum('ma_price');
   if(!price||price<=0){ alert('먼저 🔄 자동으로 현재가를 불러오거나 직접 입력하세요.'); return; }
   let rec; const date=new Date().toISOString().slice(0,10);
-  if(type==='in'){ const qty=Math.floor((st.principal||0)/price)||0; rec={type:'in',date,price:+price,qty,ts:Date.now()}; }
+  if(type==='in'){ const qty=maEntryQty(st, curStrat().hist, price).qty;
+    if(!(qty>=1)){ alert('장부 현금이 1주 값(수수료 포함)보다 적어 진입할 수 없습니다.'); return; }
+    rec={type:'in',date,price:+price,qty,ts:Date.now()}; }
   else{ rec={type:'out',date,price:+price,ts:Date.now()}; }
   if(!confirm(`${type==='in'?'진입(매수)':'청산(현금)'} ${px(price)}${rec.qty?' × '+rec.qty+'주':''}\n오늘(${date}) 기록할까요?`))return;
   const h=curStrat().hist; h.push(rec); sortHist(h); save(); refreshMa();
@@ -5898,14 +5908,20 @@ function computeIvs(){
   out.hit=Math.abs(out.gap)>band;
   // ── 리밸런싱 주문 ──
   // 레버리지: 목표 w·eq 로 맞춘다. 짝=1배수면 나머지 (1−w)·eq 를 1배로 맞춘다.
+  /* 주수는 재생(ivsReplay — 모의·과거 재생)·백테(runIVS)와 같은 식으로 센다 (2026-11-19 점검: 운영 ↔ 재생 하루씩 대조).
+     매수 = imBuyQty(배정금, 가격, 수수료) — 수수료를 얹어 내므로 배정금 ÷ (가격 × (1+수수료)) 내림 · 배정금 1$ 이하면 0주.
+     매도 = 넘친 금액 ÷ 가격 내림(재생 _sq 와 같은 1e-9) · 보유분 이하.
+     예전엔 매수를 배정금 × (1−수수료) ÷ 가격으로 세서 경계에서 엔진보다 1주 적었다(USD 2009-07-01 5,081 vs 5,082 · TECL 2012-08-28 1,502 vs 1,503). */
+  const _ivsSellQ=(x,have)=>Math.min(Math.floor(x+1e-9), Math.floor(have+1e-9));
+  const _ivsBuyQ=(sp,p)=>(sp>1)?imBuyQty(sp,p,IVS_FEE):0;
   if(out.hit && price>0){
     const tA=out.w*eq, notional=tA-qty*price;
     if(notional>0){
       // 매수 재원: 예수금 + (짝=1배수면 1배 매도분)
       const fund = X1 ? cash + qty1*price1 : cash;
       const spend=Math.min(fund,notional); out.side='buy';
-      out.orderQty=Math.floor(spend*(1-IVS_FEE)/price);
-    }else{ out.side='sell'; out.orderQty=Math.min(qty,Math.floor(-notional/price)); }
+      out.orderQty=_ivsBuyQ(spend,price);
+    }else{ out.side='sell'; out.orderQty=_ivsSellQ(-notional/price, qty); }
     out.orderAmt=(out.orderQty||0)*price;
     out.orderFee=out.orderAmt*IVS_FEE;
     if(out.side==='sell'&&avg>0) out.orderPnl=(out.orderQty||0)*(price-avg)-out.orderFee;
@@ -5914,8 +5930,8 @@ function computeIvs(){
       const cashAfter = cash + (out.side==='sell'? out.orderAmt-out.orderFee : -(out.orderAmt+out.orderFee));
       const tB=(1-out.w)*eq, need=tB-qty1*price1;
       if(need>0){ const sp=Math.min(Math.max(cashAfter,0),need);
-        out.side1='buy'; out.orderQty1=Math.floor(sp*(1-IVS_FEE)/price1); }
-      else { out.side1='sell'; out.orderQty1=Math.min(qty1,Math.floor(-need/price1)); }
+        out.side1='buy'; out.orderQty1=_ivsBuyQ(sp,price1); }
+      else { out.side1='sell'; out.orderQty1=_ivsSellQ(-need/price1, qty1); }
       out.orderAmt1=(out.orderQty1||0)*price1;
       out.orderFee1=out.orderAmt1*IVS_FEE;
       if(out.side1==='sell'&&avg1>0) out.orderPnl1=(out.orderQty1||0)*(price1-avg1)-out.orderFee1;
@@ -5924,9 +5940,9 @@ function computeIvs(){
   // ── 이번 달 투입 ── 목표 비중대로 나눠 산다 (백테 검증된 방식)
   if(out.monthly>0 && price>0){
     const mA=out.monthly*out.w, mB=out.monthly-mA;
-    out.addQty=Math.floor(mA*(1-IVS_FEE)/price);
+    out.addQty=_ivsBuyQ(mA,price);
     out.addAmt=(out.addQty||0)*price;
-    if(X1&&price1>0){ out.addQty1=Math.floor(mB*(1-IVS_FEE)/price1); out.addAmt1=(out.addQty1||0)*price1; }
+    if(X1&&price1>0){ out.addQty1=_ivsBuyQ(mB,price1); out.addAmt1=(out.addQty1||0)*price1; }
     else { out.addCash=mB; }   // 짝이 현금·국채면 나머지는 예수금으로
   }
   // 트리거 가격 — 이 밖으로 나가야 밴드를 벗어난다 (σ·1배 가격이 그대로라는 가정)

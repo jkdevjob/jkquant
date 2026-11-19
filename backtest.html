@@ -333,7 +333,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.18.0</span></h1>
+      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.18.1</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2707,7 +2707,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
      addedCash 는 밖에서 채워 넣던 흔적이라 이제 늘 0 이다 — 운영 computeInf 와 같은 규약. */
-  let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0,addedCash=0,cycleStart='',m1N=0;
+  let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0,addedCash=0,cycleStart='',m1N=0,autoOK=false;   // autoOK — 이번 사이클 익절 자동 판정에 자료가 있었나(없으면 설정 익절% · MA150 −10% 규칙도 안 씀 — 앱 computeInf 와 같다 · 2026-11-19)
   // ── 비용·세금 (imCostOn=false면 전부 0, 기존과 완전 동일) ──
   const CO = (typeof imCostOn!=='undefined') && imCostOn;
   const _C=costOf(tkr), FEE = CO?_C.fee:0, SLIP = CO?_C.slip:0;
@@ -2778,7 +2778,10 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
     const prev5=closeHist.length?closeHist.reduce((s,x)=>s+x,0)/closeHist.length:0;
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
     if(AUTO&&cycleStart&&shares>0&&curTP===20){
-      const P=imAutoTPM1(AUTO,cycleStart,d,{tp:20});
+      /* 사이클 첫 매수일 판정이 자료 부족(null)이었으면 앱 장부(computeInf: cycTp=null → imAutoTPM1 이 base 그대로)처럼 −10% 규칙도 안 쓴다.
+         예전엔 여기서 {tp:20} 을 새로 넣어 판정이 없던 사이클에도 10% 로 바꿨다 — 상장 초 150일 안에 시작한 사이클에서 백테만 갈렸다
+         (2026-11-19 점검 · SOXL 2021-05-13 1회매수 25주 vs 앱 26주). */
+      const P=autoOK?imAutoTPM1(AUTO,cycleStart,d,{tp:20}):null;
       if(P&&P.tp===10){curTP=10;starBase=10;starSlope=starBase*0.1*20/divs;exitMul=1-starBase/100;m1N++;}
     }
 
@@ -2826,7 +2829,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
     /* 익절 자동 — 보유 0 · T 0 인 아침(새 사이클 첫 매수 전)마다 이번 사이클 익절%를 다시 정한다. 첫 매수가 체결된 날의 판정이
        그 사이클 끝까지 간다(같은 날 익절 뒤 LOC 매수로 이어지는 날은 T 가 0 이 아니라 다시 안 잰다 · 제14차 D15). 자료가 모자라면 설정 익절%. */
     const flat0=!(shares>0) && T===0;
-    if(AUTO && flat0){ const P=imAutoTP(AUTO, d), tp=P?P.tp:targetPct;
+    if(AUTO && flat0){ const P=imAutoTP(AUTO, d), tp=P?P.tp:targetPct; autoOK=!!P;
       if(tp!==curTP){ curTP=tp; starBase=tp; starSlope=starBase*0.1*20/divs; exitMul=1-starBase/100; } }
     const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, imRowsOf({}), isKRW(tkr)?'krw':'usd');
     let soldToday=false;               // 오늘 매도가 체결됐나 — 사이클 종료는 하루 주문을 다 처리한 뒤에만 판정한다 (제14차 D15)
