@@ -36,7 +36,7 @@
   table { width:100%; border-collapse:separate; border-spacing:0; margin-top:34px; background:#fff; border-radius:24px; overflow:hidden; box-shadow:0 6px 18px rgba(0,0,0,.10); }
   .mb table { background:#16243d; }
   th { background:var(--navy); color:#fff; font-size:34px; font-weight:800; padding:20px 18px; text-align:left; }
-  td { font-size:46px; font-weight:800; padding:22px 18px; border-top:2px solid rgba(0,0,0,.06); }
+  td { font-size:46px; font-weight:800; padding:19px 18px; border-top:2px solid rgba(0,0,0,.06); }
   td.dim { color:var(--gray); font-size:40px; }
   tr.hi td { background:var(--yel); color:#16130f; }
   tr:nth-child(even):not(.hi) td { background:rgba(0,0,0,.025); }
@@ -52,7 +52,8 @@
   ol.list .tx b { display:block; font-size:42px; font-weight:800; line-height:1.25; }
   ol.list .tx span { display:block; font-size:32px; font-weight:700; color:var(--gray); margin-top:6px; line-height:1.35; }
   .foot { position:absolute; left:0; right:0; bottom:0; height:110px; background:var(--navy); color:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 64px 0 120px; }
-  .foot .hd { font-size:38px; font-weight:800; }
+  .foot .hd { font-size:38px; font-weight:800; white-space:nowrap; }
+  .mb .foot .hd { font-size:32px; }
   .foot .ds { font-size:24px; color:#c9d3e3; text-align:right; line-height:1.35; }
   .cta .big2 { font-size:76px; font-weight:800; line-height:1.2; margin-top:40px; }
   .cta .big2 .r { color:var(--red); }
@@ -64,6 +65,12 @@
   .bar .bl { flex:0 0 190px; font-size:32px; font-weight:800; }
   .bar .bw { flex:1; height:52px; position:relative; }
   .bar .bf { height:100%; border-radius:12px; background:var(--c); display:flex; align-items:center; justify-content:flex-end; padding-right:16px; color:#fff; font-size:34px; font-weight:800; }
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-top:30px; }
+  .tile { background:#fff; border-radius:26px; padding:22px 26px 20px; box-shadow:0 6px 18px rgba(0,0,0,.10); border-top:12px solid var(--red); }
+  .mb .tile { background:#16243d; }
+  .tile .lab { font-size:34px; font-weight:800; color:var(--gray); }
+  .tile .big { font-size:84px; font-weight:800; color:var(--red); line-height:1.08; margin:10px 0 6px; letter-spacing:-0.05em; }
+  .tile .cap { font-size:31px; font-weight:700; line-height:1.3; }
   .more { margin-top:36px; }
   .more .mt { font-size:34px; font-weight:800; color:var(--gray); margin-bottom:14px; }
   .more span { display:inline-block; background:#fff; border:3px solid var(--navy); border-radius:40px; padding:10px 24px; margin:0 12px 14px 0; font-size:32px; font-weight:800; }
@@ -84,7 +91,9 @@ const html = D.slides.map((s, i) => {
   if (s.type === "cover") {
     b = `<div class="t1">${rich(s.t1)}</div><div class="t2">${rich(s.t2)}</div>${s.sub ? `<div class="sub">${rich(s.sub)}</div>` : ""}
       <div class="vs">${(s.cards || []).map((c) => `<div class="card" style="--c:${c.color === "blue" ? "var(--blue)" : "var(--red)"}"><div class="lab">${rich(c.label)}</div><div class="big">${esc(c.big)}</div><div class="cap">${rich(c.cap)}</div></div>`).join("")}</div>
+      ${s.tiles ? `<div class="tiles">${s.tiles.map((x) => `<div class="tile"><div class="lab">${rich(x.label)}</div><div class="big">${esc(x.big)}</div><div class="cap">${rich(x.cap)}</div></div>`).join("")}</div>` : ""}
       ${s.bars ? `<div class="bars"><div class="bt">${rich(s.bars.t)}</div>${s.bars.items.map((x) => `<div class="bar" style="--c:${x.color === "blue" ? "var(--blue)" : x.color === "gray" ? "#8a8178" : "var(--red)"}"><div class="bl">${rich(x.label)}</div><div class="bw"><div class="bf" style="width:${Math.round(x.pct / s.bars.max * 100)}%">${esc(x.text)}</div></div></div>`).join("")}</div>` : ""}
+      ${s.box ? `<div class="box"><div class="bt">${esc(s.box.t)}</div><p>${rich(s.box.p)}</p></div>` : ""}
       ${s.swipe ? `<div class="swipe"><span>${esc(s.swipe)}</span></div>` : ""}`;
   } else if (s.type === "table") {
     b = `<div class="h">${rich(s.title)}</div>${s.sub ? `<div class="sub">${rich(s.sub)}</div>` : ""}
