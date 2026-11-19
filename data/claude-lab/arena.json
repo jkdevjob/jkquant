@@ -2600,171 +2600,6 @@
      ]
     },
     {
-     "version": "g_coin_ma20_s99_hi2_eth",
-     "name": "평균 20일 · 최근 2일 고가 돌파 · 손절 없음 · ETH 만",
-     "rule": "어제 종가 > 20일 평균인 날, 최근 2일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · ETH 만 · 탭 자금 80%",
-     "params": {
-      "ma": 20,
-      "stopPct": 99.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 2,
-      "lastEntryHour": null,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-10-07",
-     "op": "struct",
-     "parents": [
-      "g_coin_ma20_s99_vb0.7_eth"
-     ]
-    },
-    {
-     "version": "g_coin_ma10_s10_hi5_both",
-     "name": "평균 10일 · 최근 5일 고가 돌파 · 손절 −10% · BTC·ETH 반반",
-     "rule": "어제 종가 > 10일 평균인 날, 최근 5일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · BTC·ETH 반반 · 탭 자금 80%",
-     "params": {
-      "ma": 10,
-      "stopPct": 10.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 5,
-      "lastEntryHour": null,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-BTC",
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-10-13",
-     "op": "cross",
-     "parents": [
-      "g_coin_ma10_s10_hi7_eth",
-      "g_coin_ma15_s99_hi5_both"
-     ]
-    },
-    {
-     "version": "g_coin_ma5_s10_hi7_eth",
-     "name": "평균 5일 · 최근 7일 고가 돌파 · 손절 −10% · ETH 만",
-     "rule": "어제 종가 > 5일 평균인 날, 최근 7일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · ETH 만 · 탭 자금 80%",
-     "params": {
-      "ma": 5,
-      "stopPct": 10.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 7,
-      "lastEntryHour": null,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-10-13",
-     "op": "jump2",
-     "parents": [
-      "g_coin_ma10_s10_hi7_eth"
-     ]
-    },
-    {
-     "version": "g_coin_ma5_s10_hi5_eth",
-     "name": "평균 5일 · 최근 5일 고가 돌파 · 손절 −10% · ETH 만",
-     "rule": "어제 종가 > 5일 평균인 날, 최근 5일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · ETH 만 · 탭 자금 80%",
-     "params": {
-      "ma": 5,
-      "stopPct": 10.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 5,
-      "lastEntryHour": null,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-10-13",
-     "op": "cross",
-     "parents": [
-      "g_coin_ma10_s10_hi5_both",
-      "g_coin_ma5_s10_hi7_eth"
-     ]
-    },
-    {
-     "version": "g_coin_ma5_s10_hi5_both",
-     "name": "평균 5일 · 최근 5일 고가 돌파 · 손절 −10% · BTC·ETH 반반",
-     "rule": "어제 종가 > 5일 평균인 날, 최근 5일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · BTC·ETH 반반 · 탭 자금 80%",
-     "params": {
-      "ma": 5,
-      "stopPct": 10.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 5,
-      "lastEntryHour": null,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-BTC",
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-10-13",
-     "op": "cross",
-     "parents": [
-      "g_coin_ma5_s10_hi7_eth",
-      "g_coin_ma10_s10_hi5_both"
-     ]
-    },
-    {
-     "version": "g_coin_ma5_s8_hi4_both",
-     "name": "평균 5일 · 최근 4일 고가 돌파 · 손절 −8% · BTC·ETH 반반",
-     "rule": "어제 종가 > 5일 평균인 날, 최근 4일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · BTC·ETH 반반 · 탭 자금 80%",
-     "params": {
-      "ma": 5,
-      "stopPct": 8.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 4,
-      "lastEntryHour": null,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-BTC",
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-11-12",
-     "op": "jump2",
-     "parents": [
-      "g_coin_ma5_s10_hi5_both"
-     ]
-    },
-    {
-     "version": "g_coin_ma40_s99_hi2_h18_eth",
-     "name": "평균 40일 · 최근 2일 고가 돌파 · 손절 없음 · 18시 전 돌파만 · ETH 만",
-     "rule": "어제 종가 > 40일 평균인 날, 최근 2일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · 18시 전 돌파만 · ETH 만 · 탭 자금 80%",
-     "params": {
-      "ma": 40,
-      "stopPct": 99.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 2,
-      "lastEntryHour": 18,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-11-17",
-     "op": "explore",
-     "parents": []
-    },
-    {
      "version": "g_coin_ma40_s8_hi5_h18_both",
      "name": "평균 40일 · 최근 5일 고가 돌파 · 손절 −8% · 18시 전 돌파만 · BTC·ETH 반반",
      "rule": "어제 종가 > 40일 평균인 날, 최근 5일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 18시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
@@ -2828,6 +2663,224 @@
      "addedAt": "2026-11-19",
      "op": "explore",
      "parents": []
+    },
+    {
+     "version": "g_coin_ma40_s8_hi10_h21_both",
+     "name": "평균 40일 · 최근 10일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 최근 10일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 10,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "struct",
+     "parents": [
+      "g_coin_ma40_s8_vb1_h21_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s8_vb0.7_h21_both",
+     "name": "평균 40일 · 시가+0.7×어제 폭 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 시가+0.7×어제 폭를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "vb",
+      "k": 0.7,
+      "hiN": 1,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "cross",
+     "parents": [
+      "g_coin_ma40_s8_vb1_h21_both",
+      "g_coin_ma80_s5_vb0.7_h12_eth"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s8_hi3_h21_both",
+     "name": "평균 40일 · 최근 3일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 최근 3일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 3,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "struct",
+     "parents": [
+      "g_coin_ma40_s8_vb1_h21_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s8_hi2_h18_both",
+     "name": "평균 40일 · 최근 2일 고가 돌파 · 손절 −8% · 18시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 최근 2일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 18시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 2,
+      "lastEntryHour": 18,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "struct",
+     "parents": [
+      "g_coin_ma40_s8_hi5_h18_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s8_hi4_h15_both",
+     "name": "평균 40일 · 최근 4일 고가 돌파 · 손절 −8% · 15시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 최근 4일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 15시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 4,
+      "lastEntryHour": 15,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "jump2",
+     "parents": [
+      "g_coin_ma40_s8_hi5_h18_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s8_vb1_h18_both",
+     "name": "평균 40일 · 시가+1×어제 폭 돌파 · 손절 −8% · 18시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 시가+1×어제 폭를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 18시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "vb",
+      "k": 1.0,
+      "hiN": 1,
+      "lastEntryHour": 18,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "cross",
+     "parents": [
+      "g_coin_ma40_s8_vb1_h21_both",
+      "g_coin_ma40_s8_hi5_h18_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s5_hi5_h12_both",
+     "name": "평균 40일 · 최근 5일 고가 돌파 · 손절 −5% · 12시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 최근 5일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −5% · 12시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 5,
+      "lastEntryHour": 12,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "cross",
+     "parents": [
+      "g_coin_ma80_s5_vb0.7_h12_eth",
+      "g_coin_ma40_s8_hi5_h18_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s5_vb0.7_h12_eth",
+     "name": "평균 40일 · 시가+0.7×어제 폭 돌파 · 손절 −5% · 12시 전 돌파만 · ETH 만",
+     "rule": "어제 종가 > 40일 평균인 날, 시가+0.7×어제 폭를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −5% · 12시 전 돌파만 · ETH 만 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 5.0,
+      "level": "vb",
+      "k": 0.7,
+      "hiN": 1,
+      "lastEntryHour": 12,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "cross",
+     "parents": [
+      "g_coin_ma80_s5_vb0.7_h12_eth",
+      "g_coin_ma40_s8_vb1_h21_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s8_vb1_h21_btc",
+     "name": "평균 40일 · 시가+1×어제 폭 돌파 · 손절 −8% · 21시 전 돌파만 · BTC 만",
+     "rule": "어제 종가 > 40일 평균인 날, 시가+1×어제 폭를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC 만 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "vb",
+      "k": 1.0,
+      "hiN": 1,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "neighbor",
+     "parents": [
+      "g_coin_ma40_s8_vb1_h21_both"
+     ]
     }
    ],
    "retired": [
@@ -3836,6 +3889,135 @@
      },
      "retiredAt": "2026-11-19",
      "reason": "손실 기준 미달 — MDD -56.9% · 최악일 -8.5% · 거래당 +0.03%"
+    },
+    {
+     "version": "g_coin_ma5_s8_hi4_both",
+     "name": "평균 5일 · 최근 4일 고가 돌파 · 손절 −8% · BTC·ETH 반반",
+     "params": {
+      "ma": 5,
+      "stopPct": 8.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 4,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "손실 기준 미달 — MDD -63.2% · 최악일 -6.9% · 거래당 -0.02%"
+    },
+    {
+     "version": "g_coin_ma20_s99_hi2_eth",
+     "name": "평균 20일 · 최근 2일 고가 돌파 · 손절 없음 · ETH 만",
+     "params": {
+      "ma": 20,
+      "stopPct": 99.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 2,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "손실 기준 미달 — MDD -38.0% · 최악일 -11.8% · 거래당 +0.15%"
+    },
+    {
+     "version": "g_coin_ma5_s10_hi5_both",
+     "name": "평균 5일 · 최근 5일 고가 돌파 · 손절 −10% · BTC·ETH 반반",
+     "params": {
+      "ma": 5,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "손실 기준 미달 — MDD -52.1% · 최악일 -7.3% · 거래당 +0.02%"
+    },
+    {
+     "version": "g_coin_ma10_s10_hi5_both",
+     "name": "평균 10일 · 최근 5일 고가 돌파 · 손절 −10% · BTC·ETH 반반",
+     "params": {
+      "ma": 10,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "손실 기준 미달 — MDD -42.4% · 최악일 -7.3% · 거래당 +0.05%"
+    },
+    {
+     "version": "g_coin_ma40_s99_hi2_h18_eth",
+     "name": "평균 40일 · 최근 2일 고가 돌파 · 손절 없음 · 18시 전 돌파만 · ETH 만",
+     "params": {
+      "ma": 40,
+      "stopPct": 99.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 2,
+      "lastEntryHour": 18,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "손실 기준 미달 — MDD -27.3% · 최악일 -11.8% · 거래당 +0.22%"
+    },
+    {
+     "version": "g_coin_ma5_s10_hi5_eth",
+     "name": "평균 5일 · 최근 5일 고가 돌파 · 손절 −10% · ETH 만",
+     "params": {
+      "ma": 5,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "손실 기준 미달 — MDD -57.6% · 최악일 -8.5% · 거래당 +0.08%"
+    },
+    {
+     "version": "g_coin_ma5_s10_hi7_eth",
+     "name": "평균 5일 · 최근 7일 고가 돌파 · 손절 −10% · ETH 만",
+     "params": {
+      "ma": 5,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 7,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "손실 기준 미달 — MDD -44.2% · 최악일 -8.5% · 거래당 +0.13%"
     }
    ],
    "tried": [
@@ -5951,7 +6133,44 @@
     "g_coin_ma25_s2_vb1_h18_eth",
     "g_coin_ma20_s2_hi20_h15_btc",
     "g_coin_ma100_s6_hi20_both",
-    "g_coin_ma5_s99_vb0.3_h21_both"
+    "g_coin_ma5_s99_vb0.3_h21_both",
+    "g_coin_ma80_s5_hi2_h12_eth",
+    "g_coin_ma80_s5_vb1_h12_both",
+    "g_coin_ma80_s5_hi3_h12_eth",
+    "g_coin_ma80_s5_hi7_h12_eth",
+    "g_coin_ma40_s5_vb0.5_h18_eth",
+    "g_coin_ma40_s8_hi_h21_both",
+    "g_coin_ma100_s5_hi_h12_eth",
+    "g_coin_ma80_s5_vb1_h21_eth",
+    "g_coin_ma80_s5_vb0.7_h21_eth",
+    "g_coin_ma80_s5_hi10_h12_eth",
+    "g_coin_ma40_s8_vb0.5_h18_both",
+    "g_coin_ma40_s8_hi_h18_both",
+    "g_coin_ma50_s8_hi_h21_both",
+    "g_coin_ma80_s5_hi5_h12_eth",
+    "g_coin_ma40_s8_hi7_h18_both",
+    "g_coin_ma80_s8_vb1_h12_both",
+    "g_coin_ma100_s5_vb0.7_h12_btc",
+    "g_coin_ma80_s5_vb0.8_h12_eth",
+    "g_coin_ma100_s5_vb0.7_h15_eth",
+    "g_coin_ma80_s5_vb0.7_eth",
+    "g_coin_ma80_s5_vb0.7_h18_eth",
+    "g_coin_ma40_s8_hi_h12_eth",
+    "g_coin_ma80_s8_hi_h12_eth",
+    "g_coin_ma80_s8_hi5_h18_both",
+    "g_coin_ma80_s5_vb0.7_h12_both",
+    "g_coin_ma80_s5_vb0.7_h21_both",
+    "g_coin_ma80_s5_vb1_h12_eth",
+    "g_coin_ma80_s5_vb1_h21_both",
+    "g_coin_ma40_s8_hi5_h21_both",
+    "g_coin_ma40_s8_hi10_h18_both",
+    "g_coin_ma40_s8_hi2_h21_both",
+    "g_coin_ma40_s8_hi3_h18_both",
+    "g_coin_ma40_s6_vb1_h21_both",
+    "g_coin_ma40_s5_vb1_h21_both",
+    "g_coin_ma40_s5_vb0.7_h12_both",
+    "g_coin_ma40_s8_vb0.5_h12_eth",
+    "g_coin_ma40_s8_vb0.7_h12_eth"
    ],
    "snapshots": [
     {
@@ -6931,14 +7150,17 @@
     },
     {
      "date": "2026-11-19",
-     "top": "g_coin_ma15_s99_hi7_eth",
+     "top": "g_coin_ma40_s8_hi5_h18_both",
      "main": "g_coin_ma15_s99_hi7_eth",
      "bottom": [
-      "g_coin_ma15_s10_hi_eth",
-      "g_coin_ma5_s8_hi2_both",
-      "g_coin_ma5_s10_hi_both"
+      "g_coin_ma5_s10_hi5_both",
+      "g_coin_ma20_s99_hi2_eth",
+      "g_coin_ma5_s8_hi4_both"
      ],
      "ranks": [
+      "g_coin_ma40_s8_hi5_h18_both",
+      "g_coin_ma40_s8_vb1_h21_both",
+      "g_coin_ma80_s5_vb0.7_h12_eth",
       "g_coin_ma15_s99_hi7_eth",
       "g_coin_ma5_s10_hi7_eth",
       "g_coin_ma5_s10_hi5_eth",
@@ -6946,33 +7168,30 @@
       "g_coin_ma10_s10_hi5_both",
       "g_coin_ma5_s10_hi5_both",
       "g_coin_ma20_s99_hi2_eth",
-      "g_coin_ma5_s8_hi4_both",
-      "g_coin_ma15_s10_hi_eth",
-      "g_coin_ma5_s8_hi2_both",
-      "g_coin_ma5_s10_hi_both"
+      "g_coin_ma5_s8_hi4_both"
      ]
     }
    ],
    "ops": {
     "neighbor": {
-     "tried": 83,
-     "accepted": 0
+     "tried": 88,
+     "accepted": 1
     },
     "explore": {
      "tried": 4322,
      "accepted": 19
     },
     "jump2": {
-     "tried": 396,
-     "accepted": 10
+     "tried": 402,
+     "accepted": 11
     },
     "struct": {
-     "tried": 36,
-     "accepted": 9
+     "tried": 49,
+     "accepted": 12
     },
     "cross": {
-     "tried": 49,
-     "accepted": 13
+     "tried": 73,
+     "accepted": 17
     }
    }
   },
@@ -7155,13 +7374,13 @@
      "parents": []
     },
     {
-     "version": "g_soxl_r3lt15_ibs0.1_dn2_ma100_d5",
-     "name": "RSI(3) < 15 · 종가 위치(IBS) ≤ 0.1 · 2일 연속 하락 · 100일 평균 위 · 최대 5일",
-     "rule": "확정 종가 RSI(3) < 15 · 종가 위치(IBS) ≤ 0.1 · 2일 연속 하락 · 100일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+     "version": "g_soxl_r3lt40_ibs0.7_dn2_ma100_d5",
+     "name": "RSI(3) < 40 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 100일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(3) < 40 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 100일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
      "params": {
-      "rsiMax": 15.0,
+      "rsiMax": 40.0,
       "rsiN": 3,
-      "ibsMax": 0.1,
+      "ibsMax": 0.7,
       "downDays": 2,
       "ma": 100,
       "maxHoldDays": 5,
@@ -7169,44 +7388,71 @@
      },
      "source": "generated",
      "addedAt": "2026-11-19",
-     "op": "explore",
-     "parents": []
+     "op": "struct",
+     "parents": [
+      "g_soxl_r3lt40_dn2_ma100_d5"
+     ]
     },
     {
-     "version": "g_soxl_r3lt35_ibs0.3_dn3_ma100_d2",
-     "name": "RSI(3) < 35 · 종가 위치(IBS) ≤ 0.3 · 3일 연속 하락 · 100일 평균 위 · 최대 2일",
-     "rule": "확정 종가 RSI(3) < 35 · 종가 위치(IBS) ≤ 0.3 · 3일 연속 하락 · 100일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 2거래일 · 탭 자금 50%",
+     "version": "g_soxl_r3lt35_ibs0.7_dn2_ma100_d5",
+     "name": "RSI(3) < 35 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 100일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(3) < 35 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 100일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
      "params": {
       "rsiMax": 35.0,
       "rsiN": 3,
-      "ibsMax": 0.3,
-      "downDays": 3,
+      "ibsMax": 0.7,
+      "downDays": 2,
       "ma": 100,
-      "maxHoldDays": 2,
+      "maxHoldDays": 5,
       "tabSize": 0.5
      },
      "source": "generated",
      "addedAt": "2026-11-19",
-     "op": "explore",
-     "parents": []
+     "op": "neighbor",
+     "parents": [
+      "g_soxl_r3lt35_dn2_ma100_d5"
+     ]
     },
     {
-     "version": "g_soxl_r3lt20_ibs0.5_dn1_ma150_d3",
-     "name": "RSI(3) < 20 · 종가 위치(IBS) ≤ 0.5 · 1일 연속 하락 · 150일 평균 위 · 최대 3일",
-     "rule": "확정 종가 RSI(3) < 20 · 종가 위치(IBS) ≤ 0.5 · 1일 연속 하락 · 150일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 3거래일 · 탭 자금 50%",
+     "version": "g_soxl_r3lt35_dn1_ma50_d3",
+     "name": "RSI(3) < 35 · 1일 연속 하락 · 50일 평균 위 · 최대 3일",
+     "rule": "확정 종가 RSI(3) < 35 · 1일 연속 하락 · 50일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 3거래일 · 탭 자금 50%",
      "params": {
-      "rsiMax": 20.0,
+      "rsiMax": 35.0,
       "rsiN": 3,
-      "ibsMax": 0.5,
+      "ibsMax": 1.0,
       "downDays": 1,
-      "ma": 150,
+      "ma": 50,
       "maxHoldDays": 3,
       "tabSize": 0.5
      },
      "source": "generated",
      "addedAt": "2026-11-19",
-     "op": "explore",
-     "parents": []
+     "op": "jump2",
+     "parents": [
+      "g_soxl_r3lt40_dn1_ma50_d4"
+     ]
+    },
+    {
+     "version": "g_soxl_r3lt40_dn2_ma150_d4",
+     "name": "RSI(3) < 40 · 2일 연속 하락 · 150일 평균 위 · 최대 4일",
+     "rule": "확정 종가 RSI(3) < 40 · 2일 연속 하락 · 150일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 4거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 40.0,
+      "rsiN": 3,
+      "ibsMax": 1.0,
+      "downDays": 2,
+      "ma": 150,
+      "maxHoldDays": 4,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-11-19",
+     "op": "cross",
+     "parents": [
+      "g_soxl_r3lt40_dn1_ma150_d4",
+      "g_soxl_r3lt40_dn2_ma100_d5"
+     ]
     }
    ],
    "retired": [
@@ -8476,6 +8722,51 @@
      },
      "retiredAt": "2026-11-19",
      "reason": "손실 기준 미달 — MDD -35.6% · 최악일 -7.6% · 거래당 +0.19%"
+    },
+    {
+     "version": "g_soxl_r3lt20_ibs0.5_dn1_ma150_d3",
+     "name": "RSI(3) < 20 · 종가 위치(IBS) ≤ 0.5 · 1일 연속 하락 · 150일 평균 위 · 최대 3일",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 3,
+      "ibsMax": 0.5,
+      "downDays": 1,
+      "ma": 150,
+      "maxHoldDays": 3,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "자리 교체 — 신규 g_soxl_r3lt35_ibs0.7_dn2_ma100_d5 가 순위 점수 +0.104 로 +0.010 보다 확실히 나음"
+    },
+    {
+     "version": "g_soxl_r3lt35_ibs0.3_dn3_ma100_d2",
+     "name": "RSI(3) < 35 · 종가 위치(IBS) ≤ 0.3 · 3일 연속 하락 · 100일 평균 위 · 최대 2일",
+     "params": {
+      "rsiMax": 35.0,
+      "rsiN": 3,
+      "ibsMax": 0.3,
+      "downDays": 3,
+      "ma": 100,
+      "maxHoldDays": 2,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "자리 교체 — 신규 g_soxl_r3lt35_dn1_ma50_d3 가 순위 점수 +0.087 로 +0.015 보다 확실히 나음"
+    },
+    {
+     "version": "g_soxl_r3lt15_ibs0.1_dn2_ma100_d5",
+     "name": "RSI(3) < 15 · 종가 위치(IBS) ≤ 0.1 · 2일 연속 하락 · 100일 평균 위 · 최대 5일",
+     "params": {
+      "rsiMax": 15.0,
+      "rsiN": 3,
+      "ibsMax": 0.1,
+      "downDays": 2,
+      "ma": 100,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-11-19",
+     "reason": "자리 교체 — 신규 g_soxl_r3lt40_dn2_ma150_d4 가 순위 점수 +0.088 로 +0.017 보다 확실히 나음"
     }
    ],
    "tried": [
@@ -11019,7 +11310,45 @@
     "g_soxl_r4lt35_ibs0.3_ma200_d1",
     "g_soxl_r3lt40_ibs0.7_dn1_ma100_d5",
     "g_soxl_r3lt40_dn1_ma50_d5",
-    "g_soxl_r3lt40_dn1_ma150_d5"
+    "g_soxl_r3lt40_dn1_ma150_d5",
+    "g_soxl_r3lt35_dn3_ma100_d5",
+    "g_soxl_r3lt35_dn2_ma150_d5",
+    "g_soxl_norsi_ibs0.3_dn2_ma100_d5",
+    "g_soxl_r3lt40_ma0_d4",
+    "g_soxl_r3lt35_ibs0.3_dn2_ma100_d5",
+    "g_soxl_r3lt35_dn2_ma50_d5",
+    "g_soxl_r3lt40_dn3_ma100_d5",
+    "g_soxl_r3lt35_ibs0.7_ma100_d1",
+    "g_soxl_r2lt40_dn1_ma50_d4",
+    "g_soxl_r3lt40_ma50_d3",
+    "g_soxl_r4lt40_dn1_ma200_d4",
+    "g_soxl_r2lt5_ma150_d3",
+    "g_soxl_r4lt35_ibs0.7_dn2_ma100_d5",
+    "g_soxl_r4lt35_dn1_ma150_d4",
+    "g_soxl_r2lt35_dn2_ma100_d4",
+    "g_soxl_r2lt35_dn2_ma100_d5",
+    "g_soxl_r3lt40_dn2_ma150_d3",
+    "g_soxl_r4lt40_dn2_ma100_d5",
+    "g_soxl_r4lt40_ibs0.7_dn1_ma50_d4",
+    "g_soxl_r2lt40_dn2_ma50_d5",
+    "g_soxl_r4lt35_dn1_ma50_d4",
+    "g_soxl_r4lt35_dn2_ma100_d5",
+    "g_soxl_r4lt35_dn2_ma50_d5",
+    "g_soxl_norsi_ibs0.3_ma0_d4",
+    "g_soxl_r2lt40_dn1_ma150_d3",
+    "g_soxl_r3lt35_dn1_ma150_d4",
+    "g_soxl_r3lt35_dn1_ma150_d3",
+    "g_soxl_r2lt35_dn2_ma50_d5",
+    "g_soxl_r4lt40_ibs0.7_dn2_ma100_d5",
+    "g_soxl_norsi_dn1_ma200_d4",
+    "g_soxl_norsi_dn1_ma150_d4",
+    "g_soxl_norsi_dn2_ma150_d5",
+    "g_soxl_r3lt35_dn2_ma100_d4",
+    "g_soxl_r3lt35_dn1_ma50_d4",
+    "g_soxl_r3lt30_dn2_ma100_d5",
+    "g_soxl_r3lt35_dn2_ma150_d4",
+    "g_soxl_r3lt40_dn2_ma50_d4",
+    "g_soxl_r3lt35_dn2_ma50_d4"
    ],
    "snapshots": [
     {
@@ -12002,47 +12331,46 @@
      "top": "g_soxl_r3lt40_dn1_ma100_d5",
      "main": "g_soxl_norsi_ibs0.6_dn1_ma50_d3",
      "bottom": [
-      "g_soxl_r2lt25_ibs0.3_ma150_d4",
-      "g_soxl_r3lt40_ibs0.3_dn1_ma150_d5",
-      "g_soxl_r2lt10_dn2_ma100_d4"
+      "g_soxl_r3lt15_ibs0.1_dn2_ma100_d5",
+      "g_soxl_r3lt35_ibs0.3_dn3_ma100_d2",
+      "g_soxl_r3lt20_ibs0.5_dn1_ma150_d3"
      ],
      "ranks": [
       "g_soxl_r3lt40_dn1_ma100_d5",
-      "g_soxl_norsi_ibs0.6_dn1_ma50_d3",
-      "g_soxl_r2lt30_ibs0.6_ma100_d5",
-      "g_soxl_r2lt40_ibs0.7_ma100_d4",
-      "g_soxl_r2lt30_ma100_d5",
-      "g_soxl_norsi_ibs0.5_dn1_ma50_d4",
-      "g_soxl_r2lt30_ibs0.7_dn1_ma100_d5",
-      "g_soxl_r2lt25_ibs0.7_ma100_d3",
-      "g_soxl_r2lt25_dn1_ma100_d4",
-      "g_soxl_r2lt30_ibs0.5_dn1_ma100_d4",
-      "g_soxl_r2lt25_ibs0.3_ma150_d4",
-      "g_soxl_r3lt40_ibs0.3_dn1_ma150_d5",
-      "g_soxl_r2lt10_dn2_ma100_d4"
+      "g_soxl_r3lt40_dn2_ma100_d5",
+      "g_soxl_r3lt35_dn2_ma100_d5",
+      "g_soxl_r3lt40_dn1_ma150_d4",
+      "g_soxl_r3lt40_dn1_ma50_d4",
+      "g_soxl_r3lt40_ibs0.7_dn1_ma150_d5",
+      "g_soxl_r3lt40_ibs0.7_dn1_ma50_d5",
+      "g_soxl_r2lt15_ibs0.1_dn3_ma0_d4",
+      "g_soxl_r3lt15_ibs0.1_dn2_ma100_d5",
+      "g_soxl_r3lt35_ibs0.3_dn3_ma100_d2",
+      "g_soxl_r3lt20_ibs0.5_dn1_ma150_d3",
+      "g_soxl_norsi_ibs0.6_dn1_ma50_d3"
      ]
     }
    ],
    "ops": {
     "struct": {
-     "tried": 143,
-     "accepted": 8
+     "tried": 146,
+     "accepted": 9
     },
     "explore": {
-     "tried": 3118,
+     "tried": 3122,
      "accepted": 26
     },
     "jump2": {
-     "tried": 693,
-     "accepted": 29
+     "tried": 720,
+     "accepted": 30
     },
     "neighbor": {
-     "tried": 145,
-     "accepted": 6
+     "tried": 152,
+     "accepted": 7
     },
     "cross": {
-     "tried": 114,
-     "accepted": 11
+     "tried": 121,
+     "accepted": 12
     }
    }
   },
@@ -12699,234 +13027,6 @@
   }
  },
  "log": [
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "daytrading",
-   "kind": "retire",
-   "version": "etf_dip_overnight_th2",
-   "name": "−2% 이하 마감",
-   "reason": "손실 기준 미달 — MDD -30.6% · 최악일 -13.1% · 거래당 +0.23%"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "crypto",
-   "kind": "new",
-   "version": "g_coin_ma25_s99_hi_both",
-   "name": "평균 25일 · 어제 고가 돌파 · 손절 없음 · BTC·ETH 반반",
-   "reason": "신규 투입 — 점수 +0.199 · 최근 1년 -1.6% (상위 coin_bo_nostop 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "crypto",
-   "kind": "new",
-   "version": "g_coin_ma15_s99_hi_both",
-   "name": "평균 15일 · 어제 고가 돌파 · 손절 없음 · BTC·ETH 반반",
-   "reason": "신규 투입 — 점수 +0.343 · 최근 1년 +9.8% (상위 coin_bo_nostop 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "crypto",
-   "kind": "retire",
-   "version": "coin_vb_k05",
-   "name": "변동성 돌파 k=0.5",
-   "reason": "손실 기준 미달 — MDD -25.6% · 최악일 -4.2% · 거래당 +0.15%"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "crypto",
-   "kind": "retire",
-   "version": "coin_bo_eth_only",
-   "name": "ETH 만",
-   "reason": "손실 기준 미달 — MDD -28.1% · 최악일 -4.2% · 거래당 +0.31%"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r3lt15_ma200_d5",
-   "name": "RSI(3) < 15 · 200일 평균 위 · 최대 5일",
-   "reason": "신규 투입 — 점수 +0.447 · 최근 1년 +41.5% (상위 soxl_rsi3_th20 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r2lt20_ma200_d5",
-   "name": "RSI(2) < 20 · 200일 평균 위 · 최대 5일",
-   "reason": "신규 투입 — 점수 +0.278 · 최근 1년 +49.5% (상위 soxl_rsi3_th20 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r3lt20_ma150_d5",
-   "name": "RSI(3) < 20 · 150일 평균 위 · 최대 5일",
-   "reason": "신규 투입 — 점수 +0.631 · 최근 1년 +53.2% (상위 soxl_rsi3_th20 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r3lt20_ma200_d4",
-   "name": "RSI(3) < 20 · 200일 평균 위 · 최대 4일",
-   "reason": "신규 투입 — 점수 +0.697 · 최근 1년 +56.9% (상위 soxl_rsi3_th20 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r2lt15_ma200_d5",
-   "name": "RSI(2) < 15 · 200일 평균 위 · 최대 5일",
-   "reason": "신규 투입 — 점수 +0.311 · 최근 1년 +58.0% (상위 soxl_rsi3_th20 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r2lt5_ma200_d5",
-   "name": "RSI(2) < 5 · 200일 평균 위 · 최대 5일",
-   "reason": "신규 투입 — 점수 +0.359 · 최근 1년 +56.8% (상위 soxl_rsi3_th20 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r3lt10_ma200_d5",
-   "name": "RSI(3) < 10 · 200일 평균 위 · 최대 5일",
-   "reason": "신규 투입 — 점수 +0.104 · 최근 1년 +23.8% (상위 soxl_rsi3_th20 주변/격자에서)"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "reject",
-   "version": "",
-   "name": "",
-   "reason": "새 후보 2개는 손실 기준 미달로 투입 전 탈락"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "retire",
-   "version": "soxl_rsi2_th25_max3",
-   "name": "RSI(2) < 25 · 최대 3일",
-   "reason": "손실 기준 미달 — MDD -30.6% · 최악일 -8.4% · 거래당 +0.17%"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "retire",
-   "version": "soxl_rsi2_1d",
-   "name": "하루 한정",
-   "reason": "손실 기준 미달 — MDD -38.5% · 최악일 -7.6% · 거래당 +0.07%"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "retire",
-   "version": "soxl_rsi2_th25",
-   "name": "RSI(2) < 25",
-   "reason": "손실 기준 미달 — MDD -25.0% · 최악일 -8.4% · 거래당 +0.18%"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "retire",
-   "version": "soxl_rsi2_th30",
-   "name": "RSI(2) < 30",
-   "reason": "손실 기준 미달 — MDD -25.0% · 최악일 -8.4% · 거래당 +0.20%"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "retire",
-   "version": "soxl_rsi2_ma100",
-   "name": "100일 평균 위",
-   "reason": "손실 기준 미달 — MDD -31.1% · 최악일 -7.6% · 거래당 +0.17%"
-  },
-  {
-   "date": "2026-10-05",
-   "at": "2026-10-05T21:11+09:00",
-   "tab": "soxl",
-   "kind": "retire",
-   "version": "soxl_rsi2_noma",
-   "name": "평균 조건 없음",
-   "reason": "손실 기준 미달 — MDD -40.0% · 최악일 -15.5% · 거래당 +0.16%"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "opening",
-   "kind": "note",
-   "version": "",
-   "name": "",
-   "reason": "순위 기준을 안정 점수(구간 당김 · 이웃 중앙값)로 바꿈 — 1위 · 하위 연속 일수를 오늘부터 새로 셈"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "opening",
-   "kind": "new",
-   "version": "g_open_q12_k3",
-   "name": "통과 12개↑ · 깊은 3종목",
-   "reason": "격자 탐색 · 안정 점수 +0.399 (그대로 +0.414 · 이웃 중앙 +0.399) · 매매일 81 · MDD -16.3% · 플러스 8/8해",
-   "op": "explore"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "opening",
-   "kind": "new",
-   "version": "g_open_q12_k2",
-   "name": "통과 12개↑ · 깊은 2종목",
-   "reason": "격자 탐색 · 안정 점수 +0.406 (그대로 +0.405 · 이웃 중앙 +0.406) · 매매일 81 · MDD -15.6% · 플러스 7/8해",
-   "op": "explore"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "opening",
-   "kind": "new",
-   "version": "g_open_q5_k2_gap3",
-   "name": "통과 5개↑ · 깊은 2종목 · 갭 -3% 이하만",
-   "reason": "격자 탐색 · 안정 점수 +0.402 (그대로 +0.451 · 이웃 중앙 +0.403) · 매매일 140 · MDD -23.7% · 플러스 7/9해",
-   "op": "explore"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "opening",
-   "kind": "reject",
-   "version": "",
-   "name": "",
-   "reason": "후보 48개 계산 → 기준 통과 9 · 투입 3(교체 0) · 탈락: 손실 기준 미달 39 · 복제 6"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "opening",
-   "kind": "retire",
-   "version": "g_open_q6_k2",
-   "name": "통과 6개↑ · 깊은 2종목",
-   "reason": "복제 — 통과 7개↑ · 깊은 2종목 와 사실상 같은 매매(일 손익 상관 0.980) · 순위 낮은 쪽을 뺌"
-  },
   {
    "date": "2026-10-06",
    "at": "2026-10-06T09:19+09:00",
@@ -18238,8 +18338,246 @@
    "version": "g_soxl_r2lt30_ibs0.6_ma100_d5",
    "name": "RSI(2) < 30 · 종가 위치(IBS) ≤ 0.6 · 100일 평균 위 · 최대 5일",
    "reason": "손실 기준 미달 — MDD -35.6% · 최악일 -7.6% · 거래당 +0.19%"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s8_hi10_h21_both",
+   "name": "평균 40일 · 최근 10일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+   "reason": "새 구조 — g_coin_ma40_s8_vb1_h21_both 에서 기준선 vb→prevhigh, k 1→0.5, 고가 일수 1→10 · 순위 점수 +0.080 (안정 +0.084 × 빈도 0.95 · 그대로 +0.119 · 이웃 중앙 +0.084) · 매매일 459 · 연 52회 · MDD -20.3% · 플러스 7/9해",
+   "op": "struct"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s8_vb0.7_h21_both",
+   "name": "평균 40일 · 시가+0.7×어제 폭 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+   "reason": "교배 — g_coin_ma40_s8_vb1_h21_both × g_coin_ma80_s5_vb0.7_h12_eth · 순위 점수 +0.083 (안정 +0.094 × 빈도 0.89 · 그대로 +0.071 · 이웃 중앙 +0.094) · 매매일 349 · 연 39회 · MDD -12.1% · 플러스 7/9해",
+   "op": "cross"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s8_hi3_h21_both",
+   "name": "평균 40일 · 최근 3일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+   "reason": "새 구조 — g_coin_ma40_s8_vb1_h21_both 에서 기준선 vb→prevhigh, k 1→0.5, 고가 일수 1→3 · 순위 점수 +0.071 (안정 +0.069 × 빈도 1.03 · 그대로 +0.076 · 이웃 중앙 +0.069) · 매매일 613 · 연 69회 · MDD -20.5% · 플러스 6/9해",
+   "op": "struct"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s8_hi2_h18_both",
+   "name": "평균 40일 · 최근 2일 고가 돌파 · 손절 −8% · 18시 전 돌파만 · BTC·ETH 반반",
+   "reason": "새 구조 — g_coin_ma40_s8_hi5_h18_both 에서 고가 일수 5→2 · 순위 점수 +0.073 (안정 +0.071 × 빈도 1.03 · 그대로 +0.037 · 이웃 중앙 +0.071) · 매매일 620 · 연 70회 · MDD -24.6% · 플러스 6/9해",
+   "op": "struct"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s8_hi4_h15_both",
+   "name": "평균 40일 · 최근 4일 고가 돌파 · 손절 −8% · 15시 전 돌파만 · BTC·ETH 반반",
+   "reason": "두 칸 동시 — g_coin_ma40_s8_hi5_h18_both 에서 고가 일수 5→4, 마지막 매수 시 18→15 · 순위 점수 +0.059 (안정 +0.062 × 빈도 0.95 · 그대로 +0.037 · 이웃 중앙 +0.062) · 매매일 443 · 연 50회 · MDD -15.9% · 플러스 8/9해",
+   "op": "jump2"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s8_vb1_h18_both",
+   "name": "평균 40일 · 시가+1×어제 폭 돌파 · 손절 −8% · 18시 전 돌파만 · BTC·ETH 반반",
+   "reason": "교배 — g_coin_ma40_s8_vb1_h21_both × g_coin_ma40_s8_hi5_h18_both · 순위 점수 +0.058 (안정 +0.081 × 빈도 0.72 · 그대로 +0.035 · 이웃 중앙 +0.081) · 매매일 149 · 연 17회 · MDD -7.4% · 플러스 7/9해",
+   "op": "cross"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s5_hi5_h12_both",
+   "name": "평균 40일 · 최근 5일 고가 돌파 · 손절 −5% · 12시 전 돌파만 · BTC·ETH 반반",
+   "reason": "교배 — g_coin_ma80_s5_vb0.7_h12_eth × g_coin_ma40_s8_hi5_h18_both · 순위 점수 +0.048 (안정 +0.054 × 빈도 0.89 · 그대로 +0.095 · 이웃 중앙 +0.054) · 매매일 342 · 연 38회 · MDD -24.8% · 플러스 7/9해",
+   "op": "cross"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s5_vb0.7_h12_eth",
+   "name": "평균 40일 · 시가+0.7×어제 폭 돌파 · 손절 −5% · 12시 전 돌파만 · ETH 만",
+   "reason": "교배 — g_coin_ma80_s5_vb0.7_h12_eth × g_coin_ma40_s8_vb1_h21_both · 순위 점수 +0.026 (안정 +0.044 × 빈도 0.59 · 그대로 -0.044 · 이웃 중앙 +0.044) · 매매일 66 · 연 7회 · MDD -15.6% · 플러스 4/6해",
+   "op": "cross"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s8_vb1_h21_btc",
+   "name": "평균 40일 · 시가+1×어제 폭 돌파 · 손절 −8% · 21시 전 돌파만 · BTC 만",
+   "reason": "이웃(한 칸) — g_coin_ma40_s8_vb1_h21_both 에서 코인 BTC·ETH→BTC · 순위 점수 +0.037 (안정 +0.053 × 빈도 0.70 · 그대로 +0.125 · 이웃 중앙 +0.053) · 매매일 133 · 연 15회 · MDD -15.8% · 플러스 6/9해",
+   "op": "neighbor"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 20 · 투입 9(교체 0) · 탈락: 손실 기준 미달 19 · 복제 7 · 해마다 일관성 부족 5 · 매매일 부족 4 · 점수 부족 2"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma5_s8_hi4_both",
+   "name": "평균 5일 · 최근 4일 고가 돌파 · 손절 −8% · BTC·ETH 반반",
+   "reason": "손실 기준 미달 — MDD -63.2% · 최악일 -6.9% · 거래당 -0.02%"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma20_s99_hi2_eth",
+   "name": "평균 20일 · 최근 2일 고가 돌파 · 손절 없음 · ETH 만",
+   "reason": "손실 기준 미달 — MDD -38.0% · 최악일 -11.8% · 거래당 +0.15%"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma5_s10_hi5_both",
+   "name": "평균 5일 · 최근 5일 고가 돌파 · 손절 −10% · BTC·ETH 반반",
+   "reason": "손실 기준 미달 — MDD -52.1% · 최악일 -7.3% · 거래당 +0.02%"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma10_s10_hi5_both",
+   "name": "평균 10일 · 최근 5일 고가 돌파 · 손절 −10% · BTC·ETH 반반",
+   "reason": "손실 기준 미달 — MDD -42.4% · 최악일 -7.3% · 거래당 +0.05%"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma40_s99_hi2_h18_eth",
+   "name": "평균 40일 · 최근 2일 고가 돌파 · 손절 없음 · 18시 전 돌파만 · ETH 만",
+   "reason": "손실 기준 미달 — MDD -27.3% · 최악일 -11.8% · 거래당 +0.22%"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma5_s10_hi5_eth",
+   "name": "평균 5일 · 최근 5일 고가 돌파 · 손절 −10% · ETH 만",
+   "reason": "손실 기준 미달 — MDD -57.6% · 최악일 -8.5% · 거래당 +0.08%"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma5_s10_hi7_eth",
+   "name": "평균 5일 · 최근 7일 고가 돌파 · 손절 −10% · ETH 만",
+   "reason": "손실 기준 미달 — MDD -44.2% · 최악일 -8.5% · 거래당 +0.13%"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r3lt40_ibs0.7_dn2_ma100_d5",
+   "name": "RSI(3) < 40 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 100일 평균 위 · 최대 5일",
+   "reason": "새 구조 — g_soxl_r3lt40_dn2_ma100_d5 에서 IBS 상한 1→0.7 · 순위 점수 +0.110 (안정 +0.143 × 빈도 0.77 · 그대로 +0.195 · 이웃 중앙 +0.143) · 매매일 516 · 연 12회 · MDD -21.2% · 플러스 12/16해",
+   "op": "struct"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r3lt35_ibs0.7_dn2_ma100_d5",
+   "name": "RSI(3) < 35 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 100일 평균 위 · 최대 5일",
+   "reason": "이웃(한 칸) — g_soxl_r3lt35_dn2_ma100_d5 에서 IBS 상한 1→0.7 · 순위 점수 +0.104 (안정 +0.139 × 빈도 0.75 · 그대로 +0.201 · 이웃 중앙 +0.139) · 매매일 480 · 연 11회 · MDD -23.0% · 플러스 13/16해",
+   "op": "neighbor"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r3lt35_dn1_ma50_d3",
+   "name": "RSI(3) < 35 · 1일 연속 하락 · 50일 평균 위 · 최대 3일",
+   "reason": "두 칸 동시 — g_soxl_r3lt40_dn1_ma50_d4 에서 RSI 상한 40→35, 최대 보유 4→3 · 순위 점수 +0.087 (안정 +0.105 × 빈도 0.83 · 그대로 -0.215 · 이웃 중앙 +0.105) · 매매일 701 · 연 16회 · MDD -20.7% · 플러스 14/17해",
+   "op": "jump2"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r3lt40_dn2_ma150_d4",
+   "name": "RSI(3) < 40 · 2일 연속 하락 · 150일 평균 위 · 최대 4일",
+   "reason": "교배 — g_soxl_r3lt40_dn1_ma150_d4 × g_soxl_r3lt40_dn2_ma100_d5 · 순위 점수 +0.088 (안정 +0.110 × 빈도 0.80 · 그대로 -0.148 · 이웃 중앙 +0.110) · 매매일 625 · 연 14회 · MDD -24.3% · 플러스 14/17해",
+   "op": "cross"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 16 · 투입 4(교체 3) · 탈락: 손실 기준 미달 31 · 점수 부족 4 · 복제 2 · 해마다 일관성 부족 1"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "g_soxl_r3lt20_ibs0.5_dn1_ma150_d3",
+   "name": "RSI(3) < 20 · 종가 위치(IBS) ≤ 0.5 · 1일 연속 하락 · 150일 평균 위 · 최대 3일",
+   "reason": "자리 교체 — 신규 g_soxl_r3lt35_ibs0.7_dn2_ma100_d5 가 순위 점수 +0.104 로 +0.010 보다 확실히 나음"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "g_soxl_r3lt35_ibs0.3_dn3_ma100_d2",
+   "name": "RSI(3) < 35 · 종가 위치(IBS) ≤ 0.3 · 3일 연속 하락 · 100일 평균 위 · 최대 2일",
+   "reason": "자리 교체 — 신규 g_soxl_r3lt35_dn1_ma50_d3 가 순위 점수 +0.087 로 +0.015 보다 확실히 나음"
+  },
+  {
+   "date": "2026-11-19",
+   "at": "2026-11-19T17:55+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "g_soxl_r3lt15_ibs0.1_dn2_ma100_d5",
+   "name": "RSI(3) < 15 · 종가 위치(IBS) ≤ 0.1 · 2일 연속 하락 · 100일 평균 위 · 최대 5일",
+   "reason": "자리 교체 — 신규 g_soxl_r3lt40_dn2_ma150_d4 가 순위 점수 +0.088 로 +0.017 보다 확실히 나음"
   }
  ],
- "updatedAt": "2026-11-19T17:26+09:00",
+ "updatedAt": "2026-11-19T17:55+09:00",
  "freqBeta": 0.25
 }
