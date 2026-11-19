@@ -11030,6 +11030,66 @@ console.log('\n[138] 액면분할 — 실제 거래 가격 체결 · 분할일 �
   WARM_FROM=BK.WF; WARM_TO=BK.WT; for(const [k,v] of BK.g){ if(v===undefined) delete global[k]; else global[k]=v; }
 }
 
+/* ════ 139. VR 밴드 20% 실험적 확장 선택지 (2026-11-19 사용자 "vr 20넣어" · 연구 REPLICATION R-20261116-1 · 지피티 재현 확인 11-19) ════
+   공식(원문) 15% 는 기본 그대로 · 20% 는 '실험적 확장' 고르기 단추. 엔진(runVR · vrOrderPlan)은 그대로 — 단추는 칸 값만 바꾼다.
+   값 시험: 단추(HTML 의 data-v 그대로)를 누른 칸 값 → run() 과 같은 읽기 줄 → runVR 끝값이 밴드 20 값(센트)과 같고 15 와 다르다.
+   testdata TQQQ 는 2020-09~ 라 창은 2021-01-04~2026-01-02(1만$ · 적립 100$ · G10 · 적립식 · 기본공식 · 비용 반영). */
+console.log('\n[139] VR 밴드 20% 실험적 확장 — 단추 → 칸 → 엔진 · 15 아니면 실험적 확장 표시 · 기본 15');
+{
+  const segBtns=(src,id)=>{ const m=src.match(new RegExp('<div class="seg" id="'+id+'">([\\s\\S]*?)</div>'));
+    return m?[...m[1].matchAll(/<button data-v="([^"]+)"[^>]*>([^<]*)<\/button>/g)].map(x=>({v:x[1],label:x[2]})):[]; };
+  const mkBtn=(o,cls)=>{ const b={dataset:{v:o.v},label:o.label,on:false,onclick:null};
+    b.classList={add:c=>{ if(c===cls) b.on=true; },remove:c=>{ if(c===cls) b.on=false; },toggle:(c,f)=>{ if(c===cls) b.on=!!f; }}; return b; };
+  // ── 운영(index): 설정 단추 ↔ 밴드 칸 · 표시 글자 (실제 함수를 떼어 가짜 화면에서)
+  const iB=segBtns(idx,'set_vband').map(o=>mkBtn(o,'on'));
+  const D={set_vband:{querySelectorAll:()=>iB,querySelector:()=>iB.find(b=>b.on)||null}, set_band:{value:'15'}};
+  let I=null;
+  try{ I=new Function('$',[
+      ...['function segSet(id,val)','function segGet(id)','function setupSegs()','function vrBandExp(b)','function vrBandText(b)','function vrBandSegSync()'].map(m=>extractFn(idx,m))].join('\n')
+      +'\nreturn {setupSegs,segGet,vrBandText,vrBandSegSync};')(id=>D[id]); }catch(e){ console.log('  (index 추출 실패: '+e.message+')'); }
+  const i20=iB.find(b=>/실험적 확장/.test(b.label)), i15=iB.find(b=>/공식/.test(b.label));
+  let iOk=false, iInfo='단추·함수 없음';
+  if(I&&i20&&i15){ I.setupSegs(); if(i20.onclick) i20.onclick();
+    const a=[String(D.set_band.value), I.segGet('set_vband')];
+    D.set_band.value='17.5'; I.vrBandSegSync(); const b=I.segGet('set_vband');
+    D.set_band.value='15'; I.vrBandSegSync(); const c=I.segGet('set_vband');
+    iOk=a[0]==='20'&&a[1]==='20'&&b===null&&c==='15'&&i15.dataset.v==='15'; iInfo=JSON.stringify({a,b,c}); }
+  ok('운영: [20% 실험적 확장] 누르면 밴드 칸 20 · 단추 켜짐 · 직접 17.5 면 둘 다 꺼짐 · 15 면 [15% 공식]', iOk, iInfo);
+  const tx=I?[15,20,'',17.5].map(v=>I.vrBandText(v)).join('|'):'';
+  ok('운영: 표시 — ±15% · ±20% (실험적 확장) · 빈 값은 15 · 17.5 도 실험적 확장', tx==='±15%|±20% (실험적 확장)|±15%|±17.5% (실험적 확장)', tx);
+  ok('운영: 상태 줄 · 다음 V 이름표 · 가격 위치 안내가 이 표시를 쓴다 · 기본 15 · 저장은 칸 값 그대로',
+     /\$\{mode\} · \$\{vrBandText\(st\.band\)\} · /.test(idx)
+     && /\$\('nv_formula_lbl'\)\.textContent=\(st\.formula==='skill'\?'실력공식\(실험적 확장\)':vrBandExp\(st\.band\)\?'기본공식':'기본공식\(오피셜\)'\)/.test(idx)
+     && /if\(note\)note\.textContent=vrBandExp\(st\.band\)\?/.test(idx) && /function defVrSettings\(\)\{const b=\{[^}]*band:15,/.test(idx)
+     && /band:inputNum\('set_band'\)\|\|15/.test(idx) && /<input id="set_band" type="number" inputmode="decimal" value="15"/.test(idx));
+  // ── 백테(backtest): 단추 → 칸 → run() 과 같은 읽기 줄 → runVR
+  const bB=segBtns(bt,'vrBandSeg').map(o=>mkBtn(o,'active'));
+  const E={vrBand:{value:'15'}, vrBandSeg:{onclick:null}};
+  const doc={getElementById:id=>E[id], querySelectorAll:q=>q==='#vrBandSeg button'?bB:[]};
+  let B=null;
+  try{ const wire=(bt.match(/document\.getElementById\('vrBandSeg'\)\.onclick=[^\n]*/)||[''])[0];
+    B=new Function('document','dataLoaded','run',[
+      ...['function vrBandExp(b)','function vrBandTitle(b)','function vrBandSegSync()'].map(m=>extractFn(bt,m)),wire].join('\n')
+      +'\nreturn {vrBandTitle};')(doc,false,()=>{}); }catch(e){ console.log('  (backtest 추출 실패: '+e.message+')'); }
+  const b20=bB.find(b=>/실험적 확장/.test(b.label));
+  const rdLine=(bt.match(/const band=\+document\.getElementById\('vrBand'\)\.value\|\|15;/)||[''])[0];   // run() 의 읽기 줄 그대로
+  let band=null;
+  if(B&&b20&&E.vrBandSeg.onclick&&rdLine){ E.vrBandSeg.onclick({target:b20}); band=new Function('document',rdLine+'\nreturn band;')(doc); }
+  const W=(DAYS.TQQQ||[]).filter(d=>d>='2021-01-04'&&d<='2026-01-02');
+  const P=bp=>runVR(W,'TQQQ',{contrib:100,G:10,bandPct:bp,mode:0.75,formula:'basic',initAmt:10000,startV:0,startPool:0,costOn:true});
+  const c2=x=>Math.round(x*100)/100;
+  const GOLD20=59402.67, GOLD15=57894.05;   // 2026-11-19 · 이 회귀(함수 원문 추출)와 실제 backtest.html(Chromium · 같은 testdata 행) 값이 센트까지 같음
+  const r=(band!=null&&W.length>1000)?P(band):null, v15=W.length>1000?c2(P(15).final):null, v20=W.length>1000?c2(P(20).final):null;
+  console.log('  값: 창 '+W.length+'일 · 고른 밴드 '+band+' · 끝값 '+(r?c2(r.final):'-')+' · 밴드 20 '+v20+' · 밴드 15 '+v15);
+  ok('백테: [20 실험적 확장] → 칸 20 → run() 읽기 20 → runVR 끝값 = 밴드 20 값(센트) ≠ 15 · 단추 켜짐 · run() 이 bandPct 로 넘김',
+     band===20&&r&&c2(r.final)===GOLD20&&v20===GOLD20&&v15===GOLD15&&GOLD20!==GOLD15&&bB.find(b=>b.on)===b20
+     &&/runVR\(commonD,t,\{contrib:contribUSD,G,bandPct:band,/.test(bt),
+     JSON.stringify({band,fin:r&&c2(r.final),v20,v15,GOLD20,GOLD15}));
+  ok('백테: 결과 제목 — 15 면 그대로 · 20 이면 "밴드 ±20% 실험적 확장" · 전체비교 요약 두 곳 · 기본 칸 15',
+     !!B&&B.vrBandTitle(15)===''&&/밴드 ±20% 실험적 확장/.test(B.vrBandTitle(20))&&/vrBandTitle\(params&&params\.band\)/.test(bt)
+     &&(bt.match(/밴드±\$\{vBt\}/g)||[]).length===2&&/<input type="number" id="vrBand" value="15"/.test(bt));
+}
+
 /* ════ 단타 공통 9단계 UI · 다음 계획 · BTC 분리 모의 · SOXL 해외 VTS ════ */
 console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
 {
