@@ -94,7 +94,7 @@ function due(p) {
   if (opt("id")) {
     const it = queue.find((q) => q.id === opt("id"));
     if (!it) throw new Error(`큐에 없는 id: ${opt("id")}`);
-    return { items: done(it.id, p) ? [] : [it], missed: [] };
+    return { items: done(it.id, p) || (it.kind === "carousel" && p !== "ig") ? [] : [it], missed: [] };
   }
   const today = queue
     .filter((q) => { const t = plannedAt(q); return t != null && kstDate(new Date(t).toISOString()) === TODAY; })
@@ -103,6 +103,7 @@ function due(p) {
   for (const q of today) {
     const t = plannedAt(q);
     if (done(q.id, p) || t > NOW) continue;
+    if (q.kind === "carousel" && p !== "ig") continue; // 카드뉴스(사진 여러 장)는 인스타 전용
     if (q.kind === "buffer" && today.some((o) => o !== q && o.kind !== "buffer" && plannedAt(o) === t)) continue;
     if (NOW - t > LATE_MIN * 60e3) { missed.push(q); continue; }
     items.push(q);
@@ -123,6 +124,19 @@ function igCaption(item) {
 // ── 사전 점검(--dry 에서도 실행) ──
 function check(item) {
   const problems = [];
+  if (item.kind === "carousel") {
+    const imgs = item.images || [];
+    if (imgs.length < 2 || imgs.length > 10) problems.push(`카드뉴스 장수 ${imgs.length}(2~10장)`);
+    for (const f of imgs) {
+      const fp = path.join(__dirname, f);
+      if (!fs.existsSync(fp)) problems.push(`파일 없음: ${f}`);
+      else if (!/\.jpe?g$/i.test(f)) problems.push(`JPEG 만 가능: ${f}`);
+      else if (fs.statSync(fp).size > 8 * 1048576) problems.push(`8MB 초과: ${f}`);
+    }
+    if ([...igCaption(item)].length > 2200) problems.push("인스타 캡션 2,200자 초과");
+    if ((item.caption.match(/#[^\s#]+/g) || []).length > 30) problems.push("해시태그 30개 초과");
+    return problems;
+  }
   const file = path.join(__dirname, item.file);
   if (!fs.existsSync(file)) problems.push(`파일 없음: ${item.file}`);
   else {
@@ -269,6 +283,7 @@ async function repoSha() {
 
 // 영상 파일이 없으면(저장소 없이, 또는 Actions 의 일부만 체크아웃) 그 커밋에서 내려받는다.
 async function ensureLocal(item) {
+  if (item.kind === "carousel") { for (const f of item.images || []) await ensureLocal({ file: f }); return; }
   const file = path.join(__dirname, item.file);
   if (fs.existsSync(file)) return;
   const url = `https://raw.githubusercontent.com/${REPO}/${await repoSha()}/reel/${item.file}`;
@@ -280,6 +295,7 @@ async function ensureLocal(item) {
 
 // 인스타 서버가 내려받을 공개 주소. 저장소가 공개라 커밋된 파일을 jsDelivr(커밋 고정)로 연다.
 async function mediaUrl(item) {
+  if (item.kind === "carousel") return mediaUrl({ file: item.images[0] });
   if (process.env.MEDIA_BASE_URL) return process.env.MEDIA_BASE_URL.replace(/\/$/, "") + "/" + item.file;
   const rel = `reel/${item.file}`;
   if (!IN_REPO) return `https://cdn.jsdelivr.net/gh/${REPO}@${await repoSha()}/${rel}`;
@@ -312,17 +328,7 @@ async function igExisting(item) {
 
 async function publishInstagram(item) {
   const videoUrl = await mediaUrl(item);
-  // jsDelivr 는 새 커밋의 큰 파일을 처음 가져올 때 잠깐 403 을 줄 때가 있다(11/18 09:00 b05). 앞 1바이트를 받아 보며 최대 5번(약 4분) 다시 시도.
-  let probe = 0;
-  for (let i = 0; i < 5; i++) {
-    if (i) await sleep(15000 * i);
-    const r = await fetch(videoUrl, { headers: { Range: "bytes=0-0" } }).catch(() => null);
-    probe = r ? r.status : 0;
-    if (r) await r.arrayBuffer().catch(() => {});
-    if (probe >= 200 && probe < 300) break;
-    console.log(`  영상 공개 주소 응답 ${probe} — ${i < 4 ? "다시 시도" : "포기"}`);
-  }
-  if (!(probe >= 200 && probe < 300)) throw new Error(`영상 공개 주소 접근 실패(HTTP ${probe}): ${videoUrl}`);
+  await probeUrl(videoUrl);
   await igReady();
   const uid = igUid();
   // 1) 컨테이너 만들기
@@ -343,6 +349,42 @@ async function publishInstagram(item) {
   const m = await igCall("POST", `${IG()}/${uid}/media_publish`, { creation_id: c.id });
   const info = await igCall("GET", `${IG()}/${m.id}`, { fields: "permalink" }).catch(() => ({}));
   return { media_id: m.id, url: info.permalink || "(링크 조회 실패 — 앱에서 확인)", video_url: videoUrl };
+}
+
+// jsDelivr 는 새 커밋의 큰 파일을 처음 가져올 때 잠깐 403 을 줄 때가 있다(11/18 09:00 b05). 앞 1바이트를 받아 보며 최대 5번(약 4분) 다시 시도.
+async function probeUrl(url) {
+  let probe = 0;
+  for (let i = 0; i < 5; i++) {
+    if (i) await sleep(15000 * i);
+    const r = await fetch(url, { headers: { Range: "bytes=0-0" } }).catch(() => null);
+    probe = r ? r.status : 0;
+    if (r) await r.arrayBuffer().catch(() => {});
+    if (probe >= 200 && probe < 300) return;
+    console.log(`  공개 주소 응답 ${probe} — ${i < 4 ? "다시 시도" : "포기"}`);
+  }
+  throw new Error(`공개 주소 접근 실패(HTTP ${probe}): ${url}`);
+}
+
+// 카드뉴스(사진 2~10장, JPEG) — 장마다 컨테이너 → 묶음(CAROUSEL) 컨테이너 → 게시
+async function publishCarousel(item) {
+  const urls = [];
+  for (const f of item.images) { const u = await mediaUrl({ file: f }); await probeUrl(u); urls.push(u); }
+  await igReady();
+  const uid = igUid();
+  const kids = [];
+  for (const u of urls) kids.push((await igCall("POST", `${IG()}/${uid}/media`, { image_url: u, is_carousel_item: "true" })).id);
+  const c = await igCall("POST", `${IG()}/${uid}/media`, { media_type: "CAROUSEL", children: kids.join(","), caption: igCaption(item) });
+  let status = "IN_PROGRESS";
+  for (let i = 0; i < 20 && status !== "FINISHED"; i++) {
+    await sleep(5000);
+    const s = await igCall("GET", `${IG()}/${c.id}`, { fields: "status_code,status" });
+    status = s.status_code;
+    if (status === "ERROR" || status === "EXPIRED") throw new Error(`인스타 카드뉴스 처리 실패(${status}): ${s.status || ""}`);
+  }
+  if (status !== "FINISHED") throw new Error(`인스타 카드뉴스 처리가 끝나지 않음(${status})`);
+  const m = await igCall("POST", `${IG()}/${uid}/media_publish`, { creation_id: c.id });
+  const info = await igCall("GET", `${IG()}/${m.id}`, { fields: "permalink" }).catch(() => ({}));
+  return { media_id: m.id, url: info.permalink || "(링크 조회 실패 — 앱에서 확인)", images: urls };
 }
 
 // 장기 토큰(60일) 연장 — 7일에 한 번. 토큰 값은 어디에도 출력·저장하지 않는다.
@@ -410,7 +452,7 @@ for (const p of targets) {
       if (problems.length) { failed = true; report.push(`${P.name}: ${item.id} 점검 실패 — ${problems.join(" / ")}`); continue; }
       let extra = "";
       if (p === "ig") { try { extra = ` · 공개 주소 ${await mediaUrl(item)}`; } catch (e) { extra = ` · ${e.message}`; } }
-      report.push(`${P.name}: ${item.id}(${kstHM(plannedAt(item))}) 올릴 예정 · ${item.file}${extra}` + (missing.length ? ` · 키 없음: ${missing.join(", ")}` : " · 키 있음"));
+      report.push(`${P.name}: ${item.id}(${kstHM(plannedAt(item))}) 올릴 예정 · ${item.kind === "carousel" ? `카드뉴스 ${item.images.length}장` : item.file}${extra}` + (missing.length ? ` · 키 없음: ${missing.join(", ")}` : " · 키 있음"));
     }
     continue;
   }
@@ -434,7 +476,7 @@ for (const p of targets) {
       await ensureLocal(item);
       const problems = check(item);
       if (problems.length) throw new Error(`점검 실패 — ${problems.join(" / ")}`);
-      const res = p === "yt" ? await uploadYouTube(item, token) : await publishInstagram(item);
+      const res = p === "yt" ? await uploadYouTube(item, token) : item.kind === "carousel" ? await publishCarousel(item) : await publishInstagram(item);
       (log.items[item.id] ||= {})[p] = { ...res, at: new Date().toISOString() };
       saveLog();
       report.push(`${P.name}: ${item.id} 게시 완료 → ${res.url}` + (res.note ? ` (${res.note})` : ""));
