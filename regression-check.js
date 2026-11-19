@@ -4381,10 +4381,13 @@ console.log('\n[71] same-close 룩어헤드 탐지');
   ok('운영 섀넌도 전일 종가로 판정',
      /const eqP = cash \+ qty\*pc \+ \(X1\?qty1\*pc1:0\);/.test(appIvs)
      && !/if\(Math\.abs\(w-qty\*c\/eq\)<=band\) continue;/.test(appIvs));
-  const appAsap=extractFn(idx,'function _paperAsap(sess, from)');
-  ok('운영 ASAP 도 전일 지표로',
-     /const q=i-1, p=i-2;/.test(appAsap) && /const pc=cl\[q\], down=pc<m200;/.test(appAsap)
-     && !/rsi<=30&&c<=m200\*0\.85/.test(appAsap));
+  /* ASAP 하루 판정은 공용 asapDay(2026-11-19) — 모의(_paperAsap)와 운영(computeAsap)이 같은 함수를 부른다 */
+  const appAsap=extractFn(idx,'function asapDay(I, i, S, cfg, c)');
+  ok('운영 ASAP 도 전일 지표로 (공용 asapDay — 모의 · 운영이 같이 부름)',
+     /const q=i-1, p=i-2, m200=q>=0\?I\.MA200\[q\]:null;/.test(appAsap) && /const cl=I\.cl, pc=cl\[q\], down=pc<m200;/.test(appAsap)
+     && !/rsi<=30&&c<=m200\*0\.85/.test(appAsap)
+     && /const R=asapDay\(I, i, \{stage, sgov\}, cfg, c\);/.test(extractFn(idx,'function _paperAsap(sess, from)'))
+     && /const todo=asapDay\(I,n,\{stage:stage0,sgov:pos\.reserve\},cfg,price\);/.test(extractFn(idx,'function computeAsap()')));
 
   // VR 사이클은 달력 14일 — 앱 CYC_DAYS 와 같은 숫자여야 한다
   const vrS=extractFn(bt,'function runVR(days,tkr,params)');
@@ -7476,7 +7479,7 @@ const __P7={};
         mains.forEach((o,i)=>H.push({date:d,kind:kindOf(o,rev),price:+cl.toFixed(4),qty:o.qty+(i===0?extra:0),ts:++seq}));
         if(!mains.length && extra>0) H.push({date:d,kind:'1회매수',price:+cl.toFixed(4),qty:extra,ts:++seq}); }
       __strat={settings:{...st},hist:H}; const c1=computeInf();
-      if(rev && c1.qty>0 && cl>c1.avg*exitMulOf(st.target)) H.push({date:d,kind:'리버스복귀',price:cl,qty:0,ts:++seq});
+      if(rev && c1.qty>0 && cl>c1.avg*exitMulOf(c1.tp)) H.push({date:d,kind:'리버스복귀',price:cl,qty:0,ts:++seq});   // 복귀선 = 그 사이클 익절%(앱 주문표·모의와 같게 · 익절 자동이면 10% 사이클은 평단×0.9)
     }
     ENV.CDATE='';   // 확정 종가 날짜를 다음 시험으로 흘리지 않는다
     return H;
@@ -7576,6 +7579,45 @@ const __P7={};
 /* ════ 106. 7차 — 무매 운영 3벌: 앱 주문표 · 서버 자동주문 · 5년 플랜 ════
    장부(computeInf·imCompute·calcInfState)와 주문(renderOrder·imOrders·플랜 imOrders)을 같은 입력에서 맞댄다.
    서버 판은 4·5차 감사 이전 규칙에 멈춰 있었다 — 복합거래 0주 종료·배당·리버스 상태·큰수 기본값이 달랐다. */
+/* ════ 105-자동. 사용자 실계좌 설정 그대로 — 익절 자동(MA150+초강세·고변동 · −10%→10%) · 큰수 20 · 하방 3줄 ════
+   (2026-11-19 점검 · 사용자: "운영 메뉴, 포트폴리오, 모의투자가 전략대로 제대로 코드가 구현되어 있는지 점검해봐")
+   [105] 는 익절 고정 · 큰수 15 만 대조했다. 실계좌 세션(키움·토스 SOXL 20분할)은 익절 자동 · 큰수 20 이다 —
+   같은 하네스로 백테(runIM) ↔ 모의(infSimForward) ↔ 운영(주문표 → 그날 봉 체결)을 거래 단위로 맞춘다. 리버스 끔(실계좌) · 켬 둘 다. */
+console.log('\n[105-자동] 무매 실계좌 설정(익절 자동 · 큰수 20 · 하방 3줄) — 백테 ↔ 모의 ↔ 운영 거래 단위 대조');
+{
+  const {runIMd, paperRun, quoteOfTk, liveRun, setLOGD, LOGD}=__P7;
+  const key=x=>`${x.date} ${x.kind} ${(+x.price).toFixed(4)} x${x.qty}`;
+  const trades=a=>a.filter(h=>h.kind!=='리버스복귀'&&h.kind!=='배당').map(key);
+  const firstDiff=(A,B)=>{ let k=0; while(k<A.length&&k<B.length&&A[k]===B[k]) k++; return (k===A.length&&k===B.length)?-1:k; };
+  const _save={imFill:global.imFill, imCostOn:global.imCostOn, imTgtDyn:global.imTgtDyn, imRevGap:global.imRevGap, imReverse:global.imReverse, imAutoTp:global.imAutoTp, imAutoBars:global.imAutoBars};
+  global.imFill='high'; global.imCostOn=false; global.imTgtDyn=false; global.imRevGap=0; global.imAutoTp=true;
+  for(const [tk,rev] of [['SOXL',false],['SOXL',true],['TQQQ',false]]){
+    if(!DAYS[tk]) continue;
+    global.imReverse=rev;
+    /* 앱 장부(computeInf)는 익절 자동 판정 봉을 imAutoBars 로 받는다 — 하네스 기본은 null(끔과 같음)이라 갈아 끼운다.
+       imAutoTP·imAutoTPM1 은 판정일 '전' 봉만 보므로 전 구간을 줘도 룩어헤드가 아니다(백테 runIM 도 같은 봉). */
+    const _bars=DAYS[tk].map(d=>({date:d, close:M[tk][d][C]}));
+    /* 운영 주문표는 앱처럼 확정 봉만(전날까지 · ENV.CDATE) — 모의 재생은 재생 날짜(_infReplayAsOf)로 스스로 막는다 */
+    const _ENV=__P7.ENV; global.imAutoBars=()=>_ENV.CDATE?_bars.filter(b=>b.date<=_ENV.CDATE):_bars;
+    const all=DAYS[tk], days=all.slice(1);
+    const st={ticker:tk,div:20,target:20,principal:10000,compound:true,reverse:rev,big:20,revGap:0,tgtDyn:false,divmode:'reinv',
+              rows:3,rowqty:1,autoTp:true,autoTpMode:'auto'};
+    setLOGD([]); runIMd(days, tk, 10000, 20, 20, true, 20);
+    const B=LOGD().map(key);
+    const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]};
+    paperRun(sess, quoteOfTk(tk), days[0]);
+    const P=trades(sess.hist), L=trades(liveRun(tk,st));
+    const nm=`${tk} 20분할 익절 자동 큰수 20 리버스${rev?'ON':'OFF'}`;
+    const k1=firstDiff(B,P), k2=firstDiff(L,P);
+    ok(`${nm} — 백테 ↔ 모의 거래 ${B.length}건 한 건도 안 다르다`, B.length>50 && k1<0, k1<0?'':`#${k1} 백테 [${B[k1]||'—'}] 모의 [${P[k1]||'—'}]`);
+    ok(`${nm} — 운영(주문표→실제 체결) ↔ 모의 거래 ${L.length}건 한 건도 안 다르다`, L.length>50 && k2<0, k2<0?'':`#${k2} 운영 [${L[k2]||'—'}] 모의 [${P[k2]||'—'}]`);
+    /* 시험이 헛돌지 않는다 — 같은 장부를 익절 고정 20% 로 다시 세면 거래가 달라야 한다(익절 자동이 실제로 10% 사이클을 만들었다) */
+    { global.imAutoBars=()=>null; const s0={paper:true,id:'q',simStart:days[0],settings:{...st,autoTp:false},hist:[]}; paperRun(s0, quoteOfTk(tk), days[0]); global.imAutoBars=()=>_ENV.CDATE?_bars.filter(b=>b.date<=_ENV.CDATE):_bars;
+      const F=trades(s0.hist); ok(`${nm} — 익절 자동이 실제로 결과를 바꾼다(고정 20% 와 다른 첫 거래 #${firstDiff(F,P)})`, firstDiff(F,P)>=0, ''); }
+  }
+  Object.assign(global,_save);
+}
+
 console.log('\n[106] 7차 — 무매 운영 3벌 (장부·주문)');
 {
   const imSrc7=fs.readFileSync(__d+'/functions/api/_im.js','utf8');
@@ -8262,7 +8304,7 @@ console.log('\n[115] 7차 — ASAP 모의 ↔ 백테 (매수일·금액)');
     +'const __B=(d,a,c,F,I)=>{ if(a>0) __LOG.push({date:d,amt:a}); return buyQty(a,c,F,I); };\n'
     +'return ('+as.replace(/^function \w+\(/,'function (')+')')(LOG);
   const pa=extractFn(idx,'function _paperAsap(sess, from)');
-  const helpers=[extractFn(idx,'function _asapMA(a,k)'), extractFn(idx,'function _asapRSI(a)')].join('\n');
+  const helpers=[extractFn(idx,'function _asapMA(a,k)'), extractFn(idx,'function _asapRSI(a)'), extractFn(idx,'function asapDay(I, i, S, cfg, c)')].join('\n');
   const runApp=(T,Dall,from,DV)=>{
     const st={ticker:T, base:10, mid:50, deep:100};
     const sess={settings:st, hist:[]};
@@ -9712,7 +9754,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
 
   /* ── ASAP ── */
   const runAsap=(st,Q)=>new Function('curStrat','asapQuoteData','__CUT',
-      base+'\n'+fns(['function _asapMA(a,k)','function _asapRSI(a)','function asapPos(hist)','function _asapPriceView(days)','function computeAsap()'])+'\nreturn computeAsap();')(
+      base+'\n'+fns(['function _asapMA(a,k)','function _asapRSI(a)','function asapPos(hist)','function _asapPriceView(days)','function asapDay(I, i, S, cfg, c)','function computeAsap()'])+'\nreturn computeAsap();')(
       ()=>({settings:st,hist:[]}), Q, ()=>CUT);
   { const st={ticker:'SOXL',base:10,mid:50,deep:100};
     const Q={symbol:'SOXL', days:withToday, price:today.close};
@@ -9724,7 +9766,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
   /* ── 섀넌(역분산) ── 목표 비중(σ)도, 밴드 이탈도 확정 종가 · 주문 수량만 현재가 (백테 runIVS 와 같은 규약) */
   const runIvs=(st,hist,Q)=>new Function('curStrat','ivsQuoteData','ivsQuote1','__CUT','nfix',
       base+'\n'+(idx.match(/const IVS_FEE=[^\n]*/)||[''])[0]+'\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
-      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function computeIvs()'])+'\nreturn computeIvs();')(
+      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function imBuyQty(alloc, refPx, feeRate)','function computeIvs()'])+'\nreturn computeIvs();')(
       ()=>({settings:st,hist}), Q, null, ()=>CUT, v=>String(v));
   { /* 하루 +5% / −4.5% 번갈아 — σ 가 s0 보다 커서 목표 비중이 1 아래(밴드 시험이 뜻이 있다) */
     const vol=[{date:dayOf(0),close:50}]; for(let i=1;i<80;i++) vol.push({date:dayOf(i), close:+(vol[i-1].close*(i%2?1.05:0.955)).toFixed(4)});
@@ -9758,7 +9800,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
     const Q={symbol:'TQQQ', days:[...vol,{date:tD,close:vS.close}], price:vS.close}, Q1={symbol:'QQQ', days:q1Days, price:p1S*3, last:{close:p1S*3}};
     const run1=(hist)=>new Function('curStrat','ivsQuoteData','ivsQuote1','__CUT','nfix',
       base+'\n'+(idx.match(/const IVS_FEE=[^\n]*/)||[''])[0]+'\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
-      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function computeIvs()'])+'\nreturn computeIvs();')(
+      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function imBuyQty(alloc, refPx, feeRate)','function computeIvs()'])+'\nreturn computeIvs();')(
       ()=>({settings:st,hist}), Q, Q1, ()=>CUT, v=>String(v));
     const z=at(vS.date,()=>run1([]));
     const q=Math.round(z.w*10000/vS.close), q1=Math.floor((10000-q*vS.close)/p1S);
@@ -10991,64 +11033,44 @@ console.log('\n[138] 액면분할 — 실제 거래 가격 체결 · 분할일 �
   WARM_FROM=BK.WF; WARM_TO=BK.WT; for(const [k,v] of BK.g){ if(v===undefined) delete global[k]; else global[k]=v; }
 }
 
-/* ════ 139. VR 밴드 20% 실험적 확장 선택지 (2026-11-19 사용자 "vr 20넣어" · 연구 REPLICATION R-20261116-1 · 지피티 재현 확인 11-19) ════
-   공식(원문) 15% 는 기본 그대로 · 20% 는 '실험적 확장' 고르기 단추. 엔진(runVR · vrOrderPlan)은 그대로 — 단추는 칸 값만 바꾼다.
-   값 시험: 단추(HTML 의 data-v 그대로)를 누른 칸 값 → run() 과 같은 읽기 줄 → runVR 끝값이 밴드 20 값(센트)과 같고 15 와 다르다.
+/* ════ 139. VR 밴드 — 칸에 직접 입력 · 15 아니면 '실험적 확장' 표시 (2026-11-19) ════
+   같은 날 20% 고르기 단추를 넣었다가(#679) 뺐다 — 20 의 이득이 종목마다 달라서(연구 R-20261119-2 · 사용자 "모든 종목 적용되는거 아니면 버튼 다 지워").
+   공식(원문) 15% 는 기본 그대로 · 엔진(runVR · vrOrderPlan)은 그대로. 값 시험: 칸에 20 → run() 의 읽기 줄 → runVR 끝값이 밴드 20 값(센트)과 같고 15 와 다르다.
    testdata TQQQ 는 2020-09~ 라 창은 2021-01-04~2026-01-02(1만$ · 적립 100$ · G10 · 적립식 · 기본공식 · 비용 반영). */
-console.log('\n[139] VR 밴드 20% 실험적 확장 — 단추 → 칸 → 엔진 · 15 아니면 실험적 확장 표시 · 기본 15');
+console.log('\n[139] VR 밴드 — 칸에 직접 입력(고르기 단추 없음) · 15 아니면 실험적 확장 표시 · 기본 15');
 {
-  const segBtns=(src,id)=>{ const m=src.match(new RegExp('<div class="seg" id="'+id+'">([\\s\\S]*?)</div>'));
-    return m?[...m[1].matchAll(/<button data-v="([^"]+)"[^>]*>([^<]*)<\/button>/g)].map(x=>({v:x[1],label:x[2]})):[]; };
-  const mkBtn=(o,cls)=>{ const b={dataset:{v:o.v},label:o.label,on:false,onclick:null};
-    b.classList={add:c=>{ if(c===cls) b.on=true; },remove:c=>{ if(c===cls) b.on=false; },toggle:(c,f)=>{ if(c===cls) b.on=!!f; }}; return b; };
-  // ── 운영(index): 설정 단추 ↔ 밴드 칸 · 표시 글자 (실제 함수를 떼어 가짜 화면에서)
-  const iB=segBtns(idx,'set_vband').map(o=>mkBtn(o,'on'));
-  const D={set_vband:{querySelectorAll:()=>iB,querySelector:()=>iB.find(b=>b.on)||null}, set_band:{value:'15'}};
+  // ── 운영(index): 단추 없음 · 표시 글자 (실제 함수를 떼어)
   let I=null;
-  try{ I=new Function('$',[
-      ...['function segSet(id,val)','function segGet(id)','function setupSegs()','function vrBandExp(b)','function vrBandText(b)','function vrBandSegSync()'].map(m=>extractFn(idx,m))].join('\n')
-      +'\nreturn {setupSegs,segGet,vrBandText,vrBandSegSync};')(id=>D[id]); }catch(e){ console.log('  (index 추출 실패: '+e.message+')'); }
-  const i20=iB.find(b=>/실험적 확장/.test(b.label)), i15=iB.find(b=>/공식/.test(b.label));
-  let iOk=false, iInfo='단추·함수 없음';
-  if(I&&i20&&i15){ I.setupSegs(); if(i20.onclick) i20.onclick();
-    const a=[String(D.set_band.value), I.segGet('set_vband')];
-    D.set_band.value='17.5'; I.vrBandSegSync(); const b=I.segGet('set_vband');
-    D.set_band.value='15'; I.vrBandSegSync(); const c=I.segGet('set_vband');
-    iOk=a[0]==='20'&&a[1]==='20'&&b===null&&c==='15'&&i15.dataset.v==='15'; iInfo=JSON.stringify({a,b,c}); }
-  ok('운영: [20% 실험적 확장] 누르면 밴드 칸 20 · 단추 켜짐 · 직접 17.5 면 둘 다 꺼짐 · 15 면 [15% 공식]', iOk, iInfo);
+  try{ I=new Function(['function vrBandExp(b)','function vrBandText(b)'].map(m=>extractFn(idx,m)).join('\n')+'\nreturn {vrBandText};')(); }catch(e){ console.log('  (index 추출 실패: '+e.message+')'); }
+  ok('운영: 밴드 고르기 단추 없음 — 칸(set_band) 하나 · 기본 15 · 저장은 칸 값 그대로 · defVrSettings 15',
+     !/id="set_vband"/.test(idx)&&!/'set_vband'/.test(idx)&&!/vrBandSegSync/.test(idx)
+     &&/<input id="set_band" type="number" inputmode="decimal" value="15">/.test(idx)&&/band:inputNum\('set_band'\)\|\|15/.test(idx)
+     &&/function defVrSettings\(\)\{const b=\{[^}]*band:15,/.test(idx));
   const tx=I?[15,20,'',17.5].map(v=>I.vrBandText(v)).join('|'):'';
   ok('운영: 표시 — ±15% · ±20% (실험적 확장) · 빈 값은 15 · 17.5 도 실험적 확장', tx==='±15%|±20% (실험적 확장)|±15%|±17.5% (실험적 확장)', tx);
-  ok('운영: 상태 줄 · 다음 V 이름표 · 가격 위치 안내가 이 표시를 쓴다 · 기본 15 · 저장은 칸 값 그대로',
+  ok('운영: 상태 줄 · 다음 V 이름표 · 가격 위치 안내가 이 표시를 쓴다',
      /\$\{mode\} · \$\{vrBandText\(st\.band\)\} · /.test(idx)
      && /\$\('nv_formula_lbl'\)\.textContent=\(st\.formula==='skill'\?'실력공식\(실험적 확장\)':vrBandExp\(st\.band\)\?'기본공식':'기본공식\(오피셜\)'\)/.test(idx)
-     && /if\(note\)note\.textContent=vrBandExp\(st\.band\)\?/.test(idx) && /function defVrSettings\(\)\{const b=\{[^}]*band:15,/.test(idx)
-     && /band:inputNum\('set_band'\)\|\|15/.test(idx) && /<input id="set_band" type="number" inputmode="decimal" value="15"/.test(idx));
-  // ── 백테(backtest): 단추 → 칸 → run() 과 같은 읽기 줄 → runVR
-  const bB=segBtns(bt,'vrBandSeg').map(o=>mkBtn(o,'active'));
-  const E={vrBand:{value:'15'}, vrBandSeg:{onclick:null}};
-  const doc={getElementById:id=>E[id], querySelectorAll:q=>q==='#vrBandSeg button'?bB:[]};
+     && /if\(note\)note\.textContent=vrBandExp\(st\.band\)\?/.test(idx));
+  // ── 백테(backtest): 단추 없음 · 칸 20 → run() 읽기 줄 → runVR
   let B=null;
-  try{ const wire=(bt.match(/document\.getElementById\('vrBandSeg'\)\.onclick=[^\n]*/)||[''])[0];
-    B=new Function('document','dataLoaded','run',[
-      ...['function vrBandExp(b)','function vrBandTitle(b)','function vrBandSegSync()'].map(m=>extractFn(bt,m)),wire].join('\n')
-      +'\nreturn {vrBandTitle};')(doc,false,()=>{}); }catch(e){ console.log('  (backtest 추출 실패: '+e.message+')'); }
-  const b20=bB.find(b=>/실험적 확장/.test(b.label));
+  try{ B=new Function(['function vrBandExp(b)','function vrBandTitle(b)'].map(m=>extractFn(bt,m)).join('\n')+'\nreturn {vrBandTitle};')(); }catch(e){ console.log('  (backtest 추출 실패: '+e.message+')'); }
   const rdLine=(bt.match(/const band=\+document\.getElementById\('vrBand'\)\.value\|\|15;/)||[''])[0];   // run() 의 읽기 줄 그대로
-  let band=null;
-  if(B&&b20&&E.vrBandSeg.onclick&&rdLine){ E.vrBandSeg.onclick({target:b20}); band=new Function('document',rdLine+'\nreturn band;')(doc); }
+  const E={vrBand:{value:'20'}}, doc={getElementById:id=>E[id]};
+  const band=rdLine?new Function('document',rdLine+'\nreturn band;')(doc):null;
   const W=(DAYS.TQQQ||[]).filter(d=>d>='2021-01-04'&&d<='2026-01-02');
   const P=bp=>runVR(W,'TQQQ',{contrib:100,G:10,bandPct:bp,mode:0.75,formula:'basic',initAmt:10000,startV:0,startPool:0,costOn:true});
   const c2=x=>Math.round(x*100)/100;
   const GOLD20=59402.67, GOLD15=57894.05;   // 2026-11-19 · 이 회귀(함수 원문 추출)와 실제 backtest.html(Chromium · 같은 testdata 행) 값이 센트까지 같음
-  const r=(band!=null&&W.length>1000)?P(band):null, v15=W.length>1000?c2(P(15).final):null, v20=W.length>1000?c2(P(20).final):null;
-  console.log('  값: 창 '+W.length+'일 · 고른 밴드 '+band+' · 끝값 '+(r?c2(r.final):'-')+' · 밴드 20 '+v20+' · 밴드 15 '+v15);
-  ok('백테: [20 실험적 확장] → 칸 20 → run() 읽기 20 → runVR 끝값 = 밴드 20 값(센트) ≠ 15 · 단추 켜짐 · run() 이 bandPct 로 넘김',
-     band===20&&r&&c2(r.final)===GOLD20&&v20===GOLD20&&v15===GOLD15&&GOLD20!==GOLD15&&bB.find(b=>b.on)===b20
-     &&/runVR\(commonD,t,\{contrib:contribUSD,G,bandPct:band,/.test(bt),
-     JSON.stringify({band,fin:r&&c2(r.final),v20,v15,GOLD20,GOLD15}));
+  const r=(band!=null&&W.length>1000)?P(band):null, v15=W.length>1000?c2(P(15).final):null;
+  console.log('  값: 창 '+W.length+'일 · 칸 20 → 읽은 밴드 '+band+' · 끝값 '+(r?c2(r.final):'-')+' · 밴드 15 '+v15);
+  ok('백테: 밴드 고르기 단추 없음 · 칸에 20 → run() 읽기 20 → runVR 끝값 = 밴드 20 값(센트) ≠ 15 · run() 이 bandPct 로 넘김',
+     !/id="vrBandSeg"/.test(bt)&&!/vrBandSegSync/.test(bt)
+     &&band===20&&r&&c2(r.final)===GOLD20&&v15===GOLD15&&GOLD20!==GOLD15&&/runVR\(commonD,t,\{contrib:contribUSD,G,bandPct:band,/.test(bt),
+     JSON.stringify({band,fin:r&&c2(r.final),v15}));
   ok('백테: 결과 제목 — 15 면 그대로 · 20 이면 "밴드 ±20% 실험적 확장" · 전체비교 요약 두 곳 · 기본 칸 15',
      !!B&&B.vrBandTitle(15)===''&&/밴드 ±20% 실험적 확장/.test(B.vrBandTitle(20))&&/vrBandTitle\(params&&params\.band\)/.test(bt)
-     &&(bt.match(/밴드±\$\{vBt\}/g)||[]).length===2&&/<input type="number" id="vrBand" value="15"/.test(bt));
+     &&(bt.match(/밴드±\$\{vBt\}/g)||[]).length===2&&/<input type="number" id="vrBand" value="15" min="5" max="30">/.test(bt));
 }
 
 /* ════ 단타 공통 9단계 UI · 다음 계획 · BTC 분리 모의 · SOXL 해외 VTS ════ */

@@ -721,7 +721,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.138.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.138.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1849,7 +1849,7 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.138.0</b> · 2026-11-19</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.138.3</b> · 2026-11-19</div>
   </footer>
 </div>
 
@@ -1911,13 +1911,11 @@ if(/^\/portfolio\/?$/.test(location.pathname)){
     </div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력(실험적)</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
-    <div class="seclabel">밴드 폭 <span class="hint" style="color:var(--faint);font-weight:500">원문(공식)은 15%</span></div><div class="seg" id="set_vband"><button data-v="15">15% 공식</button><button data-v="20">20% 실험적 확장</button></div>
-    <p class="note" style="margin:4px 0 8px"><b>20%</b>는 원문이 아닌 <b>실험적 확장</b>입니다 — 앱 백테(TQQQ 적립식 · G 10 · 비용 반영 · 5년 창)에서 15%보다 연수익이 약 0.3~0.5%p 높고 최대 낙폭은 조금 낮았습니다(매매가 줄어든 몫 · 클로드 연구 · 지피티 재현 2026-11-19). 가장 좋은 폭은 아직 모릅니다. 다른 값은 아래 칸에 직접 넣을 수 있고, 15가 아니면 화면에 실험적 확장으로 표시합니다.</p>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>G (Gradient) <span class="hint" id="set_g_guide">1~50, 클수록 보수</span></label><input id="set_g" type="number" inputmode="numeric" value="10" oninput="vrGGuideRefresh()"></div>
     <div class="field"><label id="set_initamt_lbl" data-tk="set_vticker">초기 투자금 ($) <span class="hint">첫 매수에 넣을 돈</span></label><input id="set_initamt" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <div class="field"><label id="set_add_lbl" data-tk="set_vticker">매 사이클 적립금 ($)</label><input id="set_add" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
-    <div class="field"><label>밴드 폭 (%) <span class="hint">±, 좁을수록 매매↑ · 15 = 원문</span></label><input id="set_band" type="number" inputmode="decimal" value="15" oninput="vrBandSegSync()"></div>
+    <div class="field"><label>밴드 폭 (%) <span class="hint">±, 좁을수록 매매↑ · 원문 15 · 그 밖은 실험적 확장</span></label><input id="set_band" type="number" inputmode="decimal" value="15"></div>
     <div class="field"><label id="set_startv_lbl" data-tk="set_vticker">시작 V ($) <span class="hint">0이면 첫 매수가 V</span></label><input id="set_startv" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
     <div class="field"><label id="set_startpool_lbl" data-tk="set_vticker">시작 Pool ($)</label><input id="set_startpool" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
   </div>
@@ -5351,9 +5349,9 @@ function renderMaNow(){
   // 판단 (신호 vs 내 포지션)
   let v='';
   if(hold && c.pos!=='hold'){
-    const qty=price>0?Math.floor((st.principal||0)/price):0;
+    const E=maEntryQty(st, curStrat().hist, price);
     v=`<div class="oitem b"><span class="tag">진입</span><span class="nm">현금 → 100% 매수 전환</span><span class="pr">${px(price)}</span></div>
-       <p class="note" style="margin-top:8px">약 ${qty}주 매수 (원금 ${wn(st.principal)} 기준). 아래 <b>🟢 진입 기록</b>으로 남기세요.</p>`;
+       <p class="note" style="margin-top:8px">약 ${E.qty}주 매수 (현금 ${wn(E.cash)} 전액 · 수수료 포함). 아래 <b>🟢 진입 기록</b>으로 남기세요.</p>`;
   }else if(!hold && c.pos==='hold'){
     v=`<div class="oitem s"><span class="tag">청산</span><span class="nm">보유 → 전액 현금 전환</span><span class="pr">${px(price)}</span></div>
        <p class="note" style="margin-top:8px">보유분 전량 매도 후 현금 보유. 아래 <b>🔴 청산 기록</b>으로 남기세요.</p>`;
@@ -5509,12 +5507,22 @@ function maReplay(){
   alert(`${rec.length}건 생성됨 ✓`);
   return true;
 }
+/* 로테 진입 수량 — 장부 현금(maLedger: 원금 ± 지난 매매 · 배당) 전액 ÷ (가격 × (1+수수료)) 내림.
+   모의 재생(maReplay)·백테(runMA200)가 사는 식 그대로(imBuyQty). 운영 '오늘 할 일' 안내(renderMaNow)와 🟢 진입 기록(maRecord)이 이 함수 하나를 쓴다.
+   예전엔 둘 다 원금 ÷ 가격(수수료 없음)이라 첫 청산 뒤엔 실제 현금과 상관없는 수량을 안내하고 장부에도 그 수량을 적었다
+   (2026-11-19 점검: 운영 ↔ 재생 하루씩 대조 — 원금 1만$ 가 2만$ 가 된 계좌에 절반만 사라고 했다). */
+function maEntryQty(st, hist, price){
+  const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025, L=maLedger(hist||[], price, +(st&&st.principal)||0);
+  return {cash:L.cash, qty:(price>0)?imBuyQty(L.cash, price, FEE):0};
+}
 function maRecord(type){
   const c=computeMa(), st=curStrat().settings;
   const price=c.ready?(c.price||c.lastClose):inputNum('ma_price');
   if(!price||price<=0){ alert('먼저 🔄 자동으로 현재가를 불러오거나 직접 입력하세요.'); return; }
   let rec; const date=new Date().toISOString().slice(0,10);
-  if(type==='in'){ const qty=Math.floor((st.principal||0)/price)||0; rec={type:'in',date,price:+price,qty,ts:Date.now()}; }
+  if(type==='in'){ const qty=maEntryQty(st, curStrat().hist, price).qty;
+    if(!(qty>=1)){ alert('장부 현금이 1주 값(수수료 포함)보다 적어 진입할 수 없습니다.'); return; }
+    rec={type:'in',date,price:+price,qty,ts:Date.now()}; }
   else{ rec={type:'out',date,price:+price,ts:Date.now()}; }
   if(!confirm(`${type==='in'?'진입(매수)':'청산(현금)'} ${px(price)}${rec.qty?' × '+rec.qty+'주':''}\n오늘(${date}) 기록할까요?`))return;
   const h=curStrat().hist; h.push(rec); sortHist(h); save(); refreshMa();
@@ -5898,14 +5906,20 @@ function computeIvs(){
   out.hit=Math.abs(out.gap)>band;
   // ── 리밸런싱 주문 ──
   // 레버리지: 목표 w·eq 로 맞춘다. 짝=1배수면 나머지 (1−w)·eq 를 1배로 맞춘다.
+  /* 주수는 재생(ivsReplay — 모의·과거 재생)·백테(runIVS)와 같은 식으로 센다 (2026-11-19 점검: 운영 ↔ 재생 하루씩 대조).
+     매수 = imBuyQty(배정금, 가격, 수수료) — 수수료를 얹어 내므로 배정금 ÷ (가격 × (1+수수료)) 내림 · 배정금 1$ 이하면 0주.
+     매도 = 넘친 금액 ÷ 가격 내림(재생 _sq 와 같은 1e-9) · 보유분 이하.
+     예전엔 매수를 배정금 × (1−수수료) ÷ 가격으로 세서 경계에서 엔진보다 1주 적었다(USD 2009-07-01 5,081 vs 5,082 · TECL 2012-08-28 1,502 vs 1,503). */
+  const _ivsSellQ=(x,have)=>Math.min(Math.floor(x+1e-9), Math.floor(have+1e-9));
+  const _ivsBuyQ=(sp,p)=>(sp>1)?imBuyQty(sp,p,IVS_FEE):0;
   if(out.hit && price>0){
     const tA=out.w*eq, notional=tA-qty*price;
     if(notional>0){
       // 매수 재원: 예수금 + (짝=1배수면 1배 매도분)
       const fund = X1 ? cash + qty1*price1 : cash;
       const spend=Math.min(fund,notional); out.side='buy';
-      out.orderQty=Math.floor(spend*(1-IVS_FEE)/price);
-    }else{ out.side='sell'; out.orderQty=Math.min(qty,Math.floor(-notional/price)); }
+      out.orderQty=_ivsBuyQ(spend,price);
+    }else{ out.side='sell'; out.orderQty=_ivsSellQ(-notional/price, qty); }
     out.orderAmt=(out.orderQty||0)*price;
     out.orderFee=out.orderAmt*IVS_FEE;
     if(out.side==='sell'&&avg>0) out.orderPnl=(out.orderQty||0)*(price-avg)-out.orderFee;
@@ -5914,8 +5928,8 @@ function computeIvs(){
       const cashAfter = cash + (out.side==='sell'? out.orderAmt-out.orderFee : -(out.orderAmt+out.orderFee));
       const tB=(1-out.w)*eq, need=tB-qty1*price1;
       if(need>0){ const sp=Math.min(Math.max(cashAfter,0),need);
-        out.side1='buy'; out.orderQty1=Math.floor(sp*(1-IVS_FEE)/price1); }
-      else { out.side1='sell'; out.orderQty1=Math.min(qty1,Math.floor(-need/price1)); }
+        out.side1='buy'; out.orderQty1=_ivsBuyQ(sp,price1); }
+      else { out.side1='sell'; out.orderQty1=_ivsSellQ(-need/price1, qty1); }
       out.orderAmt1=(out.orderQty1||0)*price1;
       out.orderFee1=out.orderAmt1*IVS_FEE;
       if(out.side1==='sell'&&avg1>0) out.orderPnl1=(out.orderQty1||0)*(price1-avg1)-out.orderFee1;
@@ -5924,9 +5938,9 @@ function computeIvs(){
   // ── 이번 달 투입 ── 목표 비중대로 나눠 산다 (백테 검증된 방식)
   if(out.monthly>0 && price>0){
     const mA=out.monthly*out.w, mB=out.monthly-mA;
-    out.addQty=Math.floor(mA*(1-IVS_FEE)/price);
+    out.addQty=_ivsBuyQ(mA,price);
     out.addAmt=(out.addQty||0)*price;
-    if(X1&&price1>0){ out.addQty1=Math.floor(mB*(1-IVS_FEE)/price1); out.addAmt1=(out.addQty1||0)*price1; }
+    if(X1&&price1>0){ out.addQty1=_ivsBuyQ(mB,price1); out.addAmt1=(out.addQty1||0)*price1; }
     else { out.addCash=mB; }   // 짝이 현금·국채면 나머지는 예수금으로
   }
   // 트리거 가격 — 이 밖으로 나가야 밴드를 벗어난다 (σ·1배 가격이 그대로라는 가정)
@@ -6636,6 +6650,46 @@ function asapPos(hist){
   });
   return {shares,cost,avg:shares>0?cost/shares:0,reserve,divs,realized,bought};
 }
+/* ASAP 하루 판정 — 모의(_paperAsap)와 운영 '오늘 할 일'(computeAsap → renderAsapNow · 🟢 매수 돈 출처)이 이 함수 하나를 쓴다.
+   백테 runASAP 과 같은 규칙 (2026-11-19 점검 · 사용자: "VR이랑 ASAP도 매일 대조 돌려봐"):
+     지표는 전일(q=i−1)·전전일(p=i−2) 확정 종가로만 보고 체결은 오늘(i) 종가 — 룩어헤드 없음. 200일선이 아직 없으면 그날은 건너뛴다(skip).
+     하락장(전일 종가 < 200일선): 리저브(SGOV)에 base 적립 · RSI ≤ 30 & 200선 −15% 이하면 deep, RSI ≤ 35 & −10% 이하면 mid 를 새 돈으로 산다.
+     재진입(리저브): 하락 전환(crossDn)에 단계 0 → MA5↑MA20 다음 날 리저브 20% → MA20↑MA50 다음 날 30% → 상승장 재확인(전일 종가 ≥ 200선) 날 나머지 전액.
+     상승장: 매일 base 를 새 돈으로 산다. 재진입이 끝난 뒤 들어온 배당은 리저브에 남아 다음 하락장 재진입 때 쓴다.
+   예전엔 운영 화면이 이 판정을 따로 세서 ① 재진입 날 20%·30% 매수를 안내하지 않았고 ② 재진입이 끝난 뒤에도 리저브가 있으면 '전액 매수'를 날마다 띄웠다.
+   I={cl,MA5,MA20,MA50,MA200,RSI} · S={stage, sgov(그날 배당까지 넣은 리저브)} · cfg={base,mid,deep} · c=체결가(0 이하면 사지 않는다)
+   돌려줌 {skip, down, rsi, m200, pc, ev:{crossDn,cross5,cross20}, acts:[{type:'sgov'|'buy', amt, from:'new'|'reserve', why}], stage, sgov} — stage·sgov 는 그날 판정 뒤 */
+function asapDay(I, i, S, cfg, c){
+  const q=i-1, p=i-2, m200=q>=0?I.MA200[q]:null;
+  let stage=S.stage, sgov=S.sgov; const acts=[];
+  if(m200==null) return {skip:true, acts, stage, sgov};
+  const cl=I.cl, pc=cl[q], down=pc<m200;
+  const crossDn=p>=0&&I.MA200[p]!=null&&cl[p]>=I.MA200[p]&&pc<m200;
+  const cross5 =p>=0&&I.MA5[p]!=null&&I.MA20[p]!=null&&I.MA5[p]<=I.MA20[p]&&I.MA5[q]>I.MA20[q];
+  const cross20=p>=0&&I.MA20[p]!=null&&I.MA50[p]!=null&&I.MA20[p]<=I.MA50[p]&&I.MA20[q]>I.MA50[q];
+  const rsi=I.RSI[q]!=null?I.RSI[q]:50;
+  const _sg=(a,why)=>{ if(a>0){ sgov+=a; acts.push({type:'sgov',amt:a,why}); } };
+  const _buy=(a,res,why)=>{ if(!(a>0)||!(c>0)) return; acts.push({type:'buy',amt:a,from:res?'reserve':'new',why}); if(res) sgov-=a; };
+  if(crossDn&&stage>0) stage=0;
+  if(down){ _sg(cfg.base,'base');
+    if(rsi<=30&&pc<=m200*0.85) _buy(cfg.deep,false,'deep');
+    else if(rsi<=35&&pc<=m200*0.90) _buy(cfg.mid,false,'mid'); }
+  if(stage===0&&cross5){ _buy(sgov*0.2,true,'re1'); stage=1; }
+  if(stage===1&&cross20){ _buy(sgov*0.3,true,'re2'); stage=2; }
+  if(stage===2&&!down){ _buy(sgov,true,'re3'); stage=3; }
+  if(!down) _buy(cfg.base,false,'base');
+  return {skip:false, down, rsi, m200, pc, ev:{crossDn,cross5,cross20}, acts, stage, sgov};
+}
+/* 🟢 매수 기록의 돈 출처 — 오늘 할 일(asapDay)과 금액이 같으면 그 출처: 재진입 = 리저브 · 상승장 적립 · 딥 = 새 돈 (백테 runASAP · 모의와 같다).
+   오늘 할 일과 다른 금액(손으로 넣은 매수)만 예전처럼 리저브가 넉넉하면 리저브.
+   예전엔 늘 '리저브가 넉넉하면 리저브'라, 리저브가 쌓인 동안의 상승장 적립 · 딥 매수까지 리저브에서 빼 장부 리저브가 엔진보다 빨리 줄었다(2026-11-19 점검). */
+function asapBuyFrom(c, amt){
+  const acts=(c&&c.ready&&c.todo&&c.todo.acts)||[], R=(c&&c.pos&&c.pos.reserve)||0, same=(x,y)=>Math.abs(x-y)<=0.005;
+  const res=acts.filter(a=>a.type==='buy'&&a.from==='reserve'), resSum=res.reduce((s,a)=>s+a.amt,0);
+  if(R>=amt-0.005 && res.length && (same(amt,resSum) || res.some(a=>same(amt,a.amt)))) return 'reserve';   // 권장 금액칸은 센트 반올림 — 리저브 전액(3차)이 0.5센트 미만 올라가도 리저브
+  if(acts.some(a=>a.type==='buy'&&a.from==='new'&&same(amt,a.amt))) return 'new';
+  return (R>=amt-1e-6)?'reserve':'new';
+}
 function computeAsap(){
   const st=curStrat().settings, hist=curStrat().hist;
   const sym=String(st.ticker||'SOXL').toUpperCase();
@@ -6646,9 +6700,18 @@ function computeAsap(){
   const days=_dAll ? settledBars(_dAll, curOf(st)) : null;
   if(!days || days.length<2) return {st,sym,pos,ready:false};
   const V=_asapPriceView(days);
+  /* 오늘 할 일 — 모의와 같은 asapDay 로 판정한다(2026-11-19). 오늘 = 마지막 확정 봉 다음 거래일(체결은 그날 종가 · 수량 안내는 현재가).
+     단계는 엔진처럼 세션 첫 기록일부터 0 으로 시작해 어제까지 다시 센다(단계는 시세만으로 움직인다 · 기록이 없으면 오늘이 첫날).
+     예전엔 시세 전 구간으로 센 단계(V.stage — 오늘 판정 뒤 값)를 써서, 모의 · 백테와 시작 단계가 다를 수 있었다. 리저브는 장부(asapPos · 그날 배당까지). */
+  const price=(asapQuoteData.price>0?asapQuoteData.price:V.lastClose);
+  const cfg={base:+st.base||10, mid:+st.mid||50, deep:+st.deep||100}, I={cl:V.cl,MA5:V.ma5,MA20:V.ma20,MA50:V.ma50,MA200:V.ma200,RSI:V.rsi}, n=V.cl.length;
+  const first=(hist||[]).reduce((m,h)=>(h&&h.date&&(!m||h.date<m))?h.date:m,'');
+  let s0=first?V.dates.findIndex(d=>d>=first):n; if(s0<0) s0=n;
+  let stage0=0; for(let i=Math.max(2,s0);i<n;i++){ const R=asapDay(I,i,{stage:stage0,sgov:0},cfg,1); if(!R.skip) stage0=R.stage; }
+  const todo=asapDay(I,n,{stage:stage0,sgov:pos.reserve},cfg,price);
   return {st,sym,pos,ready:true,warming:V.warming,cl:V.cl,dates:V.dates,ma5:V.ma5,ma20:V.ma20,ma50:V.ma50,ma200:V.ma200,rsi:V.rsi,
     lastClose:V.lastClose,lastDate:V.lastDate,m200Now:V.m200Now,ma5Now:V.ma5Now,ma20Now:V.ma20Now,ma50Now:V.ma50Now,rsiNow:V.rsiNow,
-    phase:V.phase,stage:V.stage,gapPct:V.gapPct,ev:V.ev,dip:V.dip,regimeDays:V.regimeDays, price:(asapQuoteData.price>0?asapQuoteData.price:V.lastClose)};
+    phase:V.phase,stage:todo.skip?stage0:todo.stage,stageAm:stage0,todo,gapPct:V.gapPct,ev:V.ev,dip:V.dip,regimeDays:V.regimeDays, price};
 }
 /* ASAP: 이평·RSI·단계 재생·국면은 기록과 무관하다 — 시세 배열(확정 봉)마다 한 번만 센다.
    예전엔 computeAsap 를 부를 때마다 전 구간(수천 일)을 다시 셌고, 모의 MDD 가 그걸 하루마다 불렀다.
@@ -6740,35 +6803,37 @@ function renderAsapNow(){
   $('asap_phase_txt').textContent=stageTxt; $('asap_phase_txt').style.color=down?'var(--sell)':'var(--buy)';
   $('asap_ind_lbl').innerHTML=`종가 ${nfix(c.lastClose,2)} · 200일선 ${c.m200Now?nfix(c.m200Now,2):'—'} · <b style="color:${c.gapPct>=0?'var(--buy)':'var(--sell)'}">${c.gapPct>=0?'+':''}${c.gapPct.toFixed(1)}%</b> · RSI ${c.rsiNow.toFixed(0)}`;
   let pct=(c.gapPct+20)/40*100; pct=Math.max(0,Math.min(100,pct)); $('asap_mark').style.left=pct+'%';
-  // 오늘 할 일 + 권장 금액/동작
+  // 오늘 할 일 — computeAsap 의 todo(모의 · 백테와 같은 asapDay 판정) 그대로 보인다. 권장 금액칸: 리저브 매수가 있으면 그 합, 없으면 새 돈 매수, 없으면 적립액
   let v='', recAmt=base;
   const oi=(cls,tag,nm,pr)=>`<div class="oitem ${cls}"><span class="tag">${tag}</span><span class="nm">${nm}</span>${pr?`<span class="pr">${pr}</span>`:''}</div>`;
   if(c.warming){ v=`<p class="note" style="color:var(--gold)">ⓘ 이력이 200일 미만이라 워밍업입니다. 종가가 200일선 위면 보유를 시작하세요.</p>`; }
-  else if(down){
-    if(c.ev.crossDn) v+=`<p class="note" style="color:var(--sell);margin-bottom:8px">⚠ 하락 전환 — 재진입 카운터 리셋 (다음 상승 시 1차부터)</p>`;
-    v+=oi('','SGOV',`매일 <b>${px(base)}</b> 리저브 적립`,px(base));
-    if(c.dip==='deep'){ recAmt=deep; v+=oi('b','딥·deep',`SOXL <b>${px(deep)}</b> 매수 — RSI ${c.rsiNow.toFixed(0)} · 200선 ${c.gapPct.toFixed(0)}%`,px(price)); }
-    else if(c.dip==='mid'){ recAmt=mid; v+=oi('b','딥·mid',`SOXL <b>${px(mid)}</b> 매수 — RSI ${c.rsiNow.toFixed(0)} · 200선 ${c.gapPct.toFixed(0)}%`,px(price)); }
-    else v+=`<p class="note" style="margin-top:8px">딥 조건 미충족 (mid: −10%&RSI≤35 / deep: −15%&RSI≤30) — 오늘은 <b>적립만</b>. 현재 200선 ${c.gapPct.toFixed(0)}% · RSI ${c.rsiNow.toFixed(0)}.</p>`;
-  } else { // 상승장 — 매일 base로 SOXL 적립(DCA)이 기본 행동 + 리저브는 재진입 단계로 소진
-    recAmt=base;
-    v+=oi('b','매일 적립',`SOXL <b>${px(base)}</b>/일 매수 — 상승장 일일 적립(DCA)`,px(price));
-    if(pos.reserve>0.5){
-      if(c.stage<3){
-        const trig=c.stage===0?`MA5(${c.ma5Now?nfix(c.ma5Now,1):'—'}) > MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'})`:`MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'}) > MA50(${c.ma50Now?nfix(c.ma50Now,1):'—'})`;
-        const pctg=c.stage===0?'20%':'30%', amt=c.stage===0?pos.reserve*0.2:pos.reserve*0.3;
-        v+=`<p class="note" style="margin-top:8px">💰 리저브 <b>${px(pos.reserve)}</b> 대기 — 재진입 <b>${c.stage+1}차</b> 트리거 <b>${trig}</b> 충족 시 <b>${pctg}(${px(amt)})</b> SOXL 추가 매수</p>`;
-      } else {
-        v+=oi('b','재진입 완료',`상승장 재확인 — 남은 리저브 <b>${px(pos.reserve)}</b> 전액 SOXL 매수로 소진`,px(price));
-      }
-    } else {
-      v+=`<p class="note" style="margin-top:8px;color:var(--dim)">리저브 소진 완료 — 상승장 base 적립만 지속</p>`;
+  else{
+    const T=c.todo||{acts:[]}, acts=T.acts||[];
+    const RL={re1:['재진입 1차','MA5↑MA20 — 리저브 20%'],re2:['재진입 2차','MA20↑MA50 — 남은 리저브 30%'],re3:['재진입 3차','상승장 재확인(종가 ≥ 200일선) — 남은 리저브 전액']};
+    if(down&&c.ev.crossDn) v+=`<p class="note" style="color:var(--sell);margin-bottom:8px">⚠ 하락 전환 — 재진입 카운터 리셋 (다음 상승 시 1차부터)</p>`;
+    for(const a of acts){
+      if(a.type==='sgov') v+=oi('','SGOV',`매일 <b>${px(a.amt)}</b> 리저브 적립`,px(a.amt));
+      else if(a.why==='deep'||a.why==='mid') v+=oi('b','딥·'+a.why,`SOXL <b>${px(a.amt)}</b> 매수(새 돈) — RSI ${c.rsiNow.toFixed(0)} · 200선 ${c.gapPct.toFixed(0)}%`,px(price));
+      else if(a.why==='base') v+=oi('b','매일 적립',`SOXL <b>${px(a.amt)}</b>/일 매수(새 돈) — 상승장 일일 적립(DCA)`,px(price));
+      else if(RL[a.why]) v+=oi('b',RL[a.why][0],`${RL[a.why][1]} <b>${px(a.amt)}</b> SOXL 매수(리저브)`,px(price));
     }
+    const resBuy=acts.filter(a=>a.type==='buy'&&a.from==='reserve').reduce((s,a)=>s+a.amt,0), newBuy=acts.find(a=>a.type==='buy'&&a.from==='new');
+    recAmt=resBuy>0?resBuy:(newBuy?newBuy.amt:base);
+    if(down&&!acts.some(a=>a.why==='deep'||a.why==='mid')) v+=`<p class="note" style="margin-top:8px">딥 조건 미충족 (mid: −10%&RSI≤35 / deep: −15%&RSI≤30) — 오늘은 <b>적립만</b>. 현재 200선 ${c.gapPct.toFixed(0)}% · RSI ${c.rsiNow.toFixed(0)}.</p>`;
+    /* 아직 오지 않은 재진입 — 신호(종가 확정)가 나면 다음 거래일 종가에 산다. 재진입이 끝난 뒤 리저브(배당 등)는 다음 하락장 재진입 때 쓴다(엔진 규칙 · 하락장에서도 1·2차가 올 수 있다) */
+    const left=T.skip?pos.reserve:T.sgov;
+    if(left>0.5){
+      const s=c.stage, nx=s===0?`1차 — MA5(${c.ma5Now?nfix(c.ma5Now,1):'—'}) > MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'}) 교차가 확정되면 다음 거래일에 리저브 20%`
+        :s===1?`2차 — MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'}) > MA50(${c.ma50Now?nfix(c.ma50Now,1):'—'}) 교차가 확정되면 다음 거래일에 남은 리저브 30%`
+        :s===2?'3차 — 종가가 200일선 위로 올라선 다음 거래일에 남은 리저브 전액':'';
+      v+= nx ? `<p class="note" style="margin-top:8px">💰 리저브 <b>${px(left)}</b> 대기 — 재진입 ${nx} SOXL 매수</p>`
+             : `<p class="note" style="margin-top:8px;color:var(--dim)">재진입 완료 — 남은 리저브 <b>${px(left)}</b>(배당 등)는 다음 하락장 재진입 때 씁니다</p>`;
+    } else if(!down) v+=`<p class="note" style="margin-top:8px;color:var(--dim)">리저브 소진 완료 — 상승장 base 적립만 지속</p>`;
   }
   if(c.ready) v+=`<p class="note" style="margin-top:8px;color:var(--faint)">ⓘ 신호 기준 <b>${c.lastDate}</b> 확정 종가 · 체결은 그다음 거래일 종가(MOC) — 장중 가격은 신호에 쓰지 않습니다(백테·모의와 같은 규약).</p>`;
   $('asap_verdict').innerHTML=v;
   // 금액칸이 비어있을 때만 권장액 자동 입력 (사용자가 입력하면 유지)
-  if($('asap_amt') && (!$('asap_amt').value || +unComma($('asap_amt').value)===0) && recAmt>0){ $('asap_amt').value=nfix(recAmt,recAmt>=100?0:2); }
+  if($('asap_amt') && (!$('asap_amt').value || +unComma($('asap_amt').value)===0) && recAmt>0){ $('asap_amt').value=nfix(recAmt,2); }   // 센트까지 — 🟢 매수가 오늘 할 일 금액과 맞춰 돈 출처를 정한다(asapBuyFrom)
   $('asap_stage').textContent = down ? `하락장 · ${c.regimeDays}거래일` : (c.stage>=3?`상승 · 완료 · ${c.regimeDays}일`:`상승 · 재진입 ${c.stage}/3`);
   drawAsapChart(c);
 }
@@ -6848,9 +6913,10 @@ function asapRecord(kind){
   }else if(kind==='buy'){
     if(!price||price<=0){alert('먼저 🔄 자동으로 현재가를 불러오거나 입력하세요.');return;}
     if(!amt||amt<=0){alert('매수 금액을 입력하세요.');return;}
-    const qty=amt/price, from=(pos.reserve>=amt-1e-6)?'reserve':'new';
-    rec={type:'buy',date,price:+price,qty:+qty.toFixed(6),amt:+amt,from,ts:Date.now()};
-    if(!confirm(`SOXL ${px(amt)} 매수 (≈${nfix(qty,4)}주 @ ${px(price)})\n자금: ${from==='reserve'?'리저브 차감':'신규 자금'}\n오늘(${date}) 기록할까요?`))return;
+    const from=asapBuyFrom(c, amt);   // 오늘 할 일과 같은 금액이면 엔진이 정한 출처(재진입 = 리저브 · 적립 · 딥 = 새 돈)
+    const a=(from==='reserve'&&amt>pos.reserve&&amt-pos.reserve<=0.005)?pos.reserve:amt, qty=a/price;   // 리저브 전액을 센트로 반올림한 금액이면 장부 리저브 그대로 — 리저브를 음수로 만들지 않는다
+    rec={type:'buy',date,price:+price,qty:+qty.toFixed(6),amt:+a,from,ts:Date.now()};
+    if(!confirm(`SOXL ${px(a)} 매수 (≈${nfix(qty,4)}주 @ ${px(price)})\n자금: ${from==='reserve'?'리저브 차감':'신규 자금'}\n오늘(${date}) 기록할까요?`))return;
   }else{
     if(!price||price<=0){alert('먼저 현재가를 불러오세요.');return;}
     if(pos.shares<=0){alert('보유 수량이 없습니다.');return;}
@@ -7559,33 +7625,21 @@ function _paperAsap(sess, from){
   const divOn=!divCashOn(st);                          // 현금 수령 세션은 분배금 카드가 따로 센다
   /* 기록 금액·주수는 반올림하지 않는다 (7차 D8) — 예전엔 센트·6자리로 잘라 적고 안에서는 안 자른 값으로
      리저브를 굴려, 장부가 다시 센 리저브와 조금씩 어긋났다. 저장 전 장부 == 저장 후 장부. */
-  const _sgov=(d,a)=>{ if(a>0){ sgov+=a; rec.push({type:'sgov',date:d,amt:a,sim:true,ts:ts++}); } };
-  const _buy=(d,c,a,fromRes)=>{ if(!(a>0)||!(c>0))return; const q=a/c; sh+=q;
-    rec.push({type:'buy',date:d,price:+c,qty:q,amt:a,from:fromRes?'reserve':'new',sim:true,ts:ts++});
-    if(fromRes) sgov-=a; };
   /* 지표는 '전일 종가까지'로 만들고 체결만 오늘 종가에 한다 — 백테 runASAP 와 같은 규약.
-     오늘 종가로 RSI·이평·교차를 확정한 뒤 같은 종가에 샀다고 치면 낼 수 없는 주문이다. */
+     오늘 종가로 RSI·이평·교차를 확정한 뒤 같은 종가에 샀다고 치면 낼 수 없는 주문이다.
+     하루 판정은 공용 asapDay — 운영 '오늘 할 일'(computeAsap)이 같은 함수를 쓴다(2026-11-19 · 같은 걸 두 군데서 세지 않는다). */
+  const I={cl,MA5,MA20,MA50,MA200,RSI}, cfg={base,mid,deep};
   for(let i=2;i<n;i++){ const d=days[i].date; if(d<from||d>today) continue;
     const c=cl[i];                              // 체결가만 오늘 종가
     /* 배당락일 — 전날 종가 시점 보유분의 세후 배당이 리저브로 들어와 다음 매수 재원이 된다 (7차 D8).
        백테 runASAP 과 같은 자리(지표 워밍업 판정 전)·같은 식. */
     if(divOn && sh>0){ const dv=divCashQ(asapQuoteData, d, sh, true);
       if(dv>0){ sgov+=dv; rec.push({type:'div',date:d,amt:dv,sim:true,ts:ts++}); } }
-    const q=i-1, p=i-2;                         // q=전일, p=전전일
-    const m200=MA200[q]; if(m200==null) continue;
-    const pc=cl[q], down=pc<m200;
-    const crossDn=MA200[p]!=null&&cl[p]>=MA200[p]&&pc<m200;
-    const cross5 =MA5[p]!=null&&MA20[p]!=null&&MA5[p]<=MA20[p]&&MA5[q]>MA20[q];
-    const cross20=MA20[p]!=null&&MA50[p]!=null&&MA20[p]<=MA50[p]&&MA20[q]>MA50[q];
-    const rsi=RSI[q]!=null?RSI[q]:50;
-    if(crossDn&&stage>0) stage=0;
-    if(down){ _sgov(d,base);
-      if(rsi<=30&&pc<=m200*0.85) _buy(d,c,deep,false);
-      else if(rsi<=35&&pc<=m200*0.90) _buy(d,c,mid,false); }
-    if(stage===0&&cross5){ _buy(d,c,sgov*0.2,true); stage=1; }
-    if(stage===1&&cross20){ _buy(d,c,sgov*0.3,true); stage=2; }
-    if(stage===2&&!down){ _buy(d,c,sgov,true); stage=3; }
-    if(!down) _buy(d,c,base,false); }
+    const R=asapDay(I, i, {stage, sgov}, cfg, c); if(R.skip) continue;
+    for(const a of R.acts){
+      if(a.type==='sgov') rec.push({type:'sgov',date:d,amt:a.amt,sim:true,ts:ts++});
+      else { const q=a.amt/c; sh+=q; rec.push({type:'buy',date:d,price:+c,qty:q,amt:a.amt,from:a.from,sim:true,ts:ts++}); } }
+    stage=R.stage; sgov=R.sgov; }
   if(!rec.length) return null;
   sess.hist=rec; st.simLast=last; save();
   return {upto:last, n:rec.length, regen:true};
@@ -11715,7 +11769,7 @@ function openSettings(){
     $('set_vticker').value=st.ticker;segSet('set_vmode',String(st.mode));segSet('set_vformula',st.formula);segSet('set_vrdivmode',st.divmode||'reinv');
     segSet('set_vauto',st.autoCyc?'1':'0');
     segSet('set_vmodel', vrModelOf(st));
-    $('set_g').value=st.g;$('set_add').value=nfix(st.add,0);$('set_band').value=st.band;vrBandSegSync();$('set_startv').value=nfix(st.startv,0);$('set_startpool').value=nfix(st.startpool,0);
+    $('set_g').value=st.g;$('set_add').value=nfix(st.add,0);$('set_band').value=st.band;$('set_startv').value=nfix(st.startv,0);$('set_startpool').value=nfix(st.startpool,0);
     $('set_initamt').value=nfix(st.initAmt!=null?st.initAmt:10000,0);
     $('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;
     $('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;
@@ -11789,11 +11843,10 @@ function vrGGuideText(mode, g){
   const m=String(mode), isWd=m==='0.25', gv=isWd?20:10, cur=+g||0;
   return `라오어 시작 가이드 G=${gv} (${isWd?'인출식':m==='0.5'?'거치식':'적립식'})`+(cur&&cur!==gv?` · 지금 ${cur}`:'')+' · 클수록 보수';
 }
-/* VR 밴드 — 원문(공식)은 15% · 20% 선택지(2026-11-19 사용자 승인 · 연구 REPLICATION R-20261116-1 지피티 재현 확인)를 포함해
-   15 가 아니면 '실험적 확장'으로 표시한다(공식 결과와 실험 결과가 같은 이름으로 보이지 않게). 계산은 원래대로 band 값 그대로. */
+/* VR 밴드 — 원문(공식)은 15% · 칸에 다른 값을 넣으면 '실험적 확장'으로 표시한다(공식 결과와 실험 결과가 같은 이름으로 보이지 않게). 계산은 band 값 그대로.
+   2026-11-19: 20% 고르기 단추를 넣었다가(#679) 같은 날 뺐다 — 20 의 이득이 종목마다 달라서(R-20261119-2 · 사용자 "모든 종목 적용되는거 아니면 버튼 다 지워"). */
 function vrBandExp(b){ return (+b||15)!==15; }   // 원문(공식) 15% — 상수 대신 글자 그대로(읽는 순서와 무관)
 function vrBandText(b){ const v=+b||15; return '±'+v+'%'+(vrBandExp(v)?' (실험적 확장)':''); }
-function vrBandSegSync(){ const e=$('set_band'); if(e) segSet('set_vband',String(+e.value)); }
 function vrGGuideRefresh(){ const gg=$('set_g_guide'); if(gg) gg.textContent=vrGGuideText(segGet('set_vmode')||'0.75', ($('set_g')||{}).value); }
 function applyVrModeUI(mode){
   const isLump=String(mode)==='0.5', isWd=String(mode)==='0.25';
@@ -11839,7 +11892,7 @@ function syncSetCurLabels(){
 function setupSegs(){
   ['set_div','set_reverse','set_tgtdyn','set_autotp','set_vmode','set_vformula','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
    'set_infdivmode','set_vrdivmode','set_madivmode','set_ivsdivmode','set_asapdivmode',
-   'set_vauto','set_vmodel','set_vband','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
+   'set_vauto','set_vmodel','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -11849,7 +11902,6 @@ function setupSegs(){
         if(id==='set_dcamode') dcaModeUI();          // 적립↔거치 전환 시 칸·라벨 갱신
         // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
         if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
-        if(id==='set_vband'){ const e=$('set_band'); if(e) e.value=b.dataset.v; }   // 고르기는 칸 값만 바꾼다 — 저장·계산은 칸 값 그대로
         if(id==='set_ivspark'||id==='set_ivsmode')
           syncIvsSetUI(segGet('set_ivspark')||'bill', tkVal('set_ivsticker_in','TQQQ'), segGet('set_ivsmode')||'iv');
       };

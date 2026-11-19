@@ -715,5 +715,9 @@
 - name: 모의 재생 이어 계산 검사 (기억 켬/끔 장부 일치 · 무작위 덧붙이기 · 경계)
   run: node scripts/check-paper-replay.cjs index.html testdata
 
+- name: 운영 오늘 할 일 == 모의 재생 그날 매매 — 하루씩(섀넌 · 로테 · 적립 · 듀얼가드 기본 · 공포 모드 · VR · ASAP) 값·변이 검사
+  minutes: 1.7
+  run: node scripts/check-ops-daily-parity.cjs
+
 - name: MA150 하향 기준 및 시간대 경계 검증
   run: node scripts/check-ma150-cutover.cjs
