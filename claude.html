@@ -85,7 +85,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.31.1</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.31.2</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -179,7 +179,8 @@ function sec(title,inner,open,id){return "<details class='card sec'"+(open?" ope
 function docRow(k,v){return "<tr><td style='width:96px;color:var(--gold);font-weight:800;vertical-align:top'>"+k+"</td><td style='white-space:normal;text-align:left'>"+esc(v)+"</td></tr>"}
 function mainBanner(tab){var a=arenaOf(tab),m=(((J.lab||{}).main||{})[tab]||{}).current;
   if(!m||!m.effectiveFrom)return "";                             // 처음 채택한 기본 메인이면 아래 설명 그대로
-  return "<div class='warn' style='margin-bottom:8px'>🏆 지금 메인은 자동 승격된 <b>"+esc(m.name)+"</b> ("+esc(m.effectiveFrom)+" 부터) — "+esc(m.rule||"")+"<br>아래 설명은 처음 채택한 기본 전략 기준입니다. 바뀐 변수는 ⑥ 전략 경쟁 표에서 확인하세요.</div>";}
+  var pin=/^user:/.test(String(m.by||""));                       // 사용자 고정(USER_PINS · main-config by=user:pin)이면 '자동 승격'이라 쓰지 않는다
+  return "<div class='warn' style='margin-bottom:8px'>"+(pin?"📌 지금 메인은 사용자가 고정한 ":"🏆 지금 메인은 자동 승격된 ")+"<b>"+esc(m.name)+"</b> ("+esc(m.effectiveFrom)+" 부터) — "+esc(m.rule||"")+"<br>아래 설명은 처음 채택한 기본 전략 기준입니다. 바뀐 변수는 ⑥ 전략 경쟁 표에서 확인하세요.</div>";}
 function docCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("① 전략 · 종목 선정 규칙 — "+esc(d.title),mainBanner(tab)+"<div class='rule'>"+esc(d.what)+"</div><div class='tw'><table class='board doc'><tbody>"+docRow("종목 선정",d.pick)+docRow("자금",d.money)+docRow("근거",d.proof)+"</tbody></table></div>",true);}
 function buyCard(tab){var d=DOC[tab];if(!d)return "";

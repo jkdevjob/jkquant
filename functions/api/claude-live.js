@@ -88,6 +88,7 @@ export function openingRows(st,prices,bars={},hm=2400,date=""){
 const sgnPct=v=>v==null||!isFinite(v)?"—":(v>=0?"+":"")+(+v).toFixed(2)+"%";
 export function etfNoBuyNote(buy){
   const th=String(((buy&&buy.rule)||{}).dropMaxPct??-3).replace("-","−"),dp=sgnPct(buy&&buy.dropPct);
+  if(buy&&buy.decisionReason==="main_config_unavailable")return "15:21 예상 전일 대비 "+dp+" — 메인 기록을 못 읽어 판단 안 함(점검)";   // 2026-11-19~ 옛 기본 규칙으로 판단하지 않는다
   if(buy&&buy.decisionReason==="no_signal_next_day_closed_max24h"){
     const n=String(((buy.max24||{}).next)||"");
     return "15:21 예상 전일 대비 "+dp+" — 기준 "+th+"% 이하지만 다음 날"+(n?"("+n.slice(5,7)+"/"+n.slice(8,10)+")":"")+" 휴장 · 최대 24시간이라 매수 없음";
@@ -130,7 +131,8 @@ export function close30Rows(st,nowPrice,bar={},hm=2400){
   if(buy.decisionReason==="krx_holiday")return [{code:"233740",name:C30_NAME,status:"매매 없음",note:"국내 휴장일"}];
   const th=String((buy.rule&&buy.rule.th)??0).replace("-","−");
   if(!buy.signal)return [{code:"233740",name:C30_NAME,status:"매매 없음",sofarPct:buy.sofarPct,
-    note:buy.decisionReason==="price_missing"||String(buy.decisionReason||"").startsWith("quote_failed")?"15:00 가격을 못 받음 — "+String(buy.decisionReason||""):"15:00 전일 대비 "+sgn(buy.sofarPct)+" (기준 "+th+"% 미만 아님)"}];
+    note:buy.decisionReason==="price_missing"||String(buy.decisionReason||"").startsWith("quote_failed")?"15:00 가격을 못 받음 — "+String(buy.decisionReason||"")
+      :buy.decisionReason==="main_config_unavailable"?"15:00 전일 대비 "+sgn(buy.sofarPct)+" — 메인 기록을 못 읽어 판단 안 함(점검)":"15:00 전일 대비 "+sgn(buy.sofarPct)+" (기준 "+th+"% 미만 아님)"}];
   // 주문한 건(15:00 신호)을 15:00 판단 가격 → 공식 종가로(모의투자 체결과 상관없이)
   const bp=+((buy.quote||{}).price)||null,sp=hm>=1531&&+(bar||{}).close>0?+bar.close:null,ref=sp||nowPrice;
   const note=vtsNote(buy.order,((st.c30_reconcile||{}).fills||{}).buy,buy.ordersSkipped);
@@ -171,6 +173,17 @@ export function coinBreakoutDay(h,bars,last,p=MAIN_DEFAULT.crypto.params){
   return {hold:true,action:stopped?"손절":"돌파 매수",status:stopped?"손절 (−"+stopPct+"%)":"보유중 — "+hm+" 돌파 매수, 다음 09:00 매도",
     buyTime:hm,buyPrice:entry,stopPrice:stop,level:h.level,stopped,
     pnlPct:stopped?(-stopPct-COIN_STOP_SLIP-COIN_COST):(last?pct(last,entry)-COIN_COST:null)};
+}
+// 끝난 업비트 하루 day 를 받은 60분봉(hourly · 순서 상관없음)이 다 덮는지 — 봉 개수(24)로 보지 않는다: 업비트 점검(거래 멈춤) 시간은 봉이 없는 게 정상이다
+// (2026-11-09 03~06시 · 2018~ ETH 58일 · BTC 54일). 받은 봉이 그 하루 시작(09:00) 전부터 있고(앞이 안 잘림) 그 하루 마지막 시간(다음 날 08시) 봉이나 그 뒤 봉까지 있으며,
+// 빈 시간이 COIN_GAP_MAX 를 넘지 않으면 덮었다고 본다. 밤 계산(claude_lab._upbit_days · UPBIT_GAP_MAX)과 같은 정의 — 그 하루 봉은 업비트 일봉과 같아진다.
+export const COIN_GAP_MAX=12;
+export function coinDayCovered(hourly,day){
+  const s=Date.parse(day+"T09:00:00+09:00");
+  const ts=(Array.isArray(hourly)?hourly:[]).map(b=>Date.parse(String(b&&b.candle_date_time_kst)+"+09:00")).filter(Number.isFinite);
+  if(!ts.length||!Number.isFinite(s))return false;
+  const inDay=new Set(ts.filter(x=>x>=s&&x<s+864e5)).size;
+  return Math.min(...ts)<=s&&Math.max(...ts)>=s+23*36e5&&24-inDay<=COIN_GAP_MAX;
 }
 // 60분봉(최신순) 중 업비트 하루 day(YYYY-MM-DD, 09:00 시작)에 속하고 이미 시작한 봉(진행 중 봉 포함 — 실시간 돌파는 그 순간 일어난다)을 오래된 순으로
 export function barsOfDay(hourly,day,nowMs=Date.now()){
@@ -369,7 +382,7 @@ export function coinDayCell(ud,coins,P,nowMs=Date.now()){
     if(i<0)return null;
     const h=coinHoldToday(daily.slice(i),P);if(!h)return null;
     const bars=barsOfDay(c.hourly,ud,nowMs);
-    if(final&&bars.length<24)return null;                                // 끝난 하루인데 봉이 모자라면 계산하지 않는다
+    if(final&&!coinDayCovered(c.hourly,ud))return null;                  // 끝난 하루인데 받은 봉이 그 하루를 다 덮지 못하면 계산하지 않는다(점검 시간 빈 것은 정상 — 개수로 보지 않음)
     const r=coinBreakoutDay(h,bars,bars.length?+bars[bars.length-1].trade_price:null,P);
     if(r&&r.hold&&r.pnlPct!=null)pnl.push(r.pnlPct);else{why.push(m.replace("KRW-","")+" "+(!r?"판단 없음":r.action==="쉼"?"쉼(추세 평균 아래)":r.action));if(r&&r.action==="돌파 없음"&&nowMs<end)open=true;}
   }

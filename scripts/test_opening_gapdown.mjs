@@ -57,19 +57,23 @@ t("main record: 범위 검사(보유 ≤5일 · ② 233740 전용) · 효력일 
   assert.deepEqual(MAIN.openingPick({ topK: 2, gapMax: -5 }, [{ code: "A", expectedGapPct: -3 }, { code: "B", expectedGapPct: -9 }, { code: "C", expectedGapPct: -6 }]), ["B", "C"]);
   assert.deepEqual(MAIN.openingPick({ topK: 3, gapMax: -5 }, [{ code: "A", expectedGapPct: -3 }, { code: "B", expectedGapPct: -9 }]), ["B"]);
 });
-t("② 주문: 그날 메인 하락 기준으로 판단 · 기록을 못 읽으면 기본 −3% 로 하고 그 사실을 남긴다", () => {
+t("② 주문: 그날 메인 하락 기준으로 판단 · 기록을 못 읽으면 기본 −3% 로 사지 않고 판단을 멈춘다(2026-11-19~) · 사본으로 읽었으면 그 사실을 남긴다", () => {
   const ev = MAIN.cleanEvents([{ tab: "daytrading", version: "g_etf_th4", params: { th: -4 }, effectiveFrom: "2026-10-07", promotedAt: "a" }]);
   const r = F.etfRuleFor({ ok: true, events: ev }, "2026-10-07");
-  assert.equal(r.rule.dropMaxPct, -4); assert.equal(r.rule.version, "g_etf_th4"); assert.equal(r.ruleSource, "main-config");
-  assert.equal(F.etfRuleFor({ ok: true, events: ev }, "2026-10-06").rule.dropMaxPct, -3);
+  assert.equal(r.rule.dropMaxPct, -4); assert.equal(r.rule.version, "g_etf_th4"); assert.equal(r.ruleSource, "main-config"); assert.equal(r.blocked, false);
+  assert.equal(F.etfRuleFor({ ok: true, events: ev }, "2026-10-06").rule.dropMaxPct, -3);            // 승격 전날은 기본 메인(기록을 읽었고 승격이 없던 날)
+  assert.match(F.etfRuleFor({ ok: true, events: ev, source: "copy", workerError: "HTTP 503" }, "2026-10-07").ruleSource, /^main-config \(밤 계산 사본 — Worker 읽기 실패: HTTP 503\)$/);
   const f = F.etfRuleFor({ ok: false, error: "x" }, "2026-10-07");
-  assert.equal(f.rule.dropMaxPct, -3); assert.ok(f.ruleSource.startsWith("default"));
-  assert.equal(F.etfRuleFor({ ok: true, events: [{ tab: "daytrading", version: "z", effectiveFrom: "2026-10-01", params: { code: "122630", th: -2 } }] }, "2026-10-07").rule.dropMaxPct, -3);
+  assert.deepEqual([f.blocked, f.rule.dropMaxPct, f.rule.version, f.mainVersion], [true, null, "main_unavailable", null]); assert.ok(f.ruleSource.startsWith("none (메인 기록 읽기 실패: x"));
+  const other = F.etfRuleFor({ ok: true, events: [{ tab: "daytrading", version: "z", effectiveFrom: "2026-10-01", params: { code: "122630", th: -2 } }] }, "2026-10-07");
+  assert.deepEqual([other.blocked, other.rule.dropMaxPct], [true, null]);                               // 다른 종목 메인은 이 주문 경로로 사지 않는다
   assert.equal(F.etfDecision(-3.5, -4).signal, false); assert.equal(F.etfDecision(-4.2, -4).signal, true);
   assert.equal(F.etfDecision(-3.5, -4).decisionReason, "no_signal_drop_above_-4%");
   const plan = F.etfBuyPlan(r, { expectedPrice: 9650, basePrice: 10000 });           // −3.5%: 기본(−3)이면 매수, 메인 −4 면 안 삼
   near(plan.dropPct, -3.5); assert.equal(plan.signal, false);
-  assert.equal(F.etfBuyPlan(f, { expectedPrice: 9650, basePrice: 10000 }).signal, true);
+  const fb = F.etfBuyPlan(f, { expectedPrice: 9500, basePrice: 10000 }, "2026-11-19");   // −5%: 옛 판은 기본 −3% 로 매수였다 — 이제는 판단 안 함(가격은 기록)
+  near(fb.dropPct, -5); assert.deepEqual([fb.signal, fb.decisionReason, fb.max24], [false, "main_config_unavailable", undefined]);
+  assert.equal(LV.etfNoBuyNote({ ...fb, rule: f.rule }), "15:21 예상 전일 대비 -5.00% — 메인 기록을 못 읽어 판단 안 함(점검)");
 });
 t("① 메인 변수: 매매일 기준(minQ) · 장부 종목(깊은 topK) — 장중 화면과 마감 장부가 같게", () => {
   const rows = [{ code: "A", pnlPct: 3, status: "청산", buyPrice: 1, expectedGapPct: -9 }, { code: "B", pnlPct: -1, status: "청산", buyPrice: 1, expectedGapPct: -5 },
@@ -337,6 +341,21 @@ t("claude.html arena status: user pin shows pinned, not a 7-day countdown", () =
   assert.ok(!h.includes("/7일") && !h.includes("자동 메인"), h);
   assert.ok(ctx.arenaStatus({ ...z, status: { code: "pin_due", text: "사용자 고정 · 되돌림 조건 충족" } }).startsWith("📌 사용자 고정 · 되돌림 조건 충족"));
   assert.ok(ctx.arenaStatus({ ...z, status: { code: "streak", days: 3 } }).includes("3/7일 (7일이면 다음 날부터 자동 메인)"));   // 고정 아닌 탭은 그대로
+});
+t("claude.html 메인 안내: 사용자 고정이면 '자동 승격'이라 쓰지 않는다 · 규칙 글은 밤 계산이 붙인 그대로(2026-11-19)", () => {
+  const own = path.join(dir, "claude.html");
+  const html = fs.readFileSync(fs.existsSync(own) ? own : path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "claude.html"), "utf8");
+  const grab = name => { const i = html.indexOf("function " + name + "("); assert.ok(i >= 0, name); let k = html.indexOf("{", i), depth = 0;
+    for (let j = k; j < html.length; j++) { if (html[j] === "{") depth++; else if (html[j] === "}" && --depth === 0) return html.slice(i, j + 1); } };
+  const lab = { main: { crypto: { current: { name: "평균 15일 · ETH 만", effectiveFrom: "2026-11-13", rule: "r3", by: "user:pin" } },
+    opening: { current: { name: "통과 7개↑", effectiveFrom: "2026-10-13", rule: "… 시가 매수 → 종가 매도 (연구 자료 기준 · 실매매는 11/09~ 10:00 매도)", by: "auto:arena-7d-top1" } },
+    soxl: { current: { name: "IBS", effectiveFrom: "2026-11-14", rule: "r4" } }, daytrading: { current: { name: "기본", effectiveFrom: null } } } };
+  const ctx = { J: { lab } }; vm.runInNewContext(grab("esc") + "\n" + grab("arenaOf") + "\n" + grab("mainBanner") + "\nthis.mainBanner=mainBanner;", ctx);
+  const c = ctx.mainBanner("crypto"), o = ctx.mainBanner("opening"), x = ctx.mainBanner("soxl");
+  assert.ok(c.includes("📌 지금 메인은 사용자가 고정한 <b>평균 15일 · ETH 만</b> (2026-11-13 부터) — r3") && !c.includes("자동 승격"), c);
+  assert.ok(o.includes("🏆 지금 메인은 자동 승격된 <b>통과 7개↑</b>") && o.includes("실매매는 11/09~ 10:00 매도"), o);
+  assert.ok(x.includes("🏆 지금 메인은 자동 승격된 <b>IBS</b>"), x);                       // by 가 없는 옛 기록은 자동 승격으로
+  assert.equal(ctx.mainBanner("daytrading"), "");                                          // 처음 채택한 기본 메인이면 안내 없음
 });
 t("telegram weekly: account week, +5% check, contributions, shadow candidates, stale guard", () => {
   assert.equal(TG.mondayOf("2026-10-10"), "2026-10-05"); assert.equal(TG.mondayOf("2026-10-05"), "2026-10-05"); assert.equal(TG.mondayOf("2026-10-11"), "2026-10-05");
@@ -953,7 +972,8 @@ t("day close ③: KST 00:00 day — realized = closed in the day, open = held at
   assert.equal(day.exits, 1); assert.equal(day.trades[0].exitTime, "10-05 09:00"); assert.equal(day.trades[0].entryTime, "10-04 13:00");
   near(day.trades[0].pnlPct, (121 / (119 * 1.0005) - 1) * 100 - 0.14);
   assert.equal(day.open.length, 1); assert.equal(day.open[0].entryTime, "10-05 10:00"); near(day.open[0].markPrice, 123);   // 23시 봉 종가 — 자정 뒤 급락 안 씀
-  assert.equal(day.entries, 1); near(day.realizedAmount, 10000000 * day.trades[0].pnlPct / 100);
+  assert.equal(day.entries, 1); near(day.realizedAmount, 5000000 * day.trades[0].pnlPct / 100);   // 기본 메인은 BTC·ETH 두 코인 — 한 코인 몫은 칸 자금의 절반(넘겨준 코인 수가 아니라 메인 코인 수로 · 2026-11-19)
+  assert.deepEqual([day.watched, day.strategyVersion, day.mainName, day.capitalNote], [1, MAIN.MAIN_DEFAULT.crypto.version, MAIN.MAIN_DEFAULT.crypto.name, "코인 칸 모의 자금 10,000,000원(2개 코인 똑같이 나눔)"]);   // 감시 = 받은 코인 중 메인 코인(여기선 BTC 만 넘김)
   // ETH: 10/04 13시 매수 → 10/04 20시 손절(전날 한국 날짜) → 10/05 결과에는 없다
   const eh = [];
   for (let k = 0; k < 24; k++) { const t0 = Date.parse("2026-10-04T09:00:00+09:00") + k * 36e5; const s = new Date(t0 + 9 * 36e5).toISOString().slice(0, 19);
@@ -962,6 +982,70 @@ t("day close ③: KST 00:00 day — realized = closed in the day, open = held at
   assert.equal(d2.exits, 0); assert.equal(d2.open.length, 0);
   const d1 = DAY.coinDay("2026-10-04", [{ market: "KRW-ETH", daily: daily.slice(1), hourly: eh }], Date.parse("2026-10-05T00:00:00+09:00"));
   assert.equal(d1.exits, 1); assert.equal(d1.trades[0].reason, "손절 −5%"); assert.equal(d1.trades[0].exitTime, "10-04 20:00");
+});
+t("③ 업비트 점검일 — 받은 봉이 그 하루를 다 덮으면 계산(개수 24 아님) · 자금은 그날 메인 코인 수로 · 이름은 그날 메인(2026-11-19)", () => {
+  const hr = 36e5, s0 = Date.parse("2026-11-08T09:00:00+09:00");
+  const H = (ms, o, h, l, c) => ({ candle_date_time_kst: new Date(ms + 9 * hr).toISOString().slice(0, 19), opening_price: o, high_price: h, low_price: l, trade_price: c });
+  const D = (d, o, h, l, c) => ({ candle_date_time_kst: d + "T09:00:00", opening_price: o, high_price: h, low_price: l, trade_price: c });
+  const old = [];                                                                // 10/19 ~ 11/07 오르는 흐름 · 11/07 고가 120(최근 7일 고가)
+  for (let i = 0; i < 20; i++) old.push(D(new Date(Date.parse("2026-10-19T00:00:00Z") + i * 864e5).toISOString().slice(0, 10), 100 + i, 101 + i, 99 + i, 100 + i));
+  const daily = [D("2026-11-09", 124, 124.5, 123.5, 124), D("2026-11-08", 119, 125, 118.5, 126), ...old.reverse()];
+  const hourly = [];
+  for (let k = -24; k < 0; k++) hourly.push(H(s0 + k * hr, 119, 119.4, 118.6, 119));          // 11/07 하루(앞이 안 잘림)
+  for (let k = 0; k < 24; k++) {                                                                // 11/08 하루 — 11/09 03~06시 점검(봉 없음)
+    if (k >= 18 && k <= 21) continue;
+    hourly.push(k === 0 ? H(s0, 119, 119.5, 118.5, 119.2) : k === 1 ? H(s0 + hr, 119.2, 125, 119, 124) : k === 23 ? H(s0 + 23 * hr, 124, 126, 123.5, 126) : H(s0 + k * hr, 124, 124.5, 123.5, 124));
+  }
+  for (let k = 24; k < 39; k++) hourly.push(H(s0 + k * hr, 124, 124.5, 123.5, 124));          // 11/09 09~23시(돌파 없음 · 기준 125)
+  const latest = [...hourly].reverse();
+  assert.deepEqual([LV.coinDayCovered(latest, "2026-11-08"), LV.coinDayCovered(latest.filter(b => b.candle_date_time_kst >= "2026-11-08T12:00:00"), "2026-11-08"),
+    LV.coinDayCovered(latest.filter(b => b.candle_date_time_kst < "2026-11-09T07:00:00"), "2026-11-08"), LV.coinDayCovered([], "2026-11-08")], [true, false, false, false]);   // 다 덮음 · 앞 잘림 · 뒤 잘림 · 봉 없음
+  const gap13 = latest.filter(b => !(b.candle_date_time_kst >= "2026-11-08T10:00:00" && b.candle_date_time_kst < "2026-11-08T19:00:00"));   // 점검 4시간 + 9시간 더 = 13시간 빔
+  assert.equal(LV.coinDayCovered(gap13, "2026-11-08"), false);
+  const ethMain = MAIN.cleanEvents([{ tab: "crypto", version: "g_coin_ma15_s99_hi7_eth", name: "평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만", effectiveFrom: "2026-10-14", promotedAt: "a",
+    params: { ma: 15, stopPct: 99, level: "prevhigh", k: 0.5, hiN: 7, lastEntryHour: null, tabSize: 0.8, markets: ["KRW-ETH"] } }]);
+  const mainOn = d => MAIN.mainFor(ethMain, "crypto", d);
+  const coins = [{ market: "KRW-BTC", daily, hourly: latest }, { market: "KRW-ETH", daily, hourly: latest }];
+  const day = DAY.coinDay("2026-11-09", coins, Date.parse("2026-11-10T00:00:00+09:00"), mainOn);
+  const pnl = (126 / (120 * 1.0005) - 1) * 100 - 0.14;                                          // 10시 봉 시가 119.2 < 기준 120 → 기준선에 사고 · 11/09 08시 봉 종가에 판다
+  assert.equal(day.trades.length, 1); assert.equal(day.trades[0].name, "ETH"); near(day.trades[0].pnlPct, pnl);
+  assert.equal(day.trades[0].exitTime, "11-09 09:00"); assert.equal(day.trades[0].exitPrice, 126);
+  near(day.trades[0].pnlAmount, 10000000 * pnl / 100); near(day.realizedPct, pnl);               // ETH 만인 메인 — 칸 자금 전부(옛 판은 반반이라 절반)
+  assert.deepEqual([day.watched, day.name, day.mainName, day.strategyVersion, day.capitalNote],
+    [1, "③ 비트코인 · 업비트 하루 돌파 단타", "평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만", "g_coin_ma15_s99_hi7_eth", "코인 칸 모의 자금 10,000,000원(ETH 한 코인에 전부)"]);
+  const msg = DAY.composeDay(day);
+  assert.ok(msg.startsWith("[③ 비트코인 · 업비트 하루 돌파 단타 · 2026-11-09 종료]\n메인: 평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만\n감시 1 /"), msg.slice(0, 120));
+  // 받은 봉이 그 하루 앞을 못 덮으면(받기 문제) 실현으로 셈하지 않고 미청산 '점검'으로 남긴다(옛 판은 아무 데도 안 남겼다)
+  const cut = DAY.coinDay("2026-11-09", [{ market: "KRW-ETH", daily, hourly: latest.filter(b => b.candle_date_time_kst >= "2026-11-08T12:00:00") }], Date.parse("2026-11-10T00:00:00+09:00"), mainOn);
+  assert.deepEqual([cut.trades.length, cut.open.length, cut.open[0] && cut.open[0].reason], [0, 1, "60분봉이 그 하루를 다 덮지 못함 — 청산 확인 못 함(점검)"]);
+  // 실시간 칸: 끝난 하루(11/09 10:30)에 점검 시간이 비어도 계산한다(옛 판은 '—')
+  const cell = LV.coinDayCell("2026-11-08", coins, mainOn("2026-11-08").params, Date.parse("2026-11-09T10:30:00+09:00"));
+  assert.ok(cell && cell.final, JSON.stringify(cell)); near(cell.v, pnl * 0.8); assert.equal(cell.trades, 1);
+});
+t("메인 기록 읽기: Worker → 못 읽으면 밤 계산 사본 → 둘 다 못 읽으면 ok:false · ②⑤ 는 판단 안 함(2026-11-19)", async () => {
+  const ev = [{ tab: "daytrading", version: "g_etf_th4.75", params: { code: "233740", th: -4.75 }, effectiveFrom: "2026-10-24", promotedAt: "a" }];
+  const calls = [];
+  const fx = (worker, copy) => async url => { calls.push(String(url).split("?")[0]); const r = String(url).startsWith(MAIN.WORKER) ? worker : copy;
+    if (r instanceof Error) throw r; return { ok: r.status === 200, status: r.status, json: async () => r.body }; };
+  const a = await MAIN.loadMainEvents({ OPENING_MONITOR_KEY: "k" }, 1000, fx({ status: 200, body: { ok: true, events: ev } }, { status: 500, body: {} }));
+  assert.deepEqual([a.ok, a.source, a.events.length, calls.length], [true, "worker", 1, 1]);       // Worker 가 되면 사본은 안 읽는다
+  const b = await MAIN.loadMainEvents({ OPENING_MONITOR_KEY: "k" }, 1000, fx({ status: 503, body: { ok: false, error: "busy" } }, { status: 200, body: { ok: true, events: ev } }));
+  assert.deepEqual([b.ok, b.source, b.workerError, b.events.map(e => e.params.th), calls[calls.length - 1]], [true, "copy", "busy", [-4.75], MAIN.MAIN_COPY_URL]);
+  const c = await MAIN.loadMainEvents({ OPENING_MONITOR_KEY: "k" }, 1000, fx(new Error("down"), { status: 404, body: {} }));
+  assert.deepEqual([c.ok, c.events.length, c.error], [false, 0, "down · 사본 HTTP 404"]);
+  const d = await MAIN.loadMainEvents({}, 1000, fx({ status: 200, body: { ok: true, events: [] } }, { status: 200, body: { ok: true, events: ev } }));
+  assert.deepEqual([d.ok, d.source, d.workerError], [true, "copy", "감시키 없음"]);               // 감시키가 없으면 Worker 를 부르지 않고 사본
+  const viaCopy = F.etfRuleFor(b, "2026-11-19");
+  assert.deepEqual([viaCopy.blocked, viaCopy.rule.dropMaxPct, viaCopy.ruleSource], [false, -4.75, "main-config (밤 계산 사본 — Worker 읽기 실패: busy)"]);
+  // 둘 다 못 읽은 날의 장부 · 화면 — 기본 규칙으로 사지 않았다고 남긴다
+  const L = (stage, payload) => ({ events: [{ stage, payload }] });
+  const etf = DAY.etfDay("2026-11-19", L("etf_buy", { signal: false, decisionReason: "main_config_unavailable", dropPct: -5, rule: { code: "233740", dropMaxPct: null, version: "main_unavailable" }, strategyVersion: "main_unavailable" }), null, null, true, {});
+  assert.deepEqual([etf.trades.length, etf.open.length, etf.params, etf.strategyVersion], [0, 0, null, "main_unavailable"]);
+  assert.match(etf.warn, /메인 기록을 못 읽어 15:21 판단 안 함 — 점검/); assert.equal(etf.note, "15:21 예상 전일 대비 -5.00% — 메인 기록을 못 읽어 판단 안 함(점검) → 매수 없음");
+  const c30 = DAY.close30Day("2026-11-19", L("c30_buy", { signal: false, decisionReason: "main_config_unavailable", sofarPct: -5, rule: { code: "233740", th: null, version: "main_unavailable" }, strategyVersion: "main_unavailable" }), true, {});
+  assert.deepEqual([c30.trades.length, c30.params, c30.note], [0, null, "15:00 전일 대비 -5.00% — 메인 기록을 못 읽어 판단 안 함 → 매수 없음"]);
+  assert.match(c30.warn, /메인 기록을 못 읽어 15:00 판단 안 함 — 점검/);
+  assert.equal(LV.close30Rows({ c30_buy: { signal: false, decisionReason: "main_config_unavailable", sofarPct: -5, rule: { th: null } } })[0].note, "15:00 전일 대비 -5.00% — 메인 기록을 못 읽어 판단 안 함(점검)");
 });
 t("day close ④: SOXL session after the decision; holiday when no session; sell realized in USD", () => {
   const q = (d, o, c) => ({ ohlc: [{ date: "2026-10-02", open: 100, close: 100 }, { date: d, open: o, close: c }] });
@@ -1242,9 +1326,13 @@ t("⑤ 판단 · 규칙 · 시간창 · 체결 구분: 15:00 등락률이 기준
   assert.equal(ev.length, 1);
   assert.deepEqual([F.c30RuleFor({ ok: true, events: ev }, "2026-10-24").rule.th, F.c30RuleFor({ ok: true, events: ev }, "2026-10-24").rule.version,
     F.c30RuleFor({ ok: true, events: ev }, "2026-10-23").rule.th, F.c30RuleFor({ ok: false, error: "x" }, "2026-10-24").rule.th],
-    [-1, "close30_dip_th1", 0, 0]);                                                               // 승격은 다음 날부터 · 기록을 못 읽으면 기본(0%)
-  assert.match(F.c30RuleFor({ ok: false, error: "x" }, "2026-10-24").ruleSource, /default/);
-  assert.equal(F.c30RuleFor({ ok: true, events: [{ tab: "close30", version: "z", effectiveFrom: "2026-10-01", params: { code: "122630", th: -2 } }] }, "2026-10-24").rule.th, 0);   // 다른 종목 기록은 쓰지 않는다
+    [-1, "close30_dip_th1", 0, null]);                                                            // 승격은 다음 날부터 · 기록을 못 읽으면 기준 없음(판단 안 함 · 2026-11-19~)
+  const c30f = F.c30RuleFor({ ok: false, error: "x" }, "2026-10-24");
+  assert.match(c30f.ruleSource, /^none \(메인 기록 읽기 실패: x/); assert.deepEqual([c30f.blocked, c30f.rule.version], [true, "main_unavailable"]);
+  const c30o = F.c30RuleFor({ ok: true, events: [{ tab: "close30", version: "z", effectiveFrom: "2026-10-01", params: { code: "122630", th: -2 } }] }, "2026-10-24");
+  assert.deepEqual([c30o.blocked, c30o.rule.th], [true, null]);                                    // 다른 종목 기록은 쓰지 않는다 — 기본 0% 로도 사지 않는다
+  const c30b = F.c30BuyPlan(c30f, { price: 9500, chgRate: -5 });                                   // −5%: 옛 판은 기본 0% 로 매수 — 이제는 판단 안 함(가격은 기록)
+  assert.deepEqual([c30b.signal, c30b.decisionReason, c30b.sofarPct], [false, "main_config_unavailable", -5]);
   assert.equal(F.c30SignalId("2026-10-23", "buy"), "close30:2026-10-23:233740:buy");
   assert.deepEqual([F.stageWindow("c30_buy", 150000), F.stageWindow("c30_buy", 145959), F.stageWindow("c30_buy", 150959), F.stageWindow("c30_buy", 151000),
     F.stageWindow("c30_sell", 152000), F.stageWindow("c30_sell", 152800), F.stageWindow("c30_reconcile", 153500), F.stageWindow("c30_reconcile", 153400),

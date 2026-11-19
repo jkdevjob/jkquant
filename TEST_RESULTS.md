@@ -12,6 +12,18 @@
 - 전체검사·PR·병합 상태는 이번 작업의 추가 검증 기록에 실제 결과로 남긴다. 연구 값 시험 PASS를 전체 CI나 운영 배포 완료로 취급하지 않는다.
 
 
+## 2026-11-19 · 연구(클로드) 점검 · 고침 — claude v2.31.2
+
+- 점검 기준 main 95535760 · scalping-data(claude-live 11/13~11/18 · opening-gapdown-live 11/17 · claude-paper · soxl-mr-decisions · main-config.json · latest.json 07:22).
+  - ①②④⑤ 판단 · ③ 쉼을 가격으로 대조 — 틀린 날 0. 업비트 일봉(api.upbit.com)으로 ③ 11/14~11/19 다시 계산 — 엿새 모두 15일 평균 아래.
+  - ③ 실투자 기록(claude-live real) 11/13~11/18 0건 — 설치 · 실전 전환은 미확인.
+  - 모의(10/08~): ② 14번 4승 누적 −33.0%(매매당 −2.71%) · ⑤ 10번 2승 −5.3% · ① 12번 5승 +5.7% — R51 로 인계.
+- ③ 하루 봉: 고친 `upbit_days` 로 만든 ETH · BTC 하루 봉 198일(2026-05-04~11-17 · 점검일 07-05 · 10-18 · 11-08 포함)이 업비트 공식 일봉 O · H · L · C 와 차이 0. 원래 있던 날 값 그대로(전 기간). 더해진 날 ETH 58 · BTC 54.
+  - ③ 메인(ma15 · 7일 고가 · 손절 없음 · ETH) 2018~: 543번 · +0.638% → 552번 · +0.676%. 2021-06~: 320번 +0.421% → 325번 +0.428%. 다음 판단 15일 평균 2,819,533 → 2,811,400(업비트 일봉 계산과 같음).
+- 값 시험: `python3 scripts/test_opening_gapdown.py` 105 OK(새 6) · `node scripts/test_opening_gapdown.mjs` 74 ALL PASS(새 4 · 기존 기대값 3 새 동작으로).
+- 변이: `python3 scripts/mutation_test_opening_gapdown.py` — 새 38종 + 대상 옮긴 6종 포함 452종 모두 잡힘 · 대조군 2 초록(처음 돌림에서 '사본 안 읽음' 1종이 TypeError 로 멈춰 안 잡힘으로 셈 → 시험을 값 비교로 고쳐 다시 돌려 잡힘).
+- 미확인(병합 · 배포 뒤 확인할 것): 밤 계산 운영 실행에서 ③ nextSignals 15일 평균이 업비트 일봉 값과 같은지 · 화면 맨 위 ③ 📌 문구 · ①② 안내 글 · 점검 기록에 '④ 6일 연속 손실'이 안 뜨는지 · ②⑤ 15:21 · 15:00 장부 ruleSource 가 main-config 인지.
+
 ## 2026-11-19 · 연구(클로드) 아침 루틴 — R50
 
 - 11/18 결과(scalping-data 09bc51ac · `claude-live/2026-11-18.json` · `claude-lab/review/2026-11-18.json` · `latest.json` 04:26)
