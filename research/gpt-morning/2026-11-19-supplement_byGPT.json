@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "kind": "post-report-supplement",
+  "date": "2026-11-19",
+  "preparedAt": "2026-11-19T09:35:07.032917+09:00",
+  "mainSha": "6a4fdd9ec2f8ef4a95ca1ccedd0c22dec6b1de31",
+  "sourceSha": "c481c5beadc97d8d20185909172995a68ce55c73",
+  "originalReportPreserved": true,
+  "originalReportCommit": "23a2d5385ee35146c931de7b797cfa3fa34163d7",
+  "originalReportPreparedAt": "2026-11-19T07:16:08+09:00",
+  "morningDelivery": {
+    "date": "2026-11-19",
+    "push": {
+      "sent": 1,
+      "eligible": 1,
+      "failed": 0,
+      "removed": 0
+    },
+    "telegram": {
+      "result": "sent",
+      "tries": 1
+    },
+    "complete": true,
+    "updatedAt": "2026-11-18T23:00:02.234Z"
+  },
+  "snapshotGeneratedAt": "2026-11-19T00:24:12.101Z",
+  "operationalResults": [
+    {
+      "strategy": "opening",
+      "previous": {
+        "date": "2026-11-18",
+        "returnPct": -1.5328224397830308,
+        "trades": 5,
+        "finalized": true,
+        "source": "opening-operational-history",
+        "mainVariant": "combo_pb05_e0920"
+      },
+      "current": {
+        "date": "2026-11-19",
+        "marketDate": null,
+        "finalized": false,
+        "source": "kst-calendar"
+      }
+    },
+    {
+      "strategy": "daytrading",
+      "previous": {
+        "date": "2026-11-18",
+        "returnPct": -1.2500000000000009,
+        "trades": 3,
+        "finalized": true,
+        "source": "daytrading-paper-live",
+        "mainVariant": "baseline"
+      },
+      "current": {
+        "date": "2026-11-19",
+        "marketDate": null,
+        "finalized": false,
+        "source": "kst-calendar"
+      }
+    },
+    {
+      "strategy": "crypto",
+      "previous": {
+        "date": "2026-11-18",
+        "returnPct": -0.6400000000000005,
+        "trades": 1,
+        "finalized": true,
+        "source": "global-paper-live"
+      },
+      "current": {
+        "date": "2026-11-19",
+        "marketDate": null,
+        "finalized": false,
+        "source": "kst-calendar"
+      }
+    },
+    {
+      "strategy": "soxl",
+      "previous": {
+        "date": "2026-11-18",
+        "returnPct": 0,
+        "trades": 0,
+        "finalized": true,
+        "source": "global-paper-live"
+      },
+      "current": {
+        "date": "2026-11-19",
+        "returnPct": 0,
+        "trades": 0,
+        "finalized": true,
+        "source": "global-paper-live",
+        "marketDate": "2026-11-18"
+      }
+    },
+    {
+      "strategy": "closing30",
+      "previous": {
+        "date": "2026-11-18",
+        "returnPct": 0.09054551011350498,
+        "trades": 3,
+        "finalized": true,
+        "source": "closing30-paper-live",
+        "mainVariant": "baseline"
+      },
+      "current": {
+        "date": "2026-11-19",
+        "marketDate": null,
+        "finalized": false,
+        "source": "kst-calendar"
+      }
+    },
+    {
+      "strategy": "closing_bet",
+      "previous": {
+        "date": "2026-11-18",
+        "returnPct": null,
+        "trades": 3,
+        "finalized": false,
+        "source": "closing30-paper-live",
+        "mainVariant": "baseline"
+      },
+      "current": {
+        "date": "2026-11-19",
+        "marketDate": null,
+        "finalized": false,
+        "source": "kst-calendar"
+      }
+    }
+  ],
+  "newResearch": "G9 historical candidate only; G7 full actual research engine replay reproduced",
+  "evidencePaths": [
+    "experiments/G9-20261119/result_byGPT.json",
+    "experiments/G9-20261119/G7_refresh_byGPT.json",
+    "experiments/G9-20261119/ledger_parity_byGPT.json"
+  ],
+  "nextChecks": [
+    {
+      "date": "2026-11-20",
+      "research": "G4",
+      "check": "Only if 11/19 ET is collected as the 40th valid session, execute the preregistered 30/10 test."
+    },
+    {
+      "date": "2026-11-20",
+      "research": "G7",
+      "check": "Add completed 11/19 paper evidence; do not count old historical WF as new prospective days."
+    },
+    {
+      "date": "2026-11-20",
+      "research": "G9",
+      "check": "First eligible post-registration signal session; no prospective performance exists today."
+    }
+  ],
+  "decision": "No new live-investment recommendation or promotion. No order or broker-setting changes.",
+  "limits": [
+    "G9 up_1 was chosen using known historical performance; all pre-registration results are post-selection diagnostics.",
+    "G9 has eight unsettled overnight records and no independent forward evidence or eligible walk-forward fold.",
+    "Overnight holdings exceeded 24 hours on twelve historical trades (maximum 65.5h). Holding-time authorization is required before any adoption.",
+    "Crypto historical research remains through 11/17; 11/18 operational live ledger already has a finalized -0.64% trade. They are distinct sources.",
+    "No authenticated workflow_dispatch capability is available in this session; delayed/missing collection is not claimed rerun."
+  ]
+}
