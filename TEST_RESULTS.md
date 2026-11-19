@@ -106,6 +106,23 @@
 - 전체검사·PR·병합 상태는 이번 작업의 추가 검증 기록에 실제 결과로 남긴다. 연구 값 시험 PASS를 전체 CI나 운영 배포 완료로 취급하지 않는다.
 
 
+## 2026-11-19 · 연구(클로드) 점검 · 고침 — claude v2.31.2
+
+- 점검 기준 main 95535760 · scalping-data(claude-live 11/13~11/18 · opening-gapdown-live 11/17 · claude-paper · soxl-mr-decisions · main-config.json · latest.json 07:22).
+  - ①②④⑤ 판단 · ③ 쉼을 가격으로 대조 — 틀린 날 0. 업비트 일봉(api.upbit.com)으로 ③ 11/14~11/19 다시 계산 — 엿새 모두 15일 평균 아래.
+  - ③ 실투자 기록(claude-live real) 11/13~11/18 0건 — 설치 · 실전 전환은 미확인.
+  - 모의(10/08~): ② 14번 4승 누적 −33.0%(매매당 −2.71%) · ⑤ 10번 2승 −5.3% · ① 12번 5승 +5.7% — R51 로 인계.
+- ③ 하루 봉: 고친 `upbit_days` 로 만든 ETH · BTC 하루 봉 198일(2026-05-04~11-17 · 점검일 07-05 · 10-18 · 11-08 포함)이 업비트 공식 일봉 O · H · L · C 와 차이 0. 원래 있던 날 값 그대로(전 기간). 더해진 날 ETH 58 · BTC 54.
+  - ③ 메인(ma15 · 7일 고가 · 손절 없음 · ETH) 2018~: 543번 · +0.638% → 552번 · +0.676%. 2021-06~: 320번 +0.421% → 325번 +0.428%. 다음 판단 15일 평균 2,819,533 → 2,811,400(업비트 일봉 계산과 같음).
+- 값 시험: `python3 scripts/test_opening_gapdown.py` 105 OK(새 6) · `node scripts/test_opening_gapdown.mjs` 74 ALL PASS(새 4 · 기존 기대값 3 새 동작으로).
+- 변이: `python3 scripts/mutation_test_opening_gapdown.py` — 새 38종 + 대상 옮긴 6종 포함 452종 모두 잡힘 · 대조군 2 초록(처음 돌림에서 '사본 안 읽음' 1종이 TypeError 로 멈춰 안 잡힘으로 셈 → 시험을 값 비교로 고쳐 다시 돌려 잡힘).
+- `node scripts/check-before-push.cjs`: 65단계 PASS(5분 48초 · 병렬 4 · main 549fe70f 합친 뒤). 처음 돌림은 회귀 [보유 기간 규칙] 1건 FAIL — 옛 코드 문장(range(24) 봉 목록 · bars[-1][3])을 찾던 검사를 day_slots · bars[-1][1][3] 기준으로 옮김(뜻 그대로: 그 하루 24시간 봉 안에서 사고 마지막 봉 = 다음 09:00 에 판다) → 회귀 2831 PASS.
+- 병합 · 배포(PR #681 · squash 704331e0 · 2026-11-19 16:05 KST): 운영 jkquant.pages.dev/claude v2.31.2 · /settings v1.8.1(16:05:43 확인) · Worker 배포(시초가 정시 스케줄러 run 44476905340) 성공.
+  - 병합 뒤 첫 밤 계산(latest.json 16:07:32 · scalping-data 040fbf30): ③ nextSignals KRW-ETH basedOn 11-18 · 15일 평균 2,768,133.33 = 업비트 일봉 계산 값(병합 전 12:44 실행 2,778,066.67 — 11/08 점검일이 빠진 값).
+  - main.current: ① 규칙 글 끝 '(연구 자료 기준 · 실매매는 11/09~ 10:00 매도)' · ② '… 이면 사지 않음(최대 24시간)' · ③ by=user:pin(화면 📌) · ①②④⑤ by=auto:arena-7d-top1.
+  - 11/19 점검 기록(16:08): issues = ['account: 실측이 기대보다 낮음 — 규칙 점검'] 1건 — '④ 6일 연속 손실' 없음(us_soxl lossStreak 6 · lastTradeDate 10-15 · idleDays 24).
+- 미확인: ③ 00:00 마감 텔레그램 새 형식('메인:' 줄 · 감시 1 · 자금 글 — 오늘 밤 00:00) · ②⑤ 15:00 · 15:21 장부 ruleSource 'main-config'(11/20 장중) · 사본 읽기 경로는 Worker 장애 때만 쓰여 운영 확인 기회가 드묾.
+
 ## 2026-11-19 · 연구(클로드) 아침 루틴 — R50
 
 - 11/18 결과(scalping-data 09bc51ac · `claude-live/2026-11-18.json` · `claude-lab/review/2026-11-18.json` · `latest.json` 04:26)

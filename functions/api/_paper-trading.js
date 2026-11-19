@@ -1,18 +1,22 @@
 // Research broker settings. Research/paper calculations do not depend on this switch.
 export const PAPER_STRATEGIES=Object.freeze([
- {id:'gpt_opening',group:'연구(지피티)',label:'시초가 돌파',supported:true,description:'국내 시장가 · 오전 진입/09:30 청산'},
- {id:'gpt_daytrading',group:'연구(지피티)',label:'데이트레이딩',supported:true,description:'국내 시장가 · 당시 운영 메인 · 최대 3종목 · 15:10 청산'},
- {id:'gpt_closing30',group:'연구(지피티)',label:'종가 30분',supported:true,description:'15:07 시장가 매수 → 15:23 종가 동시호가 시장가 매도'},
- {id:'gpt_closing_bet',group:'연구(지피티)',label:'개별 종목 종가 베팅',supported:true,description:'15:23 종가 동시호가 매수 → 다음 거래일 08:56 시가 동시호가 매도'},
- {id:'gpt_crypto',group:'연구(지피티)',label:'비트코인',supported:false,description:'한투 BTC 현물 주문 미지원 · Upbit KRW-BTC 연구·이력은 계속 수집'},
- {id:'gpt_soxl',group:'연구(지피티)',label:'SOXL',supported:true,description:'미국 지정가(현재가 대비 매수 +0.5% / 매도 −0.5%) · 원화 예산을 조회 환율로 환산 · 미체결 잔량 취소/확인'},
- {id:'gpt_tenbagger',group:'연구(지피티)',label:'텐배거',supported:true,description:'등록 이후 첫 거래일 종가 동시호가 · 선택한 가격 가설/청산군만 주문'},
+ // 표시 순서 = 연구(지피티) 번호 순 → 연구(클로드) 번호 순. 번호는 두 연구 페이지가 같이 쓰는 탭 번호(① 시초가 · ② 데이트레이딩 · ③ 비트코인 · ④ SOXL ·
+ // ⑤ 종가 30분 · 🔟 텐배거 — scalping.html 클로드 대결 · claude.html) · 지피티만 있는 개별 종목 종가 베팅은 ⑥.
+ // 2026-11-19 사용자 "클로드는 클로드 표시가 있는데 왜 지피티는 없지? 클로드랑 같이 통일해 번호도 넣고 순서도 번호 순서로 정렬해". id 는 그대로(저장값 · 주문 경로).
+ {id:'gpt_opening',group:'연구(지피티)',label:'지피티 ① 시초가 돌파',supported:true,description:'국내 시장가 · 오전 진입/09:30 청산'},
+ {id:'gpt_daytrading',group:'연구(지피티)',label:'지피티 ② 데이트레이딩',supported:true,description:'국내 시장가 · 당시 운영 메인 · 최대 3종목 · 15:10 청산'},
+ {id:'gpt_crypto',group:'연구(지피티)',label:'지피티 ③ 비트코인',supported:false,description:'한투 BTC 현물 주문 미지원 · Upbit KRW-BTC 연구·이력은 계속 수집'},
+ {id:'gpt_soxl',group:'연구(지피티)',label:'지피티 ④ SOXL',supported:true,description:'미국 지정가(현재가 대비 매수 +0.5% / 매도 −0.5%) · 원화 예산을 조회 환율로 환산 · 미체결 잔량 취소/확인'},
+ {id:'gpt_closing30',group:'연구(지피티)',label:'지피티 ⑤ 종가 30분',supported:true,description:'15:07 시장가 매수 → 15:23 종가 동시호가 시장가 매도'},
+ {id:'gpt_closing_bet',group:'연구(지피티)',label:'지피티 ⑥ 개별 종목 종가 베팅',supported:true,description:'15:23 종가 동시호가 매수 → 다음 거래일 08:56 시가 동시호가 매도'},
+ {id:'gpt_tenbagger',group:'연구(지피티)',label:'지피티 🔟 텐배거',supported:true,description:'등록 이후 첫 거래일 종가 동시호가 · 선택한 가격 가설/청산군만 주문'},
  // 연구(클로드) — 2026-10-26 사용자 "설정 모의투자에 추가하라니까". 꺼져 있어도 신호 · 알림 · 정산(신호대로) · 이력은 그대로다.
- {id:'claude_opening',group:'연구(클로드)',label:'클로드 ① 시초가',supported:true,description:'08:58 장전 동시호가 시장가 매수(깊은 갭 최대 3종목 · 예산은 종목마다) → 15:21 종가 동시호가 매도 · 끄면 새 매수만 멈춤(산 수량은 예정대로 매도)'},
- {id:'claude_daytrading',group:'연구(클로드)',label:'클로드 ② 데이트레이딩',supported:true,description:'KODEX 코스닥150레버리지 · 15:21 종가 동시호가 시장가 매수 → 다음 거래일 장전 동시호가 매도 · 끄면 새 매수만 멈춤(산 수량은 예정대로 매도)'},
- {id:'claude_close30',group:'연구(클로드)',label:'클로드 ⑤ 종가 30분',supported:true,description:'KODEX 코스닥150레버리지 · 15:00 시장가 매수 → 15:21 종가 동시호가 매도 · 끄면 새 매수만 멈춤(산 수량은 예정대로 매도)'},
+ // ① 은 2026-11-09 거래일부터 10:00 에 판다(opening-gapdown exit10 · 늦게 온 10:00 호출이면 15:21 단계가 남은 몫을 판다). ② 는 다음 날 휴장이면 15:21 에 사지 않는다(최대 24시간).
+ {id:'claude_opening',group:'연구(클로드)',label:'클로드 ① 시초가',supported:true,description:'08:58 장전 동시호가 시장가 매수(깊은 갭 최대 3종목 · 예산은 종목마다) → 10:00 시장가 매도(10:00 에 못 팔면 15:21 종가 동시호가) · 끄면 새 매수만 멈춤(산 수량은 예정대로 매도)'},
+ {id:'claude_daytrading',group:'연구(클로드)',label:'클로드 ② 데이트레이딩',supported:true,description:'KODEX 코스닥150레버리지 · 15:21 종가 동시호가 시장가 매수 → 다음 거래일 장전 동시호가 매도 · 다음 날 휴장이면 사지 않음(최대 24시간) · 끄면 새 매수만 멈춤(산 수량은 예정대로 매도)'},
  {id:'claude_crypto',group:'연구(클로드)',label:'클로드 ③ 비트코인',supported:false,description:'한투 주문 없음 · 업비트 60분봉 연구 장부'},
  {id:'claude_soxl',group:'연구(클로드)',label:'클로드 ④ SOXL',supported:false,description:'한투 주문 미연결 · 미국 일봉 연구 장부'},
+ {id:'claude_close30',group:'연구(클로드)',label:'클로드 ⑤ 종가 30분',supported:true,description:'KODEX 코스닥150레버리지 · 15:00 시장가 매수 → 15:21 종가 동시호가 매도 · 끄면 새 매수만 멈춤(산 수량은 예정대로 매도)'},
 ]);
 export const PAPER_WORKER='https://jkquant-opening-scheduler.mumae4.workers.dev';
 export function defaultPaperSettings(){return {schema:1,revision:0,updatedAt:null,strategies:Object.fromEntries(PAPER_STRATEGIES.map(s=>[s.id,{enabled:false,budget:2000000}]))};}

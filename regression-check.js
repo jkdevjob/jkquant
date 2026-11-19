@@ -11598,8 +11598,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'),lv=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
     const hold=[...lp.matchAll(/maxHoldDays=(\d+)/g)].map(m=>+m[1]);
-    ok('보유 기간 규칙(하루, 최대 5일): ③ 코인은 그날 24개 봉 안에서 사고 다음 09:00 매도 · ④ SOXL 최대 5거래일 · 옛 여러 날 보유 전략은 탭에서 빠짐',
-       /bars = \[H\[\(s0 \+ timedelta\(hours=k\)\)\.isoformat\(\)\] for k in range\(24\)\]/.test(lp)&&/exitPrice=bars\[-1\]\[3\]/.test(lp)
+    // ③ 그 업비트 하루(09:00 부터 24시간) 안의 봉만 — 2026-11-19 부터 업비트 점검으로 빈 시간은 건너뛴다(day_slots) · 그 하루 마지막 봉 종가(= 다음 09:00)에 판다
+    const slots=lp.slice(lp.indexOf('def day_slots(H, d):'),lp.indexOf('def _upbit_days('));
+    ok('보유 기간 규칙(하루, 최대 5일): ③ 코인은 그날 24시간 봉 안에서 사고 다음 09:00 매도 · ④ SOXL 최대 5거래일 · 옛 여러 날 보유 전략은 탭에서 빠짐',
+       /bars = day_slots\(H, d\)/.test(lp)&&/s0 = datetime\.fromisoformat\(d \+ "T09:00:00"\)\n\s*out = \[\]\n\s*for k in range\(24\):\n\s*t = s0 \+ timedelta\(hours=k\)/.test(slots)
+       &&/exitPrice=bars\[-1\]\[1\]\[3\]/.test(lp)
        &&hold.length>=2&&hold.every(x=>x>=1&&x<=5)&&/SOXL_MR = dict\(version="soxl_rsi2_meanrev_v1", trade="SOXL"/.test(lp)
        &&!/TQQQ|tqqq/.test(scl2)&&!/TQQQ|tqqq/.test(lv)&&/report\["tabs"\]\["soxl"\] = tab_report\("soxl", m4\["name"\]/.test(lp)&&/"soxl": dict\(version="soxl_rsi2_meanrev_v1", name="④ SOXL/.test(lp)&&/maxHoldDays=num\(p\["maxHoldDays"\], 1, 5, True\)/.test(lp),JSON.stringify(hold));
   }

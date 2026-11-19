@@ -167,28 +167,56 @@ def fetch_hourly(market, start="2018-01-01"):
     return H
 
 
-_DAYS_MEMO = []                    # [(H, 봉 수, 결과)] — H 자체를 붙잡아 두어 같은 객체일 때만 다시 쓴다(id 재사용으로 남의 결과를 쓰지 않게)
+_DAYS_MEMO = []                    # [(H, 봉 수, partial, 결과)] — H 자체를 붙잡아 두어 같은 객체일 때만 다시 쓴다(id 재사용으로 남의 결과를 쓰지 않게)
+# 업비트 점검(거래 멈춤)으로 60분봉이 없는 시간 — 2018~2026 캐시에서 가장 긴 것이 7시간(분기 말 · 2026-11-09 03~06시 등).
+# 그보다 많이 비면 점검이 아니라 받기 문제로 보고 그 하루를 뺀다(옛 방식처럼).
+UPBIT_GAP_MAX = 12
 
 
-def upbit_days(H):
-    """60분봉 → 업비트 하루(09:00~다음날 09:00) 봉. 24개가 다 있는 날만. 같은 자료(H)면 한 번만 만든다(경쟁 계산이 수백 번 부른다)."""
-    for h, n, out in _DAYS_MEMO:
-        if h is H and n == len(H):
+def upbit_days(H, partial=True):
+    """60분봉 → 업비트 하루(09:00~다음날 09:00) 봉. 같은 자료(H)면 한 번만 만든다(경쟁 계산이 수백 번 부른다).
+    partial=True(2026-11-19~ 기본): 업비트 점검으로 빈 시간이 있어도 끝난 하루면 있는 봉으로 만든다 — 업비트 일봉과 같은 값이고,
+      실시간 화면(claude-live coinHoldToday) · 실투자 봇이 쓰는 일봉 목록과 같은 날짜가 된다(옛 방식은 그 하루를 통째로 빼서
+      2018~ ETH 58일 · BTC 54일이 빠졌고, 그 뒤 15일 평균 · 최근 고가가 실시간과 달랐다).
+    partial=False: 24개가 다 있는 날만(옛 방식 — R40 처럼 그 방식으로 낸 연구 결과를 그대로 다시 낼 때)."""
+    for h, n, pa, out in _DAYS_MEMO:
+        if h is H and n == len(H) and pa == partial:
             return out
-    out = _upbit_days(H)
-    _DAYS_MEMO[:] = ([(H, len(H), out)] + [x for x in _DAYS_MEMO if x[0] is not H])[:4]
+    out = _upbit_days(H, partial)
+    _DAYS_MEMO[:] = ([(H, len(H), partial, out)] + [x for x in _DAYS_MEMO if not (x[0] is H and x[2] == partial)])[:4]
     return out
 
 
-def _upbit_days(H):
+def day_slots(H, d):
+    """업비트 하루 d 의 [(봉 시각, 봉)] — 있는 봉만 시간순(점검으로 빈 시간은 건너뛴다)."""
+    s0 = datetime.fromisoformat(d + "T09:00:00")
+    out = []
+    for k in range(24):
+        t = s0 + timedelta(hours=k)
+        b = H.get(t.isoformat())
+        if b is not None:
+            out.append((t, b))
+    return out
+
+
+def _upbit_days(H, partial=True):
     out = {}
+    if not H:
+        return out
+    keys = sorted(H)
+    first, last = datetime.fromisoformat(keys[0]), datetime.fromisoformat(keys[-1])
     starts = sorted({(datetime.fromisoformat(k) - timedelta(hours=9)).date() for k in H})
     for d in starts:
         s0 = datetime(d.year, d.month, d.day, 9)
         hs = [H.get((s0 + timedelta(hours=k)).isoformat()) for k in range(24)]
-        if any(x is None for x in hs):
-            continue
-        out[d.isoformat()] = (hs[0][0], max(x[1] for x in hs), min(x[2] for x in hs), hs[-1][3])
+        have = [x for x in hs if x is not None]
+        if len(have) < 24:
+            if not partial:
+                continue
+            ended = hs[-1] is not None or last >= s0 + timedelta(hours=24)       # 끝난 하루 — 마지막(08시) 봉이 있거나 다음 하루 봉이 있다
+            if not ended or first > s0 or 24 - len(have) > UPBIT_GAP_MAX:          # 진행 중 · 자료가 그 하루 중간부터 · 너무 많이 빔 → 뺀다
+                continue
+        out[d.isoformat()] = (have[0][0], max(x[1] for x in have), min(x[2] for x in have), have[-1][3])
     return out
 
 
@@ -212,20 +240,20 @@ def coin_breakout(H, p):
                    action="flat" if not trend else "no_break", entryHour="", entryPrice=None, exitPrice=None, pnlPct=None)
         if trend:
             s0 = datetime.fromisoformat(d + "T09:00:00")
-            bars = [H[(s0 + timedelta(hours=k)).isoformat()] for k in range(24)]
-            for k, b in enumerate(bars):
-                if p.get("lastEntryHour") is not None and (s0 + timedelta(hours=k)).hour >= p["lastEntryHour"] and k < 15:
-                    break                                          # 그림자: 밤(lastEntryHour 시 이후) 돌파는 사지 않는다
+            bars = day_slots(H, d)                                 # 있는 봉만 시간순(업비트 점검으로 빈 시간은 건너뛴다)
+            for k, (t, b) in enumerate(bars):
+                if p.get("lastEntryHour") is not None and t.hour >= p["lastEntryHour"] and t < s0 + timedelta(hours=15):
+                    break                                          # 그림자: 밤(lastEntryHour 시 이후 · 자정 전) 돌파는 사지 않는다
                 if b[1] > level:
                     e = max(b[0], level) * (1 + p["entrySlipPct"] / 100)
                     stop = e * (1 - p["stopPct"] / 100)
-                    if any(x[2] <= stop for x in bars[k:]):
+                    if any(x[2] <= stop for _, x in bars[k:]):
                         r = -p["stopPct"] - p["stopSlipPct"] - 2 * half
                         rec.update(action="stop", exitPrice=stop)
                     else:
-                        r = (bars[-1][3] / e - 1) * 100 - 2 * half
-                        rec.update(action="trade", exitPrice=bars[-1][3])
-                    rec.update(entryHour=(s0 + timedelta(hours=k)).strftime("%H:00"), entryPrice=e, pnlPct=r * sz)
+                        r = (bars[-1][1][3] / e - 1) * 100 - 2 * half   # 그 하루 마지막 봉 종가(= 다음 날 09:00 · 업비트 일봉 종가)
+                        rec.update(action="trade", exitPrice=bars[-1][1][3])
+                    rec.update(entryHour=t.strftime("%H:00"), entryPrice=e, pnlPct=r * sz)
                     dv[d] = r * sz
                     break
         decisions.append(rec)
@@ -853,6 +881,19 @@ def week_recon(report, d1, krx_cal, crypto_full, us_full, cal_c, today):
     return w
 
 
+def paper_streak(dvs):
+    """모의 장부 [(날짜, 그날 손익%)](날짜순 · 쉬는 날 0) → (연속 손실 수 · 마지막 손익 난 날 · 그 뒤 쉰 기록 수).
+    쉬는 날은 줄을 끊지 않는다(손실 매매 사이에 쉰 날이 있어도 연속). 쉰 기록 수로 점검 기록이 '지금 이어지는 손실'인지 가른다(LOSS_STREAK_FRESH)."""
+    streak, last_trade, idle = 0, None, 0
+    for d, v in dvs:
+        streak = streak + 1 if v < 0 else (0 if v > 0 else streak)
+        last_trade, idle = (d, 0) if v != 0 else (last_trade, idle + 1)
+    return streak, last_trade, idle
+
+
+LOSS_STREAK_FRESH = 5          # 점검 기록 연속 손실 경고 — 마지막 손익 난 날 뒤 쉰 기록이 이 수 이하일 때만(그보다 오래 쉬었으면 지금 일이 아니다)
+
+
 EXPECT = {"opening_d1v2": ("opening", 250), "daytrading_etf": ("daytrading", 250), "close30_etf": ("close30", 250), "account": (None, 365)}
 
 
@@ -873,16 +914,18 @@ def write_paper(report, d1, krx_cal, crypto_full, us_full, cal_c):
         cal = [r["date"] for r in recs]
         z = goal_metrics(vals, cal, 365 if key.startswith(("crypto", "account")) else 250) if cal else {}
         exp = expectation(report, key)
-        cum, peak, dd, rows_out, streak = 1.0, 1.0, 0.0, [], 0
+        cum, peak, dd, rows_out, dvs = 1.0, 1.0, 0.0, [], []
         for r in recs:
             v = float(r.get("pnlPct") or 0.0) if r.get("action") not in ("no_trade", "flat") else 0.0
             cum *= 1 + v / 100
             peak = max(peak, cum)
             dd = cum / peak - 1
-            streak = streak + 1 if v < 0 else (0 if v > 0 else streak)
+            dvs.append((r["date"], v))
             rows_out.append(dict(date=r["date"], action=r.get("action"), pnlPct=v, cumPct=(cum - 1) * 100,
                                  note=r.get("decisionReason") or r.get("signalClose") and f"종가 {r.get('signalClose')}" or ""))
-        summary[key] = dict(rows=rows_out[-60:], currentDrawdownPct=dd * 100, lossStreak=streak, start=max(PAPER_START, START.get(key, PAPER_START)),
+        streak, last_trade, idle = paper_streak(dvs)
+        summary[key] = dict(rows=rows_out[-60:], currentDrawdownPct=dd * 100, lossStreak=streak, lastTradeDate=last_trade, idleDays=idle,
+                            start=max(PAPER_START, START.get(key, PAPER_START)),
                             days=len(cal), first=cal[0] if cal else None, last=cal[-1] if cal else None,
                             tradeDays=len(vals), plus1Days=sum(1 for v in vals.values() if v >= 1),
                             winDays=sum(1 for v in vals.values() if v > 0), profitFactor=z.get("profitFactor"),
@@ -1235,8 +1278,27 @@ def load_main_events(path=None):
             except (ValueError, KeyError, TypeError):
                 continue                                    # 검사에 떨어진 기록은 쓰지 않는다(JS 와 같게)
             out.append(dict(tab=e["tab"], version=str(e["version"]), name=str(e.get("name") or e["version"]), rule=str(e.get("rule") or ""),
-                            effectiveFrom=e["effectiveFrom"], promotedAt=str(e.get("promotedAt") or ""), params=params))
+                            effectiveFrom=e["effectiveFrom"], promotedAt=str(e.get("promotedAt") or ""), params=params,
+                            by=str(e.get("by") or "")))     # auto:arena-7d-top1 · user:pin — 화면이 '자동 승격' · '사용자 고정'을 가른다
     return sorted(out, key=lambda e: (e["effectiveFrom"], e["promotedAt"]))
+
+
+def rule_shown(e):
+    """화면에 보일 메인 규칙 글 — 승격 때 적힌 글(기록)은 그대로 두고, 그 뒤 생긴 탭 규칙(① 11/09~ 10:00 매도 · ② 최대 24시간)을 붙인다.
+    탭 카드(tabs.opening · tabs.daytrading)와 화면 맨 위 메인 안내(main.current · today)가 이 함수 하나를 쓴다."""
+    r = str(e.get("rule") or "")
+    if e.get("tab") == "opening" and "10:00" not in r:
+        r += D1_EXIT_NOTE
+    if e.get("tab") == "daytrading" and "24시간" not in r:
+        r += ETF_24H_NOTE
+    return r
+
+
+def main_export(t, today):
+    """report["main"][탭] — current(다음에 매매할 메인) · today(오늘 메인)는 화면 글(rule_shown)로, history 는 승격 기록 그대로."""
+    def shown(e):
+        return dict(e, rule=rule_shown(e))
+    return dict(current=shown(main_for(t)), today=shown(main_for(t, today)), history=[e for e in MAIN_EVENTS if e["tab"] == t])
 
 
 def main_for(tab, d=None):
@@ -2648,8 +2710,10 @@ def review_entry(report, day=None):
     for k, v in paper.items():
         if (v.get("status") or {}).get("code") == "below":
             issues.append(f"{k}: 실측이 기대보다 낮음 — 규칙 점검")
-        if (v.get("lossStreak") or 0) >= 4:
-            issues.append(f"{k}: {v['lossStreak']}일 연속 손실")
+        # 연속 손실은 지금 이어지는 것만 — 마지막 손익 뒤 LOSS_STREAK_FRESH 기록 넘게 쉬었으면 옛 일이다(2026-11-19: ④ 10/08~10/15 한 번 매매의
+        # 6일 손실이 그 뒤 한 달 내내 쉬어도 매일 '6일 연속 손실'로 떴다). 쉬는 날은 줄을 끊지 않는다(손실 매매 사이에 쉰 날이 있어도 연속).
+        if (v.get("lossStreak") or 0) >= 4 and (v.get("idleDays") or 0) <= LOSS_STREAK_FRESH:
+            issues.append(f"{k}: {v['lossStreak']}일 연속 손실" + (f"(마지막 {v['lastTradeDate']})" if v.get("lastTradeDate") else ""))
     tabs = {}
     for r in (report.get("daily") or {}).get("rows", []):
         if r.get("side") == "claude":                    # 기록 날짜의 칸(늦은 실행이면 표의 '어제' 칸)
@@ -2738,7 +2802,7 @@ def main():
     report = dict(schema=1, generatedAt=datetime.now(KST).isoformat(), designEnd=DESIGN_END, gate=GATE, tabs={},
                   note="모든 수익률은 각 전략 자체 기록의 순수익(수수료·슬리피지 포함). 매매 없는 날 0%. 클로드 ③④ 는 주문 없는 연구 그림자.")
     today = datetime.now(KST).strftime("%Y-%m-%d")
-    report["main"] = {t: dict(current=main_for(t), today=main_for(t, today), history=[e for e in MAIN_EVENTS if e["tab"] == t]) for t in TABS_ALL}
+    report["main"] = {t: main_export(t, today) for t in TABS_ALL}
     try:                                           # ①②⑤ 주문 정산 장부(2026-10-22~) — Worker 장부가 확정 전 · 옛 형식이면 Pages 같은 계산의 밤 사본
         cp = fetch_settle_copies()
     except Exception as e:  # noqa: BLE001
@@ -2751,11 +2815,11 @@ def main():
     m1 = main_for("opening")
     d1_cur, krx_cal = d1_series(m1["params"])
     d1 = apply_orders(piecewise("opening", lambda p: d1_series(p)[0]), "opening")
-    r1 = m1["rule"] + ("" if "10:00" in m1["rule"] else D1_EXIT_NOTE)       # 승격 때 적힌 옛 규칙 글에도 실매매 매도 시각을 붙인다(기록은 그대로)
+    r1 = rule_shown(m1)                                                      # 승격 때 적힌 옛 규칙 글에도 실매매 매도 시각을 붙인다(기록은 그대로)
     report["tabs"]["opening"] = tab_report("opening", m1["name"], m1["version"], r1, d1_cur, krx_cal, 250, extra=dict(params=m1["params"]))
     m2 = main_for("daytrading")
     ETF_PW = apply_orders(piecewise("daytrading", etf_series), "daytrading")
-    r2 = m2["rule"] + ("" if "24시간" in m2["rule"] else ETF_24H_NOTE)      # 승격 때 적힌 옛 규칙 글에도 최대 24시간을 붙인다(기록은 그대로)
+    r2 = rule_shown(m2)                                                      # 승격 때 적힌 옛 규칙 글에도 최대 24시간을 붙인다(기록은 그대로)
     report["tabs"]["daytrading"] = tab_report("daytrading", m2["name"], m2["version"], r2, etf_series(m2["params"]), krx_cal, 250,
                                               extra=dict(params=m2["params"]))
     try:                                           # ⑤ 종가 30분 — 60분봉을 못 받아도 다른 탭 계산은 계속
@@ -2863,7 +2927,7 @@ def main():
             report["history"] = write_history(report["arena"], astate, ctx)
         except Exception as e:  # noqa: BLE001
             report["history"] = dict(error=str(e))
-        report["main"] = {t: dict(current=main_for(t), today=main_for(t, today), history=[e for e in MAIN_EVENTS if e["tab"] == t]) for t in TABS_ALL}
+        report["main"] = {t: main_export(t, today) for t in TABS_ALL}
     except Exception as e:  # noqa: BLE001
         report["shadows"] = dict(error=str(e))
     try:
