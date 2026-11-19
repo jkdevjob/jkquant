@@ -1544,7 +1544,7 @@ t("⑤ Worker: 15:00 경로 · 15:21 매도는 ② 매수 판단보다 먼저 ·
 });
 t("설정 › 모의투자 목록에 클로드 ①②⑤(켤 수 있음) · ③④(표시만) — 옛 저장값(GPT 7개)도 깨지지 않고 클로드는 꺼짐으로 채움", async () => {
   const ids = PT.PAPER_STRATEGIES.filter(x => x.group === "연구(클로드)").map(x => [x.id, x.supported]);
-  assert.deepEqual(ids, [["claude_opening", true], ["claude_daytrading", true], ["claude_close30", true], ["claude_crypto", false], ["claude_soxl", false]]);
+  assert.deepEqual(ids, [["claude_opening", true], ["claude_daytrading", true], ["claude_crypto", false], ["claude_soxl", false], ["claude_close30", true]]);   // 번호 순(2026-11-19)
   const full = PT.defaultPaperSettings();
   const old = { ...full, revision: 7, strategies: Object.fromEntries(Object.entries(full.strategies).filter(([k]) => k.startsWith("gpt_"))) };
   old.strategies.gpt_opening = { enabled: true, budget: 500000, enabledSince: "2026-10-23T00:00:00.000Z" };

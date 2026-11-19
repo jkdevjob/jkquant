@@ -52,6 +52,20 @@ function world(worker=W){
 async function mocked(h,fn){const old=globalThis.fetch;globalThis.fetch=h.fetch.bind(h);try{return await fn();}finally{globalThis.fetch=old;}}
 const ownerRequest=(method='GET',patch)=>new Request('https://app/api/paper-trading-settings',{method,headers:{Authorization:'Bearer fixture'},...(patch?{body:JSON.stringify(patch)}:{})});
 const patch={expectedRevision:0,strategy:'gpt_opening',enabled:true,budget:300000};
+test('설정 카드 이름 · 순서: 지피티 · 클로드 표시와 탭 번호, 그룹마다 번호 순(2026-11-19 사용자) · 클로드 ① 10:00 매도 · ② 최대 24시간',()=>{
+ const NUM=['①','②','③','④','⑤','⑥','🔟'],num=l=>NUM.findIndex(n=>l.split(' ')[1]===n);
+ assert.deepEqual(PAPER_STRATEGIES.map(s=>s.label),['지피티 ① 시초가 돌파','지피티 ② 데이트레이딩','지피티 ③ 비트코인','지피티 ④ SOXL','지피티 ⑤ 종가 30분','지피티 ⑥ 개별 종목 종가 베팅','지피티 🔟 텐배거',
+  '클로드 ① 시초가','클로드 ② 데이트레이딩','클로드 ③ 비트코인','클로드 ④ SOXL','클로드 ⑤ 종가 30분']);
+ for(const [g,head] of [['연구(지피티)','지피티 '],['연구(클로드)','클로드 ']]){
+  const rows=PAPER_STRATEGIES.filter(s=>s.group===g);
+  assert.ok(rows.every(s=>s.label.startsWith(head)&&num(s.label)>=0),g);                       // 두 그룹 모두 표시 + 번호
+  assert.deepEqual(rows.map(s=>num(s.label)),[...rows.map(s=>num(s.label))].sort((a,b)=>a-b),g);   // 번호 순
+ }
+ assert.ok(PAPER_STRATEGIES.findIndex(s=>s.group==='연구(클로드)')>PAPER_STRATEGIES.map(s=>s.group).lastIndexOf('연구(지피티)'));   // 지피티 다음 클로드
+ const c1=PAPER_STRATEGIES.find(s=>s.id==='claude_opening').description,c2=PAPER_STRATEGIES.find(s=>s.id==='claude_daytrading').description;
+ assert.match(c1,/→ 10:00 시장가 매도\(10:00 에 못 팔면 15:21 종가 동시호가\)/);assert.ok(!/→ 15:21 종가 동시호가 매도/.test(c1));
+ assert.match(c2,/다음 날 휴장이면 사지 않음\(최대 24시간\)/);
+});
 test('research strategies (GPT 7 · Claude 5) default OFF; malformed/unsupported/budget settings rejected',()=>{
  const s=defaultPaperSettings();assert.equal(PAPER_STRATEGIES.length,12);assert.ok(Object.values(s.strategies).every(x=>x.enabled===false));assert.ok(validPaperSettings(s));
  for(const change of [{...patch,budget:9999},{...patch,budget:100000001},{...patch,budget:1.5},{...patch,enabled:'true'},{...patch,strategy:'gpt_crypto'},{...patch,strategy:'claude_crypto'},{...patch,strategy:'claude_unknown'}])assert.throws(()=>changePaperSettings(s,change));
