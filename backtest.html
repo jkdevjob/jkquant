@@ -333,7 +333,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.18.1</span></h1>
+      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.18.2</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -539,9 +539,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-vr hide vr-lump"><label data-cur="vr" title="첫 매수에 쓰는 돈 — 거치·인출식은 이 돈으로 시작, 적립식도 이 돈으로 시작한 뒤 2주마다 적립금을 더합니다 (0 이면 적립식은 첫 적립금으로 시작)">초기 투자금 ($)</label><input type="number" id="vrInitAmt" value="10000" min="0"></div>
     <div class="ctrl s-vr hide vr-wd" style="display:none"><label data-cur="vr">2주 인출액 ($)</label><input type="number" id="vrWithdraw" value="100" min="10"></div>
     <div class="ctrl s-vr hide"><label>G값 <span id="vrGGuide" style="font-size:9px;color:var(--dim)" title="라오어 시작 가이드 — 적립식·거치식 G=10, 인출식 G=20 (VR 원문 posts/009). 값을 바꾸지는 않습니다">가이드 10 (적립식)</span></label><input type="number" id="vrG" value="10" min="1" max="50"></div>
-    <div class="ctrl s-vr hide"><label>밴드 ±% <span style="font-size:9px;color:var(--dim)" title="원문(공식)은 15% · 20%는 연구(클로드 · 지피티 재현 확인 2026-11-19)로 고른 실험적 확장입니다 — TQQQ 적립식 · G 10 · 비용 반영 5년 창에서 15%보다 연수익 약 0.3~0.5%p 높고 최대 낙폭 조금 낮음(매매가 줄어든 몫) · 가장 좋은 폭은 아직 모름. 15가 아니면 결과 제목에 실험적 확장으로 적습니다">15 = 원문</span></label>
-      <div class="seg" id="vrBandSeg"><button data-v="15" class="active">15 공식</button><button data-v="20">20 실험적 확장</button></div>
-      <input type="number" id="vrBand" value="15" min="5" max="30" oninput="vrBandSegSync()"></div>
+    <div class="ctrl s-vr hide"><label>밴드 ±% <span style="font-size:9px;color:var(--dim)" title="원문(공식)은 15% · 다른 값은 실험적 확장 — 결과 제목에 실험적 확장으로 적습니다">15 = 원문</span></label><input type="number" id="vrBand" value="15" min="5" max="30"></div>
     <div class="ctrl s-vr hide"><label data-cur="vr">시작 V ($)</label><input type="number" id="vrStartV" value="0" min="0" placeholder="0=첫매수가 V"></div>
     <div class="ctrl s-vr hide"><label data-cur="vr">시작 Pool ($)</label><input type="number" id="vrStartPool" value="0" min="0"></div>
     <div class="ctrl s-vr hide"><label>사이클 기준일</label><input type="date" id="vrCycStart" title="시작 V로 이어받을 때, 마지막 사이클이 시작된 날. 비워 두면 첫 거래일을 기준으로 잡습니다."></div>
@@ -1766,12 +1764,10 @@ document.getElementById('imTgtDynSeg').onclick=e=>{if(e.target.dataset.x){docume
 document.getElementById('imRev').onclick=e=>{if(e.target.dataset.r){document.querySelectorAll('#imRev button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imReverse=e.target.dataset.r==='1';if(dataLoaded)run();}};
 document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
 document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
-/* VR 밴드 — 원문(공식)은 15% · 20% 는 연구로 고른 실험적 확장(2026-11-19 사용자 승인 · REPLICATION R-20261116-1 지피티 재현 확인).
-   단추는 칸 값만 바꾼다(계산은 칸 값 그대로) · 15 가 아니면 결과 제목·전체비교 요약에 '실험적 확장'을 적는다(공식 결과와 같은 이름으로 안 보이게). */
+/* VR 밴드 — 원문(공식)은 15% · 칸에 다른 값을 넣으면 결과 제목·전체비교 요약에 '실험적 확장'을 적는다(공식 결과와 같은 이름으로 안 보이게).
+   2026-11-19: 20% 고르기 단추를 넣었다가(#679) 같은 날 뺐다 — 20 의 이득이 종목마다 달라서(R-20261119-2). */
 function vrBandExp(b){ return (+b||15)!==15; }   // 원문(공식) 15% — 상수 대신 글자 그대로(읽는 순서와 무관)
 function vrBandTitle(b){ return vrBandExp(b)?' · <span style="color:var(--gold)">밴드 ±'+(+b)+'% 실험적 확장</span>':''; }
-function vrBandSegSync(){ const v=String(+document.getElementById('vrBand').value); document.querySelectorAll('#vrBandSeg button').forEach(b=>b.classList.toggle('active',b.dataset.v===v)); }
-document.getElementById('vrBandSeg').onclick=e=>{if(e.target.dataset.v){document.getElementById('vrBand').value=e.target.dataset.v;vrBandSegSync();if(dataLoaded)run();}};
 document.getElementById('vrFillSeg').onclick=e=>{if(e.target.dataset.v){document.querySelectorAll('#vrFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrFill=e.target.dataset.v;if(dataLoaded)run();}};
 { const el=document.getElementById('imRevGapIn');
   if(el) el.onchange=()=>{ const v=+el.value; imRevGap=(isFinite(v)&&v>=0)?Math.min(20,v):0; el.value=imRevGap; if(dataLoaded)run(); }; }
