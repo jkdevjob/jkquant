@@ -38,7 +38,8 @@ for k in ['id', 'date', 'blog_id', 'title', 'topic', 'tags', 'blocks']:
 ok(post.get('blog_id') == 'maniacjk', 'blog_id')
 ok(post.get('date') == f'{kst[:4]}-{kst[4:6]}-{kst[6:]}', 'date field mismatch')
 ok(str(post.get('id', '')).startswith(kst), 'id date prefix')
-ok(30 <= len(post.get('title', '')) <= 45, f"title length {len(post.get('title', ''))} (30~45)")
+# 2026-11-20 메르 형식(사용자 "메르 분석해서 하는 그대로"): 메르 제목 중앙값 26자(12~38) → 18~40자
+ok(18 <= len(post.get('title', '')) <= 40, f"title length {len(post.get('title', ''))} (18~40)")
 NAVER_TOPICS = ['문학·책', '영화', '미술·디자인', '공연·전시', '음악', '드라마', '스타·연예인', '만화·애니', '방송',
                 '일상·생각', '육아·결혼', '반려동물', '좋은글·이미지', '패션·미용', '인테리어·DIY', '요리·레시피', '상품리뷰', '원예·재배',
                 '게임', '스포츠', '사진', '자동차', '취미', '국내여행', '세계여행', '맛집',
@@ -58,10 +59,35 @@ paras = [b for b in bl if b.get('type') == 'paragraph']
 imgs = [b for b in bl if b.get('type') == 'image']
 ok(all(b.get('text', '').strip() for b in paras), 'empty paragraph')
 ok(not any(re.search(r'<[a-zA-Z/][^>]*>|\*\*|^#|\[[^\]]+\]\(|https?://', b['text']) for b in paras), 'html/markdown/link in body text')
+# 2026-11-20 메르 형식(사용자 "메르 분석해서 하는 그대로 내일 제작해 내용 길게 이미지도 좀 더 넣고"):
+# 메르 최근 12개 글 — 번호 줄 중앙값 48(상위 25% 67) · 한 줄 평균 51자 · '~임/~함/~음/~됨' 끝맺음 · 이미지 중앙값 8(상위 25% 11)
+# · 글과 이미지가 번갈아 · 끝에 '한줄 코멘트' · 뉴스 주소 0. 우리는 '길게'라 번호 줄 55~90, 이미지 8~12.
 nums_p = [b for b in paras if re.match(r'^\d+\. ', b['text'])]
-ok(8 <= len(nums_p) <= 15, f'numbered paragraphs {len(nums_p)} (8~15)')
-# 2026-11-19 상위 글 136개 비교(naver/peer_study.py): 이미지 하위 25% 4개 · 중앙값 5개, 우리는 2개(하위 15%) → 4~6개
-ok(4 <= len(imgs) <= 6, f'images {len(imgs)} (4~6)')
+ok(55 <= len(nums_p) <= 90, f'numbered lines {len(nums_p)} (55~90)')
+ok([int(re.match(r'^(\d+)\. ', b['text']).group(1)) for b in nums_p] == list(range(1, len(nums_p) + 1)), 'numbered lines must run 1,2,3… without gaps')
+ok(all('\n' not in b['text'] for b in nums_p), 'one numbered line per paragraph (no line breaks inside)')
+lens = [len(b['text']) for b in nums_p]
+ok(lens and 30 <= sum(lens) / len(lens) <= 90 and max(lens) <= 180, f'numbered line length avg {sum(lens) // max(len(lens), 1)} (30~90) / max {max(lens or [0])} (<=180)')
+def m_end(t):  # 끝 글자가 받침 ㅁ(~음·~임·~함·~됨) 인지 — 끝의 (해석)·마침표·따옴표는 걷고 본다
+    t = re.sub(r'(\s*\([^()]*\))+\s*$', '', t.strip()).rstrip('.!?"\'”’ ')
+    return bool(t) and 0xAC00 <= ord(t[-1]) <= 0xD7A3 and (ord(t[-1]) - 0xAC00) % 28 == 16
+ok(sum(m_end(b['text']) for b in nums_p) >= 0.7 * max(len(nums_p), 1), f"'~음/~임' endings {sum(m_end(b['text']) for b in nums_p)}/{len(nums_p)} (>=70%)")
+others = [b for b in paras if b not in nums_p]
+ok(bl and bl[0].get('type') == 'paragraph' and bl[0] in others and len(bl[0]['text']) <= 160, 'first block: short intro line without number (<=160 chars)')
+ok(len(others) <= 4, f'non-numbered paragraphs {len(others)} (<=4: intro · 한줄 코멘트 · ※ note)')
+ok(any(b['text'].startswith('한줄 코멘트') for b in others) and bl.index(next(b for b in others if b['text'].startswith('한줄 코멘트'))) > bl.index(nums_p[-1]) if nums_p else False, "'한줄 코멘트.' paragraph after the last numbered line")
+ok(8 <= len(imgs) <= 12, f'images {len(imgs)} (8~12)')
+pos = [i for i, b in enumerate(bl) if b.get('type') == 'image']
+ok(pos and pos[0] <= 1, 'thumbnail within the first 2 blocks')
+ok(all(b - a >= 3 for a, b in zip(pos, pos[1:])), 'images must be spread: at least 2 paragraphs between images')
+runs, cur = [], 0  # 이미지 없이 이어지는 번호 줄 수(끝의 한줄 코멘트·※ 줄은 세지 않음)
+for b in bl:
+    if b.get('type') == 'image':
+        runs.append(cur); cur = 0
+    elif b in nums_p:
+        cur += 1
+runs.append(cur)
+ok(max(runs) <= 16, f'no more than 16 numbered lines in a row without an image (max {max(runs)})')
 bad_words = ['example.com', '여기에 이미지', '이미지 삽입', '제목 후보', 'TODO', 'replace-with']
 ok(not any(w in raw.decode('utf-8') for w in bad_words), 'placeholder text remains')
 
@@ -87,7 +113,7 @@ for b in imgs:
 text = ''.join(b['text'] for b in paras)
 print('title:', post.get('title'))
 print('paragraphs', len(paras), 'numbered', len(nums_p), 'images', len(imgs), 'tags', len(tags), '| body chars', len(text))
-ok(1800 <= len(text) <= 2500, f'body chars {len(text)} (1,800~2,500)')
+ok(3500 <= len(text) <= 5500, f'body chars {len(text)} (3,500~5,500 — 메르 중앙값 2,945 · 상위 25% 3,881, 사용자 "내용 길게")')
 for num in [n for n in a.nums.split('|') if n]:
     ok(num in text, f'chart number {num} not in body')
 print('RESULT:', 'PASS' if not errs else 'FAIL')

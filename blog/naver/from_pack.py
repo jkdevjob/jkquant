@@ -31,7 +31,7 @@ def main():
     pk = json.load(open(src, encoding='utf-8'))
     assets = os.path.join(HERE, 'posts', 'assets', date)
     os.makedirs(assets, exist_ok=True)
-    blocks = []
+    blocks, used = [], []
     for b in pk['blocks']:
         if b['type'] == 'paragraph':
             blocks.append({'t': 'p', 'text': b['text']})
@@ -51,7 +51,12 @@ def main():
             continue
         if not links:
             sys.exit('image without source link: ' + b['file'])
-        blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': ['자료: ' + ' · '.join(outlets(links))]})
+        # 2026-11-20 메르 형식(이미지 8~12장): 사진마다 '자료:' 줄을 달면 같은 줄이 반복되므로 사진 아래는 비우고
+        # 글 맨 끝에 '자료: 언론사 · …' 한 줄로 모은다(메르는 뉴스 주소 0 · 사진 아래 줄 없음).
+        used += links
+        blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': []})
+    if used:
+        blocks.append({'t': 'p', 'text': '자료: ' + ' · '.join(outlets(used))})
     out = {'title': pk['title'], 'blocks': blocks, 'tags': pk['tags'], 'topic': pk.get('topic') or '비즈니스·경제', 'category': pk.get('category') or '', 'priority': pk.get('priority') or 1, 'keyword': pk.get('keyword') or ''}  # keyword: STRATEGY_LAB 순위 추적용 노린 검색어
     dst = os.path.join(HERE, 'posts', f'{date}_{slug}.json')
     if os.path.exists(dst):
