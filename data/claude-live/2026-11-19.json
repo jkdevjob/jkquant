@@ -6,8 +6,23 @@
     "date": "2026-11-19",
     "mainVariant": "baseline",
     "createdAt": "2026-11-19T06:40:39.550Z",
-    "updatedAt": "2026-11-19T06:40:41.441Z",
+    "updatedAt": "2026-11-19T15:05:41.132Z",
     "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1795100736406,
+        "capturedAt": "2026-11-19T15:05:41.008Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1,
+        "kind": null,
+        "observations": null,
+        "variants": null
+      },
       {
         "id": "close:close30",
         "scheduledTime": 1795070436406,
@@ -55,6 +70,36 @@
       }
     ],
     "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-11-19",
+        "capturedAt": "2026-11-19T15:05:41.008Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · 업비트 하루 돌파 단타",
+          "mainName": "평균 15일 · 최근 7일 고가 돌파 · 손절 없음 · ETH 만",
+          "strategyVersion": "g_coin_ma15_s99_hi7_eth",
+          "date": "2026-11-19",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(ETH 한 코인에 전부)"
+        }
+      },
       {
         "id": "close:close30",
         "date": "2026-11-19",

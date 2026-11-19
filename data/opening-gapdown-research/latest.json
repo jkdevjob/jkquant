@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-19T17:55:11.317249+09:00",
+  "generatedAt": "2026-11-20T03:38:24.563805+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -23,7 +23,7 @@
     "primarySlipTicks": 1.5
   },
   "from": "2018-01-02",
-  "to": "2026-11-17",
+  "to": "2026-11-18",
   "sources": [
     {
       "url": "https://raw.githubusercontent.com/FinanceData/marcap/master/data/marcap-2018.parquet",
@@ -75,15 +75,9 @@
     },
     {
       "url": "https://raw.githubusercontent.com/FinanceData/marcap/master/data/marcap-2026.parquet",
-      "rows": 615868,
-      "lastDate": "2026-11-17",
-      "status": "final"
-    },
-    {
-      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-11-18.csv",
-      "rows": 2878,
+      "rows": 618746,
       "lastDate": "2026-11-18",
-      "status": "provisional"
+      "status": "final"
     },
     {
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-11-19.csv",
@@ -226,43 +220,43 @@
     },
     "control": {
       "0.0t": {
-        "trades": 96,
-        "days": 32,
-        "winRate": 38.54166666666667,
-        "avgPnl": -1.2812423851244341,
-        "avgWin": 4.842465920769833,
-        "avgLoss": -5.121534034583551,
-        "dayAvgPnl": -1.2812423851244341,
-        "tStatDays": -1.4875459654161005,
-        "avgGross": -0.581242385124434
+        "trades": 99,
+        "days": 33,
+        "winRate": 38.38383838383838,
+        "avgPnl": -1.1224418853084128,
+        "avgWin": 5.096200548611201,
+        "avgLoss": -4.996350286766533,
+        "dayAvgPnl": -1.1224418853084128,
+        "tStatDays": -1.3208707909318267,
+        "avgGross": -0.4224418853084128
       },
       "1.5t": {
-        "trades": 96,
-        "days": 32,
-        "winRate": 38.54166666666667,
-        "avgPnl": -1.6701246791907296,
-        "avgWin": 4.433480555955435,
-        "avgLoss": -5.497809318180698,
-        "dayAvgPnl": -1.6701246791907298,
-        "tStatDays": -1.9471937143212492,
-        "avgGross": -0.581242385124434
+        "trades": 99,
+        "days": 33,
+        "winRate": 38.38383838383838,
+        "avgPnl": -1.5102137298641825,
+        "avgWin": 4.689415335251276,
+        "avgLoss": -5.372277737641026,
+        "dayAvgPnl": -1.5102137298641827,
+        "tStatDays": -1.7839592698925948,
+        "avgGross": -0.4224418853084128
       },
       "3.0t": {
-        "trades": 96,
-        "days": 32,
-        "winRate": 37.5,
-        "avgPnl": -2.0590069732570253,
-        "avgWin": 4.136424285768978,
-        "avgLoss": -5.7762657286726276,
-        "dayAvgPnl": -2.0590069732570253,
-        "tStatDays": -2.410164382948492,
-        "avgGross": -0.581242385124434
+        "trades": 99,
+        "days": 33,
+        "winRate": 37.37373737373738,
+        "avgPnl": -1.8979855744199523,
+        "avgWin": 4.398510725603679,
+        "avgLoss": -5.655572076046957,
+        "dayAvgPnl": -1.8979855744199523,
+        "tStatDays": -2.250076602399093,
+        "avgGross": -0.4224418853084128
       }
     },
     "skillPctPoints": {
-      "0.0t": 2.0900947509506906,
-      "1.5t": 2.086967725795158,
-      "3.0t": 2.083840700639626
+      "0.0t": 1.9312942511346696,
+      "1.5t": 1.927056776468611,
+      "3.0t": 1.9228193018025526
     },
     "skillPairedDays": {
       "0.0t": {
@@ -2282,12 +2276,12 @@
     "days": 29,
     "actualGapQualifiesRate": 48.717948717948715,
     "openVsExpectedPct": {
-      "n": 72,
-      "mean": 5.33146702480919
+      "n": 75,
+      "mean": 5.213029463837207
     },
     "openVsExpected0856Pct": {
-      "n": 47,
-      "mean": 5.6274073517009775
+      "n": 50,
+      "mean": 5.440911269629051
     },
     "buySlipPct": {
       "n": 25,
@@ -2302,8 +2296,8 @@
       "mean": -1.0690051725139331
     },
     "modelNet0tPct": {
-      "n": 70,
-      "mean": -0.8555862076824943
+      "n": 73,
+      "mean": -0.8811075884753372
     },
     "note": "buySlip = 매수체결가/시가-1, sellSlip = 1-매도체결가/매도 기준가(10:00 매도 날은 10:00 기록 가격 · 그 전은 종가) (양수 = 비용). 판정은 realizedNet 누적으로 한다."
   },
@@ -3153,13 +3147,13 @@
       "source": "kis-vts-live",
       "expectedPrice": 23300,
       "expectedGapPct": -2.713987473903967,
-      "actualOpen": null,
-      "actualClose": null,
-      "actualGapPct": null,
+      "actualOpen": 24100.0,
+      "actualClose": 23700.0,
+      "actualGapPct": 0.6263048016701411,
       "actualGapQualifies": false,
-      "openVsExpectedPct": null,
+      "openVsExpectedPct": 3.433476394849788,
       "expectedGapPct0856": -3.131524008350728,
-      "openVsExpected0856Pct": null,
+      "openVsExpected0856Pct": 3.87931034482758,
       "buyOrderOk": false,
       "buyOrderMsg": null,
       "sellOrderOk": false,
@@ -3174,7 +3168,7 @@
       "sellSlipPct": null,
       "realizedGrossPct": null,
       "realizedNetPct": null,
-      "modelNet0tPct": null
+      "modelNet0tPct": -1.7373443983402452
     },
     {
       "date": "2026-11-18",
@@ -3184,13 +3178,13 @@
       "source": "kis-vts-live",
       "expectedPrice": 24500,
       "expectedGapPct": -2.39043824701195,
-      "actualOpen": null,
-      "actualClose": null,
-      "actualGapPct": null,
+      "actualOpen": 24900.0,
+      "actualClose": 25100.0,
+      "actualGapPct": -0.7968127490039834,
       "actualGapQualifies": false,
-      "openVsExpectedPct": null,
+      "openVsExpectedPct": 1.6326530612244872,
       "expectedGapPct0856": -2.39043824701195,
-      "openVsExpected0856Pct": null,
+      "openVsExpected0856Pct": 1.6326530612244872,
       "buyOrderOk": false,
       "buyOrderMsg": null,
       "sellOrderOk": false,
@@ -3205,7 +3199,7 @@
       "sellSlipPct": null,
       "realizedGrossPct": null,
       "realizedNetPct": null,
-      "modelNet0tPct": null
+      "modelNet0tPct": -1.1016064257028162
     },
     {
       "date": "2026-11-18",
@@ -3215,13 +3209,13 @@
       "source": "kis-vts-live",
       "expectedPrice": 22000,
       "expectedGapPct": -2.0044543429844075,
-      "actualOpen": null,
-      "actualClose": null,
-      "actualGapPct": null,
+      "actualOpen": 22450.0,
+      "actualClose": 22200.0,
+      "actualGapPct": 0.0,
       "actualGapQualifies": false,
-      "openVsExpectedPct": null,
+      "openVsExpectedPct": 2.0454545454545503,
       "expectedGapPct0856": -2.0044543429844075,
-      "openVsExpected0856Pct": null,
+      "openVsExpected0856Pct": 2.0454545454545503,
       "buyOrderOk": false,
       "buyOrderMsg": null,
       "sellOrderOk": false,
@@ -3236,13 +3230,13 @@
       "sellSlipPct": null,
       "realizedGrossPct": null,
       "realizedNetPct": null,
-      "modelNet0tPct": null
+      "modelNet0tPct": -1.5908685968819551
     }
   ],
   "watchlist": {
     "basedOn": "2026-11-19",
     "basedOnStatus": "provisional_snapshot",
-    "size": 27
+    "size": 28
   },
-  "finalDataThrough": "2026-11-17"
+  "finalDataThrough": "2026-11-18"
 }
