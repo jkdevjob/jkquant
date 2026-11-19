@@ -989,7 +989,7 @@ export class PresaleAlertStore{
       lastChecks.gpt=[...GPT_TOPICS].map(t=>lastChecks[t]).filter(Boolean).sort().at(-1)||null;
       const rd=await this.state.storage.get('gpt-report:last-delivery'),rc=rd?await this.state.storage.get('gpt-report-delivery:'+rd):null;
       const gptMorningReport=rc?{date:rd,push:rc.push,telegram:rc.telegram,complete:rc.complete,updatedAt:rc.updatedAt}:null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.10.1",topicSchemaVersion:2,subscriptions:subs.size,
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.10.2",topicSchemaVersion:2,subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries,lastTelegramDeliveries,
         telegramSignalDedup:{version:1,store:"durable-object",unknownRetry:false},gptMorningReport,nextMorningAlarm:await this.state.storage.getAlarm()});
     }

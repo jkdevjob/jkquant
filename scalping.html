@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.50.1</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.50.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -348,7 +348,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_daily" class="strategy-pane on">
     <div class="card" id="gpt_morning_card">
-      <h3><span class="dot"></span>🔬 아침 연구 리포트 <span class="sub">매일 08:00 · 전체 탭</span></h3>
+      <h3><span class="dot"></span>🔬 아침 연구 리포트 <span class="sub">매일 05:00 · 전체 탭</span></h3>
       <div id="gpt_morning_body"><p class="sub">보고서를 불러오는 중…</p></div>
     </div>
     <div class="strategy-head">모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>
@@ -1861,9 +1861,10 @@ function renderGptMorningReport(j){
   const statuses={verified:'검증 근거 확인',collecting:'표본 수집',blocked:'미검증·자료 미확인',no_change:'새 개선 없음'};
   const tg={sent:'전송 확인',fail:'전송 실패',unknown:'결과 미확인',not_sent:'전송 대기'};
   return '<p class="lead"><b>'+esc(r.date)+' · '+esc(r.summary)+'</b></p>'+
-    '<p class="sub">작성 '+esc(scalpingKstStamp(r.preparedAt))+' · 기준 코드 '+esc((r.mainSha||'미확인').slice(0,8))+' · '+(d?'앱푸시 접수 '+Number(d.push?.sent||0)+'건 · 텔레그램 '+esc(tg[d.telegram?.result]||'전송 대기'):'08:00 발송 예약·전송 상태 확인 중')+'</p>'+
+    '<p class="sub">작성 '+esc(scalpingKstStamp(r.preparedAt))+' · 기준 코드 '+esc((r.mainSha||'미확인').slice(0,8))+' · '+(d?'앱푸시 접수 '+Number(d.push?.sent||0)+'건 · 텔레그램 '+esc(tg[d.telegram?.result]||'전송 대기'):'발송 예약·전송 상태 확인 중')+'</p>'+
     (r.sections||[]).map(s=>'<details><summary>'+esc(s.label)+' · '+esc(statuses[s.status]||'미확인')+'</summary><p>'+esc(s.findings)+'</p><p><b>다음 검증</b> '+esc(s.nextTest)+'</p>'+
-      (s.evidence||[]).filter(u=>/^https:\/\//.test(u)).map(u=>'<a href="'+esc(u)+'" target="_blank" rel="noopener">근거 자료 ↗</a>').join(' · ')+'</details>').join('');
+      (s.evidence||[]).filter(u=>/^https:\/\//.test(u)).map(u=>'<a href="'+esc(u)+'" target="_blank" rel="noopener">근거 자료 ↗</a>').join(' · ')+'</details>').join('')+
+    '<p class="lead"><b>'+esc(r.finalVerdict||'최종 판정 — 판정 미확인')+'</b></p>';
 }
 async function loadGptMorningReport(force=false){
   if(!me||document.hidden)return null;

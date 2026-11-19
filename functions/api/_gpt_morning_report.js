@@ -2,7 +2,8 @@
 export const GPT_REPORT_HEAD='[지피티 연구 리포트]';
 export const GPT_REPORT_TABS={today:'오늘 · 전체 현황',opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL',closing30:'종가 30분 · 개별 종목 종가 베팅',tenbagger:'텐배거 연구',duel:'클로드 대결'};
 export const gptReportDate=(now=Date.now())=>new Date(now+9*3600000).toISOString().slice(0,10);
-export const gptReportDue=date=>Date.parse(date+'T08:00:00+09:00');
+export const gptReportDue=date=>Date.parse(date+'T05:00:00+09:00');
+export const GPT_REPORT_UNKNOWN_VERDICT='최종 판정 — 판정 미확인';
 export async function enrichClosingReport(report){
   const section=report.sections.find(s=>s.tab==='closing30');
   if(!section||section.evidence.length||!section.findings.startsWith('종가 30분·개별 종목 종가 베팅의 이번 보고 원본'))return report;
@@ -42,11 +43,14 @@ export function normalizeGptReport(b,now=Date.now()){
     return {tab,label:GPT_REPORT_TABS[tab],status:s.status,findings,nextTest,evidence};
   });
   const summary=text(b.summary,260);if(!summary)throw Error('summary required');
-  return {schema:1,date,preparedAt:new Date(at).toISOString(),mainSha:b.mainSha,summary,sections};
+  const finalVerdict=text(b.finalVerdict,260).replace(/\s+/g,' ');
+  if(finalVerdict&&!/^최종 판정 — (실전에 쓸 개선안 (있음|없음)|판정 미확인)(?:$|[ .·])/.test(finalVerdict))throw Error('finalVerdict must state the investment decision');
+  return {schema:1,date,preparedAt:new Date(at).toISOString(),mainSha:b.mainSha,summary,sections,...(finalVerdict?{finalVerdict}:{})};
 }
 export function missingGptReport(date,now=Date.now()){
   return {schema:1,date,preparedAt:new Date(now).toISOString(),mainSha:'',missing:true,
-    summary:'아침 연구 보고서가 준비되지 않았습니다. 개선·수익 수치를 확인하지 못했으며 운영 전략은 유지합니다.',
+    summary:'아침 연구 보고서가 준비되지 않았습니다. 개선·수익 수치를 확인하지 못했습니다.',
+    finalVerdict:GPT_REPORT_UNKNOWN_VERDICT+' · 오전 5시까지 검증 결과 미제출',
     sections:Object.entries(GPT_REPORT_TABS).map(([tab,label])=>({tab,label,status:'blocked',findings:'제출된 최신 연구·검증 결과 없음 · 미확인',nextTest:'원천·자동화 실행을 확인하고 검증 결과를 누적',evidence:[]}))};
 }
 export function gptReportMessage(report){
@@ -54,8 +58,9 @@ export function gptReportMessage(report){
   const lines=[title,report.summary,''];
   for(const s of report.sections)lines.push('['+s.label+'] '+s.findings.slice(0,180),'다음 검증: '+s.nextTest.slice(0,100),'');
   const prepared=new Date(Date.parse(report.preparedAt)+9*3600000).toISOString().slice(0,16).replace('T',' ')+' KST';
-  lines.push('기준 코드 '+(report.mainSha?report.mainSha.slice(0,8):'미확인')+' · 작성 '+prepared,
-    '자료 부족·미검증은 성과로 계산하지 않습니다. 운영 규칙·실주문 변경 없음.',
-    '전체 보고서: https://jkquant.pages.dev/scalping?strategy=daily&morningReport='+report.date);
-  return {id:'gpt-morning:'+report.date,type:'gpt',title,body:report.summary,url:'https://jkquant.pages.dev/scalping?strategy=daily&morningReport='+report.date,text:lines.join('\n').slice(0,3500)};
+  const url='https://jkquant.pages.dev/scalping?strategy=daily&morningReport='+report.date;
+  const verdict=report.finalVerdict||GPT_REPORT_UNKNOWN_VERDICT;
+  const footer=['','기준 코드 '+(report.mainSha?report.mainSha.slice(0,8):'미확인')+' · 작성 '+prepared,'전체 보고서 '+url,'',verdict].join('\n');
+  const message=lines.join('\n').slice(0,3500-footer.length).trimEnd()+footer;
+  return {id:'gpt-morning:'+report.date,type:'gpt',title,body:report.finalVerdict||report.summary,url,text:message};
 }
