@@ -2668,28 +2668,6 @@
      "parents": []
     },
     {
-     "version": "g_coin_ma40_s8_vb1_h21_both",
-     "name": "평균 40일 · 시가+1×어제 폭 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
-     "rule": "어제 종가 > 40일 평균인 날, 시가+1×어제 폭를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
-     "params": {
-      "ma": 40,
-      "stopPct": 8.0,
-      "level": "vb",
-      "k": 1.0,
-      "hiN": 1,
-      "lastEntryHour": 21,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-BTC",
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-11-19",
-     "op": "explore",
-     "parents": []
-    },
-    {
      "version": "g_coin_ma40_s8_hi10_h21_both",
      "name": "평균 40일 · 최근 10일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
      "rule": "어제 종가 > 40일 평균인 날, 최근 10일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
@@ -2736,30 +2714,6 @@
      "parents": [
       "g_coin_ma40_s8_vb1_h21_both",
       "g_coin_ma80_s5_vb0.7_h12_eth"
-     ]
-    },
-    {
-     "version": "g_coin_ma40_s8_hi3_h21_both",
-     "name": "평균 40일 · 최근 3일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
-     "rule": "어제 종가 > 40일 평균인 날, 최근 3일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
-     "params": {
-      "ma": 40,
-      "stopPct": 8.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 3,
-      "lastEntryHour": 21,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-BTC",
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-11-19",
-     "op": "struct",
-     "parents": [
-      "g_coin_ma40_s8_vb1_h21_both"
      ]
     },
     {
@@ -2925,6 +2879,54 @@
      "op": "jump2",
      "parents": [
       "g_coin_ma40_s8_vb0.7_h21_btc"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s10_hi2_h15_both",
+     "name": "평균 40일 · 최근 2일 고가 돌파 · 손절 −10% · 15시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 최근 2일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · 15시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 2,
+      "lastEntryHour": 15,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-20",
+     "op": "struct",
+     "parents": [
+      "g_coin_ma40_s10_hi5_h15_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s10_hi10_h15_both",
+     "name": "평균 40일 · 최근 10일 고가 돌파 · 손절 −10% · 15시 전 돌파만 · BTC·ETH 반반",
+     "rule": "어제 종가 > 40일 평균인 날, 최근 10일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · 15시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 10,
+      "lastEntryHour": 15,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-20",
+     "op": "struct",
+     "parents": [
+      "g_coin_ma40_s10_hi5_h15_both"
      ]
     }
    ],
@@ -4174,6 +4176,44 @@
      },
      "retiredAt": "2026-11-20",
      "reason": "자리 교체 — 같은 매매의 더 나은 신규 g_coin_ma40_s10_hi5_h15_both (순위 점수 +0.099 > +0.059)"
+    },
+    {
+     "version": "g_coin_ma40_s8_vb1_h21_both",
+     "name": "평균 40일 · 시가+1×어제 폭 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "vb",
+      "k": 1.0,
+      "hiN": 1,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-20",
+     "reason": "자리 교체 — 신규 g_coin_ma40_s10_hi2_h15_both 가 순위 점수 +0.092 로 +0.067 보다 확실히 나음"
+    },
+    {
+     "version": "g_coin_ma40_s8_hi3_h21_both",
+     "name": "평균 40일 · 최근 3일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 3,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-20",
+     "reason": "자리 교체 — 신규 g_coin_ma40_s10_hi10_h15_both 가 순위 점수 +0.097 로 +0.071 보다 확실히 나음"
     }
    ],
    "tried": [
@@ -6392,7 +6432,35 @@
     "g_coin_ma40_s8_hi5_h15_both",
     "g_coin_ma30_s8_vb0.7_h18_both",
     "g_coin_ma40_s8_vb0.7_h18_btc",
-    "g_coin_ma30_s6_vb0.7_h21_btc"
+    "g_coin_ma30_s6_vb0.7_h21_btc",
+    "g_coin_ma40_s10_vb0.5_h15_both",
+    "g_coin_ma40_s8_vb0.5_h15_both",
+    "g_coin_ma50_s8_hi5_h15_both",
+    "g_coin_ma50_s8_vb0.5_h18_both",
+    "g_coin_ma40_s10_vb0.5_h18_both",
+    "g_coin_ma40_s10_vb0.5_h21_both",
+    "g_coin_ma40_s10_hi_h15_btc",
+    "g_coin_ma50_s10_hi5_h15_btc",
+    "g_coin_ma40_s10_hi_h18_both",
+    "g_coin_ma10_s2_hi3_h21_eth",
+    "g_coin_ma30_s5_vb0.4_h12_both",
+    "g_coin_ma40_s8_vb0.5_h15_btc",
+    "g_coin_ma50_s8_hi_h18_both",
+    "g_coin_ma40_s10_hi_h21_both",
+    "g_coin_ma40_s6_vb0.5_h18_both",
+    "g_coin_ma50_s8_vb0.5_h18_btc",
+    "g_coin_ma40_s10_hi7_h15_btc",
+    "g_coin_ma25_s2_hi5_h21_btc",
+    "g_coin_ma30_s8_hi5_eth",
+    "g_coin_ma50_s10_vb0.5_h15_both",
+    "g_coin_ma50_s8_hi7_h18_both",
+    "g_coin_ma40_s99_hi5_h15_both",
+    "g_coin_ma40_s10_hi7_h15_both",
+    "g_coin_ma40_s10_hi3_h15_both",
+    "g_coin_ma50_s10_vb0.7_h18_btc",
+    "g_coin_ma50_s10_vb0.7_h18_both",
+    "g_coin_ma50_s99_hi20_h18_both",
+    "g_coin_ma30_s8_vb0.7_h21_both"
    ],
    "snapshots": [
     {
@@ -7395,49 +7463,49 @@
     },
     {
      "date": "2026-11-20",
-     "top": "g_coin_ma40_s8_vb0.7_h18_both",
+     "top": "g_coin_ma40_s10_hi5_h15_both",
      "main": "g_coin_ma15_s99_hi7_eth",
      "bottom": [
-      "g_coin_ma40_s8_hi4_h15_both",
-      "g_coin_ma40_s8_vb1_h18_both",
-      "g_coin_ma40_s5_hi5_h12_both"
+      "g_coin_ma40_s8_hi2_h18_both",
+      "g_coin_ma40_s8_hi3_h21_both",
+      "g_coin_ma40_s8_vb1_h21_both"
      ],
      "ranks": [
+      "g_coin_ma40_s10_hi5_h15_both",
       "g_coin_ma40_s8_vb0.7_h18_both",
       "g_coin_ma40_s8_vb0.7_h21_both",
+      "g_coin_ma50_s8_vb0.7_h18_btc",
       "g_coin_ma40_s8_hi5_h18_both",
+      "g_coin_ma40_s6_vb0.7_h18_btc",
       "g_coin_ma40_s8_hi10_h21_both",
       "g_coin_ma40_s8_vb0.7_h21_btc",
       "g_coin_ma50_s8_hi10_h21_btc",
       "g_coin_ma40_s8_hi2_h18_both",
       "g_coin_ma40_s8_hi3_h21_both",
       "g_coin_ma40_s8_vb1_h21_both",
-      "g_coin_ma40_s8_hi4_h15_both",
-      "g_coin_ma40_s8_vb1_h18_both",
-      "g_coin_ma40_s5_hi5_h12_both",
       "g_coin_ma15_s99_hi7_eth"
      ]
     }
    ],
    "ops": {
     "neighbor": {
-     "tried": 109,
+     "tried": 114,
      "accepted": 2
     },
     "explore": {
-     "tried": 4360,
+     "tried": 4366,
      "accepted": 19
     },
     "jump2": {
-     "tried": 431,
+     "tried": 444,
      "accepted": 15
     },
     "struct": {
-     "tried": 50,
-     "accepted": 12
+     "tried": 54,
+     "accepted": 14
     },
     "cross": {
-     "tried": 80,
+     "tried": 100,
      "accepted": 18
     }
    }
@@ -11724,7 +11792,43 @@
     "g_soxl_r3lt40_dn3_ma150_d3",
     "g_soxl_norsi_ibs0.3_dn3_ma150_d5",
     "g_soxl_r2lt40_ibs0.7_dn3_ma100_d5",
-    "g_soxl_r3lt10_ibs0.3_dn3_ma150_d3"
+    "g_soxl_r3lt10_ibs0.3_dn3_ma150_d3",
+    "g_soxl_r2lt40_ibs0.6_dn1_ma100_d5",
+    "g_soxl_r2lt40_ibs0.5_dn1_ma100_d5",
+    "g_soxl_r3lt35_ibs0.6_dn1_ma100_d5",
+    "g_soxl_r3lt40_ibs0.6_ma100_d5",
+    "g_soxl_r3lt35_dn3_ma50_d5",
+    "g_soxl_r3lt40_ibs0.6_dn1_ma100_d4",
+    "g_soxl_r3lt40_ibs0.5_dn1_ma150_d5",
+    "g_soxl_r4lt40_ibs0.7_dn2_ma50_d5",
+    "g_soxl_norsi_ibs0.6_dn2_ma100_d5",
+    "g_soxl_r2lt40_ibs0.6_dn1_ma50_d5",
+    "g_soxl_r3lt35_ibs0.5_dn1_ma100_d5",
+    "g_soxl_r2lt40_ibs0.6_dn1_ma150_d5",
+    "g_soxl_r4lt35_ibs0.6_dn1_ma100_d5",
+    "g_soxl_r3lt35_ibs0.6_dn1_ma100_d4",
+    "g_soxl_r4lt40_ibs0.6_ma100_d5",
+    "g_soxl_r3lt40_ibs0.6_ma50_d5",
+    "g_soxl_r2lt35_dn2_ma150_d5",
+    "g_soxl_r3lt30_dn3_ma100_d5",
+    "g_soxl_r3lt35_dn3_ma100_d4",
+    "g_soxl_r3lt40_ibs0.6_ma150_d5",
+    "g_soxl_r4lt40_ibs0.5_dn1_ma100_d5",
+    "g_soxl_r2lt30_ibs0.3_dn1_ma150_d5",
+    "g_soxl_r3lt10_ibs0.2_ma0_d1",
+    "g_soxl_r2lt15_ibs0.1_dn1_ma0_d2",
+    "g_soxl_norsi_ibs0.4_ma100_d2",
+    "g_soxl_r4lt35_ibs0.7_dn3_ma100_d2",
+    "g_soxl_r2lt10_ibs0.2_dn2_ma150_d1",
+    "g_soxl_r4lt35_dn2_ma150_d5",
+    "g_soxl_r3lt35_ibs0.6_dn1_ma50_d5",
+    "g_soxl_r3lt40_ibs0.6_dn1_ma50_d5",
+    "g_soxl_r3lt40_ibs0.6_dn1_ma50_d4",
+    "g_soxl_r3lt40_ibs0.7_dn3_ma100_d4",
+    "g_soxl_r4lt35_dn3_ma100_d5",
+    "g_soxl_r3lt10_dn2_ma50_d3",
+    "g_soxl_r2lt20_dn3_ma150_d2",
+    "g_soxl_r3lt40_ibs0.7_dn2_ma50_d5"
    ],
    "snapshots": [
     {
@@ -12732,22 +12836,22 @@
      "main": "g_soxl_norsi_ibs0.6_dn1_ma50_d3",
      "bottom": [
       "g_soxl_r3lt35_dn1_ma50_d3",
-      "g_soxl_r4lt35_ibs0.7_dn2_ma150_d5",
-      "g_soxl_r3lt40_ibs0.7_dn1_ma150_d5"
+      "g_soxl_r3lt40_dn2_ma150_d4",
+      "g_soxl_r3lt40_dn1_ma50_d4"
      ],
      "ranks": [
       "g_soxl_r3lt40_dn1_ma100_d5",
+      "g_soxl_r3lt40_ibs0.6_dn1_ma100_d5",
       "g_soxl_r3lt40_ibs0.7_dn2_ma100_d5",
       "g_soxl_r3lt40_dn2_ma100_d5",
       "g_soxl_r3lt35_dn2_ma100_d5",
       "g_soxl_r3lt35_ibs0.7_dn2_ma100_d5",
+      "g_soxl_r2lt40_ibs0.7_dn2_ma150_d5",
       "g_soxl_r3lt40_dn1_ma150_d4",
       "g_soxl_r4lt30_dn2_ma100_d5",
+      "g_soxl_r3lt35_dn1_ma50_d3",
       "g_soxl_r3lt40_dn2_ma150_d4",
       "g_soxl_r3lt40_dn1_ma50_d4",
-      "g_soxl_r3lt35_dn1_ma50_d3",
-      "g_soxl_r4lt35_ibs0.7_dn2_ma150_d5",
-      "g_soxl_r3lt40_ibs0.7_dn1_ma150_d5",
       "g_soxl_norsi_ibs0.6_dn1_ma50_d3"
      ]
     }
@@ -12758,15 +12862,15 @@
      "accepted": 9
     },
     "explore": {
-     "tried": 3172,
+     "tried": 3187,
      "accepted": 26
     },
     "jump2": {
-     "tried": 758,
+     "tried": 785,
      "accepted": 34
     },
     "neighbor": {
-     "tried": 160,
+     "tried": 166,
      "accepted": 7
     },
     "cross": {
@@ -13448,63 +13552,6 @@
   }
  },
  "log": [
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "crypto",
-   "kind": "retire",
-   "version": "coin_bo_ma30",
-   "name": "평균 30일",
-   "reason": "자리 교체 — 신규 g_coin_ma20_s5_hi10_both 가 안정 점수 +0.390 로 +0.227 보다 확실히 나음"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "crypto",
-   "kind": "retire",
-   "version": "coin_bo_stop8",
-   "name": "손절 −8%",
-   "reason": "복제 — 손절 없음 와 사실상 같은 매매(일 손익 상관 0.993) · 순위 낮은 쪽을 뺌"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "soxl",
-   "kind": "note",
-   "version": "",
-   "name": "",
-   "reason": "순위 기준을 안정 점수(구간 당김 · 이웃 중앙값)로 바꿈 — 1위 · 하위 연속 일수를 오늘부터 새로 셈"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r3lt20_dn1_ma200_d5",
-   "name": "RSI(3) < 20 · 1일 연속 하락 · 200일 평균 위 · 최대 5일",
-   "reason": "새 구조 — soxl_rsi3_th20 에서 연속 하락 0→1 · 안정 점수 +0.349 (그대로 +0.748 · 이웃 중앙 +0.349) · 매매일 586 · MDD -18.5% · 플러스 14/15해",
-   "op": "struct"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r3lt20_ibs0.7_ma200_d5",
-   "name": "RSI(3) < 20 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위 · 최대 5일",
-   "reason": "새 구조 — soxl_rsi3_th20 에서 IBS 상한 1→0.7 · 안정 점수 +0.326 (그대로 +0.689 · 이웃 중앙 +0.326) · 매매일 575 · MDD -18.5% · 플러스 13/15해",
-   "op": "struct"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "soxl",
-   "kind": "new",
-   "version": "g_soxl_r2lt20_ibs0.5_ma200_d5",
-   "name": "RSI(2) < 20 · 종가 위치(IBS) ≤ 0.5 · 200일 평균 위 · 최대 5일",
-   "reason": "새 구조 — soxl_rsi2_meanrev_v1 에서 IBS 상한 1→0.5 · 안정 점수 +0.328 (그대로 +0.461 · 이웃 중앙 +0.328) · 매매일 798 · MDD -24.1% · 플러스 10/16해",
-   "op": "struct"
-  },
   {
    "date": "2026-10-06",
    "at": "2026-10-06T09:19+09:00",
@@ -18999,8 +19046,64 @@
    "version": "g_soxl_r4lt35_ibs0.7_dn2_ma150_d5",
    "name": "RSI(4) < 35 · 종가 위치(IBS) ≤ 0.7 · 2일 연속 하락 · 150일 평균 위 · 최대 5일",
    "reason": "자리 교체 — 신규 g_soxl_r2lt40_ibs0.7_dn2_ma150_d5 가 순위 점수 +0.109 로 +0.085 보다 확실히 나음"
+  },
+  {
+   "date": "2026-11-20",
+   "at": "2026-11-20T07:27+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s10_hi2_h15_both",
+   "name": "평균 40일 · 최근 2일 고가 돌파 · 손절 −10% · 15시 전 돌파만 · BTC·ETH 반반",
+   "reason": "새 구조 — g_coin_ma40_s10_hi5_h15_both 에서 고가 일수 5→2 · 순위 점수 +0.092 (안정 +0.093 × 빈도 0.99 · 그대로 +0.101 · 이웃 중앙 +0.093) · 매매일 533 · 연 60회 · MDD -19.5% · 플러스 8/9해",
+   "op": "struct"
+  },
+  {
+   "date": "2026-11-20",
+   "at": "2026-11-20T07:27+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s10_hi10_h15_both",
+   "name": "평균 40일 · 최근 10일 고가 돌파 · 손절 −10% · 15시 전 돌파만 · BTC·ETH 반반",
+   "reason": "새 구조 — g_coin_ma40_s10_hi5_h15_both 에서 고가 일수 5→10 · 순위 점수 +0.097 (안정 +0.108 × 빈도 0.90 · 그대로 +0.107 · 이웃 중앙 +0.108) · 매매일 358 · 연 40회 · MDD -20.0% · 플러스 7/9해",
+   "op": "struct"
+  },
+  {
+   "date": "2026-11-20",
+   "at": "2026-11-20T07:27+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 27 · 투입 2(교체 2) · 탈락: 손실 기준 미달 16 · 해마다 일관성 부족 5 · 복제 4 · 점수 부족 3"
+  },
+  {
+   "date": "2026-11-20",
+   "at": "2026-11-20T07:27+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma40_s8_vb1_h21_both",
+   "name": "평균 40일 · 시가+1×어제 폭 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+   "reason": "자리 교체 — 신규 g_coin_ma40_s10_hi2_h15_both 가 순위 점수 +0.092 로 +0.067 보다 확실히 나음"
+  },
+  {
+   "date": "2026-11-20",
+   "at": "2026-11-20T07:27+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma40_s8_hi3_h21_both",
+   "name": "평균 40일 · 최근 3일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+   "reason": "자리 교체 — 신규 g_coin_ma40_s10_hi10_h15_both 가 순위 점수 +0.097 로 +0.071 보다 확실히 나음"
+  },
+  {
+   "date": "2026-11-20",
+   "at": "2026-11-20T07:27+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 21 · 투입 0(교체 0) · 탈락: 손실 기준 미달 24 · 점수 부족 9 · 해마다 일관성 부족 3"
   }
  ],
- "updatedAt": "2026-11-20T04:31+09:00",
+ "updatedAt": "2026-11-20T07:27+09:00",
  "freqBeta": 0.25
 }
