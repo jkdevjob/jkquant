@@ -4381,10 +4381,13 @@ console.log('\n[71] same-close 룩어헤드 탐지');
   ok('운영 섀넌도 전일 종가로 판정',
      /const eqP = cash \+ qty\*pc \+ \(X1\?qty1\*pc1:0\);/.test(appIvs)
      && !/if\(Math\.abs\(w-qty\*c\/eq\)<=band\) continue;/.test(appIvs));
-  const appAsap=extractFn(idx,'function _paperAsap(sess, from)');
-  ok('운영 ASAP 도 전일 지표로',
-     /const q=i-1, p=i-2;/.test(appAsap) && /const pc=cl\[q\], down=pc<m200;/.test(appAsap)
-     && !/rsi<=30&&c<=m200\*0\.85/.test(appAsap));
+  /* ASAP 하루 판정은 공용 asapDay(2026-11-19) — 모의(_paperAsap)와 운영(computeAsap)이 같은 함수를 부른다 */
+  const appAsap=extractFn(idx,'function asapDay(I, i, S, cfg, c)');
+  ok('운영 ASAP 도 전일 지표로 (공용 asapDay — 모의 · 운영이 같이 부름)',
+     /const q=i-1, p=i-2, m200=q>=0\?I\.MA200\[q\]:null;/.test(appAsap) && /const cl=I\.cl, pc=cl\[q\], down=pc<m200;/.test(appAsap)
+     && !/rsi<=30&&c<=m200\*0\.85/.test(appAsap)
+     && /const R=asapDay\(I, i, \{stage, sgov\}, cfg, c\);/.test(extractFn(idx,'function _paperAsap(sess, from)'))
+     && /const todo=asapDay\(I,n,\{stage:stage0,sgov:pos\.reserve\},cfg,price\);/.test(extractFn(idx,'function computeAsap()')));
 
   // VR 사이클은 달력 14일 — 앱 CYC_DAYS 와 같은 숫자여야 한다
   const vrS=extractFn(bt,'function runVR(days,tkr,params)');
@@ -8301,7 +8304,7 @@ console.log('\n[115] 7차 — ASAP 모의 ↔ 백테 (매수일·금액)');
     +'const __B=(d,a,c,F,I)=>{ if(a>0) __LOG.push({date:d,amt:a}); return buyQty(a,c,F,I); };\n'
     +'return ('+as.replace(/^function \w+\(/,'function (')+')')(LOG);
   const pa=extractFn(idx,'function _paperAsap(sess, from)');
-  const helpers=[extractFn(idx,'function _asapMA(a,k)'), extractFn(idx,'function _asapRSI(a)')].join('\n');
+  const helpers=[extractFn(idx,'function _asapMA(a,k)'), extractFn(idx,'function _asapRSI(a)'), extractFn(idx,'function asapDay(I, i, S, cfg, c)')].join('\n');
   const runApp=(T,Dall,from,DV)=>{
     const st={ticker:T, base:10, mid:50, deep:100};
     const sess={settings:st, hist:[]};
@@ -9751,7 +9754,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
 
   /* ── ASAP ── */
   const runAsap=(st,Q)=>new Function('curStrat','asapQuoteData','__CUT',
-      base+'\n'+fns(['function _asapMA(a,k)','function _asapRSI(a)','function asapPos(hist)','function _asapPriceView(days)','function computeAsap()'])+'\nreturn computeAsap();')(
+      base+'\n'+fns(['function _asapMA(a,k)','function _asapRSI(a)','function asapPos(hist)','function _asapPriceView(days)','function asapDay(I, i, S, cfg, c)','function computeAsap()'])+'\nreturn computeAsap();')(
       ()=>({settings:st,hist:[]}), Q, ()=>CUT);
   { const st={ticker:'SOXL',base:10,mid:50,deep:100};
     const Q={symbol:'SOXL', days:withToday, price:today.close};
