@@ -44,7 +44,7 @@ function sheetCover(o) {
   if (o.note) items.push(T("note", o.note, 76, yEnd + 10, 32, { color: GRAY, font: "sans", weight: 700 }));
   if (o.foot) items.push(T("foot", o.foot, 76, yEnd + 70, 50, { color: ACC, font: "pen" }));
   // (11/19 사용자 "마스코트도 만들어서 넣어") 표지 오른쪽 아래에 채널 마스코트 — o.mascot === false 면 뺀다
-  if (o.mascot !== false) items.push({ type: "mascot", brand: MB ? "mb" : "rn", x: o.mascotX ?? 760, y: o.mascotY ?? yEnd + 60, size: o.mascotSize ?? 270, at: 0, dur: 0, say: o.mascotSay });
+  if (o.mascot !== false) items.push({ type: "mascot", brand: MB ? "mb" : "rn", x: o.mascotX ?? 730, y: o.mascotY ?? yEnd + 60, size: o.mascotSize ?? 250, at: 0, dur: 0, say: o.mascotSay });
   return { cover: true, start: 0, items };
 }
 module.exports.sheetCover = sheetCover;
