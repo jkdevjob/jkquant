@@ -76,7 +76,14 @@ ok(sum(m_end(b['text']) for b in nums_p) >= 0.7 * max(len(nums_p), 1), f"'~음/~
 others = [b for b in paras if b not in nums_p]
 ok(bl and bl[0].get('type') == 'paragraph' and bl[0] in others and len(bl[0]['text']) <= 160, 'first block: short intro line without number (<=160 chars)')
 ok(len(others) <= 4, f'non-numbered paragraphs {len(others)} (<=4: intro · 한줄 코멘트 · ※ note)')
-ok(any(b['text'].startswith('한줄 코멘트') for b in others) and bl.index(next(b for b in others if b['text'].startswith('한줄 코멘트'))) > bl.index(nums_p[-1]) if nums_p else False, "'한줄 코멘트.' paragraph after the last numbered line")
+# 2026-11-20 사용자 "글 맨끝에 한줄코멘트로 정리한 글 있던데 우리도 한줄정리 넣자": 메르 12개 중 10개가 '한줄 코멘트'로 끝남
+# (맨 마지막 줄 · 26~205자, 중앙값 약 150자 · 1~3문장이 대부분 · 숫자 요약보다 '그래서 어떻게 보나' 판단 한마디)
+last = bl[-1] if bl else {}
+ok(last.get('type') == 'paragraph' and last.get('text', '').startswith('한줄 코멘트.'), "last block must be the '한줄 코멘트.' paragraph (맨 끝 한줄 정리)")
+if last.get('text', '').startswith('한줄 코멘트.'):
+    c = last['text'][len('한줄 코멘트.'):].strip()
+    ok(60 <= len(c) <= 220, f'한줄 코멘트 length {len(c)} (60~220)')
+    ok(len([x for x in re.split(r'(?<=[.!?])\s+', c) if x]) <= 3, '한줄 코멘트: 3 sentences max')
 ok(8 <= len(imgs) <= 12, f'images {len(imgs)} (8~12)')
 pos = [i for i, b in enumerate(bl) if b.get('type') == 'image']
 ok(pos and pos[0] <= 1, 'thumbnail within the first 2 blocks')

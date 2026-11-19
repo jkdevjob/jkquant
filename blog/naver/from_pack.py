@@ -56,7 +56,12 @@ def main():
         used += links
         blocks.append({'t': 'img', 'file': name, 'cap': cap, 'attr': []})
     if used:
-        blocks.append({'t': 'p', 'text': '자료: ' + ' · '.join(outlets(used))})
+        src = {'t': 'p', 'text': '자료: ' + ' · '.join(outlets(used))}
+        # 2026-11-20 '한줄 코멘트'는 글의 맨 끝(메르처럼) — 자료 줄은 그 바로 앞에 넣는다
+        if blocks and blocks[-1].get('t') == 'p' and blocks[-1]['text'].startswith('한줄 코멘트'):
+            blocks.insert(len(blocks) - 1, src)
+        else:
+            blocks.append(src)
     out = {'title': pk['title'], 'blocks': blocks, 'tags': pk['tags'], 'topic': pk.get('topic') or '비즈니스·경제', 'category': pk.get('category') or '', 'priority': pk.get('priority') or 1, 'keyword': pk.get('keyword') or ''}  # keyword: STRATEGY_LAB 순위 추적용 노린 검색어
     dst = os.path.join(HERE, 'posts', f'{date}_{slug}.json')
     if os.path.exists(dst):
