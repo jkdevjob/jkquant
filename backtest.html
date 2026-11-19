@@ -8,6 +8,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/jk-money.js?v=1.0.0"></script>
+<script src="/jk-fee.js?v=1.0.0"></script>
 <script src="/jk-access.js" data-guard="1"></script>
 <script src="/jk-ui.js?v=1.1.1" defer></script>
 <script type="module">
@@ -60,6 +61,7 @@ window.saveBacktestState = async function(st){
 };
 async function loadBacktestUserState(uid){
   const snap=await getDoc(doc(db,'users',uid)),d=snap.exists()?(snap.data()||{}):{};
+  if(typeof window.jkBtSetFee==='function')window.jkBtSetFee(window.JKFee?window.JKFee.fromDoc(d):null);   // 공통 수수료율 — 설정을 되살리기(다시 돌리기) 전에
   const custom=Array.isArray(d.backtestTickers)?d.backtestTickers:[];
   if(custom.length)applyCustomList(custom);
   if(typeof window.restoreBtStateFrom==='function')window.restoreBtStateFrom(d.backtestState||null);
@@ -333,7 +335,8 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.18.2</span></h1>
+      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.19.0</span></h1>
+      <div style="font-size:11px;color:var(--dim);margin-top:2px">비용 반영 수수료 = 공통 <span class="jk-fee-pct">0.25%</span> (매수 · 매도 각 · <a href="/settings#fee" style="color:inherit">설정 › 💸 수수료</a>)</div>
     </div>
   </div>
   <div class="hright">
@@ -428,7 +431,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-dca"><label>세금·비용</label>
       <div class="seg" id="dcaCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="매수 수수료 0.25% · 적립·보유형이라 실현 양도세 없음(이연) · 국내는 수수료 0.015% · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
+        <button data-x="1" class="active" title="매수 공통 수수료(설정 › 💸 수수료 · 기본 0.25%) · 적립·보유형이라 실현 양도세 없음(이연) · 국내도 같은 공통 수수료 · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
       </div>
     </div>
 
@@ -469,7 +472,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-im hide"><label>세금·비용</label>
       <div class="seg" id="imCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="수수료 0.25%×2 · 슬리피지 0.05%(지정가매도) · 양도세 22%(연 250만원 공제) · 국내는 수수료 0.015% · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
+        <button data-x="1" class="active" title="공통 수수료(설정 › 💸 수수료 · 기본 0.25%)×2 · 슬리피지 0.05%(지정가매도) · 양도세 22%(연 250만원 공제) · 국내도 같은 공통 수수료 · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>리버스 <span style="font-size:9px;color:var(--dim)">V4.0 원금소진 후</span></label>
@@ -546,7 +549,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-vr hide"><label>세금·비용</label>
       <div class="seg" id="vrCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="수수료 0.25%(매수·매도 각) · 양도세 22%(연 250만원 공제) — 리밸런싱은 종가 체결이라 슬리피지 없음 · 국내는 수수료 0.015% · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
+        <button data-x="1" class="active" title="공통 수수료(설정 › 💸 수수료 · 기본 0.25%)(매수·매도 각) · 양도세 22%(연 250만원 공제) — 리밸런싱은 종가 체결이라 슬리피지 없음 · 국내도 같은 공통 수수료 · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
       </div>
     </div>
 
@@ -586,7 +589,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-ma hide"><label>세금·비용</label>
       <div class="seg" id="maCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="수수료 0.25%(매수·매도 각) · 양도세 22%(연 250만원 공제) — MOC 체결이라 슬리피지 없음 · 국내는 수수료 0.015% · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
+        <button data-x="1" class="active" title="공통 수수료(설정 › 💸 수수료 · 기본 0.25%)(매수·매도 각) · 양도세 22%(연 250만원 공제) — MOC 체결이라 슬리피지 없음 · 국내도 같은 공통 수수료 · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
       </div>
     </div>
 
@@ -614,7 +617,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-mom hide"><label>세금·비용</label>
       <div class="seg" id="momCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="미국: 수수료·슬립 0.30%/편도 + 양도세 22%(연 250만공제) · 국내: 수수료 0.015%/편도 + 해외·채권·금 ETF 15.4%(국내주식형 비과세)">적용</button>
+        <button data-x="1" class="active" title="미국: 공통 수수료(설정 › 💸 수수료 · 기본 0.25%)+슬립 0.05%/편도 + 양도세 22%(연 250만공제) · 국내: 공통 수수료/편도 + 해외·채권·금 ETF 15.4%(국내주식형 비과세)">적용</button>
       </div>
     </div>
 
@@ -625,7 +628,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-asap hide"><label>세금·비용</label>
       <div class="seg" id="asapCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="매수 수수료 0.25% · ASAP은 스톡을 안 팔아 실현 양도세 없음(이연) · 국내는 수수료 0.015% · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
+        <button data-x="1" class="active" title="매수 공통 수수료(설정 › 💸 수수료 · 기본 0.25%) · ASAP은 스톡을 안 팔아 실현 양도세 없음(이연) · 국내도 같은 공통 수수료 · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
       </div>
     </div>
     <!-- 표준편차 매매법 (볼린저 σ밴드) -->
@@ -672,7 +675,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-ivs hide"><label>세금·비용</label>
       <div class="seg" id="ivsCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="레버리지: 수수료 0.25%(매수·매도) + 실현이익 양도세 22%(연 250만 공제) · 예수금: T-Bill 이자에서 배당소득세 15.4%와 국채ETF 보수 0.10%를 빼고, 리밸런싱 때 국채 쪽 매매 수수료도 부과 · 국내는 수수료 0.015% · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
+        <button data-x="1" class="active" title="레버리지: 공통 수수료(설정 › 💸 수수료 · 기본 0.25%)(매수·매도) + 실현이익 양도세 22%(연 250만 공제) · 예수금: T-Bill 이자에서 배당소득세 15.4%와 국채ETF 보수 0.10%를 빼고, 리밸런싱 때 국채 쪽 매매 수수료도 부과 · 국내도 같은 공통 수수료 · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
       </div>
     </div>
     <div class="ctrl s-std hide"><label data-cur="std">원금 ($)</label><input type="number" id="stdCap" value="10000" min="100"></div>
@@ -701,7 +704,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-std hide"><label>세금·비용</label>
       <div class="seg" id="stdCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="수수료 0.25%(매수·매도) · 밴드 매도 시 실현이익 양도세 22%(연 250만 공제) · 국내는 수수료 0.015% · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
+        <button data-x="1" class="active" title="공통 수수료(설정 › 💸 수수료 · 기본 0.25%)(매수·매도) · 밴드 매도 시 실현이익 양도세 22%(연 250만 공제) · 국내도 같은 공통 수수료 · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
       </div>
     </div>
     <!-- 전체 비교: 전 전략 × 전 종목 한 표로 -->
@@ -715,7 +718,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-all hide"><label>세금·비용</label>
       <div class="seg" id="allCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="수수료 0.25%(매수·매도) · 회전형은 실현이익 양도세 22%(연 250만 공제) · 방치/적립형은 매수 수수료+양도세 이연 · 국내는 수수료 0.015% · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
+        <button data-x="1" class="active" title="공통 수수료(설정 › 💸 수수료 · 기본 0.25%)(매수·매도) · 회전형은 실현이익 양도세 22%(연 250만 공제) · 방치/적립형은 매수 수수료+양도세 이연 · 국내도 같은 공통 수수료 · 국내주식형 ETF 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜) 15.4% — 과표기준가격을 반영하지 않은 근사입니다(실제로는 매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준)">적용</button>
       </div>
     </div>
 
@@ -822,6 +825,15 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 </div>
 
 <script>
+/* 공통 수수료율 — 설정 › 💸 수수료(users/{uid}.commonFee · jk-fee.js). 로그인 뒤 loadBacktestUserState 가 사용자 문서에서 받아 바꾼다(없으면 0.25%).
+   모든 전략의 비용(costOf().fee · 모멘텀 로테 포함 · 국내도 같은 율)이 이 값 하나를 쓴다 — 운영 · 모의 · 듀얼가드와 같은 율(2026-11-19 사용자: "수수료는 전부 똑같이"). 슬리피지 · 세금은 따로. */
+let JK_FEE=0.0025;
+function jkBtSetFee(r){
+  const K=window.JKFee, x=K?K.valid(r):null; JK_FEE=(x!=null)?x:(K?K.DEFAULT:0.0025);
+  try{ const t=(K?K.pct(JK_FEE):String(JK_FEE*100))+'%'; for(const el of document.querySelectorAll('.jk-fee-pct')) el.textContent=t; }catch(e){}
+  return JK_FEE;
+}
+window.jkBtSetFee=jkBtSetFee;
 // ════════ 데이터 (실시간 로딩 — '데이터 새로고침' 버튼으로 받아옵니다) ════════
 // 종목별 /api/quote?range=max 호출. 막힌 종목은 건너뜁니다.
 const C=0,O=1,HI=2,LO=3;
@@ -1552,7 +1564,7 @@ document.getElementById('result').addEventListener('click',e=>{
 let imEngine='v40';   // V5.0 숨김 기간: v40 고정
 
 /* ════ 실전 비용 모델 (imCostOn=true일 때만 적용) ════
-   수수료 0.25%(매수·매도 각) · 슬리피지 0.05%(지정가매도만, LOC는 종가체결이라 없음)
+   공통 수수료(설정 › 💸 수수료 · 기본 0.25%)(매수·매도 각) · 슬리피지 0.05%(지정가매도만, LOC는 종가체결이라 없음)
    양도소득세 22% · 연 250만원 기본공제 · 손익통산(이월없음) · 환율 1,350원/$
    Python 독립구현(cost_engine.py)과 소수점 일치 검증됨. */
 const COST_FEE=0.0025, COST_SLIP=0.0005, COST_TAXRATE=0.22, COST_KRW=1350, COST_DEDUCT=250e4;
@@ -1563,7 +1575,7 @@ const COST_FEE=0.0025, COST_SLIP=0.0005, COST_TAXRATE=0.22, COST_KRW=1350, COST_
    taxBasis(세무 원가) 양도차익에서 빼는 취득가액 = 체결금액 + 매수 필요경비.
    예전엔 둘을 avg 하나로 썼다. 매수수수료는 현금에서 나가고도 취득가액에는
    안 들어가, 과세 실현손익이 그만큼 과대 계상됐다. 손으로 셀 수 있는 예:
-     100$ × 100주 매수(수수료 0.25%) → 110$ 전량매도(수수료 0.25%)
+     100$ × 100주 매수(수수료 0.25% 예) → 110$ 전량매도(수수료 0.25% 예)
        실제로 늘어난 돈   947.50
        예전 실현손익      972.50   ← 매수수수료 25 만큼 과대
        양도세 22% 면 5.50$ 를 더 낸 것으로 잡힌다.
@@ -1661,7 +1673,7 @@ const isKRW=t=>/^(?:\d{6}|\d{4}[A-Z]\d)(?:\.K[SQ])?$/.test(String(t||'').toUpper
 
 /* ════ 국내 종목의 비용·세금 규약 ════
    미국과 겹치는 게 하나도 없다 — 그냥 미국 상수를 쓰면 전부 틀린다.
-     수수료  0.25% → 0.015%
+     수수료  미국과 같은 공통 수수료율(설정 › 💸 수수료 · 예전엔 0.015% · 2026-11-19 "수수료는 전부 똑같이")
      양도세  22%(연 250만원 공제) → 국내주식형 ETF는 매매차익 비과세,
              그 밖(해외지수·채권·원자재·커버드콜)은 배당소득세 15.4%·공제 없음
      환율    원화 종목에 1,350을 곱하면 과세표준이 1,350배로 부풀어 세금이 터진다 → 1
@@ -1676,9 +1688,12 @@ const krCode=t=>String(t||'').toUpperCase().replace(/\.K[SQ]$/,'');
      (보수적 = 세금이 실제보다 크게 나오는 쪽). 화면에도 '근사' 라고 적는다. */
 const krTaxRate=t=>KR_STOCK_ETF.has(krCode(t))?0:0.154;
 function costOf(t){
+  /* 수수료 = 공통 수수료율 하나(설정 › 💸 수수료 · JK_FEE) — 국내 · 해외 같은 율. 저장값을 아직 못 받았으면 기본 COST_FEE(0.25%).
+     예전엔 국내만 0.015% 였다(2026-11-19 사용자: "수수료는 전부 똑같이 적용하고"). 세금 · 슬리피지 규약은 그대로. */
+  const F=(typeof JK_FEE!=='undefined'&&JK_FEE!=null)?JK_FEE:COST_FEE;
   return isKRW(t)
-    ? {fee:0.00015, slip:COST_SLIP, taxRate:krTaxRate(t), krw:1,        deduct:0,           cur:'₩'}
-    : {fee:COST_FEE, slip:COST_SLIP, taxRate:COST_TAXRATE, krw:COST_KRW, deduct:COST_DEDUCT, cur:'$'};
+    ? {fee:F, slip:COST_SLIP, taxRate:krTaxRate(t), krw:1,        deduct:0,           cur:'₩'}
+    : {fee:F, slip:COST_SLIP, taxRate:COST_TAXRATE, krw:COST_KRW, deduct:COST_DEDUCT, cur:'$'};
 }
 /* 실현손익 → 세금. 미국은 원화 환산 후 250만원 공제하고 22%를 물린 뒤 다시 달러로 돌린다.
    국내는 krw=1·deduct=0이라 같은 식이 그대로 '실현익 × 세율'이 된다. */
@@ -1780,7 +1795,8 @@ syncRevUI();
 // [sym,name] 목록 → {sym,name,taxable,color} (색은 골든앵글 HSL 자동배정)
 function _mkUniv(list){ return list.map((x,i)=>({sym:x[0],name:x[1],taxable:true,color:`hsl(${Math.round((i*137.508)%360)},62%,62%)`})); }
 const MOM_UNIV={
-  us:{ label:'🇺🇸 미국', cur:'$', cap:10000, fee:0.0030, taxRate:0.22, annual:true, tickers:_mkUniv([
+  /* fee — 공통 수수료율 + 슬리피지(미국 · 예전 0.30% = 0.25%+0.05%) · 국내는 공통 수수료율(예전 0.015%) — 설정 › 💸 수수료를 따른다(2026-11-19) */
+  us:{ label:'🇺🇸 미국', cur:'$', cap:10000, get fee(){ return costOf('SPY').fee+COST_SLIP; }, taxRate:0.22, annual:true, tickers:_mkUniv([
     // 정예 10종 — 레버리지 3(테크·반도체) + 지수 3 + 채권 3 + 금 (모멘텀 로테이션 최적, MAR≈1.0)
     ['SOXL','반도체 3×'],['TECL','테크 3×'],['TQQQ','나스닥100 3×'],
     ['QQQ','나스닥100'],['SPY','S&P500'],['DIA','다우30'],
@@ -1789,7 +1805,7 @@ const MOM_UNIV={
       {sym:'SOXL',name:'반도체 3×',color:'#ff6b6b'},{sym:'USD',name:'반도체 2×',color:'#b088f8'},
       {sym:'TECL',name:'테크 3×',color:'#ffc844'},{sym:'TQQQ',name:'나스닥100 3×',color:'#00d4b4'},
       {sym:'QLD',name:'나스닥100 2×',color:'#5b8dee'},{sym:'KORU',name:'한국 3×',color:'#ef5350'} ]},
-  kr:{ label:'🇰🇷 국내', cur:'₩', cap:10000000, fee:0.00015, taxRate:0.154, annual:false, tickers:[
+  kr:{ label:'🇰🇷 국내', cur:'₩', cap:10000000, get fee(){ return costOf('069500').fee; }, taxRate:0.154, annual:false, tickers:[
     {sym:'122630.KS',name:'KODEX 레버리지',taxable:false,color:'#ff6b6b'},
     {sym:'233740.KS',name:'코스닥150 레버',taxable:false,color:'#ff9e6b'},
     {sym:'133690.KS',name:'TIGER 나스닥100',taxable:true,color:'#00d4b4'},
@@ -3380,7 +3396,7 @@ function runVR(days,tkr,params){
   let bothDays=0;                              // 같은 봉에서 상·하단 차수가 둘 다 닿은 날 수
   let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
   // ── 비용·세금 (costOn=false면 전부 0 — 기존 산술과 완전 동일) · 규약은 무매·200일선과 같음 ──
-  //   수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제, 실현손익만) · 리밸런싱=종가 체결이라 슬리피지 없음
+  //   공통 수수료(설정 › 💸 수수료 · 기본 0.25%) 매수·매도 각 · 양도세 22%(연 250만원 공제, 실현손익만) · 리밸런싱=종가 체결이라 슬리피지 없음
   const FEE=costOn?costOf(tkr).fee:0;
   let avg=0, feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
   /* 실제로 나간 돈만 돌려준다 — _vsell 이 '판 만큼만' 돌려주는 것과 같은 이치다.
@@ -3573,7 +3589,7 @@ function calcVol(snap, stepDays){
 //   · 판정 = 전일 종가 기준 (룩어헤드 없음) · 체결 = 당일 종가 MOC (슬리피지 없음, 수수료만)
 //   · SMA는 로딩된 전체 이력으로 계산 (buildGateIM과 동일 — 선택 기간 앞 데이터를 워밍업에 활용)
 //   · 워밍업(이력<N일)은 '보유'로 간주 — V5.0 국면 워밍업과 동일 규약 (짧은 기간에서 부당히 불리해지지 않게)
-// 비용 모델은 무매와 동일 규약: 수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제) · 실현손익만 과세.
+// 비용 모델은 무매와 동일 규약: 공통 수수료(설정 › 💸 수수료 · 기본 0.25%) 매수·매도 각 · 양도세 22%(연 250만원 공제) · 실현손익만 과세.
 /* ── 로테 신호 조건: 매수·매도 각각 4가지(200선 / 크로스 / 둘다 / 하나만) → 16조합 ──
    a = 합성 1배지수 > 200일선 · b = 단기선(50일) > 200일선(골든크로스)
    매수 조건 충족 시 진입:  ma=a · cross=b · both=a∧b · either=a∨b
@@ -3848,7 +3864,7 @@ function runBH(days,tkr,cap,costOn){
   const FEE=costOn?costOf(tkr).fee:0;
   const p=d=>tradeBar(tkr,d)[C], p0=p(days[0]);   // 실제 거래 가격 (분할 전 구간은 분할 전 가격 · unitOf)
   /* 정수 주수로 끊고 남는 현금을 그대로 들고 간다 — 예전엔 그냥 버렸다.
-     원금 1만$·주가 100$·수수료 0.25% 면 99주(9,900) + 수수료 24.75 → 잔돈 75.25.
+     원금 1만$·주가 100$·수수료 0.25%(예) 면 99주(9,900) + 수수료 24.75 → 잔돈 75.25.
      그 75.25가 최종 평가액에서도 MDD에서도 사라져, 거치식이 실제보다 나쁘게 나왔다.
      불변식: 초기자금 = 주식매수액 + 수수료 + 잔돈 (회귀가 값으로 검사한다) */
   let sh=buyQty(cap,p0,FEE,true);                    // 거치도 정수 주수 (공통 매수 규약)
@@ -4409,7 +4425,7 @@ function renderASAP(results, days, opt){
   h+=`</tbody></table></div>`;
   // 연도별 총자산 비교 (공용 카드)
   h+=yearCompareCard(rows.map(r=>({label:r.ticker,tkr:r.ticker,snap:r.snap,color:r.color})), money);
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: 리저브에 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>${o.costOn?'세후':'세전'}</b>(${o.costOn?'매수 수수료 0.25% 반영 · 스톡 미매도로 양도세 이연':'세금·수수료 미반영'}).`
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: 리저브에 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>${o.costOn?'세후':'세전'}</b>(${o.costOn?'매수 수수료 공통 '+(costOf('SOXL').fee*100).toFixed(2)+'% 반영 · 스톡 미매도로 양도세 이연':'세금·수수료 미반영'}).`
     +`<br>※ <b>리저브는 실제 SGOV 시세가 아니라 T-Bill 연이자 근사</b>입니다(연도별 상수, 일할 복리). 리저브에는 <b>보수·이자소득세·매매수수료를 물리지 않습니다</b> — 비용반영을 켜도 주식 매수 수수료만 반영됩니다.`
     +`<br>※ 200일선이 아직 안 선 구간(상장 직후 등)의 적립금은 <b>리저브에 쌓아 둡니다</b> — 그 돈도 총투입에 그대로 들어갑니다.</p></div>`;
   document.getElementById('asapResult').innerHTML=h;
@@ -4648,15 +4664,15 @@ const curOf=t=>isKRW(t)?'₩':'$';
 const fmtV=(v,t)=>!isKRW(t)&&typeof window!=='undefined'&&window.JKMoney?window.JKMoney.usdText(v,{digits:0}):fmt(v)+curOf(t);
 
 /* 화면에 적는 세율·수수료는 계산에 실제로 쓰인 값이어야 한다 — 글로 박아 두면
-   국내 백테를 돌려도 '수수료 0.25% · 양도세 22%'가 그대로 남아 거짓말이 된다. */
+   국내 백테를 돌려도 '수수료 0.25% · 양도세 22%'가 그대로 남아 거짓말이 된다(지금 수수료는 국내 · 해외 같은 공통 율). */
 function _costNote(tkrs){
   const set=[...new Set((tkrs||[]).filter(Boolean))];
   const kr=set.filter(isKRW), us=set.filter(t=>!isKRW(t));
   const parts=[];
-  if(us.length) parts.push('미국 수수료 0.25%·실현 양도세 22%(연 250만원 공제)');
+  if(us.length) parts.push('미국 수수료 공통 '+(costOf('SPY').fee*100).toFixed(2)+'%·실현 양도세 22%(연 250만원 공제)');
   if(kr.length){
     const free=kr.filter(t=>krTaxRate(t)===0), tax=kr.filter(t=>krTaxRate(t)>0);
-    parts.push('국내 수수료 0.015%'+(free.length?'·국내주식형 매매차익 비과세':'')+(tax.length?'·그 밖 15.4%':''));
+    parts.push('국내 수수료 공통 '+(costOf('069500').fee*100).toFixed(3)+'%'+(free.length?'·국내주식형 매매차익 비과세':'')+(tax.length?'·그 밖 15.4%':''));
   }
   return parts.join(' · ')+' 반영';
 }

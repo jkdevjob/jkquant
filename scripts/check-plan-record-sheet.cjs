@@ -41,7 +41,7 @@ function saveCtx(src,eng,{cloud=true,orders=[]}={}){
     alphaSyncInputs(){},renderAlphaLedger(){},refreshAlphaFromCache(){},localSave(){},alphaCloseFillEditor(){},cloudSave:async()=>cloud};
   vm.createContext(c);c.window=c;vm.runInContext(eng,c);
   vm.runInContext('var alphaLedger={base:{date:"2026-11-01",tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[]};var pendingAlphaOrders='+JSON.stringify(orders)+';\n'
-    +[ 'const ALPHA_FEE_RATE=','function alphaFee(q,p)','function alphaEventList(ledger=alphaLedger)','function alphaLedgerCalc(ledger=alphaLedger)','async function alphaAddCashEvent()','async function alphaSaveFills()']
+    +[ 'let ALPHA_FEE_RATE=','function alphaFee(q,p)','function alphaEventList(ledger=alphaLedger)','function alphaLedgerCalc(ledger=alphaLedger)','async function alphaAddCashEvent()','async function alphaSaveFills()']
       .map(m=>m.startsWith('const')?src.slice(src.indexOf(m),src.indexOf(';',src.indexOf(m))+1):fnOf(src,m)).join('\n'),c);
   return c;
 }

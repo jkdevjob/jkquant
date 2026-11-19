@@ -23,6 +23,7 @@
 
 import { imOrders, settledLast, staleDays, STALE_MAX_DAYS, orderWindow } from "./_im.js";
 import { hydratePaperDoc } from "../../jk-paper-store.mjs";
+import { feeRateFromDoc } from "./_fee.js";
 
 const JH = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o, null, 2), { status: s, headers: JH });
@@ -179,6 +180,9 @@ export async function onRequest({ request, env }) {
     const doc = await hydratePaperDoc(rawDoc, id=>fsGet(tok,pid,"users/"+uid+"/paperHistory/"+id),
       {boxes:['inf'],session:s=>s?.paper===true&&!!s.kis});
     const state = doc && (doc.stateV2 || doc.state);  // stateV2 정본, legacy state는 1회 마이그레이션 전 fallback
+    /* 공통 수수료율 — 설정 › 💸 수수료(users/{uid}.commonFee). 앱 주문표와 같은 율로 잔금 · 매수 수량을 센다(없으면 0.25%) */
+    const fee = feeRateFromDoc(rawDoc);
+    out.feeRate = fee;
     if (!state || !state.inf || !state.inf.sessions) return json({ ...out, error: "저장된 세션이 없습니다" }, 404);
 
     // 오늘 이미 돌았으면 다시 내지 않는다 — 이중 주문 방지
@@ -230,7 +234,7 @@ export async function onRequest({ request, env }) {
       }
       row.staleDays = stale;
 
-      const { orders, skip } = imOrders({ st, hist: s.hist || [], close, days });
+      const { orders, skip } = imOrders({ st, hist: s.hist || [], close, days, fee });
       if (skip) { row.skip = skip; out.sessions.push(row); continue; }
       row.orders = orders.map((o) => ({ ...o, price: Math.round(o.price * (KRCODE.test(sym) ? 1 : 100)) / (KRCODE.test(sym) ? 1 : 100) }));
       if (!orders.length) { row.skip = "낼 주문 없음"; out.sessions.push(row); continue; }

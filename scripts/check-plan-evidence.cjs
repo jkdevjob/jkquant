@@ -10,6 +10,7 @@ function check(source=src){
   const c={PATH_DEFAULTS:{alpha:D},horizonStrategy:()=>({years:5,key:'dualGuard',name:'5년 · 듀얼가드'}),document:{querySelectorAll:()=>[]},$:el,activeHorizon:5,horizonRebalancePending:false,setTxt:(id,v)=>el(id).textContent=v};
   vm.createContext(c);c.window=c;vm.runInContext(fs.readFileSync('plan-session-engine.js','utf8'),c);   // 판정(alphaDecide)·전략 이름(STRATEGY)은 모의 엔진과 같은 글자
   vm.runInContext("var planCurRules='base';function activeAssetSession(){return null;}",c);
+  vm.runInContext((source.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0].replace('let ','var '),c);   // 공통 수수료율(검증 문구가 지금 율을 적는다)
   for(const m of ['function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function renderPlanVersion()','function alphaRuleSet()','function renderHorizonCopy()'])vm.runInContext(fn(source,m),c);
   c.renderHorizonCopy();
   assert.equal(el('alphaEv1Label').textContent,'TECL σ20');assert(el('alphaEv2Sub').textContent.includes('σ20'));assert(el('alphaEv2Sub').textContent.includes('최대70%'));

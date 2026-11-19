@@ -81,7 +81,10 @@ function check(S){
   const bad=[];const t=(name,cond,info)=>{if(!cond)bad.push(name+(info!=null?' · '+String(info).slice(0,300):''));};
   const E=loadEngine(S.eng);
   // ── A. 장부 계산 이동 — 옛 코드와 결과가 글자까지 같다
-  { const O=new Function('alphaLedger',OLD_LEDGER+'\nreturn alphaLedgerCalc;')(null);
+  /* 2026-11-19 공통 수수료 — 엔진 장부는 기록의 fee 칸 대신 '체결금액 × 공통 율'로 센다(사용자 결정 · 설정 › 💸 수수료). 옮기기 전 코드도 그 한 식만 같이 바꿔 대조한다(나머지는 글자 그대로). */
+  const OLD_FEE=OLD_LEDGER.replace('fee=Math.max(0,+e.fee||0)','fee=e.seed?0:Math.max(0,q*p)*__RATE');
+  if(OLD_FEE===OLD_LEDGER) throw Error('옛 장부 수수료 식 자리 없음');
+  { const O=new Function('alphaLedger','__RATE',OLD_FEE+'\nreturn alphaLedgerCalc;')(null,E.FEE_RATE);
     const fixed=[
       {base:{date:'2026-01-02',tecl:10,tqqq:0,sgov:0,cash:5000,avgTecl:100},events:[
         {id:'1',type:'trade',date:'2026-01-02',symbol:'TECL',side:'buy',qty:10,price:120,fee:0},{id:'2',type:'cash',date:'2026-09-03',kind:'div',amount:3.5},
@@ -92,12 +95,12 @@ function check(S){
     for(let i=0;i<all.length;i++){if(JSON.stringify(O(all[i]))!==JSON.stringify(E.ledgerCalc(all[i]))){diff=i;break;}}
     t('A1 엔진 ledgerCalc = 옮기기 전 plan.html alphaLedgerCalc (고정 3 + 무작위 600 장부 · 결과 글자까지)',diff<0,diff>=0?JSON.stringify([all[diff],O(all[diff]),E.ledgerCalc(all[diff])]):null);
     const f0=E.ledgerCalc(fixed[0]);
-    t('A2 값: 현금 5000−1200+3.5+1000−200+3249=7852.5 · 입출금 800 · 배당 3.5 · TECL 매도 25>20 → 장부 오류',near(f0.cash,7852.5)&&f0.netFlow===800&&near(f0.divIn,3.5)&&f0.invalid===true&&f0.tecl===0,JSON.stringify(f0));
+    t('A2 값: 현금 5000−1200×1.0025+3.5+1000−200+3250×0.9975=7842.375(공통 수수료 0.25% · 기록 칸 0·1 은 안 씀) · 입출금 800 · 배당 3.5 · TECL 매도 25>20 → 장부 오류',near(f0.cash,5000-1200*1.0025+3.5+1000-200+3250*0.9975)&&f0.netFlow===800&&near(f0.divIn,3.5)&&f0.invalid===true&&f0.tecl===0,JSON.stringify(f0));
     t('A3 plan.html 의 alphaEventList·alphaLedgerCalc 는 엔진을 부른다(계산 한 벌)',
       /function alphaEventList\(ledger=alphaLedger\)\{return JKPlanSessionEngine\.ledgerEvents\(ledger\);\}/.test(S.plan)
       &&/function alphaLedgerCalc\(ledger=alphaLedger\)\{return JKPlanSessionEngine\.ledgerCalc\(ledger\);\}/.test(S.plan)
       &&!/S\.tradePnl\[e\._i\]=/.test(S.plan));
-    t('A4 엔진 캐시 판 9(모의 재생 저장본 함수) — 플랜·운영 둘 다(새 함수를 옛 캐시 엔진으로 부르지 않게)',/plan-session-engine\.js\?v=9"/.test(S.plan)&&/plan-session-engine\.js\?v=9"/.test(S.idx)); }
+    t('A4 엔진 캐시 판 10(공통 수수료 setFeeRate) — 플랜·운영 둘 다(새 함수를 옛 캐시 엔진으로 부르지 않게)',/plan-session-engine\.js\?v=10"/.test(S.plan)&&/plan-session-engine\.js\?v=10"/.test(S.idx)); }
 
   // ── B. 합계
   { const c={};vm.createContext(c);vm.runInContext(fnOf(S.idx,'function pfOutAmt(r)')+fnOf(S.idx,'function pfSummary(rows, fx)'),c);
@@ -117,7 +120,7 @@ function check(S){
       {id:'a',type:'trade',date:'2026-01-05',symbol:'TECL',side:'buy',qty:64,price:95,fee:6.08},{id:'b',type:'trade',date:'2026-01-05',symbol:'TQQQ',side:'buy',qty:38,price:80,fee:3.04},
       {id:'c',type:'trade',date:'2026-01-05',symbol:'SGOV',side:'buy',qty:6,price:100.3,fee:0},{id:'d',type:'cash',kind:'dep',date:'2026-11-03',amount:500},{id:'e',type:'cash',kind:'wd',date:'2026-11-04',amount:100}]}};
     const Q={TECL:{price:98.875,last:{date:'2026-11-06',close:98}},TQQQ:{price:0,last:{date:'2026-11-06',close:62.2}},SGOV:{price:100.5,last:{date:'2026-11-05',close:100.4}}};
-    const r=c.pfPlanRow(L,Q,E),cash=20000-64*95-6.08-38*80-3.04-6*100.3+500-100;
+    const r=c.pfPlanRow(L,Q,E),cash=20000-(64*95+38*80+6*100.3)*1.0025+500-100;   // 수수료 = 체결금액 × 공통 0.25%(기록 칸 6.08 · 3.04 · 0 은 안 씀)
     t('C1 평가 = 현금 + TECL 64×98.875 + TQQQ 38×62.2(지금가 없으면 마지막 종가) + SGOV 6×100.5',near(r.total,cash+64*98.875+38*62.2+6*100.5)&&near(r.hold.cash,cash),JSON.stringify(r));
     t('C2 투입 = 시작 20,000 + 입금 500 − 출금 100 = 20,400 · 수익률 = 평가÷투입−1',r.inflow===20400&&near(r.ret,(r.total/20400-1)*100),r.inflow);
     t('C3 기준일 = 세 종목 마지막 종가 중 가장 이른 날 · 통화 USD · 시세 대기 아님',r.to==='2026-11-05'&&r.cur==='usd'&&r.pending===false&&r.out===0,JSON.stringify([r.to,r.cur,r.pending]));
@@ -353,7 +356,7 @@ function check3(S,t,E,bad){
       {id:'b',type:'trade',date:'2026-03-02',symbol:'TECL',side:'buy',qty:5,price:100,fee:0.5},{id:'p',type:'cash',kind:'dep',date:'2026-03-04',amount:500},
       {id:'w',type:'cash',kind:'wd',date:'2026-03-07',amount:100}]}};
     const s1=c.pfPlanSeries(L,Q,E,{pending:false,total:4321,inflow:1400});
-    t('N1 날마다: 03-02 체결 뒤 현금 499.5 + TECL 5×100 · 03-03 5×150 · 03-04 입금 → 투입 1,500',s1.length===6&&near(s1[1].tot,499.5+500)&&near(s1[2].tot,499.5+750)&&s1[3].inflow===1500&&s1[0].inflow===1000&&near(s1[0].tot,1000),JSON.stringify(s1));
+    t('N1 날마다: 03-02 체결 뒤 현금 498.75(수수료 500×0.25%) + TECL 5×100 · 03-03 5×150 · 03-04 입금 → 투입 1,500',s1.length===6&&near(s1[1].tot,498.75+500)&&near(s1[2].tot,498.75+750)&&s1[3].inflow===1500&&s1[0].inflow===1000&&near(s1[0].tot,1000),JSON.stringify(s1));
     t('N2 끝 = 줄의 지금 값 · 종가 뒤(03-07) 출금 기록 → 그 날짜로 하나 더',s1[5].date==='2026-03-07'&&s1[5].tot===4321&&s1[5].inflow===1400&&s1[4].date==='2026-03-05',JSON.stringify(s1.slice(-2))); }
   // ── J. 올해 양도세 — 운영 줄 추정(결제일 해 · 결제일 환율) · 듀얼가드는 플랜 세금 점검과 같은 계산 · 공제는 사람당 한 번
   { const fx=T.fxFn([{date:'2026-01-02',close:1000},{date:'2026-07-01',close:1100}]);
@@ -408,7 +411,7 @@ function check3(S,t,E,bad){
       &&/\.pf-in\{stroke:var\(--pf-in\);stroke-width:1\.5;stroke-dasharray:6 4\}/.test(S.idx));
     t('L3 비중 막대는 무리 넷(듀얼가드·섀넌·무매·그 밖)만 — 모든 짝이 갈리는 색(검증) · 2px 틈',/plan:\{label:'듀얼가드',color:'#9085e9'\},ivs:\{label:'섀넌',color:'#d55181'\},inf:\{label:'무한매수법',color:'#008300'\}/.test(S.idx)&&/const PF_OTHER=\{label:'그 밖',color:'#c9cdd9'\};/.test(S.idx)&&/\.pf-bar\{display:flex;gap:2px;/.test(S.idx)&&!/PF_COLOR/.test(S.idx));
     t('L4 화면 배선: 합친 MDD 칸 · 추이 · 목표 · 양도세(세금 모듈 불러옴) · 환율 KRW=X',/합친 MDD/.test(fnOf(S.idx,'function pfRender()'))&&/pfChartHtml\(C\)/.test(fnOf(S.idx,'function pfRender()'))&&/pfTargetHtml\(V\)/.test(fnOf(S.idx,'function pfRender()'))&&/pfTaxHtml\(PF\.tax,T\)/.test(fnOf(S.idx,'function pfRender()'))
-      &&/<script src="\/plan-tax-check\.js\?v=2"><\/script>/.test(S.idx)&&/fetchDaily\('KRW=X'\)/.test(fnOf(S.idx,'async function pfRefresh(force)'))
+      &&/<script src="\/plan-tax-check\.js\?v=3"><\/script>/.test(S.idx)&&/fetchDaily\('KRW=X'\)/.test(fnOf(S.idx,'async function pfRefresh(force)'))
       &&/PF\.tax=pfTaxCheck\(PF\.rows,/.test(fnOf(S.idx,'async function pfRefresh(force)'))&&/PF\.tax=pfTaxCheck\(PF\.rows,/.test(fnOf(S.idx,'async function pfRecalcPlan()'))); }
   /* ── 세션별 선(2026-11-09 사용자: "이 그래프에 포트폴리오에 선택한 세션별 라인도 그려") ── */
   { const d=i=>'2026-05-0'+i;
@@ -500,10 +503,10 @@ function check3(S,t,E,bad){
   { const days=k=>[1,2,3].map(i=>({date:'2026-08-0'+i,close:k*i}));
     const Q={TECL:{days:days(50)},TQQQ:{days:days(40)},SGOV:{days:[1,2,3].map(i=>({date:'2026-08-0'+i,close:100}))}};
     const L={start:2000,from:'2026-08-01',ledger:{base:{date:'2026-08-01',cash:2000},events:[{id:'b',type:'trade',date:'2026-08-02',symbol:'TECL',side:'buy',qty:5,price:100,fee:0},{id:'c',type:'trade',date:'2026-08-02',symbol:'SGOV',side:'buy',qty:3,price:100,fee:0}]}};
-    const row={pending:false,total:1200+5*160+3*101,inflow:2000,hold:{TECL:5,TQQQ:0,SGOV:3,cash:1200},px:{TECL:160,TQQQ:120,SGOV:101}};
+    const row={pending:false,total:1198+5*160+3*101,inflow:2000,hold:{TECL:5,TQQQ:0,SGOV:3,cash:1198},px:{TECL:160,TQQQ:120,SGOV:101}};   // 현금 2,000 − 800 − 수수료 2(0.25%)
     const s=c.pfPlanSeries(L,Q,E,row);
-    t('Q6 듀얼가드 — 날마다 hv(TECL 5×100 · SGOV 3×100) · 현금 1,200 · hv 합 + 현금 = 총자산 · 끝 값 = 보유 × 지금가(TECL 5×160 · SGOV 3×101)',
-      s.length===3&&s[0].cash===2000&&Object.keys(s[0].hv).length===0&&s[1].hv.TECL===500&&s[1].hv.SGOV===300&&s[1].cash===1200&&s[2].hv.TECL===800&&s[2].hv.SGOV===303&&s[2].cash===1200
+    t('Q6 듀얼가드 — 날마다 hv(TECL 5×100 · SGOV 3×100) · 현금 1,198(수수료 2) · hv 합 + 현금 = 총자산 · 끝 값 = 보유 × 지금가(TECL 5×160 · SGOV 3×101)',
+      s.length===3&&s[0].cash===2000&&Object.keys(s[0].hv).length===0&&s[1].hv.TECL===500&&s[1].hv.SGOV===300&&near(s[1].cash,1198)&&s[2].hv.TECL===800&&s[2].hv.SGOV===303&&near(s[2].cash,1198)
       &&s.every(q=>near(Object.values(q.hv).reduce((a,v)=>a+v,0)+q.cash,q.tot)),JSON.stringify(s)); }
   return check4(S,t,E,bad);
 }
