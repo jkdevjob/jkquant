@@ -49,11 +49,27 @@ function gptTrades(rows){
   return m;
 }
 function datesFromCsv(rows){return new Set(rows.map(r=>String(r.date||"")).filter(Boolean));}
-async function loadReport(){
-  const paths=await tree();
+/* 클로드 하루 마감 사본 — 날짜 파일을 하나씩 받으면 Cloudflare 한 번 실행 요청 한도(50)를 넘는다(2026-11-16 쯤부터 46 파일 + 8).
+   밤 워크플로가 같은 단계에서 대결이 읽는 close:* 기록만 묶은 duel-index.json 을 만든다 — 지난 날은 거기서,
+   사본을 다시 받는 최근 6일(워크플로가 날마다 6일치를 새로 받는다)과 묶음에 없는 날만 날짜 파일로 받는다. */
+const RECENT_DAYS=6;
+async function claudeLiveFiles(paths,now=Date.now()){
   const claudePaths=paths.filter(p=>/^data\/claude-live\/20\d\d-\d\d-\d\d\.json$/.test(p)&&p.slice(-15,-5)>=DUEL_START);
-  const claudeFiles=[];
-  for(const p of claudePaths){const j=await rawJson(p.slice(5));if(j)claudeFiles.push(j);}
+  const recentFrom=new Date(now+9*36e5-RECENT_DAYS*864e5).toISOString().slice(0,10);
+  let idx=null;
+  if(paths.includes("data/claude-live/duel-index.json")){try{idx=await rawJson("claude-live/duel-index.json");}catch(e){idx=null;}}
+  const have=new Map(((idx&&Array.isArray(idx.files))?idx.files:[]).filter(f=>f&&f.date).map(f=>[String(f.date),f]));
+  const files=[];let fetched=0;
+  for(const p of claudePaths){
+    const d=p.slice(-15,-5);
+    if(d<recentFrom&&have.has(d)){files.push(have.get(d));continue;}
+    const j=await rawJson(p.slice(5));fetched++;if(j)files.push(j);
+  }
+  return {files,fromIndex:files.length-fetched,fetched};
+}
+async function loadReport(now=Date.now()){
+  const paths=await tree();
+  const {files:claudeFiles}=await claudeLiveFiles(paths,now);
   const claudeRecords=normalizeClaudeEvents(claudeFiles);
 
   const [opCsv,dayCsv,crCsv,sxCsv,crDec,sxDec]=await Promise.all([
@@ -108,4 +124,4 @@ export async function onRequestPost({request,env}){
     return json({ok:true,date,skipped:"buy_sell_only"});
   }catch(e){return json({ok:false,error:String(e.message||e)},500);}
 }
-export {loadReport,message,csv};
+export {loadReport,message,csv,claudeLiveFiles,RECENT_DAYS};
