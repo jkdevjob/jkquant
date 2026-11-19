@@ -108,6 +108,7 @@ test("설정 목록의 모든 6개 항목(수영대회 포함): 안내 이름 �
 });
 async function checkCommonToggle(code=source){
   const h=await harness(code,["opening","research","ipo"],{legacy:true});
+  assert.match(row(h.html,"gpt"),/매일 05:00 전체 탭 최종 연구 리포트/);
   assert.equal((h.html.match(/class="alert-name">[^<]*연구\(지피티\)/g)||[]).length,1,"지피티 설정은 하나");
   assert.match(row(h.html,"gpt"),/>일부 ON<\/span>/,"기존 일부 탭은 확대 없이 표시");
   assert.doesNotMatch(h.html,/data-topic="(?:opening|daytrading|crypto|soxl|tenbagger_gpt)"/);
