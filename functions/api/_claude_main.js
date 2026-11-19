@@ -96,18 +96,33 @@ export async function claudeVts(env, tab, read = readPaperSettings) {
     ? { on: true, budget: v.budget, revision: s.revision }
     : { on: false, reason: VTS_OFF, revision: s && s.revision };
 }
-export async function loadMainEvents(env, timeoutMs = 4000) {
-  const key = String(env.OPENING_MONITOR_KEY || env.AUTOTRADE_KEY || "").trim();
-  if (!key) return { ok: false, events: [], error: "감시키 없음" };
+// 메인 기록 사본 — 밤 계산 작업이 Worker 기록을 그대로 받아 scalping-data 에 둔 것(③ 실투자 봇도 이것을 읽는다).
+// Worker 를 못 읽으면 이 사본을 읽는다(2026-11-19 — 옛 판은 못 읽으면 ②⑤ 가 기본 규칙 −3% · 0% 로 판단했다. 승격 뒤 규칙과 다른 신호가 '메인'으로 남을 수 있었다).
+export const MAIN_COPY_URL = "https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/claude-lab/main-config.json";
+async function fetchJson(url, init, timeoutMs, fetchImpl) {
   const ac = typeof AbortController !== "undefined" ? new AbortController() : null;
   const t = ac ? setTimeout(() => ac.abort(), timeoutMs) : null;
   try {
-    const r = await fetch(WORKER + "/claude-config", { headers: { "x-monitor-key": key, Accept: "application/json" }, signal: ac ? ac.signal : undefined });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || !j.ok) return { ok: false, events: [], error: j.error || ("HTTP " + r.status) };
-    return { ok: true, events: cleanEvents(j.events) };
-  } catch (e) { return { ok: false, events: [], error: String(e.message || e) }; }
-  finally { if (t) clearTimeout(t); }
+    const r = await fetchImpl(url, Object.assign({}, init, { signal: ac ? ac.signal : undefined }));
+    return { status: r.status, ok: r.ok, j: await r.json().catch(() => ({})) };
+  } finally { if (t) clearTimeout(t); }
+}
+// 반환 {ok, events, source: "worker" | "copy", error?, workerError?} — 둘 다 못 읽으면 ok:false(부르는 쪽이 판단을 멈출지 · 표시할지 정한다).
+export async function loadMainEvents(env, timeoutMs = 4000, fetchImpl = (...a) => fetch(...a)) {
+  const key = String(env.OPENING_MONITOR_KEY || env.AUTOTRADE_KEY || "").trim();
+  let werr = "감시키 없음";
+  if (key) {
+    try {
+      const w = await fetchJson(WORKER + "/claude-config", { headers: { "x-monitor-key": key, Accept: "application/json" } }, timeoutMs, fetchImpl);
+      if (w.ok && w.j && w.j.ok) return { ok: true, events: cleanEvents(w.j.events), source: "worker" };
+      werr = (w.j && w.j.error) || ("HTTP " + w.status);
+    } catch (e) { werr = String((e && e.message) || e); }
+  }
+  try {
+    const c = await fetchJson(MAIN_COPY_URL + "?t=" + Date.now(), { headers: { Accept: "application/json" } }, timeoutMs, fetchImpl);
+    if (c.ok && c.j && Array.isArray(c.j.events)) return { ok: true, events: cleanEvents(c.j.events), source: "copy", workerError: werr };
+    return { ok: false, events: [], error: werr + " · 사본 HTTP " + c.status };
+  } catch (e) { return { ok: false, events: [], error: werr + " · 사본 " + String((e && e.message) || e) }; }
 }
 
 // ① 매도 시각 — 2026-11-09 거래일부터 10:00 에 판다(2026-11-08 사용자 "1은 10시" · 연구 R34: 2년 60분봉 10:00 매도 +1.38% ≈ 종가 +1.46%,

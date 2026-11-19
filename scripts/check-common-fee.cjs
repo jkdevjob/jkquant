@@ -50,10 +50,10 @@ async function check(S){
   const bad=[];const t=(name,cond,info)=>{if(!cond)bad.push(name+(info!=null?' · '+String(info).slice(0,400):''));};
 
   // ── S. 설정 탭 ──
-  t('S1 설정 화면 — 💸 수수료 단추 · 칸(기본 0.25 · 0~2% · 0.01 단위) · 저장 단추 · jk-fee.js 다음 settings-fee.js · 사용자 문서 도구를 넘긴다 · 머리 v1.8.0',
+  t('S1 설정 화면 — 💸 수수료 단추 · 칸(기본 0.25 · 0~2% · 0.01 단위) · 저장 단추 · jk-fee.js 다음 settings-fee.js · 사용자 문서 도구를 넘긴다 · 머리 v1.8.1(11/19 모의투자 카드 지피티 표시 · 번호 순으로 v1.8.0 → v1.8.1)',
     /data-settings-tab="fee">💸 수수료<\/button>/.test(S.set)&&/data-settings-panel="fee"/.test(S.set)&&/id="feeRatePct" min="0" max="2" step="0\.01"[^>]*value="0\.25"/.test(S.set)
     &&/id="feeSave"/.test(S.set)&&S.set.indexOf('/jk-fee.js')>0&&S.set.indexOf('/jk-fee.js')<S.set.indexOf('/settings-fee.js')&&/window\.jkSettingsDb=\{db,doc,getDoc,setDoc\};/.test(S.set)
-    &&/>v1\.8\.0</.test(S.set));
+    &&/>v1\.8\.1</.test(S.set));
   t("S1 관리자 하위 탭 목록(jk-access.js) — 설정 페이지 탭 셋(알림 · 모의투자 · 수수료)",/'\/settings':\{[^}]*items:\[\['notifications','🔔 알림'\],\['paper','🧪 모의투자'\],\['fee','💸 수수료'\]\]\}/.test(S.acc));
   const setH=(docData,user)=>{
     const els={feeRatePct:{value:'0.25'},feeMessage:{textContent:''},feeSave:{disabled:false,addEventListener(){}}},calls=[];

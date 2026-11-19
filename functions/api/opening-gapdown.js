@@ -415,6 +415,7 @@ export function etfDecision(dropPct,th=ETF_RULE.dropMaxPct){
 // date 가 있으면 ② 최대 24시간(2026-11-09~ · _claude_main.etfMax24)도 본다: 기준을 넘었어도 다음 달력일이 휴장(금요일 · 연휴 전)이면 사지 않는다.
 // 제한 없는 판의 판단은 shadow 로 같이 남긴다(기록만 — 주문 · 정산 · 알림에 쓰지 않음).
 export function etfBuyPlan(R,q,date=""){
+  if(R&&R.blocked)return {dropPct:etfDropPct(q),signal:false,decisionReason:"main_config_unavailable"};   // 메인을 모르면 사지 않는다(가격은 기록)
   const dropPct=etfDropPct(q),base=etfDecision(dropPct,R.rule.dropMaxPct),m=etfMax24(date);
   if(!m.on)return {dropPct,...base};
   const shadow={variant:"etf_nolimit",signal:base.signal,decisionReason:base.decisionReason};
@@ -422,12 +423,17 @@ export function etfBuyPlan(R,q,date=""){
   if(base.signal&&!m.ok)return {dropPct,signal:false,decisionReason:"no_signal_next_day_closed_max24h",max24,shadow};
   return {dropPct,...base,max24,shadow};
 }
-// 그날 ② 메인 규칙 — 승격 기록을 못 읽으면 기본 규칙으로 하되, 그 사실을 장부에 남긴다(주문을 막지 않는다).
+// 그날 ② 메인 규칙 — 승격 기록(Worker · 못 읽으면 밤 계산 사본 — _claude_main.loadMainEvents)을 읽는다.
+// 둘 다 못 읽으면(또는 메인이 이 주문 경로 종목이 아니면) 판단하지 않는다(blocked · 2026-11-19). 옛 판은 기본 규칙(−3%)으로 판단해
+// 승격된 메인(−4.75%)과 다른 신호가 '메인' 장부 · 주문으로 남을 수 있었다 — 공식 규칙에 다른 판단을 섞지 않는다(CLAUDE.md).
+export const MAIN_UNAVAILABLE="main_unavailable";
+const ruleSourceOf=cfg=>"main-config"+(cfg&&cfg.source==="copy"?" (밤 계산 사본 — Worker 읽기 실패: "+String(cfg.workerError||"")+")":"");
 export function etfRuleFor(cfg,date){
-  const m=mainFor(cfg&&cfg.ok?cfg.events:[],"daytrading",date);
-  const ok=!!(cfg&&cfg.ok)&&m.params.code===ETF_RULE.code;
-  return {rule:{...ETF_RULE,dropMaxPct:ok?m.params.th:ETF_RULE.dropMaxPct,version:ok?m.version:ETF_RULE.version},
-    mainVersion:ok?m.version:ETF_RULE.version,ruleSource:ok?"main-config":"default (메인 기록 읽기 실패: "+((cfg&&cfg.error)||"없음")+")"};
+  const read=!!(cfg&&cfg.ok),m=mainFor(read?cfg.events:[],"daytrading",date);
+  const ok=read&&m.params.code===ETF_RULE.code;
+  if(!ok)return {rule:{...ETF_RULE,dropMaxPct:null,version:MAIN_UNAVAILABLE},mainVersion:null,blocked:true,
+    ruleSource:"none ("+(read?"메인 종목이 "+m.params.code+" — 이 주문 경로는 "+ETF_RULE.code+" 만":"메인 기록 읽기 실패: "+((cfg&&cfg.error)||"없음"))+" — 판단 안 함)"};
+  return {rule:{...ETF_RULE,dropMaxPct:m.params.th,version:m.version},mainVersion:m.version,blocked:false,ruleSource:ruleSourceOf(cfg)};
 }
 export function etfSignalId(buyDate,side){return ["etf_dip",buyDate,ETF_RULE.code,side].join(":");}
 // 매수는 15:15 이후(종가 동시호가) 접수분, 매도는 09:00 전(장전 동시호가) 접수분만 이 전략 물량으로 센다.
@@ -504,15 +510,17 @@ export function c30Decision(sofar,th=C30_RULE.th){
   return {signal:true,decisionReason:"price_vs_prev_close<"+th+"%"};
 }
 export function c30BuyPlan(R,q){
+  if(R&&R.blocked)return {sofarPct:c30SofarPct(q),signal:false,decisionReason:"main_config_unavailable"};   // 메인을 모르면 사지 않는다(가격은 기록)
   const sofarPct=c30SofarPct(q);
   return {sofarPct,...c30Decision(sofarPct,R.rule.th)};
 }
-// 그날 ⑤ 메인 규칙 — 승격 기록을 못 읽으면 기본 규칙으로 하되 그 사실을 장부에 남긴다(주문을 막지 않는다)
+// 그날 ⑤ 메인 규칙 — ② 와 같다: Worker · 사본 둘 다 못 읽으면 판단하지 않는다(옛 판은 기본 0% — 조금만 내려도 매수로 판단했다).
 export function c30RuleFor(cfg,date){
-  const m=mainFor(cfg&&cfg.ok?cfg.events:[],"close30",date);
-  const ok=!!(cfg&&cfg.ok)&&m.params.code===C30_RULE.code;
-  return {rule:{...C30_RULE,th:ok?m.params.th:C30_RULE.th,version:ok?m.version:C30_RULE.version},
-    mainVersion:ok?m.version:C30_RULE.version,ruleSource:ok?"main-config":"default (메인 기록 읽기 실패: "+((cfg&&cfg.error)||"없음")+")"};
+  const read=!!(cfg&&cfg.ok),m=mainFor(read?cfg.events:[],"close30",date);
+  const ok=read&&m.params.code===C30_RULE.code;
+  if(!ok)return {rule:{...C30_RULE,th:null,version:MAIN_UNAVAILABLE},mainVersion:null,blocked:true,
+    ruleSource:"none ("+(read?"메인 종목이 "+m.params.code+" — 이 주문 경로는 "+C30_RULE.code+" 만":"메인 기록 읽기 실패: "+((cfg&&cfg.error)||"없음"))+" — 판단 안 함)"};
+  return {rule:{...C30_RULE,th:m.params.th,version:m.version},mainVersion:m.version,blocked:false,ruleSource:ruleSourceOf(cfg)};
 }
 export function c30SignalId(date,side){return ["close30",date,C30_RULE.code,side].join(":");}
 // 이 전략 물량만: 매수 = 15:00~15:15 접수(장중 시장가), 매도 = 15:15 이후 접수(종가 동시호가)
