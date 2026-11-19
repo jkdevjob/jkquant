@@ -16,6 +16,7 @@
 - `scripts/check-ops-daily-parity.cjs` ALL PASS · 27개 · 변이 29/29 · 101.8초.
 - `scripts/check-plan-tax.cjs` ALL PASS · 변이 12/12 — 세금 점검 수수료 = 공통 율(A4d 0.25%: 선입선출 248.65 → 246.625$) · 기록 칸 · 토스 식 되돌리면 빨간불.
 - 실제 Chromium: 설정(390px) 💸 수수료 탭 · 탭 전환 · 기본 0.25 · 오류 0. 운영 setCommonFee(0.1%) → JK_FEE · 엔진 · 화면 글자. 백테 jkBtSetFee(0.2%) → costOf 미국 · 국내 · 모멘텀 로테 · 머리 글자. 세 페이지 스크립트 오류 0.
+- `node scripts/check-before-push.cjs`(병렬 4): **PASS 67 CI 검사 단계 — 전체 검증 완료 · 5분 14초** (회귀 2875 PASS · check-common-fee 변이 34/34).
 - 미확인
   - 실제 계정에서 저장 → 운영 · 듀얼가드 · 백테가 그 율로 다시 세는지(로그인 화면은 못 거침).
   - 실계좌 세션의 바뀐 잔금(사용자 문서를 못 봄). GitHub 검증 · 배포 화면은 병합 뒤.
