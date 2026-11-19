@@ -28,13 +28,20 @@ def main():
     for b in d['blocks']:
         if b.get('t') == 'img':
             n += 1
-            L.append(f"[이미지 {n}: {b['file']} 넣기 → 사진 설명 칸에 아래 한 줄]")
-            L.append(b['cap'])
-            L.append('[사진 아래 본문에 아래 줄을 붙여 넣기]')
             attr = b.get('attr') or []
             if isinstance(attr, str):
                 attr = [attr]
-            L.extend(re.sub(r'<[^>]+>', '', x) for x in attr)  # 편집기용 <a> 태그를 걷어 맨 주소만 남긴다(앱이 자동 링크)
+            attr = [re.sub(r'<[^>]+>', '', x) for x in attr]  # 편집기용 <a> 태그를 걷어 맨 주소만 남긴다(앱이 자동 링크)
+            # 2026-11-19 사용자 형식("쓸데없는 글 남기지 말고"): 썸네일은 사진 설명·'이미지: 블로그 직접 제작' 줄 없이,
+            # 도표는 '도표:' 머리말과 '사진: 블로그 직접 작성 도표 /' 머리말을 뺀다.
+            if n == 1 and any('직접 제작' in x for x in attr):
+                L.append(f"[이미지 {n}: {b['file']} 넣기 — 사진 설명은 비워 둠]")
+                L.append('')
+                continue
+            L.append(f"[이미지 {n}: {b['file']} 넣기 → 사진 설명 칸에 아래 한 줄]")
+            L.append(re.sub(r'^도표:\s*', '', b['cap']))
+            L.append('[사진 아래 본문에 아래 줄을 붙여 넣기]')
+            L.extend(re.sub(r'^사진: 블로그 직접 작성 도표 / ', '', x) for x in attr)
             L.append('')
         else:
             t = b.get('text', '').strip()

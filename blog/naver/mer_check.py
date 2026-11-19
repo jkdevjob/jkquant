@@ -32,6 +32,21 @@ def posts(blog, n):
     return out
 
 
+def layout(blog, no):
+    """글 모양만 센다(내용은 옮기지 않음): 이미지 수·캡션 수·번호 줄·출처 줄·링크 수."""
+    t = get(f'https://blog.naver.com/PostView.naver?blogId={blog}&logNo={no}')
+    s = t[t.find('se-main-container'):]
+    e = s.find('post_footer'); s = s[:e] if e > 0 else s
+    imgs = len(re.findall(r'<div class="se-component se-image', s))
+    caps = len([c for c in re.findall(r'se-caption.*?<p[^>]*>(.*?)</p>', s, re.S) if re.sub(r'<[^>]+>', '', c).strip()])
+    lines = [re.sub(r'\s+', ' ', html.unescape(re.sub(r'<[^>]+>', '', x))).strip() for x in re.findall(r'<p class="se-text-paragraph[^"]*"[^>]*>(.*?)</p>', s, re.S)]
+    lines = [x for x in lines if x and x != '\u200b']
+    num = sum(1 for x in lines if re.match(r'^\d+\.\s', x))
+    src = sum(1 for x in lines if re.match(r'^(출처|자료|사진|이미지)\s*[:：]', x))
+    links = len(re.findall(r'<a [^>]*href="http', s))
+    return f'이미지 {imgs}(캡션 {caps}) · 글 줄 {len(lines)}(번호 {num}) · 출처 줄 {src} · 링크 {links}'
+
+
 def words(title):
     w = re.findall(r'[가-힣A-Za-z]{2,}', re.sub(r'\(feat.*?\)', ' ', title))
     return {x for x in w if x not in STOP}
@@ -78,6 +93,11 @@ def main():
     print(f'== 제목 형식(최근 {len(t)}개): 물음표 {k(r"[?？]")} · (feat) {k(r"feat")} · 비밀 {k("비밀")} · A/S {k("A/S")} · '
           f'국장/미장/이번주 {k("국장|미장|이번주")} · 평균 {sum(len(x) for x in t) // max(len(t), 1)}자')
 
+    print('== 글 모양(최근 2개 · 우리 최신 1개)')
+    for no, added, title in ref[:2]:
+        print(f'  메르 | {title[:28]} | {layout(REF, no)}')
+    if ours:
+        print(f'  우리 | {ours[0][2][:28]} | {layout(OURS, ours[0][0])}')
     print('== 색인 대조군(제목 그대로 검색)')
     for no, added, title in ref[:3]:
         q = re.sub(r'\s+', ' ', re.sub(r"[^\w가-힣\s%.]", ' ', title)).strip()
