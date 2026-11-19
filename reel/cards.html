@@ -161,7 +161,7 @@ const html = D.slides.map((s, i) => {
   } else if (s.type === "cta") {
     b = `<div class="h">${rich(s.title)}</div><div class="cta">${(s.lines || []).map((l) => `<div class="big2">${rich(l)}</div>`).join("")}</div>
       ${s.box ? `<div class="box"><div class="bt">${esc(s.box.t)}</div><p>${rich(s.box.p)}</p></div>` : ""}
-      ${s.more ? `<div class="more"><div class="mt">${esc(s.more.t)}</div>${s.more.items.map((x) => `<span>${esc(x)}</span>`).join("")}</div>` : ""}`;
+      ${s.more ? `<div class="more"${MASC ? ' style="max-width:600px"' : ""}><div class="mt">${esc(s.more.t)}</div>${s.more.items.map((x) => `<span>${esc(x)}</span>`).join("")}</div>` : ""}`;
   }
   const m = s.type === "point" ? msc(s.mx ?? 830, s.my ?? 118, s.ms ?? 180, s.say, "left")
     : s.type === "cta" ? msc(s.mx ?? 700, s.my ?? 820, s.ms ?? 300, s.say ?? "저장! 팔로우!")
