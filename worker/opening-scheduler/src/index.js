@@ -4,6 +4,7 @@ import {marketDayCache} from "../../../functions/api/_market-day-cache.js";
 import {closingResearchVariants} from "../../../functions/api/_closing30.js";
 import {readSignalLedger,writeSignalLedger} from "../../../functions/api/_closing30-storage.js";
 import {closingOutcomes} from "../../../functions/api/_closing30-outcomes.js";
+import {scalpCostPct,setScalpFee,fetchCommonFee} from "../../../functions/api/_scalp_cost.js";   // 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐
 import {defaultPaperSettings,changePaperSettings} from "../../../functions/api/_paper-trading.js";
 import {openingOrderRefs,openingExecutionResult} from "../../../functions/api/_opening-execution.js";
 import {researchBroker} from "../../../functions/api/_research-broker.js";
@@ -538,6 +539,11 @@ async function retryOpeningNotifications(env,date,target){
     }
   }catch(e){console.warn(JSON.stringify({type:"opening_alert_retry_failed",date,error:String(e.message||e)}));}
 }
+/* 시초가 거래마다 남긴 마찰(세금 0.20 + 공통 수수료 × 2 + 호가 미끄러짐 · _opening.js openingFriction) — 평균. 남긴 값이 없으면 '거래별' */
+function openingFrictionLabel(trades){
+  const v=trades.map(x=>Number(x.frictionPct)).filter(x=>Number.isFinite(x)&&x>0);
+  return v.length?"평균 "+(v.reduce((a,b)=>a+b,0)/v.length).toFixed(2)+"%":"거래별";
+}
 async function sendOpeningCloseSummary(env,date){
   const mainVariant=await mainVariantForDate(env,date);
   const parts=[];
@@ -554,7 +560,7 @@ async function sendOpeningCloseSummary(env,date){
   const lines=[
     "후보/진입 "+trades.length+"건 · 청산 "+pn.length+"건 · 미청산 "+Math.max(0,trades.length-pn.length)+"건",
     "승 "+wins+" · 패 "+losses+" · 승률 "+(pn.length?(wins/pn.length*100).toFixed(1):"0.0")+"%",
-    "실현 평균 순수익률 "+(avg>=0?"+":"")+avg.toFixed(2)+"% · 왕복 마찰비용 0.25% 반영"
+    "실현 평균 순수익률 "+(avg>=0?"+":"")+avg.toFixed(2)+"% · 왕복 마찰비용 "+openingFrictionLabel(trades)+" 반영"
   ];
   for(const x of trades)lines.push((x.name||x.code)+" · "+String(x.entryTime||"—")+"→"+String(x.exitTime||"—")+" · "+(x.pnl!=null&&Number.isFinite(+x.pnl)?((+x.pnl>=0?"+":"")+(+x.pnl).toFixed(2)+"%"):"체결 확인 전")+" · "+String(x.reason||""));
   if(!trades.length)lines.push("오늘 조건 충족 모의거래 없음");
@@ -754,8 +760,11 @@ async function lastOpenDate(env,date){
 function closingEntries(ledger,kind,stage){
   return (ledger?.events||[]).filter(e=>e&&e.kind===kind&&e.stage===stage);
 }
+/* 종가 30분 매도 왕복 비용 — 신호가 남긴 frictionPct(그때 율 · 2026-11-19 전 0.23)를 그대로, 없을 때만 지금 율(거래세 0.20 + 공통 수수료 × 2) */
+export function closingSellCost(signal){const fp=Number(signal&&signal.strategyParams&&signal.strategyParams.frictionPct);return Number.isFinite(fp)&&fp>0?fp:scalpCostPct("kr");}
 async function runClosing30(route,controller,env){
   const scheduled=Number(controller.scheduledTime)||Date.now(),now=Date.now();
+  {const v=await fetchCommonFee(baseUrl(env),env.MONITOR_KEY);setScalpFee(v.rate,v.source);}   // 이번 실행 비용 율
   if(Math.max(0,now-scheduled)>MAX_SCAN_LAG_MS)throw Error("closing30 scheduled invocation stale");
   const today=kstParts(scheduled).date,hm=kstHm(scheduled);
   if(route==="closing_day_signal"||route==="closing_overnight_signal"){
@@ -791,15 +800,17 @@ async function runClosing30(route,controller,env){
       const q=prices.get(x.code);
       if(!q||!(q.price>0))return [];
       let pnl=null,outcomes=null;
+      const cost=closingSellCost(x);
       if(destStage==="sell"){
         const bought=closingEntries(ledger,kind,"buy").find(y=>y.variant===x.variant&&y.code===x.code);
         if(!bought||!(bought.price>0))return [];
-        pnl=(q.price/bought.price-1)*100-.23; // 보수적인 왕복 비용 0.23% 연구가정
-        outcomes=closingOutcomes(bought.price,bought.priceAt||bought.createdAt,q.price,q.priceAt,q.outcomeBars||[]);
+        // 왕복 비용 = 신호가 남긴 frictionPct(그때 율 · 2026-11-19 전 0.23) — 없으면 지금 율(거래세 0.20 + 공통 수수료 × 2)
+        pnl=(q.price/bought.price-1)*100-cost;
+        outcomes=closingOutcomes(bought.price,bought.priceAt||bought.createdAt,q.price,q.priceAt,q.outcomeBars||[],cost);
         if(bought.outcomes?.signal)outcomes.signal={...bought.outcomes.signal,finalNetPnlPct:pnl};
       }
       if(x.signal?.signalPrice>0&&q.outcomeBars?.length){
-        const signal=closingOutcomes(x.signal.signalPrice,x.signal.signalTime,q.price,q.priceAt,q.outcomeBars);
+        const signal=closingOutcomes(x.signal.signalPrice,x.signal.signalTime,q.price,q.priceAt,q.outcomeBars,cost);
         signal.finalNetPnlPct=pnl;signal.basis='signal-time price';
         if(!outcomes)outcomes={signal,finalNetPnlPct:null,basis:'signal-only labels; holding unsettled'};
         else outcomes.signal=signal;

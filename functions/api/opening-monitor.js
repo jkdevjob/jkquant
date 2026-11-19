@@ -3,6 +3,7 @@
 // 연구용 shadow 전략은 같은 분봉/같은 엔진으로 동시에 계산하지만 실제 알림/주문에는 영향을 주지 않고 기록만 한다.
 
 import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS, openingVariant } from "./_opening.js";
+import { useOwnerFee } from "./_owner_fee.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const FIREBASE_API_KEY_FALLBACK="AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw";
@@ -155,6 +156,7 @@ export async function onRequestGet({request,env}){
   }else if(!monitorAuthorized(request,env)){
     return new Response(JSON.stringify({ok:false,error:"unauthorized"}),{status:401,headers:JH});
   }
+  await useOwnerFee(env);   // 시초가 비용 고정 몫 = 거래세 0.20 + 공통 수수료(설정 › 💸 수수료) × 2
 
   const now=kstNow();
   const shard=Math.max(0,parseInt(url.searchParams.get("shard")||"0",10)||0);

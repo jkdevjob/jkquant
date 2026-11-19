@@ -76,7 +76,7 @@ def main():
         "FALLBACK_TICKS_PER_SIDE = 0.0",
         (
             "z=m.opening_friction(15000,{'completeMatches':0});"
-            "assert z['totalPct']>0.55,z"
+            "assert z['totalPct']>m.FIXED_KR_FRICTION_PCT+0.3,z"
         ),
     )
     return 0

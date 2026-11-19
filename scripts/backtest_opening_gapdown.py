@@ -12,7 +12,7 @@ Rule opening_gapdown_v1 (fixed before evaluation; see SCALPING_IMPROVEMENTS_v2.m
 - Signal (known at the 09:00 opening auction): previous-day RSI(14) < 30 on adjusted closes
   AND opening gap vs adjusted previous close <= -2% (and > -29%, limit-down opens excluded).
 - Take the 3 deepest gaps. Buy at the opening auction (open), sell at the closing auction (close).
-- Costs: tax 0.20% + commission 0.015% x 2 = 0.23% fixed, plus auction slippage scenarios of
+- Costs: tax 0.20% + common fee x 2 (before 2026-11-19 commission 0.015% x 2 = 0.23%) fixed, plus auction slippage scenarios of
   0 / 1.5 / 3.0 ticks per side (KRX tick table). The primary scenario is 1.5 ticks.
 - Control: same day, same liquidity filters, gap <= -2% but NO RSI condition, 3 random names
   (seed = date). Strategy skill = strategy - control.
@@ -39,6 +39,10 @@ import time
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 KST = timezone(timedelta(hours=9))
 OUT = Path(os.environ.get("JKQ_GAPDOWN_OUT", "data/opening-gapdown-research"))
@@ -54,7 +58,7 @@ SCHEMA = 1
 BREADTH_MIN = [3, 5]
 PARAMS = dict(rsiMax=30.0, gapMax=-2.0, gapFloor=-29.0, minPrevClose=1000, minPrevAmount=2e9,
               minHistory=60, haltLookback=20, noLimitLookback=10, picks=3, entry="open_auction", exit="close_auction",
-              fixedCostPct=0.23, slipTicksPerSide=[0.0, 1.5, 3.0], primarySlipTicks=1.5)
+              fixedCostPct=SC.cost_pct("kr"), slipTicksPerSide=[0.0, 1.5, 3.0], primarySlipTicks=1.5)
 
 TICK = [(2000, 1), (5000, 5), (20000, 10), (50000, 50), (200000, 100), (500000, 500), (float("inf"), 1000)]
 

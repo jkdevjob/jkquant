@@ -10,7 +10,7 @@ Baseline v2:
 - Enter at the NEXT 5-minute bar open (no same-bar/lookahead entry).
 - Stop -0.5%, take-profit +1.0%, max hold 60 minutes.
 - If stop and target are both touched in one candle, stop wins.
-- Net result subtracts 0.10% round-trip fee plus 0.04% slippage assumption.
+- Net result subtracts the common fee x 2 (settings > fee, default 0.25% per side; before 2026-11-19 0.10%) plus 0.04% slippage assumption.
 
 Research only. No variant is automatically promoted and no orders are placed.
 
@@ -19,7 +19,7 @@ Shadow D-3 btc_dip24_v1 (separate strategy, not an ORB variant; see SCALPING_IMP
   24h change close[h-1] / close[h-25] - 1 (both already completed).
 - If <= -5%: buy at that hour's open, sell at the close of the 24th hourly bar (24h hold).
 - Non-overlapping (next check after exit). Any missing hour in the 49h window -> no evaluation.
-- Friction: same 0.10% fee + 0.04% slippage as this tab. Designed on 2023-07..2026-09 hourly data;
+- Friction: same common fee x 2 + 0.04% slippage as this tab. Designed on 2023-07..2026-09 hourly data;
   only signals from 2026-10-01 KST count for the verdict.
 """
 from __future__ import annotations
@@ -33,6 +33,10 @@ from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 KST = ZoneInfo("Asia/Seoul")
 DATA = Path("data") / "crypto" / "KRW-BTC" / "5m"
@@ -50,7 +54,7 @@ class Params:
     stop_pct: float = 0.5
     take_profit_pct: float = 1.0
     max_hold_bars: int = 12      # 60 minutes on 5m bars
-    fee_round_trip_pct: float = 0.10
+    fee_round_trip_pct: float = SC.fee_rt_pct()   # 공통 수수료 × 2 (2026-11-19 전 업비트 0.05 × 2 = 0.10)
     slippage_round_trip_pct: float = 0.04
     evaluation_start: str = ""
 
@@ -435,7 +439,7 @@ def rolling_baseline(days, trades, window=30):
 
 
 DIP24_VERSION = "btc_dip24_v1"
-DIP24 = dict(dropPct=-5.0, lookbackHours=24, holdHours=24, feeRoundTripPct=0.10, slippageRoundTripPct=0.04,
+DIP24 = dict(dropPct=-5.0, lookbackHours=24, holdHours=24, feeRoundTripPct=SC.fee_rt_pct(), slippageRoundTripPct=0.04,
              designEndKst="2026-09-30", designedFrom="Upbit KRW-BTC 1h 2023-07..2026-09: 52 trades, +0.93%/trade, t=1.76")
 
 
@@ -625,7 +629,8 @@ def main():
         "comparisonRule": "Research comparison only. No automatic strategy promotion or live order connection.",
         "auditRule": "Raw OHLCV + strategy version + observed signal features + thresholds + entry/exit reason are retained for reproducibility.",
         "executionModel": "KST 00:00 opening range; completed 5m signal; next-candle entry through 22:00 KST; same-candle stop/target conflict resolves to stop",
-        "frictionModel": "0.10% round-trip fee + 0.04% round-trip slippage assumption",
+        "frictionModel": f"{SC.fee_rt_pct():.2f}% round-trip fee (common fee {SC.fee_pct()}% x 2) + 0.04% round-trip slippage assumption",
+        "fee": SC.fee_info(),
         "variants": reports,
         "rolling30": rolling_baseline(valid, baseline, 30),
         "latestTrades": baseline[-20:],

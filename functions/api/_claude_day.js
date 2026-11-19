@@ -6,9 +6,12 @@
 //  모의투자 체결 · 거절은 줄마다 vts 로 측정용으로만 남긴다.
 // 모든 함수는 마감 시점까지 들어온 자료만 받는다(미래 자료 없음). 순손익 = 비용(수수료·세금·미끄러짐) 뺀 값.
 import { coinHoldToday, coinBreakoutDay, coinDayCovered, c30CostPct, d1CostPct, etfNoBuyNote, etfRuleCost, SETTLE_BASIS } from "./claude-live.js";
+import { scalpCostPct } from "./_scalp_cost.js";
 import { MAIN_DEFAULT, VTS_OFF, mainFor, openingCounts, openingExit, openingExitPrices, openingPick } from "./_claude_main.js";
 
-export const COST = { kr: 0.23, etf: 0.13, coin: 0.14, us: 0.20 };          // 왕복 %, 연구·실시간과 같은 값
+// 왕복 % = 공통 수수료(설정 › 💸 수수료) × 2 + 수수료 아닌 몫(_scalp_cost.js) — 연구 · 실시간과 같은 값. 읽을 때마다 지금 율로 센다(2026-11-19 ~)
+export const COST = Object.freeze({ get kr() { return scalpCostPct("kr"); }, get etf() { return scalpCostPct("etfFlat"); },
+                                    get coin() { return scalpCostPct("coin"); }, get us() { return scalpCostPct("us"); } });
 export const PAPER_CAPITAL = { coin: 10000000, soxl: 10000 };                // 주문 없는 칸의 모의 자금(원 · 달러)
 export const NAMES = {
   opening: "① 시초가 · D-1 갭하락 과매도", daytrading: "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",

@@ -1,5 +1,40 @@
 # jkquant 점검 기록 — 무한매수법 · VR (+ 섀넌 · 200일선 · 적립 · ASAP)
 
+## 2026-11-19 · 단타 연구 봇 공통 수수료 — 왕복 비용 = 공통 율 × 2 + 세금 · 미끄러짐 (단타 v1.50.0 · 클로드 v2.32.0)
+
+- 요청(11/19): "단타 연구 봇에도 공통 수수료 적용해" — 앞 장(설정 › 💸 수수료) 바로 다음.
+- 고치기 전(코드에서 확인) — 단타 비용이 파일마다 따로 있었다. 수수료 · 세금 · 미끄러짐을 섞은 왕복 % 상수다.
+  - 국내 주식 0.23(세금 0.20 + 수수료 0.015% × 2): 클로드 ① · GPT 시초가 고정 몫 · 종가 30분(Pages · 워커 · 밤 스크립트 · 화면 사본).
+  - 국내 데이트레이딩 · 대결 0.25 · ETF 0.03 + 틱 · 0.13 · 대결 ETF 0.15.
+  - 코인 0.14(업비트 0.05% × 2 + 미끄러짐 0.04) · 미국 0.20(0.10% × 2): 워커 · 클로드 연구실 · daily1 · 백테 스크립트 · 알림 글(0.14 를 글에 박음).
+  - 모의체결 대조는 '내부 0.25% 가정'과 비교했다(데이트레이딩 기본 마찰).
+- 결정(사용자 말 그대로 · 근거 있는 규칙만)
+  - 바꾸는 것은 수수료 몫만 — "공통 수수료 적용". 세금(국내 거래세 0.20) · 미끄러짐(틱 · 0.04 · 0.02 · 0.10 · 0.12)은 수수료가 아니라 그대로 둔다.
+    - 예전 상수에서 수수료 몫을 뺀 나머지를 그대로 '수수료 아닌 몫'으로 둔다 → 옛 율을 넣으면 옛 상수와 같다(규칙만 옮겼다는 증명).
+    - 미국 0.20 은 근거 문서가 '마찰 0.20'만 적었다. 토스 0.1% × 2 와 같아 전부 수수료로 봤다(미끄러짐 0). 그래서 기본 율에서 0.50.
+  - 율은 사용자 문서 한 곳. 단타 봇용 사본을 따로 저장하지 않는다(두 군데서 세지 않는다).
+    - Pages 함수는 서비스 계정으로 그 칸만 읽고, 워커 · 밤 스크립트는 `/api/common-fee` 에서 받는다. 못 받으면 기본 0.25% · 출처 default 를 남긴다.
+  - 단타 누적 원칙: 이미 남은 거래 · 신호의 마찰 · strategyVersion · 파라미터는 다시 쓰지 않는다.
+    - 코인 · SOXL 워커는 매분 장부를 다시 만들 때 예전엔 그 실행의 마찰로 지난 거래 손익을 다시 셌다 → 지난 거래가 남긴 마찰을 쓰게 했다.
+    - 종가 30분 매도는 신호가 남긴 frictionPct(그때 율) · 데이트레이딩 옛 기록(칸 없음)은 0.25.
+    - 매매 규칙이 그대로라 strategyVersion 은 올리지 않았다. 새 기록에 costModel common-fee-v1 · feeRatePct · feeSource 를 남겨 구분한다.
+  - 대결 · 밤 백테처럼 남은 체결가로 매번 다시 세는 것은 지금 율 하나로 모든 날을 센다(재구성 자료 · 원본 장부는 그대로).
+  - 실제 체결(③ 실투자 봇 · KIS 모의 체결 제비용)은 체결이 말하는 값 — 공통 율로 바꾸지 않는다.
+- 바꾼 곳 — 매매 규칙(신호 · 진입 · 청산 · 손절 · 익절)은 하나도 안 바꿨다. 바뀐 것은 비용 식 · 그 비용을 뺀 손익 · 비용 문구.
+  - 새 파일: `_scalp_cost.js` · `_owner_fee.js` · `common-fee.js`(GET · 감시키 · 소유자) · `scripts/scalp_cost.py`.
+  - Pages: claude-live · _claude_day · claude-telegram · _claude_push · _closing30 · _closing30-outcomes · closing30-monitor · _opening · opening-monitor · _scalping_duel · scalping-duel · vts-reconcile · vts-summary · opening-execute(가정 라벨).
+  - 워커: daytrading-scheduler · global-intraday-scheduler · opening-scheduler(closingSellCost · 요약 글). 배포 워크플로 paths 에 _scalp_cost.js · _fee.js.
+  - 밤 스크립트: claude_lab · daily1_shadow_lab · nightly_closing30_research · backtest_daytrading · backtest_crypto_orb · backtest_soxl_intraday · backtest_opening_rebreak · opening_basis_cost · backtest_opening_gapdown · backtest_etf_overnight · backfill_scalping_paper · analyze_vts_reconcile. 워크플로 단계에 감시키 · paths 에 scalp_cost.py.
+  - 화면: scalping.html(SCALP_FEE · 시초가 마찰 · 문구 · 모의체결 대조) · claude.html(CL_NONFEE · 대결 · 실행 품질 문구).
+- 검증
+  - 새 단계 `scripts/check-scalp-fee.cjs` — 값 시험(S 규칙 · P 파이썬 = JS · B 화면 · O 율 읽기 · E 엔드포인트 · F 워커 · L 쓰는 곳 9) + 배선 W5 · 변이 36/36 빨간불.
+  - 옛 값을 고정한 시험은 두 가지로 바꿨다: 공용 값으로 다시 쓰거나(구조 시험), 옛 율을 넣어 옛 숫자 그대로 확인(회귀 klogRealized · B-6 · 변이 시험 하네스).
+  - 회귀 2875 PASS · D-1/D-3 변이 414 · check-before-push 67 단계 PASS · 실제 Chromium 화면 2 오류 0.
+- 남은 위험 · 확인할 것
+  - 운영 Pages 에 서비스 계정이 없으면 사용자가 율을 바꿔도 봇은 기본 0.25% 로 돈다 — `/api/common-fee` 의 source 로 배포 뒤 확인.
+  - 비용이 크게 올라 단타 판정 · 자동 승격 · 대결 숫자가 바뀐다(국내 왕복 0.23 → 0.70). 사용자 결정 — 율은 설정에서 바꾼다.
+  - 연구 워크플로가 main 에 올라가자마자 다시 계산한다. 그때 Pages 배포가 끝나기 전이면 그 한 번은 기본 0.25%(사용자 율과 같으면 차이 없음).
+
 ## 2026-11-19 · 연구(클로드) 점검 뒤 고침 — ③ 업비트 점검일 · ③ 마감 장부 · 메인 안내 · 연속 손실 경고 · ②⑤ 메인 못 읽을 때 (claude v2.31.2)
 
 - 계기: 사용자 11/19 "연구 클로드가 전략대로 제대로 코드가 구현되어 있는지 매일 개선연구가 제대로 되고 있는지 점검해봐" → 점검 결과(판단 틀린 날 없음 · 버그 4 · 잠재 위험 1) 보고 → "어 다 고치고 ② 점검은 연구창에 넘겨".

@@ -294,7 +294,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.49.0</span></h1></div>
+    <div><div class="kicker">GPT Research</div><h1>JK <span class="v">투자</span> 연구 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.50.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -511,7 +511,7 @@ canvas{display:block;width:100%;height:auto}
       <div class="fld"><label>손절 %</label><input id="ob_stop" type="number" value="1" min="0.1" step="0.1" style="width:80px"></div>
       <div class="fld"><label>1차익절 %</label><input id="ob_t1" type="number" value="0.8" min="0.1" step="0.1" style="width:80px"></div>
       <div class="fld"><label>2차익절 %</label><input id="ob_t2" type="number" value="1.5" min="0.1" step="0.1" style="width:80px"></div>
-      <div class="fld"><label>마찰비용 %</label><input id="ob_fee" type="number" value="0.25" min="0" step="0.05" style="width:80px"></div>
+      <div class="fld"><label>마찰비용 %</label><input id="ob_fee" type="number" value="0.72" min="0" step="0.05" style="width:80px" oninput="this.dataset.touched=1"></div>
       <button class="prim" onclick="runOpeningBreakout()">▶ 즉시돌파 백테스트</button>
       <button class="ghostbtn" onclick="runPullbackRebreak()">↘ 눌림→재돌파 백테스트</button>
       <button class="ghostbtn" onclick="optimizeOpening()">⚙ 과거값 최적화</button>
@@ -564,7 +564,7 @@ canvas{display:block;width:100%;height:auto}
       </ul></div>
       <div class="step"><div class="st"><span class="n">3</span>모의 체결·청산</div><ul>
         <li>신호는 분봉 마감 뒤 확정하므로 <b>다음 1분봉 시가</b>에 모의 진입한다.</li>
-        <li><b>손절 −1.0% / 익절 +2.0% / 15:10 시간청산</b>, 왕복 마찰비용 0.25% 반영.</li>
+        <li><b>손절 −1.0% / 익절 +2.0% / 15:10 시간청산</b>, 왕복 마찰비용 <span data-scalp-cost="krDay">0.72%</span>(세금 0.20 + 미끄러짐 0.02 + 공통 수수료 <span data-scalp-fee>0.25%</span> × 2) 반영.</li>
         <li>하루 최대 <b>3건</b>. 같은 시각 신호는 당시 거래량·돌파강도 점수로 정렬한다.</li>
       </ul></div>
       <div class="warn"><b>현재 단계:</b> 전략 후보를 만든 첫 단계다. 성과가 좋아 보여도 바로 기준을 바꾸지 않는다.
@@ -646,7 +646,7 @@ canvas{display:block;width:100%;height:auto}
         <li><b>손절 −0.5% / 익절 +1.0% / 최대 60분</b>.</li>
         <li>22:00 진입이 발생하면 해당 포지션의 청산과 Telegram 매도 메시지는 최대 60분 동안 계속 추적한다.</li>
         <li>한 캔들 안에서 손절·익절이 모두 닿으면 보수적으로 <b>손절 우선</b>.</li>
-        <li>왕복 수수료 <b>0.10%</b> + 왕복 슬리피지 가정 <b>0.04%</b> = 총 마찰비용 0.14% 차감.</li>
+        <li>왕복 수수료 <b>공통 <span data-scalp-fee>0.25%</span> × 2</b> + 왕복 슬리피지 가정 <b>0.04%</b> = 총 마찰비용 <span data-scalp-cost="coin">0.54%</span> 차감.</li>
       </ul></div>
       <div class="warn"><b>연구 전용:</b> 이 탭은 실계좌·모의계좌 주문 API에 연결하지 않는다. 결과가 좋아도 자동으로 기준전략을 바꾸지 않고,
         최근 구간·홀드아웃·30일 롤링 성과가 함께 유지되는지 확인한 뒤 다음 실험을 추가한다.</div>
@@ -710,7 +710,7 @@ canvas{display:block;width:100%;height:auto}
       <div class="step"><div class="st"><span class="n">2</span>청산</div><ul>
         <li>손절 −1.2% / 익절 +2.4% / 최대 90분 / 하루 최대 1회.</li>
         <li>같은 봉에서 손절·익절 동시 충족 시 손절 우선.</li>
-        <li>왕복 마찰비용 0.20% 차감.</li>
+        <li>왕복 마찰비용 <span data-scalp-cost="us">0.50%</span>(공통 수수료 <span data-scalp-fee>0.25%</span> × 2) 차감.</li>
       </ul></div>
       <div class="warn"><b>+1%는 연구 목표 지표</b>다. 일일 수익을 보장하지 않으며 기준전략은 자동 변경하지 않는다.
         그림자 후보는 OR 5/30분, 거래량 0.8/1.2배, VWAP 제외, 손절·익절/보유시간 변형을 병렬 비교한다.</div>
@@ -853,7 +853,35 @@ function toBars(min, step){
   return out;
 }
 const REF_ATR_LEN=14, REF_ATR_STOP_MULT=2, REF_ATR_TGT_MULT=4;
-const OPENING_FIXED_FRICTION_PCT=0.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5;
+/* 단타 연구 비용(왕복 %) — 봇과 같은 율(/api/common-fee · 설정 › 💸 수수료 · 2026-11-19 사용자 "단타 연구 봇에도 공통 수수료 적용해").
+   받기 전 · 실패하면 기본 0.25%. 수수료 아닌 몫은 서버 응답(nonFeePct)을 쓰고, 없을 때만 아래 기본표(_scalp_cost.js NON_FEE_PCT 와 같은 값 — check-scalp-fee 가 대조).
+   국내 주식 고정 몫 = 거래세 0.20 + 수수료 × 2(예전 0.23) · 데이트레이딩 0.22 + 수수료 × 2(예전 0.25) · 코인 0.04 + 수수료 × 2(예전 0.14) · 미국 수수료 × 2(예전 0.20). */
+let SCALP_FEE={rate:0.0025,source:'default',roundTripPct:0.5,nonFeePct:{kr:0.20,krDay:0.22,etf:0,etfFlat:0.10,etfFair:0.12,coin:0.04,us:0}};
+function scalpCost(kind){const n=(SCALP_FEE.nonFeePct||{})[kind];return Math.round(((n==null?0:+n)+(+SCALP_FEE.roundTripPct||0))*1e6)/1e6;}
+function scalpFeeLabel(){return (Math.round(SCALP_FEE.rate*1e8)/1e6)+'%'+(SCALP_FEE.source==='user'?'':'(기본값)');}
+function renderScalpFeeTexts(){
+  for(const el of document.querySelectorAll('[data-scalp-cost]'))el.textContent=scalpCost(el.dataset.scalpCost).toFixed(2)+'%';
+  for(const el of document.querySelectorAll('[data-scalp-fee]'))el.textContent=scalpFeeLabel();
+  const ob=document.getElementById('ob_fee');if(ob&&!ob.dataset.touched)ob.value=scalpCost('krDay').toFixed(2);
+}
+async function loadScalpFee(user){
+  try{
+    const tok=await user.getIdToken();
+    const r=await fetch('/api/common-fee',{cache:'no-store',headers:{Authorization:'Bearer '+tok,Accept:'application/json'}});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.ok&&Number.isFinite(+j.rate)&&Number.isFinite(+j.roundTripPct))
+      SCALP_FEE={rate:+j.rate,source:String(j.source||'user'),roundTripPct:+j.roundTripPct,nonFeePct:j.nonFeePct||SCALP_FEE.nonFeePct};
+  }catch(e){}
+  renderScalpFeeTexts();
+}
+function openingFixedFrictionPct(){return scalpCost('kr');}
+/* 대결 같은 비용표 문구 — 보고서가 남긴 표(costs)를 먼저, 없으면 지금 율 */
+function duelCostNote(D){
+  const c=(D&&D.costs)||{},g=c.gpt||{},cl=c.claude||{},v=(x,k)=>(Number.isFinite(+x)&&x!==null&&x!==''?+x:scalpCost(k)).toFixed(2)+'%';
+  return '비용(왕복): GPT 국내 시초가·데이트레이딩 '+v(g.opening,'krDay')+' · 클로드 국내 시초가 '+v(cl.opening,'krDay')+' / ② ETF '+v(cl.daytrading,'etfFair')
+    +' · 코인 양쪽 '+v(g.crypto,'coin')+' · 미국 양쪽 '+v(g.soxl,'us')+' — 공통 수수료 '+scalpFeeLabel()+' × 2 포함.';
+}
+const OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5;
 let OPENING_FRICTION_CAL={completeMatches:0,observedRoundTripSlippagePct:null};
 
 function referenceAtr14(bars,endExclusive){
@@ -891,7 +919,7 @@ function openingFrictionPct(entryPrice,calibration=OPENING_FRICTION_CAL){
   const obs=raw==null?NaN:Number(raw);
   const slip=n>=OPENING_VTS_MIN_MATCHES&&isFinite(obs)?Math.max(0,obs):
     2*OPENING_FALLBACK_TICKS_PER_SIDE*openingKrTickSize(p)/Math.max(p,1e-9)*100;
-  return OPENING_FIXED_FRICTION_PCT+slip;
+  return openingFixedFrictionPct()+slip;
 }
 function levelsOf(entry,atr14){
   const e=+entry,a=+atr14;
@@ -2173,7 +2201,7 @@ function scoreRequiredWin(name,j,v,s){
   let cost=Number(p.fee??p.fee_round_trip_pct??0)+Number(p.slippage_round_trip_pct??0);
   if(name==='opening'){
     const f=j.frictionCalibration||{};
-    cost=Number(f.fixedPct||0.23);
+    cost=Number(f.fixedPct||openingFixedFrictionPct());
     const c=j.exitModelComparison&&j.exitModelComparison.close;
     if(c&&Number(c.avgWin)>0&&Number(c.avgLoss)<0)
       return Math.abs(Number(c.avgLoss))/(Number(c.avgWin)+Math.abs(Number(c.avgLoss)))*100;
@@ -2607,7 +2635,7 @@ function renderScalpingDuel(D){
       '<td class="'+bw[0]+'"><b>'+scDuelPct(gg.totalPct)+'</b><div class="sub">'+(r.gpt||0)+'승 '+(r.claude||0)+'패 '+(r.draw||0)+'무 · '+(gg.trades||0)+'건 · 승률 '+(gg.winRate==null?'—':Number(gg.winRate).toFixed(1)+'%')+'</div></td>'+
       '<td class="'+bw[1]+'"><b>'+scDuelPct(cc.totalPct)+'</b><div class="sub">'+(r.claude||0)+'승 '+(r.gpt||0)+'패 '+(r.draw||0)+'무 · '+(cc.trades||0)+'건 · 승률 '+(cc.winRate==null?'—':Number(cc.winRate).toFixed(1)+'%')+'</div></td></tr>';
   }
-  html+='</tbody></table></div><p class="note">비용(왕복): GPT 국내 시초가·데이트레이딩 0.25% · 클로드 국내 시초가 0.25% / ② ETF 0.15% · 코인 양쪽 0.14% · 미국 양쪽 0.20%.</p></div>';
+  html+='</tbody></table></div><p class="note">'+esc(duelCostNote(D))+'</p></div>';
 
   const tabMaps={};
   for(const k of ['opening','daytrading','crypto','soxl'])tabMaps[k]=new Map((((D.tabs||{})[k]||{}).days||[]).map(x=>[x.date,x]));
@@ -2636,7 +2664,7 @@ function renderScalpingDuel(D){
   html+='<div class="card"><h3><span class="dot"></span>📐 판정 규칙 공개</h3><ol class="duel-rule-list">'+
     '<li><b>실시간 기록만:</b> GPT는 opening-history · daytrading-research · crypto-research · soxl-research의 기준전략 모의매매 기록, 클로드는 scalping-data의 data/claude-live/{날짜}.json에서 id가 close:opening / close:daytrading / close:crypto / close:soxl인 하루 마감 장부만 사용합니다. 클로드 payload.status=closed만 포함하고 holiday는 제외합니다. 백테스트·사후 재구성 값은 섞지 않습니다.</li>'+
     '<li><b>시작일 2026-10-05:</b> 두 쪽 기록이 모두 있는 날만 비교합니다. 한쪽만 있으면 기록 대기로 분리합니다.</li>'+
-    '<li><b>같은 비용표:</b> 왕복 국내주식 0.25%, 국내 ETF 0.15%(클로드 ②), 코인 0.14%, 미국 0.20%. 매매 순손익 = (청산가 ÷ 진입가 − 1)×100 − 비용입니다.</li>'+
+    '<li><b>같은 비용표:</b> '+esc(duelCostNote(D).replace(/^비용\(왕복\): /,'왕복 '))+' 매매 순손익 = (청산가 ÷ 진입가 − 1)×100 − 비용입니다.</li>'+
     '<li><b>하루 손익:</b> 그날 청산된 실현 매매만, 칸 자금 100% 기준. 여러 종목은 균등 평균, 클로드 코인은 BTC·ETH 각각 0.5. 매매가 없으면 0%입니다.</li>'+
     '<li><b>합계:</b> 시초가·데이트레이딩·비트코인·SOXL 네 탭에 원금을 각각 25%씩 배분합니다.</li>'+
     '<li><b>하루 승패:</b> 상대보다 0.01%p를 초과해 앞설 때만 승, 그 이하는 무승부입니다.</li>'+
@@ -2972,7 +3000,7 @@ async function loadDayTradingPaper(silent=false){
             '<td class="'+(pl==null?'':+pl>=0?'win':'loss')+'">'+pct(pl)+'</td></tr>';
         }).join('')+'</tbody></table></div>';
     }
-    html+='<p class="note">손익에는 왕복 마찰비용 '+Number(l.frictionPct||0.25).toFixed(2)+'%를 반영합니다. 장중 미실현손익도 같은 비용을 보수적으로 선반영합니다.</p>';
+    html+='<p class="note">손익에는 왕복 마찰비용 '+Number(l.frictionPct||0.25).toFixed(2)+'%(그날 장부가 남긴 값 · 지금 공통 수수료 '+esc(scalpFeeLabel())+' × 2 기준 '+scalpCost('krDay').toFixed(2)+'%)를 반영합니다. 장중 미실현손익도 같은 비용을 보수적으로 선반영합니다.</p>';
     body.innerHTML=html;
   }catch(e){
     msg.textContent='장중 모의장부 조회 실패 · '+String(e.message||e)+(silent?' · 이전 표시값은 최신이 아닐 수 있습니다.':'');
@@ -3144,7 +3172,7 @@ async function loadVtsReconcile(strategy){
       '<div class="outbox"><div class="ol">왕복 슬리피지 P95</div><div class="ov">'+pct(s.p95RoundTripSlippageCostPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">부분/미체결</div><div class="ov">'+Number(s.partialFillOrderCount||0)+' / '+Number(s.unfilledOrderCount||0)+'</div></div>'+
       '<div class="outbox"><div class="ol">관측 총 마찰비용</div><div class="ov">'+pct(s.avgObservedExecutionDragPct)+'</div></div>'+
-      '<div class="outbox"><div class="ol">0.25% 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternal025Pct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">내부 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternalPct!=null?s.frictionGapVsInternalPct:s.frictionGapVsInternal025Pct)+'</div><div class="sub">내부 가정 '+(s.avgInternalFrictionPct!=null?pct(s.avgInternalFrictionPct):'0.25%(옛 기록)')+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 진입 주문지연(근사)</div><div class="ov">'+sec(s.avgEntryOrderLagSecApprox)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 주문→통보 지연</div><div class="ov">'+sec(s.avgBrokerNotifyLagSec)+'</div></div>'+
       '<div class="outbox"><div class="ol">VTS 추정 제비용 합</div><div class="ov">'+won(s.totalBrokerEstimatedCostsWon)+'</div></div>'+
@@ -3195,7 +3223,7 @@ async function loadVtsResearch(strategy){
       '<div class="outbox"><div class="ol">완전 매칭</div><div class="ov">'+(s.completeMatches||0)+'건</div></div>'+
       '<div class="outbox"><div class="ol">평균 왕복 슬리피지 비용</div><div class="ov">'+pct(s.avgRoundTripSlippageCostPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">관측 총 마찰비용</div><div class="ov">'+pct(s.avgObservedExecutionDragPct)+'</div></div>'+
-      '<div class="outbox"><div class="ol">0.25% 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternal025Pct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">내부 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternalPct!=null?s.frictionGapVsInternalPct:s.frictionGapVsInternal025Pct)+'</div><div class="sub">내부 가정 '+(s.avgInternalFrictionPct!=null?pct(s.avgInternalFrictionPct):'0.25%(옛 기록)')+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 VTS 순손익</div><div class="ov '+((s.avgVtsNetPnlPct||0)>=0?'good':'bad')+'">'+pct(s.avgVtsNetPnlPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 내부 손익</div><div class="ov '+((s.avgInternalPnlPct||0)>=0?'good':'bad')+'">'+pct(s.avgInternalPnlPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 진입 주문지연(근사)</div><div class="ov">'+sec(s.avgEntryOrderLagSecApprox)+'</div></div>'+
@@ -3204,7 +3232,7 @@ async function loadVtsResearch(strategy){
       '</div>'+
       '<div class="warn" style="margin-top:8px"><b>마찰비용 보정 상태:</b> '+((s.calibrationStatus==='reviewable')?'검토 가능':'표본 수집 중')+
       ' · 완전매칭 '+(s.calibrationMatches||0)+'건'+
-      ((s.calibrationMatches||0)<20?' · 20건 전에는 내부 0.25% 가정을 자동 변경하지 않습니다.':' · 데이터와 0.25% 가정을 비교할 수 있는 최소 표본에 도달했습니다.')+'</div>'+
+      ((s.calibrationMatches||0)<20?' · 20건 전에는 내부 가정(거래마다 남긴 마찰 · 공통 수수료 반영)을 자동 변경하지 않습니다.':' · 데이터와 내부 가정을 비교할 수 있는 최소 표본에 도달했습니다.')+'</div>'+
       '<p class="note">관측 총 마찰비용 = 매수 슬리피지 비용 + 매도 슬리피지 비용 + VTS 체결조회 제비용률. 실제 실계좌 수수료·체결품질을 의미하지 않습니다.</p>';
   }catch(e){
     box.innerHTML='<div class="warn">누적 VTS 실행품질 조회 실패: '+esc(e.message||String(e))+'</div>';
@@ -3357,7 +3385,7 @@ async function loadOpeningResearch(){
       '<div class="out" style="margin-top:8px">'+
       '<div class="outbox"><div class="ol">종가 청산 · 공식 호환</div><div class="ov '+((closeModel.avgPnl||0)>=0?'good':'bad')+'">'+((closeModel.avgPnl||0)>=0?'+':'')+Number(closeModel.avgPnl||0).toFixed(3)+'%</div><div class="sub">'+Number(closeModel.trades||0)+'건</div></div>'+
       '<div class="outbox"><div class="ol">저가/고가 터치 · 연구</div><div class="ov '+((lhModel.avgPnl||0)>=0?'good':'bad')+'">'+((lhModel.avgPnl||0)>=0?'+':'')+Number(lhModel.avgPnl||0).toFixed(3)+'%</div><div class="sub">'+Number(lhModel.trades||0)+'건 · 동일봉 손절우선</div></div>'+
-      '<div class="outbox"><div class="ol">실행비용 원천</div><div class="ov" style="font-size:13px">'+esc(fsrc)+'</div><div class="sub">고정 0.23% · VTS 완전매칭 '+Number(fc.completeMatches||0)+'/30</div></div>'+
+      '<div class="outbox"><div class="ol">실행비용 원천</div><div class="ov" style="font-size:13px">'+esc(fsrc)+'</div><div class="sub">고정 '+Number(fc.fixedPct||0.23).toFixed(2)+'%(거래세 0.20 + 수수료) · VTS 완전매칭 '+Number(fc.completeMatches||0)+'/30</div></div>'+
       '</div>'+
       '<p class="note">두 청산 모델을 병렬 기록하지만 기준전략 호환 필드는 종가 모델 그대로입니다. 비용은 VTS 완전매칭 30건 전까지 가격별 2.5틱/편도 fallback을 사용합니다.</p>'+
       '<div class="warn" style="margin-top:8px"><b>다중검정 통제:</b> K='+(mt.K||13)+' · '+esc(mt.method||'Bonferroni')+
@@ -3882,7 +3910,7 @@ function renderBacktest(tr,base,from){
   ms.forEach(m=>{const g=pick.filter(t=>t.date.slice(0,7)===m); if(!g.length)return; const a=mean(g.map(t=>t.pnl));
     html+=`<tr><td>${m}</td><td>${g.length}</td><td class="${a>0?'win':'loss'}">${a>=0?'+':''}${a.toFixed(2)}%</td><td>${wr(g.map(t=>t.pnl)).toFixed(0)}%</td></tr>`;});
   html+='</tbody></table></div>';
-  html+='<p class="note">보수적 가정: 일봉이라 손절·익절 도달 순서를 몰라 <b>손절 우선</b>. 레벨은 진입 전날까지의 ATR(14) 기준 손절 2×ATR / 목표 4×ATR이며 ATR 부족 시 거래를 만들지 않는다. 비용은 A-3과 같은 고정 0.23% + VTS 실측(30건 이상), 그 전에는 2.5틱/편도 fallback. 유니버스는 오늘 기준 상위 종목이라 <b>생존편향</b>이 있다.</p>';
+  html+='<p class="note">보수적 가정: 일봉이라 손절·익절 도달 순서를 몰라 <b>손절 우선</b>. 레벨은 진입 전날까지의 ATR(14) 기준 손절 2×ATR / 목표 4×ATR이며 ATR 부족 시 거래를 만들지 않는다. 비용은 A-3과 같은 고정 '+openingFixedFrictionPct().toFixed(2)+'%(거래세 0.20 + 공통 수수료 × 2) + VTS 실측(30건 이상), 그 전에는 2.5틱/편도 fallback. 유니버스는 오늘 기준 상위 종목이라 <b>생존편향</b>이 있다.</p>';
   $('bt_body').innerHTML=html;
 }
 
@@ -4470,6 +4498,7 @@ function boot(){
     }catch(e){ console.warn('menu config',e); }
     if(!current())return;
     me=user;renderBadge();
+    loadScalpFee(user);   // 단타 비용 = 봇과 같은 공통 수수료(/api/common-fee) — 문구 · 화면 계산
     // 사용자 데이터는 Firebase DB에서만 불러온다.
     loadAll();await cloudLoad();
     if(!current())return;

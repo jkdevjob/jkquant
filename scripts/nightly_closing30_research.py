@@ -14,13 +14,18 @@ import subprocess
 from closing30_metrics import section
 from pathlib import Path
 from zoneinfo import ZoneInfo
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 KST=ZoneInfo("Asia/Seoul")
 RAW=Path("data/closing30")
 OUT=Path("data/nightly-research")
 KEY=os.environ.get("KEY") or os.environ.get("AUTOTRADE_KEY") or ""
 WORKER=(os.environ.get("CLOSING_WORKER_URL") or "https://jkquant-opening-scheduler.mumae4.workers.dev").rstrip("/")
-FEE=.23
+# 왕복 비용 = 거래세 0.20 + 공통 수수료 × 2(scalp_cost.py · _closing30.js closeFeesPct 와 같은 값). 2026-11-19 전 0.23.
+FEE=SC.cost_pct("kr")
 
 def needs_refresh(path, recent=False):
     if recent or not path.is_file():return True

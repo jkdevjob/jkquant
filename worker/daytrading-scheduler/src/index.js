@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import {dayBrokerPlans,sendResearchPlans,RESEARCH_BROKER_VERSION} from "../../../functions/api/_research-orders.js";
+import {scalpCostPct,scalpFeeRate,scalpFeeSource,setScalpFee,fetchCommonFee,SCALP_COST_MODEL} from "../../../functions/api/_scalp_cost.js";
 
 const SHARDS=5;
 const MAX_SCAN_LAG_MS=3*60*1000;
@@ -8,7 +9,12 @@ const PAPER_MAX_TRADES=3;
 const PAPER_STOP_PCT=1.0;
 const PAPER_TAKE_PROFIT_PCT=2.0;
 const PAPER_FINAL_EXIT_HM=1510;
-const PAPER_FRICTION_PCT=0.25;
+// 왕복 마찰 % = 거래세 0.20 + 미끄러짐 0.02 + 공통 수수료(설정 › 💸 수수료) × 2 — _scalp_cost.js(krDay). 실행마다 /api/common-fee 에서 율을 받는다.
+// 2026-11-19 전 0.25 고정 — 그때 만든 거래는 저장된 frictionPct 그대로(덮어쓰지 않는다). 칸이 없는 옛 기록만 0.25 로 본다.
+const LEGACY_FRICTION_PCT=0.25;
+const paperFrictionPct=()=>scalpCostPct("krDay");
+const feeSnap=()=>({costModel:SCALP_COST_MODEL,feeRatePct:Math.round(scalpFeeRate()*1e8)/1e6,feeSource:scalpFeeSource()});
+async function useCommonFee(env){const v=await fetchCommonFee(baseUrl(env),env.MONITOR_KEY);setScalpFee(v.rate,v.source);return v;}
 const KIS_MIN_INTERVAL_MS=650;
 const DAY_EXIT_VARIANTS=Object.freeze({
   baseline:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
@@ -313,7 +319,7 @@ function blankTrade(c,date,params=DAY_EXIT_VARIANTS.baseline){
     exitTime:null,exitPrice:null,reason:null,grossPnl:null,pnl:null,
     currentPrice:null,unrealizedPnl:null,lastEvaluatedHm:null,
     stopPct:Number(params.stopPct||PAPER_STOP_PCT),takeProfitPct:Number(params.takeProfitPct||PAPER_TAKE_PROFIT_PCT),
-    finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT,
+    finalExit:PAPER_FINAL_EXIT_HM,frictionPct:paperFrictionPct(),...feeSnap(),
     source:"kis-minhist-paper"
   };
 }
@@ -354,10 +360,10 @@ function applyBars(trade,bars,target){
   // No fill at 15:10 without the 15:10 completed candle.
   if(t.status==="closed"&&t.exitPrice>0){
     t.grossPnl=(t.exitPrice/t.entryPrice-1)*100;
-    t.pnl=t.grossPnl-Number(t.frictionPct||PAPER_FRICTION_PCT);
+    t.pnl=t.grossPnl-Number(t.frictionPct||LEGACY_FRICTION_PCT);
     t.currentPrice=t.exitPrice;t.unrealizedPnl=null;
   }else if(t.entryPrice>0&&t.currentPrice>0){
-    t.unrealizedPnl=(t.currentPrice/t.entryPrice-1)*100-Number(t.frictionPct||PAPER_FRICTION_PCT);
+    t.unrealizedPnl=(t.currentPrice/t.entryPrice-1)*100-Number(t.frictionPct||LEGACY_FRICTION_PCT);
   }
   return t;
 }
@@ -455,7 +461,7 @@ async function notifyPaperTransitions(env,oldLedger,newLedger){
           (x.name||x.code)+" ("+x.code+") · "+exitLabel(x.reason),
           "매수 "+hmLabel(x.entryTime)+" · "+Math.round(x.entryPrice||0).toLocaleString("ko-KR")+"원",
           "매도 "+hmLabel(x.exitTime)+" · "+Math.round(x.exitPrice||0).toLocaleString("ko-KR")+"원",
-          "전략 손익 "+signedPct(x.pnl)+" · 왕복 마찰비용 "+PAPER_FRICTION_PCT.toFixed(2)+"% 반영"
+          "전략 손익 "+signedPct(x.pnl)+" · 왕복 마찰비용 "+Number(x.frictionPct||LEGACY_FRICTION_PCT).toFixed(2)+"% 반영"
         ]
       });
     }
@@ -547,7 +553,7 @@ async function reconcilePaper(env,date,target,candidates,mainVariant="baseline",
   }
   const ledger={...old,schema:2,date,updatedAt:new Date().toISOString(),targetHm:target,mainVariant,
     strategy:'VWAP trend breakout v1',strategyVersion:'daytrading_vwap_breakout_v1@'+mainVariant,mode:'server-live-paper-no-order',
-    maxTrades:params.maxTrades,stopPct:params.stopPct,takeProfitPct:params.takeProfitPct,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT,
+    maxTrades:params.maxTrades,stopPct:params.stopPct,takeProfitPct:params.takeProfitPct,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:paperFrictionPct(),...feeSnap(),
     ...built.get(mainVariant),shadowLedgers:Object.fromEntries([...built].filter(([v])=>v!==mainVariant)),
     signalEvents};
   ledger.summary=ledgerSummary(ledger);
@@ -563,6 +569,8 @@ async function advanceExistingPaper(env,date,target){
   return reconcilePaper(env,date,target,[],old.mainVariant||'baseline');
 }
 
+/* 거래마다 남긴 마찰 % — 같으면 그 값, 섞였으면 범위(율을 하루 중에 바꾼 날) */
+function frictionLabel(closed){const v=[...new Set(closed.map(x=>Number(x.frictionPct||LEGACY_FRICTION_PCT)).map(x=>x.toFixed(2)))];return v.length?(v.length===1?v[0]+"%":v.sort().join("~")+"%"):paperFrictionPct().toFixed(2)+"%";}
 async function sendDailySummary(env,date){
   const ledger=await readPaper(env,date);
   const a=ledger&&Array.isArray(ledger.trades)?ledger.trades:[];
@@ -572,7 +580,7 @@ async function sendDailySummary(env,date){
   const lines=[
     "후보/진입 "+a.length+"건 · 청산 "+closed.length+"건 · 미청산 "+open.length+"건 · 체결/청산 확인필요 "+a.filter(x=>x.status==="unverified").length+"건",
     "승 "+wins+" · 패 "+losses+" · 승률 "+(pn.length?(wins/pn.length*100).toFixed(1):"0.0")+"%",
-    "실현 평균 순수익률 "+signedPct(avg)+" · 왕복 마찰비용 "+PAPER_FRICTION_PCT.toFixed(2)+"% 반영"
+    "실현 평균 순수익률 "+signedPct(avg)+" · 왕복 마찰비용 "+frictionLabel(closed)+" 반영"
   ];
   for(const x of closed)lines.push((x.name||x.code)+" · "+hmLabel(x.entryTime)+"→"+hmLabel(x.exitTime)+" · "+signedPct(x.pnl)+" · "+exitLabel(x.reason));
   if(!a.length)lines.push("오늘 조건 충족 모의거래 없음");
@@ -581,6 +589,7 @@ async function sendDailySummary(env,date){
 
 async function runScheduled(controller,env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
+  await useCommonFee(env);   // 이번 실행의 새 거래 마찰 = 공통 수수료(설정 › 💸 수수료) — 못 받으면 기본 0.25% · feeSource default
   const scheduled=Number(controller.scheduledTime)||Date.now();
   const sched=kstParts(scheduled);
 
@@ -659,7 +668,7 @@ export default {
     if(u.pathname==="/health")return json({
       ok:true,service:"jkquant-daytrading-scheduler",
       schedule:"09:55 snapshot + 10:00~14:31 signal scans + 14:32~15:11 paper exits",
-      paper:{maxTrades:PAPER_MAX_TRADES,stopPct:PAPER_STOP_PCT,takeProfitPct:PAPER_TAKE_PROFIT_PCT,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT,store:"Durable Object SQLite + date index"}
+      paper:{maxTrades:PAPER_MAX_TRADES,stopPct:PAPER_STOP_PCT,takeProfitPct:PAPER_TAKE_PROFIT_PCT,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:paperFrictionPct(),...feeSnap(),store:"Durable Object SQLite + date index"}
     });
     if(u.pathname==="/config"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);

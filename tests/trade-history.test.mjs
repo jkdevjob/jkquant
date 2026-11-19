@@ -161,7 +161,7 @@ test('BTC/SOXL detail panel never renders unconfirmed exit as entry waiting or z
 });
 test('daytrading detail panel reports missing exit and withholds aggregate return',async()=>{
  const ui=read('scalping.html'),a=ui.indexOf('async function loadDayTradingPaper('),b=ui.indexOf('\nasync function ',a+20),nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:''});return nodes.get(id);},boards=[];
- const c={$:node,me:{getIdToken:async()=>'fixture'},fetch:async()=>Response.json({ok:true,ledger:{date,trades:[{...base,status:'unverified',unrealizedPnl:2}],summary:{selected:1,open:0,closed:0,unverified:1}}}),esc:String,scalpingKstStamp:String,window:{},commas:String,setTimingBoard:(...args)=>boards.push(args)};
+ const c={$:node,me:{getIdToken:async()=>'fixture'},fetch:async()=>Response.json({ok:true,ledger:{date,trades:[{...base,status:'unverified',unrealizedPnl:2}],summary:{selected:1,open:0,closed:0,unverified:1}}}),esc:String,scalpingKstStamp:String,window:{},scalpFeeLabel:()=>'0.25%',scalpCost:()=>0.72,commas:String,setTimingBoard:(...args)=>boards.push(args)};
  vm.createContext(c);vm.runInContext(ui.slice(a,b),c);await c.loadDayTradingPaper();const html=node('dt_live_body').innerHTML;
  assert.match(html,/체결\/청산 확인 필요/);assert.doesNotMatch(html,/다음분 시가대기|>\+0\.00%/);assert.ok(boards.some(x=>x[2]==='청산 확인 필요'));
 });

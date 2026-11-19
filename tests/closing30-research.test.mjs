@@ -24,7 +24,8 @@ test("10 shadow candidates plus baseline persist stable variant keys",()=>{
  assert(xs.every(x=>x.kind==="day"&&x.fillStatus==="signal_only"));
 });
 test("strict paper net PnL costs and no fabricated price",()=>{
- assert(Math.abs(closeNetPct(100,101)-.77)<1e-8);
+ assert(Math.abs(closeNetPct(100,101)-.30)<1e-8);   // 1 − (거래세 0.20 + 공통 수수료 0.25% × 2) — 기본 율(2026-11-19 전 0.23 → 0.77)
+ assert(Math.abs(closeNetPct(100,101,.23)-.77)<1e-8);
  assert.equal(closeNetPct(null,101),null);
  assert.equal(closeNetPct(100,null),null);
 });

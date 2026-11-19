@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const source=fs.readFileSync(new URL('../functions/api/_opening.js',import.meta.url),'utf8');
-const load=async text=>import('data:text/javascript;base64,'+Buffer.from(text).toString('base64'));
+// _opening.js 의 상대 import(./_scalp_cost.js 등)는 실제 파일 주소로 바꿔 읽는다
+const load=async text=>import('data:text/javascript;base64,'+Buffer.from(text.replace(/from\s+(["'])\.\/([^"']+)\1/g,(m,q,f)=>'from '+q+new URL('../functions/api/'+f,import.meta.url).href+q)).toString('base64'));
 const prices=[103,103,103,104,103.6,104.2,102,101,100];
 const rows=prices.map((close,i)=>({t:`2026-09-25 09:${String(i).padStart(2,'0')}`,close,high:close,vol:i===5?500:100}));
 rows.push({t:'2026-09-25 09:30',close:100,high:100,vol:100});

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {DUEL_START,COSTS,TOTAL_WEIGHT,WIN_EDGE_PCT,grossPct,normalizeClaudeEvents,normalizeTrades,sideDay,winner,buildDuel} from "../functions/api/_scalping_duel.js";
+import {setScalpFee} from "../functions/api/_scalp_cost.js";
 
 const T=["opening","daytrading","crypto","soxl"];
 const empty=()=>Object.fromEntries(T.map(k=>[k,new Map()]));
@@ -9,7 +10,12 @@ const trade=(e,x,n="X")=>normalizeTrades([{name:n,entryPrice:e,exitPrice:x}])[0]
 console.log("[scalping duel] 규칙 값 시험");
 assert.equal(DUEL_START,"2026-10-05");                                  // 규칙2
 assert.equal(TOTAL_WEIGHT,0.25); assert.equal(WIN_EDGE_PCT,0.01);       // 규칙5,6
-assert.deepEqual(COSTS,{gpt:{opening:.25,daytrading:.25,crypto:.14,soxl:.20},claude:{opening:.25,daytrading:.15,crypto:.14,soxl:.20}}); // 규칙3
+// 규칙3 같은 비용표 = 공통 수수료 × 2 + 수수료 아닌 몫(_scalp_cost.js). 기본 율 0.25% 면 국내 0.72 · ETF 0.62 · 코인 0.54 · 미국 0.50
+const costsNow=()=>JSON.parse(JSON.stringify(COSTS));
+assert.deepEqual(costsNow(),{gpt:{opening:.72,daytrading:.72,crypto:.54,soxl:.5},claude:{opening:.72,daytrading:.62,crypto:.54,soxl:.5}});
+setScalpFee(0.00015);assert.deepEqual([COSTS.gpt.opening,COSTS.claude.daytrading],[.25,.15]);   // 옛 국내 수수료(0.015%)면 옛 표(0.25 · 0.15)
+setScalpFee(0.0005);assert.equal(COSTS.gpt.crypto,.14);setScalpFee(0.001);assert.equal(COSTS.claude.soxl,.2);   // 옛 업비트 0.05% · 미국 0.10%
+setScalpFee(0.0025);
 assert.ok(Math.abs(grossPct(100,101)-1)<1e-12);
 
 const ce=normalizeClaudeEvents([
@@ -38,8 +44,8 @@ gc.opening.add("2026-10-05");gc.opening.add("2026-10-06");gc.opening.add("2026-1
 const d=buildDuel({claudeRecords:cr,gptTrades:gt,gptCoverage:gc});
 assert.deepEqual(d.tabs.opening.days.map(x=>x.date),["2026-10-05","2026-10-06"]); // 규칙2: 교집합만
 assert.deepEqual(d.tabs.opening.pending.map(x=>x.date),["2026-10-07","2026-10-08"]); // 한쪽만 기록 대기
-assert.ok(Math.abs(d.tabs.opening.days[0].gpt.pnlPct-.25)<1e-9);       // 0.5 gross - 0.25
-assert.ok(Math.abs(d.tabs.opening.days[0].claude.pnlPct-.75)<1e-9);   // 1 gross - 0.25
+assert.ok(Math.abs(d.tabs.opening.days[0].gpt.pnlPct-(.5-.72))<1e-9);   // 0.5 gross - 0.72(국내 0.22 + 공통 수수료 0.25% × 2)
+assert.ok(Math.abs(d.tabs.opening.days[0].claude.pnlPct-(1-.72))<1e-9); // 1 gross - 0.72
 assert.equal(d.tabs.opening.days[0].winner,"claude");
 assert.equal(d.tabs.opening.days[1].gpt.pnlPct,0);assert.equal(d.tabs.opening.days[1].claude.pnlPct,0); // 매매없음=0
 assert.equal(winner(.0100001,0),"gpt");assert.equal(winner(.01,0),"draw"); // 규칙6 정확한 >0.01
@@ -52,8 +58,8 @@ for(const [i,k] of T.entries()){
   gc2[k].add("2026-10-05");
 }
 const d2=buildDuel({claudeRecords:cr2,gptTrades:gt2,gptCoverage:gc2});
-const expectedClaude=.25*((1-.25)+(2-.15)+(3-.14)+(4-.20));
-const expectedGpt=.25*((0-.25)+(0-.25)+(0-.14)+(0-.20));
+const expectedClaude=.25*((1-.72)+(2-.62)+(3-.54)+(4-.5));
+const expectedGpt=.25*((0-.72)+(0-.72)+(0-.54)+(0-.5));
 assert.ok(Math.abs(d2.total.days[0].claudePct-expectedClaude)<1e-9);
 assert.ok(Math.abs(d2.total.days[0].gptPct-expectedGpt)<1e-9);
 
