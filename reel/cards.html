@@ -75,12 +75,52 @@
   .more .mt { font-size:34px; font-weight:800; color:var(--gray); margin-bottom:14px; }
   .more span { display:inline-block; background:#fff; border:3px solid var(--navy); border-radius:40px; padding:10px 24px; margin:0 12px 14px 0; font-size:32px; font-weight:800; }
   .mb .more span { background:#16243d; }
+  /* ── 굵은 글씨 꼴(style:"bold") — 위 그림 절반 + 아래 검은 바탕 큰 흰 글씨(인스타 명언·정보 계정 꼴, 11/19) ── */
+  .bold .slide { background:#0b0b0b !important; background-image:none !important; color:#fff; }
+  .bold .slide::before { display:none; }
+  .bold .top { padding:0 56px; height:96px; }
+  .bold .tape { font-family:'Sans'; font-weight:800; font-size:28px; transform:none; border-radius:30px; padding:8px 22px; background:var(--hl); color:#0b0b0b; box-shadow:none; }
+  .bold .pg { color:#8d8d8d; }
+  .bold .foot { background:transparent; height:84px; padding:0 56px; }
+  .bold .foot .hd { font-size:28px; color:#cfcfcf; }
+  .bold .foot .ds { color:#7d7d7d; }
+  .hero-vis { position:absolute; left:0; right:0; top:0; height:640px; overflow:hidden; background:radial-gradient(ellipse at 40% 30%, #6b4a32 0%, #3a281b 55%, #1d140d 100%); }
+  .hero-vis::after { content:""; position:absolute; left:0; right:0; bottom:0; height:160px; background:linear-gradient(transparent, #0b0b0b); }
+  .hero-paper { position:absolute; left:110px; top:130px; width:880px; height:620px; background:#fbf6ea; border-radius:6px; transform:rotate(-3deg); box-shadow:0 30px 60px rgba(0,0,0,.55);
+    background-image:repeating-linear-gradient(to bottom, transparent 0 61px, #d9e3ef 61px 63px); background-position:0 34px; padding:56px 60px 0 96px; }
+  .hero-paper::before { content:""; position:absolute; left:70px; top:0; bottom:0; width:3px; background:#f0a8a3; }
+  .hero-paper .pl { font-family:'Pen'; font-size:78px; line-height:63px; color:#1d2a52; white-space:nowrap; }
+  .hero-paper .pl.r { color:#c8231c; }
+  .hero-paper .pl.hl span { background:linear-gradient(transparent 45%, rgba(255,225,77,.85) 45%); padding:0 8px; }
+  .hero-big { position:absolute; left:0; right:0; top:120px; text-align:center; }
+  .hero-big .n { font-size:200px; font-weight:800; color:var(--hl); letter-spacing:-0.05em; line-height:1; -webkit-text-stroke:6px #000; paint-order:stroke fill; }
+  .hero-big .c { font-size:44px; font-weight:800; color:#fff; margin-top:14px; }
+  .hero-txt { position:absolute; left:56px; right:48px; top:640px; bottom:96px; display:flex; flex-direction:column; justify-content:center; }
+  .hero-txt .k { font-size:38px; font-weight:800; color:var(--hl); margin-bottom:18px; }
+  .hero-txt .tl { font-size:96px; font-weight:800; line-height:1.17; letter-spacing:-0.045em; color:#fff; }
+  .hero-txt .tl .r, .hero-txt .tl em { color:var(--hl); font-style:normal; background:none; padding:0; }
+  .pt .no { font-size:150px; font-weight:800; color:var(--hl); line-height:1; letter-spacing:-0.04em; }
+  .pt .ph { font-size:88px; font-weight:800; line-height:1.18; margin-top:26px; letter-spacing:-0.04em; }
+  .pt .ph .r, .pt .ph em { color:var(--hl); font-style:normal; background:none; padding:0; }
+  .pt .pb { font-size:44px; font-weight:700; line-height:1.5; color:#d6d6d6; margin-top:34px; }
+  .pt .pb b { color:#fff; }
+  .pt .vs2 { display:flex; gap:20px; margin-top:44px; }
+  .pt .vs2 div { flex:1; border-radius:22px; padding:30px 28px; font-size:42px; font-weight:800; line-height:1.35; }
+  .pt .vs2 .bad { background:#2a2a2a; color:#bdbdbd; }
+  .pt .vs2 .good { background:var(--hl); color:#0b0b0b; }
+  .pt .vs2 small { display:block; font-size:26px; opacity:.8; margin-bottom:8px; }
+  .bold .box { background:#1c1c1c; box-shadow:none; }
+  .bold .box p { color:#e6e6e6; }
+  .bold .h .r, .bold .cta .r { color:var(--hl); }
+  .bold .cta .big2 { color:#fff; }
+  .psrc { position:absolute; left:0; right:0; bottom:0; font-size:26px; color:#8d8d8d; font-weight:700; }
 </style></head>
 <body><div id="root"></div>
 <script>
 const D = window.__DATA__;
 const MB = D.brand === "mb";
-document.body.className = MB ? "mb" : "rn";
+document.body.className = (MB ? "mb" : "rn") + (D.style === "bold" ? " bold" : "");
+document.body.style.setProperty("--hl", D.hl || (MB ? "#ffb340" : "#ffe14d"));
 const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
 const rich = (s) => esc(s).replace(/\[(.+?)\]/g, "<em>$1</em>").replace(/\{(.+?)\}/g, '<span class="r">$1</span>').replace(/\*(.+?)\*/g, "<b>$1</b>").replace(/\n/g, "<br>");
 const N = D.slides.length;
@@ -95,6 +135,15 @@ const html = D.slides.map((s, i) => {
       ${s.bars ? `<div class="bars"><div class="bt">${rich(s.bars.t)}</div>${s.bars.items.map((x) => `<div class="bar" style="--c:${x.color === "blue" ? "var(--blue)" : x.color === "gray" ? "#8a8178" : "var(--red)"}"><div class="bl">${rich(x.label)}</div><div class="bw"><div class="bf" style="width:${Math.round(x.pct / s.bars.max * 100)}%">${esc(x.text)}</div></div></div>`).join("")}</div>` : ""}
       ${s.box ? `<div class="box"><div class="bt">${esc(s.box.t)}</div><p>${rich(s.box.p)}</p></div>` : ""}
       ${s.swipe ? `<div class="swipe"><span>${esc(s.swipe)}</span></div>` : ""}`;
+  } else if (s.type === "hero") {
+    const v = s.visual || {};
+    const vis = v.kind === "big" ? `<div class="hero-big"><div class="n">${esc(v.big)}</div><div class="c">${rich(v.cap || "")}</div></div>`
+      : `<div class="hero-paper">${(v.lines || []).map((l, k) => `<div class="pl ${(v.red || []).includes(k) ? "r" : ""} ${(v.hl || []).includes(k) ? "hl" : ""}"><span>${esc(l)}</span></div>`).join("")}</div>`;
+    return `<div class="slide" id="s${i}"><div class="hero-vis">${vis}</div>${topBar(i)}<div class="hero-txt">${s.kicker ? `<div class="k">${rich(s.kicker)}</div>` : ""}<div class="tl">${(s.title || []).map(rich).join("<br>")}</div></div>${foot()}</div>`;
+  } else if (s.type === "point") {
+    b = `<div class="pt"><div class="no">${esc(s.no)}</div><div class="ph">${(s.head || []).map(rich).join("<br>")}</div>${s.body ? `<div class="pb">${rich(s.body)}</div>` : ""}
+      ${s.vs ? `<div class="vs2"><div class="bad"><small>${esc(s.vs.badLabel || "덜 받는 사람")}</small>${rich(s.vs.bad)}</div><div class="good"><small>${esc(s.vs.goodLabel || "더 받는 사람")}</small>${rich(s.vs.good)}</div></div>` : ""}</div>
+      ${s.src ? `<div class="psrc">${esc(s.src)}</div>` : ""}`;
   } else if (s.type === "table") {
     b = `<div class="h">${rich(s.title)}</div>${s.sub ? `<div class="sub">${rich(s.sub)}</div>` : ""}
       <table><tr>${s.head.map((h) => `<th>${esc(h)}</th>`).join("")}</tr>

@@ -32,7 +32,7 @@ try {
   await page.waitForFunction("window.__READY__ === true", null, { timeout: 20000 });
   // 넘친 글자 점검: 카드 안 요소가 카드 밖으로 나가면 알려 준다
   const over = await page.evaluate(() => [...document.querySelectorAll(".slide")].map((s, i) => {
-    const r = s.getBoundingClientRect(), body = s.querySelector(".body"), foot = s.querySelector(".foot").getBoundingClientRect();
+    const r = s.getBoundingClientRect(), body = s.querySelector(".body") || s.querySelector(".hero-txt"), foot = s.querySelector(".foot").getBoundingClientRect();
     const bad = [...body.querySelectorAll("*")].filter((e) => { const b = e.getBoundingClientRect(); return b.right > r.right - 20 || b.bottom > foot.top - 4; }).map((e) => (e.textContent || "").trim().slice(0, 24));
     return bad.length ? `${i + 1}장: ${[...new Set(bad)].slice(0, 3).join(" / ")}` : null;
   }).filter(Boolean));
