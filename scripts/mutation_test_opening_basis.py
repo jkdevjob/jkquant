@@ -15,7 +15,7 @@ mutations = [
 with tempfile.TemporaryDirectory(prefix='opening-basis-mutations-') as directory:
     target = Path(directory)
     for name in ('backtest_opening_rebreak.py', 'opening_basis_cost.py', 'test_opening_basis_cost.py',
-                 'test_opening_backfill.py', 'opening_backfill.py'):
+                 'test_opening_backfill.py', 'opening_backfill.py', 'scalp_cost.py'):
         shutil.copy2(root/name, target/name)
     engine = target/'backtest_opening_rebreak.py'
     original = engine.read_text(encoding='utf8')

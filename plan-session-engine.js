@@ -4,7 +4,10 @@
 const DEFAULTS={
   5:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01}
 };
-const FEE_RATE=.001;
+/* 공통 수수료율 — 설정 › 💸 수수료(users/{uid}.commonFee · jk-fee.js 의 규칙). 화면(운영 index · 플랜 plan · 백테 backtest)이 사용자 문서를 읽은 뒤
+   setFeeRate 로 넣는다(없으면 0.25%). 예전엔 토스 미국 0.1%(센트 내림 · 10$ 이하 무료)였다 — 2026-11-19 사용자: "수수료는 전부 똑같이 적용하고". */
+let FEE_RATE=.0025;
+function setFeeRate(r){const x=+r;if(r!==null&&r!==''&&Number.isFinite(x)&&x>=0&&x<=.02)FEE_RATE=x;return FEE_RATE;}
 /* 🤖 클로드 탭 5년 플랜 — '듀얼가드' (2026-11-08 사용자: "현재 5년 플랜 전략 이름도 정하고 · 넌 클로드 탭만 담당").
    TECL 은 변동성으로 크기를 정하고(역분산 · 변동성 가드), TQQQ 는 추세로 켜고 끈다(SMA225 · 추세 가드) — 두 겹의 가드.
    화면(plan.html)·모의 목록(index.html)이 이 이름과 판 번호를 함께 쓴다(같은 걸 두 군데서 세지 않는다). */
@@ -84,7 +87,7 @@ function alphaDecide(a){
 
 function alphaFee(q,p){
   const gross=Math.max(0,(+q||0)*(+p||0));
-  return gross<=10?0:Math.floor(gross*FEE_RATE*100)/100;
+  return gross*FEE_RATE;   // 거래금액 × 공통 수수료율 — 다른 전략(무매 · VR · 로테 · 섀넌 · 적립 · ASAP)과 같은 식
 }
 /* 운영 장부(듀얼가드 '현재 투자중'·운영 세션) — base(시작 잔고) + events(체결·현금·보정)를 날짜 → 기록 순서로 걸어 지금 수량·평단·현금을 센다.
    플랜 화면(plan.html alphaEventList·alphaLedgerCalc)과 포트폴리오(index.html)가 이 두 함수를 같이 쓴다 — 같은 장부를 두 곳에서 따로 세지 않는다.
@@ -114,7 +117,8 @@ function ledgerCalc(ledger){
       S.avgTecl=Number.isFinite(+e.snapshot.avgTecl)&&+e.snapshot.avgTecl>0?+e.snapshot.avgTecl:null;S.avgTqqq=Number.isFinite(+e.snapshot.avgTqqq)&&+e.snapshot.avgTqqq>0?+e.snapshot.avgTqqq:null;S.avgSgov=Number.isFinite(+e.snapshot.avgSgov)&&+e.snapshot.avgSgov>0?+e.snapshot.avgSgov:null;continue;
     }
     if(e.type!=='trade')continue;
-    const sym=String(e.symbol||'').toUpperCase(),q=Math.max(0,Math.floor(+e.qty||0)),p=Math.max(0,+e.price||0),fee=Math.max(0,+e.fee||0),k=sym==='TECL'?'tecl':sym==='TQQQ'?'tqqq':sym==='SGOV'?'sgov':null,ak=sym==='TECL'?'avgTecl':sym==='TQQQ'?'avgTqqq':sym==='SGOV'?'avgSgov':null;
+    /* 수수료 = 체결금액 × 공통 수수료율(alphaFee) — 기록의 fee 칸은 안 쓴다(율을 바꾸면 지난 체결도 같은 율 · 시작 잔고 base 는 매매가 아니라 수수료 없음) */
+    const sym=String(e.symbol||'').toUpperCase(),q=Math.max(0,Math.floor(+e.qty||0)),p=Math.max(0,+e.price||0),fee=e.seed?0:alphaFee(q,p),k=sym==='TECL'?'tecl':sym==='TQQQ'?'tqqq':sym==='SGOV'?'sgov':null,ak=sym==='TECL'?'avgTecl':sym==='TQQQ'?'avgTqqq':sym==='SGOV'?'avgSgov':null;
     if(!k||!ak||!q||!(p>0))continue;
     if(e.side==='buy'){
       const oldQ=S[k],oldAvg=S[ak];
@@ -164,7 +168,7 @@ function commonSeries(tecl,tqqq,sgov,endDate){
   return {dates,tecl:dates.map(d=>tm.get(d)),tqqq:dates.map(d=>qm.get(d)),sgov:dates.map(d=>{if(sm.has(d))lastS=sm.get(d);return lastS;})};
 }
 function initialLedger(start,principal){
-  return {base:{date:start,tecl:0,tqqq:0,sgov:0,cash:principal,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
+  return {base:{date:start,tecl:0,tqqq:0,sgov:0,cash:principal,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'common-v1'};
 }
 function evtId(date,n){return 'planpaper_'+String(date).replace(/-/g,'')+'_'+n;}
 function addCash(ledger,date,kind,amount,n){
@@ -322,7 +326,7 @@ function paperRunOpts(sess){
   return {horizon:+(sess&&sess.horizon)||+st.horizon||5,rules:r==='panic'?((sess&&sess.paper)?'panic':'base'):(r||'base'),
     startDate:String((sess&&sess.simStart)||''),principal:+st.startCapital||+st.principal||0,monthlyAdd:+st.monthlyAdd||0};
 }
-function paperRunSig(o){return ['r'+PAPER_RUN_VER,ENGINE_FP,o.horizon,o.rules,o.startDate,o.principal,o.monthlyAdd].join('|');}
+function paperRunSig(o){return ['r'+PAPER_RUN_VER,ENGINE_FP,o.horizon,o.rules,o.startDate,o.principal,o.monthlyAdd,'f'+FEE_RATE].join('|');}   // 공통 수수료율도 지문 — 바꾸면 저장본을 다시 재생
 function weekdayOnOrBefore(d){const t=new Date(String(d||'')+'T00:00:00Z');if(isNaN(t))return '';while(t.getUTCDay()===0||t.getUTCDay()===6)t.setUTCDate(t.getUTCDate()-1);return t.toISOString().slice(0,10);}
 /* 오늘 것인가 — 확정 상한(그날 포함)의 직전 평일 봉까지 들어 있으면 새 확정 봉이 있을 수 없다(주말엔 금요일 봉이면 됨 · 휴장일엔 시세를 받아 보고 그대로 둔다) */
 function paperRunFresh(upto,cut){const w=weekdayOnOrBefore(cut);return !!(upto&&w&&String(upto)>=w);}
@@ -407,6 +411,6 @@ async function paperRunGet(sess,io){
 }
 function paperRunForget(key){runMemo.delete(String(key||''));}
 
-g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,strategyLabel,panicStep,panicState,retiredReason,alphaDecide,yearDoneAt,FEE_RATE,alphaFee,ledgerEvents,ledgerCalc,replay,stats,
+g.JKPlanSessionEngine={VERSION:2,ORDER_SIZING_BASIS:'previous-settled-close',STRATEGY,DEFAULTS,ALPHA_RULES,RETIRED,alphaRules,strategyLabel,panicStep,panicState,retiredReason,alphaDecide,yearDoneAt,get FEE_RATE(){return FEE_RATE;},setFeeRate,alphaFee,ledgerEvents,ledgerCalc,replay,stats,
   PAPER_RUN_VER,PAPER_RUN_MAX,ENGINE_FP,paperRunOpts,paperRunSig,paperRunFresh,paperRunEnd,paperRunPack,paperRunUnpack,paperRunStored,paperRunGet,paperRunForget};
 })(typeof window!=='undefined'?window:globalThis);

@@ -57,7 +57,7 @@ function ctx(fnText){
     renderLivePanic:PX=>log.live.push(PX?JSON.stringify(PX):'null'),alphaPanicBlocked:why=>{log.blocked.push(why);c.pendingAlphaOrders=[];c.alphaOrderHold=why;},
     renderDualGuardStrip:o=>log.strip.push(JSON.parse(JSON.stringify(o))),planPortfolioStrips:()=>{log.bgStrips++;},activeAssetSession:()=>null,curPX:null};
   vm.createContext(c);c.window=c;vm.runInContext(SRC.eng,c);
-  vm.runInContext(constOf(SRC.plan,'const PATH_DEFAULTS={')+constOf(SRC.plan,'const ALPHA_FEE_RATE=')+'\n'+lineOf(SRC.plan,'const num=')+lineOf(SRC.plan,'const usd=')+lineOf(SRC.plan,'const usd2='),c);
+  vm.runInContext(constOf(SRC.plan,'const PATH_DEFAULTS={')+constOf(SRC.plan,'let ALPHA_FEE_RATE=')+'\n'+lineOf(SRC.plan,'const num=')+lineOf(SRC.plan,'const usd=')+lineOf(SRC.plan,'const usd2='),c);
   vm.runInContext('this.PATH_DEFAULTS=PATH_DEFAULTS;var alphaLedger={base:{},events:[]};var planCurRules="base";function alphaPanicNext(d,on){return curPX;}',c);
   for(const m of ['function alphaFee(q,p)','function indicatorSeries(a,n)','function realizedVol(rows,n)','function alphaEventList(ledger=alphaLedger)','function alphaDepositPending(ledger=alphaLedger)',
     'function planStrategy()','function planStrategyLabel()','function assetRulesOf(x)','function planStrategyLabelOf(x)','function alphaPanicApply(PX,sigma,decGuard)','function alphaRuleSet()','function alphaExplainBounds(target,current,band)'])
@@ -78,7 +78,8 @@ const bgOf=(C,s)=>({tq:s.tq,qq:s.qq,sq:s.sq,cash:s.cash,startCap:Math.max(1,s.st
 
 function check(S){
   const bad=[],t=(n,cond,info)=>{if(!cond)bad.push(n+(info?' · '+info:''));};
-  const NEWF=fnOf(S.plan,NEW_SIG),OLDF=fnOf(S.old,OLD_SIG);
+  /* 옛 함수 원문의 수수료 안내 글자(토스 0.1%)만 공통 수수료 안내로 — 2026-11-19 사용자 결정으로 바뀐 문구 한 줄이다(고정 원문 파일은 그대로 둔다) */
+  const NEWF=fnOf(S.plan,NEW_SIG),OLDF=fnOf(S.old,OLD_SIG).replace("현재가·수수료(0.1%)로 추정합니다.","현재가·공통 수수료('+(window.JKFee?JKFee.pct(ALPHA_FEE_RATE):ALPHA_FEE_RATE*100)+'% · 설정 › 💸 수수료)로 추정합니다.");
   const N=400;let diffA=0,firstA='',diffB=0,firstB='',touched=0,firstT='',holds=0,orderScenes=0,bgCalls=0;
   for(let k=1;k<=N;k++){
     const s=scene(k*7919);
@@ -105,7 +106,7 @@ function check(S){
   // ── C planBgTargets
   { const c={window:null,console:{warn(){}},sent:[],act:null,sessions:[],planDbState:null,planCurRules:'base',panicCalls:[]};
     vm.createContext(c);c.window=c;vm.runInContext(SRC.eng,c);
-    vm.runInContext(constOf(S.plan,'const ALPHA_FEE_RATE=')+'\n'+lineOf(S.plan,'const todayISO=')+fnOf(S.plan,'function alphaFee(q,p)')+fnOf(S.plan,'function alphaEventList(ledger=alphaLedger)')
+    vm.runInContext(constOf(S.plan,'let ALPHA_FEE_RATE=')+'\n'+lineOf(S.plan,'const todayISO=')+fnOf(S.plan,'function alphaFee(q,p)')+fnOf(S.plan,'function alphaEventList(ledger=alphaLedger)')
       +fnOf(S.plan,'function alphaDepositPending(ledger=alphaLedger)')+fnOf(S.plan,'function assetRulesOf(x)')+fnOf(S.plan,'function planLedgerFrom(o,all)')+fnOf(S.plan,'function assetLedgerSeed(date,cap)')
       +'\nvar alphaLedger={base:{},events:[]};function plusYears(s,n){return s;}function activeAssetSession(){return act;}function assetSessionList(){return sessions;}'
       +'function planLivePanic(x,d,on,start){panicCalls.push([x?x.id:"cur",d,on,start]);return {live:true,state:{pf:false,ps:false},guard:"ON",sigma:.5};}\n'

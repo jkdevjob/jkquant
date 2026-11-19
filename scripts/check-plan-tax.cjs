@@ -10,7 +10,9 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const root=path.join(__dirname,'..');
 const SRC={mod:fs.readFileSync(path.join(root,'plan-tax-check.js'),'utf8'),plan:fs.readFileSync(path.join(root,'plan.html'),'utf8'),eng:fs.readFileSync(path.join(root,'plan-session-engine.js'),'utf8'),idx:fs.readFileSync(path.join(root,'index.html'),'utf8')};
-const load=js=>{const m={exports:{}};vm.runInNewContext(js,{module:m});return m.exports;};
+/* 세금 점검 수수료 = 거래금액 × 공통 율(엔진 alphaFee · 2026-11-19). 아래 장부의 기록 수수료(0.6 · 1.05 · 10 …)가 정확히 0.1% 라
+   엔진 율을 0.1% 로 두면 손으로 센 값이 그대로다 — 율이 실제로 쓰이는지는 A4d(0.25%)가 본다 */
+const load=(js,rate=0.001)=>{const m={exports:{}},c={module:m};vm.runInNewContext(SRC.eng+'\nJKPlanSessionEngine.setFeeRate('+rate+');\n'+js,c);return m.exports;};
 const fnOf=(src,marker)=>{const s=src.indexOf(marker);assert(s>=0,'없음: '+marker);let i=src.indexOf('{',s),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(s,i+1);}throw Error(marker);};
 const lineOf=(src,start)=>{const s=src.indexOf(start);assert(s>=0,'없음: '+start);return src.slice(s,src.indexOf('\n',s));};
 const near=(a,b,e=0.02)=>Math.abs(a-b)<=e;
@@ -33,6 +35,8 @@ function check(S){
   const B1=T.build(L1,T.fxFn(FX1)),s1=B1.sells[0];
   t('A4 선입선출 원화 312,116 · 달러 248.65',near(s1.fifo.krw,312116)&&near(s1.fifo.usd,248.65),JSON.stringify(s1.fifo));
   t('A4b 이동평균 원화 269,398.5 · 달러 223.5',near(s1.avg.krw,269398.5)&&near(s1.avg.usd,223.5),JSON.stringify(s1.avg));
+  { const T25=load(S.mod,0.0025),s25=T25.build(L1,T25.fxFn(FX1)).sells[0];
+    t('A4d 공통 율 0.25% — 기록 칸(0.6 · 1.05) 대신 율로: 선입선출 달러 248.65 − (매수 수수료 차 0.9 의 절반 + 매도 수수료 차 1.575) = 246.625',near(s25.fifo.usd,246.625,1e-9),JSON.stringify(s25.fifo)); }
   t('A4c 남은 5주 원가(선입선출 = 두 번째 lot 절반 · 435,435원)',B1.pos.TECL.qty===5&&B1.pos.TECL.lots.length===1&&near(B1.pos.TECL.lots[0].costKrw,435435),JSON.stringify(B1.pos.TECL.lots));
   // A5 12-31 체결 매도는 다음 해(결제일 01-04) 세금
   const L2={base:{date:'2026-01-02',tecl:10,avgTecl:50},events:[tr('2026-12-31','TECL','sell',10,80,0.8)]};
@@ -78,9 +82,10 @@ function check(S){
     const I={key:'I',label:'무한매수법',tab:'inf',kind:'trades',harvest:false,why:'평단으로 매도 시점을 정하는 전략',prices:{SOXL:5},expect:{SOXL:100},
       trades:[{date:'2026-01-10',symbol:'SOXL',side:'buy',qty:100,price:20,fee:0}]};
     const R=T.portfolio({sources:[P,V,I],fxSeries:FXC,year:'2026'}),S=R.suggestions;
-    t('A12 상계: 실현 300만(듀얼가드) + 10만(섀넌) = 310만 · 공제 한 번 → 초과 60만 · 세금 13.2만',R.mode==='offset'&&near(R.total.fifo,3100000)&&near(R.room.fifo,-600000)&&near(R.tax.fifo,132000),JSON.stringify({t:R.total,r:R.room,x:R.tax}));
-    t('A12b 제안: 섀넌 USD 5주(세금 −11,099) → 듀얼가드 TQQQ 55주(−120,901 · 순 116,501) · 무매 SOXL 은 손실이 더 커도 제안 없음(규칙이 바뀌는 전략)',
-      S.length===2&&S[0].key==='V'&&S[0].symbol==='USD'&&S[0].qty===5&&near(S[0].taxKrw,11099)&&S[1].key==='P'&&S[1].symbol==='TQQQ'&&S[1].qty===55&&near(S[1].taxKrw,120901)&&near(S[1].netKrw,116501)&&!S.some(x=>x.key==='I'),
+    /* 듀얼가드 장부 수수료는 기록 칸(0) 대신 공통 율(이 시험 0.1%) — TECL 매도 8,000$ × 0.1% = 8$ → 실현 2,992$ (2026-11-19) */
+    t('A12 상계: 실현 299.2만(듀얼가드 · 매도 수수료 8$) + 10만(섀넌) = 309.2만 · 공제 한 번 → 초과 59.2만 · 세금 13.024만',R.mode==='offset'&&near(R.total.fifo,3092000)&&near(R.room.fifo,-592000)&&near(R.tax.fifo,130240),JSON.stringify({t:R.total,r:R.room,x:R.tax}));
+    t('A12b 제안: 섀넌 USD 5주(세금 −11,099 · 순 10,199) → 듀얼가드 TQQQ 54주(남은 초과 541,550 을 덮는 최소 · −119,141 · 순 114,821) · 무매 SOXL 은 손실이 더 커도 제안 없음(규칙이 바뀌는 전략)',
+      S.length===2&&S[0].key==='V'&&S[0].symbol==='USD'&&S[0].qty===5&&near(S[0].taxKrw,11099)&&near(S[0].netKrw,10199)&&S[1].key==='P'&&S[1].symbol==='TQQQ'&&S[1].qty===54&&near(S[1].taxKrw,119141)&&near(S[1].netKrw,114821)&&!S.some(x=>x.key==='I'),
       JSON.stringify(S.map(x=>[x.key,x.symbol,x.qty,Math.round(x.taxKrw),Math.round(x.netKrw)])));
     const pI=R.positions.find(p=>p.key==='I');
     t('A12c 지금 팔면: 무매 SOXL −150만원 · 제안에서 뺌(이유 그대로)',pI&&pI.harvest===false&&pI.why.includes('평단')&&near(pI.unreal.fifo.krw,-1500000),JSON.stringify(pI)); }
@@ -113,7 +118,7 @@ function check(S){
     &&!/function renderTaxCheck/.test(S.plan)&&!/<script src="\/plan-tax-check\.js/.test(S.plan)&&!/renderTaxCheck/.test(al)&&!/alphaTaxSection/.test(S.plan));
   t('B2 듀얼가드 현재 계좌 카드에 포트폴리오로 가는 안내(창 밖으로 열림)',/id="alphaTaxMoved"[^>]*>🧾 연말 세금 점검\(해외주식 양도세\)은 <a href="\/portfolio" target="_top">💰 포트폴리오<\/a>/.test(S.plan)
     &&S.plan.indexOf('id="alphaTaxMoved"')>S.plan.indexOf('id="alphaAccountSection"')&&S.plan.indexOf('id="alphaTaxMoved"')<S.plan.indexOf('id="alphaEvidenceSection"'));
-  t('B3 포트폴리오가 새 모듈(v=2)을 불러 portfolio() 로 센다',S.idx.includes('<script src="/plan-tax-check.js?v=2"></script>')&&/T\.portfolio\(\{sources, fxSeries:fxDays, year\}\)/.test(fnOf(S.idx,'function pfTaxCheck('))
+  t('B3 포트폴리오가 새 모듈(v=3)을 불러 portfolio() 로 센다',S.idx.includes('<script src="/plan-tax-check.js?v=3"></script>')&&/T\.portfolio\(\{sources, fxSeries:fxDays, year\}\)/.test(fnOf(S.idx,'function pfTaxCheck('))
     &&/pfTaxHtml\(PF\.tax,T\)/.test(fnOf(S.idx,'function pfRender()')));
   return bad;
 }
@@ -122,6 +127,8 @@ const bad=check(SRC);
 if(bad.length){console.error('FAIL\n  '+bad.join('\n  '));process.exit(1);}
 console.log('PASS 포트폴리오 연말 세금 점검(A11~A14 · B) · 결제일 T+1/T+2 · 마지막 체결일 · 환율 찾기 · 선입선출/이동평균 원화 실현손익(312,116 / 269,398.5) · 12-31 매도 다음 해 · 수량 = 화면 장부 · 공제 채우기 n 최대 · 손실 상계 298,188 · 환율 함정 · 평단 미등록 · 화면 연결');
 const MUT=[
+  ['수수료: 기록 칸(옛 코드 · 공통 율 아님)','mod',s=>s.replace("fee=e.seed?0:Math.max(0,+F(q,p)||0);","fee=Math.max(0,+e.fee||0);")],
+  ['수수료: 엔진 율 대신 토스 0.1% 고정(옛 코드)','mod',s=>s.replace("if(E&&typeof E.alphaFee==='function')return E.alphaFee(q,p);","const gross=Math.max(0,(+q||0)*(+p||0));return gross<=10?0:Math.floor(gross*0.001*100)/100;")],
   ['시작잔고 원가를 지금 환율로(환차손익 무시)','mod',s=>s.replace("const cu=avg!=null?q*avg:0,r=fx(settleDate(d)||d);","const cu=avg!=null?q*avg:0,r=fx('9999-12-31');")],
   ['결제일 = 체결일(T+1 무시)','mod',s=>s.replace("let n=String(trade)>='2024-05-28'?1:2;","let n=0;")],
   ['선입선출 대신 이동평균 원가','mod',s=>s.replace("fifo:{usd:pu-fu,krw:pk-fk}","fifo:{usd:pu-au,krw:pk-ak}")],

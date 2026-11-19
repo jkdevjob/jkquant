@@ -1,11 +1,14 @@
 // GPT 단타 ↔ 클로드 단타 대결 공용 계산기.
 // 실시간으로 남은 장부만 입력으로 받고, 백테스트/사후 재구성 값은 이 모듈이 만들지 않는다.
+import {scalpCostPct} from "./_scalp_cost.js";
 export const DUEL_START="2026-10-05";
 export const DUEL_TABS=["opening","daytrading","crypto","soxl"];
-export const COSTS={
-  gpt:{opening:0.25,daytrading:0.25,crypto:0.14,soxl:0.20},
-  claude:{opening:0.25,daytrading:0.15,crypto:0.14,soxl:0.20}
-};
+// 같은 비용표(왕복 %) = 공통 수수료(설정 › 💸 수수료) × 2 + 수수료 아닌 몫(_scalp_cost.js). 2026-11-19 전: 국내 0.25 · ETF 0.15 · 코인 0.14 · 미국 0.20.
+// 대결은 남은 체결가로 매번 다시 세는 비교라 모든 날을 지금 율 하나로 센다(원본 장부는 건드리지 않는다).
+export const COSTS=Object.freeze({
+  gpt:Object.freeze({get opening(){return scalpCostPct("krDay");},get daytrading(){return scalpCostPct("krDay");},get crypto(){return scalpCostPct("coin");},get soxl(){return scalpCostPct("us");}}),
+  claude:Object.freeze({get opening(){return scalpCostPct("krDay");},get daytrading(){return scalpCostPct("etfFair");},get crypto(){return scalpCostPct("coin");},get soxl(){return scalpCostPct("us");}})
+});
 export const TOTAL_WEIGHT=0.25;
 export const WIN_EDGE_PCT=0.01;
 
@@ -125,7 +128,7 @@ export function buildDuel({claudeRecords,gptTrades,gptCoverage,start=DUEL_START}
   const cm=metrics(totalDays.map(r=>({date:r.date,pnlPct:r.claudePct})));
   return {
     start,rulesVersion:1,
-    costs:COSTS,totalWeight:TOTAL_WEIGHT,winEdgePct:WIN_EDGE_PCT,
+    costs:JSON.parse(JSON.stringify(COSTS)),totalWeight:TOTAL_WEIGHT,winEdgePct:WIN_EDGE_PCT,
     tabs,
     total:{days:totalDays,record:{gpt:gw,claude:cw,draw},gpt:gm,claude:cm},
     latest:dates.length?dates[dates.length-1]:null

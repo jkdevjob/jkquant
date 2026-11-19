@@ -5,6 +5,8 @@
 
 import {paperPermission} from './_paper-trading.js';
 import {openingOwnedQty} from './_opening-execution.js';
+/* 내부 모의가 그 신호에 뺀 왕복 마찰(기록값 · 거래세 0.20 + 공통 수수료 × 2 + 호가 · 2026-11-19 ~) — 기록이 없는 옛 신호만 그때 가정 0.25. 주문 수량과는 무관(표시 · 대조용) */
+function paperCostOf(x){const v=x&&x.evidence&&x.evidence.frictionPct!=null?+x.evidence.frictionPct:(x&&x.friction&&x.friction.totalPct!=null?+x.friction.totalPct:NaN);return Number.isFinite(v)?v:0.25;}
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const KRCODE=/^(?:\d{6}|\d{4}[A-Z]\d)$/;
@@ -76,7 +78,7 @@ async function kisOrder(origin,env,side,x,qty,date){
   const paperTime=side==="buy"?+x.entryTime||0:+x.exitTime||0;
   const rec={
     signalId:id,strategy:"opening",date,side,code:x.code,name:x.name||x.code,qty,
-    paper:{time:paperTime,fillPrice:paperPrice,fillModel:"completed 1m close",roundTripCostAssumptionPct:0.25},
+    paper:{time:paperTime,fillPrice:paperPrice,fillModel:"completed 1m close",roundTripCostAssumptionPct:paperCostOf(x)},
     submittedAt:null,
     vts:{ok:false,env:"vts",priceType:"market",orderNo:"",msg:""}
   };
@@ -139,7 +141,7 @@ export async function onRequestPost({request,env}){
   ];
   const amount=budget({...env,SCALPING_VTS_BUDGET:permission.budget}),events=stale.map(({side,x,ageMin})=>({
     signalId:signalId(date,x,side),strategy:"opening",date,side,code:x.code,name:x.name||x.code,qty:0,
-    paper:{time:eventHm(x,side),fillPrice:side==="buy"?+x.entryPrice||0:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:0.25},
+    paper:{time:eventHm(x,side),fillPrice:side==="buy"?+x.entryPrice||0:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:paperCostOf(x)},
     submittedAt:null,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",staleBlocked:true,msg:"오래된 신호 주문 차단 ("+ageMin+"분 경과, 최대 "+MAX_SIGNAL_AGE_MIN+"분)"}
   }));
   try{
@@ -153,7 +155,7 @@ export async function onRequestPost({request,env}){
       catch(e){
         events.push({
           signalId:signalId(date,x,"sell"),strategy:"opening",date,side:"sell",code:x.code,name:x.name||x.code,qty:0,
-          paper:{time:+x.exitTime||0,fillPrice:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:0.25},
+          paper:{time:+x.exitTime||0,fillPrice:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:paperCostOf(x)},
           submittedAt:null,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",msg:"매도 전 체결수량 조회 실패: "+String(e.message||e)}
         });
         continue;
@@ -163,7 +165,7 @@ export async function onRequestPost({request,env}){
       if(!(pos.qty>0)){
         events.push({
           signalId:signalId(date,x,"sell"),strategy:"opening",date,side:"sell",code:x.code,name:x.name||x.code,qty:0,
-          paper:{time:+x.exitTime||0,fillPrice:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:0.25},
+          paper:{time:+x.exitTime||0,fillPrice:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:paperCostOf(x)},
           submittedAt:null,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",msg:"매도 생략 — "+(pos.error||"이 전략의 VTS 보유수량 없음")}
         });
         continue;

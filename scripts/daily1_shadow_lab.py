@@ -34,6 +34,10 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from backtest_crypto_orb import crypto_archive_files
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 KST = ZoneInfo("Asia/Seoul")
 NY = ZoneInfo("America/New_York")
@@ -42,10 +46,11 @@ OUT = DATA / "daily1-shadow"
 DESIGN_END = "2026-09-30"
 PAPER_START = "2026-10-01"
 
-KR_FIXED_COST = 0.23
+# 왕복 비용 = 공통 수수료 × 2 + 세금 · 미끄러짐(scalp_cost.py). 2026-11-19 전 국내 0.23 · 코인 0.14 · 미국 0.20.
+KR_FIXED_COST = SC.cost_pct("kr")
 KR_TICKS_PER_SIDE = 2.5
-CRYPTO_FRICTION = 0.14
-SOXL_FRICTION = 0.20
+CRYPTO_FRICTION = SC.cost_pct("coin")
+SOXL_FRICTION = SC.cost_pct("us")
 
 META = {
     "opening": {
@@ -328,7 +333,7 @@ def day_candidate(day, row):
             continue
         ent_i = i + 1
         entry = a[ent_i]["o"]
-        ex = sim_exit(a, ent_i, entry, .8, 1.6, 1510, 60, .25)
+        ex = sim_exit(a, ent_i, entry, .8, 1.6, 1510, 60, SC.cost_pct("krDay"))   # 데이트레이딩 마찰 = 세금 0.20 + 미끄러짐 0.02 + 공통 수수료 × 2 (2026-11-19 전 0.25)
         if not ex:
             continue
         return {

@@ -8,10 +8,13 @@
 import { claudeAuthorized } from "./_claude_auth.js";
 import { MAIN_DEFAULT, VTS_OFF, coinDaysNeeded, etfMax24, loadMainEvents, mainFor, openingCounts, openingExit, openingExitPrices, openingPick } from "./_claude_main.js";
 import { krxDay } from "./_krx_calendar.js";
+import { scalpCostPct } from "./_scalp_cost.js";
+import { useOwnerFee } from "./_owner_fee.js";
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WORKER="https://jkquant-opening-scheduler.mumae4.workers.dev";
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
-const KR_COST=0.23, ETF_COST=0.13, COIN_COST=0.14, US_COST=0.20;   // 왕복 비용 %(연구와 같은 값)
+// 왕복 비용 % = 공통 수수료(설정 › 💸 수수료) × 2 + 수수료 아닌 몫(_scalp_cost.js · 밤 계산 scripts/scalp_cost.py 와 같은 값). 2026-11-19 ~
+const COIN_COST=()=>scalpCostPct("coin"), US_COST=()=>scalpCostPct("us");
 const COIN_STOP_SLIP=0.1, COIN_ENTRY_SLIP=0.05;                  // 손절폭·추세 평균·자금은 그날 ③ 메인 변수(_claude_main.js)
 
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
@@ -55,10 +58,10 @@ async function csvLast(path,n=2){
 
 // ── 정산 기준(2026-10-22 사용자: "모의계좌로 판단하지 말고 그냥 모의계좌에 주문한 건으로 정산해야지 · 지금은 모의계좌가 안 되니까") ──
 // ①②⑤ 손익은 모의투자 체결 여부와 상관없이 '전략이 낸 주문'(그날 메인이 고른 종목 · 신호)을 공식 시가 · 종가로 정산한다
-// (장 마감 전이면 지금 가격으로 평가). 비용은 밤 계산과 같은 식(① 0.23% + 1.5틱 × 2 · ② 0.03% + 2틱 · ⑤ 0.03% + 반 호가).
+// (장 마감 전이면 지금 가격으로 평가). 비용은 밤 계산과 같은 식(① 세금 0.20% + 수수료(공통 율 × 2) + 1.5틱 × 2 · ② 수수료 + 2틱 · ⑤ 수수료 + 반 호가).
 // 모의투자 체결 · 거절은 측정용으로 줄에 같이 적기만 한다(vts). 시세는 /api/quote(국내 = 네이버 일봉) 그날 봉.
 export const SETTLE_BASIS="orders";
-export function etfRuleCost(p){p=+p;return 0.03+2*(p>=2000?5:1)/p*100;}
+export function etfRuleCost(p){p=+p;return scalpCostPct("etf")+2*(p>=2000?5:1)/p*100;}
 export const barOn=(q,d)=>((q&&q.ohlc)||[]).find(x=>x.date===d)||null;
 // 모의투자 측정용 한 줄 — 정산에는 쓰지 않는다
 export function vtsNote(o,fill,skipped=""){
@@ -88,6 +91,7 @@ export function openingRows(st,prices,bars={},hm=2400,date=""){
 const sgnPct=v=>v==null||!isFinite(v)?"—":(v>=0?"+":"")+(+v).toFixed(2)+"%";
 export function etfNoBuyNote(buy){
   const th=String(((buy&&buy.rule)||{}).dropMaxPct??-3).replace("-","−"),dp=sgnPct(buy&&buy.dropPct);
+  if(buy&&buy.decisionReason==="main_config_unavailable")return "15:21 예상 전일 대비 "+dp+" — 메인 기록을 못 읽어 판단 안 함(점검)";   // 2026-11-19~ 옛 기본 규칙으로 판단하지 않는다
   if(buy&&buy.decisionReason==="no_signal_next_day_closed_max24h"){
     const n=String(((buy.max24||{}).next)||"");
     return "15:21 예상 전일 대비 "+dp+" — 기준 "+th+"% 이하지만 다음 날"+(n?"("+n.slice(5,7)+"/"+n.slice(8,10)+")":"")+" 휴장 · 최대 24시간이라 매수 없음";
@@ -120,8 +124,8 @@ export function etfRows(todaySt,prevSt,prevDate,nowPrice,bars={},hm=2400,today="
   return rows;
 }
 // ⑤ 종가 30분: 오늘 15:00 판단 · 매수 → 15:30 종가 동시호가 매도(당일 청산). 비용은 밤 계산 close30_trades 와 같은 식 —
-// 수수료 0.015%×2 + 15:00 매수 반 호가(종가 동시호가 매도는 호가 비용 없음). 모의투자 체결가에도 같은 값을 뺀다(② 와 같은 보수적 처리).
-export function c30CostPct(px){px=+px;return px>0?0.03+((px>=2000?5:1)/2)/px*100:0.03;}
+// 수수료(공통 율 × 2 · 2026-11-19 전 0.015%×2) + 15:00 매수 반 호가(종가 동시호가 매도는 호가 비용 없음). 모의투자 체결가에도 같은 값을 뺀다(② 와 같은 보수적 처리).
+export function c30CostPct(px){px=+px;const f=scalpCostPct("etf");return px>0?f+((px>=2000?5:1)/2)/px*100:f;}
 const C30_NAME="KODEX 코스닥150레버리지";
 const sgn=v=>v==null||!isFinite(v)?"—":(v>=0?"+":"")+(+v).toFixed(2)+"%";
 export function close30Rows(st,nowPrice,bar={},hm=2400){
@@ -130,7 +134,8 @@ export function close30Rows(st,nowPrice,bar={},hm=2400){
   if(buy.decisionReason==="krx_holiday")return [{code:"233740",name:C30_NAME,status:"매매 없음",note:"국내 휴장일"}];
   const th=String((buy.rule&&buy.rule.th)??0).replace("-","−");
   if(!buy.signal)return [{code:"233740",name:C30_NAME,status:"매매 없음",sofarPct:buy.sofarPct,
-    note:buy.decisionReason==="price_missing"||String(buy.decisionReason||"").startsWith("quote_failed")?"15:00 가격을 못 받음 — "+String(buy.decisionReason||""):"15:00 전일 대비 "+sgn(buy.sofarPct)+" (기준 "+th+"% 미만 아님)"}];
+    note:buy.decisionReason==="price_missing"||String(buy.decisionReason||"").startsWith("quote_failed")?"15:00 가격을 못 받음 — "+String(buy.decisionReason||"")
+      :buy.decisionReason==="main_config_unavailable"?"15:00 전일 대비 "+sgn(buy.sofarPct)+" — 메인 기록을 못 읽어 판단 안 함(점검)":"15:00 전일 대비 "+sgn(buy.sofarPct)+" (기준 "+th+"% 미만 아님)"}];
   // 주문한 건(15:00 신호)을 15:00 판단 가격 → 공식 종가로(모의투자 체결과 상관없이)
   const bp=+((buy.quote||{}).price)||null,sp=hm>=1531&&+(bar||{}).close>0?+bar.close:null,ref=sp||nowPrice;
   const note=vtsNote(buy.order,((st.c30_reconcile||{}).fills||{}).buy,buy.ordersSkipped);
@@ -170,7 +175,18 @@ export function coinBreakoutDay(h,bars,last,p=MAIN_DEFAULT.crypto.params){
   const hm=String(b.candle_date_time_kst||"").slice(11,16);
   return {hold:true,action:stopped?"손절":"돌파 매수",status:stopped?"손절 (−"+stopPct+"%)":"보유중 — "+hm+" 돌파 매수, 다음 09:00 매도",
     buyTime:hm,buyPrice:entry,stopPrice:stop,level:h.level,stopped,
-    pnlPct:stopped?(-stopPct-COIN_STOP_SLIP-COIN_COST):(last?pct(last,entry)-COIN_COST:null)};
+    pnlPct:stopped?(-stopPct-COIN_STOP_SLIP-COIN_COST()):(last?pct(last,entry)-COIN_COST():null)};
+}
+// 끝난 업비트 하루 day 를 받은 60분봉(hourly · 순서 상관없음)이 다 덮는지 — 봉 개수(24)로 보지 않는다: 업비트 점검(거래 멈춤) 시간은 봉이 없는 게 정상이다
+// (2026-11-09 03~06시 · 2018~ ETH 58일 · BTC 54일). 받은 봉이 그 하루 시작(09:00) 전부터 있고(앞이 안 잘림) 그 하루 마지막 시간(다음 날 08시) 봉이나 그 뒤 봉까지 있으며,
+// 빈 시간이 COIN_GAP_MAX 를 넘지 않으면 덮었다고 본다. 밤 계산(claude_lab._upbit_days · UPBIT_GAP_MAX)과 같은 정의 — 그 하루 봉은 업비트 일봉과 같아진다.
+export const COIN_GAP_MAX=12;
+export function coinDayCovered(hourly,day){
+  const s=Date.parse(day+"T09:00:00+09:00");
+  const ts=(Array.isArray(hourly)?hourly:[]).map(b=>Date.parse(String(b&&b.candle_date_time_kst)+"+09:00")).filter(Number.isFinite);
+  if(!ts.length||!Number.isFinite(s))return false;
+  const inDay=new Set(ts.filter(x=>x>=s&&x<s+864e5)).size;
+  return Math.min(...ts)<=s&&Math.max(...ts)>=s+23*36e5&&24-inDay<=COIN_GAP_MAX;
 }
 // 60분봉(최신순) 중 업비트 하루 day(YYYY-MM-DD, 09:00 시작)에 속하고 이미 시작한 봉(진행 중 봉 포함 — 실시간 돌파는 그 순간 일어난다)을 오래된 순으로
 export function barsOfDay(hourly,day,nowMs=Date.now()){
@@ -247,7 +263,7 @@ export function soxlLive(nx,q,last){
   const session=intra&&intra.post?"애프터마켓":intra&&intra.regular?"정규장":intra&&intra.pre?"프리마켓":"장 마감";
   Object.assign(row,{signalBasedOn:nx.basedOn,rsi2:nx.rsi2,ma200:nx.ma,signalClose:nx.close,nowPrice:now,session});
   const started=!!(sess&&sess.date>nx.basedOn&&sess.open>0);
-  const half=0.1;
+  const half=US_COST()/2;   // 비용 절반(매수 · 매도 한쪽) — 공통 수수료 × 2 의 반
   if(nx.action==="buy"){
     row.hold=true;
     if(started){Object.assign(row,{status:"보유중 (시가 매수)",buyTime:sess.date+" 시가",buyPrice:sess.open,pnlPct:now?pct(now,sess.open)-half:null});}
@@ -276,11 +292,11 @@ export function prevKrDay(d){let x=d;for(let i=0;i<15;i++){x=addDays(x,-1);if(!k
 function wl(xs){return {wins:xs.filter(x=>x>0).length,losses:xs.filter(x=>x<=0).length};}
 // ① 규칙 칸 — 메인 매매일인데 모의투자 체결이 하나도 없는 날(계좌 현금 부족 · 주문 거절).
 // 2026-10-22: 매수가능 0원이라 메인 3종목을 모두 못 샀는데 칸이 '매매없음'으로 보였다. 밤 계산은 그날을 규칙(연구 signals 의 pnl)으로 매매일로 센다 →
-// 같은 식으로: 메인이 고른 종목(깊은 갭 topK · gapMax 이하)의 그날 시가 → 종가(장 마감 전이면 지금 가격) − (0.23% + 1.5틱 × 2), 종목 평균.
+// 같은 식으로: 메인이 고른 종목(깊은 갭 topK · gapMax 이하)의 그날 시가 → 종가(장 마감 전이면 지금 가격) − (세금 0.20% + 수수료 + 1.5틱 × 2), 종목 평균.
 // bars: {종목코드: {open, close}} · final: 그날 종가가 확정됐는지. 메인 매매일이 아니거나 가격이 하나라도 없으면 null.
 const KR_TICK=[[2000,1],[5000,5],[20000,10],[50000,50],[200000,100],[500000,500]];
 export function krTick(p){for(const [u,t] of KR_TICK)if(p<u)return t;return 1000;}
-export function d1CostPct(p){return 0.23+2*1.5*krTick(p)/p*100;}
+export function d1CostPct(p){return scalpCostPct("kr")+2*1.5*krTick(p)/p*100;}
 export function openingRuleCell(pre,P,bars,final,date="",st=null){
   const b=pre&&pre.breadth;
   if(!b||b.qualified==null||!openingCounts(P,b.qualified))return null;
@@ -324,7 +340,7 @@ export function openingTodayCell(t,closed,holiday,rule=null){
   return {v:q.tabPct,final:sold,src:"rule",trades:q.trades,wins:q.wins,losses:q.losses};   // 매매 근거는 ① 탭에(칸은 짧게)
 }
 // ② 칸 d = 매수일(d 의 직전 거래일) 종가에 사서 d 아침 시가에 판 결과 — 밤 계산 ETF 칸과 같은 식(claude_lab etf_variant):
-// (d 시가 ÷ 매수일 종가 − 1) − (0.03% + 2틱). 매수했는지는 매수일 15:21 판단(signal) — 모의투자 매수가 안 됐어도(현금 부족 등) 규칙 결과를 보이고 그 사실을 적는다.
+// (d 시가 ÷ 매수일 종가 − 1) − (수수료 + 2틱). 매수했는지는 매수일 15:21 판단(signal) — 모의투자 매수가 안 됐어도(현금 부족 등) 규칙 결과를 보이고 그 사실을 적는다.
 // buySt · sellSt: 매수일 · d 의 장부 단계, bars: {buyClose, sellOpen} 233740 일봉 값(없으면 체결가 → 15:21 예상가로 대신하고 적는다)
 export function etfDayCell(buySt,sellSt,bars,holiday){
   if(holiday)return {v:"holiday",final:true,src:"vts"};
@@ -334,12 +350,12 @@ export function etfDayCell(buySt,sellSt,bars,holiday){
   const bf=((buySt.etf_reconcile||{}).fills||{}).closeBuy||{},sf=(((sellSt||{}).etf_reconcile||{}).fills||{}).openSell||{};
   const bc=+((bars||{}).buyClose)||(bf.qty>0?+bf.avgPrice:+((b.quote||{}).expectedPrice)),so=+((bars||{}).sellOpen)||(sf.qty>0?+sf.avgPrice:0);
   if(!(bc>0&&so>0))return null;                                          // 시가 전이거나 값이 없다
-  const tick=bc>=2000?5:1,v=pct(so,bc)-(0.03+2*tick/bc*100),notes=[];
+  const v=pct(so,bc)-etfRuleCost(bc),notes=[];
   if(!(bf.qty>0))notes.push("모의투자 매수 안 됨 — 규칙대로 계산");
   if(!(+((bars||{}).buyClose)>0))notes.push("매수일 종가 대신 "+(bf.qty>0?"체결가":"15:21 예상가"));
   return {v,final:true,src:"rule",trades:1,...wl([v]),note:notes.join(" · ")};
 }
-// ⑤ 칸 d = d 15:00 매수 → d 15:30 종가 매도 — 밤 계산 close30 칸과 같은 식: (종가 ÷ 15:00 가격 − 1) − (0.03% + 반 호가).
+// ⑤ 칸 d = d 15:00 매수 → d 15:30 종가 매도 — 밤 계산 close30 칸과 같은 식: (종가 ÷ 15:00 가격 − 1) − (수수료 + 반 호가).
 // 15:00 가격 = 그날 15:00 판단 때 받은 가격(c30_buy.quote.price) · 종가 = 15:40 체결 조회의 종가 동시호가 매도 체결가 또는 그날 일봉 종가(close).
 // 종가 전이면 지금 가격(now)으로 평가하고 '확정 전'. 매수 신호가 났는데 모의투자 매수가 안 됐어도(현금 부족 등) 규칙 결과를 보이고 그 사실을 적는다.
 export function close30DayCell(st,px,holiday){
@@ -369,7 +385,7 @@ export function coinDayCell(ud,coins,P,nowMs=Date.now()){
     if(i<0)return null;
     const h=coinHoldToday(daily.slice(i),P);if(!h)return null;
     const bars=barsOfDay(c.hourly,ud,nowMs);
-    if(final&&bars.length<24)return null;                                // 끝난 하루인데 봉이 모자라면 계산하지 않는다
+    if(final&&!coinDayCovered(c.hourly,ud))return null;                  // 끝난 하루인데 받은 봉이 그 하루를 다 덮지 못하면 계산하지 않는다(점검 시간 빈 것은 정상 — 개수로 보지 않음)
     const r=coinBreakoutDay(h,bars,bars.length?+bars[bars.length-1].trade_price:null,P);
     if(r&&r.hold&&r.pnlPct!=null)pnl.push(r.pnlPct);else{why.push(m.replace("KRW-","")+" "+(!r?"판단 없음":r.action==="쉼"?"쉼(추세 평균 아래)":r.action));if(r&&r.action==="돌파 없음"&&nowMs<end)open=true;}
   }
@@ -388,7 +404,7 @@ export function soxlDayCell(nx,q,tabSize){
   if(!nx||nx.action===undefined||!(nx.close>0))return null;
   const ohlc=(q&&q.ohlc)||[],sess=ohlc[ohlc.length-1]||null;
   if(!(sess&&sess.date>nx.basedOn&&sess.open>0))return null;            // 밤 판단 뒤 세션이 아직 안 열렸다
-  const date=addDays(sess.date,1),open=+sess.open,px=+(q.price||sess.close),final=q.marketState!=="REGULAR",half=US_COST/2;
+  const date=addDays(sess.date,1),open=+sess.open,px=+(q.price||sess.close),final=q.marketState!=="REGULAR",half=US_COST()/2;
   let v=null;
   if(nx.action==="buy")v=pct(px,open)-half;
   else if(nx.action==="sell")v=pct(open,+nx.close)-half;
@@ -400,6 +416,7 @@ export function soxlDayCell(nx,q,tabSize){
 export async function onRequestGet({request,env}){
   if(!(await claudeAuthorized(request,env)))return json({ok:false,error:"unauthorized"},401);   // 소유자만(서버끼리는 감시키)
   const origin=new URL(request.url).origin,now=kstToday(),out={ok:true,asOf:new Date().toISOString(),today:now.date,tabs:{}};
+  out.fee=await useOwnerFee(env);   // 공통 수수료(설정 › 💸 수수료) — 이 응답의 모든 비용이 이 율
   try{
     // 그날 메인 전략(승격 기록) — 못 읽으면 기본 메인으로 보이고 그 사실을 응답에 남긴다
     const cfg=await loadMainEvents(env);

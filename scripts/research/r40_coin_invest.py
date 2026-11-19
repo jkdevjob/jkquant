@@ -37,7 +37,7 @@ class Mk:
     """시장 하나의 미리 계산한 특징 — 연구실 coin_breakout 과 같은 식(같은 순서의 같은 연산)."""
 
     def __init__(self, H):
-        self.Dd = L.upbit_days(H)
+        self.Dd = L.upbit_days(H, partial=False)      # R40(2026-11-12)을 낸 옛 방식(24봉 다 있는 날만) 그대로 — 이 스크립트는 24봉을 전제로 짰다
         self.days = sorted(self.Dd)
         self.C = [self.Dd[d][3] for d in self.days]
         self.bars, self.sufmin = [], []

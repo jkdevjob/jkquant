@@ -13,6 +13,7 @@ function page(ledger,capital=10000){
   const els={alphaLedgerBody:{innerHTML:''}},c=vm.createContext({alphaLedger:ledger,liveQuotes:{},
     $:id=>els[id]||null,num:()=>capital,usd2:v=>'$'+Number(v).toFixed(2)});
   vm.runInContext(ENGINE,c);   // 장부 계산은 엔진(plan-session-engine.js ledgerCalc) 한 곳 — plan.html 의 alphaLedgerCalc 는 그걸 부른다(2026-11-09)
+  vm.runInContext((html.match(/let ALPHA_FEE_RATE=[^\n]*/)||[''])[0].replace('let ','var ')+'\n'+fn('function alphaFee(q,p)'),c);   // 표의 수수료 칸 = 공통 율(엔진과 같은 기본 0.25%)
   vm.runInContext(['function alphaEventList(ledger=alphaLedger)','function alphaLedgerCalc(ledger=alphaLedger)',
     'function alphaSyncInputs()','function alphaAvgText(q,avg)','function renderAlphaLedger()'].map(fn).join('\n'),c);
   c.renderAlphaLedger();
@@ -33,7 +34,9 @@ assert.equal(a.state.tradePnl[3].profit,-300);
 assert.equal(a.state.tradePnl[5].profit,0);
 assert.equal(a.state.tradePnl[1],undefined);
 assert.equal(a.state.tecl,0);assert.equal(a.state.avgTecl,null);
-assert(Math.abs(a.state.cash-11796.38)<1e-8); // cash still deducts every recorded fee
+/* cash deducts the common-rate fee (설정 › 💸 수수료 · default 0.25%) for every trade — the stored fee column (old Toss 0.1%) is not used.
+   gross 650+1200+1350+210+210 = 3,620 → fee 9.05 → 9,000 + 2,000 + 650 − 1,200 + 1,350 − 210 + 210 − 9.05 */
+assert(Math.abs(a.state.cash-(11800-3620*0.0025))<1e-8, String(a.state.cash));
 assert.equal(a.state.netFlow,2000);assert.equal(JSON.stringify(ledger),original);
 console.log('PASS plan sale PnL uses chronological weighted average; full sale/rebuy, fees and source ledger preserved');
 

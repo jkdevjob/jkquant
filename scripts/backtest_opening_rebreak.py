@@ -21,6 +21,10 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from opening_basis_cost import cost_range, overnight_basis_status
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 KST = ZoneInfo("Asia/Seoul")
 DATA = Path(os.environ.get("JKQ_RESEARCH_DATA", "data/scalping"))
@@ -28,7 +32,8 @@ OUT = Path(os.environ.get("JKQ_RESEARCH_OUT", "data/opening-research"))
 VTS_DATA = Path("data/vts-research/latest.json")
 
 # Execution-cost research model (A-3). Signal/exit thresholds remain strategy params.
-FIXED_KR_FRICTION_PCT = 0.23
+# 고정 몫 = 거래세 0.20 + 공통 수수료 × 2(scalp_cost.py · _opening.js openingFixedFrictionPct). 2026-11-19 전 0.23.
+FIXED_KR_FRICTION_PCT = SC.cost_pct("kr")
 VTS_MIN_MATCHES = 30
 FALLBACK_TICKS_PER_SIDE = 2.5
 

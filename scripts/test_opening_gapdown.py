@@ -12,6 +12,7 @@ import backtest_opening_gapdown as g  # noqa: E402
 import backtest_crypto_orb as c  # noqa: E402
 import backtest_etf_overnight as e  # noqa: E402
 import claude_lab as lab  # noqa: E402
+import scalp_cost as SC  # noqa: E402  단타 비용 = 공통 수수료 × 2 + 세금 · 미끄러짐
 
 
 def days(n, start="2026-01-01"):
@@ -46,8 +47,8 @@ def falling(n=80, start=20000.0, step=0.99):
 
 class GapdownRule(unittest.TestCase):
     def test_cost_uses_tick_table(self):
-        self.assertAlmostEqual(g.cost_pct(10000, 1.5), 0.23 + 2 * 1.5 * 10 / 10000 * 100)
-        self.assertAlmostEqual(g.cost_pct(1999, 0), 0.23)
+        self.assertAlmostEqual(g.cost_pct(10000, 1.5), SC.cost_pct("kr") + 2 * 1.5 * 10 / 10000 * 100)   # 거래세 0.20 + 공통 수수료 × 2 + 틱
+        self.assertAlmostEqual(g.cost_pct(1999, 0), SC.cost_pct("kr"))
         self.assertEqual(g.tick(1999), 1)
         self.assertEqual(g.tick(2000), 5)
 
@@ -143,7 +144,7 @@ class GapdownLive(unittest.TestCase):
         r = rows[0]
         self.assertAlmostEqual(r["buySlipPct"], ((op[-1] + 10) / op[-1] - 1) * 100)
         self.assertAlmostEqual(r["sellSlipPct"], -(((cl[-1] - 10) / cl[-1] - 1) * 100))
-        self.assertAlmostEqual(r["realizedNetPct"], ((cl[-1] - 10) / (op[-1] + 10) - 1) * 100 - 0.23)
+        self.assertAlmostEqual(r["realizedNetPct"], ((cl[-1] - 10) / (op[-1] + 10) - 1) * 100 - SC.cost_pct("kr"))
         self.assertAlmostEqual(r["openVsExpectedPct"], (1 / 1.01 - 1) * 100)
         self.assertAlmostEqual(r["openVsExpected0856Pct"], (1 / 0.9 - 1) * 100)          # 08:58 다시 보기 전(08:56) 값과의 차이도 잰다
         self.assertEqual(r["expectedGapPct0856"], -14.0)
@@ -182,7 +183,7 @@ class GapdownLive(unittest.TestCase):
         r = run([{"code": "000010", "price": px10}])
         self.assertEqual((r["exitRef"], r["exitRefPrice"]), ("10:00", px10))
         self.assertAlmostEqual(r["sellSlipPct"], -(((px10 - 5) / px10 - 1) * 100))      # 종가가 아니라 10:00 가격 대비
-        self.assertAlmostEqual(r["modelNet0tPct"], (px10 / op[-1] - 1) * 100 - 0.23)
+        self.assertAlmostEqual(r["modelNet0tPct"], (px10 / op[-1] - 1) * 100 - SC.cost_pct("kr"))
         self.assertEqual((r["sellOrderOk"], r["sellOrderMsg"]), (True, "10시 매도"))     # 10:00 주문이 15:21 '매도 생략'보다 먼저
         miss = run([])
         self.assertEqual(miss["exitRef"], "10:00")
@@ -213,7 +214,7 @@ class Dip24(unittest.TestCase):
         t = trades[0]
         self.assertAlmostEqual(t["trailing24hChangePct"], -5.0)
         self.assertEqual(t["entryPrice"], 95.0)          # 31번째 시간 시가 (= 30번째 종가)
-        self.assertAlmostEqual(t["pnlPct"], 0 - 0.14)
+        self.assertAlmostEqual(t["pnlPct"], 0 - SC.cost_pct("coin"))
         self.assertEqual(t["sample"], "design")
         self.assertTrue(any(r["signals"] for r in dec))
 
@@ -250,7 +251,7 @@ class EtfOvernight(unittest.TestCase):
         x = s[0]
         self.assertEqual(x["exitDate"], "2026-01-05")
         self.assertAlmostEqual(x["grossPnl"], (98.5 / 97 - 1) * 100)
-        self.assertAlmostEqual(x["frictionPct"], 0.03 + 2 * 1 / 97 * 100)
+        self.assertAlmostEqual(x["frictionPct"], SC.cost_pct("etf") + 2 * 1 / 97 * 100)
 
     def test_goal_metrics_count_no_trade_days_as_zero(self):
         cal = ["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09"]
@@ -341,11 +342,11 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertEqual((by["s1"]["next"], by["s1"]["action"]), ("buy_open", "flat"))
         self.assertNotIn("s1", dv)
         self.assertEqual(by["b1"]["action"], "enter")
-        self.assertAlmostEqual(dv["b1"], (0.94 / 0.96 - 1) * 100 - 0.1)
+        self.assertAlmostEqual(dv["b1"], (0.94 / 0.96 - 1) * 100 - SC.cost_pct("us") / 2)
         self.assertAlmostEqual(dv["b2"], (0.96 / 0.94 - 1) * 100)
         self.assertEqual(by["b2"]["next"], "sell_open")
         self.assertEqual(by["x1"]["action"], "exit")
-        self.assertAlmostEqual(dv["x1"], (0.97 / 0.96 - 1) * 100 - 0.1)
+        self.assertAlmostEqual(dv["x1"], (0.97 / 0.96 - 1) * 100 - SC.cost_pct("us") / 2)
         self.assertEqual(by["x1"]["heldDays"], 2)
         # 계속 빠지면 5거래일째 종가 뒤 다음 시가에 무조건 판다
         rows2 = rows[:-3] + [(f"f{k}", base * (0.96 - k * 0.01), 0, 0, base * (0.955 - k * 0.01)) for k in range(7)]
@@ -381,9 +382,9 @@ class ClaudeLabTrend(unittest.TestCase):
         by = {r["date"]: r for r in dec}
         e = 120.0 * 1.0005                                                        # 봉 시가 119 < 기준 120 → 기준선에 산다
         self.assertEqual(by[t1]["entryHour"], "14:00")
-        self.assertAlmostEqual(dv[t1], (124.0 / e - 1) * 100 - 0.14)
+        self.assertAlmostEqual(dv[t1], (124.0 / e - 1) * 100 - SC.cost_pct("coin"))
         self.assertEqual(by[t2]["action"], "stop")
-        self.assertAlmostEqual(dv[t2], -5 - 0.1 - 0.14)
+        self.assertAlmostEqual(dv[t2], -5 - 0.1 - SC.cost_pct("coin"))
         self.assertEqual(nx["basedOn"], t2)
         self.assertEqual(nx["levelNext"], 130.0)
         # 어제 종가가 평균 아래면 돌파해도 매매 없음 (t2 다음 날을 하락 흐름으로)
@@ -423,11 +424,11 @@ class ClaudeLabTrend(unittest.TestCase):
                                            "2026-09-30": [dict(name="BTC", entry=100, exit=99, reason="손절", gross=-1.0)]}, {}, ["gpt_v1"])
             f = lab.fair_compare("crypto", ["2026-09-20", "2026-09-28", "2026-09-29", "2026-09-30"])
             self.assertEqual(f["window"], ["2026-09-28", "2026-09-30"])                  # GPT 기록 구간만 — 9/20 클로드 매매는 빠진다
-            self.assertEqual(f["costPct"], {"claude": 0.14, "gpt": 0.14})
+            self.assertEqual(f["costPct"], {"claude": SC.cost_pct("coin"), "gpt": SC.cost_pct("coin")})
             self.assertEqual(f["claude"]["trades"], 1)
-            self.assertAlmostEqual(f["claude"]["avgTradePct"], 2.0 - 0.14)
-            self.assertAlmostEqual(f["days"][1]["claude"]["pnlPct"], (2.0 - 0.14) * 0.5)  # 코인 한쪽 몫(반)
-            self.assertAlmostEqual(f["gpt"]["avgTradePct"], 0.0 - 0.14)
+            self.assertAlmostEqual(f["claude"]["avgTradePct"], 2.0 - SC.cost_pct("coin"))
+            self.assertAlmostEqual(f["days"][1]["claude"]["pnlPct"], (2.0 - SC.cost_pct("coin")) * 0.5)  # 코인 한쪽 몫(반)
+            self.assertAlmostEqual(f["gpt"]["avgTradePct"], 0.0 - SC.cost_pct("coin"))
             self.assertEqual((f["gpt"]["wins"], f["gpt"]["losses"]), (1, 1))
             self.assertEqual(f["days"][0]["date"], "2026-09-30")
             lab.gpt_trades = lambda tab: ({}, {}, [])
@@ -485,14 +486,14 @@ class ClaudeLabTrend(unittest.TestCase):
             t = lab.duel_tab("crypto")
             self.assertEqual([r["date"] for r in t["days"]], ["2026-10-05", "2026-10-06"])
             d5 = t["days"][0]
-            self.assertAlmostEqual(d5["claude"]["pnlPct"], (2.0 - 0.14) * 0.5)          # 코인 한쪽 몫
-            self.assertAlmostEqual(d5["gpt"]["pnlPct"], 0.5 - 0.14)
+            self.assertAlmostEqual(d5["claude"]["pnlPct"], (2.0 - SC.cost_pct("coin")) * 0.5)          # 코인 한쪽 몫
+            self.assertAlmostEqual(d5["gpt"]["pnlPct"], 0.5 - SC.cost_pct("coin"))
             self.assertEqual(d5["winner"], "claude")
             self.assertEqual(t["days"][1]["winner"], "draw")                               # 둘 다 매매 없음 0%
             self.assertEqual(t["record"], {"claude": 1, "gpt": 0, "draw": 1})
             self.assertEqual(t["pending"], [{"date": "2026-10-07", "missing": "GPT"}])
             full = lab.duel()
-            self.assertAlmostEqual(full["total"]["days"][0]["claudePct"], 0.25 * (2.0 - 0.14) * 0.5)   # 합계는 4탭 균등
+            self.assertAlmostEqual(full["total"]["days"][0]["claudePct"], 0.25 * (2.0 - SC.cost_pct("coin")) * 0.5)   # 합계는 4탭 균등
             self.assertEqual(full["latest"], "2026-10-06")
         finally:
             lab.claude_closed_records, lab.gpt_trades, lab.gpt_coverage = old
@@ -857,6 +858,149 @@ class CoinParityTest(unittest.TestCase):
                 self.assertAlmostEqual(a["entry"], b["entry"], places=6)
                 self.assertAlmostEqual(a["pnl"], b["pnl"], places=6)
         self.assertTrue({"trade", "no_break"} <= acts, acts)                  # 여러 경우가 실제로 나왔는지
+
+
+class UpbitGapDayTest(unittest.TestCase):
+    """③ 업비트 점검(거래 멈춤)으로 60분봉이 빈 시간이 있는 날 — 끝난 하루면 있는 봉으로 하루를 만든다(업비트 일봉과 같은 값 · 2026-11-19).
+    옛 방식은 24봉이 아닌 날을 통째로 빼서(2018~ 59일 · 최근 10/18 · 11/08) 그 뒤 15일 평균 · 최근 고가가 실시간 화면 · 실투자 봇(업비트 일봉)과 달랐다."""
+
+    @staticmethod
+    def hours(start, n, f):
+        t0 = lab.datetime.fromisoformat(start)
+        return {(t0 + lab.timedelta(hours=k)).isoformat(): f(k) for k in range(n)}
+
+    def test_partial_day_built_from_available_bars(self):
+        H = self.hours("2026-11-06T09:00:00", 24 * 4, lambda k: [100.0 + k, 101.0 + k, 99.0 + k, 100.5 + k])
+        for k in ("2026-11-09T03:00:00", "2026-11-09T04:00:00", "2026-11-09T05:00:00", "2026-11-09T06:00:00"):
+            H.pop(k)                                                                 # 11/08 하루(09:00~11/09 09:00) 중 4시간 점검
+        H.update(self.hours("2026-11-10T09:00:00", 7, lambda k: [200.0, 201.0, 199.0, 200.5]))   # 11/10 하루는 진행 중(7봉)
+        new, old = lab.upbit_days(H), lab.upbit_days(H, partial=False)
+        self.assertNotIn("2026-11-08", old)                                          # 옛 방식: 통째로 빠짐
+        hs = [v for k, v in sorted(H.items()) if "2026-11-08T09:00:00" <= k < "2026-11-09T09:00:00"]
+        self.assertEqual(len(hs), 20)
+        self.assertEqual(new["2026-11-08"], (hs[0][0], max(x[1] for x in hs), min(x[2] for x in hs), H["2026-11-09T08:00:00"][3]))
+        self.assertEqual({d: new[d] for d in old}, old)                              # 다 있는 날은 옛 방식과 같은 값
+        self.assertEqual(sorted(new), ["2026-11-06", "2026-11-07", "2026-11-08", "2026-11-09"])   # 진행 중인 11/10 은 둘 다 뺀다
+
+    def test_gap_day_edges(self):
+        base = lambda k: [100.0, 101.0, 99.0, 100.0 + k]
+        H = self.hours("2026-11-07T09:00:00", 24, base)
+        H.update(self.hours("2026-11-08T09:00:00", 22, base))                       # 11/08 하루 끝(11/09 07 · 08시)이 비고 그 뒤 봉도 아직 없음
+        self.assertNotIn("2026-11-08", lab.upbit_days(H))                            # 끝났는지 모른다 → 뺀다
+        H["2026-11-09T09:00:00"] = [100.0, 101.0, 99.0, 100.0]                        # 다음 하루 첫 봉이 오면 끝난 하루
+        self.assertEqual(lab.upbit_days(H)["2026-11-08"][3], H["2026-11-09T06:00:00"][3])
+        G = self.hours("2026-11-07T09:00:00", 48, base)
+        for k in range(13):
+            G.pop((lab.datetime(2026, 11, 8, 10) + lab.timedelta(hours=k)).isoformat())   # 13시간 빔 — 점검이 아니라 받기 문제로 본다
+        self.assertNotIn("2026-11-08", lab.upbit_days(G))
+        late = self.hours("2026-11-07T18:00:00", 24 * 2, base)                       # 자료가 하루 중간(18시)부터 — 그 하루는 시가를 모른다
+        self.assertNotIn("2026-11-07", lab.upbit_days(late))
+        self.assertIn("2026-11-08", lab.upbit_days(late))
+
+    def test_breakout_on_and_after_gap_day(self):
+        H = self.hours("2026-10-01T09:00:00", 24 * 30, lambda k: [100.0 + k * 0.01, 100.005 + k * 0.01, 99.995 + k * 0.01, 100.004 + k * 0.01])
+        D = "2026-10-26"
+        s0 = lab.datetime.fromisoformat(D + "T09:00:00")
+        for k in (18, 19, 20, 21):
+            H.pop((s0 + lab.timedelta(hours=k)).isoformat())                         # 점검 4시간
+        p = dict(lab.COIN_BO, ma=15, stopPct=99.0, level="prevhigh", hiN=7, version="gap")
+        dv, dec, _, days = lab.coin_breakout(H, p)
+        by = {r["date"]: r for r in dec}
+        self.assertIn(D, days)
+        self.assertEqual((by[D]["action"], by[D]["entryHour"]), ("trade", "09:00"))  # 오르는 흐름 — 첫 봉에서 최근 7일 고가 돌파
+        first, last = H[s0.isoformat()], H[(s0 + lab.timedelta(hours=23)).isoformat()]
+        e = max(first[0], by[D]["level"]) * 1.0005
+        self.assertAlmostEqual(dv[D], (last[3] / e - 1) * 100 - SC.cost_pct("coin"))                # 그 하루 마지막 봉(다음 날 08시) 종가에 판다
+        nxt = (s0 + lab.timedelta(days=1)).date().isoformat()
+        self.assertAlmostEqual(by[nxt]["prevClose"], last[3])                        # 다음 날 '어제 종가' = 점검일 종가(옛 방식은 그 전날 종가)
+        self.assertNotIn(D, lab.upbit_days(H, partial=False))
+
+    def test_gap_day_parity_with_js(self):
+        """빈 시간이 있는 하루도 밤 계산(Python)과 실시간·마감 장부(JS)가 같은 판단 · 같은 손익 — JS 는 받은 봉만 넘긴다."""
+        import random
+        import subprocess
+        rnd = random.Random(11)
+        H, px, t0 = {}, 100.0, lab.datetime(2026, 8, 1, 9)
+        for k in range(24 * 45):
+            o = px
+            c = max(1.0, o * (1 + rnd.gauss(0.0004, 0.012)))
+            H[(t0 + lab.timedelta(hours=k)).isoformat()] = (o, max(o, c) * (1 + abs(rnd.gauss(0, 0.004))), min(o, c) * (1 - abs(rnd.gauss(0, 0.004))), c)
+            px = c
+        for d in range(20, 45, 3):                                                   # 사흘마다 점검 3~6시간
+            for k in range(14, 14 + 3 + d % 4):
+                H.pop((t0 + lab.timedelta(days=d, hours=k)).isoformat(), None)
+        Dd = lab.upbit_days(H)
+        days = sorted(Dd)
+        cases, py = [], []
+        for v in [dict(), dict(hiN=3), dict(ma=10, stopPct=3.0), dict(lastEntryHour=21, stopPct=2.0)]:
+            P = dict(lab.MAIN_DEFAULT["crypto"]["params"], **v)
+            _, dec, _, _ = lab.coin_breakout(H, dict(lab.COIN_BO, **P, version="x"))
+            for r in dec[-20:]:
+                i = days.index(r["date"])
+                daily = [dict(candle_date_time_kst=d + "T09:00:00", opening_price=Dd[d][0], high_price=Dd[d][1], low_price=Dd[d][2], trade_price=Dd[d][3])
+                         for d in reversed(days[:i + 1])]
+                bars = [dict(candle_date_time_kst=t.isoformat(), opening_price=b[0], high_price=b[1], low_price=b[2], trade_price=b[3])
+                        for t, b in lab.day_slots(H, r["date"])]
+                cases.append(dict(P=P, daily=daily, bars=bars))
+                py.append(dict(action=r["action"], entry=r["entryPrice"], pnl=r["pnlPct"], n=len(bars)))
+        self.assertTrue(any(c["n"] < 24 for c in py))                                # 빈 시간 있는 날이 실제로 들어갔는지
+        api_dir = os.environ.get("JKQ_API_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "functions", "api")
+        api = os.path.join(api_dir, "claude-live.js")
+        js = ("import * as LV from " + json.dumps("file://" + os.path.abspath(api)) + ";"
+              "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const out=JSON.parse(s).map(c=>{const h=LV.coinHoldToday(c.daily,c.P);"
+              "const r=LV.coinBreakoutDay(h,c.bars,c.bars[c.bars.length-1].trade_price,c.P);"
+              "return {action:!h.hold?'flat':!r.hold?'no_break':r.stopped?'stop':'trade',entry:r.hold?r.buyPrice:null,pnl:r.hold?r.pnlPct:null};});"
+              "process.stdout.write(JSON.stringify(out));});")
+        res = subprocess.run(["node", "--input-type=module", "-e", js], input=json.dumps(cases), capture_output=True, text=True)
+        self.assertEqual(res.returncode, 0, res.stderr[-500:])
+        out = json.loads(res.stdout)
+        self.assertEqual(len(out), len(py))
+        for a, b in zip(py, out):
+            self.assertEqual(a["action"], b["action"])
+            if a["entry"] is not None:
+                self.assertAlmostEqual(a["entry"], b["entry"], places=6)
+                self.assertAlmostEqual(a["pnl"], b["pnl"], places=6)
+
+
+class MainShownAndStreakTest(unittest.TestCase):
+    """화면 맨 위 메인 안내(①②③) · 점검 기록 연속 손실 경고(2026-11-19)."""
+
+    def test_banner_rule_gets_tab_rules_and_pin_source(self):
+        cp = dict(ma=15, stopPct=99, level="prevhigh", k=0.5, hiN=7, lastEntryHour=None, tabSize=0.8, markets=["KRW-ETH"])
+        ev = [dict(tab="opening", version="g_open_q7_k3_gap3", name="n1", rule="갭 깊은 3종목 시가 매수 → 종가 매도", effectiveFrom="2026-10-13", promotedAt="a",
+                   params=dict(minQ=7, topK=3, gapMax=-3), by="auto:arena-7d-top1"),
+              dict(tab="daytrading", version="g_etf_th4.75", name="n2", rule="종가 매수 → 다음 날 시가 매도", effectiveFrom="2026-10-24", promotedAt="b",
+                   params=dict(code="233740", th=-4.75), by="auto:arena-7d-top1"),
+              dict(tab="crypto", version="g_coin_ma15_s99_hi7_eth", name="n3", rule="r3", effectiveFrom="2026-11-13", promotedAt="c", params=cp, by="user:pin")]
+        old = list(lab.MAIN_EVENTS)
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                f = Path(td) / "main-config.json"
+                f.write_text(json.dumps(dict(ok=True, events=ev), ensure_ascii=False), encoding="utf-8")
+                lab.MAIN_EVENTS[:] = lab.load_main_events(f)
+            m1, m2, m3 = (lab.main_export(t, "2026-11-19") for t in ("opening", "daytrading", "crypto"))
+            self.assertEqual(m1["current"]["rule"], "갭 깊은 3종목 시가 매수 → 종가 매도" + lab.D1_EXIT_NOTE)     # 실매매 10:00 매도를 붙인다
+            self.assertEqual(m1["history"][0]["rule"], "갭 깊은 3종목 시가 매수 → 종가 매도")                   # 승격 기록은 그대로
+            self.assertEqual(m2["today"]["rule"], "종가 매수 → 다음 날 시가 매도" + lab.ETF_24H_NOTE)
+            self.assertEqual((m3["current"]["by"], m3["current"]["rule"], m1["current"]["by"]), ("user:pin", "r3", "auto:arena-7d-top1"))
+            self.assertEqual(lab.rule_shown(dict(tab="opening", rule="x 10:00 매도")), "x 10:00 매도")          # 이미 있으면 두 번 붙이지 않는다
+        finally:
+            lab.MAIN_EVENTS[:] = old
+
+    def test_paper_streak_and_fresh_review(self):
+        dvs = [("2026-10-08", -5.4), ("2026-10-09", -1.9), ("2026-10-12", -8.1), ("2026-10-13", -0.7), ("2026-10-14", -13.4), ("2026-10-15", -11.1)]
+        self.assertEqual(lab.paper_streak(dvs + [("2026-10-16", 0.0)] * 24), (6, "2026-10-15", 24))   # ④ 10/08~10/15 한 번 매매 뒤 24기록 쉼
+        self.assertEqual(lab.paper_streak([("a", -1.0), ("b", 0.0), ("c", -2.0), ("d", 3.0), ("e", -1.0)]), (1, "e", 0))   # 이긴 날이 줄을 끊고, 쉬는 날은 안 끊는다
+        rep = lambda idle: {"paper": {"summary": {"us_soxl": {"lossStreak": 6, "lastTradeDate": "2026-10-15", "idleDays": idle}}}, "daily": {"rows": []}}
+        old = lab.read_json
+        lab.read_json = lambda p: {}
+        try:
+            stale, fresh, edge = (lab.review_entry(rep(i), "2026-11-18") for i in (24, 2, lab.LOSS_STREAK_FRESH))
+        finally:
+            lab.read_json = old
+        self.assertFalse(any("연속 손실" in x for x in stale["issues"]))                 # 한 달 전 일 — 매일 경고하지 않는다
+        self.assertIn("us_soxl: 6일 연속 손실(마지막 2026-10-15)", fresh["issues"])
+        self.assertIn("us_soxl: 6일 연속 손실(마지막 2026-10-15)", edge["issues"])
 
 
 class SoxlParamsTest(unittest.TestCase):
@@ -1399,7 +1543,7 @@ class HistoryTest(unittest.TestCase):
         self.assertEqual(rows[0][1], ds[1] + " 15:30")
         self.assertEqual(rows[0][2], 96.0)
         self.assertEqual(rows[0][4], 98.5)
-        self.assertAlmostEqual(rows[0][7], round((98.5 / 96 - 1) * 100 - (0.03 + 2 * 1 / 96 * 100), 4))
+        self.assertAlmostEqual(rows[0][7], round((98.5 / 96 - 1) * 100 - (SC.cost_pct("etf") + 2 * 1 / 96 * 100), 4))
         self.assertEqual(acts[ds[1]], "no_trade")
 
     def test_etf_max24_skips_friday_and_pre_holiday_entries(self):
@@ -1600,8 +1744,8 @@ class Close30Test(unittest.TestCase):
         self.assertEqual(cal, [ds[1], ds[2], ds[4]])                                  # 6시간이 다 없는 날 · 자료 오류 날은 달력 밖
         self.assertEqual([t["date"] for t in tr], [ds[1], ds[4]])                     # 보합(0%)은 사지 않는다
         self.assertAlmostEqual(tr[0]["sofarPct"], -0.5)
-        self.assertAlmostEqual(tr[0]["pnl"], (10100 / 9950 - 1) * 100 - (0.03 + 2.5 / 9950 * 100))
-        self.assertAlmostEqual(tr[1]["pnl"], (9950 / 9800 - 1) * 100 - (0.03 + 2.5 / 9800 * 100))
+        self.assertAlmostEqual(tr[0]["pnl"], (10100 / 9950 - 1) * 100 - (SC.cost_pct("etf") + 2.5 / 9950 * 100))
+        self.assertAlmostEqual(tr[1]["pnl"], (9950 / 9800 - 1) * 100 - (SC.cost_pct("etf") + 2.5 / 9800 * 100))
         self.assertEqual([t["date"] for t in lab.close30_trades("233740", -1.0)[0]], [ds[4]])
         self.assertEqual(set(lab.close30_series(dict(code="233740", th=0.0))[0]), {ds[1], ds[4]})
 

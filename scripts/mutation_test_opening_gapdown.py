@@ -113,7 +113,7 @@ PY = [
     ("arena reproposes seen", "claude_lab.py", "if not k or k in seen:", "if not k:"),
     ("arena op weight unlearned", "claude_lab.py", 'w[op] = (s.get("accepted", 0) + 1) / (s.get("tried", 0) + 2)', "w[op] = 1.0"),
     ("coin trend lookahead", "claude_lab.py", "        trend = C[i - 1] > ma\n", "        trend = C[i] > ma\n"),
-    ("coin stop removed", "claude_lab.py", "if any(x[2] <= stop for x in bars[k:]):", "if False:"),
+    ("coin stop removed", "claude_lab.py", "if any(x[2] <= stop for _, x in bars[k:]):", "if False:"),
     ("soxl buy signal off", "claude_lab.py", "        elif sig and (ma is None or C[i] > ma):", "        elif sig and (ma is None or C[i] > ma) and False:"),
     ("soxl ma filter ignored", "claude_lab.py", "        elif sig and (ma is None or C[i] > ma):", "        elif sig:"),
     ("soxl max hold ignored", "claude_lab.py", 'if C[i] > C[i - 1] or pos["days"] >= p["maxHoldDays"]:', 'if C[i] > C[i - 1]:'),
@@ -134,7 +134,7 @@ PY = [
     ("duel gpt cost differs", "claude_lab.py", "        g = _side_day(gby.get(d, []), cost_g) if gby.get(d) else 0.0", "        g = _side_day(gby.get(d, []), 0.0) if gby.get(d) else 0.0"),
     ("duel total not equal weight", "claude_lab.py", '        c = sum(0.25 * by[t][d]["claude"]["pnlPct"] for t in DUEL_TABS if d in by[t])', '        c = sum(by[t][d]["claude"]["pnlPct"] for t in DUEL_TABS if d in by[t])'),
     ("kr calendar today intraday", "claude_lab.py", 'return [d for d in days if d < today or (d == today and now.hour >= 16)]', "return list(days)"),
-    ("coin night filter off", "claude_lab.py", 'if p.get("lastEntryHour") is not None and (s0 + timedelta(hours=k)).hour >= p["lastEntryHour"] and k < 15:', "if False:"),
+    ("coin night filter off", "claude_lab.py", 'if p.get("lastEntryHour") is not None and t.hour >= p["lastEntryHour"] and t < s0 + timedelta(hours=15):', "if False:"),
     ("curves include future", "claude_lab.py", "            if d < start or d > today:\n", "            if d < start:\n"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
     ("gpt blank date crashes", "claude_lab.py", "        try:\n            v = float(r[col])", "        by.setdefault(r.get(\"date\"), [])\n        try:\n            v = float(r[col])"),
@@ -143,7 +143,7 @@ PY = [
     ("review late uses today cell", "claude_lab.py", 'res = r.get("last") if r.get("lastDate") == today else r.get("prev") if r.get("prevDate") == today else None', 'res = r.get("last")'),
     ("c30 buys flat day", "claude_lab.py", "        if sofar < th:\n", "        if sofar <= th:\n"),
     ("c30 decides on close (lookahead)", "claude_lab.py", "        sofar = (p15 / prev - 1) * 100\n", "        sofar = (close / prev - 1) * 100\n"),
-    ("c30 no cost", "claude_lab.py", "pnl=(close / p15 - 1) * 100 - (0.03 + tick / 2 / p15 * 100))", "pnl=(close / p15 - 1) * 100)"),
+    ("c30 no cost", "claude_lab.py", "pnl=(close / p15 - 1) * 100 - (SC.cost_pct(\"etf\") + tick / 2 / p15 * 100))", "pnl=(close / p15 - 1) * 100)"),
     ("c30 unfinished bar kept", "claude_lab.py", " or k + timedelta(hours=1) > now:", ":"),
     ("c30 cached bar overwritten", "claude_lab.py", "            if d in H and str(k.hour) in H[d]:\n                continue", "            if False:\n                continue"),
     ("c30 partial day kept", "claude_lab.py", 'if sorted(int(k) for k in h) != [9, 10, 11, 12, 13, 14] or', 'if "14" not in h or'),
@@ -167,6 +167,21 @@ PY = [
     ("live sell ref falls back to close", "backtest_opening_gapdown.py", "ref = x10px.get(code) if x10 is not None else c", "ref = x10px.get(code) or c"),
     ("live exit10 orders ignored", "backtest_opening_gapdown.py", '        sells.update({o.get("code"): o for o in ((x10 or {}).get("orders") or []) if o.get("side") == "sell" and (o.get("vts") or {}).get("ok")})', "        pass"),
     ("live model uses close", "backtest_opening_gapdown.py", "            model = pct(ref, o)", "            model = pct(c, o)"),
+    # ③ 업비트 점검일(60분봉 빈 시간) · 메인 안내 글 · 연속 손실 경고(2026-11-19)
+    ("upbit gap day dropped", "claude_lab.py", "def upbit_days(H, partial=True):", "def upbit_days(H, partial=False):"),
+    ("upbit open-ended day accepted", "claude_lab.py", "if not ended or first > s0 or 24 - len(have) > UPBIT_GAP_MAX:", "if first > s0 or 24 - len(have) > UPBIT_GAP_MAX:"),
+    ("upbit gap limit off", "claude_lab.py", "if not ended or first > s0 or 24 - len(have) > UPBIT_GAP_MAX:", "if not ended or first > s0:"),
+    ("upbit mid-day start accepted", "claude_lab.py", "if not ended or first > s0 or 24 - len(have) > UPBIT_GAP_MAX:", "if not ended or 24 - len(have) > UPBIT_GAP_MAX:"),
+    ("coin breakout assumes 24 bars", "claude_lab.py", "bars = day_slots(H, d)", "bars = [(s0 + timedelta(hours=k), H[(s0 + timedelta(hours=k)).isoformat()]) for k in range(24)]"),
+    ("coin exit not day close", "claude_lab.py", "r = (bars[-1][1][3] / e - 1) * 100 - 2 * half", "r = (bars[-1][1][0] / e - 1) * 100 - 2 * half"),
+    ("banner rule raw", "claude_lab.py", "return dict(e, rule=rule_shown(e))", "return dict(e)"),
+    ("main pin source dropped", "claude_lab.py", 'by=str(e.get("by") or "")))', 'by=""))'),
+    ("banner opening exit note", "claude_lab.py", 'if e.get("tab") == "opening" and "10:00" not in r:', "if False:"),
+    ("banner etf 24h note", "claude_lab.py", 'if e.get("tab") == "daytrading" and "24시간" not in r:', "if False:"),
+    ("loss streak stale alarm", "claude_lab.py", ' and (v.get("idleDays") or 0) <= LOSS_STREAK_FRESH:', ":"),
+    ("loss streak idle not counted", "claude_lab.py", "else (last_trade, idle + 1)", "else (last_trade, idle)"),
+    ("loss streak fresh boundary", "claude_lab.py", '(v.get("idleDays") or 0) <= LOSS_STREAK_FRESH', '(v.get("idleDays") or 0) < LOSS_STREAK_FRESH'),
+    ("loss streak flat breaks run", "claude_lab.py", "streak = streak + 1 if v < 0 else (0 if v > 0 else streak)\n        last_trade", "streak = streak + 1 if v < 0 else 0\n        last_trade"),
 ]
 JS = [
     ("base price first", "_gapdown.js", "const base=+(q&&q.basePrice)>0?+q.basePrice:+prevClose||0;", "const base=+prevClose||0;"),
@@ -179,7 +194,7 @@ JS = [
     ("fill split", "opening-gapdown.js", 'buy:agg(fills("02",83000,90000))', 'buy:agg(fills("02",83000,240000))'),
     ("etf drop sign", "opening-gapdown.js", "if(dropPct>th)return", "if(dropPct<th)return"),
     ("etf main threshold ignored", "opening-gapdown.js", "base=etfDecision(dropPct,R.rule.dropMaxPct),m=etfMax24(date);", "base=etfDecision(dropPct),m=etfMax24(date);"),
-    ("etf rule other code allowed", "opening-gapdown.js", "const ok=!!(cfg&&cfg.ok)&&m.params.code===ETF_RULE.code;", "const ok=!!(cfg&&cfg.ok);"),
+    ("etf rule other code allowed", "opening-gapdown.js", "const ok=read&&m.params.code===ETF_RULE.code;", "const ok=read;"),
     ("etf buy window", "opening-gapdown.js", 'if(stage==="etf_buy")return hms>=152000&&hms<152800;', 'if(stage==="etf_buy")return hms>=150000&&hms<152800;'),
     ("etf fill split", "opening-gapdown.js", 'return {closeBuy:agg(f("02",151500,240000)),openSell:agg(f("01",83000,90000))};', 'return {closeBuy:agg(f("02",0,240000)),openSell:agg(f("01",0,240000))};'),
     ("d1 live fill over official open", "claude-live.js", "const buy=opened?+b.open:(p.expectedPrice||null)", "const buy=opened?+(((pos[p.code]||{}).buy||{}).avgPrice)||+b.open:(p.expectedPrice||null)"),
@@ -221,7 +236,7 @@ JS = [
     ("main future event used", "_claude_main.js", "if (e.tab === tab && (!date || e.effectiveFrom <= date)) best = e;", "if (e.tab === tab) best = e;"),
     ("main invalid record kept", "_claude_main.js", "    } catch (err) { /* 검사에 떨어진 기록은 쓰지 않는다 */ }", "    } catch (err) { out.push({ tab: e.tab, version: String(e.version), effectiveFrom: e.effectiveFrom, promotedAt: \"\", params: e.params || {} }); }"),
     ("day coin uses bars after close", "_claude_day.js", "hourly = (c.hourly || []).filter(b => t(b) + 36e5 <= dayEnd);", "hourly = (c.hourly || []);"),
-    ("day coin realized before day", "_claude_day.js", "if (exitMs >= dayStart && exitMs < dayEnd && (stopBar || bars.length === 24)) {", "if (exitMs < dayEnd && (stopBar || bars.length === 24)) {"),
+    ("day coin realized before day", "_claude_day.js", "if (exitMs >= dayStart && exitMs < dayEnd && (stopBar || coinDayCovered(hourly, ud))) {", "if (exitMs < dayEnd && (stopBar || coinDayCovered(hourly, ud))) {"),
     ("day opening measurement counted", "_claude_day.js", "v2 = b.qualified == null ? !!b.v2Signal : openingCounts(P, b.qualified);", "v2 = true;"),
     ("day opening main topK ignored", "_claude_day.js", "const mine = rows.filter(x => keep.has(String(x.code))), extra = rows.filter(x => !keep.has(String(x.code)));", "const mine = rows, extra = [];"),
     ("day coin market not in main", "_claude_day.js", "      if (!P.markets.includes(c.market)) continue;", ""),
@@ -324,11 +339,11 @@ JS = [
     ("krx holiday etf note", "claude-live.js", '}else if(buy.decisionReason==="krx_holiday")', '}else if(false)'),
     ("d1 rule cell ignored on closed day", "claude-live.js", 'if(!all.length)return rule||{v:"no_trade"', 'if(!all.length)return {v:"no_trade"'),
     ("d1 rule cell ignored intraday", "claude-live.js", 'if(q.noTrade)return rule||{v:"no_trade"', 'if(q.noTrade)return {v:"no_trade"'),
-    ("d1 rule cost one side", "claude-live.js", "export function d1CostPct(p){return 0.23+2*1.5*krTick(p)/p*100;}", "export function d1CostPct(p){return 0.23+1.5*krTick(p)/p*100;}"),
+    ("d1 rule cost one side", "claude-live.js", "export function d1CostPct(p){return scalpCostPct(\"kr\")+2*1.5*krTick(p)/p*100;}", "export function d1CostPct(p){return scalpCostPct(\"kr\")+1.5*krTick(p)/p*100;}"),
     ("d1 rule cell without main-day gate", "claude-live.js", "if(!b||b.qualified==null||!openingCounts(P,b.qualified))return null;", "if(!b)return null;"),
     ("c30 buys flat", "opening-gapdown.js", "if(!(sofar<th))return {signal:false", "if(sofar>th)return {signal:false"),
     ("c30 main threshold ignored", "opening-gapdown.js", "return {sofarPct,...c30Decision(sofarPct,R.rule.th)};", "return {sofarPct,...c30Decision(sofarPct)};"),
-    ("c30 rule other code allowed", "opening-gapdown.js", "const ok=!!(cfg&&cfg.ok)&&m.params.code===C30_RULE.code;", "const ok=!!(cfg&&cfg.ok);"),
+    ("c30 rule other code allowed", "opening-gapdown.js", "const ok=read&&m.params.code===C30_RULE.code;", "const ok=read;"),
     ("c30 sofar without price", "opening-gapdown.js", 'return px>0&&c!=null&&c!==""&&Number.isFinite(+c)?+c:null;', "return Number.isFinite(+c)?+c:null;"),
     ("c30 buy window late", "opening-gapdown.js", 'if(stage==="c30_buy")return hms>=150000&&hms<151000;', 'if(stage==="c30_buy")return hms>=150000&&hms<152800;'),
     ("c30 sell window early", "opening-gapdown.js", 'if(stage==="c30_sell")return hms>=152000&&hms<152800;', 'if(stage==="c30_sell")return hms>=150000&&hms<152800;'),
@@ -337,7 +352,7 @@ JS = [
     ("c30 sells again", "opening-gapdown.js", "  const qty=Math.max(0,out.boughtQty-out.alreadySoldQty);\n  if(!(qty>0)){out.decisionReason=\"no_position\";return out;}\n  await sleep(1200);\n  out.decisionReason=\"close_exit\";",
      "  const qty=Math.max(0,out.boughtQty);\n  if(!(qty>0)){out.decisionReason=\"no_position\";return out;}\n  await sleep(1200);\n  out.decisionReason=\"close_exit\";"),
     ("c30 budget ignores setting", "opening-gapdown.js", "const qty=Math.floor(vts.budget/Math.max(1,+q.price||0));", "const qty=Math.floor(2000000/Math.max(1,+q.price||0));"),
-    ("c30 live no cost", "claude-live.js", "export function c30CostPct(px){px=+px;return px>0?0.03+((px>=2000?5:1)/2)/px*100:0.03;}", "export function c30CostPct(px){return 0;}"),
+    ("c30 live no cost", "claude-live.js", "export function c30CostPct(px){px=+px;const f=scalpCostPct(\"etf\");return px>0?f+((px>=2000?5:1)/2)/px*100:f;}", "export function c30CostPct(px){return 0;}"),
     ("c30 live rejected no pnl", "claude-live.js", "pnlPct:bp&&ref?pct(ref,bp)-c30CostPct(bp):null", "pnlPct:bp&&ref&&buy.order&&buy.order.vts&&buy.order.vts.ok?pct(ref,bp)-c30CostPct(bp):null"),
     ("c30 live closes before 15:31", "claude-live.js", "sp=hm>=1531&&+(bar||{}).close>0?+bar.close:null", "sp=+(bar||{}).close>0?+bar.close:null"),
     ("c30 live fill over 15:00 price", "claude-live.js", "const bp=+((buy.quote||{}).price)||null", "const bp=+((((st.c30_reconcile||{}).fills||{}).buy||{}).avgPrice)||+((buy.quote||{}).price)||null"),
@@ -433,6 +448,33 @@ JS = [
     ("etf note max24 as above", "claude-live.js", '  if(buy&&buy.decisionReason==="no_signal_next_day_closed_max24h"){', "  if(false){"),
     ("etf live note max24 dropped", "claude-live.js", '+(etfMax24(now.date).on?" 다음 날이 휴장(금요일 · 연휴 전)이면 사지 않는다(최대 24시간).":"")', ""),
     ("day params drop max24", "_claude_day.js", ", buy.rule.max24h ? { max24h: true } : {})", ", {})"),
+    # ③ 업비트 점검일 · 그날 메인대로 마감 장부 · 메인 기록 사본 · ②⑤ 메인 못 읽으면 판단 안 함 · 메인 안내(2026-11-19)
+    ("coin live cell covered by count", "claude-live.js", "if(final&&!coinDayCovered(c.hourly,ud))return null;", "if(final&&bars.length<24)return null;"),
+    ("coin day close covered by count", "_claude_day.js", "(stopBar || coinDayCovered(hourly, ud))", "(stopBar || bars.length === 24)"),
+    ("coverage start unchecked", "claude-live.js", "return Math.min(...ts)<=s&&Math.max(...ts)>=s+23*36e5&&24-inDay<=COIN_GAP_MAX;", "return Math.max(...ts)>=s+23*36e5&&24-inDay<=COIN_GAP_MAX;"),
+    ("coverage end unchecked", "claude-live.js", "return Math.min(...ts)<=s&&Math.max(...ts)>=s+23*36e5&&24-inDay<=COIN_GAP_MAX;", "return Math.min(...ts)<=s&&24-inDay<=COIN_GAP_MAX;"),
+    ("coverage gap unchecked", "claude-live.js", "return Math.min(...ts)<=s&&Math.max(...ts)>=s+23*36e5&&24-inDay<=COIN_GAP_MAX;", "return Math.min(...ts)<=s&&Math.max(...ts)>=s+23*36e5;"),
+    ("coin slot by passed coins", "_claude_day.js", "const slot = PAPER_CAPITAL.coin / P.markets.length;", "const slot = PAPER_CAPITAL.coin / Math.max(1, coins.length);"),
+    ("coin watched all passed", "_claude_day.js", "if (today.params.markets.includes(c.market)) r.watched++;", "r.watched++;"),
+    ("coin uncovered exit dropped", "_claude_day.js", "} else if (exitMs >= dayStart && exitMs < dayEnd) {\n        r.open.push(", "} else if (false) {\n        r.open.push("),
+    ("day message main line", "_claude_day.js", 'if (r.mainName) L.push("메인: " + r.mainName);', ""),
+    ("coin capital note halves", "_claude_day.js", '(mk.length > 1 ? mk.length + "개 코인 똑같이 나눔" : mk[0].replace("KRW-", "") + " 한 코인에 전부")', '"두 코인 반반"'),
+    ("coin day name old main", "_claude_day.js", 'crypto: "③ 비트코인 · 업비트 하루 돌파 단타"', 'crypto: "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타"'),
+    ("main copy not read", "_claude_main.js", "if (c.ok && c.j && Array.isArray(c.j.events)) return", "if (false) return"),
+    ("etf blocked falls back to default", "opening-gapdown.js", "if(!ok)return {rule:{...ETF_RULE,dropMaxPct:null,version:MAIN_UNAVAILABLE},mainVersion:null,blocked:true,",
+     "if(!ok)return {rule:{...ETF_RULE},mainVersion:ETF_RULE.version,blocked:false,"),
+    ("etf blocked plan buys", "opening-gapdown.js", 'if(R&&R.blocked)return {dropPct:etfDropPct(q),signal:false,decisionReason:"main_config_unavailable"};', ""),
+    ("c30 blocked falls back to default", "opening-gapdown.js", "if(!ok)return {rule:{...C30_RULE,th:null,version:MAIN_UNAVAILABLE},mainVersion:null,blocked:true,",
+     "if(!ok)return {rule:{...C30_RULE},mainVersion:C30_RULE.version,blocked:false,"),
+    ("c30 blocked plan buys", "opening-gapdown.js", 'if(R&&R.blocked)return {sofarPct:c30SofarPct(q),signal:false,decisionReason:"main_config_unavailable"};', ""),
+    ("copy source not labeled", "opening-gapdown.js", 'const ruleSourceOf=cfg=>"main-config"+(cfg&&cfg.source==="copy"?', 'const ruleSourceOf=cfg=>"main-config"+(false?'),
+    ("etf live note blocked", "claude-live.js", 'if(buy&&buy.decisionReason==="main_config_unavailable")return', "if(false)return"),
+    ("c30 live note blocked", "claude-live.js", ':buy.decisionReason==="main_config_unavailable"?', ":false?"),
+    ("etf day blocked warn", "_claude_day.js", 'if (blocked) r.warn = (r.warn ? r.warn + " · " : "") + "메인 기록을 못 읽어 15:21 판단 안 함 — 점검";', ""),
+    ("etf day blocked params kept", "_claude_day.js", "params: blocked ? null : buy && buy.rule ? Object.assign(", "params: buy && buy.rule ? Object.assign("),
+    ("c30 day blocked warn", "_claude_day.js", 'if (blocked) r.warn = (r.warn ? r.warn + " · " : "") + "메인 기록을 못 읽어 15:00 판단 안 함 — 점검";', ""),
+    ("c30 day blocked note", "_claude_day.js", ': blocked ? "15:00 전일 대비 "', ': false ? "15:00 전일 대비 "'),
+    ("banner pin ignored", "claude.html", 'var pin=/^user:/.test(String(m.by||""));', "var pin=false;"),
 ]
 
 
@@ -451,7 +493,7 @@ def run_js(folder, worker_src=None):
 def mutate_py(case):
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "backtest_etf_overnight.py", "claude_lab.py", "test_opening_gapdown.py"):
+        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "backtest_etf_overnight.py", "claude_lab.py", "test_opening_gapdown.py", "scalp_cost.py"):
             shutil.copy(ROOT / name, folder / name)
         # claude_lab.krx_holidays() 는 __file__ 옆의 functions/api/_krx_calendar.js 를 읽는다 — 사본 폴더에도 둬야 휴장 시험이 변이와 무관하게 빨간불이 되지 않는다
         (folder / "functions" / "api").mkdir(parents=True)
@@ -471,7 +513,7 @@ def mutate_py(case):
 def mutate_js(case):
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js", "_claude_real.js", "_paper-trading.js", "_opening-execution.js", "_research-broker.js", "_research-orders.js", "_market-day-cache.js", "_closing30.js", "_closing30-storage.js", "_closing30-outcomes.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js", "_claude_real.js", "_paper-trading.js", "_opening-execution.js", "_research-broker.js", "_research-orders.js", "_market-day-cache.js", "_closing30.js", "_closing30-storage.js", "_closing30-outcomes.js", "_scalp_cost.js", "_fee.js", "_owner_fee.js"):
             shutil.copy(API / name, folder / name)
         shutil.copy(ROOT.parent / "claude.html", folder / "claude.html")   # 화면 함수(arenaStatus) 시험이 사본 폴더의 claude.html 을 먼저 읽는다
         worker_src = folder / "worker_index.js"                  # 'worker' = worker/opening-scheduler/src/index.js 사본(시험이 JKQ_WORKER_SRC 로 읽는다)

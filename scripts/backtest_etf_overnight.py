@@ -4,7 +4,7 @@
 Rule (fixed 2026-10-01, see AUDIT-SELF-REVIEW.md):
 - KODEX 코스닥150레버리지 (233740). If today's close is <= -3% vs the previous close, buy at the
   closing auction and sell at the next session's opening auction. ETF: no securities transaction tax.
-- Cost: commission 0.015% x 2 + one tick per side (KRX ETF tick: 5 KRW >= 2,000, else 1 KRW).
+- Cost: common fee x 2 (before 2026-11-19 commission 0.015% x 2) + one tick per side (KRX ETF tick: 5 KRW >= 2,000, else 1 KRW).
 
 Goal metrics (user's evaluation order, 2026-10-01): days/yr with net >= +1%, weeks/yr with >= +5%,
 weekly average, loss-day average and worst day, MDD. Days without a signal are 0%, not losses.
@@ -21,6 +21,10 @@ import os
 import statistics
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 KST = timezone(timedelta(hours=9))
 OUT = Path(os.environ.get("JKQ_ETF_OUT", "data/etf-overnight-research"))
@@ -29,7 +33,7 @@ LIVE = Path(os.environ.get("JKQ_GAPDOWN_LIVE", "data/opening-gapdown-live"))
 DESIGN_END = "2026-09-30"
 VERSION = "etf_dip_overnight_v1"
 RULE = dict(code="233740", name="KODEX 코스닥150레버리지", dropMaxPct=-3.0, entry="close_auction", exit="next_open_auction",
-            commissionPct=0.015, ticksPerSide=1)
+            commissionPct=SC.fee_pct(), ticksPerSide=1)   # 편도 수수료 % = 공통 수수료(2026-11-19 전 0.015)
 D1_BREADTH_MIN = 5
 GATE = dict(mdd=-25.0, worstDay=-15.0)
 

@@ -11,7 +11,7 @@ Baseline v1:
 - Stop -1.2%, take-profit +2.4%, max hold 90 minutes.
 - One trade maximum per session.
 - Same-bar stop/target conflict resolves to stop.
-- Net result subtracts 0.20% round-trip friction.
+- Net result subtracts the common fee x 2 round-trip friction (default 0.50%; before 2026-11-19 0.20%).
 
 Research only. Variants never auto-promote and no orders are placed.
 """
@@ -25,6 +25,10 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 세금 · 미끄러짐 (2026-11-19 ~)
+except ModuleNotFoundError:  # scripts 패키지로 읽힐 때
+    from scripts import scalp_cost as SC
 
 NY = ZoneInfo("America/New_York")
 DATA = Path("data") / "soxl" / "SOXL" / "5m"
@@ -43,7 +47,7 @@ class Params:
     stop_pct: float = 1.2
     take_profit_pct: float = 2.4
     max_hold_bars: int = 18
-    friction_pct: float = 0.20
+    friction_pct: float = SC.cost_pct("us")   # 공통 수수료 × 2 (2026-11-19 전 0.20 = 0.10 × 2)
     evaluation_start: str = ""
 
 
@@ -574,7 +578,8 @@ def main():
         "comparisonRule": "Research comparison only. Baseline stays fixed; no automatic live promotion.",
         "auditRule": "Raw OHLCV, strategy version, signal thresholds, trade/no-trade reason, entry/exit and MFE/MAE are retained.",
         "executionModel": "signal on completed 5m bar; enter next 5m open; same-bar stop/target conflict resolves to stop",
-        "frictionModel": "0.20% round-trip conservative friction assumption",
+        "frictionModel": f"{SC.cost_pct('us'):.2f}% round-trip friction (common fee {SC.fee_pct()}% x 2)",
+        "fee": SC.fee_info(),
         "dataWindowNote": "Yahoo 5m source backfills a rolling recent window; the scalping-data archive grows prospectively beyond it.",
         "targetNote": "Net +1% days are tracked as a research target metric, not a guaranteed daily return.",
         "variants": reports,

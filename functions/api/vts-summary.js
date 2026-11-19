@@ -27,6 +27,7 @@ function dayStats(rep){
     entry:av(a.map(x=>x.entrySlippageCostPct)),
     exit:av(a.map(x=>x.exitSlippageCostPct)),
     drag:av(complete.map(x=>x.observedExecutionDragPct)),
+    internalFriction:av(complete.map(x=>x.internalFrictionPct!=null?+x.internalFrictionPct:0.25)),   // 그 거래들이 뺀 내부 마찰(옛 기록 0.25)
     net:av(complete.map(x=>x.vtsNetPnlPct)),
     costs:complete.reduce((s,x)=>s+(+x.vtsBrokerEstimatedCosts||0),0)
   };
@@ -43,7 +44,7 @@ export async function onRequestPost({request,env}){
       const s=dayStats(rep),label=name==="opening"?"시초가":"데이트레이딩";
       lines.push("",label+" · 내부 "+s.internal+"건 / VTS 주문 "+s.kis+"건 / 완전매칭 "+s.matched+"건");
       lines.push("진입 슬리피지 "+pct(s.entry)+" · 청산 "+pct(s.exit));
-      lines.push("관측 총 마찰비용 "+pct(s.drag)+" · 내부 가정 +0.250%");
+      lines.push("관측 총 마찰비용 "+pct(s.drag)+" · 내부 가정 "+(s.internalFriction==null?"—":pct(s.internalFriction)));
       lines.push("VTS 순손익 평균 "+pct(s.net)+" · 추정 제비용 "+Math.round(s.costs).toLocaleString("ko-KR")+"원");
     }
     const id=await telegram(env,lines.join("\n"));

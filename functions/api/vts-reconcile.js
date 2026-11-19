@@ -124,6 +124,8 @@ export async function onRequestGet({request}){
         code:t.code,name:t.name||t.code,internalEntryTime:t.entryTime,internalEntryPrice:entryRef,
         internalExitTime:t.exitTime,internalExitPrice:exitRef,internalReason:t.reason||"",
         internalPnl:t.pnl,
+        // 내부 모의가 그 거래에 뺀 마찰(기록값 · 공통 수수료 반영 2026-11-19 ~) — 칸이 없는 옛 기록은 그때 가정 0.25
+        internalFrictionPct:Number.isFinite(+t.frictionPct)&&t.frictionPct!=null?+t.frictionPct:0.25,
         vtsBuy:buy?{orderNo:buy.orderNo,orderTime:buy.orderTime,notifyTime:buy.notifyTime,orderQty:buy.orderQty,
           fillQty:buy.fillQty,fillPrice:buy.fillPrice,fillAmount:buy.fillAmount,remainingQty:buy.remainingQty,
           rejectedQty:buy.rejectedQty,canceled:buy.canceled,estimatedCosts:buyCost}:null,
@@ -152,6 +154,7 @@ export async function onRequestGet({request}){
     const internalPnl=complete.map(x=>x.internalPnl).filter(Number.isFinite);
     const brokerRates=complete.map(x=>x.vtsBrokerCostRatePct).filter(Number.isFinite);
     const observedDrag=complete.map(x=>x.observedExecutionDragPct).filter(Number.isFinite);
+    const internalFriction=complete.map(x=>x.internalFrictionPct).filter(Number.isFinite);
     const entryLag=matches.map(x=>x.entryOrderLagSecApprox).filter(Number.isFinite);
     const exitLag=matches.map(x=>x.exitOrderLagSecApprox).filter(Number.isFinite);
     const notifyLag=matches.flatMap(x=>[x.entryBrokerNotifyLagSec,x.exitBrokerNotifyLagSec]).filter(Number.isFinite);
@@ -186,7 +189,9 @@ export async function onRequestGet({request}){
         avgExitOrderLagSecApprox:avg(exitLag),
         avgBrokerNotifyLagSec:avg(notifyLag),
         delayNote:"order lag is approximate from the internal reference minute start to KIS order time; broker notify lag uses KIS ord_tmd→infm_tmd and is not exact exchange fill latency.",
-        frictionGapVsInternal025Pct:avgDrag==null?null:avgDrag-0.25,
+        frictionGapVsInternal025Pct:avgDrag==null?null:avgDrag-0.25,   // 옛 칸(0.25 고정 가정) — 이어 보기용
+        avgInternalFrictionPct:avg(internalFriction),
+        frictionGapVsInternalPct:avgDrag==null||!internalFriction.length?null:avgDrag-avg(internalFriction),   // 관측 − 그 거래들이 실제로 뺀 내부 마찰
         calibrationStatus:complete.length>=20?"reviewable":"collecting",
         calibrationMatches:complete.length,
         filledOrderCount:filledOrders.length,

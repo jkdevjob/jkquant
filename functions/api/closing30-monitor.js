@@ -2,6 +2,7 @@
 // Internal scheduled paper-only signal/pricing. No broker orders and no post-cutoff input in signal selection.
 import {minuteVolume} from "./_opening.js";
 import {closeHm,snapAt,closeFeature,chooseClosingSignals,closingResearchVariants} from "./_closing30.js";
+import {useOwnerFee} from "./_owner_fee.js";
 const JSON_H={"content-type":"application/json; charset=utf-8","cache-control":"no-store"};
 const respond=(obj,status=200)=>new Response(JSON.stringify(obj),{status,headers:JSON_H});
 function permitted(req,env){const key=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"");return !!key&&req.headers.get("x-monitor-key")===key;}
@@ -61,6 +62,7 @@ async function distributed(request,rows,op,params){
 }
 export async function onRequestGet({request,env}){
  if(!permitted(request,env))return respond({ok:false,error:"unauthorized"},401);
+ await useOwnerFee(env);   // 신호 파라미터 스냅샷의 비용 = 공통 수수료(설정 › 💸 수수료)
  const u=new URL(request.url),op=u.searchParams.get("op"),kind=u.searchParams.get("kind");
  const today=kst(),date=u.searchParams.get("date")||today.date,origin=authOrigin(request);
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return respond({ok:false,error:"invalid date"},400);

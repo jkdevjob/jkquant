@@ -1,4 +1,5 @@
 import {DUEL_START,DUEL_TABS,COSTS,buildDuel,normalizeClaudeEvents,normalizeTrades} from "./_scalping_duel.js";
+import {useOwnerFee} from "./_owner_fee.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const REPO="jkdevjob/jkquant",BRANCH="scalping-data";
@@ -48,11 +49,27 @@ function gptTrades(rows){
   return m;
 }
 function datesFromCsv(rows){return new Set(rows.map(r=>String(r.date||"")).filter(Boolean));}
-async function loadReport(){
-  const paths=await tree();
+/* 클로드 하루 마감 사본 — 날짜 파일을 하나씩 받으면 Cloudflare 한 번 실행 요청 한도(50)를 넘는다(2026-11-16 쯤부터 46 파일 + 8).
+   밤 워크플로가 같은 단계에서 대결이 읽는 close:* 기록만 묶은 duel-index.json 을 만든다 — 지난 날은 거기서,
+   사본을 다시 받는 최근 6일(워크플로가 날마다 6일치를 새로 받는다)과 묶음에 없는 날만 날짜 파일로 받는다. */
+const RECENT_DAYS=6;
+async function claudeLiveFiles(paths,now=Date.now()){
   const claudePaths=paths.filter(p=>/^data\/claude-live\/20\d\d-\d\d-\d\d\.json$/.test(p)&&p.slice(-15,-5)>=DUEL_START);
-  const claudeFiles=[];
-  for(const p of claudePaths){const j=await rawJson(p.slice(5));if(j)claudeFiles.push(j);}
+  const recentFrom=new Date(now+9*36e5-RECENT_DAYS*864e5).toISOString().slice(0,10);
+  let idx=null;
+  if(paths.includes("data/claude-live/duel-index.json")){try{idx=await rawJson("claude-live/duel-index.json");}catch(e){idx=null;}}
+  const have=new Map(((idx&&Array.isArray(idx.files))?idx.files:[]).filter(f=>f&&f.date).map(f=>[String(f.date),f]));
+  const files=[];let fetched=0;
+  for(const p of claudePaths){
+    const d=p.slice(-15,-5);
+    if(d<recentFrom&&have.has(d)){files.push(have.get(d));continue;}
+    const j=await rawJson(p.slice(5));fetched++;if(j)files.push(j);
+  }
+  return {files,fromIndex:files.length-fetched,fetched};
+}
+async function loadReport(now=Date.now()){
+  const paths=await tree();
+  const {files:claudeFiles}=await claudeLiveFiles(paths,now);
   const claudeRecords=normalizeClaudeEvents(claudeFiles);
 
   const [opCsv,dayCsv,crCsv,sxCsv,crDec,sxDec]=await Promise.all([
@@ -90,11 +107,13 @@ function message(date,d){
   L.push("자세히: jkquant.pages.dev/scalping → 🆚 클로드 대결");
   return L.join("\n");
 }
-export async function onRequestGet(){
-  try{return json({ok:true,report:await loadReport()});}catch(e){return json({ok:false,error:String(e.message||e)},502);}
+export async function onRequestGet({env}={}){
+  const {error,...fee}=await useOwnerFee(env||{});   // 같은 비용표 = 공통 수수료(설정 › 💸 수수료) · 공개 응답이라 실패 이유는 빼고 율 · 출처만
+  try{return json({ok:true,fee,report:await loadReport()});}catch(e){return json({ok:false,error:String(e.message||e)},502);}
 }
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+  await useOwnerFee(env);
   try{
     const b=await request.json(),date=String(b.date||"");
     if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date<DUEL_START)return json({ok:true,pending:true,reason:"before_start"});
@@ -105,4 +124,4 @@ export async function onRequestPost({request,env}){
     return json({ok:true,date,skipped:"buy_sell_only"});
   }catch(e){return json({ok:false,error:String(e.message||e)},500);}
 }
-export {loadReport,message,csv};
+export {loadReport,message,csv,claudeLiveFiles,RECENT_DAYS};

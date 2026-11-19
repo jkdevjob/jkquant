@@ -9,6 +9,7 @@ import { ledger, quote, barOn } from "./claude-live.js";
 import { openingDay, etfDay, coinDay, soxlDay, close30Day } from "./_claude_day.js";
 import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts, openingExit, openingExitPrices } from "./_claude_main.js";
 import { REPORT_HEAD } from "./_claude_push.js";
+import { useOwnerFee } from "./_owner_fee.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
@@ -200,6 +201,7 @@ export async function sendOnce(env,text){
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
   let b={};try{b=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
+  await useOwnerFee(env);                          // 하루 마감 장부 비용 = 공통 수수료(설정 › 💸 수수료) — 웹 오늘 이력과 같은 율
   if(b.op==="event"){                               // 실제 매수 · 매도 — Worker 감시가 웹 알림과 같은 사건으로 부른다
     const text=String(b.text||"");
     if(!ALERT_HEAD.test(text)||text.length>1500)return json({ok:false,definite:true,error:"알림 형식 오류(머리말 [클로드 연구 탭])"},400);

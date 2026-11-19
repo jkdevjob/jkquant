@@ -85,7 +85,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.31.1</span></h1></div>
+  <div><div class="kicker">Claude Research</div><h1>JK <span class="v">투자</span> 연구 <span class="ver" id="clVer">v2.32.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -175,11 +175,21 @@ var DOC={
     proof:"연구 R14(10/22) · Yahoo 60분봉 약 2년(2023-10~2026-10): 매매일 347일, 누적 +33.6%, MDD −10%. 15:00 하락 폭 기준을 0 → −4% 로 바꿔 보는 그림자들과 매일 경쟁한다.",
     times:"15:00 판단 · 매수 · 15:21 매도(종가 동시호가) · 15:40 체결 확인 · 알림: 매수 · 매도 때만"}
 };
+// 단타 비용(왕복 %) — 봇과 같은 공통 수수료(/api/claude-live 의 fee · 설정 › 💸 수수료 · 2026-11-19 ~). 수수료 아닌 몫은 _scalp_cost.js NON_FEE_PCT 와 같은 값
+// (국내 주식 거래세 0.20 · 데이트레이딩 0.22 · ETF 0 · 대결 ETF 0.12 · 코인 0.04 · 미국 0) — check-scalp-fee 가 대조한다.
+var CL_NONFEE={kr:0.20,krDay:0.22,etf:0,etfFlat:0.10,etfFair:0.12,coin:0.04,us:0};
+function clFeeRate(){var r=LIVE&&LIVE.fee?+LIVE.fee.rate:NaN;return isFinite(r)&&r>=0&&r<=0.02?r:0.0025}
+function clCost(k){return Math.round((CL_NONFEE[k]+2*clFeeRate()*100)*1e6)/1e6}
+function clFeeLabel(){var f=LIVE&&LIVE.fee;return (Math.round(clFeeRate()*1e8)/1e6)+"%"+(f&&f.source==="user"?"":"(기본값)")}
+/* 대결 같은 비용표 — 밤 계산이 남긴 표(duel.costs = FAIR_COST)를 먼저, 없으면 지금 율 */
+function duelCostNote(D){var c=(D&&D.costs)||{},v=function(x,k){return (isFinite(+x)&&x!==null&&x!==""?+x:clCost(k)).toFixed(2)+"%"};
+  return "비용(왕복): 국내 주식 "+v(c.opening,"krDay")+" · ETF "+v(c.daytrading_etf,"etfFair")+" · 코인 "+v(c.crypto,"coin")+" · 미국 "+v(c.soxl,"us")+" — 공통 수수료 "+clFeeLabel()+" × 2 포함."}
 function sec(title,inner,open,id){return "<details class='card sec'"+(open?" open":"")+(id?" id='"+id+"'":"")+"><summary><h3 style='display:inline'>"+title+"</h3></summary><div style='margin-top:8px'>"+inner+"</div></details>"}
 function docRow(k,v){return "<tr><td style='width:96px;color:var(--gold);font-weight:800;vertical-align:top'>"+k+"</td><td style='white-space:normal;text-align:left'>"+esc(v)+"</td></tr>"}
 function mainBanner(tab){var a=arenaOf(tab),m=(((J.lab||{}).main||{})[tab]||{}).current;
   if(!m||!m.effectiveFrom)return "";                             // 처음 채택한 기본 메인이면 아래 설명 그대로
-  return "<div class='warn' style='margin-bottom:8px'>🏆 지금 메인은 자동 승격된 <b>"+esc(m.name)+"</b> ("+esc(m.effectiveFrom)+" 부터) — "+esc(m.rule||"")+"<br>아래 설명은 처음 채택한 기본 전략 기준입니다. 바뀐 변수는 ⑥ 전략 경쟁 표에서 확인하세요.</div>";}
+  var pin=/^user:/.test(String(m.by||""));                       // 사용자 고정(USER_PINS · main-config by=user:pin)이면 '자동 승격'이라 쓰지 않는다
+  return "<div class='warn' style='margin-bottom:8px'>"+(pin?"📌 지금 메인은 사용자가 고정한 ":"🏆 지금 메인은 자동 승격된 ")+"<b>"+esc(m.name)+"</b> ("+esc(m.effectiveFrom)+" 부터) — "+esc(m.rule||"")+"<br>아래 설명은 처음 채택한 기본 전략 기준입니다. 바뀐 변수는 ⑥ 전략 경쟁 표에서 확인하세요.</div>";}
 function docCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("① 전략 · 종목 선정 규칙 — "+esc(d.title),mainBanner(tab)+"<div class='rule'>"+esc(d.what)+"</div><div class='tw'><table class='board doc'><tbody>"+docRow("종목 선정",d.pick)+docRow("자금",d.money)+docRow("근거",d.proof)+"</tbody></table></div>",true);}
 function buyCard(tab){var d=DOC[tab];if(!d)return "";
@@ -303,7 +313,7 @@ function duelPage(){
   var sb=["opening","daytrading","crypto","soxl"].map(function(k){var t=(D.tabs||{})[k]||{},cc=t.claude||{},gg=t.gpt||{},r=t.record||{};var w=b(cc.totalPct,gg.totalPct,true);
     return "<tr><td style='text-align:left'>"+DUEL_NAME[k]+"<div class='sub'>"+(t.days||[]).length+"일 · "+(r.claude||0)+"승 "+(r.gpt||0)+"패 "+(r.draw||0)+"무</div></td><td class='"+w[0]+"'><b>"+P1(cc.totalPct)+"</b><div class='sub'>"+(cc.trades||0)+"건 · 승률 "+(cc.winRate==null?"—":num(cc.winRate,0)+"%")+"</div></td><td class='"+w[1]+"'><b>"+P1(gg.totalPct)+"</b><div class='sub'>"+(gg.trades||0)+"건 · 승률 "+(gg.winRate==null?"—":num(gg.winRate,0)+"%")+"</div></td></tr>"}).join("");
   html+="<div class='card'><h3>탭별 스코어보드</h3><div class='tw'><table class='board'><thead><tr><th style='text-align:left'>탭 · 승부</th><th>🤖 클로드 누적</th><th>GPT 누적</th></tr></thead><tbody>"+sb+"</tbody></table></div>"+
-    "<p class='note'>비용(왕복): 국내 주식 0.25% · ETF 0.15% · 코인 0.14% · 미국 0.20%. 초록 = 더 나은 쪽.</p></div>";
+    "<p class='note'>"+esc(duelCostNote(D))+" 초록 = 더 나은 쪽.</p></div>";
   // 날짜별
   var dr=days.slice().reverse().map(function(d){var cells=["opening","daytrading","crypto","soxl"].map(function(k){var x=((((D.tabs||{})[k]||{}).days)||[]).find(function(y){return y.date===d.date});
       if(!x)return "<td class='sub'>—</td>";var bc=x.winner==="claude"?DUEL_C:x.winner==="gpt"?DUEL_G:"var(--border)";
@@ -443,7 +453,7 @@ function tabPage(tab,T,gd,et,wl){
     html+=sec("⑧ 실행 품질 · VTS 대조",erows?"<div class='tw'><table><thead><tr><th>매수 → 매도</th><th>예상 하락</th><th>매수 슬립</th><th>매도 슬립</th><th>순손익</th></tr></thead><tbody>"+erows+"</tbody></table></div>":"<p class='note'>아직 매수 신호가 난 날이 없습니다.</p>",false);
   }
   if(tab==="close30")html+=sec("⑧ 실행 품질","<p class='note'>KIS 모의투자 주문은 설정 › 모의투자 '클로드 ⑤ 종가 30분'에서 켜고 끕니다(기본 꺼짐 · 주문 예산도 거기서). 켜면: 15:00 시장가 매수 → 15:21 종가 동시호가 시장가 매도 → 15:40 체결 조회. ②(같은 종목)와는 접수 시각으로 나눠 셉니다 — ⑤ 매수 15:00~15:15 · 매도 15:15 이후, ② 매수 15:15 이후 · 매도 09:00 전. 손익은 주문한 건을 15:00 판단 가격 → 공식 종가로 정산합니다(모의투자 체결 · 거절은 측정용). 비용은 밤 계산과 같은 식(수수료 0.03% + 15:00 매수 반 호가).</p>",false);
-  if(tab==="crypto"||tab==="soxl")html+=sec("⑧ 실행 품질","<p class='note'>"+(tab==="crypto"?"주문 없이 업비트 60분봉으로 기록합니다: 돌파한 봉에서 max(봉 시가, 어제 고가)+0.05% 에 매수, 다음 날 09:00 직전 봉 종가에 매도, 손절은 매수가 −5%(+0.1% 미끄러짐), 왕복 비용 0.14%. 같은 봉 안에서 손절선과 종가 순서를 모르면 손절로 봅니다(보수적). 실주문 전에는 실제 체결 차이를 따로 재야 합니다.":"주문 없이 일봉으로 기록합니다: 마감 확정 종가로 판단 → 다음 미국장 시가 매수 · 매도(같은 종가로 판단하고 체결하지 않음), 왕복 비용 0.20%. 미국장 결과는 한국시각 다음 날 아침에 확정됩니다.")+"</p>",false);
+  if(tab==="crypto"||tab==="soxl")html+=sec("⑧ 실행 품질","<p class='note'>"+(tab==="crypto"?"주문 없이 업비트 60분봉으로 기록합니다: 돌파한 봉에서 max(봉 시가, 어제 고가)+0.05% 에 매수, 다음 날 09:00 직전 봉 종가에 매도, 손절은 매수가 −5%(+0.1% 미끄러짐), 왕복 비용 "+clCost("coin").toFixed(2)+"%(공통 수수료 "+clFeeLabel()+" × 2 + 미끄러짐 0.04). 같은 봉 안에서 손절선과 종가 순서를 모르면 손절로 봅니다(보수적). 실주문 전에는 실제 체결 차이를 따로 재야 합니다.":"주문 없이 일봉으로 기록합니다: 마감 확정 종가로 판단 → 다음 미국장 시가 매수 · 매도(같은 종가로 판단하고 체결하지 않음), 왕복 비용 "+clCost("us").toFixed(2)+"%(공통 수수료 "+clFeeLabel()+" × 2). 미국장 결과는 한국시각 다음 날 아침에 확정됩니다.")+"</p>",false);
   return html;
 }
 var J=null,TAB="today";

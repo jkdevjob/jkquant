@@ -20,6 +20,7 @@ on:
       - "scripts/backtest_opening_gapdown.py"
       - "scripts/backtest_etf_overnight.py"
       - "scripts/claude_lab.py"
+      - "scripts/scalp_cost.py"
 
 permissions:
   contents: write
@@ -100,12 +101,29 @@ jobs:
               echo "$DATE: $(jq -c '[.ledger.events[].id]' "data/claude-live/$DATE.json")"
             fi
           done
+          # 대결(/api/scalping-duel) 묶음 — 날짜 파일을 하나씩 받으면 Cloudflare 요청 한도(50)를 넘는다.
+          # 대결이 읽는 close:* 기록만 날짜별로 그대로 옮긴다(원본 날짜 파일은 그대로 둔다).
+          python3 - <<'PY'
+          import glob, json, os
+          files = []
+          for f in sorted(glob.glob("data/claude-live/20[0-9][0-9]-[0-9][0-9]-[0-9][0-9].json")):
+              d = os.path.basename(f)[:10]
+              if d < "2026-10-05":
+                  continue
+              j = json.load(open(f, encoding="utf-8"))
+              ev = [e for e in ((j.get("ledger") or {}).get("events") or []) if str((e or {}).get("id", "")).startswith("close:")]
+              files.append({"date": d, "ledger": {"events": ev}})
+          out = {"schema": 1, "source": "data/claude-live/YYYY-MM-DD.json close:* events", "start": "2026-10-05", "files": files}
+          json.dump(out, open("data/claude-live/duel-index.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
+          print("duel-index:", len(files), "days")
+          PY
 
       - name: 연구 통계 + 실측 연결 + 다음 거래일 명단
         env:
           JKQ_GAPDOWN_OUT: data/opening-gapdown-research
           JKQ_GAPDOWN_LIVE: data/opening-gapdown-live
           JKQ_GAPDOWN_FROM_YEAR: "2018"
+          JKQ_FEE_KEY: ${{ secrets.AUTOTRADE_KEY }}   # 단타 비용 = 공통 수수료(/api/common-fee · scripts/scalp_cost.py)
         run: python .app/scripts/backtest_opening_gapdown.py
 
       - name: ② ETF 하락일 야간 연구 + ①+② 목표지표(+1% 일·+5% 주)
@@ -113,6 +131,7 @@ jobs:
           JKQ_ETF_OUT: data/etf-overnight-research
           JKQ_GAPDOWN_OUT: data/opening-gapdown-research
           JKQ_GAPDOWN_LIVE: data/opening-gapdown-live
+          JKQ_FEE_KEY: ${{ secrets.AUTOTRADE_KEY }}
         run: python .app/scripts/backtest_etf_overnight.py
 
       - name: 단타(클로드) 메인 전략 승격 기록 사본 (Worker claude-config — 쌓기만 하는 원본)

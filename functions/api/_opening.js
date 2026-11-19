@@ -1,6 +1,7 @@
 // 시초가 눌림→재돌파 서버 공용 규칙
 // 기준전략과 연구용 shadow 전략이 같은 엔진을 사용한다.
 // shadow는 실제 주문/기준 Telegram 알림에 영향을 주지 않고 비교 기록만 남긴다.
+import {scalpCostPct,scalpFeeRate,SCALP_COST_MODEL} from "./_scalp_cost.js";
 
 export const OPENING_BASE_PARAMS=Object.freeze({
   obs:3,
@@ -156,7 +157,8 @@ export function openingVariant(name){
   return SHADOW_VARIANTS.find(v=>v.name===n)||generatedOpeningVariant(n);
 }
 
-export const OPENING_FIXED_FRICTION_PCT=.23;
+// 고정 몫(왕복 %) = 거래세 0.20 + 공통 수수료(설정 › 💸 수수료) × 2 — _scalp_cost.js. 2026-11-19 전 0.23(그때 기록의 fixedPct 는 그대로)
+export function openingFixedFrictionPct(){return scalpCostPct("kr");}
 export const OPENING_VTS_MIN_MATCHES=30;
 export const OPENING_FALLBACK_TICKS_PER_SIDE=2.5;
 
@@ -180,9 +182,11 @@ export function openingFriction(entryPrice,calibration=null){
     slippagePct=(2*OPENING_FALLBACK_TICKS_PER_SIDE*tickSize/Math.max(+entryPrice||0,1e-9))*100;
     source="2.5tick-fallback";
   }
+  const fixedPct=openingFixedFrictionPct();
   return {
-    fixedPct:OPENING_FIXED_FRICTION_PCT,slippagePct,
-    totalPct:OPENING_FIXED_FRICTION_PCT+slippagePct,source,
+    fixedPct,slippagePct,
+    totalPct:fixedPct+slippagePct,source,
+    costModel:SCALP_COST_MODEL,feeRatePct:Math.round(scalpFeeRate()*1e8)/1e6,
     completeMatches:n,minMatches:OPENING_VTS_MIN_MATCHES,
     ticksPerSide:source==="2.5tick-fallback"?OPENING_FALLBACK_TICKS_PER_SIDE:null,
     tickSize
