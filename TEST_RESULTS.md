@@ -1,5 +1,27 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## GPT · 2026-11-19 G9·G7 원본 엔진 검증
+
+- 기준 main6a4fdd9e·봇 원천c481c5be. G9 사전등록6cfc02e4가 세부 계산보다 앞선다. 07:16의 알려진 후보 성과를 이용한 역사 진단이며 새 독립 holdout이 아니다.
+- `g05_closing_parity.py --source-sha c481c5beadc97d8d20185909172995a68ce55c73 --out <audit>`: 실제 운영JS/Python20장부/1,107건 기록차이0·일별차이0·원본해시변경0·PASS.
+- `g09_closing_up1_byGPT.py --bundle <audit> --out <result>`: 청산894건 비용식·공통계좌40일 고정3슬롯 일치, 변이(비용제거894/분모1/미정산0처리20) 감지·PASS. 현금슬롯 값 시험은 시장 표에서 제외.
+- G9 익일17공통일·각51건 baseline−10.8378%/up_1+12.7710%; 후보 추가비용+10.8815%, MDD−10.5809%, PF1.7749. 당일3공통일·각9건 baseline−0.3226%/up_1−0.3265%. 미정산·WF0·독립전향0·주말65.5시간으로 **수익성 채택 없음**.
+- `g07_refresh_byGPT.py --sources <scalping-data-checkout> --out <result>`: 실제main 연구엔진34적격일·각100거래가 보관CSV와 동일, 독립계좌·복리·MDD 차이0·PASS. 운영baseline11/16~18도9/9건 진입·청산·순손익 차이0. 등록 후3일/9건 양쪽−3.7033%(추가비용−3.9956%), 20/5 WF2구간의 학습선택 모두baseline. 실브로커체결·정수주·환전은 검증하지 않았다.
+- 공개 `/api/scalping-daily-results` 11/18 확정: 시초가−1.532822%, 데이−1.25%, BTC−0.64%, 종가30분+0.090546%. 11/18 ET SOXL 무매매0%(KST11/19). 미정산과 새 장중 성과는0으로 넣지 않았다.
+- 푸시서버 `/health`의11/19 영수증:08:00:02 KST 웹푸시1/1·실패0·텔레그램sent·1회·complete true. 기기 실제 표시/열람은 미확인.
+- 전체검사·PR·병합 상태는 이번 작업의 추가 검증 기록에 실제 결과로 남긴다. 연구 값 시험 PASS를 전체 CI나 운영 배포 완료로 취급하지 않는다.
+
+
+## 2026-11-19 · 연구(클로드) 아침 루틴 — R50
+
+- 11/18 결과(scalping-data 09bc51ac · `claude-live/2026-11-18.json` · `claude-lab/review/2026-11-18.json` · `latest.json` 04:26)
+  - ① close:opening settled · 통과 3 < 7 · ② close:daytrading settled · 15:21 +4.35% · ⑤ close:close30 settled · 15:00 +3.95% — 셋 다 매매 없음.
+  - ③ `nextSignals` KRW-ETH basedOn 11/17 · 248.0만 < 282.0만 → 쉼 · ④ `nextSignal` basedOn 11/17 · $49.07 · IBS 0.79 · 50일 평균 $107.5 아래 → none.
+- R50 `r50_turn_of_month.py`(사전 등록 08e3b1f0): SPY t 0.70 · QQQ t 0.86 · TQQQ t 1.47(MDD −31.1%) · SOXL t 0.84(MDD −39.4%) → ① 모두 X → 기록만. 장부 날짜는 사전 등록대로(2025-12-31 → 2026-01-07 등).
+- 11/19 리포트: 실행 44409501791 · `{"ok":true,"id":"report:2026-11-19","subs":1,"sent":[201],"telegram":{"result":"sent","tries":1}}` 08:00:02.
+- ④ 11/18 미국장 반영: `latest.json` 07:22 · `nextSignal` basedOn 11/18 · $49.26 · IBS 0.51 · downRun 0 · 50일 평균 $106.0 → none(오늘 밤 쉼).
+- 미확인: R42 매매 없음 · ③ 봇 실거래 기록 없음(사용자 서버 설치 전).
+
 ## 2026-11-18 · 연구(클로드) 아침 루틴 — R49
 
 - 11/17 결과(`latest.json` · `opening-gapdown-live/2026-11-17.json` · `claude-live/2026-11-17.json`)
