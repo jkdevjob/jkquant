@@ -68,9 +68,10 @@ ok([int(re.match(r'^(\d+)\. ', b['text']).group(1)) for b in nums_p] == list(ran
 ok(all('\n' not in b['text'] for b in nums_p), 'one numbered line per paragraph (no line breaks inside)')
 lens = [len(b['text']) for b in nums_p]
 ok(lens and 30 <= sum(lens) / len(lens) <= 90 and max(lens) <= 180, f'numbered line length avg {sum(lens) // max(len(lens), 1)} (30~90) / max {max(lens or [0])} (<=180)')
-def m_end(t):  # 끝 글자가 받침 ㅁ(~음·~임·~함·~됨) 인지 — 끝의 (해석)·마침표·따옴표는 걷고 본다
-    t = re.sub(r'(\s*\([^()]*\))+\s*$', '', t.strip()).rstrip('.!?"\'”’ ')
-    return bool(t) and 0xAC00 <= ord(t[-1]) <= 0xD7A3 and (ord(t[-1]) - 0xAC00) % 28 == 16
+def m_end(t):  # 끝 글자가 받침 ㅁ·ㄻ(~음·~임·~함·~됨·~듦) 인지 — 끝의 마침표·(해석)·따옴표는 걷고 본다
+    t = t.strip().rstrip('.!?"\'”’ ')
+    t = re.sub(r'(\s*\([^()]*\))+$', '', t).rstrip('.!?"\'”’ ')
+    return bool(t) and 0xAC00 <= ord(t[-1]) <= 0xD7A3 and (ord(t[-1]) - 0xAC00) % 28 in (16, 10)
 ok(sum(m_end(b['text']) for b in nums_p) >= 0.7 * max(len(nums_p), 1), f"'~음/~임' endings {sum(m_end(b['text']) for b in nums_p)}/{len(nums_p)} (>=70%)")
 others = [b for b in paras if b not in nums_p]
 ok(bl and bl[0].get('type') == 'paragraph' and bl[0] in others and len(bl[0]['text']) <= 160, 'first block: short intro line without number (<=160 chars)')
