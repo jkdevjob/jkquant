@@ -5,12 +5,23 @@
 const {open}=require('./imh'); const fs=require('fs');
 const OUT=process.argv[2]||'ma_base_out.json', DS=(process.env.DS||'real,syn,tq').split(','), CAPS=(process.env.CAPS||'10000,100000').split(',').map(Number);
 const OPT=process.env.OPT?JSON.parse(process.env.OPT):null, N=+(process.env.N||200);
+// 11-21 확인용(기준 밖): BILLX='{"fee":1,"tax":0.154,"er":0.0009}' — 앱 '단기국채' 대기는 현금에 T-Bill 이자만 붙인다(국채 ETF 매매 수수료 ·
+// 이자 세금 · 운용보수 없음). fee=1 이면 빠질 때 현금 전부를 국채 ETF 로 사고(수수료 FEE) 다시 살 때 판다(FEE) · tax = 이자에 매기는 세율 · er = 연 운용보수.
+const BILLX=process.env.BILLX?JSON.parse(process.env.BILLX):null;
+const BILLPATCH=(X)=>{ window.__BX=X; let s=runMA200.toString(); const rep=(a,b)=>{ const n=s.split(a).length-1; if(n!==1) throw new Error('BILLPATCH 고리 '+n+': '+a); s=s.replace(a,b); };
+  rep("if(PARK==='bill'&&cash>0){ const it=cash*parkRate(+d.slice(0,4),tkr)/252; cash+=it; interestTotal+=it; }",
+      "if(PARK==='bill'&&cash>0){ const it=cash*Math.max(0,parkRate(+d.slice(0,4),tkr)-(__BX.er||0))/252*(1-(__BX.tax||0)); cash+=it; interestTotal+=it; }");
+  rep("if(want && shares===0 && cash>0){", "if(want && shares===0 && cash>0){ if(PARK==='bill'&&__BX.fee&&costOn&&__inB){ const bf=cash*FEE; cash-=bf; feesTotal+=bf; } __inB=false;");
+  rep("shares=0; feesTotal+=fee; trades++;", "shares=0; feesTotal+=fee; trades++; if(PARK==='bill'&&__BX.fee&&costOn){ const bf=cash*FEE/(1+FEE); cash-=bf; feesTotal+=bf; __inB=true; }");
+  rep("let interestTotal=0;", "let interestTotal=0, __inB=false;");
+  window.runMA200=(0,eval)('('+s+')'); };
 const SETS={real:{tk:'SOXL',y0:2010},syn:{tk:'SYNSOXL_S',y0:1995},tq:{tk:'TQQQ',y0:2010}};
 const PAGE=()=>{ window.MARUN=function(tkr,from,to,cap,N,opt){ const days=Object.keys(M[tkr]).sort().filter(d=>d>=from&&d<=to); const r=runMA200(days,tkr,cap,N,true,opt||undefined);
   const yrs=(Date.parse(days[days.length-1])-Date.parse(days[0]))/(365.25*864e5), p0=M[tkr][days[0]][C], p1=M[tkr][days[days.length-1]][C];
   return {final:r.final,cagr:(Math.pow(Math.max(r.final,1e-9)/cap,1/yrs)-1)*100,mdd:r.mdd,tr:r.trades/yrs,timeIn:r.timeIn,tax:r.tax,fees:r.fees,warm:r.warmDays,bh:(Math.pow(p1/p0,1/yrs)-1)*100,first:days[0],last:days[days.length-1]}; }; };
 (async()=>{ const out={opt:OPT,N,sets:{}}; const q=(a,p)=>{ const b=[...a].sort((x,y)=>x-y); return b[Math.floor(p*(b.length-1))]; }, f1=x=>x.toFixed(1);
   for(const ds of DS){ const S=SETS[ds]; const {pg,close}=await open([{sym:S.tk}]); await pg.evaluate(PAGE);
+    if(BILLX) await pg.evaluate(BILLPATCH,BILLX);
     const all=await pg.evaluate(t=>Object.keys(M[t]).sort(),S.tk), END=all[all.length-1];
     // 전체 기간은 이평선이 생긴 뒤부터(워밍업 200일을 '보유'로 넣지 않는다 — 엔진 주석의 621% vs 187% 함정)
     const F0=all[Math.min(all.length-1,N+60)];
