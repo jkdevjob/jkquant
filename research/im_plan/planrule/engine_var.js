@@ -47,7 +47,18 @@ const P=[
    "const tq=(guardFlip||tqReb||force||first||__qHit)?(guard==='ON'?Math.max((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq/sp.TQQQ)):0):pos.TQQQ;"],
   // 11-16 고리 decHold(날짜): 그날(전일 확정) TECL 이 목표보다 많아도 TECL 을 팔지 않음(밴드 맞춤 · 입금 날 맞춤 모두 — 12월 실현이익을 다음 해로 미루는 시험) · 안 주면 앱 그대로
   ["let {teclHit,guard,guardFlip,tqReb}=dec;", "let {teclHit,guard,guardFlip,tqReb}=dec; const __dh=!!(RULES.decHold&&sleeveNow>w&&RULES.decHold(S.dates[p])); if(__dh) teclHit=false;"],
-  ["Math.max((RULES.holdT||(RULES.depBuy&&force&&!teclHit&&!first))?pos.TECL:0,", "Math.max((RULES.holdT||__dh||(RULES.depBuy&&force&&!teclHit&&!first))?pos.TECL:0,"]];
+  ["Math.max((RULES.holdT||(RULES.depBuy&&force&&!teclHit&&!first))?pos.TECL:0,", "Math.max((RULES.holdT||__dh||(RULES.depBuy&&force&&!teclHit&&!first))?pos.TECL:0,"],
+  // 11-21 고리 relBand(k): TECL 밴드를 목표 비중에 비례(±k×w · 안 주면 앱 ±bandDn/bandUp) · relMin/relMax 로 한쪽만(좁히기만 = min(앱, k×w) · 넓히기만 = max)
+  ["const teclHit=!(a.teclQty>0)||(a.sleeveNow-a.w>R.bandDn)||(a.w-a.sleeveNow>R.bandUp);",
+   "const __kb=R.relBand!=null?R.relBand*a.w:null,__bd=__kb==null?R.bandDn:(R.relMode==='min'?Math.min(R.bandDn,__kb):R.relMode==='max'?Math.max(R.bandDn,__kb):__kb),__bu=__kb==null?R.bandUp:(R.relMode==='min'?Math.min(R.bandUp,__kb):R.relMode==='max'?Math.max(R.bandUp,__kb):__kb);const teclHit=!(a.teclQty>0)||(a.sleeveNow-a.w>__bd)||(a.w-a.sleeveNow>__bu);"],
+  // 11-21 고리 noForce: 입금 날 전체 맞춤을 하지 않는다(입금 돈은 다음 신호 때 맞춤까지 현금) · 안 주면 앱 그대로
+  ["addCash(ledger,date,'dep',__pend,seq++);__pend=0;force=true;}", "addCash(ledger,date,'dep',__pend,seq++);__pend=0;force=!RULES.noForce;}"],
+  // 11-21 고리 gRamp(배열): Guard 가 바뀌면 TQQQ 를 배열의 비율대로 며칠에 나눠 맞춤(켜질 때 [1/3,2/3,1] 이면 첫날 1/3 · 둘째 날 2/3 · 셋째 날 전부 · 꺼질 때 거꾸로) · [0,1] = 하루 늦춰 한 번에(위약) · 안 주면 앱 그대로
+  ["let __pend=0,cash=principal,inflow=principal,", "let __pend=0,__RP={d:null,k:0},cash=principal,inflow=principal,"],
+  ["if(__g&&__g!==guard){guard=__g;guardFlip=(guard==='ON')!==(pos.TQQQ>0);}}", "if(__g&&__g!==guard){guard=__g;guardFlip=(guard==='ON')!==(pos.TQQQ>0);}} let __rh=false,__rf=1;if(RULES.gRamp){const __A=RULES.gRamp,__n=__A.length;if(__RP.d==null){__RP.d=guard;__RP.k=__n;}else if(__RP.d!==guard){__RP.d=guard;__RP.k=1;}else if(__RP.k<__n){__RP.k++;__rh=true;}__rf=__A[Math.min(__RP.k,__n)-1];}"],
+  ["||sgNew||__qHit;", "||sgNew||__qHit||__rh;"],
+  ["const tq=(guardFlip||tqReb||force||first||__qHit)?(guard==='ON'?Math.max((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq/sp.TQQQ)):0):pos.TQQQ;",
+   "const tq=(guardFlip||tqReb||force||first||__qHit||__rh)?(guard==='ON'?Math.max(((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)||(RULES.gRamp&&__RP.k<RULES.gRamp.length))?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq*__rf/sp.TQQQ)):(RULES.gRamp?((1-__rf)>=1?pos.TQQQ:Math.min(pos.TQQQ,Math.floor(total*D.guardWeight*(1-__rf)/sp.TQQQ))):0)):pos.TQQQ;"]];
 function load(V){
   let src=fs.readFileSync(path.join(__dirname,'..','..','..','plan-session-engine.js'),'utf8');
   for(const [a,b] of P){ const n=src.split(a).length-1; if(n!==1) throw new Error(`앱 엔진 모양이 바뀌었다(${n}곳) — engine_var.js 의 바꿔 넣을 줄을 고칠 것: ${a.slice(0,50)}`); src=src.replace(a,()=>b); }

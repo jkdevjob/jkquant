@@ -275,4 +275,26 @@ S.DMI_TQ=dmiS('DMI(14 · Wilder) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQ
 S.DMIX_TQ=dmiS('DMI(14) + ADX ≥ 20 QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,14,20);
 S.KELT_TQ=keltS('Keltner 원판(10일 · 1960) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,'orig');
 S.KELTR_TQ=keltS('Keltner Raschke(EMA20 ± 2ATR10) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,'raschke');
+// 11-21 시중 매매법 10차 — QQQ 신호(전일 확정) → TQQQ · 밖은 BIL
+//   Coppock(Barron's 1962 · 월봉): WMA10(ROC14 + ROC11) · COPP = 곡선이 전달보다 오르면 보유 · COPPB(원판 사기 + 이후 분석가 팔기) = 0 아래에서 돌아서면 사고 0 아래로 내려가면 판다
+//   Hull MA(Hull 2005 · HMA(n) = WMA(2×WMA(n/2) − WMA(n), √n) · 정수 내림): HMA 가 오르면 보유 · 내리면 판다 · n 20(TA-Lib 기본) · 이웃 16
+function _wma(a,n){ const o=new Array(a.length).fill(null), W=n*(n+1)/2; for(let j=n-1;j<a.length;j++){ let s=0,ok=true; for(let k=0;k<n;k++){ const v=a[j-k]; if(v==null){ ok=false; break; } s+=v*(n-k); } if(ok) o[j]=s/W; } return o; }
+function coppS(name,sig,lev,safe,syn,mode='dir'){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.cp){ const N=c.cal.length, C=[]; for(let j=0;j<N;j++) C.push(c.c(sig,j)); const me=[];   // 달 마지막 거래일
+    for(let j=0;j<N;j++){ const d=c.cal[j], nx=c.cal[j+1]; if(!nx||nx.slice(0,7)!==d.slice(0,7)) me.push(j); }
+    const mc=me.map(j=>C[j]), roc=(n)=>mc.map((x,k)=>k>=n&&mc[k-n]>0?(x/mc[k-n]-1)*100:null), r14=roc(14), r11=roc(11), sm=mc.map((x,k)=>(r14[k]!=null&&r11[k]!=null)?r14[k]+r11[k]:null), cv=_wma(sm,10);
+    const at=new Array(N).fill(-1); let q=-1; for(let j=0;j<N;j++){ while(q+1<me.length&&me[q+1]<=j) q++; at[j]=q; } c.st.cp={cv,at}; }
+  const p=c.p, Q=c.st.cp, k=Q.at[p]; if(k<1||Q.cv[k]==null||Q.cv[k-1]==null) return null; const v=Q.cv[k], pv=Q.cv[k-1];
+  let on;
+  if(mode==='dir') on=v>pv;
+  else { on=c.st.on; if(on==null) on=v>=0; if(!on&&v<0&&v>pv) on=true; else if(on&&v<0&&pv>=0) on=false; }
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+function hullS(name,sig,lev,safe,syn,n=20){ return {name,syn,syms:[sig,lev,safe],decide:c=>{
+  if(!c.st.hm){ const N=c.cal.length, C=[]; for(let j=0;j<N;j++) C.push(c.c(sig,j)); const a=_wma(C,Math.floor(n/2)), b=_wma(C,n); const dd=C.map((x,j)=>(a[j]!=null&&b[j]!=null)?2*a[j]-b[j]:null); c.st.hm=_wma(dd,Math.floor(Math.sqrt(n))); }
+  const p=c.p, H=c.st.hm; if(p<n+5||H[p]==null||H[p-1]==null) return null; const on=H[p]>H[p-1];
+  if(c.first) return (c.st.on=on,on?{[lev]:1}:{[safe]:1}); return once(c,'on',on,on?{[lev]:1}:{[safe]:1}); }}; }
+S.COPP_TQ=coppS('Coppock(월 · 오르면 보유) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,'dir');
+S.COPPB_TQ=coppS('Coppock 원판(0 아래 돌아서면 사기 · 0 아래로 팔기) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,'orig');
+S.HULL_TQ=hullS('Hull MA(20 · 방향) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,20);
+S.HULL16_TQ=hullS('Hull MA(16 · 방향) QQQ → TQQQ · 밖 BIL','QQQ','TQQQ','BIL',_sQB,16);
 module.exports={S,m13612,smaRel,avg4,lmr,gx,rsiMR};

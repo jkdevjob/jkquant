@@ -37,6 +37,12 @@ const PAGE_RUN=()=>{ window.__mkBoost=function(b){ const V=window.__VIXM||{}, ks
   delete x.vixTP; delete x.vixDivs; if(o.vixTP||o.vixDivs){ const V=window.__VIXM||{}, ks=Object.keys(V).sort(); const pv=d=>{ let lo=0,hi=ks.length-1,j=-1; while(lo<=hi){ const m=(lo+hi)>>1; if(ks[m]<d){ j=m; lo=m+1; } else hi=m-1; } return j>=0?V[ks[j]]:null; };   // 11-20 Z1·Z2: 전일(d 앞 마지막 VIX 날) 값
     if(o.vixTP){ const g=o.vixTP; x.tpAt2Fn=d=>{ const v=pv(d); return (v!=null&&v>=g.hi)?g.tp:null; }; }
     if(o.vixDivs){ const g=o.vixDivs; x.divsAt2Fn=d=>{ const v=pv(d); return (v!=null&&v>=g.hi)?g.divs:(o.divs||20); }; } }
+  delete x.sigTP; delete x.ddTP; if(o.sigTP||o.ddTP){ const tk=o.tkr||'SOXL', ks=Object.keys(M[tk]).sort(), cl=ks.map(d=>M[tk][d][C]);   // 11-21 Z3·Z4: 새 사이클 익절 목표를 그 종목 가격으로(전일까지)
+    const prevK=d=>{ let lo=0,hi=ks.length-1,j=-1; while(lo<=hi){ const q=(lo+hi)>>1; if(ks[q]<d){ j=q; lo=q+1; } else hi=q-1; } return j; };
+    const sigAt=k=>{ if(k<21) return null; let s=0,s2=0; for(let j=k-19;j<=k;j++){ const r=cl[j]/cl[j-1]-1; s+=r; s2+=r*r; } const mu=s/20; return Math.sqrt(Math.max(0,s2/20-mu*mu)*252); };
+    if(o.sigTP){ const g=o.sigTP; if(window.__sigRef==null||window.__sigRefTk!==tk){ const v=[]; ks.forEach((d,k)=>{ if(d>='2010-01-01'&&d<='2020-12-31'){ const z=sigAt(k); if(z>0) v.push(z); } }); v.sort((p,q)=>p-q); window.__sigRef=v[Math.floor(v.length/2)]; window.__sigRefTk=tk; }   // σref = 그 종목 2010~2020 σ20 중앙(결과와 무관)
+      x.tpAt2Fn=d=>{ const z=sigAt(prevK(d)); if(!(z>0)) return null; return Math.max(g.lo,Math.min(g.hi,Math.round(20*Math.pow(z/window.__sigRef,g.pow||1)))); }; }
+    if(o.ddTP){ const g=o.ddTP; x.tpAt2Fn=d=>{ const k=prevK(d); if(k<g.n) return null; let mx=0; for(let j=k-g.n+1;j<=k;j++) if(cl[j]>mx) mx=cl[j]; return (cl[k]/mx-1)*100<=g.dd?g.tp:null; }; } }
   delete x.lad;   // 11-13 o.lad=n: 하방 LOC 줄 크기 축 — 줄당 수량 s = max(1, floor(본 주문 주수 ÷ n)) · 값 = 1회분 ÷ (본 주문 주수 + k×s) · s=1 이면 원래와 같은 식(1만$)
   if(o.lad){ if(!window.__ibo0) window.__ibo0=imBuyOrders; const N=o.lad; imBuyOrders=function(a){ const out=window.__ibo0(Object.assign({},a,{rows:0})); const f1=1+(+a.fee||0); let res=Math.max(0,+a.bal||0)-out.reduce((t,x)=>t+x.q*x.price*f1,0);
       let lo=Infinity; for(const v of (a.first?[vrTickDn(a.firstPrice,a.cur)]:a.half?[a.starPrice,a.avg]:[a.starPrice])) if(v>0&&v<lo) lo=v;   /* 원래 imBuyOrders 처럼 본 주문 값(0주여도) 중 가장 낮은 값 */ const Q=out.reduce((t,x)=>t+x.q,0), n=Math.max(0,Math.floor(+a.rows||0)), st=Math.max(1,Math.floor(Q/N));
