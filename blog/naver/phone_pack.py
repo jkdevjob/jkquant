@@ -26,6 +26,11 @@ def main():
          f"카테고리: {d.get('category', '')}  →  주제: {d.get('topic', '')}   (카테고리를 먼저 · 바꾸면 주제가 초기화됨)",
          '공개 설정: 전체공개 · 댓글·공감·검색 허용 · 외부 공유 허용(있으면 켬) · 공지 끔', '',
          '태그: 본문 맨 끝 #태그 줄을 그대로 붙이면 태그 칸에 자동으로 들어감']
+    # 2026-11-20 사용자 결정 "2번 전체에 켤게": AI 활용 표시를 글 전체에(네이버 공식 권고 — AI 를 쓰면 문서에 밝힌다).
+    # 정본은 phone_mode.json 의 ai_label 하나("whole").
+    mode = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'phone_mode.json')
+    if os.path.exists(mode) and json.load(open(mode, encoding='utf-8')).get('ai_label') == 'whole':
+        C += ['', 'AI 활용 표시: 글 전체에 켬(도표 하나만이 아니라 글 전체 — 2026-11-20 결정)']
     L = []
     n, slot = 0, False
     SLOT = '[선택: 여기에 내 생각 2~3줄 직접 쓰기 — 안 쓰면 이 줄은 지우기]'
