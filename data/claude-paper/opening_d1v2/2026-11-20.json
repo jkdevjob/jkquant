@@ -1,0 +1,83 @@
+{
+  "date": "2026-11-20",
+  "strategy": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+  "strategyVersion": "g_open_q7_k3_gap3",
+  "params": {
+    "minQ": 7,
+    "topK": 3,
+    "gapMax": -3.0
+  },
+  "action": "trade",
+  "pnlPct": -1.8253880907812963,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "파두",
+      "code": "440110",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 30000,
+      "exitTime": "10:00 매도",
+      "exitPrice": 29400,
+      "qty": 0,
+      "pnlPct": -3.200000000000002,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:14",
+        "expectedPrice": 30100,
+        "basePrice": 32400,
+        "expectedGapPct": -7.098765432098764,
+        "rsi14Prev": 27.35,
+        "qualified": 20,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "한전기술",
+      "code": "052690",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 63800,
+      "exitTime": "10:00 매도",
+      "exitPrice": 64000,
+      "qty": 0,
+      "pnlPct": -0.8567398119122351,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:14",
+        "expectedPrice": 63100,
+        "basePrice": 67100,
+        "expectedGapPct": -5.961251862891204,
+        "rsi14Prev": 23.368,
+        "qualified": 20,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    },
+    {
+      "name": "엔켐",
+      "code": "348370",
+      "entryTime": "09:00 시가(동시호가)",
+      "entryPrice": 11120,
+      "exitTime": "10:00 매도",
+      "exitPrice": 11070,
+      "qty": 0,
+      "pnlPct": -1.4194244604316517,
+      "vtsOk": false,
+      "signal": {
+        "at": "08:58:14",
+        "expectedPrice": 11120,
+        "basePrice": 11750,
+        "expectedGapPct": -5.361702127659573,
+        "rsi14Prev": 28.069,
+        "qualified": 20,
+        "recheck": true,
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "메인 매매일(통과 20종목)",
+  "liveVersion": "g_open_q7_k3_gap3",
+  "recordedAt": "2026-11-21T03:00:49.584675+09:00"
+}

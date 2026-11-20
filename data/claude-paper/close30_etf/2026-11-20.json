@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-20",
+  "strategy": "15:00 까지 3.75% 넘게 내린 날",
+  "strategyVersion": "g_c30_th3.75",
+  "params": {
+    "code": "233740",
+    "th": -3.75
+  },
+  "action": "trade",
+  "pnlPct": -0.15277777777777923,
+  "source": "orders:worker",
+  "basis": "주문한 건을 공식 시가 · 종가로 정산(모의투자 체결과 상관없이)",
+  "trades": [
+    {
+      "name": "KODEX 코스닥150레버리지",
+      "code": "233740",
+      "entryTime": "15:00",
+      "entryPrice": 3600,
+      "exitTime": "15:30 종가(동시호가)",
+      "exitPrice": 3615,
+      "qty": 0,
+      "pnlPct": -0.15277777777777923,
+      "vtsOk": false,
+      "signal": {
+        "at": "15:00:43",
+        "price": 3600,
+        "sofarPct": -14.08,
+        "th": -3.75,
+        "version": "g_c30_th3.75",
+        "reason": "price_vs_prev_close<-3.75%"
+      }
+    }
+  ],
+  "warn": "",
+  "note": "15:00 전일 대비 -14.08% → 매수",
+  "liveVersion": "g_c30_th3.75",
+  "recordedAt": "2026-11-21T03:00:49.584675+09:00"
+}
