@@ -1,5 +1,16 @@
 # JKQuant 변경 이력 (작업 근거 중심)
 
+## 2026-11-20 · 단타 공통 수수료 — 남은 옛 비용 표기 2곳(종가 30분 밤 보고서 · 시초가 장마감 보관)
+
+- 이유: #686 · #687 배포 뒤 첫 실시간 기록을 확인하다 찾았다. 계산은 이미 새 율이고 표기만 옛 값이었다.
+  - 밤 보고서(`nightly-research`)의 closing30 · closing_bet 칸 feesPct 가 0.23(옛 상수) — 같은 날 `closing30.json` 맨 위는 0.70. 손익은 원래 Worker 매도 기록값(신호 때 비용)이다.
+  - 시초가 장마감 보관(`opening-history/날짜.json`) 머리말 strategy.friction 이 고정 문구 "0.25%" — 거래마다 남긴 마찰(고정 0.70 + 호가)과 달랐다.
+- 고침
+  - `closing30_metrics.py`: feesPct = 지금 율의 국내 왕복(`scalp_cost.cost_pct('kr')`) · recordedFeesPct = 그 종류 신호가 실제로 뺀 비용(신호 때 strategyParams.frictionPct · 지난 기록 그대로).
+  - `opening-monitor.yml`: 머리말 마찰 = 그날 거래의 friction.fixedPct 그대로(거래 없으면 규칙 문구). 지난 날 파일은 다시 쓰지 않는다.
+- 시험: `test_closing30_parity.py` 값(0.70 · 옛 율 0.23 · 기록값 [0.23, 0.7] · 다른 종류 안 섞음) + 변이 3 · 새 `test_opening_archive_friction.py`(워크플로 jq 그대로 · 0.7 · 0.23/0.7 · 거래 없음) + 변이 3 · 옛 코드로 되돌리면 둘 다 실패.
+- 같이 확인: 데이트레이딩 Worker 11/20 장부(본 3건 · 그림자 79건)가 0.72 · common-fee-v1 · user — `TEST_RESULTS.md`.
+
 ## 2026-11-20 · 지피티 연구 05:00 보고 · 단타 v1.50.2 · 푸시 Worker v2.10.2
 
 - Work 연구 예약을 04:00으로 당기고 앱푸시·텔레그램의 보고 시각을 한국시간 05:00으로 변경.
