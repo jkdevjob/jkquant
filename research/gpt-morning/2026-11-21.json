@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "date": "2026-11-21",
+  "preparedAt": "2026-11-21T04:05:05+09:00",
+  "mainSha": "19643ab19bfa9f41cdc6fb5d1a6923704b248029",
+  "summary": "G11 SOXL 시초 범위 5·10·15·30분을 30/10 시간순·비용 스트레스·정수주로 재현했으나 선택 구간 전 변형이 탈락해 15분 기준 유지. G9 전향은 0일·0건, 실전 후보 없음. 주간 동일비중 복리 −1.561589%.",
+  "finalVerdict": "최종 판정 — 실전에 쓸 개선안 없음. 모의 후보 G9 휴장 전날 진입 제외는 11/20 신호부터 전향 0일·0건이라 미검증이며, G11 SOXL 범위 변경은 역사 시간순 검증에서 탈락했다.",
+  "sections": [
+    {
+      "tab": "today",
+      "status": "verified",
+      "findings": "main 19643ab, scalping-data b664acf. daily1은 02:11 KST 생성, 최신 확정일은 시초가·BTC·SOXL 11/19, 데이 11/20이다. 동일비중 OOS 49일/121건, 평균 일수익 −0.203564%, PF0.0660, 누적/MDD −9.515849%, 최악일 −0.903009%, +1%일 0. 이번 주 11/16~20 일별 −0.18/−0.251260/−0.38/−0.38/−0.38%, 복리 −1.561589%로 +5%까지 6.561589%p 부족하다. G11은 사전등록 뒤 공식 SOXL 엔진으로 2회 동일 재현했으며 규칙 변경·주문은 없다. 11/20 미국 세션은 04:05 KST 현재 미완결이라 합산하지 않았다.",
+      "nextTest": "새 완결 원천만 누적한다. G9는 11/20 신호 이후 익일 정산부터, G7은 최초 등록 시계를 유지한다. G11 탈락 변형은 반복하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/experiments/G11-20261121/report_byGPT.md",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/latest.json"
+      ]
+    },
+    {
+      "tab": "opening",
+      "status": "blocked",
+      "findings": "daily1 확정 원천은 11/19 무신호 0%에서 멈췄다. OOS 21일/16건, 평균 거래 −1.816833%, 평균 일수익 −0.692127%, PF0.0351, 누적/MDD −13.641554%, 최악일 −2.496469%, +1%일 0. 야간 시초 아카이브는 11/20까지 44일·153건으로 더 최신이지만 daily1 확정 경로와 날짜가 달라 11/20을 무거래 0%로 넣지 않았다. G2의 기존 11/18 원본 이벤트 누락도 미해결이므로 판정 미확인 상태를 유지한다.",
+      "nextTest": "11/20 시세→단계→운영 장부→야간 사본과 daily1 미반영 원인을 대조하고, 누락 이벤트가 복구되기 전 후보 성과에 합치지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/opening-history/2026-11-20.json"
+      ]
+    },
+    {
+      "tab": "daytrading",
+      "status": "verified",
+      "findings": "11/20 원본은 아모레퍼시픽·LG에너지솔루션·GS건설 3건 모두 손절 −1.72%; 운영 장부와 연구 재구성이 종목·진입·청산·손익 3/3 정확 일치했다. 독립 baseline 누적 36일/106건, 평균 거래 −1.122020%, PF0.1698, 복리/MDD −32.945178%, 최악일 −1.72%, +1%일 1. daily1의 비용·집계 규칙은 11/20 −1.52%, OOS 34일/101건, 평균 일수익 −0.756625%, PF0.2351, 누적 −22.832032%, MDD−22.893717%, +1%일0이다. G7 session_min_2의 등록 후 최신 5일 경로는 −1.72/−1.72/−1.72/−1.72/−0.72%로 양의 근거가 없다.",
+      "nextTest": "G7은 비용 버전을 섞지 않고 최초 등록 후 20매매일·20건, PF1.10·MDD−15%·최악일−8%·원본 일치 관문까지 고정 누적한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daytrading-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daytrading-live/2026/2026-11-20.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "crypto",
+      "status": "collecting",
+      "findings": "BTC 공식 연구는 11/19 UTC까지 405 완결일/212건, 평균 일수익 −0.297470%, PF0.0424, 복리 −70.175565%, MDD−70.191377%, +1%일0이다. daily1의 10/1 이후 OOS는 47일/1건, 평균 일수익 −0.016762%, PF0, 누적/MDD −0.787797%, 최악일 −0.787797%, +1%일0. 11/20 UTC 세션은 08:55 KST까지만 수집된 watching 상태라 무거래 0%로 세지 않았다. G10 상대거래량 필터는 재현 완료·탈락 상태를 유지한다.",
+      "nextTest": "11/20 UTC 288개 5분봉과 정해진 청산까지 완결된 뒤만 추가한다. G10은 반복하지 않고 다음 미검증 후보는 별도 사전등록한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/crypto-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/experiments/G10-20261119/report_byGPT.md"
+      ]
+    },
+    {
+      "tab": "soxl",
+      "status": "verified",
+      "findings": "11/19 ET까지 공식 baseline 40일/13건, 평균 거래 −0.592308%, 평균 일수익 −0.192500%, PF0.4967, 복리 −7.598633%, MDD−11.310006%, +1%일4. G11 첫30일에서 5/10/15/30분 변형 모두 선택 자격 미달; 15분 기준은 11건·일평균 −0.3833%·PF0.2484·복리 −11.0123%. 마지막10일의 10분은 3건·PF2.2353·복리 +2.0709%, 스트레스 +1.7670%였지만 학습 9건·PF0.3193·일평균 −0.27%로 탈락했고 기준 검증 +3.8361%보다 낮다. $10k/$100k 기준 검증은 +3.8137/+3.8349%, 스트레스 +3.6130/+3.6307%. 15분 유지, 전향 승격 아님.",
+      "nextTest": "G11은 종료한다. baseline도 60일·25건과 전향20일·20건, 원본 체결 일치 전에는 실투자 후보로 올리지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/experiments/G11-20261121/report_byGPT.md",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/soxl-research/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/daily1-shadow/latest.json"
+      ]
+    },
+    {
+      "tab": "closing30",
+      "status": "collecting",
+      "findings": "11/20까지 당일 baseline은 9일/27건, 평균 일수익 −0.180342%, PF0.3277, 복리 −1.616932%, MDD−1.937531%, 최악일 −0.733549%, +1%일0, 미정산17; 11/20은 3건 −0.008680% 확정. 익일 baseline은 18일/54건, 일평균 −0.800460%, PF0.5783, 복리 −14.821315%, MDD−18.388384%, 최악일 −13.304810%, +1%일5, 미정산12. G9 up_1은 역사 18일/54건 +8.509725%지만 전향 시작 전 자료다. 11/20 신호 3건은 다음 KRX 개장 전이라 G9 전향 0일·0건이며 미검증. 과거 39건의 현 비용 +9.02%, 스트레스 +7.62%는 전향에 합치지 않았다.",
+      "nextTest": "G9 휴장 전날 진입 제외를 11/20 신호 이후 공통 완결 체결로만 누적한다. 정산 전 포지션은 0%로 바꾸지 않고 20일·20건·PF1.10·위험·체결 관문을 유지한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/nightly-research/closing30.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/closing30/2026-11-20.json",
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-morning/research/gpt-morning/2026-11-20-final-decision_byGPT.md"
+      ]
+    },
+    {
+      "tab": "tenbagger",
+      "status": "collecting",
+      "findings": "기준일 11/19, 등록 2026-10-13, v1.0.0·rules SHA 5e690d… 불변. 원천 결합 SHA c27965…, engine SHA 9c75e0…, upstream 92ef9c0. 레코드295·진입283·stop/trail 종료147·신규등록6이며 새 6종목은 다음 세션 진입 대기라 미검증. 20세션 중앙값은 trend200 60건 −18.9602%(음수50), breakout252 17건 −25.2944%(13), pullback50 22건 −8.7387%(16). 60/120/252/756/1260 성숙과 2/5/10배 최초 도달은 모두0. 종가 MFE/MAE/MDD 진입표본 중앙은 +1.6717/−12.9730/−16.3660%. 가격조건 탐색이며 재무시점 패널·시장대조·계좌 CAGR이 아니다.",
+      "nextTest": "최초 등록일을 유지해 성숙 표본과 정지·폐지·정산 미확인을 보존한다. 실패 대조군·시장국면·공시시점·유동성·비용 가설은 별도 버전으로만 제안한다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/tenbagger-forward/latest.json",
+        "https://github.com/jkdevjob/jkquant/blob/main/TENBAGGER_FORWARD_RESEARCH.md",
+        "https://github.com/jkdevjob/jkquant/blob/main/data/tenbagger/gpt/forward-latest.json"
+      ]
+    },
+    {
+      "tab": "duel",
+      "status": "no_change",
+      "findings": "대결은 8절 증거로만 읽었다. 동일 완료일·자금·비용의 새 공통 체결이 없어 승패를 갱신하지 않았다. G8 Double7 QQQ 보류, SOXL/TQQQ 큰 낙폭, 당일청산 변동성돌파 음의 기대값이라는 기존 판정은 유지한다. Claude 작업·전략·기록은 읽기만 했으며 G11은 GPT 내부 SOXL baseline 비교이므로 대결 승패로 해석하지 않는다.",
+      "nextTest": "공통 완료일·동일 비용·원본 체결이 생길 때만 대결을 갱신한다. 기존 G8/G10/G11 탈락 구간을 새 발견처럼 반복하지 않는다.",
+      "evidence": [
+        "https://github.com/jkdevjob/jkquant/blob/research/gpt-public-20261113/research/gpt-morning/experiments/G8-20261113/summary_byGPT.json",
+        "https://github.com/jkdevjob/jkquant/blob/scalping-data/data/claude-live/2026-11-20.json"
+      ]
+    }
+  ]
+}
