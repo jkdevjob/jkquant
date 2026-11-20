@@ -111,4 +111,25 @@ class ClosingParity(unittest.TestCase):
                 if old=='if not observed:continue':self.assertEqual(ctx['daily_rows']([],ledgers,'day','unobserved'),[])
                 else:self.assertEqual(ctx['daily_rows'](rows,ledgers,'day','dip_2'),expected)
 
+    def test_fee_label_is_common_fee_and_recorded_costs_stay_as_recorded(self):
+        # 2026-11-19 사용자 "단타 연구 봇에도 공통 수수료 적용해" — 보고서 feesPct = 지금 율의 국내 왕복(0.20 + 율 × 2) ·
+        # 지난 신호가 뺀 비용은 기록값 그대로(recordedFeesPct) · 다른 종류(익일 = overnight) 기록은 섞지 않는다
+        import scalp_cost as SC
+        rows,ledgers=fixture(2)
+        for x,f in zip(rows[:3],(.23,.7,.7)):x['strategyParams']={'frictionPct':f}
+        def check(mod):
+            SC.set_fee(.0025,'test');m=mod['section']('closing30',rows,ledgers,{},[]);b=mod['section']('closing_bet',rows,ledgers,{},[])
+            self.assertAlmostEqual(m['feesPct'],.70);self.assertEqual(m['recordedFeesPct'],[.23,.7]);self.assertEqual(b['recordedFeesPct'],[])
+            SC.set_fee(.00015,'test');self.assertAlmostEqual(mod['section']('closing30',rows,ledgers,{},[])['feesPct'],.23)  # 예전 율이면 예전 상수
+        import closing30_metrics as module
+        source=Path(module.__file__).read_text(encoding='utf-8');prev=SC._STATE
+        try:
+            check({'section':section})
+            for old,new in [("'feesPct':SC.cost_pct('kr')","'feesPct':.23"),("if x.get('kind')==kind","if True"),
+                            ("round(float(p['frictionPct']),6)","SC.cost_pct('kr')")]:
+                mutant=source.replace(old,new);self.assertNotEqual(mutant,source)
+                ctx={};exec(compile(mutant,module.__file__,'exec'),ctx)
+                with self.assertRaises(AssertionError):check(ctx)
+        finally:SC._STATE=prev
+
 if __name__=='__main__':unittest.main()

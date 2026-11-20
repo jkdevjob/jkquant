@@ -150,7 +150,14 @@ jobs:
                   stop: "-1%",
                   takeProfit: "+1.5%",
                   finalExit: "09:30",
-                  friction: "0.25%"
+                  # 마찰 = 거래마다 남긴 기록(trades[].friction) 그대로 — 고정 몫 = 공통 수수료 왕복 + 거래세 0.20(2026-11-19 ~ · 전 0.23) + 호가 미끄러짐
+                  friction: (
+                    [ $parts[].trades[]? | .friction | objects | .fixedPct | numbers ] | unique
+                    | if length > 0
+                      then "거래마다 기록(trades[].friction) · 고정 " + (map(tostring + "%") | join(" / ")) + " + 호가 미끄러짐"
+                      else "거래마다 기록(trades[].friction) · 고정 = 공통 수수료 왕복 + 거래세 0.20% · 호가 미끄러짐 별도"
+                      end
+                  )
                 },
                 universeChecked: ([$parts[].universe] | add),
                 errors: ([$parts[].errors] | add),

@@ -5,8 +5,18 @@ No signal discovery, price reconstruction or order path. Missing observations st
 import statistics
 import datetime as dt
 from nightly_scalping_research import (CLOSING_SHADOW_NAMES,evolve_lifecycle,shadow_score,ranking_rule)
+try:
+    import scalp_cost as SC  # 단타 비용 = 공통 수수료(설정 › 💸 수수료) × 2 + 거래세 0.20 (2026-11-19 ~ · 전에는 0.23)
+except ModuleNotFoundError:
+    from scripts import scalp_cost as SC
 
 KINDS={'closing30':'day','closing_bet':'overnight'}
+
+def recorded_fees(rows,kind):
+    """그 종류 신호가 실제로 뺀 왕복 비용(%) — 신호 때 남긴 strategyParams.frictionPct 그대로(지난 기록은 그때 값 · 덮어쓰지 않음).
+    손익(pnl)은 Worker 매도 기록값이라 이 값들로 이미 계산돼 있다. 2026-11-19 전 신호 0.23 · 뒤 공통 수수료(feesPct)."""
+    return sorted({round(float(p['frictionPct']),6) for x in rows if x.get('kind')==kind
+                   for p in [x.get('strategyParams') or {}] if isinstance(p.get('frictionPct'),(int,float))})
 
 def condition_analysis(rows):
     def bucket(value,cuts):
@@ -184,7 +194,7 @@ def section(strategy,rows,ledgers,previous,errors):
         'inputCoverage':{'observedCandidates':sum(len(s.get('observations') or []) for l in ledgers for s in l.get('scans') or [] if s.get('kind')==kind),
                          'retentionRule':'all cutoff observations + versioned variant parameters; selected and unselected inputs retained'},
         'mainPolicy':'research paper main only; existing KIS switches and broker baseline are unchanged',
-        'feesPct':.23,'slots':3}
+        'feesPct':SC.cost_pct('kr'),'recordedFeesPct':recorded_fees(rows,kind),'slots':3}
     if errors:report['to']=previous.get('lastEvidenceDate')
     evolve_lifecycle(strategy,report,previous)
     return report
