@@ -2,7 +2,7 @@
 // R-20261119-2: per-symbol paired windows and native terminal liquidation check.
 const fs=require('node:fs');
 const {boot,quant,starts}=require('./operating-20261110.cjs');
-const end='2026-11-18';
+const end=process.env.END||'2026-11-18';
 const synthetic={SOXL:'SYNSOXL_S',USD:'SYNUSD_S',TECL:'SYNTECL_S',QLD:'SYNQLD_S',TQQQ:'SYNTQQQ_S'};
 const caps=[10000,100000,30000], bands=[15,17.5,20,22.5];
 
