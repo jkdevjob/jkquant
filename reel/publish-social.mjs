@@ -31,7 +31,10 @@ import fs from "fs";
 import path from "path";
 import { execFileSync, spawnSync } from "child_process";
 import { fileURLToPath } from "url";
-import { aiTells } from "./tools/ai-tells.mjs";
+// AI 티 점검(선택) — GitHub Actions 는 이 파일과 큐만 받아 오므로(sparse checkout) 없으면 건너뛴다.
+// (11/20 고정 import 로 넣었다가 Actions 에서 모듈을 못 찾아 그날 08:30·09:00·12:00 게시가 모두 멈췄다)
+let aiTells = () => [];
+try { ({ aiTells } = await import("./tools/ai-tells.mjs")); } catch { /* 없음 — 점검만 생략 */ }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // 채널별 큐: --channel mb 면 queue/mb/(queue.json·published.json·publish.config.json·last_run.txt). 없으면 은퇴노트(queue/).
