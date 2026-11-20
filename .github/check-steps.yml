@@ -426,6 +426,7 @@
     if(fail)process.exit(1);
     console.log('✓ Cloudflare opening scheduler cron / auth / stale-order guard');
     NODE
+    python scripts/test_opening_archive_friction.py
 
 - name: 데이트레이딩 Cloudflare 정시 스케줄러 안전검사
   run: |

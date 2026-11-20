@@ -1,5 +1,24 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-20 · 단타 공통 수수료 — 첫 실시간 기록 확인 · 남은 옛 표기 2곳
+
+- 실시간 기록: GPT 데이트레이딩 Worker 장부 `daytrading-live/2026/2026-11-20.json`(scalping-data 09:04 UTC 보관)
+  - 장부 머리 frictionPct 0.72 · costModel common-fee-v1 · feeRatePct 0.25 · feeSource **user**.
+  - 본 거래 3건(아모레퍼시픽 · GS건설 · LG에너지솔루션) 모두 0.72 · 손절 −1.0% − 0.72 = −1.72%(기록 pnl 과 같음).
+  - 그림자 장부 27개 · 79건 모두 같은 값(0.72 · common-fee-v1 · 0.25 · user).
+- 지난 기록은 그대로: `daytrading-live/2026/2026-11-19.json`(배포 전 장) 0.25 · `trade-history/closing30.json` 신호 strategyParams.frictionPct 0.23 × 3,072.
+- 밤 연구: `crypto-research` · `soxl-research` 2026-11-19 fee {0.0025 · user · common-fee-v1} · 거래 0.54 / 0.50 · `daily1-shadow/latest.json` 코인 0.54 · 데이트레이딩 0.72 · SOXL 0.50.
+- 공개 `/api/scalping-duel`(11/20 18시 전): 200 · fee {0.0025 · user} · 비용표 GPT {0.72 · 0.72 · 0.54 · 0.50} · 클로드 {0.72 · 0.62 · 0.54 · 0.50}.
+- VTS 대조 11/20: 맞춘 거래 0(모의투자 주문 없음) — 내부 마찰 대조는 다음 체결 때.
+- 찾아서 고친 것(표기만 · 계산은 이미 새 율)
+  - 종가 30분 밤 보고서 closing30 · closing_bet 칸 feesPct 0.23 → 지금 율 0.70 + recordedFeesPct(신호가 실제로 뺀 값).
+  - 시초가 장마감 보관 머리말 strategy.friction "0.25%" → 그날 거래의 friction.fixedPct 그대로.
+  - `test_closing30_parity.py` 7/7(값 + 변이 3) · `test_opening_archive_friction.py` 2/2(워크플로 jq 그대로 · 변이 3) · 옛 코드로 되돌리면 둘 다 실패.
+  - 11/18 실제 보관 입력으로 jq 를 돌리면 "고정 0.23%"(그날 기록값) · `node scripts/check-before-push.cjs` 2875 PASS / 0 FAIL · 68 단계 PASS.
+- 아직 못 본 것
+  - 클로드 ①②⑤ · 종가 30분 Worker 기록의 11/20 사본(18:40 · 19:10 KST 밤 작업).
+  - 코인/SOXL Worker 모의장부(공개 사본 없음 — 배포 감사로만 본다).
+
 ## 2026-11-20 · 연구(클로드) R52 ② 데이트레이딩 심층 연구
 
 - `r52_daytrading_deep.py`(사전 등록 da9a6763 · 233740 일봉 2016-01-04~2026-11-20 · 60분봉 2023-10-23~): 빠른 식 = 연구실 `etf_trades`(−3.0 · −4.75 · −6.5 같음).
@@ -35,6 +54,7 @@
 - 워크플로: 데이트레이딩 · 시초가 · 코인/SOXL 워커 배포 성공(코인/SOXL #28 은 감사 단계에서 지난 기록 188일 0.40 차이로 실패 → #687 뒤 #29 성공).
   - 연구 워크플로 9개 성공 · D-1 #169 가 `data/claude-live/duel-index.json`(149,827B) 을 만들었다.
 - 아직 못 본 것: 새 율로 처음 생긴 실시간 거래(워커 장부의 costModel · feeRatePct · frictionPct 0.72/0.54/0.50) — 다음 장중 신호 때 확인.
+  - → 2026-11-20 데이트레이딩 Worker 장부로 확인(위 장 · 0.72 · user). 코인/SOXL 장부는 공개 사본이 없어 아직 못 봤다.
 
 ## 2026-11-19 · 단타 연구 봇 공통 수수료 — 단타 v1.50.0 · 클로드 v2.32.0
 
