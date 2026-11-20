@@ -2692,30 +2692,6 @@
      ]
     },
     {
-     "version": "g_coin_ma40_s8_hi10_h21_both",
-     "name": "평균 40일 · 최근 10일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
-     "rule": "어제 종가 > 40일 평균인 날, 최근 10일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
-     "params": {
-      "ma": 40,
-      "stopPct": 8.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "hiN": 10,
-      "lastEntryHour": 21,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-BTC",
-       "KRW-ETH"
-      ]
-     },
-     "source": "generated",
-     "addedAt": "2026-11-19",
-     "op": "struct",
-     "parents": [
-      "g_coin_ma40_s8_vb1_h21_both"
-     ]
-    },
-    {
      "version": "g_coin_ma40_s8_vb0.7_h21_both",
      "name": "평균 40일 · 시가+0.7×어제 폭 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
      "rule": "어제 종가 > 40일 평균인 날, 시가+0.7×어제 폭를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반 · 탭 자금 80%",
@@ -2976,6 +2952,29 @@
      "parents": [
       "g_coin_ma40_s10_hi5_h15_both",
       "g_coin_ma40_s8_vb0.7_h21_both"
+     ]
+    },
+    {
+     "version": "g_coin_ma40_s10_hi5_h21_btc",
+     "name": "평균 40일 · 최근 5일 고가 돌파 · 손절 −10% · 21시 전 돌파만 · BTC 만",
+     "rule": "어제 종가 > 40일 평균인 날, 최근 5일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · 21시 전 돌파만 · BTC 만 · 탭 자금 80%",
+     "params": {
+      "ma": 40,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 5,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-11-21",
+     "op": "neighbor",
+     "parents": [
+      "g_coin_ma40_s10_hi5_h21_both"
      ]
     }
    ],
@@ -4301,6 +4300,25 @@
      },
      "retiredAt": "2026-11-21",
      "reason": "자리 교체 — 같은 매매의 더 나은 신규 g_coin_ma40_s10_hi5_h21_both (순위 점수 +0.093 > +0.067)"
+    },
+    {
+     "version": "g_coin_ma40_s8_hi10_h21_both",
+     "name": "평균 40일 · 최근 10일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+     "params": {
+      "ma": 40,
+      "stopPct": 8.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 10,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-11-21",
+     "reason": "자리 교체 — 신규 g_coin_ma40_s10_hi5_h21_btc 가 순위 점수 +0.093 로 +0.066 보다 확실히 나음"
     }
    ],
    "tried": [
@@ -6636,7 +6654,36 @@
     "g_coin_ma40_s99_hi10_h18_both",
     "g_coin_ma40_s99_hi10_h12_both",
     "g_coin_ma60_s8_vb0.7_h18_both",
-    "g_coin_ma40_s10_hi10_h12_both"
+    "g_coin_ma40_s10_hi10_h12_both",
+    "g_coin_ma50_s10_hi_h18_both",
+    "g_coin_ma50_s8_vb0.5_h21_both",
+    "g_coin_ma30_s8_hi5_h21_both",
+    "g_coin_ma50_s8_hi_h21_btc",
+    "g_coin_ma15_s5_vb0.4_h15_btc",
+    "g_coin_ma30_s10_hi5_h18_both",
+    "g_coin_ma50_s10_vb0.5_h21_both",
+    "g_coin_ma40_s10_hi_h18_btc",
+    "g_coin_ma15_s10_vb0.8_both",
+    "g_coin_ma30_s10_hi5_h21_both",
+    "g_coin_ma50_s10_hi5_h21_both",
+    "g_coin_ma40_s10_hi4_h15_btc",
+    "g_coin_ma40_s10_vb0.5_h21_btc",
+    "g_coin_ma30_s3_vb0.8_h15_eth",
+    "g_coin_ma40_s10_hi4_h21_both",
+    "g_coin_ma100_s99_hi10_eth",
+    "g_coin_ma50_s8_vb0.7_h21_eth",
+    "g_coin_ma25_s8_vb0.7_eth",
+    "g_coin_ma30_s10_hi7_h15_both",
+    "g_coin_ma50_s10_hi10_h12_both",
+    "g_coin_ma100_s10_vb0.4_h15_eth",
+    "g_coin_ma40_s99_hi5_h21_both",
+    "g_coin_ma40_s99_hi5_h18_both",
+    "g_coin_ma40_s99_hi15_h15_both",
+    "g_coin_ma40_s99_hi5_h12_both",
+    "g_coin_ma40_s10_vb0.7_h21_btc",
+    "g_coin_ma50_s10_vb0.7_h21_btc",
+    "g_coin_ma40_s8_hi15_h15_both",
+    "g_coin_ma40_s10_hi3_h21_both"
    ],
    "snapshots": [
     {
@@ -7664,14 +7711,15 @@
     },
     {
      "date": "2026-11-21",
-     "top": "g_coin_ma40_s10_hi5_h15_both",
+     "top": "g_coin_ma40_s10_hi5_h21_both",
      "main": "g_coin_ma15_s99_hi7_eth",
      "bottom": [
+      "g_coin_ma40_s10_hi2_h15_both",
       "g_coin_ma50_s8_hi10_h21_btc",
-      "g_coin_ma40_s8_hi5_h18_both",
       "g_coin_ma40_s8_hi10_h21_both"
      ],
      "ranks": [
+      "g_coin_ma40_s10_hi5_h21_both",
       "g_coin_ma40_s10_hi5_h15_both",
       "g_coin_ma40_s10_hi10_h15_both",
       "g_coin_ma50_s8_vb0.7_h18_btc",
@@ -7682,7 +7730,6 @@
       "g_coin_ma50_s10_hi10_h15_both",
       "g_coin_ma40_s10_hi2_h15_both",
       "g_coin_ma50_s8_hi10_h21_btc",
-      "g_coin_ma40_s8_hi5_h18_both",
       "g_coin_ma40_s8_hi10_h21_both",
       "g_coin_ma15_s99_hi7_eth"
      ]
@@ -7690,23 +7737,23 @@
    ],
    "ops": {
     "neighbor": {
-     "tried": 130,
-     "accepted": 3
+     "tried": 136,
+     "accepted": 4
     },
     "explore": {
-     "tried": 4406,
+     "tried": 4416,
      "accepted": 19
     },
     "jump2": {
-     "tried": 488,
+     "tried": 503,
      "accepted": 15
     },
     "struct": {
-     "tried": 58,
+     "tried": 60,
      "accepted": 14
     },
     "cross": {
-     "tried": 140,
+     "tried": 155,
      "accepted": 19
     }
    }
@@ -12108,7 +12155,11 @@
     "g_soxl_r3lt15_ibs0.1_dn3_ma200_d3",
     "g_soxl_r2lt40_ibs0.2_dn2_ma200_d4",
     "g_soxl_r3lt5_ibs0.2_dn2_ma100_d3",
-    "g_soxl_r4lt10_ibs0.7_dn3_ma200_d1"
+    "g_soxl_r4lt10_ibs0.7_dn3_ma200_d1",
+    "g_soxl_r4lt10_ibs0.7_dn3_ma50_d3",
+    "g_soxl_r4lt35_ibs0.7_dn1_ma50_d5",
+    "g_soxl_r2lt20_ibs0.6_dn3_ma200_d4",
+    "g_soxl_r3lt40_ibs0.7_dn3_ma50_d5"
    ],
    "snapshots": [
     {
@@ -13140,9 +13191,9 @@
      "top": "g_soxl_r3lt40_dn1_ma100_d5",
      "main": "g_soxl_norsi_ibs0.6_dn1_ma50_d3",
      "bottom": [
-      "g_soxl_r3lt35_dn1_ma50_d3",
-      "g_soxl_r3lt40_dn2_ma150_d4",
-      "g_soxl_r3lt40_dn1_ma50_d4"
+      "g_soxl_r3lt40_dn1_ma150_d4",
+      "g_soxl_r3lt40_dn1_ma50_d4",
+      "g_soxl_r3lt40_dn2_ma150_d4"
      ],
      "ranks": [
       "g_soxl_r3lt40_dn1_ma100_d5",
@@ -13152,11 +13203,11 @@
       "g_soxl_r3lt35_dn2_ma100_d5",
       "g_soxl_r3lt35_ibs0.7_dn2_ma100_d5",
       "g_soxl_r2lt40_ibs0.7_dn2_ma150_d5",
-      "g_soxl_r3lt40_dn1_ma150_d4",
       "g_soxl_r4lt30_dn2_ma100_d5",
       "g_soxl_r3lt35_dn1_ma50_d3",
-      "g_soxl_r3lt40_dn2_ma150_d4",
+      "g_soxl_r3lt40_dn1_ma150_d4",
       "g_soxl_r3lt40_dn1_ma50_d4",
+      "g_soxl_r3lt40_dn2_ma150_d4",
       "g_soxl_norsi_ibs0.6_dn1_ma50_d3"
      ]
     }
@@ -13167,11 +13218,11 @@
      "accepted": 9
     },
     "explore": {
-     "tried": 3264,
+     "tried": 3267,
      "accepted": 26
     },
     "jump2": {
-     "tried": 801,
+     "tried": 802,
      "accepted": 34
     },
     "neighbor": {
@@ -13877,43 +13928,6 @@
   }
  },
  "log": [
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "soxl",
-   "kind": "retire",
-   "version": "g_soxl_r2lt15_ma200_d5",
-   "name": "RSI(2) < 15 · 200일 평균 위 · 최대 5일",
-   "reason": "복제 — 기본 · ④ SOXL 단기 과매도 반등 (최대 5일) 와 사실상 같은 매매(일 손익 상관 0.975) · 순위 낮은 쪽을 뺌"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T09:19+09:00",
-   "tab": "soxl",
-   "kind": "retire",
-   "version": "soxl_rsi3_th20",
-   "name": "RSI(3) < 20",
-   "reason": "복제 — RSI(3) < 20 · 150일 평균 위 · 최대 5일 와 사실상 같은 매매(일 손익 상관 0.974) · 순위 낮은 쪽을 뺌"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T11:23+09:00",
-   "tab": "opening",
-   "kind": "new",
-   "version": "g_open_q9_k2_gap3",
-   "name": "통과 9개↑ · 깊은 2종목 · 갭 -3% 이하만",
-   "reason": "두 칸 동시 — g_open_q8_k2 에서 통과 수 8→9, 갭 상한 없음→-3 · 안정 점수 +0.399 (그대로 +0.343 · 이웃 중앙 +0.400) · 매매일 98 · MDD -15.6% · 플러스 8/9해",
-   "op": "jump2"
-  },
-  {
-   "date": "2026-10-06",
-   "at": "2026-10-06T11:23+09:00",
-   "tab": "opening",
-   "kind": "reject",
-   "version": "",
-   "name": "",
-   "reason": "후보 48개 계산 → 기준 통과 5 · 투입 1(교체 0) · 탈락: 손실 기준 미달 43 · 복제 4"
-  },
   {
    "date": "2026-10-06",
    "at": "2026-10-06T11:23+09:00",
@@ -19425,8 +19439,45 @@
    "version": "",
    "name": "",
    "reason": "후보 25개 계산 → 기준 통과 13 · 투입 0(교체 0) · 탈락: 손실 기준 미달 9 · 점수 부족 9 · 해마다 일관성 부족 3"
+  },
+  {
+   "date": "2026-11-21",
+   "at": "2026-11-21T06:59+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma40_s10_hi5_h21_btc",
+   "name": "평균 40일 · 최근 5일 고가 돌파 · 손절 −10% · 21시 전 돌파만 · BTC 만",
+   "reason": "이웃(한 칸) — g_coin_ma40_s10_hi5_h21_both 에서 코인 BTC·ETH→BTC · 순위 점수 +0.093 (안정 +0.103 × 빈도 0.91 · 그대로 +0.058 · 이웃 중앙 +0.103) · 매매일 373 · 연 42회 · MDD -24.0% · 플러스 6/9해",
+   "op": "neighbor"
+  },
+  {
+   "date": "2026-11-21",
+   "at": "2026-11-21T06:59+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 27 · 투입 1(교체 1) · 탈락: 손실 기준 미달 15 · 해마다 일관성 부족 6 · 복제 5 · 점수 부족 3"
+  },
+  {
+   "date": "2026-11-21",
+   "at": "2026-11-21T06:59+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "g_coin_ma40_s8_hi10_h21_both",
+   "name": "평균 40일 · 최근 10일 고가 돌파 · 손절 −8% · 21시 전 돌파만 · BTC·ETH 반반",
+   "reason": "자리 교체 — 신규 g_coin_ma40_s10_hi5_h21_btc 가 순위 점수 +0.093 로 +0.066 보다 확실히 나음"
+  },
+  {
+   "date": "2026-11-21",
+   "at": "2026-11-21T06:59+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 4개 계산 → 기준 통과 4 · 투입 0(교체 0) · 탈락: 점수 부족 4"
   }
  ],
- "updatedAt": "2026-11-21T04:09+09:00",
+ "updatedAt": "2026-11-21T06:59+09:00",
  "freqBeta": 0.25
 }
