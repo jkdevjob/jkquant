@@ -7,8 +7,8 @@ const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),cryp
 const ROOT=path.resolve(__dirname,'../..'),D=path.join(ROOT,'research/im_plan'),END='2026-11-12';
 const TC=require('../../plan-tax-check.js');
 const {summary,dualTax}=require('./portfolio-monthly-20261113.cjs');
-function loadCashEngine(){
- let src=fs.readFileSync(path.join(ROOT,'plan-session-engine.js'),'utf8');
+function loadCashEngine(source=fs.readFileSync(path.join(ROOT,'plan-session-engine.js'),'utf8')){
+ let src=source;
  const rep=(a,b)=>{if(src.split(a).length!==2)throw Error('cash hook '+a);src=src.replace(a,()=>b);};
  rep('  const nav=[];\n\n  for(let i=startIdx;',`  const nav=[];
   const GP=opt.gptTax||null,book={},gains={},paid={},taxLog=[],harvestLog=[];let bi=0;
