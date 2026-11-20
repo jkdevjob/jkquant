@@ -32,8 +32,8 @@ def main():
     if os.path.exists(mode) and json.load(open(mode, encoding='utf-8')).get('ai_label') == 'whole':
         C += ['', 'AI 활용 표시: 글 전체에 켬(도표 하나만이 아니라 글 전체 — 2026-11-20 결정)']
     L = []
-    n, slot = 0, False
-    SLOT = '[선택: 여기에 내 생각 2~3줄 직접 쓰기 — 안 쓰면 이 줄은 지우기]'
+    n = 0
+    # 2026-11-21 사용자 "앞으로 내생각줄은 지워": '[선택: 여기에 내 생각 2~3줄 …]' 자리 줄을 본문에 넣지 않는다.
     for b in d['blocks']:
         if b.get('t') == 'img':
             n += 1
@@ -56,16 +56,9 @@ def main():
             L.append('')
         else:
             t = b.get('text', '').strip()
-            if t.startswith('한줄 코멘트') and not slot:
-                # 2026-11-20 한줄 코멘트는 글의 맨 끝 — 사용자 '내 생각' 칸은 그 바로 앞
-                L.append(SLOT); L.append(''); slot = True
             if t:
                 L.append(t)
                 L.append('')
-    # 2026-11-19 네이버 공식 가이드(서치어드바이저 '콘텐츠 작성시 권장 사항'): AI 도구를 쓰면 단순 생성·요약에 그치지 말고
-    # 운영자의 경험과 관점을 더한다. 이 부분은 사용자만 쓸 수 있다(대신 지어내지 않는다) — 안 쓰면 그냥 넘어간다.
-    if not slot:
-        L.append(SLOT); L.append('')
     # 2026-11-20 사용자 "■ 태그 … 요건 쓰지마"(머리말 없이) · "태그는 거기에 넣었기 때문에 태그 칸에 들어간거야"
     # — 본문 맨 끝 #태그 줄을 네이버가 태그로 자동 등록하므로, 한줄 코멘트 다음 마지막 줄로 둔다(지우지 않는다).
     while L and not L[-1]:
