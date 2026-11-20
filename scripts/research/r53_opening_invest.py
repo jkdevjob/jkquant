@@ -214,18 +214,21 @@ def main():
         j = json.loads(f.read_text(encoding="utf-8"))
         if j.get("action") != "trade" or j.get("strategyVersion") != "g_open_q7_k3_gap3":
             continue
-        live = sorted(t.get("code") for t in j.get("trades") or [])
+        live = sorted(t.get("code") for t in j.get("trades") or [] if t.get("code"))
         res = sorted(r["code"] for r in days.get(j["date"], []))
+        if not live or j["date"] > cal[-1]:
+            notes.append(f"{j['date']} 비교 안 함 — " + ("장부에 종목이 안 남은 옛 형식" if not live else "연구 자료 전"))
+            continue
         if live == res:
             same += 1
         else:
             diff += 1
-            notes.append(f"{j['date']} 장부 {live} · 연구 {res}")
+            notes.append(f"{j['date']} 장부 {live} · 연구 {res} · 겹침 {len(set(live) & set(res))}")
         lp = j.get("pnlPct")
         rp = dv.get(j["date"])
         notes.append(f"   {j['date']} 장부 {lp:+.2f}%({(j.get('trades') or [{}])[0].get('exitTime', '')}) · 연구 {('%+.2f%%' % rp) if rp is not None else '없음'}(종가)")
     ok7 = diff == 0 and same > 0
-    print(f"\n== 7. 기록 일치(지금 메인 판 모의 장부): 종목 같은 날 {same} · 다른 날 {diff} → {'통과' if ok7 else '미통과'}")
+    print(f"\n== 7. 기록 일치(지금 메인 판 모의 장부 · 비교할 수 있는 날): 종목 같은 날 {same} · 다른 날 {diff} → {'통과' if ok7 else '미통과'}")
     for n in notes[:30]:
         print("  ", n)
     passed = sum([ok1, ok2, ok3, ok4, ok5, ok6, ok7])
