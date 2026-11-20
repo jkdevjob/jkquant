@@ -15,8 +15,13 @@
   - 시초가 장마감 보관 머리말 strategy.friction "0.25%" → 그날 거래의 friction.fixedPct 그대로.
   - `test_closing30_parity.py` 7/7(값 + 변이 3) · `test_opening_archive_friction.py` 2/2(워크플로 jq 그대로 · 변이 3) · 옛 코드로 되돌리면 둘 다 실패.
   - 11/18 실제 보관 입력으로 jq 를 돌리면 "고정 0.23%"(그날 기록값) · `node scripts/check-before-push.cjs` 2875 PASS / 0 FAIL · 68 단계 PASS.
+- 종가 30분 Worker 장부 `closing30/2026-11-20.json`(#692 병합 push 로 돈 단타 야간 18:19 KST 보관)
+  - 124건(신호 52 · 매수 50 · 매도 22) 모두 strategyParams.frictionPct 0.70 · common-fee-v1 · feeRatePct 0.25 · 매도 outcomes.costPct 0.70.
+  - 매도 pnl = 가격 변화 − 0.70: 000660 1,103,000 → 1,113,000 = +0.2066 · 005930 182,500 → 183,100 = −0.3712(기록과 같음).
+  - 같은 실행의 밤 보고서: closing30 · closing_bet feesPct 0.7 · recordedFeesPct [0.23, 0.7](#692 고침이 실제 출력에 나옴).
+- 시초가 장마감 보관 11/20: #692 전에 이미 완성본으로 저장돼 다시 쓰지 않음(옛 문구 "0.25%" 그대로 · 다음 거래일부터 새 문구).
 - 아직 못 본 것
-  - 클로드 ①②⑤ · 종가 30분 Worker 기록의 11/20 사본(18:40 · 19:10 KST 밤 작업).
+  - 클로드 ①②⑤ Worker 마감 기록 11/20 사본: D-1 예약 18:40 · 20:17 · 23:40 KST 실행이 GitHub 에서 만들어지지 않았다(같은 저녁 다른 예약은 1~2개만 · 30분마다인 news-collect 도 6~8시간에 한 번 · githubstatus 정상). 다음 D-1 실행이 최근 6일 사본으로 넣는다.
   - 코인/SOXL Worker 모의장부(공개 사본 없음 — 배포 감사로만 본다).
 
 ## 2026-11-20 · 연구(클로드) R52 ② 데이트레이딩 심층 연구
