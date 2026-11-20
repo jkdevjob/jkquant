@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-11-20T16:48:31.990136+09:00",
+  "mode": "read-only-vts-execution-research",
+  "from": "2026-09-25",
+  "to": "2026-11-20",
+  "archiveDays": 41,
+  "strategies": [
+    {
+      "strategy": "opening",
+      "days": 41,
+      "reports": 41,
+      "internalTrades": 141,
+      "kisOrders": 78,
+      "completeMatches": 7,
+      "buyMatches": 12,
+      "sellMatches": 7,
+      "avgEntrySlippageCostPct": -0.026488106358682484,
+      "avgExitSlippageCostPct": 0.03628206666377468,
+      "avgRoundTripSlippageCostPct": -0.03902818104462342,
+      "avgInternalPnlPct": -0.6035893706170187,
+      "avgVtsGrossPnlPct": 0.31712995894338514,
+      "avgVtsNetPnlPct": -0.13955699802542557,
+      "avgBrokerCostRatePct": 0.4566869569688085,
+      "avgObservedExecutionDragPct": 0.4176587759241851,
+      "frictionGapVsInternal025Pct": 0.1676587759241851,
+      "avgInternalFrictionPct": 0.25,
+      "frictionGapVsInternalPct": 0.1676587759241851,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 7,
+      "totalBrokerEstimatedCostsWon": 56384.0,
+      "avgBrokerEstimatedCostsWon": 8054.857142857143,
+      "avgEntryOrderLagSecApprox": 124.41666666666667,
+      "avgExitOrderLagSecApprox": 132.28571428571428,
+      "avgBrokerNotifyLagSec": 0.0,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    },
+    {
+      "strategy": "daytrading",
+      "days": 28,
+      "reports": 28,
+      "internalTrades": 39,
+      "kisOrders": 57,
+      "completeMatches": 0,
+      "buyMatches": 0,
+      "sellMatches": 0,
+      "avgEntrySlippageCostPct": null,
+      "avgExitSlippageCostPct": null,
+      "avgRoundTripSlippageCostPct": null,
+      "avgInternalPnlPct": null,
+      "avgVtsGrossPnlPct": null,
+      "avgVtsNetPnlPct": null,
+      "avgBrokerCostRatePct": null,
+      "avgObservedExecutionDragPct": null,
+      "frictionGapVsInternal025Pct": null,
+      "avgInternalFrictionPct": null,
+      "frictionGapVsInternalPct": null,
+      "calibrationStatus": "collecting",
+      "calibrationMatches": 0,
+      "totalBrokerEstimatedCostsWon": 0,
+      "avgBrokerEstimatedCostsWon": null,
+      "avgEntryOrderLagSecApprox": null,
+      "avgExitOrderLagSecApprox": null,
+      "avgBrokerNotifyLagSec": null,
+      "delayNote": "order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency."
+    }
+  ],
+  "latest": {
+    "date": "2026-11-20",
+    "reports": [
+      {
+        "strategy": "daytrading",
+        "internalTrades": 0,
+        "kisOrders": 0,
+        "matched": 0,
+        "matches": [],
+        "unmatched": []
+      },
+      {
+        "strategy": "opening",
+        "internalTrades": 0,
+        "kisOrders": 0,
+        "matched": 0,
+        "matches": [],
+        "unmatched": []
+      }
+    ]
+  }
+}
