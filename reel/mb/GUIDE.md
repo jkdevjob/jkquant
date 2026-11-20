@@ -48,6 +48,7 @@
 - **AI 티 줄이기(11/20~)**: 은퇴노트 ISSUE_GUIDE 5-1 과 같다 — 줄표(—)·[사실]/[해석] 이름표·→ 나열 없이 입말 문단으로, 대본은 짧게·숫자는 말로 반올림, 끝맺음은 그날 내용으로. `node tools/ai-tells.mjs --channel mb --from 오늘` · `--note` 로 점검.
 - 유튜브: 구글 API 감사 통과 전에는 API 업로드가 비공개로 잠기고, Metricool 무료는 브랜드 하나(은퇴노트)뿐이라 **당분간 유튜브는 올리지 않는다**(감사 통과 뒤 `MB_YT_REFRESH_TOKEN` 으로 켬). 영상 파일은 큐에 남겨 둔다.
 - 결과 확인: `reel/queue/mb/published.json`·`last_run.txt`, GitHub Actions(mb-publish.yml) 실행 기록.
+- **게시 안전 장치(11/20 사고 뒤)**: 은퇴노트 ISSUE_GUIDE 6-00 과 같다 — 루틴 시작 때 `node reel/tools/verify-publish.mjs`(훅 켜기 + Actions 와 같은 조건 시험), 푸시 직후 mb-publish.yml 새 실행 `check` job success 확인, 게시 뒤엔 예약 작업 '게시 확인'이 본다.
 - (11/16~) 푸시 한 번이면 그날부터 3일 동안의 08:30·20:30 칸을 다 지킨다(workflow 는 `reel/tools/gen-publish-workflows.mjs` 로 만든다 — 손으로 고치지 말 것). 그래서 다음 날 편을 전날 밤에 미리 넣어 둬도 된다.
 
 ## 4. 하루 편수

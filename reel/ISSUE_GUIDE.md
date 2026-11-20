@@ -246,6 +246,14 @@
 - 점검: `node publish-social.mjs --dry --id iYYYYMMDD` → 커밋·푸시
   (브랜치 `claude/instagram-reel-video-creation-wl16ee`, main 금지).
 
+## 6-00. 게시 안전 장치 (11/20 사고 뒤 — 사용자 "앞으로 이런 실수 없게 해")
+
+11/20 아침 업로더에 새 파일 import 를 붙였다가 Actions(업로더·큐만 받아 옴)에서 모듈을 못 찾아 08:30·09:00·12:00 이 모두 멈췄다. 내 컴퓨터 --dry 는 저장소 전체가 있어서 통과했고, 푸시 직후 Actions '점검' 단계가 실패했는데 아무도 안 봤다. 그래서 세 겹으로 막는다.
+1. **푸시 전(자동)**: `node reel/tools/verify-publish.mjs` — Actions 의 sparse 목록 그대로 꺼낸 폴더에서 '점검' 단계와 앞으로 3일 게시 칸을 돌려 본다(2초). pre-push 훅(`reel/tools/githooks/pre-push`)이 업로더·큐·발행 workflow 가 바뀐 푸시마다 돌리고, 실패하면 푸시를 막는다. 컨테이너가 새로 받으면 훅이 꺼지니 **매일 루틴 1단계에서 이 도구를 한 번 돌린다**(돌리면 훅이 다시 켜짐). 표의 '비어 있음' 칸도 여기서 본다.
+2. **푸시 직후(2분 안)**: `mcp__github__actions_list`(list_workflow_runs, retire-note-publish.yml · mb-publish.yml) → 새 실행의 `check` job 이 success 인지. failure 면 get_job_logs 로 원인 → 바로 고쳐 다시 푸시.
+3. **게시 뒤(자동)**: 예약 작업 '게시 확인'(매일 08:41·09:41·12:41·18:41·20:41)이 방금 칸이 올라갔는지 published.json 으로 보고, 실패면 원인을 고치고 놓친 편을 다음 칸으로 다시 잡은 뒤 보고한다(문제 없으면 조용히 끝).
+- 업로더(`publish-social.mjs`)에는 다른 파일을 import 하지 않는다. 꼭 필요하면 한 줄 `try { ({ x } = await import("./…")); } catch {}` 꼴.
+
 ## 6-0. 인스타 자동 발행 (11/16~)
 
 - 푸시 한 번이면 그날부터 **3일 동안** 09:00 · 12:00 · 18:00 칸을 다 지킨다(대기 작업은 5시간 이하로 쪼갬). 루틴이 늦게 깨어나는 날을 대비해 다음 날 편·예비를 미리 넣어 두면 그대로 나간다.

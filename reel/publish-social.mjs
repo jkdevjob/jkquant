@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// ⚠ 이 파일은 GitHub Actions 에서 '업로더 + 큐'만 받아 혼자 돈다(sparse checkout — tools/gen-publish-workflows.mjs).
+//   다른 파일을 import 하지 말 것(꼭 필요하면 한 줄 try { await import() } catch {} 로 없을 때 건너뛰게).
+//   바꾼 뒤엔 node reel/tools/verify-publish.mjs (Actions 와 같은 조건 시험 · pre-push 훅이 자동으로 돌림). 11/20 사고 참고.
 // 발행 큐(queue/queue.json)에서 '지금 올릴 때가 된' 영상을 골라
 // 인스타그램 릴스(·유튜브 쇼츠)로 올린다. GitHub Actions(.github/workflows/publish-social.yml, main 브랜치)가
 // 한국 시간 09·12·18시 직후에 실행한다.

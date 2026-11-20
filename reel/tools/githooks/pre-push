@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# 게시 안전 점검(11/20 사고 뒤): 업로더·게시 큐·발행 workflow 가 바뀐 푸시는 GitHub Actions 와 같은 조건으로 먼저 돌려 보고,
+# 실패하면 푸시를 막는다. 켜기: node reel/tools/verify-publish.mjs 를 한 번 돌리면 core.hooksPath 가 켜진다.
+z=0000000000000000000000000000000000000000
+root=$(git rev-parse --show-toplevel)
+[ -f "$root/reel/tools/verify-publish.mjs" ] || exit 0
+while read -r lref lsha rref rsha; do
+  [ "$lsha" = "$z" ] && continue
+  case "$rref" in refs/heads/claude/instagram-reel-video-creation-wl16ee) ;; *) continue ;; esac
+  if [ "$rsha" = "$z" ] || ! files=$(git diff --name-only "$rsha" "$lsha" 2>/dev/null); then files=ALL; fi
+  if printf '%s\n' "$files" | grep -qE '^(reel/publish-social\.mjs|reel/queue/|reel/tools/gen-publish-workflows\.mjs|\.github/workflows/(retire-note|mb)-publish\.yml|ALL$)'; then
+    echo "게시 안전 점검(Actions 와 같은 조건) 실행 중…"
+    if ! node "$root/reel/tools/verify-publish.mjs" --ref "$lsha"; then
+      echo "✖ 게시 안전 점검 실패 — 푸시를 멈췄습니다. 고친 뒤 다시 푸시하세요."
+      exit 1
+    fi
+  fi
+done
+exit 0
