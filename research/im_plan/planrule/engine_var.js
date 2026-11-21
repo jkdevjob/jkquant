@@ -58,10 +58,18 @@ const P=[
   ["if(__g&&__g!==guard){guard=__g;guardFlip=(guard==='ON')!==(pos.TQQQ>0);}}", "if(__g&&__g!==guard){guard=__g;guardFlip=(guard==='ON')!==(pos.TQQQ>0);}} let __rh=false,__rf=1;if(RULES.gRamp){const __A=RULES.gRamp,__n=__A.length;if(__RP.d==null){__RP.d=guard;__RP.k=__n;}else if(__RP.d!==guard){__RP.d=guard;__RP.k=1;}else if(__RP.k<__n){__RP.k++;__rh=true;}__rf=__A[Math.min(__RP.k,__n)-1];}"],
   ["||sgNew||__qHit;", "||sgNew||__qHit||__rh;"],
   ["const tq=(guardFlip||tqReb||force||first||__qHit)?(guard==='ON'?Math.max((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq/sp.TQQQ)):0):pos.TQQQ;",
-   "const tq=(guardFlip||tqReb||force||first||__qHit||__rh)?(guard==='ON'?Math.max(((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)||(RULES.gRamp&&__RP.k<RULES.gRamp.length))?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq*__rf/sp.TQQQ)):(RULES.gRamp?((1-__rf)>=1?pos.TQQQ:Math.min(pos.TQQQ,Math.floor(total*D.guardWeight*(1-__rf)/sp.TQQQ))):0)):pos.TQQQ;"]];
+   "const tq=(guardFlip||tqReb||force||first||__qHit||__rh)?(guard==='ON'?Math.max(((RULES.depBuy&&force&&!guardFlip&&!tqReb&&!first&&!__qHit)||(RULES.gRamp&&__RP.k<RULES.gRamp.length))?pos.TQQQ:0,Math.floor(total*D.guardWeight*__wq*__rf/sp.TQQQ)):(RULES.gRamp?((1-__rf)>=1?pos.TQQQ:Math.min(pos.TQQQ,Math.floor(total*D.guardWeight*(1-__rf)/sp.TQQQ))):0)):pos.TQQQ;"],
+  // 11-21 고리 depX(날짜 → 금액 · 포트폴리오 ⑮): 그달 첫 거래일에 월 입금에 더해 넣을 돈(나눠 넣기) — monthlyAdd 가 0 이어도 그 달만 입금·전체 맞춤 · 안 주면 앱 그대로
+  ["    if(month!==lastMonth&&monthlyAdd>0){", "    const __dx=(opt.depX&&month!==lastMonth)?(+opt.depX(date)||0):0;if(month!==lastMonth&&(monthlyAdd>0||__dx>0)){"],
+  ["__pend+=(opt.depAmt?opt.depAmt(date,i,S):monthlyAdd);", "__pend+=(opt.depAmt?opt.depAmt(date,i,S):monthlyAdd)+__dx;"],
+  // 11-21 고리 sgx{fee0, drag}(포트폴리오 ⑯): SGOV 자리를 수수료 없는 달러 이자로 — fee0 = SGOV 매매 수수료 0 · drag = SGOV 보유액에 매일 −drag/252(음수면 더함 · 이자가 SGOV 보다 높/낮음) · 안 주면 앱 그대로
+  ["function replay(opt){\n  opt=opt||{};", "function replay(opt){\n  opt=opt||{};__SGX=opt.sgx||null;"],
+  ["const q=-dq,p=px[sym],f=alphaFee(q,p),gross=q*p;", "const q=-dq,p=px[sym],f=(sym==='SGOV'&&__SGX&&__SGX.fee0)?0:alphaFee(q,p),gross=q*p;"],
+  ["if(q>0){const f=alphaFee(q,p),gross=q*p;", "if(q>0){const f=(sym==='SGOV'&&__SGX&&__SGX.fee0)?0:alphaFee(q,p),gross=q*p;"],
+  ["    const total=pos.TECL*S.tecl[i]+pos.TQQQ*S.tqqq[i]+pos.SGOV*(S.sgov[i]||0)+cash;", "    if(__SGX&&__SGX.drag&&pos.SGOV>0&&S.sgov[i]>0) cash-=pos.SGOV*S.sgov[i]*__SGX.drag/252;\n    const total=pos.TECL*S.tecl[i]+pos.TQQQ*S.tqqq[i]+pos.SGOV*(S.sgov[i]||0)+cash;"]];
 function load(V){
   let src=fs.readFileSync(path.join(__dirname,'..','..','..','plan-session-engine.js'),'utf8');
   for(const [a,b] of P){ const n=src.split(a).length-1; if(n!==1) throw new Error(`앱 엔진 모양이 바뀌었다(${n}곳) — engine_var.js 의 바꿔 넣을 줄을 고칠 것: ${a.slice(0,50)}`); src=src.replace(a,()=>b); }
-  const ctx={__V:V||{}}; vm.runInNewContext(src,ctx); return ctx.JKPlanSessionEngine;
+  const ctx={__V:V||{},__SGX:null}; vm.runInNewContext(src,ctx); return ctx.JKPlanSessionEngine;
 }
 module.exports={load};
