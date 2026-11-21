@@ -1,5 +1,16 @@
 # JKQuant 검증 결과와 미확인 사항
 
+## 2026-11-21 · 연구(클로드) 아침 루틴 — R53
+
+- 11/20 결과(scalping-data e84525bf · `claude-live/2026-11-20.json` · `review/2026-11-20.json` · `opening-gapdown-live/2026-11-20.json` · `latest.json` 06:59)
+  - ① close:opening settled · exitRule exit10 · 파두 30,000 → 29,400 −3.20% · 한전기술 63,800 → 64,000 −0.86% · 엔켐 11,120 → 11,070 −1.42% · dayPct −1.83%.
+  - ② etf_buy decisionReason no_signal_next_day_closed_max24h · dropPct −13.72% · 그림자(etf_nolimit) signal true.
+  - ⑤ close:close30 settled · 3,600 → 3,615 · dayPct −0.15%.
+  - ③ basedOn 11/19 · 239.0만 < 271.0만 → 쉼 · ④ basedOn 11/20 · $30.88 · IBS 0.08 · downRun 2 · 50일 평균 $102.8 → none.
+- R53 `r53_opening_invest.py`(사전 등록 9ac526f3): 고정판 2019~ 118일 · +1.29% · t 2.78 · 연 +19.0% · MDD −17.5% / 걸어가기 140일 · t 1.58 · 연 +10.4% · MDD −27.4% / 비용 +0.10% 연 +15.5% / 국면 통과 10~14 30일 −0.76% / 이웃 중앙값 +17.5% / 부트스트랩 1년 −20% 손실 1.7% / 정수주 +18.7 · +19.0% / 기록 일치 0/9(비교할 수 있는 날 · 옛 형식 3번 · 연구 자료 전 1번 제외 · 1종목만 겹친 날 5번) → 4/7 · 기록만.
+- 11/21 리포트: 실행 44827615456 · `{"ok":true,"id":"report:2026-11-21","subs":1,"sent":[201],"telegram":{"result":"sent","tries":1}}` 08:00:03(먼저 보낸 44827237712 는 '13번' 숫자를 '비교할 수 있는 9번'으로 고치려고 08:00 전에 취소).
+- 미확인: R42 매매 없음 · ③ 봇 실거래 기록 없음(사용자 서버 설치 전) · ② 11/20 그림자 판 결과(11/23 시가 뒤).
+
 ## 2026-11-20 · 단타 공통 수수료 — 첫 실시간 기록 확인 · 남은 옛 표기 2곳
 
 - 실시간 기록: GPT 데이트레이딩 Worker 장부 `daytrading-live/2026/2026-11-20.json`(scalping-data 09:04 UTC 보관)
